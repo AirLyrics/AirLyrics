@@ -3,11 +3,13 @@ package com.andsi.airlyrics
 import android.animation.LayoutTransition
 import android.animation.ValueAnimator
 import android.app.AlertDialog
+import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Canvas
 import android.graphics.Color
@@ -69,10 +71,23 @@ class MainActivity : AppCompatActivity() {
 
     private val mediaRefreshHandler = Handler(Looper.getMainLooper())
     private var mediaRefreshState = RefreshState.IDLE
+    private var mediaPageRefreshScheduled = false
+
+    private val mediaStatusReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != FloatingLyricsService.ACTION_MEDIA_UPDATE) return
+            scheduleMediaPageRefresh()
+        }
+    }
 
     private val importLyricsLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@registerForActivityResult
+
+            if (!quickFloatingVisible) {
+                Toast.makeText(this, "请先显示悬浮窗，再导入当前歌曲的歌词", Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
+            }
 
             val intent = Intent(this, FloatingLyricsService::class.java).apply {
                 action = FloatingLyricsService.ACTION_IMPORT_LYRICS
@@ -109,6 +124,16 @@ class MainActivity : AppCompatActivity() {
             renderCurrentPage()
         }
 
+    private val floatingWindowStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != FloatingLyricsService.ACTION_WINDOW_VISIBILITY_CHANGED) return
+
+            val visible = intent.getBooleanExtra(FloatingLyricsService.EXTRA_WINDOW_VISIBLE, false)
+            setQuickFloatingVisible(visible)
+            updateTabs()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         locked = FloatingLyricsStyleStore.isLocked(this)
@@ -116,6 +141,8 @@ class MainActivity : AppCompatActivity() {
         quickFloatingVisible = isQuickFloatingVisible()
         applySystemBarsTheme()
         setContentView(createMainView())
+        registerFloatingWindowStateReceiver()
+        registerMediaStatusReceiver()
         autoSelectMediaSourceOnceIfNeeded()
         renderCurrentPage()
     }
@@ -890,7 +917,7 @@ class MainActivity : AppCompatActivity() {
                 addView(bigText("权限状态"))
                 addView(settingRow("悬浮窗权限", if (Settings.canDrawOverlays(this@MainActivity)) "已开启" else "未开启"))
                 addView(settingRow("通知权限", if (hasNotificationPermission()) "已开启" else "未开启"))
-                addView(settingRow("通知访问权限", "需要在系统页确认"))
+                addView(settingRow("通知访问权限", if (hasNotificationListenerAccess()) "已开启" else "未开启"))
                 addView(smallHint("通知访问权限负责读取媒体控制器；悬浮窗权限负责把歌词盖在其他 App 上。"))
             }
         )
@@ -1205,9 +1232,10 @@ class MainActivity : AppCompatActivity() {
     private fun permissionSummary(): String {
         val opened = listOf(
             Settings.canDrawOverlays(this),
-            hasNotificationPermission()
+            hasNotificationPermission(),
+            hasNotificationListenerAccess()
         ).count { it }
-        return "已开启 $opened / 2 项基础权限"
+        return "已开启 $opened / 3 项基础权限"
     }
 
     private fun getAppVersionName(): String {
@@ -1228,6 +1256,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun reloadFloatingLyrics() {
+        if (!quickFloatingVisible) return
+
         val intent = Intent(this, FloatingLyricsService::class.java).apply {
             action = FloatingLyricsService.ACTION_RELOAD_LYRICS
         }
@@ -1670,7 +1700,7 @@ class MainActivity : AppCompatActivity() {
             enableSoftPressFeedback(0.985f)
             setOnClickListener {
                 MediaSourceStore.saveSelectedPackage(this@MainActivity, controller.packageName)
-                notifyFloatingServiceSourceChanged(controller.packageName)
+                notifyFloatingServiceSourceChangedIfVisible(controller.packageName)
                 updateMediaSourceSelectionVisuals(controller.packageName)
                 playTinyPulse(this)
             }
@@ -2144,6 +2174,9 @@ class MainActivity : AppCompatActivity() {
         mediaRefreshHandler.postDelayed({
             mediaRefreshState = RefreshState.DONE
             onStateChanged()
+            if (currentPage == Page.MEDIA) {
+                renderCurrentPage()
+            }
         }, 650)
     }
 
@@ -2348,6 +2381,8 @@ class MainActivity : AppCompatActivity() {
     private fun toggleLock() {
         locked = !FloatingLyricsStyleStore.isLocked(this)
         FloatingLyricsStyleStore.setLocked(this, locked)
+        if (!quickFloatingVisible) return
+
         val intent = Intent(this, FloatingLyricsService::class.java).apply {
             action = if (locked) FloatingLyricsService.ACTION_LOCK else FloatingLyricsService.ACTION_UNLOCK
         }
@@ -2357,6 +2392,8 @@ class MainActivity : AppCompatActivity() {
     private fun toggleClickThrough() {
         clickThrough = !FloatingLyricsStyleStore.isClickThrough(this)
         FloatingLyricsStyleStore.setClickThrough(this, clickThrough)
+        if (!quickFloatingVisible) return
+
         val intent = Intent(this, FloatingLyricsService::class.java).apply {
             action = if (clickThrough) {
                 FloatingLyricsService.ACTION_CLICK_THROUGH_ON
@@ -2396,6 +2433,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun notifyFloatingStyleChanged() {
+        if (!quickFloatingVisible) return
+
         val intent = Intent(this, FloatingLyricsService::class.java).apply {
             action = FloatingLyricsService.ACTION_APPLY_STYLE
         }
@@ -2482,7 +2521,6 @@ class MainActivity : AppCompatActivity() {
 
         val packageName = controller.packageName
         MediaSourceStore.saveSelectedPackage(this, packageName)
-        notifyFloatingServiceSourceChanged(packageName)
 
     }
 
@@ -2501,7 +2539,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun notifyFloatingServiceSourceChanged(packageName: String?) {
+    private fun notifyFloatingServiceSourceChangedIfVisible(packageName: String?) {
+        if (!quickFloatingVisible) return
+
         val intent = Intent(this, FloatingLyricsService::class.java).apply {
             action = FloatingLyricsService.ACTION_SELECT_MEDIA_SOURCE
             putExtra(FloatingLyricsService.EXTRA_SOURCE_PACKAGE, packageName)
@@ -2544,6 +2584,18 @@ class MainActivity : AppCompatActivity() {
                 checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
 
+
+    private fun hasNotificationListenerAccess(): Boolean {
+        val enabledListeners = Settings.Secure.getString(
+            contentResolver,
+            "enabled_notification_listeners"
+        ).orEmpty()
+
+        return enabledListeners.split(':').any { item ->
+            item.contains(packageName, ignoreCase = true)
+        }
+    }
+
     private fun requestNotificationPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             Toast.makeText(this, "当前系统不需要单独开启通知权限", Toast.LENGTH_SHORT).show()
@@ -2556,6 +2608,40 @@ class MainActivity : AppCompatActivity() {
         }
 
         notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+
+    private fun scheduleMediaPageRefresh() {
+        if (currentPage != Page.MEDIA) return
+        if (mediaPageRefreshScheduled) return
+
+        mediaPageRefreshScheduled = true
+        mediaRefreshHandler.postDelayed({
+            mediaPageRefreshScheduled = false
+            if (currentPage == Page.MEDIA) {
+                renderCurrentPage()
+            }
+        }, 120L)
+    }
+
+    private fun registerFloatingWindowStateReceiver() {
+        val filter = IntentFilter(FloatingLyricsService.ACTION_WINDOW_VISIBILITY_CHANGED)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(floatingWindowStateReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(floatingWindowStateReceiver, filter)
+        }
+    }
+
+    private fun registerMediaStatusReceiver() {
+        val filter = IntentFilter(FloatingLyricsService.ACTION_MEDIA_UPDATE)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(mediaStatusReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(mediaStatusReceiver, filter)
+        }
     }
 
     private fun startLyricsService(intent: Intent) {
@@ -2685,6 +2771,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         mediaRefreshHandler.removeCallbacksAndMessages(null)
+        runCatching { unregisterReceiver(floatingWindowStateReceiver) }
+        runCatching { unregisterReceiver(mediaStatusReceiver) }
         super.onDestroy()
     }
 

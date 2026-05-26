@@ -122,7 +122,10 @@ class FloatingLyricsService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_SHOW -> showLyrics()
-            ACTION_HIDE -> hideLyrics()
+            ACTION_HIDE -> {
+                hideLyrics()
+                stopSelf()
+            }
             ACTION_LOCK -> setLocked(true)
             ACTION_UNLOCK -> setLocked(false)
             ACTION_CLICK_THROUGH_ON -> setClickThrough(true)
@@ -330,6 +333,7 @@ class FloatingLyricsService : Service() {
         if (!Settings.canDrawOverlays(this)) return
         if (lyricsView != null) {
             applyStyleToCurrentWindow()
+            broadcastWindowVisibility(true)
             return
         }
 
@@ -389,6 +393,7 @@ class FloatingLyricsService : Service() {
         params = layoutParams
         applyStyle(view)
         windowManager.addView(view, layoutParams)
+        broadcastWindowVisibility(true)
     }
 
     private fun applyStyleToCurrentWindow() {
@@ -446,10 +451,21 @@ class FloatingLyricsService : Service() {
     }
 
     private fun hideLyrics() {
-        val view = lyricsView ?: return
-        windowManager.removeView(view)
+        val view = lyricsView
+        if (view != null) {
+            windowManager.removeView(view)
+        }
         lyricsView = null
         params = null
+        broadcastWindowVisibility(false)
+    }
+
+    private fun broadcastWindowVisibility(visible: Boolean) {
+        val intent = Intent(ACTION_WINDOW_VISIBILITY_CHANGED).apply {
+            setPackage(packageName)
+            putExtra(EXTRA_WINDOW_VISIBLE, visible)
+        }
+        sendBroadcast(intent)
     }
 
     private fun setLocked(locked: Boolean) {
@@ -518,7 +534,7 @@ class FloatingLyricsService : Service() {
 
     override fun onDestroy() {
         syncHandler.removeCallbacks(syncRunnable)
-        unregisterReceiver(mediaReceiver)
+        runCatching { unregisterReceiver(mediaReceiver) }
         hideLyrics()
         super.onDestroy()
     }
@@ -537,6 +553,8 @@ class FloatingLyricsService : Service() {
         const val ACTION_SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
         const val ACTION_APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
         const val ACTION_RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
+        const val ACTION_WINDOW_VISIBILITY_CHANGED = "com.andsi.airlyrics.WINDOW_VISIBILITY_CHANGED"
         const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
+        const val EXTRA_WINDOW_VISIBLE = "windowVisible"
     }
 }
