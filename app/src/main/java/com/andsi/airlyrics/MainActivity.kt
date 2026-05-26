@@ -12,8 +12,11 @@ import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -23,6 +26,21 @@ import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
     private var locked = false
+
+    private val mediaSourceRefreshHandler = Handler(Looper.getMainLooper())
+    private var mediaSourceDialog: AlertDialog? = null
+    private var mediaSourceAdapter: ArrayAdapter<String>? = null
+    private var dialogSourceControllers: List<MediaController> = emptyList()
+
+    private val mediaSourceRefreshRunnable = object : Runnable {
+        override fun run() {
+            refreshMediaSourceDialog()
+
+            if (mediaSourceDialog?.isShowing == true) {
+                mediaSourceRefreshHandler.postDelayed(this, 500)
+            }
+        }
+    }
 
     private val importLyricsLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -176,14 +194,85 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun showMediaSourceDialog() {
-        val selectedPackage = MediaSourceStore.getSelectedPackage(this)
-        val controllers = getActiveMediaControllers()
+        dialogSourceControllers = getMediaSourceControllersForDialog()
+
+        if (dialogSourceControllers.isEmpty()) {
+            Toast.makeText(
+                this,
+                "没有检测到活跃媒体，请先开启通知访问权限并播放音乐",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        mediaSourceAdapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_list_item_1,
+            buildMediaSourceItems(dialogSourceControllers)
+        )
+
+        mediaSourceDialog = AlertDialog.Builder(this)
+            .setTitle("选择歌词来源")
+            .setAdapter(mediaSourceAdapter) { _, which ->
+                if (which !in dialogSourceControllers.indices) return@setAdapter
+
+                val selectedPackageName = dialogSourceControllers[which].packageName
+
+                MediaSourceStore.saveSelectedPackage(this, selectedPackageName)
+                notifyFloatingServiceSourceChanged(selectedPackageName)
+
+                Toast.makeText(
+                    this,
+                    "已选择：${getAppName(selectedPackageName)}",
+                    Toast.LENGTH_SHORT
+                ).show()
+
+                mediaSourceDialog?.dismiss()
+            }
+            .setOnDismissListener {
+                mediaSourceRefreshHandler.removeCallbacks(mediaSourceRefreshRunnable)
+                mediaSourceDialog = null
+                mediaSourceAdapter = null
+                dialogSourceControllers = emptyList()
+            }
+            .show()
+
+        mediaSourceRefreshHandler.removeCallbacks(mediaSourceRefreshRunnable)
+        mediaSourceRefreshHandler.postDelayed(mediaSourceRefreshRunnable, 500)
+    }
+
+    private fun refreshMediaSourceDialog() {
+        if (mediaSourceDialog?.isShowing != true) return
+
+        val adapter = mediaSourceAdapter ?: return
+        dialogSourceControllers = getMediaSourceControllersForDialog()
+
+        if (dialogSourceControllers.isEmpty()) {
+            mediaSourceDialog?.dismiss()
+            Toast.makeText(
+                this,
+                "当前没有活跃媒体",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        adapter.clear()
+        adapter.addAll(buildMediaSourceItems(dialogSourceControllers))
+        adapter.notifyDataSetChanged()
+    }
+
+    private fun getMediaSourceControllersForDialog(): List<MediaController> {
+        return getActiveMediaControllers()
             .filter { controller ->
                 controller.metadata != null || controller.playbackState != null
             }
+    }
 
-        val items = mutableListOf<String>()
-        val sourceControllers = controllers.map { controller ->
+    private fun buildMediaSourceItems(controllers: List<MediaController>): List<String> {
+        val selectedPackage = MediaSourceStore.getSelectedPackage(this)
+
+        return controllers.map { controller ->
             val title = controller.metadata
                 ?.getString(MediaMetadata.METADATA_KEY_TITLE)
                 .orEmpty()
@@ -199,34 +288,9 @@ class MainActivity : AppCompatActivity() {
 
             val appName = getAppName(controller.packageName)
             val mediaText = if (artist.isNotBlank()) "$title - $artist" else title
-            items.add("$appName（$stateText$connectedText）\n$mediaText")
-            controller
+
+            "$appName（$stateText$connectedText）\n$mediaText"
         }
-
-        if (sourceControllers.isEmpty()) {
-            Toast.makeText(
-                this,
-                "没有检测到活跃媒体，请先开启通知访问权限并播放音乐",
-                Toast.LENGTH_LONG
-            ).show()
-            return
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("选择歌词来源")
-            .setItems(items.toTypedArray()) { _, which ->
-                val selectedPackageName = sourceControllers[which].packageName
-
-                MediaSourceStore.saveSelectedPackage(this, selectedPackageName)
-                notifyFloatingServiceSourceChanged(selectedPackageName)
-
-                Toast.makeText(
-                    this,
-                    "已选择：${getAppName(selectedPackageName)}",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-            .show()
     }
 
     private fun getPlaybackStateText(state: Int?): String {
@@ -318,6 +382,15 @@ class MainActivity : AppCompatActivity() {
             "歌词保存目录已复制",
             Toast.LENGTH_LONG
         ).show()
+    }
+
+    override fun onDestroy() {
+        mediaSourceRefreshHandler.removeCallbacks(mediaSourceRefreshRunnable)
+        mediaSourceDialog?.dismiss()
+        mediaSourceDialog = null
+        mediaSourceAdapter = null
+        dialogSourceControllers = emptyList()
+        super.onDestroy()
     }
 
     private fun requestOverlayPermission() {
