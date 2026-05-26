@@ -5,12 +5,72 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import java.io.File
 import java.security.MessageDigest
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object LyricsStorage {
     private const val PREFS_NAME = "lyrics_storage"
     private const val KEY_TREE_URI = "lyrics_tree_uri"
 
     private const val FALLBACK_LYRICS_DIR = "lyrics"
+
+
+    data class LocalLyricsItem(
+        val name: String,
+        val modifiedTimeMillis: Long,
+        val sizeBytes: Long
+    )
+
+    fun listRecentLyrics(context: Context, limit: Int = 8): List<LocalLyricsItem> {
+        val treeUri = getLyricsDirUri(context)
+
+        val items = if (treeUri != null) {
+            val dir = DocumentFile.fromTreeUri(context, treeUri)
+            dir?.listFiles()
+                ?.filter { it.isFile && it.name?.endsWith(".lrc", ignoreCase = true) == true }
+                ?.map { file ->
+                    LocalLyricsItem(
+                        name = file.name.orEmpty(),
+                        modifiedTimeMillis = file.lastModified(),
+                        sizeBytes = file.length()
+                    )
+                }
+                .orEmpty()
+        } else {
+            fallbackLyricsDir(context).listFiles()
+                ?.filter { it.isFile && it.name.endsWith(".lrc", ignoreCase = true) }
+                ?.map { file ->
+                    LocalLyricsItem(
+                        name = file.name,
+                        modifiedTimeMillis = file.lastModified(),
+                        sizeBytes = file.length()
+                    )
+                }
+                .orEmpty()
+        }
+
+        return items
+            .sortedByDescending { it.modifiedTimeMillis }
+            .take(limit.coerceAtLeast(1))
+    }
+
+    fun formatLocalLyricsItem(item: LocalLyricsItem): String {
+        val dateText = if (item.modifiedTimeMillis > 0L) {
+            SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(item.modifiedTimeMillis))
+        } else {
+            "未知时间"
+        }
+
+        val sizeText = when {
+            item.sizeBytes >= 1024 * 1024 -> "%.1f MB".format(item.sizeBytes / 1024f / 1024f)
+            item.sizeBytes >= 1024 -> "%.1f KB".format(item.sizeBytes / 1024f)
+            item.sizeBytes > 0 -> "${item.sizeBytes} B"
+            else -> "未知大小"
+        }
+
+        return "$dateText · $sizeText"
+    }
 
     fun saveLyricsDirUri(context: Context, uri: Uri) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

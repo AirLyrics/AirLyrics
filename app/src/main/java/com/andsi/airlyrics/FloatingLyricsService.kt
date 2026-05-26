@@ -128,6 +128,7 @@ class FloatingLyricsService : Service() {
             ACTION_CLICK_THROUGH_ON -> setClickThrough(true)
             ACTION_CLICK_THROUGH_OFF -> setClickThrough(false)
             ACTION_APPLY_STYLE -> applyStyleToCurrentWindow()
+            ACTION_RELOAD_LYRICS -> reloadCurrentLyrics()
             ACTION_SELECT_MEDIA_SOURCE -> selectMediaSource(
                 intent.getStringExtra(EXTRA_SOURCE_PACKAGE)
             )
@@ -143,6 +144,31 @@ class FloatingLyricsService : Service() {
         return START_STICKY
     }
 
+
+
+    private fun reloadCurrentLyrics() {
+        if (currentTitle.isBlank()) {
+            lastLyricsKey = null
+            activeLyricsRequestKey = null
+            currentLyrics = emptyList()
+            lyricsView?.text = "♪ 等待媒体信息..."
+            return
+        }
+
+        val sourcePackage = selectedSourcePackage.orEmpty()
+        val requestKey = "$sourcePackage|$currentTitle|$currentArtist|$currentAlbum|${currentDuration / 1000L}|reload|${SystemClock.uptimeMillis()}"
+        lastLyricsKey = requestKey
+        activeLyricsRequestKey = requestKey
+
+        loadLyricsForSong(
+            title = currentTitle,
+            artist = currentArtist,
+            album = currentAlbum,
+            duration = currentDuration,
+            isPlaying = currentIsPlaying,
+            requestKey = requestKey
+        )
+    }
 
     private fun selectMediaSource(packageName: String?) {
         selectedSourcePackage = packageName
@@ -201,13 +227,19 @@ class FloatingLyricsService : Service() {
             return
         }
 
+        if (LyricsSettingsStore.getLyricsSource(this) == LyricsSettingsStore.SOURCE_LOCAL_ONLY) {
+            currentLyrics = emptyList()
+            lyricsView?.text = "♪ 仅使用本地歌词\n$mediaText\n未找到本地文件"
+            return
+        }
+
         lyricsView?.text = if (isPlaying) {
             "♪ 正在查找歌词...\n$mediaText"
         } else {
             "Ⅱ 暂停中\n$mediaText"
         }
 
-        LyricsFetcher.fetchSyncedLyrics(title, artist, album, duration) { result ->
+        LyricsFetcher.fetchSyncedLyrics(this, title, artist, album, duration) { result ->
             val lyricText = result.getOrNull()
 
             android.os.Handler(android.os.Looper.getMainLooper()).post {
@@ -216,13 +248,15 @@ class FloatingLyricsService : Service() {
                 }
 
                 if (lyricText != null) {
-                    LyricsStorage.saveLyrics(
-                        context = this,
-                        title = title,
-                        artist = artist,
-                        duration = duration,
-                        lyrics = lyricText
-                    )
+                    if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) {
+                        LyricsStorage.saveLyrics(
+                            context = this,
+                            title = title,
+                            artist = artist,
+                            duration = duration,
+                            lyrics = lyricText
+                        )
+                    }
 
                     currentLyrics = LrcParser.parse(lyricText)
 
@@ -502,6 +536,7 @@ class FloatingLyricsService : Service() {
         const val ACTION_IMPORT_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
         const val ACTION_SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
         const val ACTION_APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
+        const val ACTION_RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
         const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
     }
 }

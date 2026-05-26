@@ -171,6 +171,48 @@ object FloatingLyricsStyleStore {
             .apply()
     }
 
+    fun setShadowColor(context: Context, color: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_SHADOW_COLOR, color)
+            .apply()
+    }
+
+    fun setShadowRadius(context: Context, radius: Float) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putFloat(KEY_SHADOW_RADIUS, radius.coerceIn(0f, 24f))
+            .apply()
+    }
+
+    fun setCornerRadius(context: Context, radiusDp: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_CORNER_RADIUS, radiusDp.coerceIn(0, 36))
+            .apply()
+    }
+
+    fun setPaddingHorizontal(context: Context, paddingDp: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_PADDING_HORIZONTAL, paddingDp.coerceIn(0, 36))
+            .apply()
+    }
+
+    fun setPaddingVertical(context: Context, paddingDp: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_PADDING_VERTICAL, paddingDp.coerceIn(0, 28))
+            .apply()
+    }
+
+    fun setMaxWidthPercent(context: Context, percent: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_MAX_WIDTH_PERCENT, percent.coerceIn(45, 100))
+            .apply()
+    }
+
     fun setLocked(context: Context, locked: Boolean) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
