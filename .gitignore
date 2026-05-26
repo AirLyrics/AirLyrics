@@ -1,18 +1,19 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# Gradle / Android
+.gradle/
+build/
+*/build/
 local.properties
+.cxx/
+.externalNativeBuild/
 
-app/build/
+# Rust
+target/
+**/target/
+
+# IDE
 .idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
