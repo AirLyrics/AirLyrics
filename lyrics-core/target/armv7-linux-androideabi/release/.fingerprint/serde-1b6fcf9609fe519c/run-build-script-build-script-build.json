@@ -1,0 +1,1 @@
+{"rustc":7458672600737419911,"features":"","declared_features":"","target":0,"profile":0,"path":0,"deps":[[13548984313718623784,"build_script_build",false,16720250309790447883]],"local":[{"RerunIfChanged":{"output":"armv7-linux-androideabi/release/build/serde-1b6fcf9609fe519c/output","paths":["build.rs"]}}],"rustflags":[],"config":0,"compile_kind":0}

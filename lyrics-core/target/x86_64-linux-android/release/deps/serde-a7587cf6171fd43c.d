@@ -1,0 +1,14 @@
+/mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/deps/serde-a7587cf6171fd43c.d: /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/build/serde-d4bd6f7d2c082a7e/out/private.rs
+
+/mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/deps/libserde-a7587cf6171fd43c.rlib: /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/build/serde-d4bd6f7d2c082a7e/out/private.rs
+
+/mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/deps/libserde-a7587cf6171fd43c.rmeta: /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/build/serde-d4bd6f7d2c082a7e/out/private.rs
+
+/home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/sy/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/build/serde-d4bd6f7d2c082a7e/out/private.rs:
+
+# env-dep:OUT_DIR=/mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/build/serde-d4bd6f7d2c082a7e/out

@@ -127,6 +127,7 @@ class MediaNotificationListener : NotificationListenerService() {
         val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE)
         val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
             ?: metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+        val album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
 
         val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
         val position = state?.position ?: 0L
@@ -144,6 +145,7 @@ class MediaNotificationListener : NotificationListenerService() {
             setPackage(packageName)
             putExtra("title", title)
             putExtra("artist", artist ?: "")
+            putExtra("album", album)
             putExtra("duration", duration)
             putExtra("position", position)
             putExtra("isPlaying", isPlaying)

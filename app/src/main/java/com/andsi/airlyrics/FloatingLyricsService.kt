@@ -38,6 +38,7 @@ class FloatingLyricsService : Service() {
 
     private var currentTitle: String = ""
     private var currentArtist: String = ""
+    private var currentAlbum: String = ""
     private var currentDuration: Long = 0L
     private var selectedSourcePackage: String? = null
 
@@ -62,6 +63,7 @@ class FloatingLyricsService : Service() {
             val sourcePackage = intent.getStringExtra(EXTRA_SOURCE_PACKAGE).orEmpty()
             val title = intent.getStringExtra("title").orEmpty()
             val artist = intent.getStringExtra("artist").orEmpty()
+            val album = intent.getStringExtra("album").orEmpty()
             val isPlaying = intent.getBooleanExtra("isPlaying", false)
             val duration = intent.getLongExtra("duration", 0L)
             val position = intent.getLongExtra("position", 0L)
@@ -71,6 +73,7 @@ class FloatingLyricsService : Service() {
 
             currentTitle = title
             currentArtist = artist
+            currentAlbum = album
             currentDuration = duration
             currentIsPlaying = isPlaying
             currentPositionMs = position
@@ -86,6 +89,7 @@ class FloatingLyricsService : Service() {
             loadLyricsForSong(
                 title = title,
                 artist = artist,
+                album = album,
                 duration = duration,
                 isPlaying = isPlaying
             )
@@ -155,6 +159,7 @@ class FloatingLyricsService : Service() {
     private fun loadLyricsForSong(
         title: String,
         artist: String,
+        album: String,
         duration: Long,
         isPlaying: Boolean
     ) {
@@ -191,7 +196,7 @@ class FloatingLyricsService : Service() {
             "Ⅱ 暂停中\n$mediaText"
         }
 
-        LyricsFetcher.fetchSyncedLyrics(title, artist, duration) { result ->
+        LyricsFetcher.fetchSyncedLyrics(title, artist, album, duration) { result ->
             val lyricText = result.getOrNull()
 
             android.os.Handler(android.os.Looper.getMainLooper()).post {

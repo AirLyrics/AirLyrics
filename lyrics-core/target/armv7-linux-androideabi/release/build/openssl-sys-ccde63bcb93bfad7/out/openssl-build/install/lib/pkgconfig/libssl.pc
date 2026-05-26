@@ -1,0 +1,12 @@
+# 
+prefix=/mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/armv7-linux-androideabi/release/build/openssl-sys-ccde63bcb93bfad7/out/openssl-build/install
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include 
+
+Name: OpenSSL-libssl
+Description: Secure Sockets Layer and cryptography libraries
+Version: 3.6.2
+Requires.private: libcrypto
+Libs: -L${libdir} -lssl
+Cflags: -I${includedir}

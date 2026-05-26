@@ -1,0 +1,12 @@
+# This file should be used when building against this OpenSSL build, and should never be installed
+prefix=/mnt/data/andsi/android-floating-lyrics-main/lyrics-core/target/x86_64-linux-android/release/build/openssl-sys-e6a739a4814bbdfe/out/openssl-build/build/src
+exec_prefix=${prefix}
+libdir=${exec_prefix}
+includedir=${prefix}/include ${prefix}/./include 
+
+Name: OpenSSL-libssl
+Description: Secure Sockets Layer and cryptography libraries
+Version: 3.6.2
+Requires.private: libcrypto
+Libs: -L${libdir} -lssl
+Cflags: -I${prefix}/include  -I${prefix}/./include 

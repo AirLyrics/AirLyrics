@@ -1,0 +1,3 @@
+cargo::rustc-check-cfg=cfg(jvm_linked)
+cargo:rerun-if-env-changed=JAVA_HOME
+cargo:rerun-if-env-changed=_JNI_SYS_TEST

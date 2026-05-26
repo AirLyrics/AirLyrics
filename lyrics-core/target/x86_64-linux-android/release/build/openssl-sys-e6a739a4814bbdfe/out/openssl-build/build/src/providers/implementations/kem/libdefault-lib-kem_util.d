@@ -1,0 +1,9 @@
+providers/implementations/kem/libdefault-lib-kem_util.o: \
+  providers/implementations/kem/kem_util.c include/openssl/core_names.h \
+  include/openssl/crypto.h include/openssl/macros.h \
+  include/openssl/opensslconf.h include/openssl/configuration.h \
+  include/openssl/opensslv.h include/openssl/e_os2.h \
+  include/openssl/safestack.h include/openssl/stack.h \
+  include/openssl/types.h include/openssl/cryptoerr.h \
+  include/openssl/symhacks.h include/openssl/cryptoerr_legacy.h \
+  include/openssl/core.h providers/implementations/include/prov/eckem.h
