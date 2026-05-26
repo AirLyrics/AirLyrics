@@ -32,7 +32,13 @@
         <service
             android:name=".FloatingLyricsService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="display_floating_lyrics_overlay_while_user_is_playing_media" />
+
+        </service>
 
         <service
             android:name=".MediaNotificationListener"

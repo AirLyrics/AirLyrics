@@ -8,15 +8,17 @@ object LyricsFetcher {
         durationMs: Long,
         callback: (Result<String?>) -> Unit
     ) {
-        Thread {
-            val result = NeteaseLyricsProvider.fetchBestLyrics(
-                title = title,
-                artist = artist,
-                album = album,
-                durationMs = durationMs
-            ).map { it?.lrc }
+        Thread({
+            val result = runCatching {
+                NeteaseLyricsProvider.fetchBestLyrics(
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    durationMs = durationMs
+                ).getOrThrow()?.lrc
+            }
 
             callback(result)
-        }.start()
+        }, "AirLyrics-LyricsFetch").start()
     }
 }

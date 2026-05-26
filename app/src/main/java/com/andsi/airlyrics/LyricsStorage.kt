@@ -30,10 +30,19 @@ object LyricsStorage {
         val treeUri = getLyricsDirUri(context)
 
         return if (treeUri != null) {
-            treeUri.toString()
+            val dirName = DocumentFile.fromTreeUri(context, treeUri)?.name
+            if (dirName.isNullOrBlank()) {
+                "已选择用户目录"
+            } else {
+                "已选择：$dirName"
+            }
         } else {
             fallbackLyricsDir(context).absolutePath
         }
+    }
+
+    fun getLyricsDirRawPath(context: Context): String {
+        return getLyricsDirUri(context)?.toString() ?: fallbackLyricsDir(context).absolutePath
     }
 
     private fun fallbackLyricsDir(context: Context): File {
@@ -107,13 +116,11 @@ object LyricsStorage {
 
         if (treeUri != null) {
             val dir = DocumentFile.fromTreeUri(context, treeUri) ?: return
+            val file = dir.findFile(fileName)
+                ?: dir.createFile("application/octet-stream", fileName)
+                ?: return
 
-            val oldFile = dir.findFile(fileName)
-            oldFile?.delete()
-
-            val newFile = dir.createFile("application/octet-stream", fileName) ?: return
-
-            context.contentResolver.openOutputStream(newFile.uri)
+            context.contentResolver.openOutputStream(file.uri, "wt")
                 ?.bufferedWriter()
                 ?.use { it.write(lyrics) }
 
@@ -130,11 +137,12 @@ object LyricsStorage {
         title: String,
         artist: String,
         duration: Long
-    ) {
-        val text = context.contentResolver.openInputStream(uri)
-            ?.bufferedReader()
-            ?.use { it.readText() }
-            ?: return
+    ): Boolean {
+        val text = runCatching {
+            context.contentResolver.openInputStream(uri)
+                ?.bufferedReader()
+                ?.use { it.readText() }
+        }.getOrNull() ?: return false
 
         saveLyrics(
             context = context,
@@ -143,5 +151,7 @@ object LyricsStorage {
             duration = duration,
             lyrics = text
         )
+
+        return true
     }
 }

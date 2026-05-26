@@ -13,6 +13,7 @@ import android.graphics.PixelFormat
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
@@ -31,9 +32,11 @@ class FloatingLyricsService : Service() {
     private var touchStartY = 0f
 
     private var lastLyricsKey: String? = null
+    private var activeLyricsRequestKey: String? = null
 
     private var currentLyrics: List<LrcLine> = emptyList()
     private var currentPositionMs: Long = 0L
+    private var lastPositionUpdateUptimeMs: Long = 0L
     private var currentIsPlaying: Boolean = false
 
     private var currentTitle: String = ""
@@ -47,10 +50,6 @@ class FloatingLyricsService : Service() {
     private val syncRunnable = object : Runnable {
         override fun run() {
             updateCurrentLyricLine()
-
-            if (currentIsPlaying) {
-                currentPositionMs += 300L
-            }
 
             syncHandler.postDelayed(this, 300L)
         }
@@ -77,8 +76,9 @@ class FloatingLyricsService : Service() {
             currentDuration = duration
             currentIsPlaying = isPlaying
             currentPositionMs = position
+            lastPositionUpdateUptimeMs = SystemClock.uptimeMillis()
 
-            val lyricsKey = "$title|$artist|${duration / 1000L}"
+            val lyricsKey = "$sourcePackage|$title|$artist|$album|${duration / 1000L}"
 
             if (lyricsKey == lastLyricsKey) {
                 return
@@ -86,12 +86,15 @@ class FloatingLyricsService : Service() {
 
             lastLyricsKey = lyricsKey
 
+            activeLyricsRequestKey = lyricsKey
+
             loadLyricsForSong(
                 title = title,
                 artist = artist,
                 album = album,
                 duration = duration,
-                isPlaying = isPlaying
+                isPlaying = isPlaying,
+                requestKey = lyricsKey
             )
         }
     }
@@ -140,6 +143,7 @@ class FloatingLyricsService : Service() {
         selectedSourcePackage = packageName
         MediaSourceStore.saveSelectedPackage(this, packageName)
         lastLyricsKey = null
+        activeLyricsRequestKey = null
         currentLyrics = emptyList()
         currentPositionMs = 0L
         lyricsView?.text = if (packageName == null) {
@@ -161,7 +165,8 @@ class FloatingLyricsService : Service() {
         artist: String,
         album: String,
         duration: Long,
-        isPlaying: Boolean
+        isPlaying: Boolean,
+        requestKey: String
     ) {
         val mediaText = if (artist.isNotBlank()) {
             "♪ $title - $artist"
@@ -177,11 +182,12 @@ class FloatingLyricsService : Service() {
         )
 
         if (localLyrics != null) {
+            if (activeLyricsRequestKey != requestKey) return
+
             currentLyrics = LrcParser.parse(localLyrics)
-            currentPositionMs = 0L
 
             lyricsView?.text = if (currentLyrics.isNotEmpty()) {
-                LrcParser.findCurrentLine(currentLyrics, currentPositionMs)?.text
+                LrcParser.findCurrentLine(currentLyrics, getEstimatedPositionMs())?.text
                     ?: currentLyrics.first().text
             } else {
                 "♪ 本地歌词为空\n$mediaText"
@@ -200,6 +206,10 @@ class FloatingLyricsService : Service() {
             val lyricText = result.getOrNull()
 
             android.os.Handler(android.os.Looper.getMainLooper()).post {
+                if (activeLyricsRequestKey != requestKey) {
+                    return@post
+                }
+
                 if (lyricText != null) {
                     LyricsStorage.saveLyrics(
                         context = this,
@@ -210,10 +220,9 @@ class FloatingLyricsService : Service() {
                     )
 
                     currentLyrics = LrcParser.parse(lyricText)
-                    currentPositionMs = 0L
 
                     lyricsView?.text = if (currentLyrics.isNotEmpty()) {
-                        LrcParser.findCurrentLine(currentLyrics, currentPositionMs)?.text
+                        LrcParser.findCurrentLine(currentLyrics, getEstimatedPositionMs())?.text
                             ?: currentLyrics.first().text
                     } else {
                         "♪ 歌词解析为空\n$mediaText"
@@ -241,13 +250,18 @@ class FloatingLyricsService : Service() {
             return
         }
 
-        LyricsStorage.importLyricsFromUri(
+        val imported = LyricsStorage.importLyricsFromUri(
             context = this,
             uri = uri,
             title = title,
             artist = artist,
             duration = duration
         )
+
+        if (!imported) {
+            lyricsView?.text = "♪ 导入歌词失败"
+            return
+        }
 
         val localLyrics = LyricsStorage.readLocalLyrics(
             context = this,
@@ -258,11 +272,13 @@ class FloatingLyricsService : Service() {
 
         if (localLyrics != null) {
             currentLyrics = LrcParser.parse(localLyrics)
-            currentPositionMs = 0L
-            lastLyricsKey = "$title|$artist|${duration / 1000L}"
+            val sourcePackage = selectedSourcePackage.orEmpty()
+            lastLyricsKey = "$sourcePackage|$title|$artist|$currentAlbum|${duration / 1000L}"
+            activeLyricsRequestKey = lastLyricsKey
 
             lyricsView?.text = if (currentLyrics.isNotEmpty()) {
-                currentLyrics.first().text
+                LrcParser.findCurrentLine(currentLyrics, getEstimatedPositionMs())?.text
+                    ?: currentLyrics.first().text
             } else {
                 "♪ 已导入歌词，但内容为空"
             }
@@ -368,10 +384,19 @@ class FloatingLyricsService : Service() {
             .build()
     }
 
+    private fun getEstimatedPositionMs(): Long {
+        if (!currentIsPlaying || lastPositionUpdateUptimeMs == 0L) {
+            return currentPositionMs
+        }
+
+        val elapsedMs = SystemClock.uptimeMillis() - lastPositionUpdateUptimeMs
+        return currentPositionMs + elapsedMs.coerceAtLeast(0L)
+    }
+
     private fun updateCurrentLyricLine() {
         if (currentLyrics.isEmpty()) return
 
-        val line = LrcParser.findCurrentLine(currentLyrics, currentPositionMs) ?: return
+        val line = LrcParser.findCurrentLine(currentLyrics, getEstimatedPositionMs()) ?: return
         lyricsView?.text = line.text
     }
 

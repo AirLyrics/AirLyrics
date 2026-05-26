@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -73,6 +74,18 @@ class MainActivity : AppCompatActivity() {
 
             LyricsStorage.saveLyricsDirUri(this, uri)
             Toast.makeText(this, "已设置歌词保存目录", Toast.LENGTH_LONG).show()
+            renderCurrentPage()
+        }
+
+    private val notificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            val message = if (granted) {
+                "通知权限已开启"
+            } else {
+                "通知权限未开启，前台服务通知可能无法显示"
+            }
+
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             renderCurrentPage()
         }
 
@@ -309,9 +322,11 @@ class MainActivity : AppCompatActivity() {
             card {
                 addView(bigText("权限"))
                 addView(settingRow("悬浮窗权限", if (Settings.canDrawOverlays(this@MainActivity)) "已开启" else "未开启"))
+                addView(settingRow("通知权限", if (hasNotificationPermission()) "已开启" else "未开启"))
                 addView(settingRow("通知访问权限", "点按钮前往系统设置确认"))
                 addView(horizontalButtons(
                     "悬浮窗权限" to { requestOverlayPermission() },
+                    "通知权限" to { requestNotificationPermissionIfNeeded() },
                     "通知访问" to { startActivity(Intent(ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
                 ))
             }
@@ -637,7 +652,7 @@ class MainActivity : AppCompatActivity() {
         val intent = Intent(this, FloatingLyricsService::class.java).apply {
             action = if (locked) FloatingLyricsService.ACTION_LOCK else FloatingLyricsService.ACTION_UNLOCK
         }
-        startService(intent)
+        startLyricsService(intent)
         renderCurrentPage()
     }
 
@@ -708,7 +723,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showLyricsDir() {
-        val path = LyricsStorage.getLyricsDirDisplayPath(this)
+        val path = LyricsStorage.getLyricsDirRawPath(this)
 
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("歌词保存目录", path))
@@ -726,6 +741,25 @@ class MainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "悬浮窗权限已开启", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun hasNotificationPermission(): Boolean {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            Toast.makeText(this, "当前系统不需要单独开启通知权限", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (hasNotificationPermission()) {
+            Toast.makeText(this, "通知权限已开启", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
     }
 
     private fun startLyricsService(intent: Intent) {
