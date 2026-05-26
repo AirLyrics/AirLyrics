@@ -16,6 +16,10 @@ class MediaNotificationListener : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())
     private var mediaSessionManager: MediaSessionManager? = null
     private val controllers = mutableMapOf<String, MediaController>()
+    private val callbacks = mutableMapOf<String, MediaController.Callback>()
+
+    private val activeSessionsChangedListener =
+        MediaSessionManager.OnActiveSessionsChangedListener { setupMediaSessions(it) }
 
     override fun onCreate() {
         super.onCreate()
@@ -26,11 +30,23 @@ class MediaNotificationListener : NotificationListenerService() {
         super.onListenerConnected()
         Log.d(TAG, "Notification listener connected")
         setupMediaSessions()
+
+        try {
+            val component = ComponentName(this, MediaNotificationListener::class.java)
+            mediaSessionManager?.addOnActiveSessionsChangedListener(
+                activeSessionsChangedListener,
+                component,
+                handler
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to listen active session changes", e)
+        }
     }
 
     override fun onListenerDisconnected() {
         super.onListenerDisconnected()
-        controllers.clear()
+        mediaSessionManager?.removeOnActiveSessionsChangedListener(activeSessionsChangedListener)
+        clearControllers()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -42,18 +58,35 @@ class MediaNotificationListener : NotificationListenerService() {
         }, 200)
     }
 
-    private fun setupMediaSessions() {
+    private fun setupMediaSessions(activeSessions: List<MediaController>? = null) {
         try {
             val component = ComponentName(this, MediaNotificationListener::class.java)
-            val activeSessions = mediaSessionManager?.getActiveSessions(component) ?: return
+            val sessions = activeSessions ?: mediaSessionManager?.getActiveSessions(component) ?: return
+            val activePackages = sessions.map { it.packageName }.toSet()
 
-            controllers.clear()
+            controllers.keys
+                .filter { it !in activePackages }
+                .forEach { packageName ->
+                    callbacks.remove(packageName)?.let { callback ->
+                        controllers[packageName]?.unregisterCallback(callback)
+                    }
+                    controllers.remove(packageName)
+                }
 
-            for (controller in activeSessions) {
+            for (controller in sessions) {
                 val packageName = controller.packageName
+                if (controllers[packageName] === controller) {
+                    publishMediaInfo(controller)
+                    continue
+                }
+
+                callbacks.remove(packageName)?.let { oldCallback ->
+                    controllers[packageName]?.unregisterCallback(oldCallback)
+                }
+
                 controllers[packageName] = controller
 
-                controller.registerCallback(object : MediaController.Callback() {
+                val callback = object : MediaController.Callback() {
                     override fun onMetadataChanged(metadata: MediaMetadata?) {
                         publishMediaInfo(controller)
                     }
@@ -61,8 +94,15 @@ class MediaNotificationListener : NotificationListenerService() {
                     override fun onPlaybackStateChanged(state: PlaybackState?) {
                         publishMediaInfo(controller)
                     }
-                }, handler)
 
+                    override fun onSessionDestroyed() {
+                        callbacks.remove(packageName)
+                        controllers.remove(packageName)
+                    }
+                }
+
+                callbacks[packageName] = callback
+                controller.registerCallback(callback, handler)
                 publishMediaInfo(controller)
             }
         } catch (e: SecurityException) {
@@ -70,6 +110,14 @@ class MediaNotificationListener : NotificationListenerService() {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to setup media sessions", e)
         }
+    }
+
+    private fun clearControllers() {
+        callbacks.forEach { (packageName, callback) ->
+            controllers[packageName]?.unregisterCallback(callback)
+        }
+        callbacks.clear()
+        controllers.clear()
     }
 
     private fun publishMediaInfo(controller: MediaController) {
@@ -86,7 +134,11 @@ class MediaNotificationListener : NotificationListenerService() {
 
         if (title.isNullOrBlank()) return
 
-        Log.d(TAG, "media: title=$title artist=$artist duration=$duration position=$position playing=$isPlaying")
+        Log.d(
+            TAG,
+            "media: source=${controller.packageName} title=$title artist=$artist " +
+                    "duration=$duration position=$position playing=$isPlaying"
+        )
 
         val intent = Intent(FloatingLyricsService.ACTION_MEDIA_UPDATE).apply {
             setPackage(packageName)
@@ -95,7 +147,7 @@ class MediaNotificationListener : NotificationListenerService() {
             putExtra("duration", duration)
             putExtra("position", position)
             putExtra("isPlaying", isPlaying)
-            putExtra("sourcePackage", controller.packageName)
+            putExtra(FloatingLyricsService.EXTRA_SOURCE_PACKAGE, controller.packageName)
         }
 
         sendBroadcast(intent)

@@ -4,6 +4,11 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.ComponentName
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,6 +18,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
@@ -111,6 +117,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+
+        val selectMediaSourceButton = Button(this).apply {
+            text = "选择歌词来源"
+            setOnClickListener {
+                showMediaSourceDialog()
+            }
+        }
+
         val selectLyricsDirButton = Button(this).apply {
             text = "选择歌词保存目录"
             setOnClickListener {
@@ -149,12 +163,146 @@ class MainActivity : AppCompatActivity() {
         layout.addView(notificationAccessButton)
         layout.addView(showButton)
         layout.addView(lockButton)
+        layout.addView(selectMediaSourceButton)
         layout.addView(selectLyricsDirButton)
         layout.addView(importLyricsButton)
         layout.addView(lyricsDirButton)
         layout.addView(hideButton)
 
         setContentView(layout)
+
+        autoSelectMediaSourceOnceIfNeeded()
+    }
+
+
+    private fun showMediaSourceDialog() {
+        val selectedPackage = MediaSourceStore.getSelectedPackage(this)
+        val controllers = getActiveMediaControllers()
+            .filter { controller ->
+                controller.metadata != null || controller.playbackState != null
+            }
+
+        val items = mutableListOf<String>()
+        val sourceControllers = controllers.map { controller ->
+            val title = controller.metadata
+                ?.getString(MediaMetadata.METADATA_KEY_TITLE)
+                .orEmpty()
+                .ifBlank { "未知歌曲" }
+
+            val artist = controller.metadata
+                ?.getString(MediaMetadata.METADATA_KEY_ARTIST)
+                ?: controller.metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+                ?: ""
+
+            val stateText = getPlaybackStateText(controller.playbackState?.state)
+            val connectedText = if (controller.packageName == selectedPackage) "，已连接" else ""
+
+            val appName = getAppName(controller.packageName)
+            val mediaText = if (artist.isNotBlank()) "$title - $artist" else title
+            items.add("$appName（$stateText$connectedText）\n$mediaText")
+            controller
+        }
+
+        if (sourceControllers.isEmpty()) {
+            Toast.makeText(
+                this,
+                "没有检测到活跃媒体，请先开启通知访问权限并播放音乐",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("选择歌词来源")
+            .setItems(items.toTypedArray()) { _, which ->
+                val selectedPackageName = sourceControllers[which].packageName
+
+                MediaSourceStore.saveSelectedPackage(this, selectedPackageName)
+                notifyFloatingServiceSourceChanged(selectedPackageName)
+
+                Toast.makeText(
+                    this,
+                    "已选择：${getAppName(selectedPackageName)}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .show()
+    }
+
+    private fun getPlaybackStateText(state: Int?): String {
+        return when (state) {
+            PlaybackState.STATE_PLAYING -> "播放中"
+            PlaybackState.STATE_PAUSED -> "暂停中"
+            PlaybackState.STATE_STOPPED -> "已停止"
+            PlaybackState.STATE_BUFFERING -> "缓冲中"
+            PlaybackState.STATE_CONNECTING -> "连接中"
+            PlaybackState.STATE_FAST_FORWARDING -> "快进中"
+            PlaybackState.STATE_REWINDING -> "快退中"
+            PlaybackState.STATE_SKIPPING_TO_NEXT -> "切到下一首"
+            PlaybackState.STATE_SKIPPING_TO_PREVIOUS -> "切到上一首"
+            PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM -> "切换队列"
+            PlaybackState.STATE_NONE -> "无播放状态"
+            PlaybackState.STATE_ERROR -> "播放异常"
+            else -> "状态未知"
+        }
+    }
+
+    private fun autoSelectMediaSourceOnceIfNeeded() {
+        if (MediaSourceStore.getSelectedPackage(this) != null) return
+
+        val controllers = getActiveMediaControllers()
+            .filter { it.metadata != null || it.playbackState != null }
+
+        val controller = controllers.firstOrNull {
+            it.playbackState?.state == PlaybackState.STATE_PLAYING
+        } ?: controllers.firstOrNull() ?: return
+
+        val packageName = controller.packageName
+        MediaSourceStore.saveSelectedPackage(this, packageName)
+        notifyFloatingServiceSourceChanged(packageName)
+
+        Toast.makeText(
+            this,
+            "已自动选择：${getAppName(packageName)}",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    private fun getActiveMediaControllers(): List<MediaController> {
+        return try {
+            val mediaSessionManager =
+                getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+            val component = ComponentName(this, MediaNotificationListener::class.java)
+            mediaSessionManager.getActiveSessions(component)
+        } catch (e: SecurityException) {
+            Toast.makeText(this, "需要先开启通知访问权限", Toast.LENGTH_LONG).show()
+            emptyList()
+        } catch (e: Exception) {
+            Toast.makeText(this, "读取媒体来源失败", Toast.LENGTH_LONG).show()
+            emptyList()
+        }
+    }
+
+    private fun notifyFloatingServiceSourceChanged(packageName: String?) {
+        val intent = Intent(this, FloatingLyricsService::class.java).apply {
+            action = FloatingLyricsService.ACTION_SELECT_MEDIA_SOURCE
+            putExtra(FloatingLyricsService.EXTRA_SOURCE_PACKAGE, packageName)
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent)
+        } else {
+            startService(intent)
+        }
+    }
+
+    private fun getAppName(packageName: String): String {
+        return try {
+            val appInfo = packageManager.getApplicationInfo(packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (e: Exception) {
+            packageName
+        }
     }
 
     private fun showLyricsDir() {

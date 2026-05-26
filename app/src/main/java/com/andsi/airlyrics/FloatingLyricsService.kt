@@ -39,6 +39,7 @@ class FloatingLyricsService : Service() {
     private var currentTitle: String = ""
     private var currentArtist: String = ""
     private var currentDuration: Long = 0L
+    private var selectedSourcePackage: String? = null
 
     private val syncHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
@@ -58,6 +59,7 @@ class FloatingLyricsService : Service() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != ACTION_MEDIA_UPDATE) return
 
+            val sourcePackage = intent.getStringExtra(EXTRA_SOURCE_PACKAGE).orEmpty()
             val title = intent.getStringExtra("title").orEmpty()
             val artist = intent.getStringExtra("artist").orEmpty()
             val isPlaying = intent.getBooleanExtra("isPlaying", false)
@@ -65,6 +67,7 @@ class FloatingLyricsService : Service() {
             val position = intent.getLongExtra("position", 0L)
 
             if (title.isBlank()) return
+            if (!shouldAcceptMediaUpdate(sourcePackage, isPlaying)) return
 
             currentTitle = title
             currentArtist = artist
@@ -92,6 +95,7 @@ class FloatingLyricsService : Service() {
     override fun onCreate() {
         super.onCreate()
 
+        selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
         windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
         startForeground(1, createNotification())
 
@@ -112,6 +116,9 @@ class FloatingLyricsService : Service() {
             ACTION_HIDE -> hideLyrics()
             ACTION_LOCK -> setLocked(true)
             ACTION_UNLOCK -> setLocked(false)
+            ACTION_SELECT_MEDIA_SOURCE -> selectMediaSource(
+                intent.getStringExtra(EXTRA_SOURCE_PACKAGE)
+            )
 
             ACTION_IMPORT_LYRICS -> {
                 val uri = intent.data
@@ -122,6 +129,27 @@ class FloatingLyricsService : Service() {
         }
 
         return START_STICKY
+    }
+
+
+    private fun selectMediaSource(packageName: String?) {
+        selectedSourcePackage = packageName
+        MediaSourceStore.saveSelectedPackage(this, packageName)
+        lastLyricsKey = null
+        currentLyrics = emptyList()
+        currentPositionMs = 0L
+        lyricsView?.text = if (packageName == null) {
+            "♪ 尚未选择媒体来源，请进入 App 选择歌词来源"
+        } else {
+            "♪ 已选择媒体来源，等待该播放器更新..."
+        }
+    }
+
+    private fun shouldAcceptMediaUpdate(sourcePackage: String, isPlaying: Boolean): Boolean {
+        if (sourcePackage.isBlank()) return false
+
+        val selectedPackage = selectedSourcePackage ?: return false
+        return sourcePackage == selectedPackage
     }
 
     private fun loadLyricsForSong(
@@ -358,5 +386,7 @@ class FloatingLyricsService : Service() {
         const val ACTION_UNLOCK = "com.andsi.airlyrics.UNLOCK"
         const val ACTION_MEDIA_UPDATE = "com.andsi.airlyrics.MEDIA_UPDATE"
         const val ACTION_IMPORT_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
+        const val ACTION_SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
+        const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
     }
 }
