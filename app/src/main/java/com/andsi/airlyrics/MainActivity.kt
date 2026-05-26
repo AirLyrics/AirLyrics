@@ -1,5 +1,6 @@
 package com.andsi.airlyrics
 
+import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
@@ -27,6 +28,7 @@ import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,9 +38,12 @@ class MainActivity : AppCompatActivity() {
     private enum class Page { MEDIA, FLOATING, SETTINGS }
 
     private var locked = false
+    private var clickThrough = false
     private var currentPage = Page.MEDIA
     private var contentContainer: FrameLayout? = null
     private val tabViews = mutableMapOf<Page, TextView>()
+    private val pageScrollY = mutableMapOf<Page, Int>()
+    private var renderedPage = Page.MEDIA
 
     private enum class RefreshState { IDLE, REFRESHING, DONE }
 
@@ -91,6 +96,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        locked = FloatingLyricsStyleStore.isLocked(this)
+        clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
         setContentView(createMainView())
         autoSelectMediaSourceOnceIfNeeded()
         renderCurrentPage()
@@ -98,6 +105,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        locked = FloatingLyricsStyleStore.isLocked(this)
+        clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
         renderCurrentPage()
     }
 
@@ -169,7 +178,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderCurrentPage() {
-        contentContainer?.removeAllViews()
+        val container = contentContainer ?: return
+        (container.getChildAt(0) as? ScrollView)?.let { scrollView ->
+            pageScrollY[renderedPage] = scrollView.scrollY
+        }
+
+        container.removeAllViews()
         updateTabs()
 
         val pageView = when (currentPage) {
@@ -178,7 +192,16 @@ class MainActivity : AppCompatActivity() {
             Page.SETTINGS -> createSettingsPage()
         }
 
-        contentContainer?.addView(pageView)
+        val restoreY = pageScrollY[currentPage] ?: 0
+        container.addView(pageView)
+        renderedPage = currentPage
+
+        (pageView as? ScrollView)?.let { scrollView ->
+            scrollView.scrollTo(0, restoreY)
+            scrollView.post {
+                scrollView.scrollTo(0, restoreY)
+            }
+        }
     }
 
     private fun updateTabs() {
@@ -255,53 +278,173 @@ class MainActivity : AppCompatActivity() {
 
     private fun createFloatingPage(): View {
         val container = pageContainer()
+        val style = FloatingLyricsStyleStore.getStyle(this)
+        locked = FloatingLyricsStyleStore.isLocked(this)
+        clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
+        var previewTextView: TextView? = null
+        var summaryTextView: TextView? = null
+        var gravityStatusText: TextView? = null
+        var lockStatusText: TextView? = null
+        var clickThroughStatusText: TextView? = null
+
+        fun refreshFloatingPreview() {
+            val latestStyle = FloatingLyricsStyleStore.getStyle(this)
+            previewTextView?.applyFloatingPreviewStyle(latestStyle)
+            summaryTextView?.text = "当前：${FloatingLyricsStyleStore.getPresetTitle(latestStyle.presetName)} · ${latestStyle.textSizeSp.toInt()}sp · ${FloatingLyricsStyleStore.getGravityTitle(latestStyle.gravity)}"
+            gravityStatusText?.text = "当前对齐：${FloatingLyricsStyleStore.getGravityTitle(latestStyle.gravity)}"
+            lockStatusText?.text = "拖动锁定：${if (FloatingLyricsStyleStore.isLocked(this)) "已开启" else "已关闭"}"
+            clickThroughStatusText?.text = "点击穿透：${if (FloatingLyricsStyleStore.isClickThrough(this)) "已开启" else "已关闭"}"
+        }
 
         container.addView(
             sectionTitle(
                 "悬浮窗",
-                "这里先做成未来开发页，之后专门放歌词窗口外观和行为设置。"
+                "调整歌词窗口的大小、颜色、透明度和拖动行为，改完会立即同步到正在显示的悬浮窗。"
             )
         )
 
         container.addView(
             card {
                 addView(label("预览", colorTextMuted))
-                addView(bigText("夜に駆ける"))
-                addView(normalText("YOASOBI · 当前歌词预览"))
-                addView(smallHint("未来这里可以实时预览字体、圆角、透明度和高亮颜色。"))
+                previewTextView = floatingPreviewText("夜に駆ける\n奔向夜晚", style)
+                summaryTextView = normalText("当前：${FloatingLyricsStyleStore.getPresetTitle(style.presetName)} · ${style.textSizeSp.toInt()}sp · ${FloatingLyricsStyleStore.getGravityTitle(style.gravity)}")
+                addView(previewTextView!!)
+                addView(summaryTextView!!)
+                addView(smallHint("预览包含歌词和翻译两行，对齐方式会同时影响两行文字。"))
             }
         )
 
         container.addView(
             card {
                 addView(bigText("显示控制"))
-                addView(normalText("快速显示、隐藏或锁定悬浮歌词。"))
+                addView(normalText("快速显示、隐藏或控制悬浮歌词。锁定只禁止拖动，穿透会让触摸事件落到下面的 App。"))
                 addView(horizontalButtons(
                     "显示" to { showFloatingLyrics() },
                     "隐藏" to { hideFloatingLyrics() }
                 ))
-                addView(actionButton(if (locked) "锁定穿透：开启" else "锁定穿透：关闭") {
+                val lockButton = actionButton(if (locked) "拖动锁定：开启" else "拖动锁定：关闭") { }
+                lockButton.setOnClickListener {
                     toggleLock()
+                    lockButton.text = if (FloatingLyricsStyleStore.isLocked(this@MainActivity)) "拖动锁定：开启" else "拖动锁定：关闭"
+                    refreshFloatingPreview()
+                }
+                addView(lockButton)
+
+                val clickThroughButton = actionButton(if (clickThrough) "点击穿透：开启" else "点击穿透：关闭") { }
+                clickThroughButton.setOnClickListener {
+                    toggleClickThrough()
+                    clickThroughButton.text = if (FloatingLyricsStyleStore.isClickThrough(this@MainActivity)) "点击穿透：开启" else "点击穿透：关闭"
+                    refreshFloatingPreview()
+                }
+                addView(clickThroughButton)
+            }
+        )
+
+        container.addView(
+            card {
+                addView(bigText("皮肤预设"))
+                addView(normalText("预设仍然保留，方便一键恢复到好看的基础样式。"))
+                addView(liveOptionGrid(
+                    FloatingLyricsStyleStore.presets.map { preset ->
+                        KeyedOptionItem(
+                            key = preset.key,
+                            title = preset.title,
+                            selected = preset.key == style.presetName,
+                            action = {
+                                applyFloatingPreset(preset.key)
+                                refreshFloatingPreview()
+                            }
+                        )
+                    }
+                ))
+            }
+        )
+
+        container.addView(
+            card {
+                addView(bigText("字体大小"))
+                addView(sliderRow(
+                    title = "大小",
+                    value = style.textSizeSp.toInt(),
+                    min = 14,
+                    max = 56,
+                    suffix = "sp"
+                ) { value ->
+                    applyFloatingTextSize(value.toFloat(), refreshPage = false)
+                    refreshFloatingPreview()
                 })
             }
         )
 
         container.addView(
             card {
-                addView(bigText("外观设置"))
-                addView(settingRow("字体大小", "开发中"))
-                addView(settingRow("背景透明度", "开发中"))
-                addView(settingRow("圆角大小", "开发中"))
-                addView(settingRow("歌词高亮色", "开发中"))
+                addView(bigText("字体颜色"))
+                addView(colorControl(
+                    title = "文字",
+                    color = style.textColor
+                ) { color ->
+                    applyFloatingTextColor(color, refreshPage = false)
+                    refreshFloatingPreview()
+                })
+            }
+        )
+
+        container.addView(
+            card {
+                val backgroundColor = FloatingLyricsStyleStore.backgroundColorWithAlpha(style)
+                addView(bigText("背景颜色"))
+                val backgroundButton = actionButton(if (style.backgroundEnabled) "背景：开启" else "背景：关闭") { }
+                backgroundButton.setOnClickListener {
+                    val enabled = !FloatingLyricsStyleStore.getStyle(this@MainActivity).backgroundEnabled
+                    FloatingLyricsStyleStore.setBackgroundEnabled(this@MainActivity, enabled)
+                    notifyFloatingStyleChanged()
+                    backgroundButton.text = if (enabled) "背景：开启" else "背景：关闭"
+                    refreshFloatingPreview()
+                }
+                addView(backgroundButton)
+                addView(colorControl(
+                    title = "背景",
+                    color = backgroundColor
+                ) { color ->
+                    applyFloatingBackgroundColor(color, refreshPage = false)
+                    refreshFloatingPreview()
+                })
+            }
+        )
+
+        container.addView(
+            card {
+                addView(bigText("文字对齐"))
+                gravityStatusText = normalText("当前对齐：${FloatingLyricsStyleStore.getGravityTitle(style.gravity)}")
+                addView(gravityStatusText!!)
+                addView(liveOptionGrid(listOf(
+                    KeyedOptionItem("left", "左对齐", style.gravity == (Gravity.START or Gravity.CENTER_VERTICAL)) {
+                        applyFloatingGravity(Gravity.START or Gravity.CENTER_VERTICAL)
+                        refreshFloatingPreview()
+                    },
+                    KeyedOptionItem("center", "居中", style.gravity == Gravity.CENTER) {
+                        applyFloatingGravity(Gravity.CENTER)
+                        refreshFloatingPreview()
+                    },
+                    KeyedOptionItem("right", "右对齐", style.gravity == (Gravity.END or Gravity.CENTER_VERTICAL)) {
+                        applyFloatingGravity(Gravity.END or Gravity.CENTER_VERTICAL)
+                        refreshFloatingPreview()
+                    }
+                )))
+                addView(smallHint("悬浮窗会使用固定最大宽度，所以换行后的歌词和翻译会一起左 / 中 / 右对齐。"))
             }
         )
 
         container.addView(
             card {
                 addView(bigText("行为设置"))
-                addView(settingRow("点击穿透", "开发中"))
-                addView(settingRow("自动隐藏", "开发中"))
-                addView(settingRow("横屏模式", "开发中"))
+                addView(settingRow("记住位置", "已开启"))
+                addView(settingRow("最大宽度", "屏幕 ${style.maxWidthPercent}%"))
+                lockStatusText = normalText("拖动锁定：${if (locked) "已开启" else "已关闭"}")
+                clickThroughStatusText = normalText("点击穿透：${if (clickThrough) "已开启" else "已关闭"}")
+                addView(lockStatusText!!)
+                addView(clickThroughStatusText!!)
+                addView(smallHint("锁定后不能拖动，但仍会接收触摸；开启穿透后，悬浮窗不会挡住下面的 App。"))
             }
         )
 
@@ -357,6 +500,387 @@ class MainActivity : AppCompatActivity() {
         )
 
         return scroll(container)
+    }
+
+    private data class OptionItem(
+        val title: String,
+        val selected: Boolean,
+        val action: () -> Unit
+    )
+
+    private data class KeyedOptionItem(
+        val key: String,
+        val title: String,
+        val selected: Boolean,
+        val action: () -> Unit
+    )
+
+    private fun floatingPreviewText(text: String, style: FloatingLyricsStyle): TextView {
+        return TextView(this).apply {
+            this.text = text
+            val params = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            params.setMargins(0, dp(10), 0, dp(4))
+            layoutParams = params
+            applyFloatingPreviewStyle(style)
+        }
+    }
+
+    private fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle) {
+        textSize = style.textSizeSp.coerceAtMost(30f)
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = style.gravity
+        setTextColor(style.textColor)
+        setShadowLayer(style.shadowRadius, 0f, 0f, style.shadowColor)
+        setPadding(
+            dp(style.paddingHorizontalDp),
+            dp(style.paddingVerticalDp),
+            dp(style.paddingHorizontalDp),
+            dp(style.paddingVerticalDp)
+        )
+        background = if (style.backgroundEnabled) {
+            GradientDrawable().apply {
+                cornerRadius = dp(style.cornerRadiusDp).toFloat()
+                setColor(withAlpha(style.backgroundColor, style.backgroundAlpha))
+            }
+        } else {
+            null
+        }
+    }
+
+    private fun optionGrid(items: List<OptionItem>): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            items.chunked(2).forEach { rowItems ->
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    rowItems.forEachIndexed { index, item ->
+                        addView(optionButton(item).apply {
+                            val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                            params.setMargins(
+                                if (index == 0) 0 else dp(6),
+                                dp(10),
+                                if (index == rowItems.lastIndex) 0 else dp(6),
+                                0
+                            )
+                            layoutParams = params
+                        })
+                    }
+                    if (rowItems.size == 1) {
+                        addView(View(this@MainActivity).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
+                                setMargins(dp(6), 0, 0, 0)
+                            }
+                        })
+                    }
+                })
+            }
+        }
+    }
+
+    private fun liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val buttons = mutableListOf<Pair<KeyedOptionItem, TextView>>()
+
+            fun refreshSelection(selectedKey: String) {
+                buttons.forEach { (item, button) ->
+                    applyOptionButtonState(button, item.title, item.key == selectedKey)
+                }
+            }
+
+            items.chunked(2).forEach { rowItems ->
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    rowItems.forEachIndexed { index, item ->
+                        val button = TextView(this@MainActivity).apply {
+                            gravity = Gravity.CENTER
+                            textSize = 14f
+                            typeface = Typeface.DEFAULT_BOLD
+                            setPadding(dp(12), dp(11), dp(12), dp(11))
+                            applyOptionButtonState(this, item.title, item.selected)
+                            setOnClickListener {
+                                item.action()
+                                refreshSelection(item.key)
+                            }
+                        }
+                        buttons.add(item to button)
+                        addView(button.apply {
+                            val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                            params.setMargins(
+                                if (index == 0) 0 else dp(6),
+                                dp(10),
+                                if (index == rowItems.lastIndex) 0 else dp(6),
+                                0
+                            )
+                            layoutParams = params
+                        })
+                    }
+                    if (rowItems.size == 1) {
+                        addView(View(this@MainActivity).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
+                                setMargins(dp(6), 0, 0, 0)
+                            }
+                        })
+                    }
+                })
+            }
+        }
+    }
+
+    private fun optionButton(item: OptionItem): TextView {
+        return TextView(this).apply {
+            gravity = Gravity.CENTER
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(dp(12), dp(11), dp(12), dp(11))
+            applyOptionButtonState(this, item.title, item.selected)
+            setOnClickListener { item.action() }
+        }
+    }
+
+    private fun applyOptionButtonState(button: TextView, title: String, selected: Boolean) {
+        button.text = if (selected) "✓ $title" else title
+        button.setTextColor(if (selected) Color.WHITE else colorText)
+        button.background = GradientDrawable().apply {
+            cornerRadius = dp(18).toFloat()
+            setColor(if (selected) colorAccent else colorSurfaceLight)
+            setStroke(dp(1), if (selected) colorAccentLight else colorStroke)
+        }
+    }
+
+    private fun sliderRow(
+        title: String,
+        value: Int,
+        min: Int,
+        max: Int,
+        suffix: String,
+        onChanged: (Int) -> Unit
+    ): LinearLayout {
+        val safeValue = value.coerceIn(min, max)
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(8), 0, dp(4))
+
+            val valueText = TextView(this@MainActivity).apply {
+                text = "$title：$safeValue$suffix"
+                textSize = 14f
+                setTextColor(colorText)
+                setPadding(0, 0, 0, dp(6))
+            }
+            addView(valueText)
+
+            addView(SeekBar(this@MainActivity).apply {
+                this.max = max - min
+                progress = safeValue - min
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                        val newValue = min + progress
+                        valueText.text = "$title：$newValue$suffix"
+                        if (fromUser) onChanged(newValue)
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                    override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+                })
+            })
+        }
+    }
+
+    private fun colorControl(
+        title: String,
+        color: Int,
+        onChanged: (Int) -> Unit
+    ): LinearLayout {
+        val initialRed = Color.red(color)
+        val initialGreen = Color.green(color)
+        val initialBlue = Color.blue(color)
+        val initialAlpha = Color.alpha(color)
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(6), 0, 0)
+
+            val preview = TextView(this@MainActivity).apply {
+                text = "$title：R$initialRed G$initialGreen B$initialBlue A$initialAlpha"
+                textSize = 14f
+                setTextColor(colorText)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = colorPreviewBackground(color)
+                setOnClickListener {
+                    showColorPickerDialog(title, currentColor = colorFromSummaryText(text.toString(), color)) { pickedColor ->
+                        text = "$title：${FloatingLyricsStyleStore.colorSummary(pickedColor)}"
+                        background = colorPreviewBackground(pickedColor)
+                        onChanged(pickedColor)
+                    }
+                }
+            }
+            addView(preview)
+            addView(smallHint("点击上方颜色条可打开调色板，也可以用下面的滑条精细调整。"))
+
+            var red = initialRed
+            var green = initialGreen
+            var blue = initialBlue
+            var alpha = initialAlpha
+
+            fun updateColor() {
+                val newColor = Color.argb(alpha, red, green, blue)
+                preview.text = "$title：${FloatingLyricsStyleStore.colorSummary(newColor)}"
+                preview.background = colorPreviewBackground(newColor)
+                onChanged(newColor)
+            }
+
+            addView(sliderRow("R", red, 0, 255, "") { value ->
+                red = value
+                updateColor()
+            })
+            addView(sliderRow("G", green, 0, 255, "") { value ->
+                green = value
+                updateColor()
+            })
+            addView(sliderRow("B", blue, 0, 255, "") { value ->
+                blue = value
+                updateColor()
+            })
+            addView(sliderRow("不透明度", alpha, 0, 255, "") { value ->
+                alpha = value
+                updateColor()
+            })
+        }
+    }
+
+    private fun showColorPickerDialog(
+        title: String,
+        currentColor: Int,
+        onPicked: (Int) -> Unit
+    ) {
+        var red = Color.red(currentColor)
+        var green = Color.green(currentColor)
+        var blue = Color.blue(currentColor)
+        var alpha = Color.alpha(currentColor)
+        var selectedColor = currentColor
+
+        val dialogContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(12), dp(20), 0)
+        }
+
+        val preview = TextView(this).apply {
+            text = "${FloatingLyricsStyleStore.colorSummary(selectedColor)}"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            gravity = Gravity.CENTER
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = colorPreviewBackground(selectedColor)
+        }
+        dialogContainer.addView(preview)
+
+        fun refreshPreview() {
+            selectedColor = Color.argb(alpha, red, green, blue)
+            preview.text = FloatingLyricsStyleStore.colorSummary(selectedColor)
+            preview.background = colorPreviewBackground(selectedColor)
+        }
+
+        dialogContainer.addView(smallHint("基础色板"))
+        dialogContainer.addView(colorPaletteGrid { picked ->
+            red = Color.red(picked)
+            green = Color.green(picked)
+            blue = Color.blue(picked)
+            alpha = Color.alpha(picked)
+            refreshPreview()
+        })
+
+        dialogContainer.addView(sliderRow("R", red, 0, 255, "") { value ->
+            red = value
+            refreshPreview()
+        })
+        dialogContainer.addView(sliderRow("G", green, 0, 255, "") { value ->
+            green = value
+            refreshPreview()
+        })
+        dialogContainer.addView(sliderRow("B", blue, 0, 255, "") { value ->
+            blue = value
+            refreshPreview()
+        })
+        dialogContainer.addView(sliderRow("不透明度", alpha, 0, 255, "") { value ->
+            alpha = value
+            refreshPreview()
+        })
+
+        val dialogScroll = ScrollView(this).apply {
+            addView(dialogContainer)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("选择${title}颜色")
+            .setView(dialogScroll)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("应用") { _, _ ->
+                onPicked(selectedColor)
+            }
+            .show()
+    }
+
+    private fun colorPaletteGrid(onPicked: (Int) -> Unit): LinearLayout {
+        val colors = listOf(
+            Color.WHITE, Color.LTGRAY, Color.GRAY, Color.DKGRAY, Color.BLACK,
+            Color.rgb(255, 88, 88), Color.rgb(255, 159, 67), Color.rgb(255, 221, 89), Color.rgb(46, 213, 115), Color.rgb(112, 161, 255),
+            Color.rgb(83, 82, 237), Color.rgb(223, 108, 255), Color.rgb(176, 226, 255), Color.rgb(10, 14, 24), Color.TRANSPARENT
+        )
+
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            colors.chunked(5).forEach { rowColors ->
+                addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    rowColors.forEachIndexed { index, swatchColor ->
+                        addView(View(this@MainActivity).apply {
+                            background = colorPreviewBackground(swatchColor)
+                            setOnClickListener { onPicked(swatchColor) }
+                            layoutParams = LinearLayout.LayoutParams(0, dp(42), 1f).apply {
+                                setMargins(
+                                    if (index == 0) 0 else dp(4),
+                                    dp(8),
+                                    if (index == rowColors.lastIndex) 0 else dp(4),
+                                    0
+                                )
+                            }
+                        })
+                    }
+                })
+            }
+        }
+    }
+
+    private fun colorPreviewBackground(color: Int): GradientDrawable {
+        return GradientDrawable().apply {
+            cornerRadius = dp(16).toFloat()
+            setColor(color)
+            setStroke(dp(1), colorStroke)
+        }
+    }
+
+    private fun colorFromSummaryText(text: String, fallback: Int): Int {
+        val regex = Regex("R(\\d+)\\s+G(\\d+)\\s+B(\\d+)\\s+A(\\d+)")
+        val match = regex.find(text) ?: return fallback
+        val (r, g, b, a) = match.destructured
+        return Color.argb(
+            a.toIntOrNull()?.coerceIn(0, 255) ?: Color.alpha(fallback),
+            r.toIntOrNull()?.coerceIn(0, 255) ?: Color.red(fallback),
+            g.toIntOrNull()?.coerceIn(0, 255) ?: Color.green(fallback),
+            b.toIntOrNull()?.coerceIn(0, 255) ?: Color.blue(fallback)
+        )
+    }
+
+    private fun withAlpha(color: Int, alpha: Int): Int {
+        return Color.argb(
+            alpha.coerceIn(0, 255),
+            Color.red(color),
+            Color.green(color),
+            Color.blue(color)
+        )
     }
 
     private fun mediaSourceCard(controller: MediaController, selected: Boolean): View {
@@ -648,12 +1172,60 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleLock() {
-        locked = !locked
+        locked = !FloatingLyricsStyleStore.isLocked(this)
+        FloatingLyricsStyleStore.setLocked(this, locked)
         val intent = Intent(this, FloatingLyricsService::class.java).apply {
             action = if (locked) FloatingLyricsService.ACTION_LOCK else FloatingLyricsService.ACTION_UNLOCK
         }
         startLyricsService(intent)
-        renderCurrentPage()
+    }
+
+    private fun toggleClickThrough() {
+        clickThrough = !FloatingLyricsStyleStore.isClickThrough(this)
+        FloatingLyricsStyleStore.setClickThrough(this, clickThrough)
+        val intent = Intent(this, FloatingLyricsService::class.java).apply {
+            action = if (clickThrough) {
+                FloatingLyricsService.ACTION_CLICK_THROUGH_ON
+            } else {
+                FloatingLyricsService.ACTION_CLICK_THROUGH_OFF
+            }
+        }
+        startLyricsService(intent)
+    }
+
+    private fun applyFloatingPreset(preset: String) {
+        FloatingLyricsStyleStore.applyPreset(this, preset)
+        notifyFloatingStyleChanged()
+    }
+
+    private fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean = true) {
+        FloatingLyricsStyleStore.setTextSize(this, textSizeSp)
+        notifyFloatingStyleChanged()
+        if (refreshPage) renderCurrentPage()
+    }
+
+    private fun applyFloatingTextColor(color: Int, refreshPage: Boolean = true) {
+        FloatingLyricsStyleStore.setTextColor(this, color)
+        notifyFloatingStyleChanged()
+        if (refreshPage) renderCurrentPage()
+    }
+
+    private fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean = true) {
+        FloatingLyricsStyleStore.setBackgroundColor(this, color)
+        notifyFloatingStyleChanged()
+        if (refreshPage) renderCurrentPage()
+    }
+
+    private fun applyFloatingGravity(gravity: Int) {
+        FloatingLyricsStyleStore.setGravity(this, gravity)
+        notifyFloatingStyleChanged()
+    }
+
+    private fun notifyFloatingStyleChanged() {
+        val intent = Intent(this, FloatingLyricsService::class.java).apply {
+            action = FloatingLyricsService.ACTION_APPLY_STYLE
+        }
+        startLyricsService(intent)
     }
 
     private fun getPlaybackStateText(state: Int?): String {

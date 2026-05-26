@@ -18,7 +18,7 @@ object LrcParser {
                     return@flatMap emptySequence<LrcLine>()
                 }
 
-                val text = line.replace(timeTagRegex, "").trim()
+                val text = normalizeDisplayText(line.replace(timeTagRegex, "").trim())
                 if (text.isBlank()) {
                     return@flatMap emptySequence<LrcLine>()
                 }
@@ -30,6 +30,15 @@ object LrcParser {
             }
             .sortedBy { it.timeMs }
             .toList()
+    }
+
+    private fun normalizeDisplayText(text: String): String {
+        return text
+            .replace(" / ", "\n")
+            .replace("／", "\n")
+            .lines()
+            .joinToString("\n") { it.trim() }
+            .trim()
     }
 
     private fun parseTimeTag(match: MatchResult): Long? {
