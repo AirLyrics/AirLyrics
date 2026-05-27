@@ -68,7 +68,6 @@ import com.andsi.airlyrics.ui.components.statusPill
 import com.andsi.airlyrics.ui.pages.createFloatingPage
 import com.andsi.airlyrics.ui.pages.createMediaPage
 import com.andsi.airlyrics.ui.pages.createSettingsPage
-import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
 import com.andsi.airlyrics.ui.theme.colorAccentMint
@@ -880,185 +879,231 @@ class MainActivity : AppCompatActivity() {
         color: Int,
         onChanged: (Int) -> Unit
     ): LinearLayout {
-        val initialRed = Color.red(color)
-        val initialGreen = Color.green(color)
-        val initialBlue = Color.blue(color)
-        val initialAlpha = Color.alpha(color)
+        var red = Color.red(color)
+        var green = Color.green(color)
+        var blue = Color.blue(color)
+        var alpha = Color.alpha(color)
+        var rgbExpanded = false
+
+        val standardColors = listOf(
+            "蓝" to Color.rgb(66, 165, 245),
+            "紫" to Color.rgb(126, 87, 194),
+            "粉" to Color.rgb(236, 64, 122),
+            "青" to Color.rgb(38, 198, 218),
+            "绿" to Color.rgb(102, 187, 106),
+            "橙" to Color.rgb(255, 167, 38),
+            "红" to Color.rgb(239, 83, 80),
+            "白" to Color.WHITE
+        )
 
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, dp(6), 0, 0)
 
             val preview = TextView(this@MainActivity).apply {
-                text = "$title：R$initialRed G$initialGreen B$initialBlue A$initialAlpha"
                 textSize = 14f
                 setTextColor(colorText)
                 setPadding(dp(12), dp(10), dp(12), dp(10))
-                background = colorPreviewBackground(color)
-                setOnClickListener {
-                    showColorPickerDialog(title, currentColor = colorFromSummaryText(text.toString(), color)) { pickedColor ->
-                        text = "$title：${FloatingLyricsStyleStore.colorSummary(pickedColor)}"
-                        background = colorPreviewBackground(pickedColor)
-                        onChanged(pickedColor)
-                    }
-                }
             }
             addView(preview)
-            addView(smallHint("点击上方颜色条可打开调色板，也可以用下面的滑条精细调整。"))
+            addView(smallHint("点击标准色会立即应用；改动 RGB 后会进入自定义颜色状态。"))
 
-            var red = initialRed
-            var green = initialGreen
-            var blue = initialBlue
-            var alpha = initialAlpha
+            val swatchViews = mutableListOf<Pair<Int?, TextView>>()
+            val swatchGrid = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+            }
+            addView(swatchGrid)
 
-            fun updateColor() {
-                val newColor = Color.argb(alpha, red, green, blue)
+            val fineTuneButton = actionButton("展开 RGB 细调") { }
+            val rgbPanel = LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                visibility = View.GONE
+                setPadding(0, dp(6), 0, 0)
+            }
+            addView(fineTuneButton)
+            addView(rgbPanel)
+
+            fun currentColor(): Int = Color.argb(alpha, red, green, blue)
+
+            fun selectedStandardColor(): Int? {
+                val current = currentColor()
+                return standardColors.firstOrNull { (_, swatchColor) ->
+                    Color.red(current) == Color.red(swatchColor) &&
+                        Color.green(current) == Color.green(swatchColor) &&
+                        Color.blue(current) == Color.blue(swatchColor) &&
+                        Color.alpha(current) == Color.alpha(swatchColor)
+                }?.second
+            }
+
+            fun swatchBackground(swatchColor: Int, selected: Boolean): GradientDrawable {
+                return GradientDrawable().apply {
+                    cornerRadius = dp(16).toFloat()
+                    setColor(swatchColor)
+                    setStroke(dp(if (selected) 3 else 1), if (selected) colorAccent else colorStroke)
+                }
+            }
+
+            fun refreshSwatches() {
+                val current = currentColor()
+                val selectedPreset = selectedStandardColor()
+                swatchViews.forEach { (presetColor, view) ->
+                    val selected = if (presetColor == null) {
+                        selectedPreset == null
+                    } else {
+                        selectedPreset != null &&
+                            Color.red(selectedPreset) == Color.red(presetColor) &&
+                            Color.green(selectedPreset) == Color.green(presetColor) &&
+                            Color.blue(selectedPreset) == Color.blue(presetColor)
+                    }
+                    val displayColor = presetColor ?: current
+                    view.background = swatchBackground(displayColor, selected)
+                    view.setTextColor(if (isDarkColor(displayColor)) Color.WHITE else Color.rgb(28, 34, 46))
+                }
+            }
+
+            fun refreshPreview(dispatch: Boolean) {
+                val newColor = currentColor()
                 preview.text = "$title：${FloatingLyricsStyleStore.colorSummary(newColor)}"
                 preview.background = colorPreviewBackground(newColor)
-                onChanged(newColor)
+                refreshSwatches()
+                if (dispatch) onChanged(newColor)
             }
 
-            addView(sliderRow("R", red, 0, 255, "") { value ->
-                red = value
-                updateColor()
-            })
-            addView(sliderRow("G", green, 0, 255, "") { value ->
-                green = value
-                updateColor()
-            })
-            addView(sliderRow("B", blue, 0, 255, "") { value ->
-                blue = value
-                updateColor()
-            })
-            addView(sliderRow("不透明度", alpha, 0, 255, "") { value ->
-                alpha = value
-                updateColor()
-            })
-        }
-    }
-
-    internal fun showColorPickerDialog(
-        title: String,
-        currentColor: Int,
-        onPicked: (Int) -> Unit
-    ) {
-        var red = Color.red(currentColor)
-        var green = Color.green(currentColor)
-        var blue = Color.blue(currentColor)
-        var alpha = Color.alpha(currentColor)
-        var selectedColor = currentColor
-
-        val dialogContainer = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(12), dp(20), 0)
-        }
-
-        val preview = TextView(this).apply {
-            text = "${FloatingLyricsStyleStore.colorSummary(selectedColor)}"
-            textSize = 14f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(dp(12), dp(12), dp(12), dp(12))
-            background = colorPreviewBackground(selectedColor)
-        }
-        dialogContainer.addView(preview)
-
-        fun refreshPreview() {
-            selectedColor = Color.argb(alpha, red, green, blue)
-            preview.text = FloatingLyricsStyleStore.colorSummary(selectedColor)
-            preview.background = colorPreviewBackground(selectedColor)
-        }
-
-        dialogContainer.addView(smallHint("基础色板"))
-        dialogContainer.addView(colorPaletteGrid { picked ->
-            red = Color.red(picked)
-            green = Color.green(picked)
-            blue = Color.blue(picked)
-            alpha = Color.alpha(picked)
-            refreshPreview()
-        })
-
-        dialogContainer.addView(sliderRow("R", red, 0, 255, "") { value ->
-            red = value
-            refreshPreview()
-        })
-        dialogContainer.addView(sliderRow("G", green, 0, 255, "") { value ->
-            green = value
-            refreshPreview()
-        })
-        dialogContainer.addView(sliderRow("B", blue, 0, 255, "") { value ->
-            blue = value
-            refreshPreview()
-        })
-        dialogContainer.addView(sliderRow("不透明度", alpha, 0, 255, "") { value ->
-            alpha = value
-            refreshPreview()
-        })
-
-        val dialogScroll = ScrollView(this).apply {
-            addView(dialogContainer)
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle("选择${title}颜色")
-            .setView(dialogScroll)
-            .setNegativeButton("取消", null)
-            .setPositiveButton("应用") { _, _ ->
-                onPicked(selectedColor)
-            }
-            .show()
-    }
-
-    internal fun colorPaletteGrid(onPicked: (Int) -> Unit): LinearLayout {
-        val colors = AirLyricsTheme.colorSwatches
-
-
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            colors.chunked(5).forEach { rowColors ->
-                addView(LinearLayout(this@MainActivity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    rowColors.forEachIndexed { index, swatchColor ->
-                        addView(View(this@MainActivity).apply {
-                            background = colorPreviewBackground(swatchColor)
-                            enableSoftPressFeedback(0.9f)
-                            setOnClickListener {
-                                onPicked(swatchColor)
-                                playTinyPulse(this)
+            fun colorSliderRow(
+                sliderTitle: String,
+                initialValue: Int,
+                onValueChanged: (Int) -> Unit
+            ): Pair<SeekBar, TextView> {
+                val row = LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(0, dp(8), 0, dp(4))
+                }
+                val valueText = TextView(this@MainActivity).apply {
+                    text = "$sliderTitle：$initialValue"
+                    textSize = 14f
+                    setTextColor(colorText)
+                    setPadding(0, 0, 0, dp(6))
+                }
+                row.addView(valueText)
+                val seekBar = SeekBar(this@MainActivity).apply {
+                    max = 255
+                    progress = initialValue.coerceIn(0, 255)
+                    setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                        override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                            valueText.text = "$sliderTitle：$progress"
+                            if (fromUser) {
+                                onValueChanged(progress)
+                                refreshPreview(dispatch = true)
                             }
+                        }
+
+                        override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                        override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+                    })
+                }
+                row.addView(seekBar)
+                rgbPanel.addView(row)
+                return seekBar to valueText
+            }
+
+            val redSlider = colorSliderRow("R", red) { red = it }
+            val greenSlider = colorSliderRow("G", green) { green = it }
+            val blueSlider = colorSliderRow("B", blue) { blue = it }
+            val alphaSlider = colorSliderRow("不透明度", alpha) { alpha = it }
+
+            fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
+                pair.first.progress = value.coerceIn(0, 255)
+                pair.second.text = "$titleText：$value"
+            }
+
+            fun syncSliders() {
+                setSlider(redSlider, "R", red)
+                setSlider(greenSlider, "G", green)
+                setSlider(blueSlider, "B", blue)
+                setSlider(alphaSlider, "不透明度", alpha)
+            }
+
+            fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
+                return TextView(this@MainActivity).apply {
+                    text = label
+                    textSize = 12f
+                    typeface = Typeface.DEFAULT_BOLD
+                    gravity = Gravity.CENTER
+                    setPadding(dp(6), 0, dp(6), 0)
+                    enableSoftPressFeedback(0.9f)
+                    setOnClickListener {
+                        onClick()
+                        playTinyPulse(this)
+                    }
+                    swatchViews.add(presetColor to this)
+                }
+            }
+
+            val swatches = standardColors.map { (label, swatchColor) ->
+                Pair(label, swatchColor as Int?)
+            } + listOf("自定义" to null)
+
+            swatches.chunked(3).forEach { rowItems ->
+                swatchGrid.addView(LinearLayout(this@MainActivity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    rowItems.forEachIndexed { index, (label, presetColor) ->
+                        val button = makeSwatch(label, presetColor) {
+                            if (presetColor == null) {
+                                rgbExpanded = true
+                                rgbPanel.visibility = View.VISIBLE
+                                fineTuneButton.text = "收起 RGB 细调"
+                            } else {
+                                red = Color.red(presetColor)
+                                green = Color.green(presetColor)
+                                blue = Color.blue(presetColor)
+                                syncSliders()
+                                refreshPreview(dispatch = true)
+                            }
+                        }
+                        addView(button.apply {
                             layoutParams = LinearLayout.LayoutParams(0, dp(42), 1f).apply {
                                 setMargins(
-                                    if (index == 0) 0 else dp(4),
+                                    if (index == 0) 0 else dp(5),
                                     dp(8),
-                                    if (index == rowColors.lastIndex) 0 else dp(4),
+                                    if (index == rowItems.lastIndex) 0 else dp(5),
                                     0
                                 )
                             }
                         })
                     }
+                    repeat(3 - rowItems.size) {
+                        addView(View(this@MainActivity).apply {
+                            layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
+                                setMargins(dp(5), 0, 0, 0)
+                            }
+                        })
+                    }
                 })
             }
+
+            fineTuneButton.setOnClickListener {
+                rgbExpanded = !rgbExpanded
+                rgbPanel.visibility = if (rgbExpanded) View.VISIBLE else View.GONE
+                fineTuneButton.text = if (rgbExpanded) "收起 RGB 细调" else "展开 RGB 细调"
+                playTinyPulse(fineTuneButton)
+            }
+
+            syncSliders()
+            refreshPreview(dispatch = false)
         }
     }
 
     internal fun colorPreviewBackground(color: Int): GradientDrawable {
         return GradientDrawable().apply {
-            cornerRadius = dp(16).toFloat()
-            setColor(color)
-            setStroke(dp(1), colorStroke)
+            cornerRadius = dp(18).toFloat()
+            setColor(withAlpha(color, 42))
+            setStroke(dp(1), withAlpha(color, 190))
         }
     }
 
-    internal fun colorFromSummaryText(text: String, fallback: Int): Int {
-        val regex = Regex("R(\\d+)\\s+G(\\d+)\\s+B(\\d+)\\s+A(\\d+)")
-        val match = regex.find(text) ?: return fallback
-        val (r, g, b, a) = match.destructured
-        return Color.argb(
-            a.toIntOrNull()?.coerceIn(0, 255) ?: Color.alpha(fallback),
-            r.toIntOrNull()?.coerceIn(0, 255) ?: Color.red(fallback),
-            g.toIntOrNull()?.coerceIn(0, 255) ?: Color.green(fallback),
-            b.toIntOrNull()?.coerceIn(0, 255) ?: Color.blue(fallback)
-        )
+    internal fun isDarkColor(color: Int): Boolean {
+        val luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color))
+        return luminance < 150
     }
 
     internal fun withAlpha(color: Int, alpha: Int): Int {

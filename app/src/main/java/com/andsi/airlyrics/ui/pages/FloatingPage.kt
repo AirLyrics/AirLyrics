@@ -36,7 +36,7 @@ internal fun MainActivity.createFloatingPage(): View {
     var focusOverlay: FrameLayout? = null
     var activeBubble: LinearLayout? = null
     var selectedTileView: View? = null
-    var previewExpanded = true
+    var previewExpanded = FloatingLyricsStyleStore.isPreviewExpanded(this)
     var previewBodyView: View? = null
     var previewToggleTextView: TextView? = null
 
@@ -187,6 +187,7 @@ internal fun MainActivity.createFloatingPage(): View {
                 enableSoftPressFeedback(0.94f)
                 setOnClickListener {
                     previewExpanded = !previewExpanded
+                    FloatingLyricsStyleStore.setPreviewExpanded(this@createFloatingPage, previewExpanded)
                     playTinyPulse(this)
                     updatePreviewFold()
                 }
@@ -202,41 +203,13 @@ internal fun MainActivity.createFloatingPage(): View {
         addView(
             sectionTitle(
                 "悬浮窗设置",
-                "点击方格后，方格会像轻软气泡一样放大成调节卡片。"
+                "上方负责看效果，下方分区调参数；颜色先选预设，再按需展开 RGB 细调。"
             )
         )
 
+        addView(sectionTitle("外观", "主题、颜色、字号、背景、阴影和窗口尺寸。"))
         addView(
             settingGrid(
-                FloatingSettingTile(
-                    title = "显示控制",
-                    subtitle = floatingDisplaySummary(),
-                    mark = "●",
-                    onClick = { tile ->
-                        openPanel(tile, "显示控制", "快速显示、隐藏、锁定或开启点击穿透。") {
-                            addView(horizontalButtons(
-                                "显示" to { showFloatingLyrics() },
-                                "隐藏" to { hideFloatingLyrics() }
-                            ))
-
-                            val lockButton = actionButton(floatingLockButtonText()) { }
-                            lockButton.setOnClickListener {
-                                toggleLock()
-                                lockButton.text = floatingLockButtonText()
-                                refreshFloatingPreview()
-                            }
-                            addView(lockButton)
-
-                            val clickThroughButton = actionButton(floatingClickThroughButtonText()) { }
-                            clickThroughButton.setOnClickListener {
-                                toggleClickThrough()
-                                clickThroughButton.text = floatingClickThroughButtonText()
-                                refreshFloatingPreview()
-                            }
-                            addView(clickThroughButton)
-                        }
-                    }
-                ),
                 FloatingSettingTile(
                     title = "皮肤预设",
                     subtitle = FloatingLyricsStyleStore.getPresetTitle(style().presetName),
@@ -260,24 +233,11 @@ internal fun MainActivity.createFloatingPage(): View {
                     }
                 ),
                 FloatingSettingTile(
-                    title = "字体大小",
-                    subtitle = "${style().textSizeSp.toInt()}sp",
-                    mark = "Aa",
-                    onClick = { tile ->
-                        openPanel(tile, "字体大小", "调整歌词文字的显示尺寸。") {
-                            addView(sliderRow("大小", style().textSizeSp.toInt(), 14, 56, "sp") { value ->
-                                applyFloatingTextSize(value.toFloat(), refreshPage = false)
-                                refreshFloatingPreview()
-                            })
-                        }
-                    }
-                ),
-                FloatingSettingTile(
                     title = "文字颜色",
                     subtitle = FloatingLyricsStyleStore.colorSummary(style().textColor),
                     mark = "T",
                     onClick = { tile ->
-                        openPanel(tile, "文字颜色", "设置歌词本体颜色。") {
+                        openPanel(tile, "文字颜色", "先从标准色里快速选择，再展开 RGB 细调。") {
                             addView(colorControl("文字", style().textColor) { color ->
                                 applyFloatingTextColor(color, refreshPage = false)
                                 refreshFloatingPreview()
@@ -308,25 +268,15 @@ internal fun MainActivity.createFloatingPage(): View {
                     }
                 ),
                 FloatingSettingTile(
-                    title = "文字对齐",
-                    subtitle = FloatingLyricsStyleStore.getGravityTitle(style().gravity),
-                    mark = "≡",
+                    title = "字体大小",
+                    subtitle = "${style().textSizeSp.toInt()}sp",
+                    mark = "Aa",
                     onClick = { tile ->
-                        openPanel(tile, "文字对齐", "控制两行歌词的整体对齐方向。") {
-                            addView(liveOptionGrid(listOf(
-                                KeyedOptionItem("left", "左对齐", style().gravity == (Gravity.START or Gravity.CENTER_VERTICAL)) {
-                                    applyFloatingGravity(Gravity.START or Gravity.CENTER_VERTICAL)
-                                    refreshFloatingPreview()
-                                },
-                                KeyedOptionItem("center", "居中", style().gravity == Gravity.CENTER) {
-                                    applyFloatingGravity(Gravity.CENTER)
-                                    refreshFloatingPreview()
-                                },
-                                KeyedOptionItem("right", "右对齐", style().gravity == (Gravity.END or Gravity.CENTER_VERTICAL)) {
-                                    applyFloatingGravity(Gravity.END or Gravity.CENTER_VERTICAL)
-                                    refreshFloatingPreview()
-                                }
-                            )))
+                        openPanel(tile, "字体大小", "调整歌词文字的显示尺寸。") {
+                            addView(sliderRow("大小", style().textSizeSp.toInt(), 14, 56, "sp") { value ->
+                                applyFloatingTextSize(value.toFloat(), refreshPage = false)
+                                refreshFloatingPreview()
+                            })
                         }
                     }
                 ),
@@ -350,11 +300,11 @@ internal fun MainActivity.createFloatingPage(): View {
                     }
                 ),
                 FloatingSettingTile(
-                    title = "高级布局",
+                    title = "窗口布局",
                     subtitle = "宽度 ${style().maxWidthPercent}%",
                     mark = "⌗",
                     onClick = { tile ->
-                        openPanel(tile, "高级布局", "调整最大宽度、圆角和内边距。") {
+                        openPanel(tile, "窗口布局", "调整最大宽度、圆角和内边距。") {
                             addView(sliderRow("最大宽度", style().maxWidthPercent, 45, 100, "%") { value ->
                                 FloatingLyricsStyleStore.setMaxWidthPercent(this@createFloatingPage, value)
                                 notifyFloatingStyleChanged()
@@ -381,13 +331,90 @@ internal fun MainActivity.createFloatingPage(): View {
             )
         )
 
+        addView(sectionTitle("歌词显示", "当前句、前后句、翻译和对齐方式会放在这里。"))
+        addView(
+            settingGrid(
+                FloatingSettingTile(
+                    title = "文字对齐",
+                    subtitle = FloatingLyricsStyleStore.getGravityTitle(style().gravity),
+                    mark = "≡",
+                    onClick = { tile ->
+                        openPanel(tile, "文字对齐", "控制两行歌词的整体对齐方向。") {
+                            addView(liveOptionGrid(listOf(
+                                KeyedOptionItem("left", "左对齐", style().gravity == (Gravity.START or Gravity.CENTER_VERTICAL)) {
+                                    applyFloatingGravity(Gravity.START or Gravity.CENTER_VERTICAL)
+                                    refreshFloatingPreview()
+                                },
+                                KeyedOptionItem("center", "居中", style().gravity == Gravity.CENTER) {
+                                    applyFloatingGravity(Gravity.CENTER)
+                                    refreshFloatingPreview()
+                                },
+                                KeyedOptionItem("right", "右对齐", style().gravity == (Gravity.END or Gravity.CENTER_VERTICAL)) {
+                                    applyFloatingGravity(Gravity.END or Gravity.CENTER_VERTICAL)
+                                    refreshFloatingPreview()
+                                }
+                            )))
+                        }
+                    }
+                )
+            )
+        )
+        addView(card {
+            addView(bigText("后续显示项"))
+            addView(settingRow("前一句 / 后一句", "预留"))
+            addView(settingRow("原文 / 翻译", "预留"))
+            addView(smallHint("以后做双语歌词、前后句显示时，直接塞进这个模块，不会把外观设置挤乱。"))
+        })
+
+        addView(sectionTitle("动画效果", "歌词切换、淡入淡出、滚动和逐字高亮。"))
+        addView(card {
+            addView(bigText("动画预留区"))
+            addView(settingRow("歌词切换动画", "预留"))
+            addView(settingRow("逐字高亮 / 卡拉 OK", "预留"))
+            addView(smallHint("当前先不做无效开关，只把模块位置留好，后面加动画时结构不会塌。"))
+        })
+
+        addView(sectionTitle("行为设置", "显示隐藏、拖动锁定、点击穿透和位置记忆。"))
+        addView(
+            settingGrid(
+                FloatingSettingTile(
+                    title = "显示控制",
+                    subtitle = floatingDisplaySummary(),
+                    mark = "●",
+                    onClick = { tile ->
+                        openPanel(tile, "显示控制", "快速显示、隐藏、锁定或开启点击穿透。") {
+                            addView(horizontalButtons(
+                                "显示" to { showFloatingLyrics() },
+                                "隐藏" to { hideFloatingLyrics() }
+                            ))
+
+                            val lockButton = actionButton(floatingLockButtonText()) { }
+                            lockButton.setOnClickListener {
+                                toggleLock()
+                                lockButton.text = floatingLockButtonText()
+                                refreshFloatingPreview()
+                            }
+                            addView(lockButton)
+
+                            val clickThroughButton = actionButton(floatingClickThroughButtonText()) { }
+                            clickThroughButton.setOnClickListener {
+                                toggleClickThrough()
+                                clickThroughButton.text = floatingClickThroughButtonText()
+                                refreshFloatingPreview()
+                            }
+                            addView(clickThroughButton)
+                        }
+                    }
+                )
+            )
+        )
         addView(
             card {
                 addView(bigText("当前行为"))
                 addView(settingRow("记住位置", "已开启"))
                 addView(settingRow("拖动锁定", if (FloatingLyricsStyleStore.isLocked(this@createFloatingPage)) "已开启" else "已关闭"))
                 addView(settingRow("点击穿透", if (FloatingLyricsStyleStore.isClickThrough(this@createFloatingPage)) "已开启" else "已关闭"))
-                addView(smallHint("锁定只禁止拖动；穿透会让触摸事件落到下面的 App。"))
+                addView(smallHint("预览区展开/收起会自动记住；锁定只禁止拖动，穿透会让触摸事件落到下面的 App。"))
             }
         )
     }

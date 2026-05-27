@@ -26,6 +26,7 @@ object FloatingLyricsStyleStore {
     private const val KEY_CLICK_THROUGH = "click_through"
     private const val KEY_POS_X = "pos_x"
     private const val KEY_POS_Y = "pos_y"
+    private const val KEY_PREVIEW_EXPANDED = "preview_expanded"
 
     private const val DEFAULT_X = 100
     private const val DEFAULT_Y = 300
@@ -36,6 +37,19 @@ object FloatingLyricsStyleStore {
         FloatingLyricsPreset("neon", "霓虹蓝"),
         FloatingLyricsPreset("subtitle", "纯净字幕")
     )
+
+
+    fun isPreviewExpanded(context: Context): Boolean {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_PREVIEW_EXPANDED, true)
+    }
+
+    fun setPreviewExpanded(context: Context, expanded: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_PREVIEW_EXPANDED, expanded)
+            .apply()
+    }
 
     fun getStyle(context: Context): FloatingLyricsStyle {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
