@@ -141,7 +141,7 @@ class MediaNotificationListener : NotificationListenerService() {
                     "duration=$duration position=$position playing=$isPlaying"
         )
 
-        val intent = Intent(FloatingLyricsService.ACTION_MEDIA_UPDATE).apply {
+        val intent = Intent(BroadcastActions.MEDIA_UPDATE).apply {
             setPackage(packageName)
             putExtra("title", title)
             putExtra("artist", artist ?: "")
@@ -149,7 +149,7 @@ class MediaNotificationListener : NotificationListenerService() {
             putExtra("duration", duration)
             putExtra("position", position)
             putExtra("isPlaying", isPlaying)
-            putExtra(FloatingLyricsService.EXTRA_SOURCE_PACKAGE, controller.packageName)
+            putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, controller.packageName)
         }
 
         sendBroadcast(intent)
