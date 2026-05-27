@@ -9,8 +9,8 @@ import com.andsi.airlyrics.FloatingLyricsService
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
 
-internal fun MainActivity.createMediaPage(): View {
-    val container = pageContainer()
+internal fun MainActivity.createMediaPage(animateContent: Boolean = true): View {
+    val container = pageContainer(animateChanges = animateContent)
     val controllers = getActiveMediaControllers().filter { it.metadata != null || it.playbackState != null }
     val selectedPackage = MediaSourceStore.getSelectedPackage(this)
     val selectedController = controllers.firstOrNull { it.packageName == selectedPackage }
@@ -67,5 +67,5 @@ internal fun MainActivity.createMediaPage(): View {
     container.addView(spacer(18))
     container.addView(refreshMediaButton())
 
-    return scroll(container)
+    return scroll(container, animateChildren = animateContent)
 }

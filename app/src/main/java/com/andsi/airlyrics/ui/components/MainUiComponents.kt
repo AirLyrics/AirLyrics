@@ -23,19 +23,23 @@ import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-internal fun MainActivity.pageContainer(): LinearLayout {
+internal fun MainActivity.pageContainer(animateChanges: Boolean = true): LinearLayout {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        layoutTransition = softLayoutTransition()
+        if (animateChanges) {
+            layoutTransition = softLayoutTransition()
+        }
         setPadding(dp(20), dp(6), dp(20), dp(24))
     }
 }
 
-internal fun MainActivity.scroll(child: View): ScrollView {
+internal fun MainActivity.scroll(child: View, animateChildren: Boolean = true): ScrollView {
     return ScrollView(this).apply {
         isFillViewport = false
         addView(child)
-        post { animateChildrenCascade(child) }
+        if (animateChildren) {
+            post { animateChildrenCascade(child) }
+        }
     }
 }
 

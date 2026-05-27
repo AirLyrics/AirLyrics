@@ -305,7 +305,7 @@ class MainActivity : AppCompatActivity() {
         parent.addView(slot)
     }
 
-    internal fun renderCurrentPage() {
+    internal fun renderCurrentPage(animateContent: Boolean = true, animateTabs: Boolean = true) {
         val container = contentContainer ?: return
         (container.getChildAt(0) as? ScrollView)?.let { scrollView ->
             pageScrollY[renderedPage] = scrollView.scrollY
@@ -313,7 +313,7 @@ class MainActivity : AppCompatActivity() {
 
         val oldPage = renderedPage
         val oldSubPage = renderedSettingsSubPage
-        val shouldAnimate = container.childCount > 0 && (currentPage != oldPage || settingsSubPage != oldSubPage)
+        val shouldAnimate = animateContent && container.childCount > 0 && (currentPage != oldPage || settingsSubPage != oldSubPage)
         val slideFromRight = when {
             currentPage != oldPage -> currentPage.ordinal > oldPage.ordinal
             currentPage == Page.SETTINGS -> settingsSubPage.ordinal > oldSubPage.ordinal
@@ -321,10 +321,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         container.removeAllViews()
-        updateTabs()
+        updateTabs(animate = animateTabs)
 
         val pageView = when (currentPage) {
-            Page.MEDIA -> createMediaPage()
+            Page.MEDIA -> createMediaPage(animateContent = animateContent)
             Page.FLOATING -> createFloatingPage()
             Page.SETTINGS -> createSettingsPage()
         }
@@ -357,7 +357,7 @@ class MainActivity : AppCompatActivity() {
         return lines.maxOfOrNull { tab.paint.measureText(it) } ?: tab.paint.measureText(tab.text.toString())
     }
 
-    internal fun updateTabs() {
+    internal fun updateTabs(animate: Boolean = true) {
         tabViews.forEach { (page, view) ->
             val selected = page == currentPage
             val quickControlSelected = page == Page.FLOATING && selected
@@ -381,13 +381,22 @@ class MainActivity : AppCompatActivity() {
             view.setLineSpacing(0f, 0.92f)
             view.setTextColor(if (selected) Color.WHITE else colorTextMuted)
             view.background = null
-            view.animate()
-                .scaleX(if (quickControlSelected) 1.14f else if (selected) 1.02f else 1f)
-                .scaleY(if (quickControlSelected) 1.14f else if (selected) 1.02f else 1f)
-                .alpha(if (selected) 1f else 0.86f)
-                .setDuration(190L)
-                .setInterpolator(OvershootInterpolator(1.08f))
-                .start()
+            val targetScale = if (quickControlSelected) 1.14f else if (selected) 1.02f else 1f
+            val targetAlpha = if (selected) 1f else 0.86f
+            if (animate) {
+                view.animate()
+                    .scaleX(targetScale)
+                    .scaleY(targetScale)
+                    .alpha(targetAlpha)
+                    .setDuration(190L)
+                    .setInterpolator(OvershootInterpolator(1.08f))
+                    .start()
+            } else {
+                view.animate().cancel()
+                view.scaleX = targetScale
+                view.scaleY = targetScale
+                view.alpha = targetAlpha
+            }
         }
 
         val selectedTab = tabViews[currentPage] ?: return
@@ -1374,10 +1383,12 @@ class MainActivity : AppCompatActivity() {
         mediaRefreshHandler.postDelayed({
             mediaRefreshState = RefreshState.DONE
             onStateChanged()
-            if (currentPage == Page.MEDIA) {
-                renderCurrentPage()
-            }
-        }, 650)
+            mediaRefreshHandler.postDelayed({
+                if (currentPage == Page.MEDIA) {
+                    renderCurrentPage(animateContent = false, animateTabs = false)
+                }
+            }, 260L)
+        }, 650L)
     }
 
     internal fun updateMediaSourceSelectionVisuals(selectedPackage: String) {
@@ -1695,7 +1706,7 @@ class MainActivity : AppCompatActivity() {
         mediaRefreshHandler.postDelayed({
             mediaPageRefreshScheduled = false
             if (currentPage == Page.MEDIA) {
-                renderCurrentPage()
+                renderCurrentPage(animateContent = false, animateTabs = false)
             }
         }, 120L)
     }
