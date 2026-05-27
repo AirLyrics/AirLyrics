@@ -99,6 +99,7 @@ class MainActivity : AppCompatActivity() {
     internal val pageScrollY = mutableMapOf<Page, Int>()
     internal var renderedPage = Page.MEDIA
     internal var renderedSettingsSubPage = SettingsSubPage.HOME
+    internal var floatingPanelBackHandler: (() -> Boolean)? = null
 
     internal enum class RefreshState { IDLE, REFRESHING, DONE }
 
@@ -117,18 +118,31 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@registerForActivityResult
 
-            if (!quickFloatingVisible) {
-                Toast.makeText(this, "请先显示悬浮窗，再导入当前歌曲的歌词", Toast.LENGTH_LONG).show()
+            val media = getCurrentMediaSnapshot()
+            if (media == null || media.title.isBlank()) {
+                Toast.makeText(this, "请先播放并选择一首歌，再为当前音乐导入歌词", Toast.LENGTH_LONG).show()
                 return@registerForActivityResult
             }
 
-            val intent = Intent(this, FloatingLyricsService::class.java).apply {
-                action = BroadcastActions.IMPORT_LYRICS
-                data = uri
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
+            val exists = LyricsStorage.hasLocalLyrics(
+                context = this,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs
+            )
 
-            startLyricsService(intent)
+            if (exists) {
+                AlertDialog.Builder(this)
+                    .setTitle("当前音乐已有歌词")
+                    .setMessage("${media.displayText}\n\n要覆盖已有本地歌词吗？")
+                    .setNegativeButton("取消", null)
+                    .setPositiveButton("覆盖") { _, _ ->
+                        importLyricsForCurrentMedia(uri = uri, media = media, overwrite = true)
+                    }
+                    .show()
+            } else {
+                importLyricsForCurrentMedia(uri = uri, media = media, overwrite = false)
+            }
         }
 
     internal val selectLyricsDirLauncher =
@@ -142,7 +156,7 @@ class MainActivity : AppCompatActivity() {
 
             LyricsStorage.saveLyricsDirUri(this, uri)
             Toast.makeText(this, "已设置歌词保存目录", Toast.LENGTH_LONG).show()
-            renderCurrentPage()
+            renderCurrentPage(animateContent = false, animateTabs = false)
         }
 
     internal val notificationPermissionLauncher =
@@ -186,6 +200,26 @@ class MainActivity : AppCompatActivity() {
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
         quickFloatingVisible = isQuickFloatingVisible()
         renderCurrentPage()
+    }
+
+    @Deprecated("Use OnBackPressedDispatcher")
+    override fun onBackPressed() {
+        if (handleBackNavigation()) return
+        super.onBackPressed()
+    }
+
+    internal fun handleBackNavigation(): Boolean {
+        if (currentPage == Page.FLOATING && floatingPanelBackHandler?.invoke() == true) {
+            return true
+        }
+
+        if (currentPage == Page.SETTINGS && settingsSubPage != SettingsSubPage.HOME) {
+            settingsSubPage = SettingsSubPage.HOME
+            renderCurrentPage()
+            return true
+        }
+
+        return false
     }
 
     internal fun createMainView(): View {
@@ -321,6 +355,9 @@ class MainActivity : AppCompatActivity() {
 
         container.removeAllViews()
         updateTabs(animate = animateTabs)
+        if (currentPage != Page.FLOATING) {
+            floatingPanelBackHandler = null
+        }
 
         val pageView = when (currentPage) {
             Page.MEDIA -> createMediaPage(animateContent = animateContent)
@@ -480,14 +517,13 @@ class MainActivity : AppCompatActivity() {
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorAccent)
                     setPadding(0, 0, 0, dp(10))
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                     enableSoftPressFeedback(0.94f)
                     setOnClickListener {
                         settingsSubPage = SettingsSubPage.HOME
                         renderCurrentPage()
                     }
                 })
-                addView(themeToggleButton())
             })
             addView(TextView(this@MainActivity).apply {
                 text = title
@@ -588,13 +624,13 @@ class MainActivity : AppCompatActivity() {
                 setStroke(dp(1), colorStroke)
             }
             addView(TextView(this@MainActivity).apply {
-                text = item.name
+                text = item.displayTitle
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextStrong)
             })
             addView(TextView(this@MainActivity).apply {
-                text = LyricsStorage.formatLocalLyricsItem(item)
+                text = "${item.displaySubtitle} · ${LyricsStorage.formatLocalLyricsItem(item)}"
                 textSize = 12f
                 setTextColor(colorTextMuted)
                 setPadding(0, dp(4), 0, 0)
@@ -654,6 +690,86 @@ class MainActivity : AppCompatActivity() {
             action = BroadcastActions.RELOAD_LYRICS
         }
         startLyricsService(intent)
+    }
+
+    internal fun reloadFloatingLyricsFromOnline() {
+        if (!quickFloatingVisible) {
+            Toast.makeText(this, "请先显示悬浮窗，再重新联网搜索歌词", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val intent = Intent(this, FloatingLyricsService::class.java).apply {
+            action = BroadcastActions.RELOAD_ONLINE_LYRICS
+        }
+        startLyricsService(intent)
+        Toast.makeText(this, "正在重新联网搜索歌词", Toast.LENGTH_SHORT).show()
+    }
+
+    internal fun importLyricsForCurrentMedia(uri: Uri, media: CurrentMediaInfo, overwrite: Boolean) {
+        val imported = LyricsStorage.importLyricsFromUri(
+            context = this,
+            uri = uri,
+            title = media.title,
+            artist = media.artist,
+            duration = media.durationMs,
+            album = media.album,
+            overwrite = overwrite
+        )
+
+        if (imported) {
+            Toast.makeText(this, "已为当前音乐导入歌词", Toast.LENGTH_LONG).show()
+            reloadFloatingLyrics()
+            renderCurrentPage(animateContent = false, animateTabs = false)
+        } else {
+            Toast.makeText(this, "导入失败，可能不是可读取的歌词文件", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    internal fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo) {
+        val deleted = LyricsStorage.deleteLocalLyrics(
+            context = this,
+            title = media.title,
+            artist = media.artist,
+            duration = media.durationMs
+        )
+
+        if (deleted) {
+            Toast.makeText(this, "已移除当前音乐的本地歌词", Toast.LENGTH_LONG).show()
+            reloadFloatingLyrics()
+            renderCurrentPage(animateContent = false, animateTabs = false)
+        } else {
+            Toast.makeText(this, "当前音乐没有可移除的本地歌词", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    internal fun getCurrentMediaSnapshot(): CurrentMediaInfo? {
+        val selectedPackage = MediaSourceStore.getSelectedPackage(this)
+        val controllers = getActiveMediaControllers().filter { it.metadata != null || it.playbackState != null }
+        val controller = controllers.firstOrNull { it.packageName == selectedPackage }
+            ?: controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+            ?: controllers.firstOrNull()
+            ?: return null
+
+        val metadata = controller.metadata ?: return null
+        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty().trim()
+        if (title.isBlank()) return null
+
+        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
+            ?: metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+            ?: ""
+        val album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
+        val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
+        val state = controller.playbackState
+
+        return CurrentMediaInfo(
+            sourcePackage = controller.packageName,
+            title = title,
+            artist = artist,
+            album = album,
+            durationMs = duration,
+            isPlaying = state?.state == PlaybackState.STATE_PLAYING,
+            positionMs = state?.position ?: 0L
+        )
     }
 
     internal data class OptionItem(

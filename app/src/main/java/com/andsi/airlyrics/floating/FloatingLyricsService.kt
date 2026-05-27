@@ -97,10 +97,17 @@ class FloatingLyricsService : Service() {
             BroadcastActions.CLICK_THROUGH_OFF -> windowController.setClickThrough(false)
             BroadcastActions.APPLY_STYLE -> windowController.applyStyle()
             BroadcastActions.RELOAD_LYRICS -> reloadCurrentLyrics()
+            BroadcastActions.RELOAD_ONLINE_LYRICS -> reloadCurrentLyrics(
+                bypassLocal = true,
+                forceSaveOnline = true,
+                ignoreAutoSearchSetting = true
+            )
             BroadcastActions.SELECT_MEDIA_SOURCE -> selectMediaSource(
                 intent.getStringExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE)
             )
-            BroadcastActions.IMPORT_LYRICS -> intent.data?.let(::importLyrics)
+            BroadcastActions.IMPORT_LYRICS -> intent.data?.let { uri ->
+                importLyrics(uri = uri, overwrite = intent.getBooleanExtra(BroadcastActions.EXTRA_OVERWRITE_LYRICS, true))
+            }
         }
 
         return START_STICKY
@@ -116,7 +123,11 @@ class FloatingLyricsService : Service() {
         }
     }
 
-    private fun reloadCurrentLyrics() {
+    private fun reloadCurrentLyrics(
+        bypassLocal: Boolean = false,
+        forceSaveOnline: Boolean = false,
+        ignoreAutoSearchSetting: Boolean = false
+    ) {
         if (currentMedia.isEmpty) {
             clearLyricsState("♪ 等待媒体信息...")
             return
@@ -127,7 +138,13 @@ class FloatingLyricsService : Service() {
         )
         lastLyricsKey = requestKey
         activeLyricsRequestKey = requestKey
-        loadLyricsForSong(media = currentMedia, requestKey = requestKey)
+        loadLyricsForSong(
+            media = currentMedia,
+            requestKey = requestKey,
+            bypassLocal = bypassLocal,
+            forceSaveOnline = forceSaveOnline,
+            ignoreAutoSearchSetting = ignoreAutoSearchSetting
+        )
     }
 
     private fun selectMediaSource(packageName: String?) {
@@ -157,7 +174,13 @@ class FloatingLyricsService : Service() {
         return sourcePackage == selectedPackage
     }
 
-    private fun loadLyricsForSong(media: CurrentMediaInfo, requestKey: String) {
+    private fun loadLyricsForSong(
+        media: CurrentMediaInfo,
+        requestKey: String,
+        bypassLocal: Boolean = false,
+        forceSaveOnline: Boolean = false,
+        ignoreAutoSearchSetting: Boolean = false
+    ) {
         renderer.show(
             if (media.isPlaying) {
                 "♪ 正在查找歌词...\n${media.displayText}"
@@ -172,7 +195,10 @@ class FloatingLyricsService : Service() {
                 title = media.title,
                 artist = media.artist,
                 album = media.album,
-                durationMs = media.durationMs
+                durationMs = media.durationMs,
+                bypassLocal = bypassLocal,
+                forceSaveOnline = forceSaveOnline,
+                ignoreAutoSearchSetting = ignoreAutoSearchSetting
             )
 
             Handler(Looper.getMainLooper()).post {
@@ -198,7 +224,7 @@ class FloatingLyricsService : Service() {
     }
 
     private fun notFoundText(media: CurrentMediaInfo): String {
-        return if (LyricsSettingsStore.getLyricsSource(this) == LyricsSettingsStore.SOURCE_LOCAL_ONLY) {
+        return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
             "♪ 仅使用本地歌词\n${media.displayText}\n未找到本地文件"
         } else if (media.artist.isNotBlank()) {
             "♪ ${media.title} - ${media.artist}\n未找到歌词"
@@ -207,7 +233,7 @@ class FloatingLyricsService : Service() {
         }
     }
 
-    private fun importLyrics(uri: Uri) {
+    private fun importLyrics(uri: Uri, overwrite: Boolean) {
         val media = currentMedia
 
         if (media.title.isBlank()) {
@@ -220,7 +246,9 @@ class FloatingLyricsService : Service() {
             uri = uri,
             title = media.title,
             artist = media.artist,
-            duration = media.durationMs
+            duration = media.durationMs,
+            album = media.album,
+            overwrite = overwrite
         )
 
         if (!imported) {

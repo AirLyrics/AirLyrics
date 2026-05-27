@@ -89,6 +89,15 @@ internal fun MainActivity.createFloatingPage(): View {
             }
     }
 
+    floatingPanelBackHandler = {
+        if (activeBubble != null || focusOverlay?.visibility == View.VISIBLE) {
+            closePanel()
+            true
+        } else {
+            false
+        }
+    }
+
     fun openPanel(anchor: View, title: String, subtitle: String, content: LinearLayout.() -> Unit) {
         val overlay = focusOverlay ?: return
         selectedTileView = anchor

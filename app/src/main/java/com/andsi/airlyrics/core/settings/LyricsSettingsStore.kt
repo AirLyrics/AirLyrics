@@ -7,6 +7,7 @@ import com.andsi.airlyrics.core.settings.model.LyricsSourceOption
 object LyricsSettingsStore {
     private const val PREFS_NAME = "lyrics_settings"
     private const val KEY_LYRICS_SOURCE = "lyrics_source"
+    private const val KEY_AUTO_SEARCH_ONLINE = "auto_search_online"
     private const val KEY_AUTO_SAVE_LOCAL = "auto_save_local"
 
     const val SOURCE_NETEASE = "netease"
@@ -16,7 +17,7 @@ object LyricsSettingsStore {
         LyricsSourceOption(
             SOURCE_NETEASE,
             "网易云歌词",
-            "从网易云匹配歌词，适合中文和日系音乐。"
+            "本地没有歌词时，从网易云匹配歌词。"
         ),
         LyricsSourceOption(
             SOURCE_LOCAL_ONLY,
@@ -37,12 +38,32 @@ object LyricsSettingsStore {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putString(KEY_LYRICS_SOURCE, safeSource)
+            .putBoolean(KEY_AUTO_SEARCH_ONLINE, safeSource != SOURCE_LOCAL_ONLY)
             .apply()
     }
 
     fun getLyricsSourceTitle(context: Context): String {
         val source = getLyricsSource(context)
         return sourceOptions.firstOrNull { it.key == source }?.title ?: "网易云歌词"
+    }
+
+    fun isAutoSearchOnlineEnabled(context: Context): Boolean {
+        if (getLyricsSource(context) == SOURCE_LOCAL_ONLY) return false
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getBoolean(KEY_AUTO_SEARCH_ONLINE, true)
+    }
+
+    fun setAutoSearchOnlineEnabled(context: Context, enabled: Boolean) {
+        val editor = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_AUTO_SEARCH_ONLINE, enabled)
+
+        if (!enabled) {
+            editor.putString(KEY_LYRICS_SOURCE, SOURCE_LOCAL_ONLY)
+        } else if (getLyricsSource(context) == SOURCE_LOCAL_ONLY) {
+            editor.putString(KEY_LYRICS_SOURCE, SOURCE_NETEASE)
+        }
+
+        editor.apply()
     }
 
     fun isAutoSaveLocalEnabled(context: Context): Boolean {
@@ -60,6 +81,7 @@ object LyricsSettingsStore {
     fun getSettings(context: Context): LyricsSettings {
         return LyricsSettings(
             source = getLyricsSource(context),
+            autoSearchOnline = isAutoSearchOnlineEnabled(context),
             autoSaveLocal = isAutoSaveLocalEnabled(context)
         )
     }

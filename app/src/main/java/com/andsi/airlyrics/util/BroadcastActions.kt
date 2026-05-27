@@ -18,8 +18,10 @@ object BroadcastActions {
     const val SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
     const val APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
     const val RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
+    const val RELOAD_ONLINE_LYRICS = "com.andsi.airlyrics.RELOAD_ONLINE_LYRICS"
     const val WINDOW_VISIBILITY_CHANGED = "com.andsi.airlyrics.WINDOW_VISIBILITY_CHANGED"
 
     const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
     const val EXTRA_WINDOW_VISIBLE = "windowVisible"
+    const val EXTRA_OVERWRITE_LYRICS = "overwriteLyrics"
 }

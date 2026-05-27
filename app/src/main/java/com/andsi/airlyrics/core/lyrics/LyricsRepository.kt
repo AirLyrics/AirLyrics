@@ -8,7 +8,7 @@ import com.andsi.airlyrics.core.settings.LyricsSettingsStore
  *
  * Lookup order:
  * 1. Local lyrics, so imported/saved files always win.
- * 2. The selected online provider, unless the user chose local-only mode.
+ * 2. Online provider, only when the user allows online search.
  * 3. Optional local cache save for successful online results.
  */
 object LyricsRepository {
@@ -21,7 +21,10 @@ object LyricsRepository {
         title: String,
         artist: String,
         album: String = "",
-        durationMs: Long
+        durationMs: Long,
+        bypassLocal: Boolean = false,
+        forceSaveOnline: Boolean = false,
+        ignoreAutoSearchSetting: Boolean = false
     ): Result<LyricsProviderResult?> {
         val request = LyricsSearchRequest(
             context = context.applicationContext,
@@ -32,25 +35,36 @@ object LyricsRepository {
         )
 
         return runCatching {
-            LocalLyricsProvider.fetch(request).getOrThrow()?.let { localResult ->
-                return@runCatching localResult
+            if (!bypassLocal) {
+                LocalLyricsProvider.fetch(request).getOrThrow()?.let { localResult ->
+                    return@runCatching localResult
+                }
             }
 
             val settings = LyricsSettingsStore.getSettings(context)
-            if (settings.source == LyricsSettingsStore.SOURCE_LOCAL_ONLY) {
+            if (!ignoreAutoSearchSetting && (!settings.autoSearchOnline || settings.source == LyricsSettingsStore.SOURCE_LOCAL_ONLY)) {
                 return@runCatching null
             }
 
-            val provider = onlineProviders[settings.source] ?: NeteaseLyricsProvider
+            val providerKey = if (settings.source == LyricsSettingsStore.SOURCE_LOCAL_ONLY) {
+                LyricsSettingsStore.SOURCE_NETEASE
+            } else {
+                settings.source
+            }
+            val provider = onlineProviders[providerKey] ?: NeteaseLyricsProvider
             val onlineResult = provider.fetch(request).getOrThrow()
 
-            if (onlineResult != null && settings.autoSaveLocal) {
+            if (onlineResult != null && (settings.autoSaveLocal || forceSaveOnline)) {
                 LyricsStorage.saveLyrics(
                     context = context,
                     title = title,
                     artist = artist,
                     duration = durationMs,
-                    lyrics = onlineResult.lyrics
+                    lyrics = onlineResult.lyrics,
+                    album = album,
+                    source = LyricsStorage.SOURCE_DOWNLOADED,
+                    provider = onlineResult.providerName,
+                    overwrite = true
                 )
             }
 

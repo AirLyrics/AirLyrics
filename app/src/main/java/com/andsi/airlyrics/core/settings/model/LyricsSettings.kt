@@ -3,6 +3,7 @@ package com.andsi.airlyrics.core.settings.model
 /** User-facing lyrics lookup configuration. */
 data class LyricsSettings(
     val source: String,
+    val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean
 )
 
