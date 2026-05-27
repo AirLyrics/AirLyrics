@@ -12,8 +12,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.andsi.airlyrics.FloatingLyricsStyle
-import com.andsi.airlyrics.FloatingLyricsStyleStore
+import com.andsi.airlyrics.core.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.settings.FloatingLyricsStyleStore
 import com.andsi.airlyrics.MainActivity
 import com.andsi.airlyrics.MainActivity.FloatingSettingTile
 import com.andsi.airlyrics.MainActivity.KeyedOptionItem

@@ -13,7 +13,32 @@ data class NeteaseLyricsResult(
     val translatedLrc: String?
 )
 
-object NeteaseLyricsProvider {
+object NeteaseLyricsProvider : LyricsProvider {
+    override val id: String = "netease"
+    override val name: String = "网易云歌词"
+
+    override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
+        return fetchBestLyrics(
+            title = request.title,
+            artist = request.artist,
+            album = request.album,
+            durationMs = request.durationMs
+        ).map { result ->
+            result?.let {
+                LyricsProviderResult(
+                    providerId = id,
+                    providerName = name,
+                    lyrics = it.lrc,
+                    translatedLyrics = it.translatedLrc,
+                    matchedTitle = it.title,
+                    matchedArtist = it.artist,
+                    matchedAlbum = it.album,
+                    matchedDurationMs = it.durationMs
+                )
+            }
+        }
+    }
+
     fun fetchBestLyrics(
         title: String,
         artist: String,

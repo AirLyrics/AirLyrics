@@ -2,6 +2,7 @@ package com.andsi.airlyrics
 
 import android.content.Context
 
+/** Compatibility wrapper for older call sites. Prefer LyricsRepository for new code. */
 object LyricsFetcher {
     fun fetchSyncedLyrics(
         context: Context,
@@ -12,19 +13,13 @@ object LyricsFetcher {
         callback: (Result<String?>) -> Unit
     ) {
         Thread({
-            val result = runCatching {
-                when (LyricsSettingsStore.getLyricsSource(context)) {
-                    LyricsSettingsStore.SOURCE_NETEASE -> NeteaseLyricsProvider.fetchBestLyrics(
-                        title = title,
-                        artist = artist,
-                        album = album,
-                        durationMs = durationMs
-                    ).getOrThrow()?.lrc
-
-                    LyricsSettingsStore.SOURCE_LOCAL_ONLY -> null
-                    else -> null
-                }
-            }
+            val result = LyricsRepository.findLyrics(
+                context = context,
+                title = title,
+                artist = artist,
+                album = album,
+                durationMs = durationMs
+            ).map { providerResult -> providerResult?.lyrics }
 
             callback(result)
         }, "AirLyrics-LyricsFetch").start()

@@ -42,6 +42,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.andsi.airlyrics.core.settings.FloatingLyricsStyleStore
+import com.andsi.airlyrics.core.settings.QuickFloatingStore
+import com.andsi.airlyrics.core.settings.ThemeSettingsStore
+import com.andsi.airlyrics.core.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.animateChildrenCascade
 import com.andsi.airlyrics.ui.components.animatePageEnter
@@ -61,15 +65,10 @@ import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.components.softLayoutTransition
 import com.andsi.airlyrics.ui.components.spacer
 import com.andsi.airlyrics.ui.components.statusPill
-import com.andsi.airlyrics.ui.pages.createAboutSettingsPage
 import com.andsi.airlyrics.ui.pages.createFloatingPage
-import com.andsi.airlyrics.ui.pages.createLocalLyricsSettingsPage
 import com.andsi.airlyrics.ui.pages.createMediaPage
-import com.andsi.airlyrics.ui.pages.createSettingsHomePage
 import com.andsi.airlyrics.ui.pages.createSettingsPage
-import com.andsi.airlyrics.ui.pages.createSystemSettingsPage
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
-import com.andsi.airlyrics.ui.theme.ThemeStore
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
 import com.andsi.airlyrics.ui.theme.colorAccentMint
@@ -87,7 +86,7 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 
 class MainActivity : AppCompatActivity() {
     internal enum class Page { MEDIA, FLOATING, SETTINGS }
-    internal enum class SettingsSubPage { HOME, SYSTEM, LOCAL_LYRICS, ABOUT }
+    internal enum class SettingsSubPage { HOME, SYSTEM, THEME, FLOATING, LYRICS, ABOUT }
 
     internal var locked = false
     internal var clickThrough = false
@@ -1523,11 +1522,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun isDarkTheme(): Boolean {
-        return ThemeStore.isDark(this)
+        return ThemeSettingsStore.isDark(this)
     }
 
     internal fun setDarkTheme(enabled: Boolean) {
-        ThemeStore.setDark(this, enabled)
+        ThemeSettingsStore.setDark(this, enabled)
     }
 
     internal fun toggleThemeMode() {

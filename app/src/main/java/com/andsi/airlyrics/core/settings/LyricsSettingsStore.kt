@@ -1,6 +1,8 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.core.settings
 
 import android.content.Context
+import com.andsi.airlyrics.core.settings.model.LyricsSettings
+import com.andsi.airlyrics.core.settings.model.LyricsSourceOption
 
 object LyricsSettingsStore {
     private const val PREFS_NAME = "lyrics_settings"
@@ -9,12 +11,6 @@ object LyricsSettingsStore {
 
     const val SOURCE_NETEASE = "netease"
     const val SOURCE_LOCAL_ONLY = "local_only"
-
-    data class LyricsSourceOption(
-        val key: String,
-        val title: String,
-        val description: String
-    )
 
     val sourceOptions = listOf(
         LyricsSourceOption(
@@ -59,5 +55,12 @@ object LyricsSettingsStore {
             .edit()
             .putBoolean(KEY_AUTO_SAVE_LOCAL, enabled)
             .apply()
+    }
+
+    fun getSettings(context: Context): LyricsSettings {
+        return LyricsSettings(
+            source = getLyricsSource(context),
+            autoSaveLocal = isAutoSaveLocalEnabled(context)
+        )
     }
 }

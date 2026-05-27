@@ -1,24 +1,10 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.core.settings
 
 import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
-
-data class FloatingLyricsStyle(
-    val presetName: String,
-    val textSizeSp: Float,
-    val textColor: Int,
-    val shadowColor: Int,
-    val shadowRadius: Float,
-    val backgroundEnabled: Boolean,
-    val backgroundColor: Int,
-    val backgroundAlpha: Int,
-    val cornerRadiusDp: Int,
-    val paddingHorizontalDp: Int,
-    val paddingVerticalDp: Int,
-    val maxWidthPercent: Int,
-    val gravity: Int
-)
+import com.andsi.airlyrics.core.settings.model.FloatingLyricsPreset
+import com.andsi.airlyrics.core.settings.model.FloatingLyricsStyle
 
 object FloatingLyricsStyleStore {
     private const val PREFS_NAME = "floating_lyrics_style"
@@ -45,13 +31,11 @@ object FloatingLyricsStyleStore {
     private const val DEFAULT_Y = 300
 
     val presets = listOf(
-        Preset("transparent", "透明白字"),
-        Preset("bubble", "黑胶气泡"),
-        Preset("neon", "霓虹蓝"),
-        Preset("subtitle", "纯净字幕")
+        FloatingLyricsPreset("transparent", "透明白字"),
+        FloatingLyricsPreset("bubble", "黑胶气泡"),
+        FloatingLyricsPreset("neon", "霓虹蓝"),
+        FloatingLyricsPreset("subtitle", "纯净字幕")
     )
-
-    data class Preset(val key: String, val title: String)
 
     fun getStyle(context: Context): FloatingLyricsStyle {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

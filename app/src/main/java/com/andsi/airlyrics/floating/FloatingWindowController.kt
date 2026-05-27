@@ -10,6 +10,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
+import com.andsi.airlyrics.core.settings.FloatingLyricsStyleStore
 
 /**
  * Owns the floating lyrics window itself: creation, removal, dragging,

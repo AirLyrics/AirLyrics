@@ -1,10 +1,16 @@
-package com.andsi.airlyrics.ui.theme
+package com.andsi.airlyrics.core.settings
 
 import android.content.Context
+import com.andsi.airlyrics.core.settings.model.ThemeSettings
 
-internal object ThemeStore {
+/** Stores app-wide theme preferences. */
+object ThemeSettingsStore {
     private const val PREF_NAME = "app_theme"
     private const val KEY_DARK_MODE = "dark_mode"
+
+    fun getSettings(context: Context): ThemeSettings {
+        return ThemeSettings(darkMode = isDark(context))
+    }
 
     fun isDark(context: Context): Boolean {
         return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)

@@ -1,4 +1,4 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.core.settings
 
 import android.content.Context
 
