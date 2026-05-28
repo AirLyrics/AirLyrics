@@ -1,0 +1,27 @@
+package com.andsi.airlyrics.common
+
+/**
+ * Central place for app-local broadcast / service actions.
+ *
+ * Keeping action strings here avoids coupling UI and media code to
+ * FloatingLyricsService just to share Intent constants.
+ */
+object BroadcastActions {
+    const val SHOW = "com.andsi.airlyrics.SHOW"
+    const val HIDE = "com.andsi.airlyrics.HIDE"
+    const val LOCK = "com.andsi.airlyrics.LOCK"
+    const val UNLOCK = "com.andsi.airlyrics.UNLOCK"
+    const val CLICK_THROUGH_ON = "com.andsi.airlyrics.CLICK_THROUGH_ON"
+    const val CLICK_THROUGH_OFF = "com.andsi.airlyrics.CLICK_THROUGH_OFF"
+    const val MEDIA_UPDATE = "com.andsi.airlyrics.MEDIA_UPDATE"
+    const val IMPORT_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
+    const val SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
+    const val APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
+    const val RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
+    const val RELOAD_ONLINE_LYRICS = "com.andsi.airlyrics.RELOAD_ONLINE_LYRICS"
+    const val WINDOW_VISIBILITY_CHANGED = "com.andsi.airlyrics.WINDOW_VISIBILITY_CHANGED"
+
+    const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
+    const val EXTRA_WINDOW_VISIBLE = "windowVisible"
+    const val EXTRA_OVERWRITE_LYRICS = "overwriteLyrics"
+}

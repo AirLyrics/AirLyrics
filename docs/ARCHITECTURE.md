@@ -17,30 +17,34 @@ CONTRIBUTING.md       Contributor workflow
 
 ```text
 app/src/main/java/com/andsi/airlyrics/
-  MainActivity.kt
-  core/
-    lyrics/
-    media/
-    settings/
+  app/
+    MainActivity.kt
+    controller/
+  lyrics/
+  media/
+  settings/
+    model/
+    store/
   floating/
   ui/
     components/
+    navigation/
     pages/
     pages/settings/
     theme/
     widgets/
-  util/
+  common/
 ```
 
 ## Main responsibilities
 
 ### MainActivity
 
-`MainActivity.kt` is the app shell. It owns lifecycle wiring, page switching, permission launchers, media-state observation, and quick floating-window commands.
+`MainActivity.kt` is the app shell. It owns lifecycle wiring and delegates page rendering, UI actions, media commands, lyrics operations, and floating-window commands to small helpers/controllers.
 
 It should not become the home for new feature logic. When adding a feature, prefer one of the modules below.
 
-### core/media
+### media
 
 This module owns Android media-session observation and selected-player state.
 
@@ -53,7 +57,7 @@ MediaSourceStore.kt           Persists the selected media package.
 
 Use this module when changing player detection, playback state sync, or media-source selection.
 
-### core/lyrics
+### lyrics
 
 This module owns lyric lookup, provider routing, local lyric import/cache, and LRC parsing.
 
@@ -70,7 +74,7 @@ LrcParser.kt              Timestamped lyric parsing and current-line lookup.
 
 To add a lyric source, create a new provider implementing `LyricsProvider`, then register it in `LyricsRepository` and expose the option in `LyricsSettingsStore`.
 
-### core/settings
+### settings
 
 This module is the single settings center. UI and services should read/write settings through stores instead of directly touching `SharedPreferences`.
 
@@ -80,10 +84,10 @@ Important files:
 model/ThemeSettings.kt
 model/FloatingLyricsStyle.kt
 model/LyricsSettings.kt
-ThemeSettingsStore.kt
-FloatingLyricsStyleStore.kt
-LyricsSettingsStore.kt
-QuickFloatingStore.kt
+store/ThemeSettingsStore.kt
+store/FloatingLyricsStyleStore.kt
+store/LyricsSettingsStore.kt
+store/QuickFloatingStore.kt
 ```
 
 When adding a new setting, add it to a model first, then add store read/write methods, then wire UI and runtime behavior to that store.
@@ -135,7 +139,7 @@ This is the preferred place for settings UI changes.
 
 ### ui/theme
 
-Theme palettes, color definitions, and MainActivity theme helpers. Runtime persistence lives in `core/settings`, not here.
+Theme palettes, color definitions, and MainActivity theme helpers. Runtime persistence lives in `settings/store`, not here.
 
 ### util
 

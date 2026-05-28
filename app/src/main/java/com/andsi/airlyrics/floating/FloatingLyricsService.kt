@@ -1,4 +1,4 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.floating
 
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -11,7 +11,13 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
-import com.andsi.airlyrics.core.settings.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.LyricsRepository
+import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.common.BroadcastActions
+import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.MediaSourceStore
 
 class FloatingLyricsService : Service() {
     private lateinit var windowController: FloatingWindowController

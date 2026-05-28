@@ -1,4 +1,4 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.ui.widgets
 
 import android.animation.ValueAnimator
 import android.content.Context

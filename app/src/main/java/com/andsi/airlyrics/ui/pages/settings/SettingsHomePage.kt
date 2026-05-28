@@ -1,18 +1,19 @@
 package com.andsi.airlyrics.ui.pages.settings
 
 import android.view.View
-import com.andsi.airlyrics.MainActivity
-import com.andsi.airlyrics.MainActivity.SettingsSubPage
-import com.andsi.airlyrics.core.settings.FloatingLyricsStyleStore
-import com.andsi.airlyrics.core.settings.LyricsSettingsStore
+import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.app.*
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
 
-internal fun MainActivity.createSettingsHomePage(): View {
-    val container = pageContainer()
+internal fun createSettingsHomePage(activity: MainActivity): View  = with(activity) createSettingsHomePage@ {
+    val container = pageContainer(activity)
 
     container.addView(settingsHomeHeader())
 
@@ -23,8 +24,7 @@ internal fun MainActivity.createSettingsHomePage(): View {
             status = if (isDarkTheme()) "暗黑模式" else "白天模式",
             accent = colorAccentSoft
         ) {
-            settingsSubPage = SettingsSubPage.THEME
-            renderCurrentPage()
+            uiActions.openSettingsSubPage(SettingsSubPage.THEME)
         }
     )
 
@@ -35,8 +35,7 @@ internal fun MainActivity.createSettingsHomePage(): View {
             status = "${FloatingLyricsStyleStore.getPresetTitle(FloatingLyricsStyleStore.getStyle(this).presetName)} · ${if (quickFloatingVisible) "显示中" else "未显示"}",
             accent = colorAccent
         ) {
-            settingsSubPage = SettingsSubPage.FLOATING
-            renderCurrentPage()
+            uiActions.openSettingsSubPage(SettingsSubPage.FLOATING)
         }
     )
 
@@ -47,8 +46,7 @@ internal fun MainActivity.createSettingsHomePage(): View {
             status = "${LyricsSettingsStore.getLyricsSourceTitle(this)} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) "自动保存" else "不自动保存"}",
             accent = colorAccentPink
         ) {
-            settingsSubPage = SettingsSubPage.LYRICS
-            renderCurrentPage()
+            uiActions.openSettingsSubPage(SettingsSubPage.LYRICS)
         }
     )
 
@@ -59,8 +57,7 @@ internal fun MainActivity.createSettingsHomePage(): View {
             status = permissionSummary(),
             accent = colorAccentMint
         ) {
-            settingsSubPage = SettingsSubPage.SYSTEM
-            renderCurrentPage()
+            uiActions.openSettingsSubPage(SettingsSubPage.SYSTEM)
         }
     )
 
@@ -71,12 +68,11 @@ internal fun MainActivity.createSettingsHomePage(): View {
             status = "AirLyrics ${getAppVersionName()}",
             accent = colorAccentMint
         ) {
-            settingsSubPage = SettingsSubPage.ABOUT
-            renderCurrentPage()
+            uiActions.openSettingsSubPage(SettingsSubPage.ABOUT)
         }
     )
 
-    container.addView(smallHint("设置已经按模块拆分：主题、悬浮窗、歌词获取、系统权限各有自己的页面。"))
+    container.addView(smallHint(activity, "设置已经按模块拆分：主题、悬浮窗、歌词获取、系统权限各有自己的页面。"))
 
-    return scroll(container)
+    return scroll(activity, container)
 }

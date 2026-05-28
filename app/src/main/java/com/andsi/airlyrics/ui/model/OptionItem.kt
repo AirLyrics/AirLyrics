@@ -1,0 +1,23 @@
+package com.andsi.airlyrics.ui.model
+
+import android.view.View
+
+internal data class OptionItem(
+    val title: String,
+    val selected: Boolean,
+    val action: () -> Unit
+)
+
+internal data class KeyedOptionItem(
+    val key: String,
+    val title: String,
+    val selected: Boolean,
+    val action: () -> Unit
+)
+
+internal data class FloatingSettingTile(
+    val title: String,
+    val subtitle: String,
+    val mark: String,
+    val onClick: (View) -> Unit
+)

@@ -19,7 +19,7 @@
         android:theme="@style/Theme.AirLyrics">
 
         <activity
-            android:name=".MainActivity"
+            android:name=".app.MainActivity"
             android:exported="true">
 
             <intent-filter>
@@ -30,7 +30,7 @@
         </activity>
 
         <service
-            android:name=".FloatingLyricsService"
+            android:name=".floating.FloatingLyricsService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
 
@@ -41,7 +41,7 @@
         </service>
 
         <service
-            android:name=".MediaNotificationListener"
+            android:name=".media.MediaNotificationListener"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
             android:exported="true">
 

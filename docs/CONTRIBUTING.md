@@ -37,22 +37,22 @@ If `git status` shows `lyrics-core/target/...`, restore or ignore those changes 
 Use this map before editing:
 
 ```text
-Theme colors / dark mode       ui/theme/ and core/settings/ThemeSettingsStore.kt
-Floating window appearance     ui/pages/settings/FloatingSettingsPage.kt and core/settings/FloatingLyricsStyleStore.kt
+Theme colors / dark mode       ui/theme/ and settings/store/ThemeSettingsStore.kt
+Floating window appearance     ui/pages/settings/FloatingSettingsPage.kt and settings/store/FloatingLyricsStyleStore.kt
 Floating window behavior       floating/FloatingWindowController.kt
 Foreground service commands    floating/FloatingLyricsService.kt
-Lyrics source selection        ui/pages/settings/LyricsSettingsPage.kt and core/settings/LyricsSettingsStore.kt
-Lyrics lookup logic            core/lyrics/LyricsRepository.kt
-New lyric provider             core/lyrics/<YourProvider>.kt
-Media player detection         core/media/MediaNotificationListener.kt
+Lyrics source selection        ui/pages/settings/LyricsSettingsPage.kt and settings/store/LyricsSettingsStore.kt
+Lyrics lookup logic            lyrics/LyricsRepository.kt
+New lyric provider             lyrics/<YourProvider>.kt
+Media player detection         media/MediaNotificationListener.kt
 Reusable UI component          ui/components/
 Settings sub-page              ui/pages/settings/
-Broadcast/service constants    util/BroadcastActions.kt
+Broadcast/service constants    common/BroadcastActions.kt
 ```
 
 ## Adding a new setting
 
-1. Add the value to an existing model in `core/settings/model/`, or create a new model if it is a new settings group.
+1. Add the value to an existing model in `settings/model/`, or create a new model if it is a new settings group.
 2. Add read/write behavior in the matching `*Store.kt` file.
 3. Update the relevant UI page under `ui/pages/settings/`.
 4. Apply the setting in the runtime module that uses it, such as `FloatingWindowController` or `LyricsRepository`.
@@ -62,7 +62,7 @@ Avoid direct `SharedPreferences` access in UI pages or services unless you are c
 
 ## Adding a new lyric source
 
-1. Create a provider in `core/lyrics/`, for example `LrcLibLyricsProvider.kt`.
+1. Create a provider in `lyrics/`, for example `LrcLibLyricsProvider.kt`.
 2. Implement `LyricsProvider`.
 3. Register the provider in `LyricsRepository`.
 4. Add a user-facing option in `LyricsSettingsStore` and `LyricsSettingsPage`.
@@ -101,7 +101,7 @@ git diff --cached --stat
 
 - The project builds.
 - No build outputs are committed.
-- New settings go through `core/settings` stores.
+- New settings go through `settings/store` stores.
 - New lyric sources implement `LyricsProvider`.
 - UI changes are placed in page/component/theme files, not directly in unrelated modules.
 - Behavior changes are described clearly in the PR.

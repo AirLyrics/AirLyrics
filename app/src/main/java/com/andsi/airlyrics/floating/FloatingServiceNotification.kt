@@ -1,4 +1,4 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.floating
 
 import android.app.Notification
 import android.app.NotificationChannel

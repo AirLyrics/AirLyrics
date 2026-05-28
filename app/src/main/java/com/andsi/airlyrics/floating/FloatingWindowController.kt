@@ -1,4 +1,4 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.floating
 
 import android.content.Context
 import android.graphics.Color
@@ -10,7 +10,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
-import com.andsi.airlyrics.core.settings.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 
 /**
  * Owns the floating lyrics window itself: creation, removal, dragging,

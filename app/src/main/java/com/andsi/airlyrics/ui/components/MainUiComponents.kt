@@ -13,7 +13,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.andsi.airlyrics.MainActivity
+import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -23,7 +23,7 @@ import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-internal fun MainActivity.pageContainer(animateChanges: Boolean = true): LinearLayout {
+internal fun pageContainer(activity: MainActivity, animateChanges: Boolean = true): LinearLayout  = with(activity) pageContainer@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         if (animateChanges) {
@@ -33,27 +33,27 @@ internal fun MainActivity.pageContainer(animateChanges: Boolean = true): LinearL
     }
 }
 
-internal fun MainActivity.scroll(child: View, animateChildren: Boolean = true): ScrollView {
+internal fun scroll(activity: MainActivity, child: View, animateChildren: Boolean = true): ScrollView  = with(activity) scroll@ {
     return ScrollView(this).apply {
         isFillViewport = false
         addView(child)
         if (animateChildren) {
-            post { animateChildrenCascade(child) }
+            post { animateChildrenCascade(activity, child) }
         }
     }
 }
 
-internal fun MainActivity.sectionTitle(title: String, subtitle: String): View {
+internal fun sectionTitle(activity: MainActivity, title: String, subtitle: String): View  = with(activity) sectionTitle@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(14))
-        addView(TextView(this@sectionTitle).apply {
+        addView(TextView(activity).apply {
             text = title
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
-        addView(TextView(this@sectionTitle).apply {
+        addView(TextView(activity).apply {
             text = subtitle
             textSize = 14f
             setTextColor(colorTextMuted)
@@ -62,7 +62,7 @@ internal fun MainActivity.sectionTitle(title: String, subtitle: String): View {
     }
 }
 
-internal fun MainActivity.card(content: LinearLayout.() -> Unit): LinearLayout {
+internal fun card(activity: MainActivity, content: LinearLayout.() -> Unit): LinearLayout = with(activity) card@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(18), dp(16), dp(18), dp(16))
@@ -82,7 +82,7 @@ internal fun MainActivity.card(content: LinearLayout.() -> Unit): LinearLayout {
     }
 }
 
-internal fun MainActivity.floatingStatusPreviewCard(content: LinearLayout.() -> Unit): LinearLayout {
+internal fun floatingStatusPreviewCard(activity: MainActivity, content: LinearLayout.() -> Unit): LinearLayout = with(activity) floatingStatusPreviewCard@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(12), dp(10), dp(12), dp(10))
@@ -102,7 +102,7 @@ internal fun MainActivity.floatingStatusPreviewCard(content: LinearLayout.() -> 
     }
 }
 
-internal fun MainActivity.actionButton(text: String, onClick: () -> Unit): TextView {
+internal fun actionButton(activity: MainActivity, text: String, onClick: () -> Unit): TextView = with(activity) actionButton@ {
     return TextView(this).apply {
         this.text = text
         gravity = Gravity.CENTER
@@ -128,11 +128,11 @@ internal fun MainActivity.actionButton(text: String, onClick: () -> Unit): TextV
     }
 }
 
-internal fun MainActivity.horizontalButtons(vararg buttons: Pair<String, () -> Unit>): LinearLayout {
+internal fun horizontalButtons(activity: MainActivity, vararg buttons: Pair<String, () -> Unit>): LinearLayout = with(activity) horizontalButtons@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         buttons.forEachIndexed { index, pair ->
-            addView(TextView(this@horizontalButtons).apply {
+            addView(TextView(activity).apply {
                 text = pair.first
                 gravity = Gravity.CENTER
                 textSize = 15f
@@ -161,20 +161,20 @@ internal fun MainActivity.horizontalButtons(vararg buttons: Pair<String, () -> U
     }
 }
 
-internal fun MainActivity.settingRow(name: String, value: String): View {
+internal fun settingRow(activity: MainActivity, name: String, value: String): View  = with(activity) settingRow@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, dp(10), 0, dp(4))
 
-        addView(TextView(this@settingRow).apply {
+        addView(TextView(activity).apply {
             text = name
             textSize = 15f
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
         })
 
-        addView(TextView(this@settingRow).apply {
+        addView(TextView(activity).apply {
             text = value
             textSize = 13f
             setTextColor(colorTextMuted)
@@ -182,7 +182,7 @@ internal fun MainActivity.settingRow(name: String, value: String): View {
     }
 }
 
-internal fun MainActivity.statusPill(text: String, playing: Boolean): TextView {
+internal fun statusPill(activity: MainActivity, text: String, playing: Boolean): TextView  = with(activity) statusPill@ {
     return TextView(this).apply {
         this.text = text
         textSize = 13f
@@ -201,7 +201,7 @@ internal fun MainActivity.statusPill(text: String, playing: Boolean): TextView {
     }
 }
 
-internal fun MainActivity.label(text: String, color: Int): TextView {
+internal fun label(activity: MainActivity, text: String, color: Int): TextView  = with(activity) label@ {
     return TextView(this).apply {
         this.text = text
         textSize = 13f
@@ -211,7 +211,7 @@ internal fun MainActivity.label(text: String, color: Int): TextView {
     }
 }
 
-internal fun MainActivity.bigText(text: String): TextView {
+internal fun bigText(activity: MainActivity, text: String): TextView  = with(activity) bigText@ {
     return TextView(this).apply {
         this.text = text
         textSize = 20f
@@ -220,7 +220,7 @@ internal fun MainActivity.bigText(text: String): TextView {
     }
 }
 
-internal fun MainActivity.normalText(text: String): TextView {
+internal fun normalText(activity: MainActivity, text: String): TextView  = with(activity) normalText@ {
     return TextView(this).apply {
         this.text = text
         textSize = 14f
@@ -229,7 +229,7 @@ internal fun MainActivity.normalText(text: String): TextView {
     }
 }
 
-internal fun MainActivity.smallHint(text: String): TextView {
+internal fun smallHint(activity: MainActivity, text: String): TextView  = with(activity) smallHint@ {
     return TextView(this).apply {
         this.text = text
         textSize = 13f
@@ -238,13 +238,13 @@ internal fun MainActivity.smallHint(text: String): TextView {
     }
 }
 
-internal fun MainActivity.spacer(height: Int): View {
+internal fun spacer(activity: MainActivity, height: Int): View  = with(activity) spacer@ {
     return View(this).apply {
         layoutParams = LinearLayout.LayoutParams(1, dp(height))
     }
 }
 
-internal fun MainActivity.animatePageEnter(view: View, fromRight: Boolean) {
+internal fun animatePageEnter(activity: MainActivity, view: View, fromRight: Boolean) = with(activity) animatePageEnter@ {
     val distance = dp(26).toFloat() * if (fromRight) 1f else -1f
     view.alpha = 0f
     view.translationX = distance
@@ -256,7 +256,7 @@ internal fun MainActivity.animatePageEnter(view: View, fromRight: Boolean) {
         .start()
 }
 
-internal fun MainActivity.animateChildrenCascade(root: View) {
+internal fun animateChildrenCascade(activity: MainActivity, root: View) = with(activity) animateChildrenCascade@ {
     val parent = root as? ViewGroup ?: return
     val delayStep = 24L
     for (index in 0 until parent.childCount) {

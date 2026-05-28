@@ -12,15 +12,15 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.andsi.airlyrics.core.settings.model.FloatingLyricsStyle
-import com.andsi.airlyrics.core.settings.FloatingLyricsStyleStore
-import com.andsi.airlyrics.MainActivity
-import com.andsi.airlyrics.MainActivity.FloatingSettingTile
-import com.andsi.airlyrics.MainActivity.KeyedOptionItem
+import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.ui.model.FloatingSettingTile
+import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
 
-internal fun MainActivity.createFloatingPage(): View {
+internal fun createFloatingPage(activity: MainActivity): View  = with(activity) createFloatingPage@ {
     val rootFrame = FrameLayout(this)
     val root = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -112,8 +112,8 @@ internal fun MainActivity.createFloatingPage(): View {
 
         val bubble = floatingFocusBubble(title, subtitle, ::closePanel) {
             content()
-            addView(spacer(6))
-            addView(smallHint("调节时上方预览会即时刷新，正在显示的悬浮窗也会同步变化。"))
+            addView(spacer(activity, 6))
+            addView(smallHint(activity, "调节时上方预览会即时刷新，正在显示的悬浮窗也会同步变化。"))
         }
 
         overlay.removeAllViews()
@@ -152,9 +152,9 @@ internal fun MainActivity.createFloatingPage(): View {
         }
     }
 
-    previewCardView = floatingStatusPreviewCard {
+    previewCardView = floatingStatusPreviewCard(activity) {
         layoutTransition = softLayoutTransition()
-        previewBodyView = LinearLayout(this@createFloatingPage).apply {
+        previewBodyView = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             lyricPreviewTextView = floatingPreviewText("夜に駆ける\n奔向夜晚", style()).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -170,10 +170,10 @@ internal fun MainActivity.createFloatingPage(): View {
         }
         addView(previewBodyView!!)
 
-        addView(LinearLayout(this@createFloatingPage).apply {
+        addView(LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            summaryTextView = normalText(floatingPreviewSummary(style())).apply {
+            summaryTextView = normalText(activity, floatingPreviewSummary(style())).apply {
                 textSize = 13f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextStrong)
@@ -182,7 +182,7 @@ internal fun MainActivity.createFloatingPage(): View {
             }
             addView(summaryTextView!!)
 
-            previewToggleTextView = TextView(this@createFloatingPage).apply {
+            previewToggleTextView = TextView(activity).apply {
                 text = "收起"
                 textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
@@ -196,7 +196,7 @@ internal fun MainActivity.createFloatingPage(): View {
                 enableSoftPressFeedback(0.94f)
                 setOnClickListener {
                     previewExpanded = !previewExpanded
-                    FloatingLyricsStyleStore.setPreviewExpanded(this@createFloatingPage, previewExpanded)
+                    FloatingLyricsStyleStore.setPreviewExpanded(activity, previewExpanded)
                     playTinyPulse(this)
                     updatePreviewFold()
                 }
@@ -207,16 +207,16 @@ internal fun MainActivity.createFloatingPage(): View {
     }
     root.addView(previewCardView!!)
 
-    val list = pageContainer().apply {
+    val list = pageContainer(activity).apply {
         setPadding(0, dp(4), 0, 0)
         addView(
-            sectionTitle(
+            sectionTitle(activity, 
                 "悬浮窗设置",
                 "上方负责看效果，下方分区调参数；颜色先选预设，再按需展开 RGB 细调。"
             )
         )
 
-        addView(sectionTitle("外观", "主题、颜色、字号、背景、阴影和窗口尺寸。"))
+        addView(sectionTitle(activity, "外观", "主题、颜色、字号、背景、阴影和窗口尺寸。"))
         addView(
             settingGrid(
                 FloatingSettingTile(
@@ -260,10 +260,10 @@ internal fun MainActivity.createFloatingPage(): View {
                     mark = "▣",
                     onClick = { tile ->
                         openPanel(tile, "背景气泡", "设置背景开关、颜色和透明度。") {
-                            val backgroundButton = actionButton(if (style().backgroundEnabled) "背景：开启" else "背景：关闭") { }
+                            val backgroundButton = actionButton(activity, if (style().backgroundEnabled) "背景：开启" else "背景：关闭") { }
                             backgroundButton.setOnClickListener {
-                                val enabled = !FloatingLyricsStyleStore.getStyle(this@createFloatingPage).backgroundEnabled
-                                FloatingLyricsStyleStore.setBackgroundEnabled(this@createFloatingPage, enabled)
+                                val enabled = !FloatingLyricsStyleStore.getStyle(activity).backgroundEnabled
+                                FloatingLyricsStyleStore.setBackgroundEnabled(activity, enabled)
                                 notifyFloatingStyleChanged()
                                 backgroundButton.text = if (enabled) "背景：开启" else "背景：关闭"
                                 refreshFloatingPreview()
@@ -296,12 +296,12 @@ internal fun MainActivity.createFloatingPage(): View {
                     onClick = { tile ->
                         openPanel(tile, "阴影描边", "让白字在复杂背景上更清楚。") {
                             addView(sliderRow("阴影半径", style().shadowRadius.toInt(), 0, 24, "") { value ->
-                                FloatingLyricsStyleStore.setShadowRadius(this@createFloatingPage, value.toFloat())
+                                FloatingLyricsStyleStore.setShadowRadius(activity, value.toFloat())
                                 notifyFloatingStyleChanged()
                                 refreshFloatingPreview()
                             })
                             addView(colorControl("阴影", style().shadowColor) { color ->
-                                FloatingLyricsStyleStore.setShadowColor(this@createFloatingPage, color)
+                                FloatingLyricsStyleStore.setShadowColor(activity, color)
                                 notifyFloatingStyleChanged()
                                 refreshFloatingPreview()
                             })
@@ -315,22 +315,22 @@ internal fun MainActivity.createFloatingPage(): View {
                     onClick = { tile ->
                         openPanel(tile, "窗口布局", "调整最大宽度、圆角和内边距。") {
                             addView(sliderRow("最大宽度", style().maxWidthPercent, 45, 100, "%") { value ->
-                                FloatingLyricsStyleStore.setMaxWidthPercent(this@createFloatingPage, value)
+                                FloatingLyricsStyleStore.setMaxWidthPercent(activity, value)
                                 notifyFloatingStyleChanged()
                                 refreshFloatingPreview()
                             })
                             addView(sliderRow("横向内边距", style().paddingHorizontalDp, 0, 36, "dp") { value ->
-                                FloatingLyricsStyleStore.setPaddingHorizontal(this@createFloatingPage, value)
+                                FloatingLyricsStyleStore.setPaddingHorizontal(activity, value)
                                 notifyFloatingStyleChanged()
                                 refreshFloatingPreview()
                             })
                             addView(sliderRow("纵向内边距", style().paddingVerticalDp, 0, 28, "dp") { value ->
-                                FloatingLyricsStyleStore.setPaddingVertical(this@createFloatingPage, value)
+                                FloatingLyricsStyleStore.setPaddingVertical(activity, value)
                                 notifyFloatingStyleChanged()
                                 refreshFloatingPreview()
                             })
                             addView(sliderRow("圆角", style().cornerRadiusDp, 0, 36, "dp") { value ->
-                                FloatingLyricsStyleStore.setCornerRadius(this@createFloatingPage, value)
+                                FloatingLyricsStyleStore.setCornerRadius(activity, value)
                                 notifyFloatingStyleChanged()
                                 refreshFloatingPreview()
                             })
@@ -340,7 +340,7 @@ internal fun MainActivity.createFloatingPage(): View {
             )
         )
 
-        addView(sectionTitle("歌词显示", "当前句、前后句、翻译和对齐方式会放在这里。"))
+        addView(sectionTitle(activity, "歌词显示", "当前句、前后句、翻译和对齐方式会放在这里。"))
         addView(
             settingGrid(
                 FloatingSettingTile(
@@ -368,22 +368,22 @@ internal fun MainActivity.createFloatingPage(): View {
                 )
             )
         )
-        addView(card {
-            addView(bigText("后续显示项"))
-            addView(settingRow("前一句 / 后一句", "预留"))
-            addView(settingRow("原文 / 翻译", "预留"))
-            addView(smallHint("以后做双语歌词、前后句显示时，直接塞进这个模块，不会把外观设置挤乱。"))
+        addView(card(activity) {
+            addView(bigText(activity, "后续显示项"))
+            addView(settingRow(activity, "前一句 / 后一句", "预留"))
+            addView(settingRow(activity, "原文 / 翻译", "预留"))
+            addView(smallHint(activity, "以后做双语歌词、前后句显示时，直接塞进这个模块，不会把外观设置挤乱。"))
         })
 
-        addView(sectionTitle("动画效果", "歌词切换、淡入淡出、滚动和逐字高亮。"))
-        addView(card {
-            addView(bigText("动画预留区"))
-            addView(settingRow("歌词切换动画", "预留"))
-            addView(settingRow("逐字高亮 / 卡拉 OK", "预留"))
-            addView(smallHint("当前先不做无效开关，只把模块位置留好，后面加动画时结构不会塌。"))
+        addView(sectionTitle(activity, "动画效果", "歌词切换、淡入淡出、滚动和逐字高亮。"))
+        addView(card(activity) {
+            addView(bigText(activity, "动画预留区"))
+            addView(settingRow(activity, "歌词切换动画", "预留"))
+            addView(settingRow(activity, "逐字高亮 / 卡拉 OK", "预留"))
+            addView(smallHint(activity, "当前先不做无效开关，只把模块位置留好，后面加动画时结构不会塌。"))
         })
 
-        addView(sectionTitle("行为设置", "显示隐藏、拖动锁定、点击穿透和位置记忆。"))
+        addView(sectionTitle(activity, "行为设置", "显示隐藏、拖动锁定、点击穿透和位置记忆。"))
         addView(
             settingGrid(
                 FloatingSettingTile(
@@ -392,22 +392,22 @@ internal fun MainActivity.createFloatingPage(): View {
                     mark = "●",
                     onClick = { tile ->
                         openPanel(tile, "显示控制", "快速显示、隐藏、锁定或开启点击穿透。") {
-                            addView(horizontalButtons(
-                                "显示" to { showFloatingLyrics() },
-                                "隐藏" to { hideFloatingLyrics() }
+                            addView(horizontalButtons(activity, 
+                                "显示" to { uiActions.showFloatingLyrics() },
+                                "隐藏" to { uiActions.hideFloatingLyrics() }
                             ))
 
-                            val lockButton = actionButton(floatingLockButtonText()) { }
+                            val lockButton = actionButton(activity, floatingLockButtonText()) { }
                             lockButton.setOnClickListener {
-                                toggleLock()
+                                uiActions.toggleLock()
                                 lockButton.text = floatingLockButtonText()
                                 refreshFloatingPreview()
                             }
                             addView(lockButton)
 
-                            val clickThroughButton = actionButton(floatingClickThroughButtonText()) { }
+                            val clickThroughButton = actionButton(activity, floatingClickThroughButtonText()) { }
                             clickThroughButton.setOnClickListener {
-                                toggleClickThrough()
+                                uiActions.toggleClickThrough()
                                 clickThroughButton.text = floatingClickThroughButtonText()
                                 refreshFloatingPreview()
                             }
@@ -418,17 +418,17 @@ internal fun MainActivity.createFloatingPage(): View {
             )
         )
         addView(
-            card {
-                addView(bigText("当前行为"))
-                addView(settingRow("记住位置", "已开启"))
-                addView(settingRow("拖动锁定", if (FloatingLyricsStyleStore.isLocked(this@createFloatingPage)) "已开启" else "已关闭"))
-                addView(settingRow("点击穿透", if (FloatingLyricsStyleStore.isClickThrough(this@createFloatingPage)) "已开启" else "已关闭"))
-                addView(smallHint("预览区展开/收起会自动记住；锁定只禁止拖动，穿透会让触摸事件落到下面的 App。"))
+            card(activity) {
+                addView(bigText(activity, "当前行为"))
+                addView(settingRow(activity, "记住位置", "已开启"))
+                addView(settingRow(activity, "拖动锁定", if (FloatingLyricsStyleStore.isLocked(activity)) "已开启" else "已关闭"))
+                addView(settingRow(activity, "点击穿透", if (FloatingLyricsStyleStore.isClickThrough(activity)) "已开启" else "已关闭"))
+                addView(smallHint(activity, "预览区展开/收起会自动记住；锁定只禁止拖动，穿透会让触摸事件落到下面的 App。"))
             }
         )
     }
 
-    contentScroll = scroll(list)
+    contentScroll = scroll(activity, list)
     pageFrame.addView(contentScroll!!.apply {
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

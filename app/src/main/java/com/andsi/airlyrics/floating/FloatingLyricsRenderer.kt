@@ -1,7 +1,9 @@
-package com.andsi.airlyrics
+package com.andsi.airlyrics.floating
 
 import android.os.SystemClock
 import android.widget.TextView
+import com.andsi.airlyrics.lyrics.parser.LrcLine
+import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 /**
  * Maintains parsed lyric lines and renders the line matching the current playback position.
