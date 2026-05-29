@@ -21,6 +21,6 @@ object QuickFloatingStore {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_VISIBLE, visible)
-            .apply()
+            .commit()
     }
 }

@@ -76,7 +76,7 @@ class FloatingWindowController(
         return true
     }
 
-    fun hide() {
+    fun hide(notifyVisibilityChanged: Boolean = true) {
         val view = lyricsView
         if (view != null) {
             runCatching { windowManager.removeView(view) }
@@ -84,7 +84,9 @@ class FloatingWindowController(
 
         lyricsView = null
         params = null
-        onVisibilityChanged(false)
+        if (notifyVisibilityChanged) {
+            onVisibilityChanged(false)
+        }
     }
 
     fun setText(text: CharSequence) {

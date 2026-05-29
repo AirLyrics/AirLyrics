@@ -4,10 +4,8 @@ import android.view.View
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.*
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
-import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
@@ -28,16 +26,6 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
         }
     )
 
-    container.addView(
-        settingsCategoryCard(
-            title = "悬浮窗设置",
-            subtitle = "显示控制、锁定、穿透和歌词气泡样式入口。",
-            status = "${FloatingLyricsStyleStore.getPresetTitle(FloatingLyricsStyleStore.getStyle(this).presetName)} · ${if (quickFloatingVisible) "显示中" else "未显示"}",
-            accent = colorAccent
-        ) {
-            uiActions.openSettingsSubPage(SettingsSubPage.FLOATING)
-        }
-    )
 
     container.addView(
         settingsCategoryCard(
@@ -72,7 +60,7 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
         }
     )
 
-    container.addView(smallHint(activity, "设置已经按模块拆分：主题、悬浮窗、歌词获取、系统权限各有自己的页面。"))
+    container.addView(smallHint(activity, "设置已经按模块拆分：主题外观、歌词获取、系统权限和关于各有自己的页面。"))
 
     return scroll(activity, container)
 }

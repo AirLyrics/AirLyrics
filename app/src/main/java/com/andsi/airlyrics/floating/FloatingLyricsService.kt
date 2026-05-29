@@ -417,9 +417,8 @@ class FloatingLyricsService : Service() {
         syncHandler.removeCallbacks(syncRunnable)
         runCatching { unregisterReceiver(mediaReceiver) }
         if (::windowController.isInitialized) {
-            windowController.hide()
+            windowController.hide(notifyVisibilityChanged = false)
         }
-        QuickFloatingStore.setVisible(this, false)
         super.onDestroy()
     }
 

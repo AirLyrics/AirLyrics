@@ -163,21 +163,22 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
     val selectedTab = tabViews[currentPage] ?: return@updateTabs
     selectedTab.post {
         val highlight = tabHighlight ?: return@post
+        val selectedSlot = selectedTab.parent as? View ?: selectedTab
         val textWidth = measureTabTextWidth(activity, selectedTab)
         val horizontalPadding = if (currentPage == Page.FLOATING) dp(62) else dp(58)
         val targetWidth = (textWidth + horizontalPadding).coerceIn(
             dp(104).toFloat(),
             if (currentPage == Page.FLOATING) dp(136).toFloat() else dp(144).toFloat()
         )
-        val targetHeight = if (currentPage == Page.FLOATING) dp(54).toFloat() else dp(48).toFloat()
+        val targetHeight = if (currentPage == Page.FLOATING) dp(56).toFloat() else dp(48).toFloat()
 
-        val tabLocation = IntArray(2)
+        val slotLocation = IntArray(2)
         val highlightLocation = IntArray(2)
-        selectedTab.getLocationInWindow(tabLocation)
+        selectedSlot.getLocationInWindow(slotLocation)
         highlight.getLocationInWindow(highlightLocation)
 
-        val centerX = tabLocation[0] - highlightLocation[0] + selectedTab.width / 2f
-        val centerY = tabLocation[1] - highlightLocation[1] + selectedTab.height / 2f
+        val centerX = slotLocation[0] - highlightLocation[0] + selectedSlot.width / 2f
+        val centerY = slotLocation[1] - highlightLocation[1] + selectedSlot.height / 2f
         highlight.moveTo(
             targetCenterX = centerX,
             targetCenterY = centerY,

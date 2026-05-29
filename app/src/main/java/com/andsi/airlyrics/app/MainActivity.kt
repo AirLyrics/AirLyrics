@@ -210,9 +210,6 @@ class MainActivity : AppCompatActivity() {
             )
             updateQuickFloatingVisible(visible)
             updateTabs(this@MainActivity)
-            if (currentPage == Page.FLOATING) {
-                renderCurrentPage(animateContent = false, animateTabs = false)
-            }
         }
     }
 
@@ -226,6 +223,7 @@ class MainActivity : AppCompatActivity() {
         registerFloatingWindowStateReceiver()
         registerMediaStatusReceiver()
         autoSelectMediaSourceOnceIfNeeded()
+        restoreFloatingLyricsIfNeeded()
         renderCurrentPage()
     }
 
@@ -234,6 +232,7 @@ class MainActivity : AppCompatActivity() {
         locked = FloatingLyricsStyleStore.isLocked(this)
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
         quickFloatingVisible = isQuickFloatingVisible()
+        restoreFloatingLyricsIfNeeded()
         renderCurrentPage()
     }
 
@@ -330,6 +329,10 @@ class MainActivity : AppCompatActivity() {
 
     internal fun toggleFloatingFromNav() {
         floatingController.toggleFromNav()
+    }
+
+    internal fun restoreFloatingLyricsIfNeeded() {
+        floatingController.restoreVisibleWindowIfNeeded()
     }
 
     internal fun isQuickFloatingVisible(): Boolean {

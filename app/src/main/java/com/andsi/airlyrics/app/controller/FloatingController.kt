@@ -64,6 +64,22 @@ internal class FloatingController(
         return true
     }
 
+
+    fun restoreVisibleWindowIfNeeded() {
+        if (!activity.quickFloatingVisible) return
+
+        if (!Settings.canDrawOverlays(activity)) {
+            updateQuickFloatingVisible(false)
+            updateTabs(activity)
+            return
+        }
+
+        val intent = Intent(activity, FloatingLyricsService::class.java).apply {
+            action = BroadcastActions.SHOW
+        }
+        activity.startLyricsService(intent)
+    }
+
     fun toggleFromNav() {
         val selectedTab = activity.tabViews[Page.FLOATING]
         selectedTab?.animate()
