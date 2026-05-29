@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.floating
 
+import android.app.NotificationManager
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -11,7 +12,10 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.widget.Toast
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository
@@ -29,7 +33,8 @@ class FloatingLyricsService : Service() {
     private val renderer = FloatingLyricsRenderer(
         textViewProvider = { lyricsView },
         contentModeProvider = { LyricsSettingsStore.getContentDisplayMode(this) },
-        lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) }
+        lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
+        switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) }
     )
     private val syncHandler = Handler(Looper.getMainLooper())
 
@@ -90,22 +95,26 @@ class FloatingLyricsService : Service() {
             broadcastWindowVisibility(visible)
         }
 
-        startForeground(1, FloatingServiceNotification.create(this))
+        startForeground(FloatingServiceNotification.NOTIFICATION_ID, FloatingServiceNotification.create(this, currentQuickControlState()))
         registerMediaReceiver()
         syncHandler.post(syncRunnable)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            BroadcastActions.SHOW -> showLyrics()
+            BroadcastActions.SHOW -> showLyrics(feedback = null)
             BroadcastActions.HIDE -> {
-                hideLyrics()
+                hideLyrics(feedback = null)
                 stopSelf()
             }
-            BroadcastActions.LOCK -> windowController.setLocked(true)
-            BroadcastActions.UNLOCK -> windowController.setLocked(false)
-            BroadcastActions.CLICK_THROUGH_ON -> windowController.setClickThrough(true)
-            BroadcastActions.CLICK_THROUGH_OFF -> windowController.setClickThrough(false)
+            BroadcastActions.LOCK -> setLocked(locked = true, feedback = null)
+            BroadcastActions.UNLOCK -> setLocked(locked = false, feedback = null)
+            BroadcastActions.CLICK_THROUGH_ON -> setClickThrough(clickThrough = true, feedback = null)
+            BroadcastActions.CLICK_THROUGH_OFF -> setClickThrough(clickThrough = false, feedback = null)
+            BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE -> toggleVisibleFromNotification()
+            BroadcastActions.NOTIFICATION_TOGGLE_LOCK -> toggleLockFromNotification()
+            BroadcastActions.NOTIFICATION_TOGGLE_CLICK_THROUGH -> toggleClickThroughFromNotification()
+            BroadcastActions.NOTIFICATION_TOGGLE_ADJUST_MODE -> toggleAdjustModeFromNotification()
             BroadcastActions.APPLY_STYLE -> {
                 windowController.applyStyle()
                 renderer.refresh()
@@ -299,20 +308,107 @@ class FloatingLyricsService : Service() {
         }
     }
 
-    private fun showLyrics() {
-        windowController.show()
+    private fun showLyrics(feedback: String? = null): Boolean {
+        val shown = windowController.show()
+        QuickFloatingStore.setVisible(this, shown)
+        refreshQuickControls(feedback)
+        return shown
     }
 
-    private fun hideLyrics() {
+    private fun hideLyrics(feedback: String? = null) {
         if (::windowController.isInitialized) {
             windowController.hide()
         }
+        QuickFloatingStore.setVisible(this, false)
+        refreshQuickControls(feedback)
+    }
+
+    private fun setLocked(locked: Boolean, feedback: String? = null) {
+        windowController.setLocked(locked)
+        refreshQuickControls(feedback)
+    }
+
+    private fun setClickThrough(clickThrough: Boolean, feedback: String? = null) {
+        windowController.setClickThrough(clickThrough)
+        refreshQuickControls(feedback)
+    }
+
+    private fun toggleVisibleFromNotification() {
+        val nextVisible = !windowController.isVisible
+        if (nextVisible) {
+            if (!showLyrics(feedback = "已显示")) {
+                refreshQuickControls("需要悬浮窗权限")
+                showQuickFeedback("请先开启悬浮窗权限")
+            }
+        } else {
+            hideLyrics(feedback = "已隐藏")
+        }
+    }
+
+    private fun toggleLockFromNotification() {
+        val nextLocked = !FloatingLyricsStyleStore.isLocked(this)
+        setLocked(locked = nextLocked, feedback = if (nextLocked) "已锁定" else "已解锁")
+    }
+
+    private fun toggleClickThroughFromNotification() {
+        val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(this)
+        setClickThrough(
+            clickThrough = nextClickThrough,
+            feedback = if (nextClickThrough) "已穿透" else "可触摸"
+        )
+    }
+
+    private fun toggleAdjustModeFromNotification() {
+        val currentlyEditing = !FloatingLyricsStyleStore.isLocked(this) &&
+            !FloatingLyricsStyleStore.isClickThrough(this)
+        val nextEditing = !currentlyEditing
+
+        windowController.setLocked(!nextEditing)
+        windowController.setClickThrough(!nextEditing)
+
+        if (nextEditing) {
+            refreshQuickControls("可拖动")
+        } else {
+            refreshQuickControls("已锁定并穿透")
+        }
+    }
+
+    private fun refreshQuickControls(feedback: String? = null) {
+        val notification = FloatingServiceNotification.create(this, currentQuickControlState(feedback))
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.notify(FloatingServiceNotification.NOTIFICATION_ID, notification)
+        broadcastQuickControlState()
+    }
+
+    private fun currentQuickControlState(feedback: String? = null): FloatingServiceNotification.QuickControlState {
+        return FloatingServiceNotification.QuickControlState(
+            visible = ::windowController.isInitialized && windowController.isVisible,
+            locked = FloatingLyricsStyleStore.isLocked(this),
+            clickThrough = FloatingLyricsStyleStore.isClickThrough(this),
+            feedback = feedback
+        )
+    }
+
+    private fun showQuickFeedback(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun broadcastWindowVisibility(visible: Boolean) {
         val intent = Intent(BroadcastActions.WINDOW_VISIBILITY_CHANGED).apply {
             setPackage(packageName)
             putExtra(BroadcastActions.EXTRA_WINDOW_VISIBLE, visible)
+            putExtra(BroadcastActions.EXTRA_LOCKED, FloatingLyricsStyleStore.isLocked(this@FloatingLyricsService))
+            putExtra(BroadcastActions.EXTRA_CLICK_THROUGH, FloatingLyricsStyleStore.isClickThrough(this@FloatingLyricsService))
+        }
+        sendBroadcast(intent)
+    }
+
+    private fun broadcastQuickControlState() {
+        val intent = Intent(BroadcastActions.QUICK_CONTROL_CHANGED).apply {
+            setPackage(packageName)
+            putExtra(BroadcastActions.EXTRA_WINDOW_VISIBLE, ::windowController.isInitialized && windowController.isVisible)
+            putExtra(BroadcastActions.EXTRA_LOCKED, FloatingLyricsStyleStore.isLocked(this@FloatingLyricsService))
+            putExtra(BroadcastActions.EXTRA_CLICK_THROUGH, FloatingLyricsStyleStore.isClickThrough(this@FloatingLyricsService))
         }
         sendBroadcast(intent)
     }
@@ -320,7 +416,10 @@ class FloatingLyricsService : Service() {
     override fun onDestroy() {
         syncHandler.removeCallbacks(syncRunnable)
         runCatching { unregisterReceiver(mediaReceiver) }
-        hideLyrics()
+        if (::windowController.isInitialized) {
+            windowController.hide()
+        }
+        QuickFloatingStore.setVisible(this, false)
         super.onDestroy()
     }
 

@@ -227,7 +227,6 @@ internal fun MainActivity.colorControl(
             setPadding(dp(12), dp(10), dp(12), dp(10))
         }
         addView(preview)
-        addView(smallHint(activity, "点击标准色会立即应用；改动 RGB 后会进入自定义颜色状态。"))
 
         val swatchViews = mutableListOf<Pair<Int?, TextView>>()
         val swatchGrid = LinearLayout(activity).apply {
@@ -474,7 +473,7 @@ internal fun MainActivity.settingGrid(vararg items: FloatingSettingTile): Linear
                 orientation = LinearLayout.HORIZONTAL
                 rowItems.forEachIndexed { index, item ->
                     addView(floatingTile(item).apply {
-                        val params = LinearLayout.LayoutParams(0, dp(132), 1f)
+                        val params = LinearLayout.LayoutParams(0, dp(112), 1f)
                         params.setMargins(
                             if (index == 0) 0 else dp(6),
                             0,
@@ -530,13 +529,15 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
             setTextColor(colorTextStrong)
         })
 
-        addView(TextView(activity).apply {
-            text = item.subtitle
-            textSize = 12f
-            setTextColor(colorTextMuted)
-            maxLines = 2
-            setPadding(0, dp(4), 0, 0)
-        })
+        if (item.subtitle.isNotBlank()) {
+            addView(TextView(activity).apply {
+                text = item.subtitle
+                textSize = 12f
+                setTextColor(colorTextMuted)
+                maxLines = 1
+                setPadding(0, dp(4), 0, 0)
+            })
+        }
 
         enableSoftPressFeedback(0.975f)
         setOnClickListener { item.onClick(this) }
@@ -579,12 +580,14 @@ internal fun MainActivity.floatingFocusBubble(
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorTextStrong)
                 })
-                addView(TextView(activity).apply {
-                    text = subtitle
-                    textSize = 13f
-                    setTextColor(colorTextMuted)
-                    setPadding(0, dp(4), 0, 0)
-                })
+                if (subtitle.isNotBlank()) {
+                    addView(TextView(activity).apply {
+                        text = subtitle
+                        textSize = 13f
+                        setTextColor(colorTextMuted)
+                        setPadding(0, dp(4), 0, 0)
+                    })
+                }
             })
             addView(TextView(activity).apply {
                 text = "×"

@@ -49,3 +49,21 @@ adb logcat | grep -E 'AirLyricsLyrics|Musixmatch|airlyrics'
 ## Good first songs
 
 Use popular English/Japanese tracks with clean title and artist metadata. Avoid remixes, live versions, sped-up edits and titles with long bracket suffixes for the first smoke test.
+
+## Translation language test
+
+Musixmatch now has an optional translation language setting in `设置 -> 歌词获取设置`:
+
+- `不获取`: fetch original synchronized lyrics only.
+- `中文`: fetch original lyrics, then try Musixmatch `zh` translation.
+- `English`: fetch original lyrics, then try Musixmatch `en` translation.
+
+The floating-window page only controls how lyrics are displayed, such as original / translation content mode and current / previous / next line range.
+
+Translation is optional. If the original lyrics succeed but translation is unavailable, the lookup still succeeds and the app keeps showing original lyrics. When testing translation, set the floating-window display mode to `原文 + 翻译` or `仅翻译`.
+
+Useful log filter:
+
+```bash
+adb logcat | grep -E 'AirLyricsLyrics|Musixmatch|translation|airlyrics'
+```

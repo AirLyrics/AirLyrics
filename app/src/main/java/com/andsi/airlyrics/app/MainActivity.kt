@@ -191,11 +191,28 @@ class MainActivity : AppCompatActivity() {
 
     internal val floatingWindowStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action != BroadcastActions.WINDOW_VISIBILITY_CHANGED) return
+            val action = intent?.action ?: return
+            if (action != BroadcastActions.WINDOW_VISIBILITY_CHANGED &&
+                action != BroadcastActions.QUICK_CONTROL_CHANGED
+            ) return
 
-            val visible = intent.getBooleanExtra(BroadcastActions.EXTRA_WINDOW_VISIBLE, false)
+            val visible = intent.getBooleanExtra(
+                BroadcastActions.EXTRA_WINDOW_VISIBLE,
+                isQuickFloatingVisible()
+            )
+            locked = intent.getBooleanExtra(
+                BroadcastActions.EXTRA_LOCKED,
+                FloatingLyricsStyleStore.isLocked(this@MainActivity)
+            )
+            clickThrough = intent.getBooleanExtra(
+                BroadcastActions.EXTRA_CLICK_THROUGH,
+                FloatingLyricsStyleStore.isClickThrough(this@MainActivity)
+            )
             updateQuickFloatingVisible(visible)
             updateTabs(this@MainActivity)
+            if (currentPage == Page.FLOATING) {
+                renderCurrentPage(animateContent = false, animateTabs = false)
+            }
         }
     }
 
@@ -457,7 +474,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun registerFloatingWindowStateReceiver() {
-        val filter = IntentFilter(BroadcastActions.WINDOW_VISIBILITY_CHANGED)
+        val filter = IntentFilter().apply {
+            addAction(BroadcastActions.WINDOW_VISIBILITY_CHANGED)
+            addAction(BroadcastActions.QUICK_CONTROL_CHANGED)
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(floatingWindowStateReceiver, filter, RECEIVER_NOT_EXPORTED)

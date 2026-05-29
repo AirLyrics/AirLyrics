@@ -9,6 +9,7 @@ object MusixmatchLyricsNative {
         title: String,
         artist: String,
         album: String,
-        durationMs: Long
+        durationMs: Long,
+        translationLanguageCode: String
     ): String
 }

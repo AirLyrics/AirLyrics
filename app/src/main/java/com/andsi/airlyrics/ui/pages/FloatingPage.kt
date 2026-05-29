@@ -15,6 +15,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.app.MainActivity
@@ -51,6 +52,17 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
     fun style() = FloatingLyricsStyleStore.getStyle(this)
     fun contentDisplayMode() = LyricsSettingsStore.getContentDisplayMode(this)
     fun lineDisplayMode() = LyricsSettingsStore.getLineDisplayMode(this)
+    fun switchAnimationMode() = LyricsSettingsStore.getSwitchAnimationMode(this)
+
+    fun compactSectionTitle(title: String): TextView {
+        return TextView(activity).apply {
+            text = title
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorTextStrong)
+            setPadding(0, dp(12), 0, dp(10))
+        }
+    }
 
     fun lyricsDisplaySummary(): String {
         return "${contentDisplayMode().title} · ${lineDisplayMode().title}"
@@ -85,6 +97,60 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
             LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> 6
         }
         previewBodyView?.requestLayout()
+        notifyFloatingStyleChanged()
+    }
+
+    fun playPreviewSwitchAnimation() {
+        val view = lyricPreviewTextView ?: return
+        view.animate().cancel()
+        when (switchAnimationMode()) {
+            LyricsSwitchAnimationMode.NONE -> {
+                view.alpha = 1f
+                view.translationY = 0f
+                view.scaleX = 1f
+                view.scaleY = 1f
+            }
+            LyricsSwitchAnimationMode.FADE -> {
+                view.alpha = 0f
+                view.translationY = 0f
+                view.scaleX = 1f
+                view.scaleY = 1f
+                view.animate()
+                    .alpha(1f)
+                    .setDuration(170L)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+            LyricsSwitchAnimationMode.SLIDE_UP -> {
+                view.alpha = 0f
+                view.translationY = dp(8).toFloat()
+                view.scaleX = 1f
+                view.scaleY = 1f
+                view.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setDuration(190L)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+            LyricsSwitchAnimationMode.SCALE_FADE -> {
+                view.alpha = 0f
+                view.translationY = 0f
+                view.scaleX = 0.96f
+                view.scaleY = 0.96f
+                view.animate()
+                    .alpha(1f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(180L)
+                    .setInterpolator(DecelerateInterpolator())
+                    .start()
+            }
+        }
+    }
+
+    fun applyLyricsAnimationSettingsChanged() {
+        playPreviewSwitchAnimation()
         notifyFloatingStyleChanged()
     }
 
@@ -161,8 +227,6 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
 
         val bubble = floatingFocusBubble(title, subtitle, ::closePanel) {
             content()
-            addView(spacer(activity, 6))
-            addView(smallHint(activity, "调节时上方预览会即时刷新，正在显示的悬浮窗也会同步变化。"))
         }
 
         overlay.removeAllViews()
@@ -263,14 +327,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
 
     val list = pageContainer(activity).apply {
         setPadding(0, dp(4), 0, 0)
-        addView(
-            sectionTitle(activity, 
-                "悬浮窗设置",
-                "上方负责看效果，下方分区调参数；颜色先选预设，再按需展开 RGB 细调。"
-            )
-        )
-
-        addView(sectionTitle(activity, "外观", "主题、颜色、字号、背景、阴影和窗口尺寸。"))
+        addView(compactSectionTitle("外观"))
         addView(
             settingGrid(
                 FloatingSettingTile(
@@ -278,7 +335,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = FloatingLyricsStyleStore.getPresetTitle(style().presetName),
                     mark = "✦",
                     onClick = { tile ->
-                        openPanel(tile, "皮肤预设", "选择一套基础样式，再继续细调。") {
+                        openPanel(tile, "皮肤预设", "") {
                             addView(liveOptionGrid(
                                 FloatingLyricsStyleStore.presets.map { preset ->
                                     KeyedOptionItem(
@@ -300,7 +357,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = FloatingLyricsStyleStore.colorSummary(style().textColor),
                     mark = "T",
                     onClick = { tile ->
-                        openPanel(tile, "文字颜色", "先从标准色里快速选择，再展开 RGB 细调。") {
+                        openPanel(tile, "文字颜色", "") {
                             addView(colorControl("文字", style().textColor) { color ->
                                 applyFloatingTextColor(color, refreshPage = false)
                                 refreshFloatingPreview()
@@ -313,7 +370,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = if (style().backgroundEnabled) "已开启" else "已关闭",
                     mark = "▣",
                     onClick = { tile ->
-                        openPanel(tile, "背景气泡", "设置背景开关、颜色和透明度。") {
+                        openPanel(tile, "背景气泡", "") {
                             val backgroundButton = actionButton(activity, if (style().backgroundEnabled) "背景：开启" else "背景：关闭") { }
                             backgroundButton.setOnClickListener {
                                 val enabled = !FloatingLyricsStyleStore.getStyle(activity).backgroundEnabled
@@ -335,7 +392,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = "${style().textSizeSp.toInt()}sp",
                     mark = "Aa",
                     onClick = { tile ->
-                        openPanel(tile, "字体大小", "调整歌词文字的显示尺寸。") {
+                        openPanel(tile, "字体大小", "") {
                             addView(sliderRow("大小", style().textSizeSp.toInt(), 14, 56, "sp") { value ->
                                 applyFloatingTextSize(value.toFloat(), refreshPage = false)
                                 refreshFloatingPreview()
@@ -348,7 +405,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = "半径 ${style().shadowRadius.toInt()}",
                     mark = "◌",
                     onClick = { tile ->
-                        openPanel(tile, "阴影描边", "让白字在复杂背景上更清楚。") {
+                        openPanel(tile, "阴影描边", "") {
                             addView(sliderRow("阴影半径", style().shadowRadius.toInt(), 0, 24, "") { value ->
                                 FloatingLyricsStyleStore.setShadowRadius(activity, value.toFloat())
                                 notifyFloatingStyleChanged()
@@ -367,7 +424,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = "宽度 ${style().maxWidthPercent}%",
                     mark = "⌗",
                     onClick = { tile ->
-                        openPanel(tile, "窗口布局", "调整最大宽度、圆角和内边距。") {
+                        openPanel(tile, "窗口布局", "") {
                             addView(sliderRow("最大宽度", style().maxWidthPercent, 45, 100, "%") { value ->
                                 FloatingLyricsStyleStore.setMaxWidthPercent(activity, value)
                                 notifyFloatingStyleChanged()
@@ -394,7 +451,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
             )
         )
 
-        addView(sectionTitle(activity, "歌词显示", "控制悬浮窗里显示原文、翻译，以及当前句前后的歌词范围。"))
+        addView(compactSectionTitle("歌词显示"))
         addView(
             settingGrid(
                 FloatingSettingTile(
@@ -402,7 +459,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = contentDisplayMode().title,
                     mark = "文",
                     onClick = { tile ->
-                        openPanel(tile, "显示内容", "选择显示原文、翻译，或两者一起显示。") {
+                        openPanel(tile, "显示内容", "") {
                             addView(liveOptionGrid(
                                 LyricsContentDisplayMode.entries.map { mode ->
                                     KeyedOptionItem(
@@ -416,7 +473,6 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                                     )
                                 }
                             ))
-                            addView(smallHint(activity, "Musixmatch 当前通常只提供原文；选择仅翻译时，如果歌词没有翻译，后续显示层会给出提示。"))
                         }
                     }
                 ),
@@ -425,7 +481,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = lineDisplayMode().title,
                     mark = "行",
                     onClick = { tile ->
-                        openPanel(tile, "显示范围", "决定悬浮窗显示当前句，还是额外显示上一句 / 下一句。") {
+                        openPanel(tile, "显示范围", "") {
                             addView(liveOptionGrid(
                                 LyricsLineDisplayMode.entries.map { mode ->
                                     KeyedOptionItem(
@@ -447,7 +503,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = FloatingLyricsStyleStore.getGravityTitle(style().gravity),
                     mark = "≡",
                     onClick = { tile ->
-                        openPanel(tile, "文字对齐", "控制歌词整体对齐方向。") {
+                        openPanel(tile, "文字对齐", "") {
                             addView(liveOptionGrid(listOf(
                                 KeyedOptionItem("left", "左对齐", style().gravity == (Gravity.START or Gravity.CENTER_VERTICAL)) {
                                     applyFloatingGravity(Gravity.START or Gravity.CENTER_VERTICAL)
@@ -467,22 +523,34 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 )
             )
         )
-        addView(card(activity) {
-            addView(bigText(activity, "当前显示方案"))
-            addView(settingRow(activity, "内容", contentDisplayMode().title))
-            addView(settingRow(activity, "范围", lineDisplayMode().title))
-            addView(smallHint(activity, "这一步先保存显示偏好并更新预览；下一步会让悬浮窗真实歌词渲染读取这些设置。"))
-        })
-
-        addView(sectionTitle(activity, "动画效果", "歌词切换、淡入淡出、滚动和逐字高亮。"))
-        addView(card(activity) {
-            addView(bigText(activity, "动画预留区"))
-            addView(settingRow(activity, "歌词切换动画", "预留"))
-            addView(settingRow(activity, "逐字高亮 / 卡拉 OK", "预留"))
-            addView(smallHint(activity, "当前先不做无效开关，只把模块位置留好，后面加动画时结构不会塌。"))
-        })
-
-        addView(sectionTitle(activity, "行为设置", "显示隐藏、拖动锁定、点击穿透和位置记忆。"))
+        addView(compactSectionTitle("动画效果"))
+        addView(
+            settingGrid(
+                FloatingSettingTile(
+                    title = "歌词切换动画",
+                    subtitle = switchAnimationMode().title,
+                    mark = "✨",
+                    onClick = { tile ->
+                        openPanel(tile, "歌词切换动画", "") {
+                            addView(liveOptionGrid(
+                                LyricsSwitchAnimationMode.entries.map { mode ->
+                                    KeyedOptionItem(
+                                        key = mode.key,
+                                        title = mode.title,
+                                        selected = mode == switchAnimationMode(),
+                                        action = {
+                                            LyricsSettingsStore.setSwitchAnimationMode(activity, mode)
+                                            applyLyricsAnimationSettingsChanged()
+                                        }
+                                    )
+                                }
+                            ))
+                        }
+                    }
+                )
+            )
+        )
+        addView(compactSectionTitle("行为设置"))
         addView(
             settingGrid(
                 FloatingSettingTile(
@@ -490,7 +558,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                     subtitle = floatingDisplaySummary(),
                     mark = "●",
                     onClick = { tile ->
-                        openPanel(tile, "显示控制", "快速显示、隐藏、锁定或开启点击穿透。") {
+                        openPanel(tile, "显示控制", "") {
                             addView(horizontalButtons(activity, 
                                 "显示" to { uiActions.showFloatingLyrics() },
                                 "隐藏" to { uiActions.hideFloatingLyrics() }
@@ -516,15 +584,23 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 )
             )
         )
-        addView(
-            card(activity) {
-                addView(bigText(activity, "当前行为"))
-                addView(settingRow(activity, "记住位置", "已开启"))
-                addView(settingRow(activity, "拖动锁定", if (FloatingLyricsStyleStore.isLocked(activity)) "已开启" else "已关闭"))
-                addView(settingRow(activity, "点击穿透", if (FloatingLyricsStyleStore.isClickThrough(activity)) "已开启" else "已关闭"))
-                addView(smallHint(activity, "预览区展开/收起会自动记住；锁定只禁止拖动，穿透会让触摸事件落到下面的 App。"))
+        val summaryButton = actionButton(activity, "查看当前配置") { }
+        summaryButton.setOnClickListener {
+            openPanel(summaryButton, "当前配置", "") {
+                addView(settingRow(activity, "皮肤", FloatingLyricsStyleStore.getPresetTitle(style().presetName)))
+                addView(settingRow(activity, "字号", "${style().textSizeSp.toInt()}sp"))
+                addView(settingRow(activity, "文字", FloatingLyricsStyleStore.colorSummary(style().textColor)))
+                addView(settingRow(activity, "背景", if (style().backgroundEnabled) "开启" else "关闭"))
+                addView(settingRow(activity, "宽度", "${style().maxWidthPercent}%"))
+                addView(settingRow(activity, "内容", contentDisplayMode().title))
+                addView(settingRow(activity, "范围", lineDisplayMode().title))
+                addView(settingRow(activity, "对齐", FloatingLyricsStyleStore.getGravityTitle(style().gravity)))
+                addView(settingRow(activity, "动画", switchAnimationMode().title))
+                addView(settingRow(activity, "锁定", if (FloatingLyricsStyleStore.isLocked(activity)) "开启" else "关闭"))
+                addView(settingRow(activity, "穿透", if (FloatingLyricsStyleStore.isClickThrough(activity)) "开启" else "关闭"))
             }
-        )
+        }
+        addView(summaryButton)
     }
 
     contentScroll = scroll(activity, list)

@@ -14,6 +14,7 @@ import com.andsi.airlyrics.app.liveOptionGrid
 import com.andsi.airlyrics.app.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.model.MusixmatchTranslationLanguage
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
@@ -86,6 +87,46 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             LyricsSettingsStore.sourceOptions.forEach { option ->
                 addView(smallHint(activity, "${option.title}：${option.description}"))
             }
+        }
+    )
+
+    container.addView(
+        card(activity) {
+            addView(bigText(activity, "Musixmatch 翻译"))
+            val currentLanguage = LyricsSettingsStore.getMusixmatchTranslationLanguage(activity)
+            val languageStatus = normalText(activity, "当前：${currentLanguage.title}")
+            val languageFeedback = TextView(activity).apply {
+                text = ""
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorAccentMint)
+                setPadding(0, dp(4), 0, 0)
+            }
+            addView(languageStatus)
+            addView(languageFeedback)
+
+            lateinit var languageGrid: LinearLayout
+            languageGrid = liveOptionGrid(
+                MusixmatchTranslationLanguage.entries.map { language ->
+                    KeyedOptionItem(
+                        key = language.key,
+                        title = language.title,
+                        selected = language == currentLanguage,
+                        action = {
+                            LyricsSettingsStore.setMusixmatchTranslationLanguage(activity, language)
+                            languageStatus.text = "当前：${language.title}"
+                            Toast.makeText(activity, "Musixmatch 翻译已设置为：${language.title}", Toast.LENGTH_SHORT).show()
+                            playLocalRefreshFeedback(activity, languageGrid, languageFeedback, "已保存")
+                        }
+                    )
+                }
+            )
+            addView(languageGrid)
+
+            MusixmatchTranslationLanguage.entries.forEach { language ->
+                addView(smallHint(activity, "${language.title}：${language.description}"))
+            }
+            addView(smallHint(activity, "只影响 Musixmatch 歌词源；网易云音乐继续使用它本身提供的中文翻译。翻译不存在时不会影响原文歌词。"))
         }
     )
 

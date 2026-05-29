@@ -6,7 +6,9 @@ data class LyricsSettings(
     val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean,
     val contentDisplayMode: LyricsContentDisplayMode = LyricsContentDisplayMode.default,
-    val lineDisplayMode: LyricsLineDisplayMode = LyricsLineDisplayMode.default
+    val lineDisplayMode: LyricsLineDisplayMode = LyricsLineDisplayMode.default,
+    val switchAnimationMode: LyricsSwitchAnimationMode = LyricsSwitchAnimationMode.default,
+    val musixmatchTranslationLanguage: MusixmatchTranslationLanguage = MusixmatchTranslationLanguage.default
 )
 
 /** The user's selected online lookup source. Local lyrics are always checked first. */
@@ -103,6 +105,79 @@ enum class LyricsLineDisplayMode(
 
         fun fromKey(key: String?): LyricsLineDisplayMode {
             return entries.firstOrNull { it.key == key } ?: default
+        }
+    }
+}
+
+
+/** Controls the animation used when the floating lyric text changes to a new line. */
+enum class LyricsSwitchAnimationMode(
+    val key: String,
+    val title: String,
+    val description: String
+) {
+    NONE(
+        key = "none",
+        title = "关闭",
+        description = "歌词切换时直接更新文字，最稳定省电。"
+    ),
+    FADE(
+        key = "fade",
+        title = "柔和淡入",
+        description = "新歌词轻轻淡入，适合安静场景。"
+    ),
+    SLIDE_UP(
+        key = "slide_up",
+        title = "上滑淡入",
+        description = "新歌词从下方向上浮现，更有滚动感。"
+    ),
+    SCALE_FADE(
+        key = "scale_fade",
+        title = "轻微缩放",
+        description = "新歌词轻微放大淡入，提示感更明显。"
+    );
+
+    companion object {
+        val default: LyricsSwitchAnimationMode = SLIDE_UP
+
+        fun fromKey(key: String?): LyricsSwitchAnimationMode {
+            return entries.firstOrNull { it.key == key } ?: default
+        }
+    }
+}
+
+
+/** Optional Musixmatch translation language. Netease keeps its own built-in translation flow. */
+enum class MusixmatchTranslationLanguage(
+    val key: String,
+    val title: String,
+    val languageCode: String,
+    val description: String
+) {
+    NONE(
+        key = "none",
+        title = "不获取",
+        languageCode = "",
+        description = "只获取 Musixmatch 原文同步歌词。"
+    ),
+    CHINESE(
+        key = "zh",
+        title = "中文",
+        languageCode = "zh",
+        description = "尝试获取 Musixmatch 中文翻译。"
+    ),
+    ENGLISH(
+        key = "en",
+        title = "English",
+        languageCode = "en",
+        description = "尝试获取 Musixmatch 英文翻译。"
+    );
+
+    companion object {
+        val default: MusixmatchTranslationLanguage = NONE
+
+        fun fromKey(key: String?): MusixmatchTranslationLanguage {
+            return entries.firstOrNull { it.key == key || it.languageCode == key } ?: default
         }
     }
 }

@@ -13,6 +13,11 @@ object BroadcastActions {
     const val UNLOCK = "com.andsi.airlyrics.UNLOCK"
     const val CLICK_THROUGH_ON = "com.andsi.airlyrics.CLICK_THROUGH_ON"
     const val CLICK_THROUGH_OFF = "com.andsi.airlyrics.CLICK_THROUGH_OFF"
+    const val NOTIFICATION_TOGGLE_VISIBLE = "com.andsi.airlyrics.NOTIFICATION_TOGGLE_VISIBLE"
+    const val NOTIFICATION_TOGGLE_LOCK = "com.andsi.airlyrics.NOTIFICATION_TOGGLE_LOCK"
+    const val NOTIFICATION_TOGGLE_CLICK_THROUGH = "com.andsi.airlyrics.NOTIFICATION_TOGGLE_CLICK_THROUGH"
+    const val NOTIFICATION_TOGGLE_ADJUST_MODE = "com.andsi.airlyrics.NOTIFICATION_TOGGLE_ADJUST_MODE"
+    const val QUICK_CONTROL_CHANGED = "com.andsi.airlyrics.QUICK_CONTROL_CHANGED"
     const val MEDIA_UPDATE = "com.andsi.airlyrics.MEDIA_UPDATE"
     const val IMPORT_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
     const val SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
@@ -23,5 +28,7 @@ object BroadcastActions {
 
     const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
     const val EXTRA_WINDOW_VISIBLE = "windowVisible"
+    const val EXTRA_LOCKED = "locked"
+    const val EXTRA_CLICK_THROUGH = "clickThrough"
     const val EXTRA_OVERWRITE_LYRICS = "overwriteLyrics"
 }
