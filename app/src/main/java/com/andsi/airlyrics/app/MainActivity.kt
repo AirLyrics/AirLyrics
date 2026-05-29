@@ -217,7 +217,7 @@ class MainActivity : AppCompatActivity() {
         locked = FloatingLyricsStyleStore.isLocked(this)
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
         quickFloatingVisible = isQuickFloatingVisible()
-        renderCurrentPage()
+        renderCurrentPage(animateContent = false, animateTabs = false)
     }
 
     @Deprecated("Use OnBackPressedDispatcher")
