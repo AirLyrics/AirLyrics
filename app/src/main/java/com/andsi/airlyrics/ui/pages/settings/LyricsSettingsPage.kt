@@ -25,7 +25,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
     val autoSearch = LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
     val autoSave = LyricsSettingsStore.isAutoSaveLocalEnabled(this)
 
-    container.addView(settingsBackHeader("歌词获取设置", "本地歌词优先，当前音乐绑定导入，找不到时再按你的设置联网搜索。"))
+    container.addView(settingsBackHeader("歌词获取设置"))
 
     container.addView(createCurrentLyricsCard(activity))
 
@@ -181,7 +181,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
 
         body.addView(normalText(activity, media.displayText))
         body.addView(settingRow(activity, "歌词来源", localInfo?.sourceText ?: "暂无本地歌词"))
-        body.addView(settingRow(activity, "匹配文件", localInfo?.friendlyTitle ?: "未绑定"))
+        body.addView(settingRow(activity, "本地歌词", localInfo?.friendlyTitle ?: "未绑定"))
 
         body.addView(actionButton(activity, "为当前音乐导入歌词") {
             uiActions.importLyricsForCurrentMedia()
@@ -191,7 +191,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
             body.addView(actionButton(activity, if (localInfo.source == LyricsStorage.SOURCE_DOWNLOADED) "移除已下载歌词" else "移除本地歌词") {
                 AlertDialog.Builder(activity)
                     .setTitle("移除当前音乐歌词？")
-                    .setMessage("${media.displayText}\n\n会删除本地歌词文件和索引记录。之后如果允许联网搜索，这首歌可以重新查找歌词。")
+                    .setMessage("${media.displayText}\n\n会删除这首歌关联的本地歌词。之后如果允许联网搜索，可以重新查找歌词。")
                     .setNegativeButton("取消", null)
                     .setPositiveButton("移除") { _, _ ->
                         uiActions.deleteLyricsForCurrentMedia(media)

@@ -14,6 +14,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
@@ -507,12 +508,7 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
             setStroke(dp(1), colorStroke)
         }
 
-        addView(TextView(activity).apply {
-            text = item.mark
-            gravity = Gravity.CENTER
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.WHITE)
+        addView(FrameLayout(activity).apply {
             layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
                 setMargins(0, 0, 0, dp(10))
             }
@@ -520,6 +516,12 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
                 shape = GradientDrawable.OVAL
                 setColor(colorAccent)
             }
+            addView(ImageView(activity).apply {
+                setImageResource(item.iconRes)
+                setColorFilter(Color.WHITE)
+                scaleType = ImageView.ScaleType.CENTER
+                layoutParams = FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER)
+            })
         })
 
         addView(TextView(activity).apply {

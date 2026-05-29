@@ -7,6 +7,8 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -39,17 +41,10 @@ internal fun MainActivity.settingsHomeHeader(): View {
             })
             addView(activity.themeToggleButton())
         })
-
-        addView(TextView(activity).apply {
-            text = "把选项收进轻飘飘的小抽屉里，需要时再打开。"
-            textSize = 14f
-            setTextColor(colorTextMuted)
-            setPadding(0, dp(4), 0, 0)
-        })
     }
 }
 
-internal fun MainActivity.settingsBackHeader(title: String, subtitle: String): View {
+internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = ""): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -76,12 +71,14 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String): V
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
-        addView(TextView(activity).apply {
-            text = subtitle
-            textSize = 14f
-            setTextColor(colorTextMuted)
-            setPadding(0, dp(4), 0, 0)
-        })
+        if (subtitle.isNotBlank()) {
+            addView(TextView(activity).apply {
+                text = subtitle
+                textSize = 14f
+                setTextColor(colorTextMuted)
+                setPadding(0, dp(4), 0, 0)
+            })
+        }
     }
 }
 
@@ -115,6 +112,7 @@ internal fun MainActivity.settingsCategoryCard(
     subtitle: String,
     status: String,
     accent: Int,
+    iconRes: Int,
     onClick: () -> Unit
 ): View {
     val activity = this
@@ -124,11 +122,7 @@ internal fun MainActivity.settingsCategoryCard(
         enableSoftPressFeedback(0.985f)
         setOnClickListener { onClick() }
 
-        addView(TextView(activity).apply {
-            text = "✦"
-            textSize = 22f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
+        addView(FrameLayout(activity).apply {
             layoutParams = LinearLayout.LayoutParams(dp(46), dp(46)).apply {
                 setMargins(0, 0, dp(14), 0)
             }
@@ -136,6 +130,12 @@ internal fun MainActivity.settingsCategoryCard(
                 shape = GradientDrawable.OVAL
                 setColor(accent)
             }
+            addView(ImageView(activity).apply {
+                setImageResource(iconRes)
+                setColorFilter(Color.WHITE)
+                scaleType = ImageView.ScaleType.CENTER
+                layoutParams = FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER)
+            })
         })
 
         addView(LinearLayout(activity).apply {

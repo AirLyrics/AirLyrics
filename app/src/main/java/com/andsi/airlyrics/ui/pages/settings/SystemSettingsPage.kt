@@ -16,7 +16,6 @@ internal fun createSystemSettingsPage(activity: MainActivity): View  = with(acti
             addView(settingRow(activity, "悬浮窗权限", if (Settings.canDrawOverlays(activity)) "已开启" else "未开启"))
             addView(settingRow(activity, "通知权限", if (hasNotificationPermission()) "已开启" else "未开启"))
             addView(settingRow(activity, "通知访问权限", if (hasNotificationListenerAccess()) "已开启" else "未开启"))
-            addView(smallHint(activity, "通知访问权限负责读取媒体控制器；悬浮窗权限负责把歌词盖在其他 App 上。"))
         }
     )
 

@@ -18,6 +18,6 @@ internal data class KeyedOptionItem(
 internal data class FloatingSettingTile(
     val title: String,
     val subtitle: String,
-    val mark: String,
+    val iconRes: Int,
     val onClick: (View) -> Unit
 )

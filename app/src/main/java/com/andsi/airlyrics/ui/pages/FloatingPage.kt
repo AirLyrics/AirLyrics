@@ -12,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
@@ -333,7 +334,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "皮肤预设",
                     subtitle = FloatingLyricsStyleStore.getPresetTitle(style().presetName),
-                    mark = "✦",
+                    iconRes = R.drawable.ic_air_style,
                     onClick = { tile ->
                         openPanel(tile, "皮肤预设", "") {
                             addView(liveOptionGrid(
@@ -355,7 +356,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "文字颜色",
                     subtitle = FloatingLyricsStyleStore.colorSummary(style().textColor),
-                    mark = "T",
+                    iconRes = R.drawable.ic_air_text_color,
                     onClick = { tile ->
                         openPanel(tile, "文字颜色", "") {
                             addView(colorControl("文字", style().textColor) { color ->
@@ -368,7 +369,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "背景气泡",
                     subtitle = if (style().backgroundEnabled) "已开启" else "已关闭",
-                    mark = "▣",
+                    iconRes = R.drawable.ic_air_chat_bubble,
                     onClick = { tile ->
                         openPanel(tile, "背景气泡", "") {
                             val backgroundButton = actionButton(activity, if (style().backgroundEnabled) "背景：开启" else "背景：关闭") { }
@@ -390,7 +391,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "字体大小",
                     subtitle = "${style().textSizeSp.toInt()}sp",
-                    mark = "Aa",
+                    iconRes = R.drawable.ic_air_format_size,
                     onClick = { tile ->
                         openPanel(tile, "字体大小", "") {
                             addView(sliderRow("大小", style().textSizeSp.toInt(), 14, 56, "sp") { value ->
@@ -403,7 +404,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "阴影描边",
                     subtitle = "半径 ${style().shadowRadius.toInt()}",
-                    mark = "◌",
+                    iconRes = R.drawable.ic_air_shadow,
                     onClick = { tile ->
                         openPanel(tile, "阴影描边", "") {
                             addView(sliderRow("阴影半径", style().shadowRadius.toInt(), 0, 24, "") { value ->
@@ -422,7 +423,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "窗口布局",
                     subtitle = "宽度 ${style().maxWidthPercent}%",
-                    mark = "⌗",
+                    iconRes = R.drawable.ic_air_pip,
                     onClick = { tile ->
                         openPanel(tile, "窗口布局", "") {
                             addView(sliderRow("最大宽度", style().maxWidthPercent, 45, 100, "%") { value ->
@@ -457,7 +458,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "显示内容",
                     subtitle = contentDisplayMode().title,
-                    mark = "文",
+                    iconRes = R.drawable.ic_air_lyrics,
                     onClick = { tile ->
                         openPanel(tile, "显示内容", "") {
                             addView(liveOptionGrid(
@@ -479,7 +480,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "显示范围",
                     subtitle = lineDisplayMode().title,
-                    mark = "行",
+                    iconRes = R.drawable.ic_air_line_spacing,
                     onClick = { tile ->
                         openPanel(tile, "显示范围", "") {
                             addView(liveOptionGrid(
@@ -501,7 +502,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "文字对齐",
                     subtitle = FloatingLyricsStyleStore.getGravityTitle(style().gravity),
-                    mark = "≡",
+                    iconRes = R.drawable.ic_air_align_center,
                     onClick = { tile ->
                         openPanel(tile, "文字对齐", "") {
                             addView(liveOptionGrid(listOf(
@@ -529,7 +530,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "歌词切换动画",
                     subtitle = switchAnimationMode().title,
-                    mark = "✨",
+                    iconRes = R.drawable.ic_air_motion,
                     onClick = { tile ->
                         openPanel(tile, "歌词切换动画", "") {
                             addView(liveOptionGrid(
@@ -556,7 +557,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 FloatingSettingTile(
                     title = "显示控制",
                     subtitle = floatingDisplaySummary(),
-                    mark = "●",
+                    iconRes = R.drawable.ic_air_visibility,
                     onClick = { tile ->
                         openPanel(tile, "显示控制", "") {
                             addView(horizontalButtons(activity, 
