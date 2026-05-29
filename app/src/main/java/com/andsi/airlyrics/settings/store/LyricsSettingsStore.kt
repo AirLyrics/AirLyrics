@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
+import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsSearchSource
 import com.andsi.airlyrics.settings.model.LyricsSettings
 import com.andsi.airlyrics.settings.model.LyricsSourceOption
@@ -10,6 +12,8 @@ object LyricsSettingsStore {
     private const val KEY_LYRICS_SOURCE = "lyrics_source"
     private const val KEY_AUTO_SEARCH_ONLINE = "auto_search_online"
     private const val KEY_AUTO_SAVE_LOCAL = "auto_save_local"
+    private const val KEY_CONTENT_DISPLAY_MODE = "content_display_mode"
+    private const val KEY_LINE_DISPLAY_MODE = "line_display_mode"
 
     const val SOURCE_LOCAL_ONLY = "local_only"
     const val SOURCE_NETEASE = "netease"
@@ -81,11 +85,42 @@ object LyricsSettingsStore {
             .apply()
     }
 
+
+    fun getContentDisplayMode(context: Context): LyricsContentDisplayMode {
+        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_CONTENT_DISPLAY_MODE, LyricsContentDisplayMode.default.key)
+
+        return LyricsContentDisplayMode.fromKey(value)
+    }
+
+    fun setContentDisplayMode(context: Context, mode: LyricsContentDisplayMode) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_CONTENT_DISPLAY_MODE, mode.key)
+            .apply()
+    }
+
+    fun getLineDisplayMode(context: Context): LyricsLineDisplayMode {
+        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getString(KEY_LINE_DISPLAY_MODE, LyricsLineDisplayMode.default.key)
+
+        return LyricsLineDisplayMode.fromKey(value)
+    }
+
+    fun setLineDisplayMode(context: Context, mode: LyricsLineDisplayMode) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_LINE_DISPLAY_MODE, mode.key)
+            .apply()
+    }
+
     fun getSettings(context: Context): LyricsSettings {
         return LyricsSettings(
             source = getLyricsSearchSource(context),
             autoSearchOnline = isAutoSearchOnlineEnabled(context),
-            autoSaveLocal = isAutoSaveLocalEnabled(context)
+            autoSaveLocal = isAutoSaveLocalEnabled(context),
+            contentDisplayMode = getContentDisplayMode(context),
+            lineDisplayMode = getLineDisplayMode(context)
         )
     }
 }

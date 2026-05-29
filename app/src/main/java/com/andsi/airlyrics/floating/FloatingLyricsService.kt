@@ -26,7 +26,11 @@ class FloatingLyricsService : Service() {
     private val lyricsView
         get() = if (::windowController.isInitialized) windowController.textView else null
 
-    private val renderer = FloatingLyricsRenderer { lyricsView }
+    private val renderer = FloatingLyricsRenderer(
+        textViewProvider = { lyricsView },
+        contentModeProvider = { LyricsSettingsStore.getContentDisplayMode(this) },
+        lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) }
+    )
     private val syncHandler = Handler(Looper.getMainLooper())
 
     private var currentMedia: CurrentMediaInfo = CurrentMediaInfo.Empty
@@ -102,7 +106,10 @@ class FloatingLyricsService : Service() {
             BroadcastActions.UNLOCK -> windowController.setLocked(false)
             BroadcastActions.CLICK_THROUGH_ON -> windowController.setClickThrough(true)
             BroadcastActions.CLICK_THROUGH_OFF -> windowController.setClickThrough(false)
-            BroadcastActions.APPLY_STYLE -> windowController.applyStyle()
+            BroadcastActions.APPLY_STYLE -> {
+                windowController.applyStyle()
+                renderer.refresh()
+            }
             BroadcastActions.RELOAD_LYRICS -> reloadCurrentLyrics()
             BroadcastActions.RELOAD_ONLINE_LYRICS -> reloadCurrentLyrics(
                 bypassLocal = true,
@@ -216,11 +223,13 @@ class FloatingLyricsService : Service() {
     }
 
     private fun applyLyricsResult(result: Result<LyricsProviderResult?>, media: CurrentMediaInfo) {
-        val lyricText = result.getOrNull()?.lyrics
+        val lyricsResult = result.getOrNull()
+        val lyricText = lyricsResult?.lyrics
 
         if (lyricText != null) {
             renderer.parseAndShow(
                 lyrics = lyricText,
+                translatedLyrics = lyricsResult.translatedLyrics,
                 emptyText = "♪ 歌词解析为空\n${media.displayText}"
             )
             return

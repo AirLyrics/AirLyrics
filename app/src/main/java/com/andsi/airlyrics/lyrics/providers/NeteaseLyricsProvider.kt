@@ -62,11 +62,14 @@ object NeteaseLyricsProvider : LyricsProvider {
                 return@runCatching null
             }
 
-            val mergedLyrics = json.optString("merged_lrc", "")
-                .ifBlank { json.optString("lrc", "") }
-                .ifBlank { json.optString("translated_lrc", "") }
+            val originalLrc = json.optString("lrc", "")
+            val translatedLrc = json.optString("translated_lrc", "").ifBlank { null }
+            val fallbackMergedLrc = json.optString("merged_lrc", "")
+            val primaryLrc = originalLrc
+                .ifBlank { fallbackMergedLrc }
+                .ifBlank { translatedLrc.orEmpty() }
 
-            if (mergedLyrics.isBlank()) {
+            if (primaryLrc.isBlank()) {
                 return@runCatching null
             }
 
@@ -77,8 +80,8 @@ object NeteaseLyricsProvider : LyricsProvider {
                 artist = json.optString("artist", artist),
                 album = json.optString("album", ""),
                 durationMs = json.optLong("duration_ms", durationMs),
-                lrc = mergedLyrics,
-                translatedLrc = json.optString("translated_lrc", "").ifBlank { null }
+                lrc = primaryLrc,
+                translatedLrc = translatedLrc
             )
         }
     }

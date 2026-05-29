@@ -2,14 +2,19 @@ package com.andsi.airlyrics.floating
 
 import android.os.SystemClock
 import android.widget.TextView
+import com.andsi.airlyrics.lyrics.display.LyricsDisplayFormatter
 import com.andsi.airlyrics.lyrics.parser.LrcLine
 import com.andsi.airlyrics.lyrics.parser.LrcParser
+import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 
 /**
  * Maintains parsed lyric lines and renders the line matching the current playback position.
  */
 class FloatingLyricsRenderer(
-    private val textViewProvider: () -> TextView?
+    private val textViewProvider: () -> TextView?,
+    private val contentModeProvider: () -> LyricsContentDisplayMode = { LyricsContentDisplayMode.default },
+    private val lineModeProvider: () -> LyricsLineDisplayMode = { LyricsLineDisplayMode.default }
 ) {
     private var currentLyrics: List<LrcLine> = emptyList()
     private var currentPositionMs: Long = 0L
@@ -33,13 +38,18 @@ class FloatingLyricsRenderer(
         textViewProvider()?.text = text
     }
 
-    fun parseAndShow(lyrics: String, emptyText: String) {
-        currentLyrics = LrcParser.parse(lyrics)
+    fun parseAndShow(
+        lyrics: String,
+        translatedLyrics: String? = null,
+        emptyText: String
+    ) {
+        currentLyrics = LrcParser.parseWithTranslation(lyrics, translatedLyrics)
 
         show(
             if (currentLyrics.isNotEmpty()) {
-                LrcParser.findCurrentLine(currentLyrics, getEstimatedPositionMs())?.text
-                    ?: currentLyrics.first().text
+                renderTextAtCurrentPosition().takeIf { it.isNotBlank() }
+                    ?: renderTextAtIndex(0).takeIf { it.isNotBlank() }
+                    ?: emptyText
             } else {
                 emptyText
             }
@@ -49,8 +59,30 @@ class FloatingLyricsRenderer(
     fun tick() {
         if (currentLyrics.isEmpty()) return
 
-        val line = LrcParser.findCurrentLine(currentLyrics, getEstimatedPositionMs()) ?: return
-        show(line.text)
+        val text = renderTextAtCurrentPosition().takeIf { it.isNotBlank() } ?: return
+        show(text)
+    }
+
+    fun refresh() {
+        if (currentLyrics.isEmpty()) return
+        val text = renderTextAtCurrentPosition().takeIf { it.isNotBlank() }
+            ?: renderTextAtIndex(0).takeIf { it.isNotBlank() }
+            ?: return
+        show(text)
+    }
+
+    private fun renderTextAtCurrentPosition(): String {
+        val currentIndex = LrcParser.findCurrentIndex(currentLyrics, getEstimatedPositionMs()) ?: return ""
+        return renderTextAtIndex(currentIndex)
+    }
+
+    private fun renderTextAtIndex(index: Int): String {
+        return LyricsDisplayFormatter.format(
+            lines = currentLyrics,
+            currentIndex = index,
+            contentMode = contentModeProvider(),
+            lineMode = lineModeProvider()
+        )
     }
 
     fun getEstimatedPositionMs(): Long {

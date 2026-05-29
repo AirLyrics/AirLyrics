@@ -13,7 +13,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.sliderRow
 import com.andsi.airlyrics.app.colorControl
@@ -46,6 +49,44 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
     var previewToggleTextView: TextView? = null
 
     fun style() = FloatingLyricsStyleStore.getStyle(this)
+    fun contentDisplayMode() = LyricsSettingsStore.getContentDisplayMode(this)
+    fun lineDisplayMode() = LyricsSettingsStore.getLineDisplayMode(this)
+
+    fun lyricsDisplaySummary(): String {
+        return "${contentDisplayMode().title} · ${lineDisplayMode().title}"
+    }
+
+    fun previewLine(original: String, translation: String): String {
+        return when (contentDisplayMode()) {
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> "$original\n$translation"
+            LyricsContentDisplayMode.ORIGINAL_ONLY -> original
+            LyricsContentDisplayMode.TRANSLATION_ONLY -> translation
+        }
+    }
+
+    fun previewLyricsText(): String {
+        val previous = previewLine("昨日の夢を抱きしめて", "拥抱昨日的梦")
+        val current = previewLine("夜に駆ける", "奔向夜晚")
+        val next = previewLine("君の声を探している", "寻找你的声音")
+        return when (lineDisplayMode()) {
+            LyricsLineDisplayMode.CURRENT_ONLY -> current
+            LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> listOf(previous, current).joinToString("\n")
+            LyricsLineDisplayMode.CURRENT_AND_NEXT -> listOf(current, next).joinToString("\n")
+            LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> listOf(previous, current, next).joinToString("\n")
+        }
+    }
+
+    fun applyLyricsDisplaySettingsChanged() {
+        lyricPreviewTextView?.text = previewLyricsText()
+        lyricPreviewTextView?.maxLines = when (lineDisplayMode()) {
+            LyricsLineDisplayMode.CURRENT_ONLY -> 2
+            LyricsLineDisplayMode.PREVIOUS_AND_CURRENT,
+            LyricsLineDisplayMode.CURRENT_AND_NEXT -> 4
+            LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> 6
+        }
+        previewBodyView?.requestLayout()
+        notifyFloatingStyleChanged()
+    }
 
     fun updatePreviewFold() {
         previewBodyView?.visibility = if (previewExpanded) View.VISIBLE else View.GONE
@@ -57,7 +98,10 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         val latestStyle = style()
         val summary = floatingPreviewSummary(latestStyle)
         summaryTextView?.text = summary
-        lyricPreviewTextView?.applyFloatingPreviewStyle(latestStyle)
+        lyricPreviewTextView?.apply {
+            text = previewLyricsText()
+            applyFloatingPreviewStyle(latestStyle)
+        }
     }
 
     fun clearContentFocus() {
@@ -161,14 +205,19 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         layoutTransition = softLayoutTransition()
         previewBodyView = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            lyricPreviewTextView = floatingPreviewText("夜に駆ける\n奔向夜晚", style()).apply {
+            lyricPreviewTextView = floatingPreviewText(previewLyricsText(), style()).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     dp(72)
                 ).apply {
                     setMargins(dp(12), 0, dp(12), dp(6))
                 }
-                maxLines = 2
+                maxLines = when (lineDisplayMode()) {
+                    LyricsLineDisplayMode.CURRENT_ONLY -> 2
+                    LyricsLineDisplayMode.PREVIOUS_AND_CURRENT,
+                    LyricsLineDisplayMode.CURRENT_AND_NEXT -> 4
+                    LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> 6
+                }
                 includeFontPadding = false
             }
             addView(lyricPreviewTextView!!)
@@ -345,15 +394,60 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
             )
         )
 
-        addView(sectionTitle(activity, "歌词显示", "当前句、前后句、翻译和对齐方式会放在这里。"))
+        addView(sectionTitle(activity, "歌词显示", "控制悬浮窗里显示原文、翻译，以及当前句前后的歌词范围。"))
         addView(
             settingGrid(
+                FloatingSettingTile(
+                    title = "显示内容",
+                    subtitle = contentDisplayMode().title,
+                    mark = "文",
+                    onClick = { tile ->
+                        openPanel(tile, "显示内容", "选择显示原文、翻译，或两者一起显示。") {
+                            addView(liveOptionGrid(
+                                LyricsContentDisplayMode.entries.map { mode ->
+                                    KeyedOptionItem(
+                                        key = mode.key,
+                                        title = mode.title,
+                                        selected = mode == contentDisplayMode(),
+                                        action = {
+                                            LyricsSettingsStore.setContentDisplayMode(activity, mode)
+                                            applyLyricsDisplaySettingsChanged()
+                                        }
+                                    )
+                                }
+                            ))
+                            addView(smallHint(activity, "Musixmatch 当前通常只提供原文；选择仅翻译时，如果歌词没有翻译，后续显示层会给出提示。"))
+                        }
+                    }
+                ),
+                FloatingSettingTile(
+                    title = "显示范围",
+                    subtitle = lineDisplayMode().title,
+                    mark = "行",
+                    onClick = { tile ->
+                        openPanel(tile, "显示范围", "决定悬浮窗显示当前句，还是额外显示上一句 / 下一句。") {
+                            addView(liveOptionGrid(
+                                LyricsLineDisplayMode.entries.map { mode ->
+                                    KeyedOptionItem(
+                                        key = mode.key,
+                                        title = mode.title,
+                                        selected = mode == lineDisplayMode(),
+                                        action = {
+                                            LyricsSettingsStore.setLineDisplayMode(activity, mode)
+                                            applyLyricsDisplaySettingsChanged()
+                                        }
+                                    )
+                                }
+                            ))
+                        }
+                    }
+                ),
                 FloatingSettingTile(
                     title = "文字对齐",
                     subtitle = FloatingLyricsStyleStore.getGravityTitle(style().gravity),
                     mark = "≡",
                     onClick = { tile ->
-                        openPanel(tile, "文字对齐", "控制两行歌词的整体对齐方向。") {
+                        openPanel(tile, "文字对齐", "控制歌词整体对齐方向。") {
                             addView(liveOptionGrid(listOf(
                                 KeyedOptionItem("left", "左对齐", style().gravity == (Gravity.START or Gravity.CENTER_VERTICAL)) {
                                     applyFloatingGravity(Gravity.START or Gravity.CENTER_VERTICAL)
@@ -374,10 +468,10 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
             )
         )
         addView(card(activity) {
-            addView(bigText(activity, "后续显示项"))
-            addView(settingRow(activity, "前一句 / 后一句", "预留"))
-            addView(settingRow(activity, "原文 / 翻译", "预留"))
-            addView(smallHint(activity, "以后做双语歌词、前后句显示时，直接塞进这个模块，不会把外观设置挤乱。"))
+            addView(bigText(activity, "当前显示方案"))
+            addView(settingRow(activity, "内容", contentDisplayMode().title))
+            addView(settingRow(activity, "范围", lineDisplayMode().title))
+            addView(smallHint(activity, "这一步先保存显示偏好并更新预览；下一步会让悬浮窗真实歌词渲染读取这些设置。"))
         })
 
         addView(sectionTitle(activity, "动画效果", "歌词切换、淡入淡出、滚动和逐字高亮。"))

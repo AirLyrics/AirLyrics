@@ -1,10 +1,12 @@
 package com.andsi.airlyrics.settings.model
 
-/** User-facing lyrics lookup configuration. */
+/** User-facing lyrics lookup and display configuration. */
 data class LyricsSettings(
     val source: LyricsSearchSource,
     val autoSearchOnline: Boolean,
-    val autoSaveLocal: Boolean
+    val autoSaveLocal: Boolean,
+    val contentDisplayMode: LyricsContentDisplayMode = LyricsContentDisplayMode.default,
+    val lineDisplayMode: LyricsLineDisplayMode = LyricsLineDisplayMode.default
 )
 
 /** The user's selected online lookup source. Local lyrics are always checked first. */
@@ -33,6 +35,73 @@ enum class LyricsSearchSource(
         val default: LyricsSearchSource = NETEASE
 
         fun fromKey(key: String?): LyricsSearchSource {
+            return entries.firstOrNull { it.key == key } ?: default
+        }
+    }
+}
+
+/** Controls which lyric text should be rendered when translations are available. */
+enum class LyricsContentDisplayMode(
+    val key: String,
+    val title: String,
+    val description: String
+) {
+    ORIGINAL_WITH_TRANSLATION(
+        key = "original_with_translation",
+        title = "原文 + 翻译",
+        description = "优先显示原文，并在下一行显示翻译。"
+    ),
+    ORIGINAL_ONLY(
+        key = "original_only",
+        title = "仅原文",
+        description = "只显示歌词原文，界面更清爽。"
+    ),
+    TRANSLATION_ONLY(
+        key = "translation_only",
+        title = "仅翻译",
+        description = "只显示翻译；没有翻译时会提示当前歌词没有翻译。"
+    );
+
+    companion object {
+        val default: LyricsContentDisplayMode = ORIGINAL_WITH_TRANSLATION
+
+        fun fromKey(key: String?): LyricsContentDisplayMode {
+            return entries.firstOrNull { it.key == key } ?: default
+        }
+    }
+}
+
+/** Controls how many neighboring lyric lines should be rendered around the current line. */
+enum class LyricsLineDisplayMode(
+    val key: String,
+    val title: String,
+    val description: String
+) {
+    CURRENT_ONLY(
+        key = "current_only",
+        title = "当前句",
+        description = "只显示正在播放的这一句。"
+    ),
+    PREVIOUS_AND_CURRENT(
+        key = "previous_and_current",
+        title = "上一句 + 当前句",
+        description = "显示上一句和当前句，方便跟读。"
+    ),
+    CURRENT_AND_NEXT(
+        key = "current_and_next",
+        title = "当前句 + 下一句",
+        description = "显示当前句和下一句，提前看到下一行。"
+    ),
+    PREVIOUS_CURRENT_NEXT(
+        key = "previous_current_next",
+        title = "上 + 当前 + 下",
+        description = "同时显示上一句、当前句和下一句。"
+    );
+
+    companion object {
+        val default: LyricsLineDisplayMode = CURRENT_ONLY
+
+        fun fromKey(key: String?): LyricsLineDisplayMode {
             return entries.firstOrNull { it.key == key } ?: default
         }
     }

@@ -4,6 +4,7 @@ import com.andsi.airlyrics.lyrics.providers.LocalLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.MusixmatchLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.NeteaseLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 import android.content.Context
 import android.util.Log
@@ -73,7 +74,10 @@ object LyricsRepository {
                     title = title,
                     artist = artist,
                     duration = durationMs,
-                    lyrics = onlineResult.lyrics,
+                    lyrics = LrcParser.mergeOriginalAndTranslationForStorage(
+                        lyrics = onlineResult.lyrics,
+                        translatedLyrics = onlineResult.translatedLyrics
+                    ),
                     album = album,
                     source = LyricsStorage.SOURCE_DOWNLOADED,
                     provider = onlineResult.providerName,
