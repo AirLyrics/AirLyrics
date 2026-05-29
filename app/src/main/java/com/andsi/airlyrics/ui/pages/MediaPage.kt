@@ -4,6 +4,8 @@ import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.view.View
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.app.refreshMediaButton
+import com.andsi.airlyrics.app.mediaSourceCard
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.ui.components.*

@@ -8,6 +8,7 @@ import android.media.session.PlaybackState
 import android.view.View
 import android.widget.Toast
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.app.updateMediaSourceSelectionVisuals
 import com.andsi.airlyrics.media.MediaNotificationListener
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse

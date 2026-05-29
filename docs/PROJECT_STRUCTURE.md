@@ -4,8 +4,9 @@ AirLyrics is split by responsibility so contributors can find the right room bef
 
 ```text
 app/src/main/java/com/andsi/airlyrics/
-  app/                            App shell, lifecycle, navigation, actions and controllers.
+  app/                            App shell, lifecycle, navigation, actions and Activity-scoped helpers.
     controller/                   Thin coordinators for media, lyrics and floating-window actions.
+    MainActivity*Ui.kt            Activity-scoped UI helpers extracted out of MainActivity.
   lyrics/                         Lyrics lookup, providers, repository and LRC parsing.
   media/                          Android media notification/session state.
   settings/                       Persistent settings stores and setting data models.

@@ -10,6 +10,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.app.liveOptionGrid
 import com.andsi.airlyrics.app.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore

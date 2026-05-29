@@ -40,9 +40,20 @@ app/src/main/java/com/andsi/airlyrics/
 
 ### MainActivity
 
-`MainActivity.kt` is the app shell. It owns lifecycle wiring and delegates page rendering, UI actions, media commands, lyrics operations, and floating-window commands to small helpers/controllers.
+`MainActivity.kt` is the app shell. It owns lifecycle wiring, Activity Result launchers, broadcast receivers, and thin delegation methods. New feature logic should not be added directly to it.
 
-It should not become the home for new feature logic. When adding a feature, prefer one of the modules below.
+Nearby `app/` helpers split the old Activity responsibilities:
+
+```text
+MainActivityRenderer.kt      Root view creation and page rendering.
+MainUiActionsFactory.kt      Central UI action callbacks.
+MainActivitySettingsUi.kt    Settings-page shared UI helpers.
+MainActivityFloatingUi.kt    Floating-style controls and media-source cards.
+MainActivityMediaUi.kt       Media refresh button and visual refresh helpers.
+controller/                  Coordinators for media, lyrics, and floating actions.
+```
+
+When adding a feature, prefer a page/component/controller/store file first. Only touch `MainActivity.kt` when the feature needs lifecycle, permission, launcher, or broadcast wiring.
 
 ### media
 

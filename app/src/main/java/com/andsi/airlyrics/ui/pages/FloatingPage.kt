@@ -15,6 +15,11 @@ import android.widget.TextView
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.app.sliderRow
+import com.andsi.airlyrics.app.colorControl
+import com.andsi.airlyrics.app.liveOptionGrid
+import com.andsi.airlyrics.app.settingGrid
+import com.andsi.airlyrics.app.floatingFocusBubble
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.components.*

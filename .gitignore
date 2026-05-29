@@ -1,5 +1,6 @@
 # Gradle / Android
 .gradle/
+.kotlin/
 build/
 */build/
 local.properties
@@ -7,7 +8,7 @@ local.properties
 .externalNativeBuild/
 
 # Rust
-target/
+lyrics-core/target/
 **/target/
 
 # IDE
