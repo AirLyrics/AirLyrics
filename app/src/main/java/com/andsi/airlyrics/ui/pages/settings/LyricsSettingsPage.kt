@@ -55,7 +55,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, "联网搜索源"))
+            addView(bigText(activity, "歌词搜索来源"))
             val sourceStatus = normalText(activity, "当前：${LyricsSettingsStore.getLyricsSourceTitle(activity)}")
             val sourceFeedback = TextView(activity).apply {
                 text = ""

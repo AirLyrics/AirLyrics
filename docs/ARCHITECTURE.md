@@ -79,6 +79,7 @@ LyricsRepository.kt       Single lookup entry point used by the service.
 LyricsProvider.kt         Interface for pluggable lyric sources.
 LocalLyricsProvider.kt    Local imported/saved lyric source.
 NeteaseLyricsProvider.kt  NetEase online lyric source.
+MusixmatchLyricsProvider.kt  Musixmatch online lyric source.
 LyricsStorage.kt          Local .lrc storage.
 LrcParser.kt              Timestamped lyric parsing and current-line lookup.
 ```

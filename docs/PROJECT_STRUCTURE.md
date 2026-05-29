@@ -31,6 +31,7 @@ lyrics/
   LyricsProvider.kt               Provider interface for online/local lyrics sources.
   LocalLyricsProvider.kt          Local imported/saved lyrics source.
   NeteaseLyricsProvider.kt        NetEase lyrics provider.
+  MusixmatchLyricsProvider.kt     Musixmatch lyrics provider.
   LyricsStorage.kt                Local .lrc import/read/save helpers.
   LrcParser.kt                    LRC timestamp parser and current-line lookup.
 
@@ -83,3 +84,4 @@ Lyrics lookup goes through `LyricsRepository`. To add a new source, implement `L
 
 - `ARCHITECTURE.md` explains runtime flow and module boundaries.
 - `CONTRIBUTING.md` explains build, commit, and contribution workflow.
+- `MUSIXMATCH_TESTING.md` explains the Musixmatch smoke-test flow.

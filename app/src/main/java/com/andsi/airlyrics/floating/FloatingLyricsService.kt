@@ -12,6 +12,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -226,16 +227,24 @@ class FloatingLyricsService : Service() {
         }
 
         renderer.clear()
-        renderer.show(notFoundText(media))
+        renderer.show(lookupFailureText(result.exceptionOrNull(), media))
+    }
+
+    private fun lookupFailureText(error: Throwable?, media: CurrentMediaInfo): String {
+        val providerMessage = (error as? LyricsLookupException)?.userMessage()
+        return if (providerMessage != null) {
+            "♪ ${media.displayText}\n$providerMessage"
+        } else {
+            notFoundText(media)
+        }
     }
 
     private fun notFoundText(media: CurrentMediaInfo): String {
         return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
             "♪ 仅使用本地歌词\n${media.displayText}\n未找到本地文件"
-        } else if (media.artist.isNotBlank()) {
-            "♪ ${media.title} - ${media.artist}\n未找到歌词"
         } else {
-            "♪ ${media.title}\n未找到歌词"
+            val sourceTitle = LyricsSettingsStore.getLyricsSourceTitle(this)
+            "♪ ${media.displayText}\n当前来源：$sourceTitle\n未找到歌词"
         }
     }
 

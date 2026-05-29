@@ -1,10 +1,13 @@
 package com.andsi.airlyrics.lyrics
 
 import com.andsi.airlyrics.lyrics.providers.LocalLyricsProvider
+import com.andsi.airlyrics.lyrics.providers.MusixmatchLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.NeteaseLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 
 import android.content.Context
+import android.util.Log
+import com.andsi.airlyrics.settings.model.LyricsSearchSource
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 
 /**
@@ -16,8 +19,9 @@ import com.andsi.airlyrics.settings.store.LyricsSettingsStore
  * 3. Optional local cache save for successful online results.
  */
 object LyricsRepository {
-    private val onlineProviders: Map<String, LyricsProvider> = mapOf(
-        LyricsSettingsStore.SOURCE_NETEASE to NeteaseLyricsProvider
+    private val onlineProviders: Map<LyricsSearchSource, LyricsProvider> = mapOf(
+        LyricsSearchSource.NETEASE to NeteaseLyricsProvider,
+        LyricsSearchSource.MUSIXMATCH to MusixmatchLyricsProvider
     )
 
     fun findLyrics(
@@ -46,17 +50,22 @@ object LyricsRepository {
             }
 
             val settings = LyricsSettingsStore.getSettings(context)
-            if (!ignoreAutoSearchSetting && (!settings.autoSearchOnline || settings.source == LyricsSettingsStore.SOURCE_LOCAL_ONLY)) {
+            if (settings.source == LyricsSearchSource.LOCAL_ONLY) {
+                return@runCatching null
+            }
+            if (!ignoreAutoSearchSetting && !settings.autoSearchOnline) {
                 return@runCatching null
             }
 
-            val providerKey = if (settings.source == LyricsSettingsStore.SOURCE_LOCAL_ONLY) {
-                LyricsSettingsStore.SOURCE_NETEASE
-            } else {
-                settings.source
+            val provider = onlineProviders[settings.source] ?: NeteaseLyricsProvider
+            val onlineResult = provider.fetch(request).getOrElse { error ->
+                Log.w(
+                    "AirLyricsLyrics",
+                    "${provider.name} lookup failed: title=$title artist=$artist durationMs=$durationMs",
+                    error
+                )
+                throw error
             }
-            val provider = onlineProviders[providerKey] ?: NeteaseLyricsProvider
-            val onlineResult = provider.fetch(request).getOrThrow()
 
             if (onlineResult != null && (settings.autoSaveLocal || forceSaveOnline)) {
                 LyricsStorage.saveLyrics(

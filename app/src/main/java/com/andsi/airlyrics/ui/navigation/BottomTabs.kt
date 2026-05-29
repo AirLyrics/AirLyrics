@@ -1,7 +1,6 @@
 package com.andsi.airlyrics.ui.navigation
 
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.SpannableString
@@ -162,12 +161,8 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
     }
 
     val selectedTab = tabViews[currentPage] ?: return@updateTabs
-    val selectedSlot = selectedTab.parent as? View ?: selectedTab
-    selectedSlot.post {
+    selectedTab.post {
         val highlight = tabHighlight ?: return@post
-        val highlightParent = highlight.parent as? ViewGroup ?: return@post
-        if (selectedSlot.width <= 0 || selectedSlot.height <= 0 || highlight.width <= 0) return@post
-
         val textWidth = measureTabTextWidth(activity, selectedTab)
         val horizontalPadding = if (currentPage == Page.FLOATING) dp(62) else dp(58)
         val targetWidth = (textWidth + horizontalPadding).coerceIn(
@@ -176,21 +171,19 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
         )
         val targetHeight = if (currentPage == Page.FLOATING) dp(54).toFloat() else dp(48).toFloat()
 
-        val slotRect = Rect(0, 0, selectedSlot.width, selectedSlot.height)
-        highlightParent.offsetDescendantRectToMyCoords(selectedSlot, slotRect)
+        val tabLocation = IntArray(2)
+        val highlightLocation = IntArray(2)
+        selectedTab.getLocationInWindow(tabLocation)
+        highlight.getLocationInWindow(highlightLocation)
 
-        // slotRect is now in the coordinate space of highlightParent.
-        // WaterTabHighlightView draws in its own local canvas, so subtract the
-        // highlight view offset. Without this, the shell padding is counted
-        // twice and the water pill drifts slightly right/down.
-        val centerX = slotRect.exactCenterX() - highlight.left
-        val centerY = slotRect.exactCenterY() - highlight.top
+        val centerX = tabLocation[0] - highlightLocation[0] + selectedTab.width / 2f
+        val centerY = tabLocation[1] - highlightLocation[1] + selectedTab.height / 2f
         highlight.moveTo(
             targetCenterX = centerX,
             targetCenterY = centerY,
             targetWidth = targetWidth,
             targetHeight = targetHeight,
-            animate = animate && highlight.hasPosition
+            animate = highlight.hasPosition
         )
     }
 }
