@@ -6,6 +6,8 @@ use ncmapi::NcmApi;
 use serde::Serialize;
 use std::collections::BTreeMap;
 
+mod musixmatch;
+
 #[derive(Debug, Clone)]
 struct Candidate {
     id: String,
@@ -17,7 +19,7 @@ struct Candidate {
 }
 
 #[derive(Serialize)]
-struct NativeResult {
+pub(crate) struct NativeResult {
     ok: bool,
     source: &'static str,
     id: Option<String>,
@@ -28,11 +30,67 @@ struct NativeResult {
     lrc: Option<String>,
     translated_lrc: Option<String>,
     merged_lrc: Option<String>,
+    error_type: Option<&'static str>,
     error: Option<String>,
 }
 
 #[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_NeteaseLyricsNative_fetchBestLyricsJson(
+    env: JNIEnv,
+    this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+) -> jstring {
+    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms)
+}
+
+// Keep the old root-package symbol as a compatibility alias for older APKs/builds.
+#[no_mangle]
 pub extern "system" fn Java_com_andsi_airlyrics_NeteaseLyricsNative_fetchBestLyricsJson(
+    env: JNIEnv,
+    this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+) -> jstring {
+    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms)
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyricsNative_fetchBestLyricsJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+    translation_language: JString,
+) -> jstring {
+    let title = jstring_to_string(&mut env, title);
+    let artist = jstring_to_string(&mut env, artist);
+    let album = jstring_to_string(&mut env, album);
+    let translation_language = jstring_to_string(&mut env, translation_language);
+    let duration_ms = if duration_ms > 0 { Some(duration_ms as u64) } else { None };
+
+    let result = std::panic::catch_unwind(|| {
+        musixmatch::fetch_best_lyrics(&title, &artist, &album, duration_ms, &translation_language)
+    })
+        .unwrap_or_else(|_| Err("native panic while fetching musixmatch lyrics".to_string()));
+
+    let json = match result {
+        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| fallback_error("musixmatch-rust", "SerializeError", "failed to serialize native result")),
+        Err(err) => fallback_error("musixmatch-rust", classify_error(&err), &err),
+    };
+
+    env.new_string(json)
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+
+fn fetch_netease_lyrics_json(
     mut env: JNIEnv,
     _this: JObject,
     title: JString,
@@ -49,8 +107,8 @@ pub extern "system" fn Java_com_andsi_airlyrics_NeteaseLyricsNative_fetchBestLyr
         .unwrap_or_else(|_| Err("native panic while fetching lyrics".to_string()));
 
     let json = match result {
-        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| fallback_error("failed to serialize native result")),
-        Err(err) => fallback_error(&err),
+        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| fallback_error("netease-rust", "SerializeError", "failed to serialize native result")),
+        Err(err) => fallback_error("netease-rust", classify_error(&err), &err),
     };
 
     env.new_string(json)
@@ -66,10 +124,10 @@ fn jstring_to_string(env: &mut JNIEnv, value: JString) -> String {
         .to_string()
 }
 
-fn fallback_error(message: &str) -> String {
+fn fallback_error(source: &'static str, error_type: &'static str, message: &str) -> String {
     serde_json::to_string(&NativeResult {
         ok: false,
-        source: "netease-rust",
+        source,
         id: None,
         title: None,
         artist: None,
@@ -78,9 +136,33 @@ fn fallback_error(message: &str) -> String {
         lrc: None,
         translated_lrc: None,
         merged_lrc: None,
+        error_type: Some(error_type),
         error: Some(message.to_string()),
     })
-    .unwrap_or_else(|_| "{\"ok\":false,\"source\":\"netease-rust\",\"error\":\"unknown native error\"}".to_string())
+    .unwrap_or_else(|_| format!(r#"{{"ok":false,"source":"{source}","error_type":"SerializeError","error":"unknown native error"}}"#))
+}
+
+fn classify_error(message: &str) -> &'static str {
+    let lower = message.to_lowercase();
+    if lower.contains("missingcredentials") || lower.contains("credential") || lower.contains("token") {
+        "NeedCredential"
+    } else if lower.contains("rate") || lower.contains("429") {
+        "RateLimited"
+    } else if lower.contains("restricted") || lower.contains("copyright") {
+        "RestrictedLyrics"
+    } else if lower.contains("no subtitle")
+        || lower.contains("no usable subtitle")
+        || lower.contains("no candidates")
+        || lower.contains("not found")
+        || lower.contains("could not be found")
+        || lower.contains("404")
+    {
+        "NotFound"
+    } else if lower.contains("network") || lower.contains("timeout") || lower.contains("failed to connect") || lower.contains("dns") {
+        "NetworkError"
+    } else {
+        "Unknown"
+    }
 }
 
 fn fetch_best_lyrics(
@@ -155,6 +237,7 @@ fn fetch_best_lyrics(
             lrc,
             translated_lrc,
             merged_lrc,
+            error_type: None,
             error: None,
         })
     })

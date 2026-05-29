@@ -15,6 +15,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net"] }
 regex = "1"
 openssl = { version = "0.10", features = ["vendored"] }
+musixmatch-inofficial = "0.4.0"
 
 [profile.release]
 lto = "thin"

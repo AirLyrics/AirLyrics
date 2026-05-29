@@ -48,7 +48,7 @@ object LyricsStorage {
                 val sourcePart = when (source) {
                     SOURCE_MANUAL_IMPORT -> "手动导入"
                     SOURCE_DOWNLOADED -> if (provider.isBlank() || provider == "local") "本地缓存" else "本地缓存 · $provider"
-                    SOURCE_LEGACY -> "旧版本地文件"
+                    SOURCE_LEGACY -> "本地歌词"
                     else -> "本地歌词"
                 }
                 return "$artistPart · $sourcePart"
@@ -68,7 +68,7 @@ object LyricsStorage {
             get() = when (source) {
                 SOURCE_MANUAL_IMPORT -> "手动导入"
                 SOURCE_DOWNLOADED -> if (provider.isBlank() || provider == "local") "本地缓存" else "本地缓存 · $provider"
-                SOURCE_LEGACY -> "旧版本地文件"
+                SOURCE_LEGACY -> "本地歌词"
                 else -> "本地歌词"
             }
 
