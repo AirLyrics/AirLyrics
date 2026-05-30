@@ -8,13 +8,11 @@ import android.provider.Settings
 
 internal object PermissionController {
     fun requestOverlayPermission(activity: MainActivity) {
-        if (!Settings.canDrawOverlays(activity)) {
-            val intent = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:${activity.packageName}")
-            )
-            activity.startActivity(intent)
-        }
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            Uri.parse("package:${activity.packageName}")
+        )
+        activity.startActivity(intent)
     }
 
     fun hasNotificationPermission(activity: MainActivity): Boolean {
@@ -35,13 +33,29 @@ internal object PermissionController {
 
     fun requestNotificationPermissionIfNeeded(activity: MainActivity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            openAppNotificationSettings(activity)
             return
         }
 
         if (hasNotificationPermission(activity)) {
+            openAppNotificationSettings(activity)
             return
         }
 
         activity.notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
+
+    private fun openAppNotificationSettings(activity: MainActivity) {
+        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
+            }
+        } else {
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:${activity.packageName}")
+            )
+        }
+        activity.startActivity(intent)
     }
 }

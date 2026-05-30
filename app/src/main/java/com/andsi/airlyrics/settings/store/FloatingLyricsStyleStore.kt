@@ -33,10 +33,8 @@ object FloatingLyricsStyleStore {
     private const val DEFAULT_Y = 300
 
     val presets = listOf(
-        FloatingLyricsPreset("transparent", "透明白字"),
-        FloatingLyricsPreset("bubble", "黑胶气泡"),
-        FloatingLyricsPreset("neon", "霓虹蓝"),
-        FloatingLyricsPreset("subtitle", "纯净字幕")
+        FloatingLyricsPreset("subtitle", "纯净字母"),
+        FloatingLyricsPreset("bubble", "黑胶气泡")
     )
 
 

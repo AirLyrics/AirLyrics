@@ -4,20 +4,25 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.provider.Settings
+import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.smallHint
+import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -171,6 +176,7 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             setColor(colorSurfaceLight)
             setStroke(dp(1), colorStroke)
         }
+        enableSoftPressFeedback(0.98f)
         addView(TextView(activity).apply {
             text = item.displayTitle
             textSize = 14f
@@ -178,11 +184,64 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = "${item.displaySubtitle} · ${LyricsStorage.formatLocalLyricsItem(item)}"
+            text = "${item.displaySubtitle} · ${item.lyricsTypeText}"
             textSize = 12f
-            setTextColor(colorTextMuted)
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorAccentMint)
             setPadding(0, dp(4), 0, 0)
         })
+        addView(TextView(activity).apply {
+            text = LyricsStorage.formatLocalLyricsItem(item)
+            textSize = 12f
+            setTextColor(colorTextMuted)
+            setPadding(0, dp(2), 0, 0)
+        })
+        setOnClickListener {
+            val rawLyrics = LyricsStorage.readLocalLyricsItemText(activity, item)
+            if (rawLyrics == null) {
+                Toast.makeText(activity, "无法读取这份歌词", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val editor = EditText(activity).apply {
+                setText(rawLyrics)
+                textSize = 13f
+                minLines = 8
+                maxLines = 18
+                gravity = Gravity.TOP or Gravity.START
+                inputType = InputType.TYPE_CLASS_TEXT or
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+                    InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                setHorizontallyScrolling(false)
+                setSelection(0)
+                setTextColor(colorTextStrong)
+                setHintTextColor(colorTextMuted)
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(16).toFloat()
+                    setColor(colorSurfaceLight)
+                    setStroke(dp(1), colorStroke)
+                }
+            }
+
+            val canEdit = item.hasPlainLyrics && !item.name.endsWith(".karaoke.json", ignoreCase = true)
+            activity.showAirDialog(
+                title = item.displayTitle,
+                message = if (canEdit) "可预览，也可以直接修改普通 LRC 内容。" else "这份逐字歌词只能预览。",
+                positiveText = if (canEdit) "保存修改" else null,
+                negativeText = "关闭",
+                body = {
+                    addView(editor)
+                }
+            ) {
+                val saved = LyricsStorage.updateLocalLyricsItemText(activity, item, editor.text.toString())
+                Toast.makeText(
+                    activity,
+                    if (saved) "歌词已保存" else "保存失败，请确认内容是 [00:12.34]歌词 格式",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 }
 

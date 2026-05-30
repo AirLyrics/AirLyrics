@@ -1,15 +1,11 @@
 package com.andsi.airlyrics.floating
 
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.LinearGradient
-import android.graphics.Paint
-import android.graphics.Shader
 import android.os.SystemClock
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.style.ReplacementSpan
+import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
@@ -146,9 +142,9 @@ class FloatingLyricsRenderer(
 
     /**
      * Renders exactly the same content modes as [LyricsDisplayFormatter], but replaces only
-     * the current original line with a karaoke flow span when a matching richsync line exists.
+     * the current original line with wrap-safe karaoke highlighting when a matching local word-by-word line exists.
      * This keeps “original only / translation only / original + translation” independent from
-     * karaoke and prevents richsync text from leaking translations into original-only mode.
+     * karaoke and prevents word-by-word text from leaking translations into original-only mode.
      */
     private fun renderTextAtIndexWithKaraoke(currentIndex: Int, positionMs: Long): CharSequence {
         if (currentLyrics.isEmpty() || currentIndex !in currentLyrics.indices) return ""
@@ -227,26 +223,46 @@ class FloatingLyricsRenderer(
     private fun findKaraokeLineForLrc(line: LrcLine, positionMs: Long): KaraokeLine? {
         if (currentKaraokeLines.isEmpty()) return null
 
-        val byPosition = currentKaraokeLines
-            .filter { positionMs in (it.startMs - 350L)..(it.endMs + 700L) }
-            .minByOrNull { kotlin.math.abs(it.startMs - line.timeMs) }
-            ?.takeIf { kotlin.math.abs(it.startMs - line.timeMs) <= 2_500L }
-        if (byPosition != null) return byPosition
+        fun List<KaraokeLine>.bestCompatible(maxDistanceMs: Long): KaraokeLine? {
+            return sortedBy { kotlin.math.abs(it.startMs - line.timeMs) }
+                .firstOrNull { candidate ->
+                    kotlin.math.abs(candidate.startMs - line.timeMs) <= maxDistanceMs &&
+                        isTextCompatible(line.text, karaokeOriginalText(candidate))
+                }
+        }
 
-        return currentKaraokeLines
-            .minByOrNull { kotlin.math.abs(it.startMs - line.timeMs) }
-            ?.takeIf { kotlin.math.abs(it.startMs - line.timeMs) <= 1_500L }
+        val aroundPosition = currentKaraokeLines
+            .filter { positionMs in (it.startMs - 350L)..(it.endMs + 700L) }
+            .bestCompatible(maxDistanceMs = 2_500L)
+        if (aroundPosition != null) return aroundPosition
+
+        return currentKaraokeLines.bestCompatible(maxDistanceMs = 1_500L)
     }
 
     private fun renderKaraokeOnlyAtIndex(index: Int, positionMs: Long): CharSequence {
-        val line = currentKaraokeLines.getOrNull(index) ?: return ""
-        val original = karaokeOriginalText(line)
-        return when (contentModeProvider()) {
-            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
-            LyricsContentDisplayMode.ORIGINAL_ONLY -> {
-                if (original.isBlank()) "" else karaokeLineSpan(line, original, positionMs)
+        if (contentModeProvider() == LyricsContentDisplayMode.TRANSLATION_ONLY) {
+            return "当前歌词没有翻译"
+        }
+
+        val renderedLines = visibleKaraokeIndexes(index).mapNotNull { visibleIndex ->
+            val line = currentKaraokeLines.getOrNull(visibleIndex) ?: return@mapNotNull null
+            val original = karaokeOriginalText(line)
+            if (original.isBlank()) {
+                null
+            } else if (visibleIndex == index) {
+                karaokeLineSpan(line, original, positionMs)
+            } else {
+                original
             }
-            LyricsContentDisplayMode.TRANSLATION_ONLY -> "当前歌词没有翻译"
+        }
+
+        if (renderedLines.isEmpty()) return ""
+
+        return SpannableStringBuilder().apply {
+            renderedLines.forEachIndexed { renderedIndex, renderedLine ->
+                if (renderedIndex > 0) append('\n')
+                append(renderedLine)
+            }
         }
     }
 
@@ -264,16 +280,17 @@ class FloatingLyricsRenderer(
         val text = displayText.trim()
         if (text.isBlank()) return ""
 
+        val highlightEnd = karaokeHighlightEnd(line, text, positionMs)
+            .coerceIn(0, text.length)
         val span = SpannableString(text)
-        span.setSpan(
-            KaraokeFlowSpan(
-                highlightColor = karaokeHighlightColorProvider(),
-                progress = karaokeLineProgress(line, text, positionMs)
-            ),
-            0,
-            text.length,
-            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        )
+        if (highlightEnd > 0) {
+            span.setSpan(
+                ForegroundColorSpan(karaokeHighlightColorProvider()),
+                0,
+                highlightEnd,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
         return span
     }
 
@@ -287,9 +304,10 @@ class FloatingLyricsRenderer(
             .orEmpty()
     }
 
-    private fun karaokeLineProgress(line: KaraokeLine, displayText: String, positionMs: Long): Float {
-        if (positionMs <= line.startMs) return 0f
-        if (positionMs >= line.endMs) return 1f
+    private fun karaokeHighlightEnd(line: KaraokeLine, displayText: String, positionMs: Long): Int {
+        if (displayText.isBlank()) return 0
+        if (positionMs <= line.startMs) return 0
+        if (positionMs >= line.endMs) return displayText.length
 
         var searchStart = 0
         var completedCharEnd = 0
@@ -307,23 +325,50 @@ class FloatingLyricsRenderer(
             when {
                 positionMs >= token.endMs -> completedCharEnd = tokenEnd
                 positionMs in token.startMs until token.endMs -> {
-                    val tokenProgress = ((positionMs - token.startMs).toFloat() / (token.endMs - token.startMs).toFloat())
+                    val duration = (token.endMs - token.startMs).coerceAtLeast(1L)
+                    val tokenProgress = ((positionMs - token.startMs).toFloat() / duration.toFloat())
                         .coerceIn(0f, 1f)
                     val eased = smoothStep(tokenProgress)
-                    val currentEnd = tokenStart + tokenText.length * eased
-                    return (currentEnd / displayText.length.toFloat()).coerceAtLeast(
-                        completedCharEnd / displayText.length.toFloat()
-                    ).coerceIn(0f, 1f)
+                    val currentEnd = tokenStart + kotlin.math.ceil(tokenText.length * eased).toInt()
+                    return currentEnd.coerceAtLeast(completedCharEnd).coerceIn(0, displayText.length)
                 }
-                positionMs < token.startMs -> {
-                    return (completedCharEnd / displayText.length.toFloat()).coerceIn(0f, 1f)
-                }
+                positionMs < token.startMs -> return completedCharEnd.coerceIn(0, displayText.length)
             }
         }
 
-        val lineProgress = ((positionMs - line.startMs).toFloat() / (line.endMs - line.startMs).toFloat())
+        val duration = (line.endMs - line.startMs).coerceAtLeast(1L)
+        val lineProgress = ((positionMs - line.startMs).toFloat() / duration.toFloat())
             .coerceIn(0f, 1f)
-        return smoothStep(lineProgress)
+        return kotlin.math.ceil(displayText.length * smoothStep(lineProgress)).toInt()
+            .coerceIn(0, displayText.length)
+    }
+
+    private fun normalizeKaraokeMatchText(text: String): String {
+        return text.lowercase()
+            .replace(Regex("""[^\p{L}\p{N}]"""), "")
+            .trim()
+    }
+
+    private fun isTextCompatible(lrcText: String, karaokeText: String): Boolean {
+        val lrc = normalizeKaraokeMatchText(lrcText)
+        val karaoke = normalizeKaraokeMatchText(karaokeText)
+        if (lrc.isBlank() || karaoke.isBlank()) return false
+        if (lrc == karaoke) return true
+        if (lrc.length >= 2 && karaoke.length >= 2 && (lrc.contains(karaoke) || karaoke.contains(lrc))) {
+            return true
+        }
+
+        val shorter = if (lrc.length <= karaoke.length) lrc else karaoke
+        val longer = if (lrc.length <= karaoke.length) karaoke else lrc
+        val minCommonLength = when {
+            shorter.length >= 12 -> 8
+            shorter.length >= 6 -> 4
+            else -> return false
+        }
+
+        return (0..(shorter.length - minCommonLength)).any { start ->
+            longer.contains(shorter.substring(start, start + minCommonLength))
+        }
     }
 
     private fun smoothStep(value: Float): Float {
@@ -454,88 +499,3 @@ class FloatingLyricsRenderer(
         return (currentPositionMs + elapsedMs.coerceAtLeast(0L) + lyricsOffsetMs).coerceAtLeast(0L)
     }
 }
-
-private class KaraokeFlowSpan(
-    private val highlightColor: Int,
-    private val progress: Float
-) : ReplacementSpan() {
-    override fun getSize(
-        paint: Paint,
-        text: CharSequence?,
-        start: Int,
-        end: Int,
-        fm: Paint.FontMetricsInt?
-    ): Int {
-        if (text == null) return 0
-        return (paint.measureText(text, start, end) + 0.5f).toInt()
-    }
-
-    override fun draw(
-        canvas: Canvas,
-        text: CharSequence?,
-        start: Int,
-        end: Int,
-        x: Float,
-        top: Int,
-        y: Int,
-        bottom: Int,
-        paint: Paint
-    ) {
-        if (text == null) return
-        val value = text.subSequence(start, end).toString()
-        if (value.isBlank()) return
-
-        val oldColor = paint.color
-        val oldShader = paint.shader
-        val oldAlpha = paint.alpha
-        val oldFakeBold = paint.isFakeBoldText
-        val width = paint.measureText(value)
-        val safeProgress = progress.coerceIn(0f, 1f)
-        val highlightWidth = width * safeProgress
-
-        paint.shader = null
-        paint.color = oldColor
-        paint.alpha = oldAlpha
-        paint.isFakeBoldText = false
-        canvas.drawText(value, x, y.toFloat(), paint)
-
-        if (highlightWidth > 0f) {
-            canvas.save()
-            canvas.clipRect(x, top.toFloat(), x + highlightWidth, bottom.toFloat())
-            paint.color = highlightColor
-            paint.alpha = oldAlpha
-            paint.isFakeBoldText = false
-            canvas.drawText(value, x, y.toFloat(), paint)
-            canvas.restore()
-        }
-
-        if (highlightWidth > 1f && highlightWidth < width) {
-            val edgeWidth = (width * 0.14f).coerceIn(8f, 22f)
-            val edgeStart = (x + highlightWidth - edgeWidth).coerceAtLeast(x)
-            val edgeEnd = (x + highlightWidth + edgeWidth).coerceAtMost(x + width)
-            if (edgeEnd > edgeStart) {
-                canvas.save()
-                canvas.clipRect(edgeStart, top.toFloat(), edgeEnd, bottom.toFloat())
-                paint.shader = LinearGradient(
-                    edgeStart,
-                    0f,
-                    edgeEnd,
-                    0f,
-                    intArrayOf(Color.TRANSPARENT, highlightColor, Color.TRANSPARENT),
-                    floatArrayOf(0f, 0.5f, 1f),
-                    Shader.TileMode.CLAMP
-                )
-                paint.alpha = oldAlpha
-                paint.isFakeBoldText = false
-                canvas.drawText(value, x, y.toFloat(), paint)
-                canvas.restore()
-            }
-        }
-
-        paint.color = oldColor
-        paint.shader = oldShader
-        paint.alpha = oldAlpha
-        paint.isFakeBoldText = oldFakeBold
-    }
-}
-

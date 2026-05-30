@@ -16,7 +16,6 @@ import android.widget.Toast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
-import com.andsi.airlyrics.settings.store.KaraokeLyricsStatusStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
@@ -250,15 +249,6 @@ class FloatingLyricsService : Service() {
         val lyricText = lyricsResult?.lyrics
 
         if (lyricText != null) {
-            KaraokeLyricsStatusStore.update(
-                context = this,
-                mediaKey = media.lyricsKey(),
-                providerId = lyricsResult.providerId,
-                providerName = lyricsResult.providerName,
-                hasLyrics = true,
-                hasKaraoke = lyricsResult.karaokeLines.isNotEmpty()
-            )
-
             renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
             renderer.parseAndShow(
                 lyrics = lyricText,
@@ -269,7 +259,6 @@ class FloatingLyricsService : Service() {
             return
         }
 
-        KaraokeLyricsStatusStore.clear(this, media.lyricsKey())
         renderer.clear()
         renderer.show(lookupFailureText(result.exceptionOrNull(), media))
     }

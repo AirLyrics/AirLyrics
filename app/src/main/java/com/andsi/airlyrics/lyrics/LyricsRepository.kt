@@ -7,6 +7,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 import android.content.Context
+import com.andsi.airlyrics.BuildConfig
 import android.util.Log
 import com.andsi.airlyrics.settings.model.LyricsSearchSource
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
@@ -46,54 +47,36 @@ object LyricsRepository {
         return runCatching {
             val settings = LyricsSettingsStore.getSettings(context)
             val wordByWordEnabled = settings.karaokeLyricsEnabled
-            val wantsOnlineKaraoke = wordByWordEnabled &&
-                settings.source == LyricsSearchSource.MUSIXMATCH
-            var localFallback: LyricsProviderResult? = null
-
             if (!bypassLocal) {
                 LocalLyricsProvider.fetch(request).getOrThrow()?.let { localResult ->
-                    if (!wordByWordEnabled) {
-                        return@runCatching localResult
-                    }
-
-                    val cachedKaraokeLines = LyricsStorage.readKaraokeLyrics(
+                    return@runCatching attachLocalKaraokeIfAvailable(
                         context = context,
+                        result = localResult,
                         title = title,
                         artist = artist,
-                        duration = durationMs
+                        durationMs = durationMs,
+                        enabled = wordByWordEnabled
                     )
-                    if (cachedKaraokeLines.isNotEmpty()) {
-                        return@runCatching localResult.copy(
-                            providerId = "local",
-                            providerName = "本地缓存",
-                            karaokeLines = cachedKaraokeLines
-                        )
-                    }
-
-                    if (!wantsOnlineKaraoke) {
-                        return@runCatching localResult
-                    }
-
-                    localFallback = localResult
                 }
             }
 
             if (settings.source == LyricsSearchSource.LOCAL_ONLY) {
-                return@runCatching localFallback
+                return@runCatching null
             }
             if (!ignoreAutoSearchSetting && !settings.autoSearchOnline) {
-                return@runCatching localFallback
+                return@runCatching null
             }
 
             val provider = onlineProviders[settings.source] ?: NeteaseLyricsProvider
             val onlineResult = provider.fetch(request).getOrElse { error ->
-                Log.w(
-                    "AirLyricsLyrics",
-                    "${provider.name} lookup failed: title=$title artist=$artist durationMs=$durationMs",
-                    error
-                )
-                if (wantsOnlineKaraoke && localFallback != null) {
-                    return@runCatching localFallback
+                if (BuildConfig.DEBUG) {
+                    Log.w(
+                        "AirLyricsLyrics",
+                        "${provider.name} lookup failed: title=$title artist=$artist durationMs=$durationMs",
+                        error
+                    )
+                } else {
+                    Log.w("AirLyricsLyrics", "${provider.name} lookup failed", error)
                 }
                 throw error
             }
@@ -115,21 +98,37 @@ object LyricsRepository {
                 )
             }
 
-            if (onlineResult != null && wantsOnlineKaraoke && onlineResult.karaokeLines.isNotEmpty()) {
-                LyricsStorage.saveKaraokeLyrics(
+            onlineResult?.let { result ->
+                attachLocalKaraokeIfAvailable(
                     context = context,
+                    result = result,
                     title = title,
                     artist = artist,
-                    duration = durationMs,
-                    karaokeLines = onlineResult.karaokeLines,
-                    album = album,
-                    source = LyricsStorage.SOURCE_DOWNLOADED,
-                    provider = onlineResult.providerName,
-                    overwrite = true
+                    durationMs = durationMs,
+                    enabled = wordByWordEnabled
                 )
             }
-
-            onlineResult ?: localFallback
         }
+    }
+
+    private fun attachLocalKaraokeIfAvailable(
+        context: Context,
+        result: LyricsProviderResult,
+        title: String,
+        artist: String,
+        durationMs: Long,
+        enabled: Boolean
+    ): LyricsProviderResult {
+        if (!enabled) return result
+
+        val cachedKaraokeLines = LyricsStorage.readKaraokeLyrics(
+            context = context,
+            title = title,
+            artist = artist,
+            duration = durationMs
+        )
+        if (cachedKaraokeLines.isEmpty()) return result
+
+        return result.copy(karaokeLines = cachedKaraokeLines)
     }
 }

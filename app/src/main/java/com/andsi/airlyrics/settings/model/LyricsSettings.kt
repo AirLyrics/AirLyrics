@@ -8,8 +8,7 @@ data class LyricsSettings(
     val contentDisplayMode: LyricsContentDisplayMode = LyricsContentDisplayMode.default,
     val lineDisplayMode: LyricsLineDisplayMode = LyricsLineDisplayMode.default,
     val switchAnimationMode: LyricsSwitchAnimationMode = LyricsSwitchAnimationMode.default,
-    val karaokeLyricsEnabled: Boolean = false,
-    val musixmatchTranslationLanguage: MusixmatchTranslationLanguage = MusixmatchTranslationLanguage.default
+    val karaokeLyricsEnabled: Boolean = false
 )
 
 /** The user's selected online lookup source. Local lyrics are always checked first. */
@@ -147,41 +146,6 @@ enum class LyricsSwitchAnimationMode(
     }
 }
 
-
-/** Optional Musixmatch translation language. Netease keeps its own built-in translation flow. */
-enum class MusixmatchTranslationLanguage(
-    val key: String,
-    val title: String,
-    val languageCode: String,
-    val description: String
-) {
-    NONE(
-        key = "none",
-        title = "不获取",
-        languageCode = "",
-        description = "只获取 Musixmatch 原文同步歌词。"
-    ),
-    CHINESE(
-        key = "zh",
-        title = "中文",
-        languageCode = "zh",
-        description = "尝试获取 Musixmatch 中文翻译。"
-    ),
-    ENGLISH(
-        key = "en",
-        title = "English",
-        languageCode = "en",
-        description = "尝试获取 Musixmatch 英文翻译。"
-    );
-
-    companion object {
-        val default: MusixmatchTranslationLanguage = NONE
-
-        fun fromKey(key: String?): MusixmatchTranslationLanguage {
-            return entries.firstOrNull { it.key == key || it.languageCode == key } ?: default
-        }
-    }
-}
 
 data class LyricsSourceOption(
     val key: String,

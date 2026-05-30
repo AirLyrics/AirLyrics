@@ -43,9 +43,9 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_NeteaseLyricsNa
     artist: JString,
     album: JString,
     duration_ms: jni::sys::jlong,
-    enable_karaoke: jni::sys::jboolean,
+    _reserved: jni::sys::jboolean,
 ) -> jstring {
-    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms, enable_karaoke != 0)
+    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms)
 }
 
 // Keep the old root-package symbol as a compatibility alias for older APKs/builds.
@@ -57,9 +57,9 @@ pub extern "system" fn Java_com_andsi_airlyrics_NeteaseLyricsNative_fetchBestLyr
     artist: JString,
     album: JString,
     duration_ms: jni::sys::jlong,
-    enable_karaoke: jni::sys::jboolean,
+    _reserved: jni::sys::jboolean,
 ) -> jstring {
-    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms, enable_karaoke != 0)
+    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms)
 }
 
 #[no_mangle]
@@ -71,7 +71,7 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
     album: JString,
     duration_ms: jni::sys::jlong,
     translation_language: JString,
-    enable_karaoke: jni::sys::jboolean,
+    _reserved: jni::sys::jboolean,
 ) -> jstring {
     let title = jstring_to_string(&mut env, title);
     let artist = jstring_to_string(&mut env, artist);
@@ -86,7 +86,7 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
             &album,
             duration_ms,
             &translation_language,
-            enable_karaoke != 0,
+            false,
         )
     })
         .unwrap_or_else(|_| Err("native panic while fetching musixmatch lyrics".to_string()));
@@ -108,14 +108,13 @@ fn fetch_netease_lyrics_json(
     artist: JString,
     album: JString,
     duration_ms: jni::sys::jlong,
-    enable_karaoke: bool,
 ) -> jstring {
     let title = jstring_to_string(&mut env, title);
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
     let duration_ms = if duration_ms > 0 { Some(duration_ms as u64) } else { None };
 
-    let result = std::panic::catch_unwind(|| fetch_best_lyrics(&title, &artist, &album, duration_ms, enable_karaoke))
+    let result = std::panic::catch_unwind(|| fetch_best_lyrics(&title, &artist, &album, duration_ms))
         .unwrap_or_else(|_| Err("native panic while fetching lyrics".to_string()));
 
     let json = match result {
@@ -183,7 +182,6 @@ fn fetch_best_lyrics(
     artist: &str,
     album: &str,
     duration_ms: Option<u64>,
-    enable_karaoke: bool,
 ) -> Result<NativeResult, String> {
     if title.trim().is_empty() {
         return Err("empty title".into());
@@ -232,14 +230,6 @@ fn fetch_best_lyrics(
 
         let lrc = lyric_resp.lrc.and_then(|v| normalize_optional_lrc(v.lyric));
         let translated_lrc = lyric_resp.tlyric.and_then(|v| normalize_optional_lrc(v.lyric));
-        let karaoke_json = if enable_karaoke {
-            lyric_resp
-                .klyric
-                .and_then(|v| normalize_optional_lrc(v.lyric))
-                .and_then(|raw| netease_klyric_to_karaoke_json(&raw))
-        } else {
-            None
-        };
         let merged_lrc = merge_lrc(lrc.as_deref(), translated_lrc.as_deref())
             .or_else(|| lrc.clone())
             .or_else(|| translated_lrc.clone());
@@ -259,7 +249,7 @@ fn fetch_best_lyrics(
             lrc,
             translated_lrc,
             merged_lrc,
-            karaoke_json,
+            karaoke_json: None,
             error_type: None,
             error: None,
         })
@@ -267,103 +257,6 @@ fn fetch_best_lyrics(
 }
 
 
-fn netease_klyric_to_karaoke_json(raw: &str) -> Option<String> {
-    let values = raw
-        .lines()
-        .filter_map(parse_netease_klyric_line)
-        .collect::<Vec<_>>();
-
-    if values.is_empty() {
-        None
-    } else {
-        serde_json::to_string(&values).ok()
-    }
-}
-
-fn parse_netease_klyric_line(line: &str) -> Option<serde_json::Value> {
-    let line = line.trim();
-    if !line.starts_with('[') {
-        return None;
-    }
-
-    let close = line.find(']')?;
-    let header = &line[1..close];
-    let mut header_parts = header.split(',');
-    let line_start_ms = parse_u64(header_parts.next()?)?;
-    let line_duration_ms = parse_u64(header_parts.next().unwrap_or("0")).unwrap_or(0);
-    let line_end_from_header = line_start_ms.saturating_add(line_duration_ms.max(1));
-    let body = &line[close + 1..];
-
-    let mut tokens = Vec::<(String, u64, u64)>::new();
-    let mut cursor = 0usize;
-
-    while let Some(open_rel) = body[cursor..].find('(') {
-        let open = cursor + open_rel;
-        let Some(close_rel) = body[open..].find(')') else { break };
-        let close = open + close_rel;
-        let meta = &body[open + 1..close];
-        let mut meta_parts = meta.split(',');
-        let raw_start = parse_u64(meta_parts.next()?)?;
-        let duration = parse_u64(meta_parts.next().unwrap_or("0")).unwrap_or(0).max(1);
-        let text_start = close + 1;
-        let next_open = body[text_start..]
-            .find('(')
-            .map(|value| text_start + value)
-            .unwrap_or(body.len());
-        let text = body[text_start..next_open].trim();
-
-        if !text.is_empty() {
-            let start_ms = normalize_netease_token_start(line_start_ms, line_end_from_header, raw_start);
-            tokens.push((text.to_string(), start_ms, duration));
-        }
-        cursor = next_open;
-    }
-
-    if tokens.is_empty() {
-        return None;
-    }
-
-    tokens.sort_by_key(|(_, start, _)| *start);
-    let text = tokens.iter().map(|(text, _, _)| text.as_str()).collect::<String>();
-    if text.trim().is_empty() {
-        return None;
-    }
-
-    let last_token_end = tokens
-        .iter()
-        .map(|(_, start, duration)| start.saturating_add(*duration))
-        .max()
-        .unwrap_or(line_end_from_header);
-    let end_ms = line_end_from_header.max(last_token_end).max(line_start_ms.saturating_add(1));
-    let token_values = tokens
-        .into_iter()
-        .map(|(text, start_ms, _)| {
-            serde_json::json!({
-                "text": text,
-                "startMs": start_ms,
-            })
-        })
-        .collect::<Vec<_>>();
-
-    Some(serde_json::json!({
-        "startMs": line_start_ms,
-        "endMs": end_ms,
-        "text": text,
-        "tokens": token_values,
-    }))
-}
-
-fn normalize_netease_token_start(line_start_ms: u64, line_end_ms: u64, raw_start: u64) -> u64 {
-    if raw_start.saturating_add(200) >= line_start_ms && raw_start <= line_end_ms.saturating_add(10_000) {
-        raw_start
-    } else {
-        line_start_ms.saturating_add(raw_start)
-    }
-}
-
-fn parse_u64(value: &str) -> Option<u64> {
-    value.trim().parse::<u64>().ok()
-}
 
 fn build_search_keywords(title: &str, artist: &str, album: &str) -> Vec<String> {
     let mut keywords = Vec::new();

@@ -11,6 +11,7 @@ import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.renderCurrentPage
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.media.MediaSourceStore
 
 internal class LyricsController(
@@ -45,34 +46,54 @@ internal class LyricsController(
         }
 
         if (imported) {
-            val message = if (importAsWordByWord) "已为当前音乐导入逐字歌词" else "已为当前音乐导入普通歌词"
+            val message = if (importAsWordByWord) {
+                "已导入逐字歌词，悬浮窗显示中会立即刷新"
+            } else {
+                "已导入普通歌词，悬浮窗显示中会立即刷新"
+            }
             Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             activity.reloadFloatingLyrics()
             activity.renderCurrentPage(animateContent = false, animateTabs = false)
         } else {
-            val message = if (importAsWordByWord) {
-                "导入失败，请确认 .lrc 内含逐字时间戳"
+            if (importAsWordByWord) {
+                activity.showAirInfoDialog(
+                    title = "逐字歌词导入失败",
+                    message = "没有识别到 enhanced LRC 逐字时间戳。\n\n" +
+                        "请确认文件是 .lrc，并使用类似格式：\n" +
+                        "[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐字歌词\n\n" +
+                        "普通 LRC 只有 [00:12.34]整句歌词，需要选择“普通歌词”导入。"
+                )
             } else {
-                "导入失败，可能不是可读取的歌词文件"
+                Toast.makeText(activity, "导入失败，请使用 [00:12.34]歌词 格式的 .lrc 文件", Toast.LENGTH_LONG).show()
             }
-            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
         }
     }
 
-    fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo) {
+    fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
         val deleted = LyricsStorage.deleteLocalLyrics(
             context = activity,
             title = media.title,
             artist = media.artist,
-            duration = media.durationMs
+            duration = media.durationMs,
+            mode = mode
         )
 
         if (deleted) {
-            Toast.makeText(activity, "已移除当前音乐的本地歌词", Toast.LENGTH_LONG).show()
+            val message = when (mode) {
+                LyricsStorage.DeleteMode.PLAIN -> "已移除当前音乐的普通歌词"
+                LyricsStorage.DeleteMode.KARAOKE -> "已移除当前音乐的逐字歌词"
+                LyricsStorage.DeleteMode.ALL -> "已移除当前音乐的全部本地歌词"
+            }
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             activity.reloadFloatingLyrics()
             activity.renderCurrentPage(animateContent = false, animateTabs = false)
         } else {
-            Toast.makeText(activity, "当前音乐没有可移除的本地歌词", Toast.LENGTH_SHORT).show()
+            val message = when (mode) {
+                LyricsStorage.DeleteMode.PLAIN -> "当前音乐没有可移除的普通歌词"
+                LyricsStorage.DeleteMode.KARAOKE -> "当前音乐没有可移除的逐字歌词"
+                LyricsStorage.DeleteMode.ALL -> "当前音乐没有可移除的本地歌词"
+            }
+            Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
         }
     }
 

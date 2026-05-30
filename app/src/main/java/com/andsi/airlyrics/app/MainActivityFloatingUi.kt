@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.app
 
 import android.graphics.Color
-import android.app.AlertDialog
+import android.app.Dialog
 import android.widget.FrameLayout
 import android.widget.ScrollView
 import android.graphics.Typeface
@@ -499,6 +499,7 @@ internal fun MainActivity.settingGrid(vararg items: FloatingSettingTile): Linear
 internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
+        tag = "floating_tile:${item.title}"
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(14), dp(12), dp(14), dp(12))
@@ -533,6 +534,7 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
 
         if (item.subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
+                tag = "floating_tile_subtitle:${item.title}"
                 text = item.subtitle
                 textSize = 12f
                 setTextColor(colorTextMuted)
@@ -648,10 +650,9 @@ internal fun MainActivity.showFloatingSettingPanel(
         content()
     }
 
-    val dialog = AlertDialog.Builder(this)
-        .setView(ScrollView(this).apply { addView(panel) })
-        .create()
-
+    val dialog = Dialog(this)
+    dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+    dialog.setContentView(ScrollView(this).apply { addView(panel) })
     dialog.setOnShowListener {
         dialog.window?.let { window ->
             window.setBackgroundDrawableResource(android.R.color.transparent)

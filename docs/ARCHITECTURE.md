@@ -80,11 +80,11 @@ LyricsProvider.kt         Interface for pluggable lyric sources.
 LocalLyricsProvider.kt    Local imported/saved lyric source.
 NeteaseLyricsProvider.kt  NetEase online lyric source.
 MusixmatchLyricsProvider.kt  Musixmatch online lyric source.
-LyricsStorage.kt          Local .lrc storage.
+LyricsStorage.kt          Local .lrc storage and imported enhanced LRC word-by-word cache.
 LrcParser.kt              Timestamped lyric parsing and current-line lookup.
 ```
 
-To add a lyric source, create a new provider implementing `LyricsProvider`, then register it in `LyricsRepository` and expose the option in `LyricsSettingsStore`.
+To add a lyric source, create a new provider implementing `LyricsProvider`, then register it in `LyricsRepository` and expose the option in `LyricsSettingsStore`. Online providers should return ordinary LRC/translation data only; word-by-word lyrics are intentionally local-only through enhanced LRC import.
 
 ### settings
 

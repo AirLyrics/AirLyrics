@@ -20,7 +20,7 @@ data class LrcLine(
 }
 
 object LrcParser {
-    private val timeTagRegex = Regex("""\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?]""")
+    private val timeTagRegex = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
     private const val TRANSLATION_MATCH_TOLERANCE_MS = 500L
 
     fun parse(lyrics: String): List<LrcLine> {
@@ -66,43 +66,85 @@ object LrcParser {
         val mergedLines = parseWithTranslation(lyrics, translatedLyrics)
         if (mergedLines.isEmpty()) return lyrics
 
-        return mergedLines.joinToString("\n") { line ->
-            val text = when {
-                line.text.isNotBlank() && !line.translation.isNullOrBlank() -> {
-                    "${line.text.trim()} / ${line.translation.trim()}"
+        return formatLinesForStorage(mergedLines)
+    }
+
+    /**
+     * Converts user-imported ordinary LRC into AirLyrics' preferred storage format.
+     * The importer still accepts common variants such as [00:12:34] and compact
+     * one-line exports, but the managed local cache is saved as one lyric line per
+     * row using [mm:ss.xx] text.
+     */
+    fun normalizeForStorage(lyrics: String): String {
+        return formatLinesForStorage(parsePlainLines(lyrics))
+    }
+
+    private fun formatLinesForStorage(lines: List<LrcLine>): String {
+        return lines
+            .filter { it.text.isNotBlank() || !it.translation.isNullOrBlank() }
+            .joinToString("\n") { line ->
+                val text = when {
+                    line.text.isNotBlank() && !line.translation.isNullOrBlank() -> {
+                        "${line.text.trim()} / ${line.translation.trim()}"
+                    }
+                    line.text.isNotBlank() -> line.text.trim()
+                    !line.translation.isNullOrBlank() -> line.translation.trim()
+                    else -> ""
                 }
-                line.text.isNotBlank() -> line.text.trim()
-                !line.translation.isNullOrBlank() -> line.translation.trim()
-                else -> ""
+                "[${formatTimeTag(line.timeMs)}]$text"
             }
-            "[${formatTimeTag(line.timeMs)}]$text"
-        }
     }
 
     private fun parsePlainLines(lyrics: String): List<LrcLine> {
         return lyrics
             .lineSequence()
-            .flatMap { rawLine ->
-                val line = rawLine.trim()
-                val matches = timeTagRegex.findAll(line).toList()
-                if (matches.isEmpty()) {
-                    return@flatMap emptySequence<LrcLine>()
-                }
-
-                val text = normalizeDisplayText(line.replace(timeTagRegex, "").trim())
-                if (text.isBlank()) {
-                    return@flatMap emptySequence<LrcLine>()
-                }
-
-                val (originalText, translationText) = splitOriginalAndTranslation(text)
-
-                matches.mapNotNull { match ->
-                    val timeMs = parseTimeTag(match) ?: return@mapNotNull null
-                    LrcLine(timeMs, originalText, translationText)
-                }.asSequence()
-            }
+            .flatMap { rawLine -> parseTimedSegments(rawLine).asSequence() }
             .sortedBy { it.timeMs }
             .toList()
+    }
+
+    /**
+     * Parses both common LRC layouts:
+     *
+     * [00:01.00]first line
+     * [00:02.00]second line
+     *
+     * and compact files exported as one physical line:
+     *
+     * [00:01:00]first line[00:02:00]second line
+     *
+     * Consecutive tags before one text segment are also kept compatible:
+     * [00:01.00][00:02.00]shared text
+     */
+    private fun parseTimedSegments(rawLine: String): List<LrcLine> {
+        val line = rawLine.trim()
+        if (line.isBlank()) return emptyList()
+
+        val matches = timeTagRegex.findAll(line).toList()
+        if (matches.isEmpty()) return emptyList()
+
+        val parsedLines = mutableListOf<LrcLine>()
+        val pendingTimeTags = mutableListOf<MatchResult>()
+
+        matches.forEachIndexed { index, match ->
+            pendingTimeTags += match
+
+            val segmentStart = match.range.last + 1
+            val segmentEnd = matches.getOrNull(index + 1)?.range?.first ?: line.length
+            if (segmentStart > segmentEnd) return@forEachIndexed
+
+            val text = normalizeDisplayText(line.substring(segmentStart, segmentEnd).trim())
+            if (text.isBlank()) return@forEachIndexed
+
+            val (originalText, translationText) = splitOriginalAndTranslation(text)
+            pendingTimeTags.mapNotNullTo(parsedLines) { pendingMatch ->
+                val timeMs = parseTimeTag(pendingMatch) ?: return@mapNotNullTo null
+                LrcLine(timeMs, originalText, translationText)
+            }
+            pendingTimeTags.clear()
+        }
+
+        return parsedLines
     }
 
     private fun findNearestTranslationIndex(

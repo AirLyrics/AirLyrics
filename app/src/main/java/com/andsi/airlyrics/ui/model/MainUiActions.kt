@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.model
 
 import android.view.View
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
@@ -26,7 +27,7 @@ internal data class MainUiActions(
     val selectLyricsDirectory: () -> Unit,
     val copyLyricsDirectory: () -> Unit,
     val importLyricsForCurrentMedia: () -> Unit,
-    val deleteLyricsForCurrentMedia: (CurrentMediaInfo) -> Unit,
+    val deleteLyricsForCurrentMedia: (CurrentMediaInfo, LyricsStorage.DeleteMode) -> Unit,
     val toggleLyricsAutoSearch: () -> Boolean,
     val toggleLyricsAutoSave: () -> Boolean,
     val selectLyricsSource: (String) -> Unit,

@@ -11,6 +11,7 @@ import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.common.BroadcastActions
 
 class MediaNotificationListener : NotificationListenerService() {
@@ -29,7 +30,7 @@ class MediaNotificationListener : NotificationListenerService() {
 
     override fun onListenerConnected() {
         super.onListenerConnected()
-        Log.d(TAG, "Notification listener connected")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Notification listener connected")
         setupMediaSessions()
 
         try {
@@ -136,11 +137,13 @@ class MediaNotificationListener : NotificationListenerService() {
 
         if (title.isNullOrBlank()) return
 
-        Log.d(
-            TAG,
-            "media: source=${controller.packageName} title=$title artist=$artist " +
-                    "duration=$duration position=$position playing=$isPlaying"
-        )
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                TAG,
+                "media: source=${controller.packageName} title=$title artist=$artist " +
+                        "duration=$duration position=$position playing=$isPlaying"
+            )
+        }
 
         val intent = Intent(BroadcastActions.MEDIA_UPDATE).apply {
             setPackage(packageName)

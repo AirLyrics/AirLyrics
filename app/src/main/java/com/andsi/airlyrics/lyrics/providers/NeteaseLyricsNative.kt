@@ -10,6 +10,6 @@ object NeteaseLyricsNative {
         artist: String,
         album: String,
         durationMs: Long,
-        enableKaraoke: Boolean
+        requestKlyric: Boolean
     ): String
 }

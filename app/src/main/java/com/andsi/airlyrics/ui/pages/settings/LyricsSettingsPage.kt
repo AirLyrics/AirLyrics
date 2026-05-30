@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.ui.pages.settings
 
-import android.app.AlertDialog
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -13,11 +13,15 @@ import com.andsi.airlyrics.app.liveOptionGrid
 import com.andsi.airlyrics.app.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
-import com.andsi.airlyrics.settings.store.KaraokeLyricsStatusStore
-import com.andsi.airlyrics.settings.model.MusixmatchTranslationLanguage
+import com.andsi.airlyrics.settings.store.LyricsOffsetStore
+import com.andsi.airlyrics.settings.model.LyricsSearchSource
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
+import com.andsi.airlyrics.ui.theme.colorStroke
+import com.andsi.airlyrics.ui.theme.colorSurfaceLight
+import com.andsi.airlyrics.ui.theme.colorTextMuted
+import com.andsi.airlyrics.ui.theme.colorTextStrong
 
 internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(activity) createLyricsSettingsPage@ {
     val container = pageContainer(activity, animateChanges = false)
@@ -55,7 +59,14 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
     container.addView(
         card(activity) {
             addView(bigText(activity, "歌词搜索来源"))
+            fun sourceHintText(key: String): String = when (LyricsSearchSource.fromKey(key)) {
+                LyricsSearchSource.LOCAL_ONLY -> "只读取本地歌词"
+                LyricsSearchSource.NETEASE -> "适合中国用户"
+                LyricsSearchSource.MUSIXMATCH -> "适合国际用户，依据您的系统语言来自动获取翻译（如果有的话）"
+            }
+
             val sourceStatus = normalText(activity, "当前：${LyricsSettingsStore.getLyricsSourceTitle(activity)}")
+            val sourceHint = smallHint(activity, sourceHintText(selectedSource))
             val sourceFeedback = TextView(activity).apply {
                 text = ""
                 textSize = 12f
@@ -64,6 +75,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
                 setPadding(0, dp(4), 0, 0)
             }
             addView(sourceStatus)
+            addView(sourceHint)
             addView(sourceFeedback)
             lateinit var sourceGrid: LinearLayout
             sourceGrid = liveOptionGrid(
@@ -75,56 +87,16 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
                         action = {
                             uiActions.selectLyricsSource(option.key)
                             sourceStatus.text = "当前：${option.title}"
+                            sourceHint.text = sourceHintText(option.key)
                             playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, "已保存")
                         }
                     )
                 }
             )
             addView(sourceGrid)
-            LyricsSettingsStore.sourceOptions.forEach { option ->
-                addView(smallHint(activity, "${option.title}：${option.description}"))
-            }
         }
     )
 
-    container.addView(
-        card(activity) {
-            addView(bigText(activity, "Musixmatch 翻译"))
-            val currentLanguage = LyricsSettingsStore.getMusixmatchTranslationLanguage(activity)
-            val languageStatus = normalText(activity, "当前：${currentLanguage.title}")
-            val languageFeedback = TextView(activity).apply {
-                text = ""
-                textSize = 12f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorAccentMint)
-                setPadding(0, dp(4), 0, 0)
-            }
-            addView(languageStatus)
-            addView(languageFeedback)
-
-            lateinit var languageGrid: LinearLayout
-            languageGrid = liveOptionGrid(
-                MusixmatchTranslationLanguage.entries.map { language ->
-                    KeyedOptionItem(
-                        key = language.key,
-                        title = language.title,
-                        selected = language == currentLanguage,
-                        action = {
-                            LyricsSettingsStore.setMusixmatchTranslationLanguage(activity, language)
-                            languageStatus.text = "当前：${language.title}"
-                            playLocalRefreshFeedback(activity, languageGrid, languageFeedback, "已保存")
-                        }
-                    )
-                }
-            )
-            addView(languageGrid)
-
-            MusixmatchTranslationLanguage.entries.forEach { language ->
-                addView(smallHint(activity, "${language.title}：${language.description}"))
-            }
-            addView(smallHint(activity, "只影响 Musixmatch 歌词源；网易云音乐继续使用它本身提供的中文翻译。翻译不存在时不会影响原文歌词。"))
-        }
-    )
 
     container.addView(
         card(activity) {
@@ -143,6 +115,53 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
     container.addView(createRecentLyricsCard(activity))
 
     return scroll(activity, container, animateChildren = false)
+}
+
+
+private fun karaokeStatusRow(activity: MainActivity, value: String): View = with(activity) karaokeStatusRow@ {
+    return LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        setPadding(0, dp(10), 0, dp(4))
+
+        addView(TextView(activity).apply {
+            text = "本地逐字歌词"
+            textSize = 15f
+            setTextColor(colorTextStrong)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+
+        addView(TextView(activity).apply {
+            text = value
+            textSize = 13f
+            setTextColor(colorTextMuted)
+            gravity = Gravity.CENTER_VERTICAL
+        })
+
+        addView(TextView(activity).apply {
+            text = "!"
+            textSize = 12f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(colorTextMuted)
+            setPadding(0, 0, 0, dp(1))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(colorSurfaceLight)
+                setStroke(dp(1), colorStroke)
+            }
+            layoutParams = LinearLayout.LayoutParams(dp(22), dp(22)).apply {
+                setMargins(dp(8), 0, 0, 0)
+            }
+            enableSoftPressFeedback(0.9f)
+            setOnClickListener {
+                activity.showAirInfoDialog(
+                    title = "本地逐字歌词",
+                    message = "逐字歌词只支持手动导入本地 enhanced LRC。"
+                )
+            }
+        })
+    }
 }
 
 private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activity) createCurrentLyricsCard@ {
@@ -181,57 +200,76 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
             artist = media.artist,
             duration = media.durationMs
         )
-        val karaokeStatus = KaraokeLyricsStatusStore.get(activity, media.lyricsKey())
         val karaokeEnabled = LyricsSettingsStore.isKaraokeLyricsEnabled(activity)
         val karaokeSummary = when {
-            !karaokeEnabled -> if (localWordByWord) "未开启 · 已缓存" else "未开启"
-            localWordByWord -> "支持 · 本地缓存"
-            karaokeStatus == null -> "未检测 · 重新联网搜索后更新"
-            !karaokeStatus.hasLyrics -> "暂无歌词"
-            karaokeStatus.hasKaraoke -> "支持 · ${karaokeStatus.providerName}"
-            karaokeStatus.providerName.isNotBlank() -> "不支持 · ${karaokeStatus.providerName}"
-            else -> "不支持"
+            localWordByWord && karaokeEnabled -> "可用 · 本地逐字"
+            localWordByWord -> "已导入 · 未开启"
+            else -> "未导入"
         }
-        val karaokeHint = when {
-            !karaokeEnabled -> "可在悬浮窗页面的动画效果中开启；逐字歌词会单独缓存，不会污染普通 .lrc。"
-            localWordByWord -> "当前音乐已有逐字歌词缓存，开启后可直接使用，不需要每次联网。"
-            karaokeStatus == null -> "点击重新联网搜索歌词后，会在这里显示当前歌词是否支持逐字歌词。"
-            karaokeStatus.hasKaraoke -> "当前歌词含逐字时间戳，悬浮窗会使用左到右的柔和高亮。"
-            else -> "当前歌词没有逐字数据，悬浮窗会自动使用普通滚动歌词。"
-        }
+        val offsetMs = LyricsOffsetStore.getOffsetMs(activity, media)
 
         body.addView(normalText(activity, media.displayText))
         body.addView(settingRow(activity, "歌词来源", localInfo?.sourceText ?: "暂无普通本地歌词"))
         body.addView(settingRow(activity, "普通歌词", localInfo?.friendlyTitle ?: "未绑定"))
-        body.addView(settingRow(activity, "逐字歌词", karaokeSummary))
-        body.addView(smallHint(activity, karaokeHint))
+        body.addView(karaokeStatusRow(activity, karaokeSummary))
+        body.addView(settingRow(activity, "当前偏移", LyricsOffsetStore.description(offsetMs)))
+        if (offsetMs != 0L) {
+            body.addView(smallHint(activity, "歌词偏移按当前音乐保存，不会修改原始 LRC 或 enhanced LRC 文件。"))
+        }
 
         body.addView(actionButton(activity, "为当前音乐导入歌词") {
             uiActions.importLyricsForCurrentMedia()
         })
 
+        fun confirmDeleteLyrics(label: String, mode: LyricsStorage.DeleteMode, message: String) {
+            activity.showAirConfirmDialog(
+                title = label,
+                message = "${media.displayText}\n\n$message",
+                positiveText = "移除"
+            ) {
+                uiActions.deleteLyricsForCurrentMedia(media, mode)
+            }
+        }
+
         if (localInfo != null) {
-            body.addView(actionButton(activity, if (localInfo.source == LyricsStorage.SOURCE_DOWNLOADED) "移除已下载歌词" else "移除本地歌词") {
-                AlertDialog.Builder(activity)
-                    .setTitle("移除当前音乐歌词？")
-                    .setMessage("${media.displayText}\n\n会删除这首歌关联的本地歌词。之后如果允许联网搜索，可以重新查找歌词。")
-                    .setNegativeButton("取消", null)
-                    .setPositiveButton("移除") { _, _ ->
-                        uiActions.deleteLyricsForCurrentMedia(media)
-                    }
-                    .show()
+            val plainLabel = if (localInfo.source == LyricsStorage.SOURCE_DOWNLOADED) "移除已下载普通歌词" else "移除普通歌词"
+            body.addView(actionButton(activity, plainLabel) {
+                confirmDeleteLyrics(
+                    label = "移除普通歌词？",
+                    mode = LyricsStorage.DeleteMode.PLAIN,
+                    message = "只会删除这首歌关联的普通 LRC；如果已经导入逐字歌词，会继续保留。之后如果允许联网搜索，可以重新查找普通歌词。"
+                )
+            })
+        }
+
+        if (localWordByWord) {
+            body.addView(actionButton(activity, "移除逐字歌词") {
+                confirmDeleteLyrics(
+                    label = "移除逐字歌词？",
+                    mode = LyricsStorage.DeleteMode.KARAOKE,
+                    message = "只会删除这首歌关联的本地 enhanced LRC 逐字数据；普通歌词会继续保留。"
+                )
+            })
+        }
+
+        if (localInfo != null && localWordByWord) {
+            body.addView(actionButton(activity, "移除全部本地歌词") {
+                confirmDeleteLyrics(
+                    label = "移除全部本地歌词？",
+                    mode = LyricsStorage.DeleteMode.ALL,
+                    message = "会同时删除这首歌的普通歌词和逐字歌词。这个操作更彻底，适合想重新绑定歌词时使用。"
+                )
             })
         }
 
         body.addView(actionButton(activity, "重新联网搜索歌词") {
-            AlertDialog.Builder(activity)
-                .setTitle("重新联网搜索歌词？")
-                .setMessage("会绕过当前本地歌词重新搜索。找到后会覆盖保存为新的本地缓存。")
-                .setNegativeButton("取消", null)
-                .setPositiveButton("搜索") { _, _ ->
-                    uiActions.reloadFloatingLyricsFromOnline()
-                }
-                .show()
+            activity.showAirConfirmDialog(
+                title = "重新联网搜索歌词？",
+                message = "会绕过当前本地普通歌词重新搜索。找到后会覆盖保存为新的普通歌词缓存；逐字歌词只使用本地导入文件。",
+                positiveText = "搜索"
+            ) {
+                uiActions.reloadFloatingLyricsFromOnline()
+            }
         })
     }
 
@@ -297,8 +335,49 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(bigText(activity, "最近的本地歌词").apply {
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             })
+
+            val hintText = TextView(activity).apply {
+                text = "点击歌词可以预览或者修改"
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorTextMuted)
+                alpha = 0f
+                visibility = View.GONE
+                setPadding(dp(8), 0, 0, 0)
+            }
+
+            addView(TextView(activity).apply {
+                text = "!"
+                textSize = 12f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setTextColor(colorTextMuted)
+                setPadding(0, 0, 0, dp(1))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(colorSurfaceLight)
+                    setStroke(dp(1), colorStroke)
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(22), dp(22)).apply {
+                    setMargins(dp(8), 0, 0, 0)
+                }
+                enableSoftPressFeedback(0.9f)
+                setOnClickListener {
+                    if (hintText.visibility == View.VISIBLE) {
+                        hintText.animate().alpha(0f).setDuration(120L).withEndAction {
+                            hintText.visibility = View.GONE
+                        }.start()
+                    } else {
+                        hintText.visibility = View.VISIBLE
+                        hintText.alpha = 0f
+                        hintText.animate().alpha(1f).setDuration(160L).start()
+                    }
+                }
+            })
+            addView(hintText)
+            addView(View(activity), LinearLayout.LayoutParams(0, 1, 1f))
             addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 setMargins(0, 0, dp(8), 0)
             })

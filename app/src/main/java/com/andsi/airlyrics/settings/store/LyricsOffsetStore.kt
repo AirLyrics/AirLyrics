@@ -18,19 +18,43 @@ object LyricsOffsetStore {
         if (media.title.isBlank()) return 0L
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val exactKey = offsetKey(media.title, media.artist, media.durationMs)
-        if (prefs.contains(exactKey)) return prefs.getLong(exactKey, 0L)
-
         val weakKey = offsetKey(media.title, media.artist, 0L)
-        return prefs.getLong(weakKey, 0L)
+
+        if (prefs.contains(exactKey)) {
+            val offset = prefs.getLong(exactKey, 0L)
+            if (!prefs.contains(weakKey)) {
+                prefs.edit().putLong(weakKey, offset).apply()
+            }
+            return offset
+        }
+
+        nearbyDurationKeys(media).firstOrNull { prefs.contains(it) }?.let { nearbyKey ->
+            val offset = prefs.getLong(nearbyKey, 0L)
+            prefs.edit()
+                .putLong(exactKey, offset)
+                .putLong(weakKey, offset)
+                .apply()
+            return offset
+        }
+
+        if (prefs.contains(weakKey)) {
+            val offset = prefs.getLong(weakKey, 0L)
+            prefs.edit().putLong(exactKey, offset).apply()
+            return offset
+        }
+
+        return 0L
     }
 
     fun setOffsetMs(context: Context, media: CurrentMediaInfo, offsetMs: Long): Long {
         if (media.title.isBlank()) return 0L
         val safeOffset = offsetMs.coerceIn(-MAX_OFFSET_MS, MAX_OFFSET_MS)
-        val key = offsetKey(media.title, media.artist, media.durationMs)
+        val exactKey = offsetKey(media.title, media.artist, media.durationMs)
+        val weakKey = offsetKey(media.title, media.artist, 0L)
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
-            .putLong(key, safeOffset)
+            .putLong(exactKey, safeOffset)
+            .putLong(weakKey, safeOffset)
             .apply()
         return safeOffset
     }
@@ -42,11 +66,11 @@ object LyricsOffsetStore {
 
     fun resetOffset(context: Context, media: CurrentMediaInfo) {
         if (media.title.isBlank()) return
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .remove(offsetKey(media.title, media.artist, media.durationMs))
-            .remove(offsetKey(media.title, media.artist, 0L))
-            .apply()
+        val editor = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+        editor.remove(offsetKey(media.title, media.artist, media.durationMs))
+        editor.remove(offsetKey(media.title, media.artist, 0L))
+        nearbyDurationKeys(media).forEach { editor.remove(it) }
+        editor.apply()
     }
 
     fun formatOffset(offsetMs: Long): String {
@@ -63,10 +87,27 @@ object LyricsOffsetStore {
         }
     }
 
-    private fun offsetKey(title: String, artist: String, durationMs: Long): String {
-        val durationSeconds = if (durationMs > 0L) durationMs / 1000L else 0L
+
+    private fun nearbyDurationKeys(media: CurrentMediaInfo): List<String> {
+        if (media.durationMs <= 0L) return emptyList()
+        val durationSeconds = media.durationMs / 1000L
+        return (-5L..5L)
+            .asSequence()
+            .filter { it != 0L }
+            .map { durationSeconds + it }
+            .filter { it > 0L }
+            .map { offsetKeyByDurationSeconds(media.title, media.artist, it) }
+            .toList()
+    }
+
+    private fun offsetKeyByDurationSeconds(title: String, artist: String, durationSeconds: Long): String {
         val raw = "${normalize(title)}|${normalize(artist)}|$durationSeconds"
         return KEY_PREFIX + sha1(raw)
+    }
+
+    private fun offsetKey(title: String, artist: String, durationMs: Long): String {
+        val durationSeconds = if (durationMs > 0L) durationMs / 1000L else 0L
+        return offsetKeyByDurationSeconds(title, artist, durationSeconds)
     }
 
     private fun normalize(text: String): String {

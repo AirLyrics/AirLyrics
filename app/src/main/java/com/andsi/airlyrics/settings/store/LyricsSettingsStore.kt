@@ -3,7 +3,6 @@ package com.andsi.airlyrics.settings.store
 import android.content.Context
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.settings.model.MusixmatchTranslationLanguage
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.settings.model.LyricsSearchSource
 import com.andsi.airlyrics.settings.model.LyricsSettings
@@ -18,7 +17,6 @@ object LyricsSettingsStore {
     private const val KEY_LINE_DISPLAY_MODE = "line_display_mode"
     private const val KEY_SWITCH_ANIMATION_MODE = "switch_animation_mode"
     private const val KEY_KARAOKE_LYRICS_ENABLED = "karaoke_lyrics_enabled"
-    private const val KEY_MUSIXMATCH_TRANSLATION_LANGUAGE = "musixmatch_translation_language"
 
     const val SOURCE_LOCAL_ONLY = "local_only"
     const val SOURCE_NETEASE = "netease"
@@ -145,20 +143,6 @@ object LyricsSettingsStore {
             .apply()
     }
 
-    fun getMusixmatchTranslationLanguage(context: Context): MusixmatchTranslationLanguage {
-        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_MUSIXMATCH_TRANSLATION_LANGUAGE, MusixmatchTranslationLanguage.default.key)
-
-        return MusixmatchTranslationLanguage.fromKey(value)
-    }
-
-    fun setMusixmatchTranslationLanguage(context: Context, language: MusixmatchTranslationLanguage) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY_MUSIXMATCH_TRANSLATION_LANGUAGE, language.key)
-            .apply()
-    }
-
     fun getSettings(context: Context): LyricsSettings {
         return LyricsSettings(
             source = getLyricsSearchSource(context),
@@ -167,8 +151,7 @@ object LyricsSettingsStore {
             contentDisplayMode = getContentDisplayMode(context),
             lineDisplayMode = getLineDisplayMode(context),
             switchAnimationMode = getSwitchAnimationMode(context),
-            karaokeLyricsEnabled = isKaraokeLyricsEnabled(context),
-            musixmatchTranslationLanguage = getMusixmatchTranslationLanguage(context)
+            karaokeLyricsEnabled = isKaraokeLyricsEnabled(context)
         )
     }
 }

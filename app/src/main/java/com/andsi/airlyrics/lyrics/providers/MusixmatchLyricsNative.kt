@@ -11,6 +11,6 @@ object MusixmatchLyricsNative {
         album: String,
         durationMs: Long,
         translationLanguageCode: String,
-        enableKaraoke: Boolean
+        reserved: Boolean
     ): String
 }

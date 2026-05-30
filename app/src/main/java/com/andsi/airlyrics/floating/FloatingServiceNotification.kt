@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.common.BroadcastActions
 
 /**
@@ -37,7 +38,7 @@ object FloatingServiceNotification {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle("AirLyrics 悬浮歌词")
             .setContentText(contentText)
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(R.drawable.ic_air_notification)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)

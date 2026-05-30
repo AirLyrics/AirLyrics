@@ -3,7 +3,7 @@ package com.andsi.airlyrics.app
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 
 import android.animation.LayoutTransition
-import android.app.AlertDialog
+import android.app.Dialog
 import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -66,6 +66,9 @@ import com.andsi.airlyrics.ui.components.scroll
 import com.andsi.airlyrics.ui.components.sectionTitle
 import com.andsi.airlyrics.ui.components.settingRow
 import com.andsi.airlyrics.ui.components.smallHint
+import com.andsi.airlyrics.ui.components.showAirConfirmDialog
+import com.andsi.airlyrics.ui.components.showAirDialog
+import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.components.softLayoutTransition
 import com.andsi.airlyrics.ui.components.spacer
 import com.andsi.airlyrics.ui.components.statusPill
@@ -136,9 +139,7 @@ class MainActivity : AppCompatActivity() {
 
     private var pendingImportAsWordByWord = false
 
-    private val normalLyricsMimeTypes = arrayOf("application/x-lrc", "text/lrc", "text/plain")
-    private val wordByWordLyricsMimeTypes = normalLyricsMimeTypes
-
+    private val lyricsDocumentMimeTypes = arrayOf("*/*", "application/x-lrc", "application/lrc", "text/lrc", "text/plain", "text/*", "application/octet-stream")
     internal val importLyricsLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@registerForActivityResult
@@ -150,9 +151,11 @@ class MainActivity : AppCompatActivity() {
             }
 
             val importAsWordByWord = pendingImportAsWordByWord
-            val fileName = getDocumentDisplayName(uri).lowercase()
-            val validFile = fileName.endsWith(".lrc")
-            if (!validFile) {
+            runCatching {
+                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            if (!isLikelyLyricsDocument(uri)) {
                 val message = if (importAsWordByWord) {
                     "请选择 .lrc 逐字歌词文件"
                 } else {
@@ -179,19 +182,23 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (exists) {
-                AlertDialog.Builder(this)
-                    .setTitle(if (importAsWordByWord) "当前音乐已有逐字歌词" else "当前音乐已有普通歌词")
-                    .setMessage("${media.displayText}\n\n要覆盖已有本地歌词吗？")
-                    .setNegativeButton("取消", null)
-                    .setPositiveButton("覆盖") { _, _ ->
-                        importLyricsForCurrentMedia(
-                            uri = uri,
-                            media = media,
-                            overwrite = true,
-                            importAsWordByWord = importAsWordByWord
-                        )
-                    }
-                    .show()
+                val overwriteMessage = if (importAsWordByWord) {
+                    "${media.displayText}\n\n这首歌已经有本地逐字歌词。覆盖后只替换逐字歌词缓存，普通歌词会继续保留。"
+                } else {
+                    "${media.displayText}\n\n这首歌已经有普通歌词。覆盖后只替换普通 LRC；如果已经导入逐字歌词，会继续保留。"
+                }
+                showAirConfirmDialog(
+                    title = if (importAsWordByWord) "覆盖本地逐字歌词？" else "覆盖普通歌词？",
+                    message = overwriteMessage,
+                    positiveText = "覆盖"
+                ) {
+                    importLyricsForCurrentMedia(
+                        uri = uri,
+                        media = media,
+                        overwrite = true,
+                        importAsWordByWord = importAsWordByWord
+                    )
+                }
             } else {
                 importLyricsForCurrentMedia(
                     uri = uri,
@@ -324,12 +331,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        var dialog: AlertDialog? = null
+        var dialog: Dialog? = null
 
         fun launchImport(asWordByWord: Boolean) {
             pendingImportAsWordByWord = asWordByWord
             dialog?.dismiss()
-            importLyricsLauncher.launch(normalLyricsMimeTypes)
+            importLyricsLauncher.launch(lyricsDocumentMimeTypes)
         }
 
         val content = LinearLayout(this).apply {
@@ -345,7 +352,7 @@ class MainActivity : AppCompatActivity() {
             })
 
             addView(TextView(this@MainActivity).apply {
-                text = "两种导入都选择 .lrc 文件；逐字歌词需要包含 <时间戳> 逐字/逐词标记。"
+                text = "建议使用 AirLyrics 统一 LRC 格式。普通歌词：[00:12.34]歌词；逐字歌词：[00:12.34]<00:12.34>字。"
                 textSize = 13f
                 setTextColor(colorTextMuted)
                 setPadding(0, 0, 0, dp(10))
@@ -353,22 +360,31 @@ class MainActivity : AppCompatActivity() {
 
             addView(importLyricsChoiceRow(
                 title = "普通歌词（.lrc）",
-                subtitle = "只包含 [时间]整句歌词，用于普通滚动显示。",
+                subtitle = "推荐格式：[00:12.34]这是一行歌词。导入后会保存为统一格式。",
                 primary = true
             ) { launchImport(false) })
 
             addView(importLyricsChoiceRow(
                 title = "逐字歌词（增强 .lrc）",
-                subtitle = "包含 <时间戳>字/词，导入后会转换为逐字歌词缓存。",
+                subtitle = "推荐格式：[00:12.34]<00:12.34>这<00:12.50>是，用于逐字高亮。",
                 primary = false
             ) { launchImport(true) })
+
+            addView(importLyricsChoiceRow(
+                title = "歌词格式说明",
+                subtitle = "查看普通 LRC 和 enhanced LRC 的示例。",
+                primary = false
+            ) { showLyricsFormatGuideDialog() })
         }
 
-        dialog = AlertDialog.Builder(this)
-            .setTitle("选择导入类型")
-            .setView(content)
-            .setNegativeButton("取消", null)
-            .show()
+        dialog = showAirDialog(
+            title = "选择导入类型",
+            positiveText = null,
+            negativeText = "取消",
+            body = {
+                addView(content)
+            }
+        )
     }
 
     private fun importLyricsChoiceRow(
@@ -407,6 +423,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showLyricsFormatGuideDialog() {
+        showAirInfoDialog(
+            title = "歌词格式说明",
+            message = "普通歌词推荐格式：\n" +
+                "[00:12.34]这是一行歌词\n" +
+                "[00:15.60]This is a lyric preview\n\n" +
+                "逐字歌词推荐 enhanced LRC：\n" +
+                "[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐字歌词\n\n" +
+                "普通歌词导入后会保存为统一的 [mm:ss.xx]歌词 格式。逐字歌词只支持本地导入。"
+        )
+    }
+
+
+
+    private fun isLikelyLyricsDocument(uri: Uri): Boolean {
+        val fileName = getDocumentDisplayName(uri).lowercase()
+        val path = uri.lastPathSegment.orEmpty().lowercase()
+        val mimeType = contentResolver.getType(uri).orEmpty().lowercase()
+
+        return fileName.endsWith(".lrc") ||
+            path.endsWith(".lrc") ||
+            path.contains(".lrc") ||
+            mimeType.isBlank() ||
+            mimeType.startsWith("text/") ||
+            mimeType == "application/x-lrc" ||
+            mimeType == "application/lrc" ||
+            mimeType == "application/octet-stream"
+    }
+
     private fun getDocumentDisplayName(uri: Uri): String {
         val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
         return runCatching {
@@ -427,8 +472,8 @@ class MainActivity : AppCompatActivity() {
         lyricsController.importLyricsForCurrentMedia(uri, media, overwrite, importAsWordByWord)
     }
 
-    internal fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo) {
-        lyricsController.deleteLyricsForCurrentMedia(media)
+    internal fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
+        lyricsController.deleteLyricsForCurrentMedia(media, mode)
     }
 
     internal fun getCurrentMediaSnapshot(): CurrentMediaInfo? {

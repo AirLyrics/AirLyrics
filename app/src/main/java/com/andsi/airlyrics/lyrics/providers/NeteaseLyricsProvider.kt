@@ -55,7 +55,7 @@ object NeteaseLyricsProvider : LyricsProvider {
                 artist = artist,
                 album = album,
                 durationMs = durationMs,
-                enableKaraoke = false
+                requestKlyric = false
             )
 
             val json = JSONObject(jsonText)

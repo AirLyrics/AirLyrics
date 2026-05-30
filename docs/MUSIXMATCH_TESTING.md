@@ -23,8 +23,10 @@ Use the skip flag only when checking Kotlin/UI changes that do not touch Rust:
 3. Set lyrics search source to `Musixmatch`.
 4. Play an overseas song with title, artist and duration metadata.
 5. Show the floating lyrics window.
-6. Verify that the floating window shows synchronized lyrics.
+6. Verify that the floating window shows ordinary synchronized LRC lyrics.
 7. Stop playback, restart the same song, and verify local cache is used first after successful save.
+
+Musixmatch testing does not cover word-by-word lyrics. Word-by-word display is local-only and should be tested by importing an enhanced LRC file from the app.
 
 ## Expected source behavior
 
@@ -52,15 +54,11 @@ Use popular English/Japanese tracks with clean title and artist metadata. Avoid 
 
 ## Translation language test
 
-Musixmatch now has an optional translation language setting in `设置 -> 歌词获取设置`:
+Musixmatch no longer exposes a manual translation-language selector in the app UI.
 
-- `不获取`: fetch original synchronized lyrics only.
-- `中文`: fetch original lyrics, then try Musixmatch `zh` translation.
-- `English`: fetch original lyrics, then try Musixmatch `en` translation.
+When Musixmatch is selected, AirLyrics uses the device's default system language as the translation language code. For example, a Chinese system tries `zh`, and an English system tries `en`. Translation is still optional and depends on Musixmatch coverage. If the original lyrics succeed but translation is unavailable, the lookup still succeeds and the app keeps showing original lyrics.
 
-The floating-window page only controls how lyrics are displayed, such as original / translation content mode and current / previous / next line range.
-
-Translation is optional. If the original lyrics succeed but translation is unavailable, the lookup still succeeds and the app keeps showing original lyrics. When testing translation, set the floating-window display mode to `原文 + 翻译` or `仅翻译`.
+The floating-window page only controls how lyrics are displayed, such as original / translation content mode, current / previous / next line range, and whether locally imported enhanced LRC word-by-word timing is preferred. When testing translation, set the floating-window display mode to `原文 + 翻译` or `仅翻译`.
 
 Useful log filter:
 

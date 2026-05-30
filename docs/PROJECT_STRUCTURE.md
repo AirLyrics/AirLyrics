@@ -77,10 +77,10 @@ When adding a new setting:
 
 ## Lyrics providers
 
-Lyrics lookup goes through `LyricsRepository`. To add a new source, implement `LyricsProvider`, register it in the repository, then expose it in `LyricsSettingsStore` and `LyricsSettingsPage`.
+Lyrics lookup goes through `LyricsRepository`. To add a new source, implement `LyricsProvider`, register it in the repository, then expose it in `LyricsSettingsStore` and `LyricsSettingsPage`. Online sources are for ordinary LRC/translation lookup; word-by-word lyrics stay local-only through enhanced LRC import.
 
 ## More docs
 
 - `ARCHITECTURE.md` explains runtime flow and module boundaries.
 - `CONTRIBUTING.md` explains build, commit, and contribution workflow.
-- `MUSIXMATCH_TESTING.md` explains the Musixmatch smoke-test flow.
+- `MUSIXMATCH_TESTING.md` explains the Musixmatch ordinary-lyrics smoke-test flow.
