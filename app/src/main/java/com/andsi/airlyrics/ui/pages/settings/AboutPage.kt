@@ -40,7 +40,7 @@ import com.andsi.airlyrics.i18n.tr
 
 internal fun createAboutSettingsPage(activity: MainActivity): View = with(activity) {
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
-    container.addView(settingsBackHeader("关于"))
+    container.addView(settingsBackHeader(tr("关于", "About")))
     container.addView(aboutLogoHeader())
     container.addView(changeLogButton())
     return scroll(activity, container)
@@ -169,15 +169,15 @@ private fun MainActivity.changeLogButton(): View {
 
 private fun MainActivity.showUpdateLogDialog() {
     showAirDialog(
-        title = "更新日志",
+        title = tr("更新日志", "Changelog"),
         message = null,
-        positiveText = "知道了",
+        positiveText = tr("知道了", "OK"),
         body = {
-            addView(changelogItem("关于页改版", "移除了说明味太重的内容，改成更简洁的互动式关于页。"))
-            addView(changelogItem("互动 Logo", "把猫趴云放进关于页，点击会有 Q 弹的小动画，可以一直戳。"))
-            addView(changelogItem("关于页彩蛋", "连续点击小猫，每 6 下会解锁一段竖排小字，共三段。"))
-            addView(changelogItem("逐字歌词策略", "不再联网查找逐字歌词，仅保留本地导入逐字歌词能力。"))
-            addView(changelogItem("歌词偏移调节", "支持用户手动调整歌词 offset，并保存到对应歌曲。"))
+            addView(changelogItem(tr("关于页改版", "About page redesign"), tr("移除了说明味太重的内容，改成更简洁的互动式关于页。", "Simplified the About page into a cleaner interactive page.")))
+            addView(changelogItem(tr("互动 Logo", "Logo taps"), tr("把猫趴云放进关于页，点击会有 Q 弹的小动画，可以一直戳。", "Added the cat-on-cloud logo with a bouncy tap animation.")))
+            addView(changelogItem(tr("关于页彩蛋", "About page easter egg"), tr("连续点击小猫，每 6 下会解锁一段竖排小字，共三段。", "Tap the cat repeatedly to unlock three vertical notes.")))
+            addView(changelogItem(tr("逐字歌词策略", "Word-by-word lyrics policy"), tr("不再联网查找逐字歌词，仅保留本地导入逐字歌词能力。", "Online word-by-word lookup was removed; local imports remain.")))
+            addView(changelogItem(tr("歌词偏移调节", "Offset tuning"), tr("支持用户手动调整歌词 offset，并保存到对应歌曲。", "Lyrics offset can be adjusted and saved per song.")))
         }
     )
 }

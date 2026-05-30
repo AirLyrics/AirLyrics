@@ -210,14 +210,14 @@ internal fun MainActivity.colorControl(
     var rgbExpanded = false
 
     val standardColors = listOf(
-        "蓝" to Color.rgb(66, 165, 245),
-        "紫" to Color.rgb(126, 87, 194),
-        "粉" to Color.rgb(236, 64, 122),
-        "青" to Color.rgb(38, 198, 218),
-        "绿" to Color.rgb(102, 187, 106),
-        "橙" to Color.rgb(255, 167, 38),
-        "红" to Color.rgb(239, 83, 80),
-        "白" to Color.WHITE
+        tr("蓝", "Blue") to Color.rgb(66, 165, 245),
+        tr("紫", "Purple") to Color.rgb(126, 87, 194),
+        tr("粉", "Pink") to Color.rgb(236, 64, 122),
+        tr("青", "Cyan") to Color.rgb(38, 198, 218),
+        tr("绿", "Green") to Color.rgb(102, 187, 106),
+        tr("橙", "Orange") to Color.rgb(255, 167, 38),
+        tr("红", "Red") to Color.rgb(239, 83, 80),
+        tr("白", "White") to Color.WHITE
     )
 
     return LinearLayout(this).apply {
@@ -237,7 +237,7 @@ internal fun MainActivity.colorControl(
         }
         addView(swatchGrid)
 
-        val fineTuneButton = actionButton(activity, "展开 RGB 细调") { }
+        val fineTuneButton = actionButton(activity, tr("展开 RGB 细调", "RGB tune")) { }
         val rgbPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -364,7 +364,7 @@ internal fun MainActivity.colorControl(
 
         val swatches = standardColors.map { (label, swatchColor) ->
             Pair(label, swatchColor as Int?)
-        } + listOf("自定义" to null)
+        } + listOf(tr("自定义", "Custom") to null)
 
         swatches.chunked(3).forEach { rowItems ->
             swatchGrid.addView(LinearLayout(activity).apply {
@@ -446,14 +446,14 @@ internal fun MainActivity.mediaSourceCard(controller: MediaController, selected:
     return card(this) {
         val title = controller.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
             .orEmpty()
-            .ifBlank { "未知歌曲" }
+            .ifBlank { tr("未知歌曲", "Unknown song") }
         val artist = controller.metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
             ?: controller.metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-            ?: "未知艺术家"
+            ?: tr("未知艺术家", "Unknown artist")
         val appName = getAppName(controller.packageName)
         val state = getPlaybackStateText(controller.playbackState?.state)
 
-        addView(label(activity, if (selected) "已连接" else "可选择", if (selected) colorAccentLight else colorTextMuted).apply {
+        addView(label(activity, if (selected) tr("已连接", "Connected") else tr("可选择", "Available"), if (selected) colorAccentLight else colorTextMuted).apply {
             tag = "media_source_status:${controller.packageName}"
         })
         addView(bigText(activity, appName))

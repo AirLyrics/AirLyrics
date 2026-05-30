@@ -34,7 +34,8 @@ object LyricsRepository {
         durationMs: Long,
         bypassLocal: Boolean = false,
         forceSaveOnline: Boolean = false,
-        ignoreAutoSearchSetting: Boolean = false
+        ignoreAutoSearchSetting: Boolean = false,
+        cancellationToken: LyricsLookupCancellationToken? = null
     ): Result<LyricsProviderResult?> {
         val request = LyricsSearchRequest(
             context = context.applicationContext,
@@ -45,10 +46,14 @@ object LyricsRepository {
         )
 
         return runCatching {
+            cancellationToken?.throwIfCancellationRequested()
             val settings = LyricsSettingsStore.getSettings(context)
             val wordByWordEnabled = settings.karaokeLyricsEnabled
+            cancellationToken?.throwIfCancellationRequested()
             if (!bypassLocal) {
+                cancellationToken?.throwIfCancellationRequested()
                 LocalLyricsProvider.fetch(request).getOrThrow()?.let { localResult ->
+                    cancellationToken?.throwIfCancellationRequested()
                     return@runCatching attachLocalKaraokeIfAvailable(
                         context = context,
                         result = localResult,
@@ -67,6 +72,7 @@ object LyricsRepository {
                 return@runCatching null
             }
 
+            cancellationToken?.throwIfCancellationRequested()
             val provider = onlineProviders[settings.source] ?: NeteaseLyricsProvider
             val onlineResult = provider.fetch(request).getOrElse { error ->
                 if (BuildConfig.DEBUG) {
@@ -81,6 +87,7 @@ object LyricsRepository {
                 throw error
             }
 
+            cancellationToken?.throwIfCancellationRequested()
             if (onlineResult != null && (settings.autoSaveLocal || forceSaveOnline)) {
                 LyricsStorage.saveLyrics(
                     context = context,
@@ -98,6 +105,7 @@ object LyricsRepository {
                 )
             }
 
+            cancellationToken?.throwIfCancellationRequested()
             onlineResult?.let { result ->
                 attachLocalKaraokeIfAvailable(
                     context = context,

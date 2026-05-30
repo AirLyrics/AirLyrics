@@ -4,6 +4,8 @@ import android.content.Context
 
 /** Compatibility wrapper for older call sites. Prefer LyricsRepository for new code. */
 object LyricsFetcher {
+    private val runner = LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsFetch")
+
     fun fetchSyncedLyrics(
         context: Context,
         title: String,
@@ -11,17 +13,25 @@ object LyricsFetcher {
         album: String = "",
         durationMs: Long,
         callback: (Result<String?>) -> Unit
-    ) {
-        Thread({
-            val result = LyricsRepository.findLyrics(
-                context = context,
-                title = title,
-                artist = artist,
-                album = album,
-                durationMs = durationMs
-            ).map { providerResult -> providerResult?.lyrics }
+    ): LyricsLookupHandle {
+        return runner.submit(
+            requestKey = "$title|$artist|$album|$durationMs",
+            lookup = { token ->
+                LyricsRepository.findLyrics(
+                    context = context,
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    durationMs = durationMs,
+                    cancellationToken = token
+                ).map { providerResult -> providerResult?.lyrics }
+            },
+            callback = { _, result -> callback(result) }
+        )
+    }
 
-            callback(result)
-        }, "AirLyrics-LyricsFetch").start()
+    fun cancelActive() {
+        runner.cancelActive()
     }
 }
+

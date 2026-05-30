@@ -20,6 +20,7 @@ import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository
+import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
@@ -44,6 +45,7 @@ class FloatingLyricsService : Service() {
         noTranslationTextProvider = { tr("当前歌词没有翻译", "No translation for this lyric").toString() }
     )
     private val syncHandler = Handler(Looper.getMainLooper())
+    private val lyricsLookupRunner = LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsRepository")
 
     private var currentMedia: CurrentMediaInfo = CurrentMediaInfo.Empty
     private var lastLyricsKey: String? = null
@@ -201,6 +203,7 @@ class FloatingLyricsService : Service() {
     private fun clearLyricsState(message: String) {
         lastLyricsKey = null
         activeLyricsRequestKey = null
+        lyricsLookupRunner.cancelActive()
         currentMedia = CurrentMediaInfo.Empty
         renderer.setLyricsOffset(0L)
         renderer.clear()
@@ -229,23 +232,27 @@ class FloatingLyricsService : Service() {
             }
         )
 
-        Thread({
-            val result = LyricsRepository.findLyrics(
-                context = this,
-                title = media.title,
-                artist = media.artist,
-                album = media.album,
-                durationMs = media.durationMs,
-                bypassLocal = bypassLocal,
-                forceSaveOnline = forceSaveOnline,
-                ignoreAutoSearchSetting = ignoreAutoSearchSetting
-            )
-
-            Handler(Looper.getMainLooper()).post {
-                if (activeLyricsRequestKey != requestKey) return@post
-                applyLyricsResult(result = result, media = media)
+        lyricsLookupRunner.submit(
+            requestKey = requestKey,
+            lookup = { token ->
+                LyricsRepository.findLyrics(
+                    context = this,
+                    title = media.title,
+                    artist = media.artist,
+                    album = media.album,
+                    durationMs = media.durationMs,
+                    bypassLocal = bypassLocal,
+                    forceSaveOnline = forceSaveOnline,
+                    ignoreAutoSearchSetting = ignoreAutoSearchSetting,
+                    cancellationToken = token
+                )
+            },
+            callback = { completedRequestKey, result ->
+                if (activeLyricsRequestKey == completedRequestKey) {
+                    applyLyricsResult(result = result, media = media)
+                }
             }
-        }, "AirLyrics-LyricsRepository").start()
+        )
     }
 
     private fun applyLyricsResult(result: Result<LyricsProviderResult?>, media: CurrentMediaInfo) {
@@ -286,6 +293,8 @@ class FloatingLyricsService : Service() {
     }
 
     private fun importLyrics(uri: Uri, overwrite: Boolean) {
+        lyricsLookupRunner.cancelActive()
+        activeLyricsRequestKey = null
         val media = currentMedia
 
         if (media.title.isBlank()) {
@@ -356,25 +365,25 @@ class FloatingLyricsService : Service() {
     private fun toggleVisibleFromNotification() {
         val nextVisible = !windowController.isVisible
         if (nextVisible) {
-            if (!showLyrics(feedback = "已显示")) {
-                refreshQuickControls("需要悬浮窗权限")
-                showQuickFeedback("请先开启悬浮窗权限")
+            if (!showLyrics(feedback = tr("已显示", "Shown"))) {
+                refreshQuickControls(tr("需要悬浮窗权限", "Overlay permission required"))
+                showQuickFeedback(tr("请先开启悬浮窗权限", "Please enable overlay permission first"))
             }
         } else {
-            hideLyrics(feedback = "已隐藏")
+            hideLyrics(feedback = tr("已隐藏", "Hidden"))
         }
     }
 
     private fun toggleLockFromNotification() {
         val nextLocked = !FloatingLyricsStyleStore.isLocked(this)
-        setLocked(locked = nextLocked, feedback = if (nextLocked) "已锁定" else "已解锁")
+        setLocked(locked = nextLocked, feedback = if (nextLocked) tr("已锁定", "Locked") else tr("已解锁", "Unlocked"))
     }
 
     private fun toggleClickThroughFromNotification() {
         val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(this)
         setClickThrough(
             clickThrough = nextClickThrough,
-            feedback = if (nextClickThrough) "已穿透" else "可触摸"
+            feedback = if (nextClickThrough) tr("已穿透", "Click-through on") else tr("可触摸", "Touchable")
         )
     }
 
@@ -387,9 +396,9 @@ class FloatingLyricsService : Service() {
         windowController.setClickThrough(!nextEditing)
 
         if (nextEditing) {
-            refreshQuickControls("可拖动")
+            refreshQuickControls(tr("可拖动", "Draggable"))
         } else {
-            refreshQuickControls("已锁定并穿透")
+            refreshQuickControls(tr("已锁定并穿透", "Locked + click-through"))
         }
     }
 
@@ -435,6 +444,7 @@ class FloatingLyricsService : Service() {
 
     override fun onDestroy() {
         syncHandler.removeCallbacks(syncRunnable)
+        lyricsLookupRunner.shutdown()
         runCatching { unregisterReceiver(mediaReceiver) }
         if (::windowController.isInitialized) {
             windowController.hide(notifyVisibilityChanged = false)

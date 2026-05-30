@@ -15,6 +15,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -22,15 +23,17 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
+private const val DEFAULT_POSITIVE_TEXT = "__airlyrics_default_positive__"
+
 internal fun MainActivity.showAirInfoDialog(
     title: String,
     message: String,
-    buttonText: String = "知道了"
+    buttonText: String? = null
 ): Dialog {
     return showAirDialog(
         title = title,
         message = message,
-        positiveText = buttonText
+        positiveText = buttonText ?: tr("知道了", "OK")
     )
 }
 
@@ -38,14 +41,14 @@ internal fun MainActivity.showAirConfirmDialog(
     title: String,
     message: String,
     positiveText: String,
-    negativeText: String = "取消",
+    negativeText: String? = null,
     onPositive: () -> Unit
 ): Dialog {
     return showAirDialog(
         title = title,
         message = message,
         positiveText = positiveText,
-        negativeText = negativeText,
+        negativeText = negativeText ?: tr("取消", "Cancel"),
         onPositive = onPositive
     )
 }
@@ -53,7 +56,7 @@ internal fun MainActivity.showAirConfirmDialog(
 internal fun MainActivity.showAirDialog(
     title: String,
     message: String? = null,
-    positiveText: String? = "知道了",
+    positiveText: String? = DEFAULT_POSITIVE_TEXT,
     negativeText: String? = null,
     body: (LinearLayout.() -> Unit)? = null,
     onPositive: () -> Unit = {}
@@ -89,7 +92,8 @@ internal fun MainActivity.showAirDialog(
 
         body?.invoke(this)
 
-        if (!positiveText.isNullOrBlank() || !negativeText.isNullOrBlank()) {
+        val resolvedPositiveText = if (positiveText == DEFAULT_POSITIVE_TEXT) tr("知道了", "OK") else positiveText
+        if (!resolvedPositiveText.isNullOrBlank() || !negativeText.isNullOrBlank()) {
             addView(LinearLayout(this@showAirDialog).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
@@ -101,8 +105,8 @@ internal fun MainActivity.showAirDialog(
                     })
                 }
 
-                if (!positiveText.isNullOrBlank()) {
-                    addView(dialogButton(positiveText, primary = true) {
+                if (!resolvedPositiveText.isNullOrBlank()) {
+                    addView(dialogButton(resolvedPositiveText, primary = true) {
                         onPositive()
                         dialog.dismiss()
                     })

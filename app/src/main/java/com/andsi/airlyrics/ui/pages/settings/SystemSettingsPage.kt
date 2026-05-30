@@ -19,30 +19,31 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import com.andsi.airlyrics.i18n.tr
 
 internal fun createSystemSettingsPage(activity: MainActivity): View  = with(activity) createSystemSettingsPage@ {
     val container = pageContainer(activity)
-    container.addView(settingsBackHeader("系统与权限"))
+    container.addView(settingsBackHeader(tr("系统与权限", "System")))
 
     container.addView(languageChoiceCard(activity))
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, "权限状态"))
-            addView(settingRow(activity, "悬浮窗权限", if (Settings.canDrawOverlays(activity)) "已开启" else "未开启"))
-            addView(settingRow(activity, "通知权限", if (hasNotificationPermission()) "已开启" else "未开启"))
-            addView(settingRow(activity, "通知访问权限", if (hasNotificationListenerAccess()) "已开启" else "未开启"))
+            addView(bigText(activity, tr("权限状态", "Permissions")))
+            addView(settingRow(activity, tr("悬浮窗权限", "Overlay"), if (Settings.canDrawOverlays(activity)) tr("已开启", "On") else tr("未开启", "Off")))
+            addView(settingRow(activity, tr("通知权限", "Notify"), if (hasNotificationPermission()) tr("已开启", "On") else tr("未开启", "Off")))
+            addView(settingRow(activity, tr("通知访问权限", "Notif. access"), if (hasNotificationListenerAccess()) tr("已开启", "On") else tr("未开启", "Off")))
         }
     )
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, "快捷入口"))
+            addView(bigText(activity, tr("快捷入口", "Shortcuts")))
             addView(horizontalButtons(activity,
-                "悬浮窗权限" to { uiActions.requestOverlayPermission() },
-                "通知权限" to { uiActions.requestNotificationPermission() }
+                tr("悬浮窗权限", "Overlay") to { uiActions.requestOverlayPermission() },
+                tr("通知权限", "Notify") to { uiActions.requestNotificationPermission() }
             ))
-            addView(actionButton(activity, "打开通知访问设置") {
+            addView(actionButton(activity, tr("打开通知访问设置", "Open access settings")) {
                 uiActions.openNotificationListenerSettings()
             })
         }
@@ -98,8 +99,8 @@ private fun showLanguageDialog(activity: MainActivity) = with(activity) showLang
                 dialog.dismiss()
                 activity.refreshAfterLanguageChanged()
             }
-            addLanguageOption(activity, "跟随系统", "Follow system", LanguageSettingsStore.MODE_SYSTEM, currentMode, selectMode)
-            addLanguageOption(activity, "简体中文", "Chinese (Simplified)", LanguageSettingsStore.MODE_ZH_CN, currentMode, selectMode)
+            addLanguageOption(activity, tr("跟随系统", "Follow system"), "Follow system", LanguageSettingsStore.MODE_SYSTEM, currentMode, selectMode)
+            addLanguageOption(activity, tr("简体中文", "Chinese (Simplified)"), "Chinese (Simplified)", LanguageSettingsStore.MODE_ZH_CN, currentMode, selectMode)
             addLanguageOption(activity, "English", "English", LanguageSettingsStore.MODE_EN, currentMode, selectMode)
         }
     )

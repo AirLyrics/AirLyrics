@@ -20,8 +20,8 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
 
     container.addView(
         settingsCategoryCard(
-            title = "歌词获取设置",
-            subtitle = "歌词源、自动保存、下载目录和最近保存的 .lrc。",
+            title = tr("歌词获取设置", "Lyrics"),
+            subtitle = tr("歌词源、自动保存、下载目录和最近保存的 .lrc。", "Source, auto-save, folder, and recent .lrc files."),
             status = "${localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) tr("自动保存", "Auto-save") else tr("不自动保存", "No auto-save")}",
             accent = colorAccentPink,
             iconRes = R.drawable.ic_air_music_note
@@ -32,8 +32,8 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
 
     container.addView(
         settingsCategoryCard(
-            title = "系统与权限",
-            subtitle = "悬浮窗、通知权限、通知访问权限。",
+            title = tr("系统与权限", "System"),
+            subtitle = tr("悬浮窗、通知权限、通知访问权限。", "Overlay and notification permissions."),
             status = permissionSummary(),
             accent = colorAccentMint,
             iconRes = R.drawable.ic_air_shield
@@ -44,8 +44,8 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
 
     container.addView(
         settingsCategoryCard(
-            title = "关于",
-            subtitle = "版本号、项目地址、更新记录。",
+            title = tr("关于", "About"),
+            subtitle = tr("版本号、项目地址、更新记录。", "Version, project link, and changelog."),
             status = "AirLyrics ${getAppVersionName()}",
             accent = colorAccentMint,
             iconRes = R.drawable.ic_air_info

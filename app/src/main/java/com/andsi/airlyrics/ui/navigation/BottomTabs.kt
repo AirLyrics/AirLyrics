@@ -62,9 +62,9 @@ internal fun createBottomTabs(activity: MainActivity): View  = with(activity) cr
     }
     tabRow = bar
 
-    addTab(activity, bar, Page.MEDIA, "媒体流")
-    addTab(activity, bar, Page.FLOATING, "悬浮窗")
-    addTab(activity, bar, Page.SETTINGS, "设置")
+    addTab(activity, bar, Page.MEDIA, tr("媒体流", "Media"))
+    addTab(activity, bar, Page.FLOATING, tr("悬浮窗", "Floating"))
+    addTab(activity, bar, Page.SETTINGS, tr("设置", "Settings"))
 
     shell.addView(tabHighlight)
     shell.addView(bar)

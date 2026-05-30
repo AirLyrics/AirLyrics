@@ -49,7 +49,7 @@ object FloatingServiceNotification {
             .addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_menu_view,
-                    state.actionTitle(context, active = state.visible, activeText = "显示", inactiveText = "显示"),
+                    state.actionTitle(context, active = state.visible, activeText = context.tr("显示", "Show"), inactiveText = context.tr("显示", "Show")),
                     serviceActionIntent(context, BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE, 1001)
                 ).build()
             )
