@@ -25,6 +25,8 @@ import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 
 class FloatingLyricsService : Service() {
     private lateinit var windowController: FloatingWindowController
@@ -39,7 +41,7 @@ class FloatingLyricsService : Service() {
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
         karaokeEnabledProvider = { LyricsSettingsStore.isKaraokeLyricsEnabled(this) },
         karaokeHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).karaokeHighlightColor },
-        noTranslationTextProvider = { localizeText("当前歌词没有翻译").toString() }
+        noTranslationTextProvider = { tr("当前歌词没有翻译", "No translation for this lyric").toString() }
     )
     private val syncHandler = Handler(Looper.getMainLooper())
 
@@ -166,7 +168,7 @@ class FloatingLyricsService : Service() {
         ignoreAutoSearchSetting: Boolean = false
     ) {
         if (currentMedia.isEmpty) {
-            clearLyricsState("♪ 等待媒体信息...")
+            clearLyricsState("♪ " + tr("等待媒体信息", "Waiting for media") + "...")
             return
         }
 
@@ -189,9 +191,9 @@ class FloatingLyricsService : Service() {
         MediaSourceStore.saveSelectedPackage(this, packageName)
         clearLyricsState(
             if (packageName == null) {
-                "♪ 尚未选择媒体来源，请进入 App 选择歌词来源"
+                "♪ " + tr("尚未选择媒体来源，请进入 App 选择歌词来源", "No media source selected. Open the app and choose one.")
             } else {
-                "♪ 已选择媒体来源，等待该播放器更新..."
+                "♪ " + tr("已选择媒体来源，等待该播放器更新", "Media source selected. Waiting for that player to update") + "..."
             }
         )
     }
@@ -202,7 +204,7 @@ class FloatingLyricsService : Service() {
         currentMedia = CurrentMediaInfo.Empty
         renderer.setLyricsOffset(0L)
         renderer.clear()
-        renderer.show(localizeText(message).toString())
+        renderer.show(message)
     }
 
     private fun shouldAcceptMediaUpdate(sourcePackage: String): Boolean {
@@ -221,9 +223,9 @@ class FloatingLyricsService : Service() {
     ) {
         renderer.show(
             if (media.isPlaying) {
-                "♪ ${localizeText("正在查找歌词")}...\n${media.displayText}"
+                "♪ ${tr("正在查找歌词", "Searching lyrics")}...\n${media.displayText}"
             } else {
-                "Ⅱ ${localizeText("暂停中")}\n${media.displayText}"
+                "Ⅱ ${tr("暂停中", "Paused")}\n${media.displayText}"
             }
         )
 
@@ -256,19 +258,19 @@ class FloatingLyricsService : Service() {
                 lyrics = lyricText,
                 translatedLyrics = lyricsResult.translatedLyrics,
                 karaokeLines = lyricsResult.karaokeLines,
-                emptyText = localizeText("♪ 歌词解析为空\n${media.displayText}").toString()
+                emptyText = "♪ " + tr("歌词解析为空", "Parsed lyrics are empty") + "\n" + media.displayText
             )
             return
         }
 
         renderer.clear()
-        renderer.show(localizeText(lookupFailureText(result.exceptionOrNull(), media)).toString())
+        renderer.show(lookupFailureText(result.exceptionOrNull(), media))
     }
 
     private fun lookupFailureText(error: Throwable?, media: CurrentMediaInfo): String {
-        val providerMessage = (error as? LyricsLookupException)?.userMessage()
-        return if (providerMessage != null) {
-            "♪ ${media.displayText}\n${localizeText(providerMessage)}"
+        val lookupError = error as? LyricsLookupException
+        return if (lookupError != null) {
+            "♪ ${media.displayText}\n${localizedLyricsLookupMessage(lookupError)}"
         } else {
             notFoundText(media)
         }
@@ -276,10 +278,10 @@ class FloatingLyricsService : Service() {
 
     private fun notFoundText(media: CurrentMediaInfo): String {
         return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
-            "♪ ${localizeText("仅使用本地歌词")}\n${media.displayText}\n${localizeText("未找到本地文件")}"
+            "♪ ${tr("仅使用本地歌词", "Using local lyrics only")}\n${media.displayText}\n${tr("未找到本地文件", "Local file not found")}"
         } else {
             val sourceTitle = localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))
-            "♪ ${media.displayText}\n${localizeText("当前来源：")}$sourceTitle\n${localizeText("未找到歌词")}"
+            "♪ ${media.displayText}\n${tr("当前来源：", "Source: ")}$sourceTitle\n${tr("未找到歌词", "Lyrics not found")}"
         }
     }
 
@@ -287,7 +289,7 @@ class FloatingLyricsService : Service() {
         val media = currentMedia
 
         if (media.title.isBlank()) {
-            renderer.show(localizeText("♪ 当前没有正在播放的歌曲，无法绑定歌词").toString())
+            renderer.show("♪ " + tr("当前没有正在播放的歌曲，无法绑定歌词", "No song is playing, so lyrics cannot be bound"))
             return
         }
 
@@ -302,7 +304,7 @@ class FloatingLyricsService : Service() {
         )
 
         if (!imported) {
-            renderer.show(localizeText("♪ 导入歌词失败").toString())
+            renderer.show("♪ " + tr("导入歌词失败", "Lyrics import failed"))
             return
         }
 
@@ -319,10 +321,10 @@ class FloatingLyricsService : Service() {
             renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
             renderer.parseAndShow(
                 lyrics = localLyrics,
-                emptyText = localizeText("♪ 已导入歌词，但内容为空").toString()
+                emptyText = "♪ " + tr("已导入歌词，但内容为空", "Lyrics imported, but the content is empty")
             )
         } else {
-            renderer.show(localizeText("♪ 导入歌词失败").toString())
+            renderer.show("♪ " + tr("导入歌词失败", "Lyrics import failed"))
         }
     }
 

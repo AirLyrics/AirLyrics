@@ -36,6 +36,7 @@ import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.i18n.tr
 
 internal fun createAboutSettingsPage(activity: MainActivity): View = with(activity) {
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
@@ -261,7 +262,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
 
         val segment1 = VerticalMessageSegment(
             activity,
-            text = activity.localizeText("如果你喜欢这个项目").toString(),
+            text = activity.tr("如果你喜欢这个项目", "Like it?").toString(),
             colors = listOf(
                 Color.rgb(255, 244, 250),
                 Color.rgb(255, 210, 228)
@@ -269,7 +270,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
         )
         val segment2 = VerticalMessageSegment(
             activity,
-            text = activity.localizeText("点个star!").toString(),
+            text = activity.tr("点个star!", "Give it a star!").toString(),
             colors = listOf(
                 Color.rgb(255, 188, 200),
                 Color.rgb(255, 152, 170)
@@ -277,7 +278,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
         )
         val segment3 = VerticalMessageSegment(
             activity,
-            text = activity.localizeText("我会非常非常非常开心的！").toString(),
+            text = activity.tr("我会非常非常非常开心的！", "Yay!").toString(),
             colors = listOf(
                 Color.rgb(255, 238, 150),
                 Color.rgb(145, 203, 255)

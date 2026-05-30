@@ -10,6 +10,8 @@ import android.widget.TextView
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
+import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.liveOptionGrid
 import com.andsi.airlyrics.app.*
@@ -43,7 +45,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             val autoSearchButton = actionButton(activity, if (autoSearch) "无本地歌词时自动联网搜索：开启" else "无本地歌词时自动联网搜索：关闭") { }
             autoSearchButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSearch()
-                autoSearchButton.text = if (enabled) localizeText("无本地歌词时自动联网搜索：开启") else localizeText("无本地歌词时自动联网搜索：关闭")
+                autoSearchButton.text = if (enabled) tr("无本地歌词时自动联网搜索：开启", "Online fallback: on") else tr("无本地歌词时自动联网搜索：关闭", "Online fallback: off")
                 playLocalRefreshFeedback(activity, autoSearchButton, null, "已更新")
             }
             addView(autoSearchButton)
@@ -51,7 +53,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             val autoSaveButton = actionButton(activity, if (autoSave) "自动保存联网歌词：开启" else "自动保存联网歌词：关闭") { }
             autoSaveButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSave()
-                autoSaveButton.text = if (enabled) localizeText("自动保存联网歌词：开启") else localizeText("自动保存联网歌词：关闭")
+                autoSaveButton.text = if (enabled) tr("自动保存联网歌词：开启", "Auto-save: on") else tr("自动保存联网歌词：关闭", "Auto-save: off")
                 playLocalRefreshFeedback(activity, autoSaveButton, null, "已更新")
             }
             addView(autoSaveButton)
@@ -67,7 +69,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
                 LyricsSearchSource.MUSIXMATCH -> tr("适合国际用户，依据您的系统语言来自动获取翻译（如果有的话）", "Good for international songs; uses your system language for translations when available")
             }
 
-            val sourceStatus = normalText(activity, "当前：${LyricsSettingsStore.getLyricsSourceTitle(activity)}")
+            val sourceStatus = normalText(activity, tr("当前：", "Current: ") + localizeText(LyricsSettingsStore.getLyricsSourceTitle(activity)))
             val sourceHint = smallHint(activity, sourceHintText(selectedSource))
             val sourceFeedback = TextView(activity).apply {
                 text = ""
@@ -103,7 +105,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
     container.addView(
         card(activity) {
             addView(bigText(activity, "本地歌词目录"))
-            addView(normalText(activity, "保存目录：${LyricsStorage.getLyricsDirDisplayPath(activity)}"))
+            addView(normalText(activity, tr("保存目录：", "Save folder: ") + LyricsStorage.getLyricsDirRawPath(activity)))
             addView(smallHint(activity, "手动导入歌词、自动保存歌词和歌词索引都会使用这个位置。"))
             addView(actionButton(activity, "选择歌词保存目录") {
                 uiActions.selectLyricsDirectory()
@@ -127,7 +129,7 @@ private fun karaokeStatusRow(activity: MainActivity, value: String): View = with
         setPadding(0, dp(10), 0, dp(4))
 
         addView(TextView(activity).apply {
-            text = localizeText("本地逐字歌词")
+            text = tr("本地逐字歌词", "Word LRC")
             textSize = 15f
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -211,10 +213,10 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
         val offsetMs = LyricsOffsetStore.getOffsetMs(activity, media)
 
         body.addView(normalText(activity, media.displayText))
-        body.addView(settingRow(activity, "歌词来源", localInfo?.sourceText ?: "暂无普通本地歌词"))
+        body.addView(settingRow(activity, tr("歌词来源", "Lyrics source"), localInfo?.let { localizedLocalLyricsSource(it) } ?: tr("暂无普通本地歌词", "No plain LRC")))
         body.addView(settingRow(activity, "普通歌词", localInfo?.friendlyTitle ?: "未绑定"))
         body.addView(karaokeStatusRow(activity, karaokeSummary))
-        body.addView(settingRow(activity, "当前偏移", LyricsOffsetStore.description(offsetMs)))
+        body.addView(settingRow(activity, tr("当前偏移", "Current offset"), localizedOffsetDescription(offsetMs)))
         if (offsetMs != 0L) {
             body.addView(smallHint(activity, "歌词偏移按当前音乐保存，不会修改原始 LRC 或 enhanced LRC 文件。"))
         }
@@ -226,7 +228,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
         fun confirmDeleteLyrics(label: String, mode: LyricsStorage.DeleteMode, message: String) {
             activity.showAirConfirmDialog(
                 title = label,
-                message = "${media.displayText}\n\n$message",
+                message = media.displayText + "\n\n" + message,
                 positiveText = tr("移除", "Remove")
             ) {
                 uiActions.deleteLyricsForCurrentMedia(media, mode)
@@ -239,7 +241,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
                 confirmDeleteLyrics(
                     label = "移除普通歌词？",
                     mode = LyricsStorage.DeleteMode.PLAIN,
-                    message = "只会删除这首歌关联的普通 LRC；如果已经导入逐字歌词，会继续保留。之后如果允许联网搜索，可以重新查找普通歌词。"
+                    message = tr("只会删除这首歌关联的普通 LRC；如果已经导入逐字歌词，会继续保留。之后如果允许联网搜索，可以重新查找普通歌词。", "Deletes only this song’s plain LRC. Word LRC stays.")
                 )
             })
         }
@@ -249,7 +251,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
                 confirmDeleteLyrics(
                     label = "移除逐字歌词？",
                     mode = LyricsStorage.DeleteMode.KARAOKE,
-                    message = "只会删除这首歌关联的本地 enhanced LRC 逐字数据；普通歌词会继续保留。"
+                    message = tr("只会删除这首歌关联的本地 enhanced LRC 逐字数据；普通歌词会继续保留。", "Deletes only this song’s enhanced LRC. Plain LRC stays.")
                 )
             })
         }
@@ -259,7 +261,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
                 confirmDeleteLyrics(
                     label = "移除全部本地歌词？",
                     mode = LyricsStorage.DeleteMode.ALL,
-                    message = "会同时删除这首歌的普通歌词和逐字歌词。这个操作更彻底，适合想重新绑定歌词时使用。"
+                    message = tr("会同时删除这首歌的普通歌词和逐字歌词。这个操作更彻底，适合想重新绑定歌词时使用。", "Deletes both plain and word LRC for this song.")
                 )
             })
         }
@@ -267,7 +269,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
         body.addView(actionButton(activity, "重新联网搜索歌词") {
             activity.showAirConfirmDialog(
                 title = "重新联网搜索歌词？",
-                message = "会绕过当前本地普通歌词重新搜索。找到后会覆盖保存为新的普通歌词缓存；逐字歌词只使用本地导入文件。",
+                message = tr("会绕过当前本地普通歌词重新搜索。找到后会覆盖保存为新的普通歌词缓存；逐字歌词只使用本地导入文件。", "Search online again and replace the plain LRC cache."),
                 positiveText = tr("搜索", "Search")
             ) {
                 uiActions.reloadFloatingLyricsFromOnline()
@@ -341,7 +343,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
             })
 
             val hintText = TextView(activity).apply {
-                text = localizeText("点击歌词可以预览或者修改")
+                text = tr("点击歌词可以预览或者修改", "Tap to preview or edit")
                 textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextMuted)
@@ -395,7 +397,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
                     animate().rotationBy(360f).setDuration(420L).start()
                     populate()
                     val count = LyricsStorage.listRecentLyrics(activity, limit = 8).size
-                    playLocalRefreshFeedback(activity, listBody, feedback, if (count > 0) "已刷新 $count 首" else "已刷新")
+                    playLocalRefreshFeedback(activity, listBody, feedback, if (count > 0) tr("已刷新", "Refreshed") + " $count " + tr("首", "songs") else tr("已刷新", "Refreshed"))
                 }
             })
         })

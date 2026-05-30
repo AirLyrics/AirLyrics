@@ -45,6 +45,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.i18n.tr
 
 internal fun MainActivity.optionGrid(items: List<OptionItem>): LinearLayout {
     val activity = this
@@ -331,7 +332,7 @@ internal fun MainActivity.colorControl(
         val redSlider = colorSliderRow("R", red) { red = it }
         val greenSlider = colorSliderRow("G", green) { green = it }
         val blueSlider = colorSliderRow("B", blue) { blue = it }
-        val alphaSlider = colorSliderRow(localizeText("不透明度").toString(), alpha) { alpha = it }
+        val alphaSlider = colorSliderRow(tr("不透明度", "Opacity").toString(), alpha) { alpha = it }
 
         fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
             pair.first.progress = value.coerceIn(0, 255)
@@ -342,7 +343,7 @@ internal fun MainActivity.colorControl(
             setSlider(redSlider, "R", red)
             setSlider(greenSlider, "G", green)
             setSlider(blueSlider, "B", blue)
-            setSlider(alphaSlider, localizeText("不透明度").toString(), alpha)
+            setSlider(alphaSlider, tr("不透明度", "Opacity").toString(), alpha)
         }
 
         fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
@@ -373,7 +374,7 @@ internal fun MainActivity.colorControl(
                         if (presetColor == null) {
                             rgbExpanded = true
                             rgbPanel.visibility = View.VISIBLE
-                            fineTuneButton.text = localizeText("收起 RGB 细调")
+                            fineTuneButton.text = tr("收起 RGB 细调", "Hide RGB")
                         } else {
                             red = Color.red(presetColor)
                             green = Color.green(presetColor)
@@ -406,7 +407,7 @@ internal fun MainActivity.colorControl(
         fineTuneButton.setOnClickListener {
             rgbExpanded = !rgbExpanded
             rgbPanel.visibility = if (rgbExpanded) View.VISIBLE else View.GONE
-            fineTuneButton.text = if (rgbExpanded) localizeText("收起 RGB 细调") else localizeText("展开 RGB 细调")
+            fineTuneButton.text = if (rgbExpanded) tr("收起 RGB 细调", "Hide RGB") else tr("展开 RGB 细调", "RGB tune")
             playTinyPulse(fineTuneButton)
         }
 

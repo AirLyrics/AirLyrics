@@ -11,6 +11,7 @@ import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.tr
 
 /**
  * Builds the foreground-service notification used by the floating lyrics service.
@@ -37,7 +38,7 @@ object FloatingServiceNotification {
         val contentText = state.feedback?.let { "${state.summary(context)} · ${context.localizeText(it)}" } ?: state.summary(context)
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.localizeText("AirLyrics 悬浮歌词"))
+            .setContentTitle(context.tr("AirLyrics 悬浮歌词", "AirLyrics Floating Lyrics"))
             .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_air_notification)
             .setOngoing(true)
@@ -105,7 +106,7 @@ object FloatingServiceNotification {
     }
 
     private fun QuickControlState.summary(context: Context): String {
-        val visibleText = if (visible) context.localizeText("已显示") else context.localizeText("已隐藏")
+        val visibleText = if (visible) context.tr("已显示", "Shown") else context.tr("已隐藏", "Hidden")
         return "$visibleText · ${windowModeText(context)}"
     }
 
@@ -114,15 +115,15 @@ object FloatingServiceNotification {
 
     private fun QuickControlState.windowModeText(context: Context): CharSequence {
         return when {
-            !locked && !clickThrough -> context.localizeText("调整模式")
-            locked && clickThrough -> context.localizeText("锁定穿透")
-            locked && !clickThrough -> context.localizeText("已锁定 · 可触摸")
-            else -> context.localizeText("可拖动 · 已穿透")
+            !locked && !clickThrough -> context.tr("调整模式", "Adjustment mode")
+            locked && clickThrough -> context.tr("锁定穿透", "Lock / touch")
+            locked && !clickThrough -> context.tr("已锁定 · 可触摸", "Locked · touchable")
+            else -> context.tr("可拖动 · 已穿透", "Draggable · click-through")
         }
     }
 
     private fun QuickControlState.adjustModeActionTitle(context: Context): String {
-        return if (isAdjustMode) "● ${context.localizeText("调整模式")}" else "○ ${context.localizeText("调整模式")}"
+        return if (isAdjustMode) "● ${context.tr("调整模式", "Adjustment mode")}" else "○ ${context.tr("调整模式", "Adjustment mode")}"
     }
 
     private fun QuickControlState.actionTitle(

@@ -13,7 +13,6 @@ import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.media.MediaSourceStore
-import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.i18n.tr
 
 internal class LyricsController(
@@ -49,11 +48,11 @@ internal class LyricsController(
 
         if (imported) {
             val message = if (importAsWordByWord) {
-                "已导入逐字歌词，悬浮窗显示中会立即刷新"
+                activity.tr("已导入逐字歌词，悬浮窗显示中会立即刷新", "Word LRC imported. Floating lyrics will refresh.")
             } else {
-                "已导入普通歌词，悬浮窗显示中会立即刷新"
+                activity.tr("已导入普通歌词，悬浮窗显示中会立即刷新", "Plain LRC imported. Floating lyrics will refresh.")
             }
-            Toast.makeText(activity, activity.localizeText(message), Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             activity.reloadFloatingLyrics()
             activity.renderCurrentPage(animateContent = false, animateTabs = false)
         } else {
@@ -79,20 +78,20 @@ internal class LyricsController(
 
         if (deleted) {
             val message = when (mode) {
-                LyricsStorage.DeleteMode.PLAIN -> "已移除当前音乐的普通歌词"
-                LyricsStorage.DeleteMode.KARAOKE -> "已移除当前音乐的逐字歌词"
-                LyricsStorage.DeleteMode.ALL -> "已移除当前音乐的全部本地歌词"
+                LyricsStorage.DeleteMode.PLAIN -> activity.tr("已移除当前音乐的普通歌词", "Plain LRC removed for this song.")
+                LyricsStorage.DeleteMode.KARAOKE -> activity.tr("已移除当前音乐的逐字歌词", "Word LRC removed for this song.")
+                LyricsStorage.DeleteMode.ALL -> activity.tr("已移除当前音乐的全部本地歌词", "All local lyrics removed for this song.")
             }
-            Toast.makeText(activity, activity.localizeText(message), Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             activity.reloadFloatingLyrics()
             activity.renderCurrentPage(animateContent = false, animateTabs = false)
         } else {
             val message = when (mode) {
-                LyricsStorage.DeleteMode.PLAIN -> "当前音乐没有可移除的普通歌词"
-                LyricsStorage.DeleteMode.KARAOKE -> "当前音乐没有可移除的逐字歌词"
-                LyricsStorage.DeleteMode.ALL -> "当前音乐没有可移除的本地歌词"
+                LyricsStorage.DeleteMode.PLAIN -> activity.tr("当前音乐没有可移除的普通歌词", "No plain LRC to remove for this song.")
+                LyricsStorage.DeleteMode.KARAOKE -> activity.tr("当前音乐没有可移除的逐字歌词", "No word LRC to remove for this song.")
+                LyricsStorage.DeleteMode.ALL -> activity.tr("当前音乐没有可移除的本地歌词", "No local lyrics to remove for this song.")
             }
-            Toast.makeText(activity, activity.localizeText(message), Toast.LENGTH_SHORT).show()
+            Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
         }
     }
 

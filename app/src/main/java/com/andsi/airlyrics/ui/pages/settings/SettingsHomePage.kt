@@ -10,6 +10,7 @@ import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
+import com.andsi.airlyrics.i18n.tr
 
 internal fun createSettingsHomePage(activity: MainActivity): View  = with(activity) createSettingsHomePage@ {
     val container = pageContainer(activity)
@@ -21,7 +22,7 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
         settingsCategoryCard(
             title = "歌词获取设置",
             subtitle = "歌词源、自动保存、下载目录和最近保存的 .lrc。",
-            status = "${localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) localizeText("自动保存") else localizeText("不自动保存")}",
+            status = "${localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) tr("自动保存", "Auto-save") else tr("不自动保存", "No auto-save")}",
             accent = colorAccentPink,
             iconRes = R.drawable.ic_air_music_note
         ) {

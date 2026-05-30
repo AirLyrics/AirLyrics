@@ -28,6 +28,10 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
+import com.andsi.airlyrics.i18n.localizedLocalLyricsType
+import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
 
 internal fun MainActivity.settingsHomeHeader(): View {
     val activity = this
@@ -39,7 +43,7 @@ internal fun MainActivity.settingsHomeHeader(): View {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
-                text = localizeText("设置")
+                text = tr("设置", "Settings")
                 textSize = 22f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextStrong)
@@ -59,7 +63,7 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
-                text = localizeText("‹ 设置")
+                text = tr("‹ 设置", "‹ Settings")
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -96,7 +100,7 @@ internal fun MainActivity.themeToggleButton(): TextView {
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         setTextColor(colorAccent)
-        contentDescription = if (isDarkTheme()) localizeText("切换到白天模式") else localizeText("切换到暗黑模式")
+        contentDescription = if (isDarkTheme()) tr("切换到白天模式", "Switch to light mode") else tr("切换到暗黑模式", "Switch to dark mode")
         layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
             setMargins(dp(10), 0, 0, 0)
         }
@@ -185,14 +189,14 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = "${localizeText(item.displaySubtitle)} · ${localizeText(item.lyricsTypeText)}"
+            text = "${localizedLocalLyricsSubtitle(item)} · ${localizedLocalLyricsType(item)}"
             textSize = 12f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccentMint)
             setPadding(0, dp(4), 0, 0)
         })
         addView(TextView(activity).apply {
-            text = localizeText(LyricsStorage.formatLocalLyricsItem(item))
+            text = localizedLocalLyricsMeta(item)
             textSize = 12f
             setTextColor(colorTextMuted)
             setPadding(0, dp(2), 0, 0)
@@ -200,7 +204,7 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
         setOnClickListener {
             val rawLyrics = LyricsStorage.readLocalLyricsItemText(activity, item)
             if (rawLyrics == null) {
-                Toast.makeText(activity, localizeText("无法读取这份歌词"), Toast.LENGTH_SHORT).show()
+                Toast.makeText(activity, tr("无法读取这份歌词", "Cannot read this lyric file"), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -228,9 +232,9 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             val canEdit = item.hasPlainLyrics && !item.name.endsWith(".karaoke.json", ignoreCase = true)
             activity.showAirDialog(
                 title = item.displayTitle,
-                message = if (canEdit) localizeText("可预览，也可以直接修改普通 LRC 内容。").toString() else localizeText("这份逐字歌词只能预览。").toString(),
-                positiveText = if (canEdit) localizeText("保存修改").toString() else null,
-                negativeText = localizeText("关闭").toString(),
+                message = if (canEdit) tr("可预览，也可以直接修改普通 LRC 内容。", "Preview or edit plain LRC.").toString() else tr("这份逐字歌词只能预览。", "This word-by-word file is preview-only.").toString(),
+                positiveText = if (canEdit) tr("保存修改", "Save changes").toString() else null,
+                negativeText = tr("关闭", "Off").toString(),
                 body = {
                     addView(editor)
                 }
@@ -238,7 +242,7 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
                 val saved = LyricsStorage.updateLocalLyricsItemText(activity, item, editor.text.toString())
                 Toast.makeText(
                     activity,
-                    if (saved) localizeText("歌词已保存") else localizeText("保存失败，请确认内容是 [00:12.34]歌词 格式"),
+                    if (saved) tr("歌词已保存", "Lyrics saved") else tr("保存失败，请确认内容是 [00:12.34]歌词 格式", "Save failed. Make sure the content uses [00:12.34]lyric format."),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -272,7 +276,7 @@ internal fun MainActivity.permissionSummary(): String {
         hasNotificationPermission(),
         hasNotificationListenerAccess()
     ).count { it }
-    return localizeText("已开启 $opened / 3 项基础权限").toString()
+    return if (com.andsi.airlyrics.i18n.AirLocalizer.isChinese(this)) "已开启 $opened / 3 项基础权限" else "$opened / 3 basic permissions enabled"
 }
 
 internal fun MainActivity.getAppVersionName(): String {

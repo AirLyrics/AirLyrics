@@ -20,6 +20,8 @@ import android.widget.Toast
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.localizedOffsetDescription
+import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
@@ -129,8 +131,8 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         updateFloatingTileSubtitle("文字颜色", FloatingLyricsStyleStore.colorSummary(latestStyle.textColor))
         updateFloatingTileSubtitle("背景气泡", if (latestStyle.backgroundEnabled) "已开启" else "已关闭")
         updateFloatingTileSubtitle("字体大小", "${latestStyle.textSizeSp.toInt()}sp")
-        updateFloatingTileSubtitle("阴影描边", "半径 ${latestStyle.shadowRadius.toInt()}")
-        updateFloatingTileSubtitle("窗口布局", "宽度 ${latestStyle.maxWidthPercent}%")
+        updateFloatingTileSubtitle("阴影描边", tr("半径", "Radius") + " ${latestStyle.shadowRadius.toInt()}")
+        updateFloatingTileSubtitle("窗口布局", tr("宽度", "Width") + " ${latestStyle.maxWidthPercent}%")
         updateFloatingTileSubtitle("显示内容", contentDisplayMode().title)
         updateFloatingTileSubtitle("显示范围", lineDisplayMode().title)
         updateFloatingTileSubtitle("文字对齐", FloatingLyricsStyleStore.getGravityTitle(latestStyle.gravity))
@@ -222,7 +224,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
 
     fun updatePreviewFold() {
         previewBodyView?.visibility = if (previewExpanded) View.VISIBLE else View.GONE
-        previewToggleTextView?.text = if (previewExpanded) localizeText("收起") else localizeText("展开预览")
+        previewToggleTextView?.text = if (previewExpanded) tr("收起", "Collapse") else tr("展开预览", "Expand preview")
         previewCardView?.requestLayout()
     }
 
@@ -230,20 +232,20 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         val offset = uiActions.adjustLyricsOffsetForCurrentMedia(deltaMs)
         if (offset == null) {
             Toast.makeText(activity, tr("请先播放并选择一首歌", "Please play and select a song first"), Toast.LENGTH_SHORT).show()
-            statusView?.text = localizeText("等待当前音乐")
+            statusView?.text = tr("等待当前音乐", "Waiting for current song")
             return
         }
-        statusView?.text = localizeText(LyricsOffsetStore.description(offset))
+        statusView?.text = localizedOffsetDescription(offset)
         refreshFloatingSettingTiles()
     }
 
     fun resetLyricsOffset(statusView: TextView?) {
         if (!uiActions.resetLyricsOffsetForCurrentMedia()) {
             Toast.makeText(activity, tr("请先播放并选择一首歌", "Please play and select a song first"), Toast.LENGTH_SHORT).show()
-            statusView?.text = localizeText("等待当前音乐")
+            statusView?.text = tr("等待当前音乐", "Waiting for current song")
             return
         }
-        statusView?.text = localizeText(LyricsOffsetStore.description(0L))
+        statusView?.text = localizedOffsetDescription(0L)
         refreshFloatingSettingTiles()
     }
 
@@ -392,7 +394,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
             addView(summaryTextView!!)
 
             previewToggleTextView = TextView(activity).apply {
-                text = localizeText("收起")
+                text = tr("收起", "Collapse")
                 textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
@@ -467,7 +469,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                                 val enabled = !FloatingLyricsStyleStore.getStyle(activity).backgroundEnabled
                                 FloatingLyricsStyleStore.setBackgroundEnabled(activity, enabled)
                                 notifyFloatingStyleChanged()
-                                backgroundButton.text = if (enabled) localizeText("背景：开启") else localizeText("背景：关闭")
+                                backgroundButton.text = if (enabled) tr("背景：开启", "Background: on") else tr("背景：关闭", "Background: off")
                                 refreshFloatingPreview()
                             }
                             addView(backgroundButton)
@@ -493,7 +495,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 ),
                 FloatingSettingTile(
                     title = "阴影描边",
-                    subtitle = "半径 ${style().shadowRadius.toInt()}",
+                    subtitle = tr("半径", "Radius") + " ${style().shadowRadius.toInt()}",
                     iconRes = R.drawable.ic_air_shadow,
                     onClick = { tile ->
                         openPanel(tile, "阴影描边", "") {
@@ -512,7 +514,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 ),
                 FloatingSettingTile(
                     title = "窗口布局",
-                    subtitle = "宽度 ${style().maxWidthPercent}%",
+                    subtitle = tr("宽度", "Width") + " ${style().maxWidthPercent}%",
                     iconRes = R.drawable.ic_air_pip,
                     onClick = { tile ->
                         openPanel(tile, "窗口布局", "") {

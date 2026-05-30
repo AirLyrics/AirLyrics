@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.localizedOffsetDescription
 
 import android.animation.LayoutTransition
 import android.app.Dialog
@@ -184,10 +185,10 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (exists) {
-                val overwriteMessage = if (importAsWordByWord) {
-                    "${media.displayText}\n\n这首歌已经有本地逐字歌词。覆盖后只替换逐字歌词缓存，普通歌词会继续保留。"
+                val overwriteMessage = media.displayText + "\n\n" + if (importAsWordByWord) {
+                    tr("这首歌已经有本地逐字歌词。覆盖后只替换逐字歌词缓存，普通歌词会继续保留。", "This song already has local word-by-word lyrics. Overwriting only replaces that cache; plain lyrics remain.")
                 } else {
-                    "${media.displayText}\n\n这首歌已经有普通歌词。覆盖后只替换普通 LRC；如果已经导入逐字歌词，会继续保留。"
+                    tr("这首歌已经有普通歌词。覆盖后只替换普通 LRC；如果已经导入逐字歌词，会继续保留。", "This song already has plain lyrics. Overwriting only replaces the plain LRC; word-by-word lyrics remain.")
                 }
                 showAirConfirmDialog(
                     title = if (importAsWordByWord) tr("覆盖本地逐字歌词？", "Overwrite local word-by-word lyrics?") else tr("覆盖普通歌词？", "Overwrite plain lyrics?"),
@@ -309,7 +310,7 @@ class MainActivity : AppCompatActivity() {
 
     internal fun currentLyricsOffsetSummary(): String {
         val media = getCurrentMediaSnapshot() ?: return tr("等待当前音乐", "Waiting for current song")
-        return LyricsOffsetStore.description(LyricsOffsetStore.getOffsetMs(this, media))
+        return localizedOffsetDescription(LyricsOffsetStore.getOffsetMs(this, media))
     }
 
     internal fun adjustLyricsOffsetForCurrentMedia(deltaMs: Long): Long? {
@@ -354,7 +355,7 @@ class MainActivity : AppCompatActivity() {
             })
 
             addView(TextView(this@MainActivity).apply {
-                text = localizeText("建议使用 AirLyrics 统一 LRC 格式。普通歌词：[00:12.34]歌词；逐字歌词：[00:12.34]<00:12.34>字。")
+                text = tr("建议使用 AirLyrics 统一 LRC 格式。普通歌词：[00:12.34]歌词；逐字歌词：[00:12.34]<00:12.34>字。", "Plain: [00:12.34]text. Word LRC: <00:12.34>w.")
                 textSize = 13f
                 setTextColor(colorTextMuted)
                 setPadding(0, 0, 0, dp(10))

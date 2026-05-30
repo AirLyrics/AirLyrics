@@ -54,6 +54,7 @@ object LyricsStorage {
         val displayTitle: String
             get() = title.ifBlank { friendlyNameFromFileName(name) }
 
+        @Deprecated("UI should use Context.localizedLocalLyricsSubtitle(item) so user data is never passed through text replacement.")
         val displaySubtitle: String
             get() {
                 val artistPart = artist.ifBlank { "未知歌手" }
@@ -66,6 +67,7 @@ object LyricsStorage {
                 return "$artistPart · $sourcePart"
             }
 
+        @Deprecated("UI should use Context.localizedLocalLyricsType(item).")
         val lyricsTypeText: String
             get() = when {
                 hasPlainLyrics && hasKaraokeLyrics -> "普通 + 逐字"
@@ -95,6 +97,7 @@ object LyricsStorage {
         val provider: String,
         val updatedAt: Long
     ) {
+        @Deprecated("UI should use Context.localizedLocalLyricsSource(info).")
         val sourceText: String
             get() = when (source) {
                 SOURCE_MANUAL_IMPORT -> "手动导入"
@@ -197,6 +200,7 @@ object LyricsStorage {
             .take(limit.coerceAtLeast(1))
     }
 
+    @Deprecated("UI should use Context.localizedLocalLyricsMeta(item).")
     fun formatLocalLyricsItem(item: LocalLyricsItem): String {
         val dateText = if (item.modifiedTimeMillis > 0L) {
             SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(item.modifiedTimeMillis))
@@ -265,6 +269,7 @@ object LyricsStorage {
         return value?.let { Uri.parse(it) }
     }
 
+    @Deprecated("UI should compose the save-folder label with a keyed formatter instead of translating the full path.")
     fun getLyricsDirDisplayPath(context: Context): String {
         val treeUri = getLyricsDirUri(context)
 

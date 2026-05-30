@@ -12,6 +12,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.tr
 
 /**
  * Owns the floating lyrics window itself: creation, removal, dragging,
@@ -50,7 +51,7 @@ class FloatingWindowController(
         }
 
         val view = TextView(context).apply {
-            text = context.localizeText("♪ 等待媒体信息...")
+            text = context.tr("♪ 等待媒体信息...", "♪ Waiting for media...")
             includeFontPadding = false
         }
 

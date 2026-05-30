@@ -20,6 +20,7 @@ import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
+import com.andsi.airlyrics.i18n.tr
 
 internal fun createBottomTabs(activity: MainActivity): View  = with(activity) createBottomTabs@ {
     val shell = FrameLayout(this).apply {
@@ -107,7 +108,7 @@ internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, ti
 
 internal fun quickFloatingTabText(activity: MainActivity, visible: Boolean): SpannableString  = with(activity) quickFloatingTabText@ {
     val icon = if (visible) "×" else "♪"
-    val label = if (visible) localizeText("隐藏") else localizeText("显示")
+    val label = if (visible) tr("隐藏", "Hide") else tr("显示", "Show")
     return SpannableString("$icon\n$label").apply {
         setSpan(AbsoluteSizeSpan(24, true), 0, icon.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         setSpan(AbsoluteSizeSpan(10, true), icon.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -127,9 +128,9 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
             quickFloatingTabText(activity, quickFloatingVisible)
         } else {
             when (page) {
-                Page.MEDIA -> localizeText("媒体流")
-                Page.FLOATING -> localizeText("悬浮窗")
-                Page.SETTINGS -> localizeText("设置")
+                Page.MEDIA -> tr("媒体流", "Media")
+                Page.FLOATING -> tr("悬浮窗", "Floating")
+                Page.SETTINGS -> tr("设置", "Settings")
             }
         }
         if (view.text.toString() != targetText.toString()) {

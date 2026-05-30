@@ -8,6 +8,7 @@ class LyricsLookupException(
     val detailMessage: String,
     cause: Throwable? = null
 ) : Exception(detailMessage, cause) {
+    @Deprecated("UI should use Context.localizedLyricsLookupMessage(error) to avoid translating provider names or user data.")
     fun userMessage(): String {
         return when (errorType) {
             LyricsLookupErrorType.NotFound -> "$providerName 未找到歌词"

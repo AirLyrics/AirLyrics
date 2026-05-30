@@ -3,6 +3,16 @@ package com.andsi.airlyrics.i18n
 import android.content.Context
 import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 
+/**
+ * Central language switch for AirLyrics UI text.
+ *
+ * New code should call [tr] / [choose] with explicit zh-en strings, or use a
+ * small formatter function for dynamic messages. [localizeText] is kept only as
+ * a safe legacy bridge for old UI constants passed through shared components.
+ * It performs exact-match lookup only. It never replaces substrings, so song
+ * titles, artist names, lyrics, file names, and other user data cannot be
+ * accidentally translated.
+ */
 internal object AirLocalizer {
     fun isChinese(context: Context): Boolean {
         return LanguageSettingsStore.isChinese(context)
@@ -13,20 +23,9 @@ internal object AirLocalizer {
     }
 
     fun text(context: Context, value: CharSequence?): CharSequence {
-        if (value == null || isChinese(context)) return value ?: ""
-        val raw = value.toString()
-        return exact[raw] ?: translateComposed(raw)
-    }
-
-    private fun translateComposed(raw: String): String {
-        var value = raw
-        exact.entries
-            .sortedByDescending { it.key.length }
-            .forEach { (zh, en) -> value = value.replace(zh, en) }
-        composedReplacements.forEach { (zh, en) ->
-            value = value.replace(zh, en)
-        }
-        return value
+        val raw = value?.toString() ?: return ""
+        if (isChinese(context)) return raw
+        return exact[raw] ?: raw
     }
 
     private val exact = mapOf(
@@ -341,48 +340,6 @@ internal object AirLocalizer {
         "保存失败，请确认内容是 [00:12.34]歌词 格式" to "Save failed. Make sure the content uses [00:12.34]lyric format.",
     )
 
-    private val composedReplacements = listOf(
-        "当前：" to "Current: ",
-        "保存目录：" to "Save folder: ",
-        "半径 " to "Radius ",
-        "宽度 " to "Width ",
-        "已刷新 " to "Refreshed ",
-        " 首" to " songs",
-        "歌词提前 " to "Lyrics advanced ",
-        "歌词延后 " to "Lyrics delayed ",
-        "本地缓存 · " to "Cache / ",
-        "当前来源：" to "Source: ",
-        "未找到歌词" to "Lyrics not found",
-        "未找到本地文件" to "Local file not found",
-        "正在查找歌词" to "Searching lyrics",
-        "歌词解析为空" to "Parsed lyrics are empty",
-        "等待媒体信息" to "Waiting for media",
-        "暂停中" to "Paused",
-        "只使用本地歌词" to "Using local lyrics only",
-        "已选择：" to "Selected: ",
-        "已开启 " to "Enabled ",
-        " 项基础权限" to " basic permissions",
-        " 查找失败" to " lookup failed",
-        " 未找到歌词" to " found no lyrics",
-        " 歌词解析失败" to " failed to parse lyrics",
-        " 网络请求失败" to " network request failed",
-        " 原生歌词模块异常" to " native lyrics module error",
-        " 暂时需要访问凭据" to " needs access credentials",
-        " 歌词受限，无法获取" to " lyrics are restricted",
-        " 请求过于频繁，请稍后再试" to " rate limited. Try again later.",
-        "已选择媒体来源，等待该播放器更新" to "Media source selected. Waiting for that player to update",
-        "尚未选择媒体来源，请进入 App 选择歌词来源" to "No media source selected. Open the app and choose one",
-        "当前没有正在播放的歌曲，无法绑定歌词" to "No song is playing, so lyrics cannot be bound",
-        "已导入歌词，但内容为空" to "Lyrics imported, but the content is empty",
-        "导入歌词失败" to "Lyrics import failed",
-        "普通歌词推荐格式" to "Plain lyrics recommended format",
-        "逐字歌词推荐 enhanced LRC" to "Word-by-word lyrics recommended enhanced LRC",
-        "请确认文件是 .lrc，并使用类似格式" to "Make sure the file is .lrc and uses a format like",
-        "没有识别到 enhanced LRC 逐字时间戳" to "No enhanced LRC word timestamps were recognized",
-        "普通歌词导入后会保存为统一的 [mm:ss.xx]歌词 格式。逐字歌词只支持本地导入。" to "Plain LRC is normalized. Word LRC is local-only.",
-        "这首歌已经有本地逐字歌词。覆盖后只替换逐字歌词缓存，普通歌词会继续保留。" to "This song already has local word-by-word lyrics. Overwriting only replaces that cache; plain lyrics remain.",
-        "这首歌已经有普通歌词。覆盖后只替换普通 LRC；如果已经导入逐字歌词，会继续保留。" to "This song already has plain lyrics. Overwriting only replaces the plain LRC; word-by-word lyrics remain."
-    )
 }
 
 internal fun Context.tr(zh: String, en: String): String = AirLocalizer.choose(this, zh, en)
