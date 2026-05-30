@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.widget.Toast
 
 internal object PermissionController {
     fun requestOverlayPermission(activity: MainActivity) {
@@ -15,8 +14,6 @@ internal object PermissionController {
                 Uri.parse("package:${activity.packageName}")
             )
             activity.startActivity(intent)
-        } else {
-            Toast.makeText(activity, "悬浮窗权限已开启", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -38,12 +35,10 @@ internal object PermissionController {
 
     fun requestNotificationPermissionIfNeeded(activity: MainActivity) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            Toast.makeText(activity, "当前系统不需要单独开启通知权限", Toast.LENGTH_SHORT).show()
             return
         }
 
         if (hasNotificationPermission(activity)) {
-            Toast.makeText(activity, "通知权限已开启", Toast.LENGTH_SHORT).show()
             return
         }
 

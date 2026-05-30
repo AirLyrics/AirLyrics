@@ -16,6 +16,8 @@ import com.andsi.airlyrics.ui.navigation.updateTabs
 internal class FloatingController(
     private val activity: MainActivity
 ) {
+    private var overlayPermissionHintShown = false
+
     fun reloadLyrics() {
         if (!activity.quickFloatingVisible) return
 
@@ -40,7 +42,10 @@ internal class FloatingController(
 
     fun showLyrics(): Boolean {
         if (!Settings.canDrawOverlays(activity)) {
-            Toast.makeText(activity, "请先开启悬浮窗权限", Toast.LENGTH_LONG).show()
+            if (!overlayPermissionHintShown) {
+                Toast.makeText(activity, "请先开启悬浮窗权限", Toast.LENGTH_LONG).show()
+                overlayPermissionHintShown = true
+            }
             activity.requestOverlayPermission()
             return false
         }

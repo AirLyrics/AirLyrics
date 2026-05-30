@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.liveOptionGrid
@@ -38,7 +37,6 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             autoSearchButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSearch()
                 autoSearchButton.text = if (enabled) "无本地歌词时自动联网搜索：开启" else "无本地歌词时自动联网搜索：关闭"
-                Toast.makeText(activity, if (enabled) "已开启联网搜索" else "已关闭联网搜索", Toast.LENGTH_SHORT).show()
                 playLocalRefreshFeedback(activity, autoSearchButton, null, "已更新")
             }
             addView(autoSearchButton)
@@ -47,7 +45,6 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             autoSaveButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSave()
                 autoSaveButton.text = if (enabled) "自动保存联网歌词：开启" else "自动保存联网歌词：关闭"
-                Toast.makeText(activity, if (enabled) "已开启自动保存" else "已关闭自动保存", Toast.LENGTH_SHORT).show()
                 playLocalRefreshFeedback(activity, autoSaveButton, null, "已更新")
             }
             addView(autoSaveButton)
@@ -77,7 +74,6 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
                         action = {
                             uiActions.selectLyricsSource(option.key)
                             sourceStatus.text = "当前：${option.title}"
-                            Toast.makeText(activity, "歌词源已切换为：${option.title}", Toast.LENGTH_SHORT).show()
                             playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, "已保存")
                         }
                     )
@@ -115,7 +111,6 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
                         action = {
                             LyricsSettingsStore.setMusixmatchTranslationLanguage(activity, language)
                             languageStatus.text = "当前：${language.title}"
-                            Toast.makeText(activity, "Musixmatch 翻译已设置为：${language.title}", Toast.LENGTH_SHORT).show()
                             playLocalRefreshFeedback(activity, languageGrid, languageFeedback, "已保存")
                         }
                     )

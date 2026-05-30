@@ -6,7 +6,6 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.view.View
-import android.widget.Toast
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.updateMediaSourceSelectionVisuals
 import com.andsi.airlyrics.media.MediaNotificationListener
@@ -36,10 +35,8 @@ internal class AppMediaController(
             val component = ComponentName(activity, MediaNotificationListener::class.java)
             mediaSessionManager.getActiveSessions(component)
         } catch (e: SecurityException) {
-            Toast.makeText(activity, "需要先开启通知访问权限", Toast.LENGTH_LONG).show()
             emptyList()
         } catch (e: Exception) {
-            Toast.makeText(activity, "读取媒体来源失败", Toast.LENGTH_LONG).show()
             emptyList()
         }
     }
