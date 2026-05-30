@@ -18,6 +18,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
@@ -64,7 +66,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
 
     fun compactSectionTitle(title: String): TextView {
         return TextView(activity).apply {
-            text = title
+            text = localizeText(title)
             textSize = 18f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
@@ -85,9 +87,9 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
     }
 
     fun previewLyricsText(): String {
-        val previous = previewLine("上一行歌词预览", "Previous lyric preview")
-        val current = previewLine("这是一行歌词预览", "This is a lyric preview")
-        val next = previewLine("下一行歌词预览", "Next lyric preview")
+        val previous = previewLine(tr("上一行歌词预览", "Previous lyric preview"), "Previous lyric preview")
+        val current = previewLine(tr("这是一行歌词预览", "This is a lyric preview"), "This is a lyric preview")
+        val next = previewLine(tr("下一行歌词预览", "Next lyric preview"), "Next lyric preview")
         return when (lineDisplayMode()) {
             LyricsLineDisplayMode.CURRENT_ONLY -> current
             LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> listOf(previous, current).joinToString("\n")
@@ -98,7 +100,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
 
 
     fun karaokePreviewText(): CharSequence {
-        val text = "这是一行歌词预览\nThis is a lyric preview"
+        val text = tr("这是一行歌词预览\nThis is a lyric preview", "This is a lyric preview")
         val firstLineEnd = text.indexOf('\n').takeIf { it > 0 } ?: text.length
         val highlightEnd = (firstLineEnd / 2).coerceAtLeast(1).coerceAtMost(firstLineEnd)
         return SpannableString(text).apply {
@@ -118,7 +120,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
     }
 
     fun updateFloatingTileSubtitle(title: String, subtitle: String) {
-        rootFrame.findViewWithTag<TextView>("floating_tile_subtitle:$title")?.text = subtitle
+        rootFrame.findViewWithTag<TextView>("floating_tile_subtitle:$title")?.text = localizeText(subtitle)
     }
 
     fun refreshFloatingSettingTiles() {
@@ -220,28 +222,28 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
 
     fun updatePreviewFold() {
         previewBodyView?.visibility = if (previewExpanded) View.VISIBLE else View.GONE
-        previewToggleTextView?.text = if (previewExpanded) "收起" else "展开预览"
+        previewToggleTextView?.text = if (previewExpanded) localizeText("收起") else localizeText("展开预览")
         previewCardView?.requestLayout()
     }
 
     fun applyLyricsOffsetDelta(deltaMs: Long, statusView: TextView?) {
         val offset = uiActions.adjustLyricsOffsetForCurrentMedia(deltaMs)
         if (offset == null) {
-            Toast.makeText(activity, "请先播放并选择一首歌", Toast.LENGTH_SHORT).show()
-            statusView?.text = "等待当前音乐"
+            Toast.makeText(activity, tr("请先播放并选择一首歌", "Please play and select a song first"), Toast.LENGTH_SHORT).show()
+            statusView?.text = localizeText("等待当前音乐")
             return
         }
-        statusView?.text = LyricsOffsetStore.description(offset)
+        statusView?.text = localizeText(LyricsOffsetStore.description(offset))
         refreshFloatingSettingTiles()
     }
 
     fun resetLyricsOffset(statusView: TextView?) {
         if (!uiActions.resetLyricsOffsetForCurrentMedia()) {
-            Toast.makeText(activity, "请先播放并选择一首歌", Toast.LENGTH_SHORT).show()
-            statusView?.text = "等待当前音乐"
+            Toast.makeText(activity, tr("请先播放并选择一首歌", "Please play and select a song first"), Toast.LENGTH_SHORT).show()
+            statusView?.text = localizeText("等待当前音乐")
             return
         }
-        statusView?.text = LyricsOffsetStore.description(0L)
+        statusView?.text = localizeText(LyricsOffsetStore.description(0L))
         refreshFloatingSettingTiles()
     }
 
@@ -390,7 +392,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
             addView(summaryTextView!!)
 
             previewToggleTextView = TextView(activity).apply {
-                text = "收起"
+                text = localizeText("收起")
                 textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
@@ -465,7 +467,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                                 val enabled = !FloatingLyricsStyleStore.getStyle(activity).backgroundEnabled
                                 FloatingLyricsStyleStore.setBackgroundEnabled(activity, enabled)
                                 notifyFloatingStyleChanged()
-                                backgroundButton.text = if (enabled) "背景：开启" else "背景：关闭"
+                                backgroundButton.text = if (enabled) localizeText("背景：开启") else localizeText("背景：关闭")
                                 refreshFloatingPreview()
                             }
                             addView(backgroundButton)

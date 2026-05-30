@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
@@ -31,9 +32,9 @@ internal fun MainActivity.refreshMediaButton(): View {
 
     fun applyButtonState(animateDone: Boolean = false) {
         val buttonText = when (mediaRefreshState) {
-            RefreshState.IDLE -> "刷新媒体状态"
-            RefreshState.REFRESHING -> "刷新中"
-            RefreshState.DONE -> "已刷新"
+            RefreshState.IDLE -> localizeText("刷新媒体状态")
+            RefreshState.REFRESHING -> localizeText("刷新中")
+            RefreshState.DONE -> localizeText("已刷新")
         }
         val buttonColor = when (mediaRefreshState) {
             RefreshState.IDLE -> colorAccent
@@ -138,7 +139,7 @@ internal fun MainActivity.updateMediaSourceSelectionVisuals(selectedPackage: Str
             if (tagText?.startsWith("media_source_status:") == true) {
                 val packageName = tagText.removePrefix("media_source_status:")
                 val selected = packageName == selectedPackage
-                view.text = if (selected) "已连接" else "可选择"
+                view.text = if (selected) localizeText("已连接") else localizeText("可选择")
                 view.setTextColor(if (selected) colorAccentLight else colorTextMuted)
                 if (selected) playTinyPulse(view)
             }

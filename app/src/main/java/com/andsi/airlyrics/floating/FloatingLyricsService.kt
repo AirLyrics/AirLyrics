@@ -24,6 +24,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.i18n.localizeText
 
 class FloatingLyricsService : Service() {
     private lateinit var windowController: FloatingWindowController
@@ -37,7 +38,8 @@ class FloatingLyricsService : Service() {
         lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
         karaokeEnabledProvider = { LyricsSettingsStore.isKaraokeLyricsEnabled(this) },
-        karaokeHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).karaokeHighlightColor }
+        karaokeHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).karaokeHighlightColor },
+        noTranslationTextProvider = { localizeText("当前歌词没有翻译").toString() }
     )
     private val syncHandler = Handler(Looper.getMainLooper())
 
@@ -200,7 +202,7 @@ class FloatingLyricsService : Service() {
         currentMedia = CurrentMediaInfo.Empty
         renderer.setLyricsOffset(0L)
         renderer.clear()
-        renderer.show(message)
+        renderer.show(localizeText(message).toString())
     }
 
     private fun shouldAcceptMediaUpdate(sourcePackage: String): Boolean {
@@ -219,9 +221,9 @@ class FloatingLyricsService : Service() {
     ) {
         renderer.show(
             if (media.isPlaying) {
-                "♪ 正在查找歌词...\n${media.displayText}"
+                "♪ ${localizeText("正在查找歌词")}...\n${media.displayText}"
             } else {
-                "Ⅱ 暂停中\n${media.displayText}"
+                "Ⅱ ${localizeText("暂停中")}\n${media.displayText}"
             }
         )
 
@@ -254,19 +256,19 @@ class FloatingLyricsService : Service() {
                 lyrics = lyricText,
                 translatedLyrics = lyricsResult.translatedLyrics,
                 karaokeLines = lyricsResult.karaokeLines,
-                emptyText = "♪ 歌词解析为空\n${media.displayText}"
+                emptyText = localizeText("♪ 歌词解析为空\n${media.displayText}").toString()
             )
             return
         }
 
         renderer.clear()
-        renderer.show(lookupFailureText(result.exceptionOrNull(), media))
+        renderer.show(localizeText(lookupFailureText(result.exceptionOrNull(), media)).toString())
     }
 
     private fun lookupFailureText(error: Throwable?, media: CurrentMediaInfo): String {
         val providerMessage = (error as? LyricsLookupException)?.userMessage()
         return if (providerMessage != null) {
-            "♪ ${media.displayText}\n$providerMessage"
+            "♪ ${media.displayText}\n${localizeText(providerMessage)}"
         } else {
             notFoundText(media)
         }
@@ -274,10 +276,10 @@ class FloatingLyricsService : Service() {
 
     private fun notFoundText(media: CurrentMediaInfo): String {
         return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
-            "♪ 仅使用本地歌词\n${media.displayText}\n未找到本地文件"
+            "♪ ${localizeText("仅使用本地歌词")}\n${media.displayText}\n${localizeText("未找到本地文件")}"
         } else {
-            val sourceTitle = LyricsSettingsStore.getLyricsSourceTitle(this)
-            "♪ ${media.displayText}\n当前来源：$sourceTitle\n未找到歌词"
+            val sourceTitle = localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))
+            "♪ ${media.displayText}\n${localizeText("当前来源：")}$sourceTitle\n${localizeText("未找到歌词")}"
         }
     }
 
@@ -285,7 +287,7 @@ class FloatingLyricsService : Service() {
         val media = currentMedia
 
         if (media.title.isBlank()) {
-            renderer.show("♪ 当前没有正在播放的歌曲，无法绑定歌词")
+            renderer.show(localizeText("♪ 当前没有正在播放的歌曲，无法绑定歌词").toString())
             return
         }
 
@@ -300,7 +302,7 @@ class FloatingLyricsService : Service() {
         )
 
         if (!imported) {
-            renderer.show("♪ 导入歌词失败")
+            renderer.show(localizeText("♪ 导入歌词失败").toString())
             return
         }
 
@@ -317,10 +319,10 @@ class FloatingLyricsService : Service() {
             renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
             renderer.parseAndShow(
                 lyrics = localLyrics,
-                emptyText = "♪ 已导入歌词，但内容为空"
+                emptyText = localizeText("♪ 已导入歌词，但内容为空").toString()
             )
         } else {
-            renderer.show("♪ 导入歌词失败")
+            renderer.show(localizeText("♪ 导入歌词失败").toString())
         }
     }
 
@@ -406,7 +408,7 @@ class FloatingLyricsService : Service() {
     }
 
     private fun showQuickFeedback(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, localizeText(message), Toast.LENGTH_SHORT).show()
     }
 
     private fun broadcastWindowVisibility(visible: Boolean) {

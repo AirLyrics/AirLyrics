@@ -8,6 +8,8 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.liveOptionGrid
 import com.andsi.airlyrics.app.*
@@ -41,7 +43,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             val autoSearchButton = actionButton(activity, if (autoSearch) "无本地歌词时自动联网搜索：开启" else "无本地歌词时自动联网搜索：关闭") { }
             autoSearchButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSearch()
-                autoSearchButton.text = if (enabled) "无本地歌词时自动联网搜索：开启" else "无本地歌词时自动联网搜索：关闭"
+                autoSearchButton.text = if (enabled) localizeText("无本地歌词时自动联网搜索：开启") else localizeText("无本地歌词时自动联网搜索：关闭")
                 playLocalRefreshFeedback(activity, autoSearchButton, null, "已更新")
             }
             addView(autoSearchButton)
@@ -49,7 +51,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             val autoSaveButton = actionButton(activity, if (autoSave) "自动保存联网歌词：开启" else "自动保存联网歌词：关闭") { }
             autoSaveButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSave()
-                autoSaveButton.text = if (enabled) "自动保存联网歌词：开启" else "自动保存联网歌词：关闭"
+                autoSaveButton.text = if (enabled) localizeText("自动保存联网歌词：开启") else localizeText("自动保存联网歌词：关闭")
                 playLocalRefreshFeedback(activity, autoSaveButton, null, "已更新")
             }
             addView(autoSaveButton)
@@ -60,9 +62,9 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
         card(activity) {
             addView(bigText(activity, "歌词搜索来源"))
             fun sourceHintText(key: String): String = when (LyricsSearchSource.fromKey(key)) {
-                LyricsSearchSource.LOCAL_ONLY -> "只读取本地歌词"
-                LyricsSearchSource.NETEASE -> "适合中国用户"
-                LyricsSearchSource.MUSIXMATCH -> "适合国际用户，依据您的系统语言来自动获取翻译（如果有的话）"
+                LyricsSearchSource.LOCAL_ONLY -> tr("只读取本地歌词", "Read local lyrics only")
+                LyricsSearchSource.NETEASE -> tr("适合中国用户", "Good for Chinese songs")
+                LyricsSearchSource.MUSIXMATCH -> tr("适合国际用户，依据您的系统语言来自动获取翻译（如果有的话）", "Good for international songs; uses your system language for translations when available")
             }
 
             val sourceStatus = normalText(activity, "当前：${LyricsSettingsStore.getLyricsSourceTitle(activity)}")
@@ -86,8 +88,8 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
                         selected = option.key == selectedSource,
                         action = {
                             uiActions.selectLyricsSource(option.key)
-                            sourceStatus.text = "当前：${option.title}"
-                            sourceHint.text = sourceHintText(option.key)
+                            sourceStatus.text = tr("当前：", "Current: ") + localizeText(option.title)
+                            sourceHint.text = localizeText(sourceHintText(option.key))
                             playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, "已保存")
                         }
                     )
@@ -125,14 +127,14 @@ private fun karaokeStatusRow(activity: MainActivity, value: String): View = with
         setPadding(0, dp(10), 0, dp(4))
 
         addView(TextView(activity).apply {
-            text = "本地逐字歌词"
+            text = localizeText("本地逐字歌词")
             textSize = 15f
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
 
         addView(TextView(activity).apply {
-            text = value
+            text = localizeText(value)
             textSize = 13f
             setTextColor(colorTextMuted)
             gravity = Gravity.CENTER_VERTICAL
@@ -156,8 +158,8 @@ private fun karaokeStatusRow(activity: MainActivity, value: String): View = with
             enableSoftPressFeedback(0.9f)
             setOnClickListener {
                 activity.showAirInfoDialog(
-                    title = "本地逐字歌词",
-                    message = "逐字歌词只支持手动导入本地 enhanced LRC。"
+                    title = tr("本地逐字歌词", "Local word-by-word"),
+                    message = tr("逐字歌词只支持手动导入本地 enhanced LRC。", "Word-by-word lyrics only support local enhanced LRC imports.")
                 )
             }
         })
@@ -225,7 +227,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
             activity.showAirConfirmDialog(
                 title = label,
                 message = "${media.displayText}\n\n$message",
-                positiveText = "移除"
+                positiveText = tr("移除", "Remove")
             ) {
                 uiActions.deleteLyricsForCurrentMedia(media, mode)
             }
@@ -266,7 +268,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
             activity.showAirConfirmDialog(
                 title = "重新联网搜索歌词？",
                 message = "会绕过当前本地普通歌词重新搜索。找到后会覆盖保存为新的普通歌词缓存；逐字歌词只使用本地导入文件。",
-                positiveText = "搜索"
+                positiveText = tr("搜索", "Search")
             ) {
                 uiActions.reloadFloatingLyricsFromOnline()
             }
@@ -339,7 +341,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
             })
 
             val hintText = TextView(activity).apply {
-                text = "点击歌词可以预览或者修改"
+                text = localizeText("点击歌词可以预览或者修改")
                 textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextMuted)
@@ -403,7 +405,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
 
 private fun playLocalRefreshFeedback(activity: MainActivity, target: View, feedback: TextView?, message: String) = with(activity) playLocalRefreshFeedback@ {
     feedback?.apply {
-        text = message
+        text = localizeText(message)
         alpha = 0f
         animate().alpha(1f).setDuration(160L).withEndAction {
             postDelayed({ animate().alpha(0f).setDuration(240L).withEndAction { text = "" }.start() }, 900L)

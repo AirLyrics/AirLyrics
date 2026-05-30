@@ -17,16 +17,15 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.changelogItem
 import com.andsi.airlyrics.app.getAppVersionName
 import com.andsi.airlyrics.app.openUrl
 import com.andsi.airlyrics.app.settingsBackHeader
-import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
-import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.scroll
 import com.andsi.airlyrics.ui.components.showAirDialog
@@ -42,8 +41,7 @@ internal fun createAboutSettingsPage(activity: MainActivity): View = with(activi
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
     container.addView(settingsBackHeader("关于"))
     container.addView(aboutLogoHeader())
-    container.addView(updateLogEntryCard())
-    container.addView(projectAddressCard())
+    container.addView(changeLogButton())
     return scroll(activity, container)
 }
 
@@ -88,84 +86,83 @@ private fun MainActivity.aboutLogoHeader(): View {
             setPadding(0, dp(8), 0, 0)
         })
 
-        addView(statusPill(activity, getAppVersionName(), playing = true).apply {
-            val lp = layoutParams as LinearLayout.LayoutParams
-            lp.gravity = Gravity.CENTER_HORIZONTAL
-            layoutParams = lp
+        addView(LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(0, dp(10), 0, 0)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+
+            addView(statusPill(activity, getAppVersionName(), playing = true).apply {
+                val lp = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
+                lp.setMargins(0, 0, dp(8), 0)
+                layoutParams = lp
+            })
+
+            addView(githubIconButton(activity))
         })
     }
 }
 
-private fun MainActivity.updateLogEntryCard(): View {
-    return aboutEntryCard(
-        title = "更新日志",
-        accentLabel = "点击查看"
-    ) {
-        playTinyPulse(this)
-        showUpdateLogDialog()
-    }
-}
-
-private fun MainActivity.projectAddressCard(): View {
-    val activity = this
-    return card(this) {
-        addView(bigText(activity, "项目地址"))
-        addView(normalText(activity, "GitHub · AndSi-327/android-floating-lyrics").apply {
-            setPadding(0, dp(8), 0, 0)
-        })
-        addView(actionButton(activity, "打开项目地址") {
-            openUrl("https://github.com/AndSi-327/android-floating-lyrics")
-        })
-    }
-}
-
-private fun MainActivity.aboutEntryCard(
-    title: String,
-    accentLabel: String,
-    onClick: View.() -> Unit
-): View {
-    val activity = this
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(18), dp(16), dp(18), dp(16))
-        val params = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        params.setMargins(0, 0, 0, dp(12))
-        layoutParams = params
-        elevation = dp(2).toFloat()
+private fun MainActivity.githubIconButton(activity: MainActivity): View {
+    return FrameLayout(activity).apply {
+        layoutParams = LinearLayout.LayoutParams(dp(42), dp(32))
         background = GradientDrawable().apply {
-            cornerRadius = dp(24).toFloat()
-            setColor(colorCard)
-            setStroke(dp(1), colorStroke)
+            cornerRadius = dp(99).toFloat()
+            setColor(colorSurfaceLight)
+            setStroke(dp(1), colorAccentSoft)
         }
         isClickable = true
         isFocusable = true
-        enableSoftPressFeedback(0.97f)
-        setOnClickListener { it.onClick() }
+        enableSoftPressFeedback(0.94f)
+        setOnClickListener {
+            playTinyPulse(this)
+            openUrl("https://github.com/AndSi-327/android-floating-lyrics")
+        }
 
-        addView(TextView(activity).apply {
-            text = title
-            textSize = 18f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        addView(ImageView(activity).apply {
+            setImageResource(R.drawable.ic_air_github)
+            setColorFilter(colorAccent)
+            scaleType = ImageView.ScaleType.CENTER
+            layoutParams = FrameLayout.LayoutParams(dp(20), dp(20), Gravity.CENTER)
+            contentDescription = "GitHub"
         })
+    }
+}
 
-        addView(TextView(activity).apply {
-            text = accentLabel
-            textSize = 13f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorAccent)
-            setPadding(dp(12), dp(8), dp(12), dp(8))
-            background = GradientDrawable().apply {
-                cornerRadius = dp(99).toFloat()
-                setColor(colorSurfaceLight)
-                setStroke(dp(1), colorAccentSoft)
-            }
-        })
+private fun MainActivity.changeLogButton(): View {
+    val activity = this
+    return TextView(activity).apply {
+        text = "Change log"
+        gravity = Gravity.CENTER
+        textSize = 15f
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(colorAccent)
+        setPadding(dp(28), dp(11), dp(28), dp(11))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            setMargins(0, 0, 0, dp(12))
+        }
+        background = GradientDrawable().apply {
+            cornerRadius = dp(99).toFloat()
+            setColor(colorSurfaceLight)
+            setStroke(dp(1), colorAccentSoft)
+        }
+        isClickable = true
+        isFocusable = true
+        enableSoftPressFeedback(0.95f)
+        setOnClickListener {
+            playTinyPulse(this)
+            showUpdateLogDialog()
+        }
     }
 }
 
@@ -264,7 +261,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
 
         val segment1 = VerticalMessageSegment(
             activity,
-            text = "如果你喜欢这个项目",
+            text = activity.localizeText("如果你喜欢这个项目").toString(),
             colors = listOf(
                 Color.rgb(255, 244, 250),
                 Color.rgb(255, 210, 228)
@@ -272,7 +269,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
         )
         val segment2 = VerticalMessageSegment(
             activity,
-            text = "点个star!",
+            text = activity.localizeText("点个star!").toString(),
             colors = listOf(
                 Color.rgb(255, 188, 200),
                 Color.rgb(255, 152, 170)
@@ -280,7 +277,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
         )
         val segment3 = VerticalMessageSegment(
             activity,
-            text = "我会非常非常非常开心的！",
+            text = activity.localizeText("我会非常非常非常开心的！").toString(),
             colors = listOf(
                 Color.rgb(255, 238, 150),
                 Color.rgb(145, 203, 255)

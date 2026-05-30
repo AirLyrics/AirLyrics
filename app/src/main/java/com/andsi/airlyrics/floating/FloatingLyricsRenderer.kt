@@ -26,7 +26,8 @@ class FloatingLyricsRenderer(
     private val lineModeProvider: () -> LyricsLineDisplayMode = { LyricsLineDisplayMode.default },
     private val switchAnimationModeProvider: () -> LyricsSwitchAnimationMode = { LyricsSwitchAnimationMode.default },
     private val karaokeEnabledProvider: () -> Boolean = { false },
-    private val karaokeHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) }
+    private val karaokeHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) },
+    private val noTranslationTextProvider: () -> String = { "当前歌词没有翻译" }
 ) {
     private var currentLyrics: List<LrcLine> = emptyList()
     private var currentKaraokeLines: List<KaraokeLine> = emptyList()
@@ -136,7 +137,8 @@ class FloatingLyricsRenderer(
             lines = currentLyrics,
             currentIndex = index,
             contentMode = contentModeProvider(),
-            lineMode = lineModeProvider()
+            lineMode = lineModeProvider(),
+            noTranslationText = noTranslationTextProvider()
         )
     }
 
@@ -196,7 +198,7 @@ class FloatingLyricsRenderer(
 
         if (renderedLines.isEmpty()) {
             return if (contentMode == LyricsContentDisplayMode.TRANSLATION_ONLY) {
-                "当前歌词没有翻译"
+                noTranslationTextProvider()
             } else {
                 ""
             }
@@ -241,7 +243,7 @@ class FloatingLyricsRenderer(
 
     private fun renderKaraokeOnlyAtIndex(index: Int, positionMs: Long): CharSequence {
         if (contentModeProvider() == LyricsContentDisplayMode.TRANSLATION_ONLY) {
-            return "当前歌词没有翻译"
+            return noTranslationTextProvider()
         }
 
         val renderedLines = visibleKaraokeIndexes(index).mapNotNull { visibleIndex ->

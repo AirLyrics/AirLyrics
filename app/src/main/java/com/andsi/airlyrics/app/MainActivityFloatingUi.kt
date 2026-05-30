@@ -19,6 +19,7 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.bigText
@@ -147,7 +148,7 @@ internal fun MainActivity.optionButton(item: OptionItem): TextView {
 
 internal fun MainActivity.applyOptionButtonState(button: TextView, title: String, selected: Boolean) {
     val activity = this
-    button.text = if (selected) "✓ $title" else title
+    button.text = if (selected) "✓ ${localizeText(title)}" else localizeText(title)
     button.setTextColor(if (selected) Color.WHITE else colorText)
     button.background = GradientDrawable().apply {
         cornerRadius = dp(18).toFloat()
@@ -171,7 +172,7 @@ internal fun MainActivity.sliderRow(
         setPadding(0, dp(8), 0, dp(4))
 
         val valueText = TextView(activity).apply {
-            text = "$title：$safeValue$suffix"
+            text = "${localizeText(title)}: $safeValue$suffix"
             textSize = 14f
             setTextColor(colorText)
             setPadding(0, 0, 0, dp(6))
@@ -184,7 +185,7 @@ internal fun MainActivity.sliderRow(
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val newValue = min + progress
-                    valueText.text = "$title：$newValue$suffix"
+                    valueText.text = "${localizeText(title)}: $newValue$suffix"
                     if (fromUser) onChanged(newValue)
                 }
 
@@ -284,7 +285,7 @@ internal fun MainActivity.colorControl(
 
         fun refreshPreview(dispatch: Boolean) {
             val newColor = currentColor()
-            preview.text = "$title：${FloatingLyricsStyleStore.colorSummary(newColor)}"
+            preview.text = "${localizeText(title)}: ${localizeText(FloatingLyricsStyleStore.colorSummary(newColor))}"
             preview.background = colorPreviewBackground(newColor)
             refreshSwatches()
             if (dispatch) onChanged(newColor)
@@ -300,7 +301,7 @@ internal fun MainActivity.colorControl(
                 setPadding(0, dp(8), 0, dp(4))
             }
             val valueText = TextView(activity).apply {
-                text = "$sliderTitle：$initialValue"
+                text = "${localizeText(sliderTitle)}: $initialValue"
                 textSize = 14f
                 setTextColor(colorText)
                 setPadding(0, 0, 0, dp(6))
@@ -311,7 +312,7 @@ internal fun MainActivity.colorControl(
                 progress = initialValue.coerceIn(0, 255)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        valueText.text = "$sliderTitle：$progress"
+                        valueText.text = "${localizeText(sliderTitle)}: $progress"
                         if (fromUser) {
                             onValueChanged(progress)
                             refreshPreview(dispatch = true)
@@ -330,23 +331,23 @@ internal fun MainActivity.colorControl(
         val redSlider = colorSliderRow("R", red) { red = it }
         val greenSlider = colorSliderRow("G", green) { green = it }
         val blueSlider = colorSliderRow("B", blue) { blue = it }
-        val alphaSlider = colorSliderRow("不透明度", alpha) { alpha = it }
+        val alphaSlider = colorSliderRow(localizeText("不透明度").toString(), alpha) { alpha = it }
 
         fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
             pair.first.progress = value.coerceIn(0, 255)
-            pair.second.text = "$titleText：$value"
+            pair.second.text = "${localizeText(titleText)}: $value"
         }
 
         fun syncSliders() {
             setSlider(redSlider, "R", red)
             setSlider(greenSlider, "G", green)
             setSlider(blueSlider, "B", blue)
-            setSlider(alphaSlider, "不透明度", alpha)
+            setSlider(alphaSlider, localizeText("不透明度").toString(), alpha)
         }
 
         fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
             return TextView(activity).apply {
-                text = label
+                text = localizeText(label)
                 textSize = 12f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
@@ -372,7 +373,7 @@ internal fun MainActivity.colorControl(
                         if (presetColor == null) {
                             rgbExpanded = true
                             rgbPanel.visibility = View.VISIBLE
-                            fineTuneButton.text = "收起 RGB 细调"
+                            fineTuneButton.text = localizeText("收起 RGB 细调")
                         } else {
                             red = Color.red(presetColor)
                             green = Color.green(presetColor)
@@ -405,7 +406,7 @@ internal fun MainActivity.colorControl(
         fineTuneButton.setOnClickListener {
             rgbExpanded = !rgbExpanded
             rgbPanel.visibility = if (rgbExpanded) View.VISIBLE else View.GONE
-            fineTuneButton.text = if (rgbExpanded) "收起 RGB 细调" else "展开 RGB 细调"
+            fineTuneButton.text = if (rgbExpanded) localizeText("收起 RGB 细调") else localizeText("展开 RGB 细调")
             playTinyPulse(fineTuneButton)
         }
 
@@ -526,7 +527,7 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
         })
 
         addView(TextView(activity).apply {
-            text = item.title
+            text = localizeText(item.title)
             textSize = 16f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
@@ -535,7 +536,7 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
         if (item.subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
                 tag = "floating_tile_subtitle:${item.title}"
-                text = item.subtitle
+                text = localizeText(item.subtitle)
                 textSize = 12f
                 setTextColor(colorTextMuted)
                 maxLines = 1
@@ -579,14 +580,14 @@ internal fun MainActivity.floatingFocusBubble(
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
                 addView(TextView(activity).apply {
-                    text = title
+                    text = localizeText(title)
                     textSize = 20f
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorTextStrong)
                 })
                 if (subtitle.isNotBlank()) {
                     addView(TextView(activity).apply {
-                        text = subtitle
+                        text = localizeText(subtitle)
                         textSize = 13f
                         setTextColor(colorTextMuted)
                         setPadding(0, dp(4), 0, 0)
@@ -636,13 +637,13 @@ internal fun MainActivity.showFloatingSettingPanel(
         }
 
         addView(TextView(activity).apply {
-            text = title
+            text = localizeText(title)
             textSize = 20f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = subtitle
+            text = localizeText(subtitle)
             textSize = 13f
             setTextColor(colorTextMuted)
             setPadding(0, dp(4), 0, dp(8))

@@ -6,6 +6,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.renderCurrentPage
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
@@ -39,7 +40,7 @@ internal class FloatingController(
 
     fun reloadLyricsFromOnline() {
         if (!activity.quickFloatingVisible) {
-            Toast.makeText(activity, "请先显示悬浮窗，再重新联网搜索歌词", Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, activity.localizeText("请先显示悬浮窗，再重新联网搜索歌词"), Toast.LENGTH_LONG).show()
             return
         }
 
@@ -47,13 +48,13 @@ internal class FloatingController(
             action = BroadcastActions.RELOAD_ONLINE_LYRICS
         }
         activity.startLyricsService(intent)
-        Toast.makeText(activity, "正在重新联网搜索歌词", Toast.LENGTH_SHORT).show()
+        Toast.makeText(activity, activity.localizeText("正在重新联网搜索歌词"), Toast.LENGTH_SHORT).show()
     }
 
     fun showLyrics(): Boolean {
         if (!Settings.canDrawOverlays(activity)) {
             if (!overlayPermissionHintShown) {
-                Toast.makeText(activity, "请先开启悬浮窗权限", Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, activity.localizeText("请先开启悬浮窗权限"), Toast.LENGTH_LONG).show()
                 overlayPermissionHintShown = true
             }
             activity.requestOverlayPermission()

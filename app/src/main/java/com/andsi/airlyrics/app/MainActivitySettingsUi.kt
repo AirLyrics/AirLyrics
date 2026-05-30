@@ -15,6 +15,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -38,7 +39,7 @@ internal fun MainActivity.settingsHomeHeader(): View {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
-                text = "设置"
+                text = localizeText("设置")
                 textSize = 22f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextStrong)
@@ -58,7 +59,7 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
-                text = "‹ 设置"
+                text = localizeText("‹ 设置")
                 textSize = 14f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -71,14 +72,14 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
             })
         })
         addView(TextView(activity).apply {
-            text = title
+            text = localizeText(title)
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         if (subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
-                text = subtitle
+                text = localizeText(subtitle)
                 textSize = 14f
                 setTextColor(colorTextMuted)
                 setPadding(0, dp(4), 0, 0)
@@ -95,7 +96,7 @@ internal fun MainActivity.themeToggleButton(): TextView {
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         setTextColor(colorAccent)
-        contentDescription = if (isDarkTheme()) "切换到白天模式" else "切换到暗黑模式"
+        contentDescription = if (isDarkTheme()) localizeText("切换到白天模式") else localizeText("切换到暗黑模式")
         layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
             setMargins(dp(10), 0, 0, 0)
         }
@@ -145,7 +146,7 @@ internal fun MainActivity.settingsCategoryCard(
 
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             addView(bigText(activity, title))
             addView(normalText(activity, subtitle))
             addView(smallHint(activity, status))
@@ -184,14 +185,14 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = "${item.displaySubtitle} · ${item.lyricsTypeText}"
+            text = "${localizeText(item.displaySubtitle)} · ${localizeText(item.lyricsTypeText)}"
             textSize = 12f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccentMint)
             setPadding(0, dp(4), 0, 0)
         })
         addView(TextView(activity).apply {
-            text = LyricsStorage.formatLocalLyricsItem(item)
+            text = localizeText(LyricsStorage.formatLocalLyricsItem(item))
             textSize = 12f
             setTextColor(colorTextMuted)
             setPadding(0, dp(2), 0, 0)
@@ -199,7 +200,7 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
         setOnClickListener {
             val rawLyrics = LyricsStorage.readLocalLyricsItemText(activity, item)
             if (rawLyrics == null) {
-                Toast.makeText(activity, "无法读取这份歌词", Toast.LENGTH_SHORT).show()
+                Toast.makeText(activity, localizeText("无法读取这份歌词"), Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -227,9 +228,9 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             val canEdit = item.hasPlainLyrics && !item.name.endsWith(".karaoke.json", ignoreCase = true)
             activity.showAirDialog(
                 title = item.displayTitle,
-                message = if (canEdit) "可预览，也可以直接修改普通 LRC 内容。" else "这份逐字歌词只能预览。",
-                positiveText = if (canEdit) "保存修改" else null,
-                negativeText = "关闭",
+                message = if (canEdit) localizeText("可预览，也可以直接修改普通 LRC 内容。").toString() else localizeText("这份逐字歌词只能预览。").toString(),
+                positiveText = if (canEdit) localizeText("保存修改").toString() else null,
+                negativeText = localizeText("关闭").toString(),
                 body = {
                     addView(editor)
                 }
@@ -237,7 +238,7 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
                 val saved = LyricsStorage.updateLocalLyricsItemText(activity, item, editor.text.toString())
                 Toast.makeText(
                     activity,
-                    if (saved) "歌词已保存" else "保存失败，请确认内容是 [00:12.34]歌词 格式",
+                    if (saved) localizeText("歌词已保存") else localizeText("保存失败，请确认内容是 [00:12.34]歌词 格式"),
                     Toast.LENGTH_SHORT
                 ).show()
             }
@@ -251,13 +252,13 @@ internal fun MainActivity.changelogItem(title: String, body: String): View {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(10), 0, dp(2))
         addView(TextView(activity).apply {
-            text = title
+            text = localizeText(title)
             textSize = 15f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = body
+            text = localizeText(body)
             textSize = 13f
             setTextColor(colorTextMuted)
             setPadding(0, dp(3), 0, 0)
@@ -271,7 +272,7 @@ internal fun MainActivity.permissionSummary(): String {
         hasNotificationPermission(),
         hasNotificationListenerAccess()
     ).count { it }
-    return "已开启 $opened / 3 项基础权限"
+    return localizeText("已开启 $opened / 3 项基础权限").toString()
 }
 
 internal fun MainActivity.getAppVersionName(): String {
@@ -287,3 +288,9 @@ internal fun MainActivity.openUrl(url: String) {
     AppNavigator.openUrl(this, url)
 }
 
+
+internal fun MainActivity.refreshAfterLanguageChanged() {
+    setContentView(createMainView())
+    renderCurrentPage()
+    reloadFloatingLyrics()
+}

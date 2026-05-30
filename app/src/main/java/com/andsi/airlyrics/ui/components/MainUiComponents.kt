@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -48,13 +49,13 @@ internal fun sectionTitle(activity: MainActivity, title: String, subtitle: Strin
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(14))
         addView(TextView(activity).apply {
-            text = title
+            text = localizeText(title)
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = subtitle
+            text = localizeText(subtitle)
             textSize = 14f
             setTextColor(colorTextMuted)
             setPadding(0, dp(4), 0, 0)
@@ -104,7 +105,7 @@ internal fun floatingStatusPreviewCard(activity: MainActivity, content: LinearLa
 
 internal fun actionButton(activity: MainActivity, text: String, onClick: () -> Unit): TextView = with(activity) actionButton@ {
     return TextView(this).apply {
-        this.text = text
+        this.text = localizeText(text)
         gravity = Gravity.CENTER
         textSize = 15f
         typeface = Typeface.DEFAULT_BOLD
@@ -133,7 +134,7 @@ internal fun horizontalButtons(activity: MainActivity, vararg buttons: Pair<Stri
         orientation = LinearLayout.HORIZONTAL
         buttons.forEachIndexed { index, pair ->
             addView(TextView(activity).apply {
-                text = pair.first
+                text = localizeText(pair.first)
                 gravity = Gravity.CENTER
                 textSize = 15f
                 typeface = Typeface.DEFAULT_BOLD
@@ -168,14 +169,14 @@ internal fun settingRow(activity: MainActivity, name: String, value: String): Vi
         setPadding(0, dp(10), 0, dp(4))
 
         addView(TextView(activity).apply {
-            text = name
+            text = localizeText(name)
             textSize = 15f
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
         })
 
         addView(TextView(activity).apply {
-            text = value
+            text = localizeText(value)
             textSize = 13f
             setTextColor(colorTextMuted)
         })
@@ -184,7 +185,7 @@ internal fun settingRow(activity: MainActivity, name: String, value: String): Vi
 
 internal fun statusPill(activity: MainActivity, text: String, playing: Boolean): TextView  = with(activity) statusPill@ {
     return TextView(this).apply {
-        this.text = text
+        this.text = localizeText(text)
         textSize = 13f
         setTextColor(if (playing) Color.WHITE else colorTextMuted)
         setPadding(dp(12), dp(6), dp(12), dp(6))
@@ -203,7 +204,7 @@ internal fun statusPill(activity: MainActivity, text: String, playing: Boolean):
 
 internal fun label(activity: MainActivity, text: String, color: Int): TextView  = with(activity) label@ {
     return TextView(this).apply {
-        this.text = text
+        this.text = localizeText(text)
         textSize = 13f
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(color)
@@ -213,7 +214,7 @@ internal fun label(activity: MainActivity, text: String, color: Int): TextView  
 
 internal fun bigText(activity: MainActivity, text: String): TextView  = with(activity) bigText@ {
     return TextView(this).apply {
-        this.text = text
+        this.text = localizeText(text)
         textSize = 20f
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorTextStrong)
@@ -222,7 +223,7 @@ internal fun bigText(activity: MainActivity, text: String): TextView  = with(act
 
 internal fun normalText(activity: MainActivity, text: String): TextView  = with(activity) normalText@ {
     return TextView(this).apply {
-        this.text = text
+        this.text = localizeText(text)
         textSize = 14f
         setTextColor(colorText)
         setPadding(0, dp(5), 0, 0)
@@ -231,7 +232,7 @@ internal fun normalText(activity: MainActivity, text: String): TextView  = with(
 
 internal fun smallHint(activity: MainActivity, text: String): TextView  = with(activity) smallHint@ {
     return TextView(this).apply {
-        this.text = text
+        this.text = localizeText(text)
         textSize = 13f
         setTextColor(colorTextMuted)
         setPadding(0, dp(8), 0, 0)

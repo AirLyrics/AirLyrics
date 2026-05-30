@@ -17,7 +17,8 @@ object LyricsDisplayFormatter {
         lines: List<LrcLine>,
         currentIndex: Int,
         contentMode: LyricsContentDisplayMode,
-        lineMode: LyricsLineDisplayMode
+        lineMode: LyricsLineDisplayMode,
+        noTranslationText: String = NO_TRANSLATION_TEXT
     ): String {
         if (lines.isEmpty() || currentIndex !in lines.indices) return ""
 
@@ -35,7 +36,7 @@ object LyricsDisplayFormatter {
         }
 
         return if (contentMode == LyricsContentDisplayMode.TRANSLATION_ONLY) {
-            NO_TRANSLATION_TEXT
+            noTranslationText
         } else {
             ""
         }

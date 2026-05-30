@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import android.view.View
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.*
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
@@ -20,7 +21,7 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
         settingsCategoryCard(
             title = "歌词获取设置",
             subtitle = "歌词源、自动保存、下载目录和最近保存的 .lrc。",
-            status = "${LyricsSettingsStore.getLyricsSourceTitle(this)} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) "自动保存" else "不自动保存"}",
+            status = "${localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) localizeText("自动保存") else localizeText("不自动保存")}",
             accent = colorAccentPink,
             iconRes = R.drawable.ic_air_music_note
         ) {

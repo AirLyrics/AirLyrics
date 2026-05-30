@@ -11,6 +11,7 @@ import com.andsi.airlyrics.app.updateMediaSourceSelectionVisuals
 import com.andsi.airlyrics.media.MediaNotificationListener
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
+import com.andsi.airlyrics.i18n.tr
 
 internal class AppMediaController(
     private val activity: MainActivity
@@ -59,19 +60,19 @@ internal class AppMediaController(
 
     fun getPlaybackStateText(state: Int?): String {
         return when (state) {
-            PlaybackState.STATE_PLAYING -> "播放中"
-            PlaybackState.STATE_PAUSED -> "暂停中"
-            PlaybackState.STATE_STOPPED -> "已停止"
-            PlaybackState.STATE_BUFFERING -> "缓冲中"
-            PlaybackState.STATE_CONNECTING -> "连接中"
-            PlaybackState.STATE_FAST_FORWARDING -> "快进中"
-            PlaybackState.STATE_REWINDING -> "快退中"
-            PlaybackState.STATE_SKIPPING_TO_NEXT -> "切到下一首"
-            PlaybackState.STATE_SKIPPING_TO_PREVIOUS -> "切到上一首"
-            PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM -> "切换队列"
-            PlaybackState.STATE_NONE -> "无播放状态"
-            PlaybackState.STATE_ERROR -> "播放异常"
-            else -> "状态未知"
+            PlaybackState.STATE_PLAYING -> activity.tr("播放中", "Playing")
+            PlaybackState.STATE_PAUSED -> activity.tr("暂停中", "Paused")
+            PlaybackState.STATE_STOPPED -> activity.tr("已停止", "Stopped")
+            PlaybackState.STATE_BUFFERING -> activity.tr("缓冲中", "Buffering")
+            PlaybackState.STATE_CONNECTING -> activity.tr("连接中", "Connecting")
+            PlaybackState.STATE_FAST_FORWARDING -> activity.tr("快进中", "Fast-forwarding")
+            PlaybackState.STATE_REWINDING -> activity.tr("快退中", "Rewinding")
+            PlaybackState.STATE_SKIPPING_TO_NEXT -> activity.tr("切到下一首", "Skipping next")
+            PlaybackState.STATE_SKIPPING_TO_PREVIOUS -> activity.tr("切到上一首", "Skipping previous")
+            PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM -> activity.tr("切换队列", "Skipping queue")
+            PlaybackState.STATE_NONE -> activity.tr("无播放状态", "No playback state")
+            PlaybackState.STATE_ERROR -> activity.tr("播放异常", "Playback error")
+            else -> activity.tr("状态未知", "Unknown status")
         }
     }
 }

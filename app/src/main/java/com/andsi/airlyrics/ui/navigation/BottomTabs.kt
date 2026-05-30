@@ -14,6 +14,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorSurface
@@ -86,7 +87,7 @@ internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, ti
     }
 
     val tab = TextView(this).apply {
-        text = title
+        text = localizeText(title)
         gravity = Gravity.CENTER
         textSize = 15f
         typeface = Typeface.DEFAULT_BOLD
@@ -106,7 +107,7 @@ internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, ti
 
 internal fun quickFloatingTabText(activity: MainActivity, visible: Boolean): SpannableString  = with(activity) quickFloatingTabText@ {
     val icon = if (visible) "×" else "♪"
-    val label = if (visible) "隐藏" else "显示"
+    val label = if (visible) localizeText("隐藏") else localizeText("显示")
     return SpannableString("$icon\n$label").apply {
         setSpan(AbsoluteSizeSpan(24, true), 0, icon.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         setSpan(AbsoluteSizeSpan(10, true), icon.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -126,9 +127,9 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
             quickFloatingTabText(activity, quickFloatingVisible)
         } else {
             when (page) {
-                Page.MEDIA -> "媒体流"
-                Page.FLOATING -> "悬浮窗"
-                Page.SETTINGS -> "设置"
+                Page.MEDIA -> localizeText("媒体流")
+                Page.FLOATING -> localizeText("悬浮窗")
+                Page.SETTINGS -> localizeText("设置")
             }
         }
         if (view.text.toString() != targetText.toString()) {

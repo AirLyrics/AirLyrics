@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -70,7 +71,7 @@ internal fun MainActivity.showAirDialog(
         }
 
         addView(TextView(this@showAirDialog).apply {
-            text = title
+            text = localizeText(title)
             textSize = 21f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
@@ -78,7 +79,7 @@ internal fun MainActivity.showAirDialog(
 
         if (!message.isNullOrBlank()) {
             addView(TextView(this@showAirDialog).apply {
-                text = message
+                text = localizeText(message)
                 textSize = 14f
                 setTextColor(colorTextMuted)
                 setLineSpacing(dp(3).toFloat(), 1f)
@@ -144,7 +145,7 @@ private fun MainActivity.dialogButton(
     onClick: () -> Unit
 ): TextView {
     return TextView(this).apply {
-        this.text = text
+        this.text = localizeText(text)
         textSize = 14f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
