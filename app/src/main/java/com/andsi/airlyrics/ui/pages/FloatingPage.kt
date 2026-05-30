@@ -16,6 +16,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
@@ -23,6 +24,7 @@ import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.sliderRow
 import com.andsi.airlyrics.app.colorControl
@@ -200,6 +202,25 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         previewBodyView?.visibility = if (previewExpanded) View.VISIBLE else View.GONE
         previewToggleTextView?.text = if (previewExpanded) "收起" else "展开预览"
         previewCardView?.requestLayout()
+    }
+
+    fun applyLyricsOffsetDelta(deltaMs: Long, statusView: TextView?) {
+        val offset = uiActions.adjustLyricsOffsetForCurrentMedia(deltaMs)
+        if (offset == null) {
+            Toast.makeText(activity, "请先播放并选择一首歌", Toast.LENGTH_SHORT).show()
+            statusView?.text = "等待当前音乐"
+            return
+        }
+        statusView?.text = LyricsOffsetStore.description(offset)
+    }
+
+    fun resetLyricsOffset(statusView: TextView?) {
+        if (!uiActions.resetLyricsOffsetForCurrentMedia()) {
+            Toast.makeText(activity, "请先播放并选择一首歌", Toast.LENGTH_SHORT).show()
+            statusView?.text = "等待当前音乐"
+            return
+        }
+        statusView?.text = LyricsOffsetStore.description(0L)
     }
 
     fun refreshFloatingPreview() {
@@ -565,6 +586,33 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                             )))
                         }
                     }
+                ),
+                FloatingSettingTile(
+                    title = "歌词偏移",
+                    subtitle = uiActions.currentLyricsOffsetSummary(),
+                    iconRes = R.drawable.ic_air_motion,
+                    onClick = { tile ->
+                        openPanel(tile, "歌词偏移", "按当前音乐保存，不修改原始歌词文件。歌词慢了点提前，歌词快了点延后。") {
+                            val statusText = normalText(activity, uiActions.currentLyricsOffsetSummary()).apply {
+                                textSize = 15f
+                                typeface = Typeface.DEFAULT_BOLD
+                                setTextColor(colorTextStrong)
+                                setPadding(0, dp(2), 0, dp(8))
+                            }
+                            addView(statusText)
+                            addView(horizontalButtons(activity,
+                                "提前 1s" to { applyLyricsOffsetDelta(1_000L, statusText) },
+                                "提前 0.1s" to { applyLyricsOffsetDelta(100L, statusText) }
+                            ))
+                            addView(horizontalButtons(activity,
+                                "延后 0.1s" to { applyLyricsOffsetDelta(-100L, statusText) },
+                                "延后 1s" to { applyLyricsOffsetDelta(-1_000L, statusText) }
+                            ))
+                            addView(actionButton(activity, "重置当前歌曲偏移") {
+                                resetLyricsOffset(statusText)
+                            })
+                        }
+                    }
                 )
             )
         )
@@ -674,6 +722,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 addView(settingRow(activity, "对齐", FloatingLyricsStyleStore.getGravityTitle(style().gravity)))
                 addView(settingRow(activity, "动画", switchAnimationMode().title))
                 addView(settingRow(activity, "逐字歌词", if (karaokeLyricsEnabled()) "开启" else "关闭"))
+                addView(settingRow(activity, "歌词偏移", uiActions.currentLyricsOffsetSummary()))
                 addView(settingRow(activity, "锁定", if (FloatingLyricsStyleStore.isLocked(activity)) "开启" else "关闭"))
                 addView(settingRow(activity, "穿透", if (FloatingLyricsStyleStore.isClickThrough(activity)) "开启" else "关闭"))
             }

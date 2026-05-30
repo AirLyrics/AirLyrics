@@ -37,6 +37,7 @@ class FloatingLyricsRenderer(
     private var currentPositionMs: Long = 0L
     private var lastPositionUpdateUptimeMs: Long = 0L
     private var currentIsPlaying: Boolean = false
+    private var lyricsOffsetMs: Long = 0L
     private var lastRenderedText: String? = null
 
     fun updatePlayback(positionMs: Long, isPlaying: Boolean) {
@@ -51,6 +52,7 @@ class FloatingLyricsRenderer(
         currentPositionMs = 0L
         lastPositionUpdateUptimeMs = 0L
         currentIsPlaying = false
+        lyricsOffsetMs = 0L
         lastRenderedText = null
         resetTextAnimationState()
     }
@@ -59,6 +61,11 @@ class FloatingLyricsRenderer(
         currentLyrics = emptyList()
         currentKaraokeLines = emptyList()
         setTextImmediately(text)
+    }
+
+    fun setLyricsOffset(offsetMs: Long) {
+        lyricsOffsetMs = offsetMs
+        refresh()
     }
 
     fun parseAndShow(
@@ -440,11 +447,11 @@ class FloatingLyricsRenderer(
 
     fun getEstimatedPositionMs(): Long {
         if (!currentIsPlaying || lastPositionUpdateUptimeMs == 0L) {
-            return currentPositionMs
+            return (currentPositionMs + lyricsOffsetMs).coerceAtLeast(0L)
         }
 
         val elapsedMs = SystemClock.uptimeMillis() - lastPositionUpdateUptimeMs
-        return currentPositionMs + elapsedMs.coerceAtLeast(0L)
+        return (currentPositionMs + elapsedMs.coerceAtLeast(0L) + lyricsOffsetMs).coerceAtLeast(0L)
     }
 }
 

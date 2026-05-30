@@ -24,6 +24,7 @@ object BroadcastActions {
     const val APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
     const val RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
     const val RELOAD_ONLINE_LYRICS = "com.andsi.airlyrics.RELOAD_ONLINE_LYRICS"
+    const val APPLY_LYRICS_OFFSET = "com.andsi.airlyrics.APPLY_LYRICS_OFFSET"
     const val WINDOW_VISIBILITY_CHANGED = "com.andsi.airlyrics.WINDOW_VISIBILITY_CHANGED"
 
     const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
@@ -31,4 +32,5 @@ object BroadcastActions {
     const val EXTRA_LOCKED = "locked"
     const val EXTRA_CLICK_THROUGH = "clickThrough"
     const val EXTRA_OVERWRITE_LYRICS = "overwriteLyrics"
+    const val EXTRA_LYRICS_OFFSET_MS = "lyricsOffsetMs"
 }

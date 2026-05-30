@@ -15,6 +15,7 @@ import android.os.SystemClock
 import android.widget.Toast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.KaraokeLyricsStatusStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.lyrics.LyricsLookupException
@@ -79,6 +80,7 @@ class FloatingLyricsService : Service() {
             )
 
             currentMedia = media
+            renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this@FloatingLyricsService, media))
             renderer.updatePlayback(positionMs = position, isPlaying = isPlaying)
 
             val lyricsKey = media.lyricsKey()
@@ -123,6 +125,9 @@ class FloatingLyricsService : Service() {
                 renderer.refresh()
             }
             BroadcastActions.RELOAD_LYRICS -> reloadCurrentLyrics()
+            BroadcastActions.APPLY_LYRICS_OFFSET -> applyLyricsOffset(
+                intent.getLongExtra(BroadcastActions.EXTRA_LYRICS_OFFSET_MS, 0L)
+            )
             BroadcastActions.RELOAD_ONLINE_LYRICS -> reloadCurrentLyrics(
                 bypassLocal = true,
                 forceSaveOnline = true,
@@ -147,6 +152,11 @@ class FloatingLyricsService : Service() {
         } else {
             registerReceiver(mediaReceiver, filter)
         }
+    }
+
+    private fun applyLyricsOffset(offsetMs: Long) {
+        renderer.setLyricsOffset(offsetMs)
+        renderer.refresh()
     }
 
     private fun reloadCurrentLyrics(
@@ -189,6 +199,7 @@ class FloatingLyricsService : Service() {
         lastLyricsKey = null
         activeLyricsRequestKey = null
         currentMedia = CurrentMediaInfo.Empty
+        renderer.setLyricsOffset(0L)
         renderer.clear()
         renderer.show(message)
     }
@@ -248,6 +259,7 @@ class FloatingLyricsService : Service() {
                 hasKaraoke = lyricsResult.karaokeLines.isNotEmpty()
             )
 
+            renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
             renderer.parseAndShow(
                 lyrics = lyricText,
                 translatedLyrics = lyricsResult.translatedLyrics,
@@ -313,6 +325,7 @@ class FloatingLyricsService : Service() {
         if (localLyrics != null) {
             lastLyricsKey = media.lyricsKey()
             activeLyricsRequestKey = lastLyricsKey
+            renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
             renderer.parseAndShow(
                 lyrics = localLyrics,
                 emptyText = "♪ 已导入歌词，但内容为空"

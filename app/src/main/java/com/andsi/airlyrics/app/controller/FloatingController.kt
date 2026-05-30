@@ -27,6 +27,16 @@ internal class FloatingController(
         activity.startLyricsService(intent)
     }
 
+    fun applyLyricsOffset(offsetMs: Long) {
+        if (!activity.quickFloatingVisible) return
+
+        val intent = Intent(activity, FloatingLyricsService::class.java).apply {
+            action = BroadcastActions.APPLY_LYRICS_OFFSET
+            putExtra(BroadcastActions.EXTRA_LYRICS_OFFSET_MS, offsetMs)
+        }
+        activity.startLyricsService(intent)
+    }
+
     fun reloadLyricsFromOnline() {
         if (!activity.quickFloatingVisible) {
             Toast.makeText(activity, "请先显示悬浮窗，再重新联网搜索歌词", Toast.LENGTH_LONG).show()

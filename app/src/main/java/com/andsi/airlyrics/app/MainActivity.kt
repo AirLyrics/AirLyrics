@@ -42,6 +42,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.app.AppNavigator
@@ -292,6 +293,30 @@ class MainActivity : AppCompatActivity() {
         floatingController.reloadLyricsFromOnline()
     }
 
+    internal fun currentLyricsOffsetMs(): Long? {
+        val media = getCurrentMediaSnapshot() ?: return null
+        return LyricsOffsetStore.getOffsetMs(this, media)
+    }
+
+    internal fun currentLyricsOffsetSummary(): String {
+        val media = getCurrentMediaSnapshot() ?: return "等待当前音乐"
+        return LyricsOffsetStore.description(LyricsOffsetStore.getOffsetMs(this, media))
+    }
+
+    internal fun adjustLyricsOffsetForCurrentMedia(deltaMs: Long): Long? {
+        val media = getCurrentMediaSnapshot() ?: return null
+        val offset = LyricsOffsetStore.adjustOffsetMs(this, media, deltaMs)
+        floatingController.applyLyricsOffset(offset)
+        return offset
+    }
+
+    internal fun resetLyricsOffsetForCurrentMedia(): Boolean {
+        val media = getCurrentMediaSnapshot() ?: return false
+        LyricsOffsetStore.resetOffset(this, media)
+        floatingController.applyLyricsOffset(0L)
+        return true
+    }
+
     internal fun showImportLyricsDialog() {
         val media = getCurrentMediaSnapshot()
         if (media == null || media.title.isBlank()) {
@@ -517,6 +542,10 @@ class MainActivity : AppCompatActivity() {
 
     internal fun notifyFloatingStyleChanged() {
         floatingController.notifyStyleChanged()
+    }
+
+    internal fun notifyFloatingLyricsOffsetChanged(offsetMs: Long) {
+        floatingController.applyLyricsOffset(offsetMs)
     }
 
     internal fun isDarkTheme(): Boolean {

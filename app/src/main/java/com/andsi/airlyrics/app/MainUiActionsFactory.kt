@@ -34,6 +34,9 @@ internal fun MainActivity.createMainUiActions(): MainUiActions {
         toggleClickThrough = ::toggleClickThrough,
         reloadFloatingLyrics = ::reloadFloatingLyrics,
         reloadFloatingLyricsFromOnline = ::reloadFloatingLyricsFromOnline,
+        currentLyricsOffsetSummary = ::currentLyricsOffsetSummary,
+        adjustLyricsOffsetForCurrentMedia = ::adjustLyricsOffsetForCurrentMedia,
+        resetLyricsOffsetForCurrentMedia = ::resetLyricsOffsetForCurrentMedia,
         requestOverlayPermission = ::requestOverlayPermission,
         requestNotificationPermission = ::requestNotificationPermissionIfNeeded,
         openNotificationListenerSettings = {
