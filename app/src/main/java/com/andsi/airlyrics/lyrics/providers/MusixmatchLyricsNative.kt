@@ -10,6 +10,7 @@ object MusixmatchLyricsNative {
         artist: String,
         album: String,
         durationMs: Long,
-        translationLanguageCode: String
+        translationLanguageCode: String,
+        enableKaraoke: Boolean
     ): String
 }

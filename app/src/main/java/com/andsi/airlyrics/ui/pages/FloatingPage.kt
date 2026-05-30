@@ -3,6 +3,10 @@ package com.andsi.airlyrics.ui.pages
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -54,6 +58,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
     fun contentDisplayMode() = LyricsSettingsStore.getContentDisplayMode(this)
     fun lineDisplayMode() = LyricsSettingsStore.getLineDisplayMode(this)
     fun switchAnimationMode() = LyricsSettingsStore.getSwitchAnimationMode(this)
+    fun karaokeLyricsEnabled() = LyricsSettingsStore.isKaraokeLyricsEnabled(this)
 
     fun compactSectionTitle(title: String): TextView {
         return TextView(activity).apply {
@@ -89,8 +94,29 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         }
     }
 
+
+    fun karaokePreviewText(): CharSequence {
+        val text = "夜に駆ける\n高亮会覆盖已经唱到的文字"
+        val firstLineEnd = text.indexOf('\n').takeIf { it > 0 } ?: text.length
+        val highlightEnd = (firstLineEnd / 2).coerceAtLeast(1).coerceAtMost(firstLineEnd)
+        return SpannableString(text).apply {
+            setSpan(
+                ForegroundColorSpan(style().karaokeHighlightColor),
+                0,
+                highlightEnd,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+            setSpan(
+                StyleSpan(Typeface.BOLD),
+                0,
+                highlightEnd,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+            )
+        }
+    }
+
     fun applyLyricsDisplaySettingsChanged() {
-        lyricPreviewTextView?.text = previewLyricsText()
+        lyricPreviewTextView?.text = if (karaokeLyricsEnabled()) karaokePreviewText() else previewLyricsText()
         lyricPreviewTextView?.maxLines = when (lineDisplayMode()) {
             LyricsLineDisplayMode.CURRENT_ONLY -> 2
             LyricsLineDisplayMode.PREVIOUS_AND_CURRENT,
@@ -155,6 +181,21 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         notifyFloatingStyleChanged()
     }
 
+    fun applyKaraokeLyricsChanged(enabled: Boolean) {
+        LyricsSettingsStore.setKaraokeLyricsEnabled(activity, enabled)
+        lyricPreviewTextView?.text = if (enabled) {
+            karaokePreviewText()
+        } else {
+            previewLyricsText()
+        }
+        notifyFloatingStyleChanged()
+        if (enabled && isQuickFloatingVisible() &&
+            LyricsSettingsStore.getLyricsSource(activity) == LyricsSettingsStore.SOURCE_MUSIXMATCH
+        ) {
+            reloadFloatingLyricsFromOnline()
+        }
+    }
+
     fun updatePreviewFold() {
         previewBodyView?.visibility = if (previewExpanded) View.VISIBLE else View.GONE
         previewToggleTextView?.text = if (previewExpanded) "收起" else "展开预览"
@@ -166,7 +207,7 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         val summary = floatingPreviewSummary(latestStyle)
         summaryTextView?.text = summary
         lyricPreviewTextView?.apply {
-            text = previewLyricsText()
+            text = if (karaokeLyricsEnabled()) karaokePreviewText() else previewLyricsText()
             applyFloatingPreviewStyle(latestStyle)
         }
     }
@@ -270,7 +311,10 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
         layoutTransition = softLayoutTransition()
         previewBodyView = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            lyricPreviewTextView = floatingPreviewText(previewLyricsText(), style()).apply {
+            lyricPreviewTextView = floatingPreviewText(
+                if (karaokeLyricsEnabled()) karaokePreviewText() else previewLyricsText(),
+                style()
+            ).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     dp(72)
@@ -548,6 +592,37 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                             ))
                         }
                     }
+                ),
+                FloatingSettingTile(
+                    title = "逐字歌词",
+                    subtitle = if (karaokeLyricsEnabled()) "开启 · 状态在歌词获取页查看" else "关闭",
+                    iconRes = R.drawable.ic_air_motion,
+                    onClick = { tile ->
+                        openPanel(tile, "逐字歌词", "使用 Musixmatch 逐字歌词时生效；当前音乐是否支持可在 设置 → 歌词获取 → 当前音乐歌词 中查看。") {
+                            addView(liveOptionGrid(listOf(
+                                KeyedOptionItem("karaoke_on", "开启", karaokeLyricsEnabled()) {
+                                    applyKaraokeLyricsChanged(true)
+                                },
+                                KeyedOptionItem("karaoke_off", "关闭", !karaokeLyricsEnabled()) {
+                                    applyKaraokeLyricsChanged(false)
+                                }
+                            )))
+                        }
+                    }
+                ),
+                FloatingSettingTile(
+                    title = "高亮颜色",
+                    subtitle = FloatingLyricsStyleStore.colorSummary(style().karaokeHighlightColor),
+                    iconRes = R.drawable.ic_air_text_color,
+                    onClick = { tile ->
+                        openPanel(tile, "逐字高亮颜色", "用于左到右流动的歌词高亮；建议和普通文字颜色拉开差异。") {
+                            addView(colorControl("高亮", style().karaokeHighlightColor) { color ->
+                                FloatingLyricsStyleStore.setKaraokeHighlightColor(activity, color)
+                                notifyFloatingStyleChanged()
+                                refreshFloatingPreview()
+                            })
+                        }
+                    }
                 )
             )
         )
@@ -591,12 +666,14 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                 addView(settingRow(activity, "皮肤", FloatingLyricsStyleStore.getPresetTitle(style().presetName)))
                 addView(settingRow(activity, "字号", "${style().textSizeSp.toInt()}sp"))
                 addView(settingRow(activity, "文字", FloatingLyricsStyleStore.colorSummary(style().textColor)))
+                addView(settingRow(activity, "高亮", FloatingLyricsStyleStore.colorSummary(style().karaokeHighlightColor)))
                 addView(settingRow(activity, "背景", if (style().backgroundEnabled) "开启" else "关闭"))
                 addView(settingRow(activity, "宽度", "${style().maxWidthPercent}%"))
                 addView(settingRow(activity, "内容", contentDisplayMode().title))
                 addView(settingRow(activity, "范围", lineDisplayMode().title))
                 addView(settingRow(activity, "对齐", FloatingLyricsStyleStore.getGravityTitle(style().gravity)))
                 addView(settingRow(activity, "动画", switchAnimationMode().title))
+                addView(settingRow(activity, "逐字歌词", if (karaokeLyricsEnabled()) "开启" else "关闭"))
                 addView(settingRow(activity, "锁定", if (FloatingLyricsStyleStore.isLocked(activity)) "开启" else "关闭"))
                 addView(settingRow(activity, "穿透", if (FloatingLyricsStyleStore.isClickThrough(activity)) "开启" else "关闭"))
             }

@@ -13,6 +13,7 @@ import com.andsi.airlyrics.app.liveOptionGrid
 import com.andsi.airlyrics.app.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.KaraokeLyricsStatusStore
 import com.andsi.airlyrics.settings.model.MusixmatchTranslationLanguage
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -174,9 +175,36 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
             return
         }
 
+        val localWordByWord = LyricsStorage.hasKaraokeLyrics(
+            context = activity,
+            title = media.title,
+            artist = media.artist,
+            duration = media.durationMs
+        )
+        val karaokeStatus = KaraokeLyricsStatusStore.get(activity, media.lyricsKey())
+        val karaokeEnabled = LyricsSettingsStore.isKaraokeLyricsEnabled(activity)
+        val karaokeSummary = when {
+            !karaokeEnabled -> if (localWordByWord) "未开启 · 已缓存" else "未开启"
+            localWordByWord -> "支持 · 本地缓存"
+            karaokeStatus == null -> "未检测 · 重新联网搜索后更新"
+            !karaokeStatus.hasLyrics -> "暂无歌词"
+            karaokeStatus.hasKaraoke -> "支持 · ${karaokeStatus.providerName}"
+            karaokeStatus.providerName.isNotBlank() -> "不支持 · ${karaokeStatus.providerName}"
+            else -> "不支持"
+        }
+        val karaokeHint = when {
+            !karaokeEnabled -> "可在悬浮窗页面的动画效果中开启；逐字歌词会单独缓存，不会污染普通 .lrc。"
+            localWordByWord -> "当前音乐已有逐字歌词缓存，开启后可直接使用，不需要每次联网。"
+            karaokeStatus == null -> "点击重新联网搜索歌词后，会在这里显示当前歌词是否支持逐字歌词。"
+            karaokeStatus.hasKaraoke -> "当前歌词含逐字时间戳，悬浮窗会使用左到右的柔和高亮。"
+            else -> "当前歌词没有逐字数据，悬浮窗会自动使用普通滚动歌词。"
+        }
+
         body.addView(normalText(activity, media.displayText))
-        body.addView(settingRow(activity, "歌词来源", localInfo?.sourceText ?: "暂无本地歌词"))
-        body.addView(settingRow(activity, "本地歌词", localInfo?.friendlyTitle ?: "未绑定"))
+        body.addView(settingRow(activity, "歌词来源", localInfo?.sourceText ?: "暂无普通本地歌词"))
+        body.addView(settingRow(activity, "普通歌词", localInfo?.friendlyTitle ?: "未绑定"))
+        body.addView(settingRow(activity, "逐字歌词", karaokeSummary))
+        body.addView(smallHint(activity, karaokeHint))
 
         body.addView(actionButton(activity, "为当前音乐导入歌词") {
             uiActions.importLyricsForCurrentMedia()

@@ -10,6 +10,7 @@ data class FloatingLyricsStyle(
     val presetName: String,
     val textSizeSp: Float,
     val textColor: Int,
+    val karaokeHighlightColor: Int,
     val shadowColor: Int,
     val shadowRadius: Float,
     val backgroundEnabled: Boolean,

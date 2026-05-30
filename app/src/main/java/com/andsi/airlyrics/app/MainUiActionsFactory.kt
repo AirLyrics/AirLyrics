@@ -43,9 +43,7 @@ internal fun MainActivity.createMainUiActions(): MainUiActions {
             selectLyricsDirLauncher.launch(null)
         },
         copyLyricsDirectory = ::showLyricsDir,
-        importLyricsForCurrentMedia = {
-            importLyricsLauncher.launch(arrayOf("text/*", "application/octet-stream", "*/*"))
-        },
+        importLyricsForCurrentMedia = ::showImportLyricsDialog,
         deleteLyricsForCurrentMedia = ::deleteLyricsForCurrentMedia,
         toggleLyricsAutoSearch = {
             val enabled = !LyricsSettingsStore.isAutoSearchOnlineEnabled(this)

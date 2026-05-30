@@ -15,6 +15,7 @@ import android.os.SystemClock
 import android.widget.Toast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.KaraokeLyricsStatusStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
@@ -34,7 +35,9 @@ class FloatingLyricsService : Service() {
         textViewProvider = { lyricsView },
         contentModeProvider = { LyricsSettingsStore.getContentDisplayMode(this) },
         lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
-        switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) }
+        switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
+        karaokeEnabledProvider = { LyricsSettingsStore.isKaraokeLyricsEnabled(this) },
+        karaokeHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).karaokeHighlightColor }
     )
     private val syncHandler = Handler(Looper.getMainLooper())
 
@@ -46,7 +49,7 @@ class FloatingLyricsService : Service() {
     private val syncRunnable = object : Runnable {
         override fun run() {
             renderer.tick()
-            syncHandler.postDelayed(this, 300L)
+            syncHandler.postDelayed(this, if (renderer.isKaraokeActive()) 80L else 300L)
         }
     }
 
@@ -236,14 +239,25 @@ class FloatingLyricsService : Service() {
         val lyricText = lyricsResult?.lyrics
 
         if (lyricText != null) {
+            KaraokeLyricsStatusStore.update(
+                context = this,
+                mediaKey = media.lyricsKey(),
+                providerId = lyricsResult.providerId,
+                providerName = lyricsResult.providerName,
+                hasLyrics = true,
+                hasKaraoke = lyricsResult.karaokeLines.isNotEmpty()
+            )
+
             renderer.parseAndShow(
                 lyrics = lyricText,
                 translatedLyrics = lyricsResult.translatedLyrics,
+                karaokeLines = lyricsResult.karaokeLines,
                 emptyText = "♪ 歌词解析为空\n${media.displayText}"
             )
             return
         }
 
+        KaraokeLyricsStatusStore.clear(this, media.lyricsKey())
         renderer.clear()
         renderer.show(lookupFailureText(result.exceptionOrNull(), media))
     }

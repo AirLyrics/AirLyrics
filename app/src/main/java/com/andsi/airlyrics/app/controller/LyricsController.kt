@@ -16,23 +16,46 @@ import com.andsi.airlyrics.media.MediaSourceStore
 internal class LyricsController(
     private val activity: MainActivity
 ) {
-    fun importLyricsForCurrentMedia(uri: Uri, media: CurrentMediaInfo, overwrite: Boolean) {
-        val imported = LyricsStorage.importLyricsFromUri(
-            context = activity,
-            uri = uri,
-            title = media.title,
-            artist = media.artist,
-            duration = media.durationMs,
-            album = media.album,
-            overwrite = overwrite
-        )
+    fun importLyricsForCurrentMedia(
+        uri: Uri,
+        media: CurrentMediaInfo,
+        overwrite: Boolean,
+        importAsWordByWord: Boolean = false
+    ) {
+        val imported = if (importAsWordByWord) {
+            LyricsStorage.importKaraokeLyricsFromUri(
+                context = activity,
+                uri = uri,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs,
+                album = media.album,
+                overwrite = overwrite
+            )
+        } else {
+            LyricsStorage.importLyricsFromUri(
+                context = activity,
+                uri = uri,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs,
+                album = media.album,
+                overwrite = overwrite
+            )
+        }
 
         if (imported) {
-            Toast.makeText(activity, "已为当前音乐导入歌词", Toast.LENGTH_LONG).show()
+            val message = if (importAsWordByWord) "已为当前音乐导入逐字歌词" else "已为当前音乐导入普通歌词"
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             activity.reloadFloatingLyrics()
             activity.renderCurrentPage(animateContent = false, animateTabs = false)
         } else {
-            Toast.makeText(activity, "导入失败，可能不是可读取的歌词文件", Toast.LENGTH_LONG).show()
+            val message = if (importAsWordByWord) {
+                "导入失败，请确认 .lrc 内含逐字时间戳"
+            } else {
+                "导入失败，可能不是可读取的歌词文件"
+            }
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
         }
     }
 

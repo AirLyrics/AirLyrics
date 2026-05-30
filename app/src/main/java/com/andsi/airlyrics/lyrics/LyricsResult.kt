@@ -6,6 +6,7 @@ data class LyricsProviderResult(
     val providerName: String,
     val lyrics: String,
     val translatedLyrics: String? = null,
+    val karaokeLines: List<KaraokeLine> = emptyList(),
     val matchedTitle: String = "",
     val matchedArtist: String = "",
     val matchedAlbum: String = "",

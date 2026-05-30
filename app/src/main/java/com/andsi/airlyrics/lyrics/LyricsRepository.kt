@@ -44,18 +44,45 @@ object LyricsRepository {
         )
 
         return runCatching {
+            val settings = LyricsSettingsStore.getSettings(context)
+            val wordByWordEnabled = settings.karaokeLyricsEnabled
+            val wantsOnlineKaraoke = wordByWordEnabled &&
+                settings.source == LyricsSearchSource.MUSIXMATCH
+            var localFallback: LyricsProviderResult? = null
+
             if (!bypassLocal) {
                 LocalLyricsProvider.fetch(request).getOrThrow()?.let { localResult ->
-                    return@runCatching localResult
+                    if (!wordByWordEnabled) {
+                        return@runCatching localResult
+                    }
+
+                    val cachedKaraokeLines = LyricsStorage.readKaraokeLyrics(
+                        context = context,
+                        title = title,
+                        artist = artist,
+                        duration = durationMs
+                    )
+                    if (cachedKaraokeLines.isNotEmpty()) {
+                        return@runCatching localResult.copy(
+                            providerId = "local",
+                            providerName = "本地缓存",
+                            karaokeLines = cachedKaraokeLines
+                        )
+                    }
+
+                    if (!wantsOnlineKaraoke) {
+                        return@runCatching localResult
+                    }
+
+                    localFallback = localResult
                 }
             }
 
-            val settings = LyricsSettingsStore.getSettings(context)
             if (settings.source == LyricsSearchSource.LOCAL_ONLY) {
-                return@runCatching null
+                return@runCatching localFallback
             }
             if (!ignoreAutoSearchSetting && !settings.autoSearchOnline) {
-                return@runCatching null
+                return@runCatching localFallback
             }
 
             val provider = onlineProviders[settings.source] ?: NeteaseLyricsProvider
@@ -65,6 +92,9 @@ object LyricsRepository {
                     "${provider.name} lookup failed: title=$title artist=$artist durationMs=$durationMs",
                     error
                 )
+                if (wantsOnlineKaraoke && localFallback != null) {
+                    return@runCatching localFallback
+                }
                 throw error
             }
 
@@ -85,7 +115,21 @@ object LyricsRepository {
                 )
             }
 
-            onlineResult
+            if (onlineResult != null && wantsOnlineKaraoke && onlineResult.karaokeLines.isNotEmpty()) {
+                LyricsStorage.saveKaraokeLyrics(
+                    context = context,
+                    title = title,
+                    artist = artist,
+                    duration = durationMs,
+                    karaokeLines = onlineResult.karaokeLines,
+                    album = album,
+                    source = LyricsStorage.SOURCE_DOWNLOADED,
+                    provider = onlineResult.providerName,
+                    overwrite = true
+                )
+            }
+
+            onlineResult ?: localFallback
         }
     }
 }

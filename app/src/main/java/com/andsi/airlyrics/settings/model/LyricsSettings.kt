@@ -8,6 +8,7 @@ data class LyricsSettings(
     val contentDisplayMode: LyricsContentDisplayMode = LyricsContentDisplayMode.default,
     val lineDisplayMode: LyricsLineDisplayMode = LyricsLineDisplayMode.default,
     val switchAnimationMode: LyricsSwitchAnimationMode = LyricsSwitchAnimationMode.default,
+    val karaokeLyricsEnabled: Boolean = false,
     val musixmatchTranslationLanguage: MusixmatchTranslationLanguage = MusixmatchTranslationLanguage.default
 )
 

@@ -12,6 +12,7 @@ object FloatingLyricsStyleStore {
     private const val KEY_PRESET = "preset"
     private const val KEY_TEXT_SIZE = "text_size"
     private const val KEY_TEXT_COLOR = "text_color"
+    private const val KEY_KARAOKE_HIGHLIGHT_COLOR = "karaoke_highlight_color"
     private const val KEY_SHADOW_COLOR = "shadow_color"
     private const val KEY_SHADOW_RADIUS = "shadow_radius"
     private const val KEY_BACKGROUND_ENABLED = "background_enabled"
@@ -57,6 +58,7 @@ object FloatingLyricsStyleStore {
             presetName = prefs.getString(KEY_PRESET, "bubble") ?: "bubble",
             textSizeSp = prefs.getFloat(KEY_TEXT_SIZE, 28f),
             textColor = prefs.getInt(KEY_TEXT_COLOR, Color.WHITE),
+            karaokeHighlightColor = prefs.getInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255)),
             shadowColor = prefs.getInt(KEY_SHADOW_COLOR, Color.BLACK),
             shadowRadius = prefs.getFloat(KEY_SHADOW_RADIUS, 8f),
             backgroundEnabled = prefs.getBoolean(KEY_BACKGROUND_ENABLED, true),
@@ -76,6 +78,7 @@ object FloatingLyricsStyleStore {
             "transparent" -> editor
                 .putString(KEY_PRESET, preset)
                 .putInt(KEY_TEXT_COLOR, Color.WHITE)
+                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255))
                 .putInt(KEY_SHADOW_COLOR, Color.BLACK)
                 .putFloat(KEY_SHADOW_RADIUS, 8f)
                 .putBoolean(KEY_BACKGROUND_ENABLED, false)
@@ -90,6 +93,7 @@ object FloatingLyricsStyleStore {
             "neon" -> editor
                 .putString(KEY_PRESET, preset)
                 .putInt(KEY_TEXT_COLOR, Color.rgb(176, 226, 255))
+                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(255, 235, 120))
                 .putInt(KEY_SHADOW_COLOR, Color.rgb(66, 170, 255))
                 .putFloat(KEY_SHADOW_RADIUS, 12f)
                 .putBoolean(KEY_BACKGROUND_ENABLED, true)
@@ -104,6 +108,7 @@ object FloatingLyricsStyleStore {
             "subtitle" -> editor
                 .putString(KEY_PRESET, preset)
                 .putInt(KEY_TEXT_COLOR, Color.WHITE)
+                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255))
                 .putInt(KEY_SHADOW_COLOR, Color.BLACK)
                 .putFloat(KEY_SHADOW_RADIUS, 14f)
                 .putBoolean(KEY_BACKGROUND_ENABLED, false)
@@ -118,6 +123,7 @@ object FloatingLyricsStyleStore {
             else -> editor
                 .putString(KEY_PRESET, "bubble")
                 .putInt(KEY_TEXT_COLOR, Color.WHITE)
+                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255))
                 .putInt(KEY_SHADOW_COLOR, Color.BLACK)
                 .putFloat(KEY_SHADOW_RADIUS, 8f)
                 .putBoolean(KEY_BACKGROUND_ENABLED, true)
@@ -143,6 +149,13 @@ object FloatingLyricsStyleStore {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
             .putInt(KEY_TEXT_COLOR, color)
+            .apply()
+    }
+
+    fun setKaraokeHighlightColor(context: Context, color: Int) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color)
             .apply()
     }
 

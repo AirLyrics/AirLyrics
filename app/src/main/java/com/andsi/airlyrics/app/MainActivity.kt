@@ -22,6 +22,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
 import android.provider.Settings
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import android.view.Gravity
@@ -132,6 +133,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var pendingImportAsWordByWord = false
+
+    private val normalLyricsMimeTypes = arrayOf("application/x-lrc", "text/lrc", "text/plain")
+    private val wordByWordLyricsMimeTypes = normalLyricsMimeTypes
+
     internal val importLyricsLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri == null) return@registerForActivityResult
@@ -142,24 +148,56 @@ class MainActivity : AppCompatActivity() {
                 return@registerForActivityResult
             }
 
-            val exists = LyricsStorage.hasLocalLyrics(
-                context = this,
-                title = media.title,
-                artist = media.artist,
-                duration = media.durationMs
-            )
+            val importAsWordByWord = pendingImportAsWordByWord
+            val fileName = getDocumentDisplayName(uri).lowercase()
+            val validFile = fileName.endsWith(".lrc")
+            if (!validFile) {
+                val message = if (importAsWordByWord) {
+                    "请选择 .lrc 逐字歌词文件"
+                } else {
+                    "请选择 .lrc 普通歌词文件"
+                }
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
+            }
+
+            val exists = if (importAsWordByWord) {
+                LyricsStorage.hasKaraokeLyrics(
+                    context = this,
+                    title = media.title,
+                    artist = media.artist,
+                    duration = media.durationMs
+                )
+            } else {
+                LyricsStorage.hasLocalLyrics(
+                    context = this,
+                    title = media.title,
+                    artist = media.artist,
+                    duration = media.durationMs
+                )
+            }
 
             if (exists) {
                 AlertDialog.Builder(this)
-                    .setTitle("当前音乐已有歌词")
+                    .setTitle(if (importAsWordByWord) "当前音乐已有逐字歌词" else "当前音乐已有普通歌词")
                     .setMessage("${media.displayText}\n\n要覆盖已有本地歌词吗？")
                     .setNegativeButton("取消", null)
                     .setPositiveButton("覆盖") { _, _ ->
-                        importLyricsForCurrentMedia(uri = uri, media = media, overwrite = true)
+                        importLyricsForCurrentMedia(
+                            uri = uri,
+                            media = media,
+                            overwrite = true,
+                            importAsWordByWord = importAsWordByWord
+                        )
                     }
                     .show()
             } else {
-                importLyricsForCurrentMedia(uri = uri, media = media, overwrite = false)
+                importLyricsForCurrentMedia(
+                    uri = uri,
+                    media = media,
+                    overwrite = false,
+                    importAsWordByWord = importAsWordByWord
+                )
             }
         }
 
@@ -254,8 +292,114 @@ class MainActivity : AppCompatActivity() {
         floatingController.reloadLyricsFromOnline()
     }
 
-    internal fun importLyricsForCurrentMedia(uri: Uri, media: CurrentMediaInfo, overwrite: Boolean) {
-        lyricsController.importLyricsForCurrentMedia(uri, media, overwrite)
+    internal fun showImportLyricsDialog() {
+        val media = getCurrentMediaSnapshot()
+        if (media == null || media.title.isBlank()) {
+            Toast.makeText(this, "请先播放并选择一首歌，再为当前音乐导入歌词", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        var dialog: AlertDialog? = null
+
+        fun launchImport(asWordByWord: Boolean) {
+            pendingImportAsWordByWord = asWordByWord
+            dialog?.dismiss()
+            importLyricsLauncher.launch(normalLyricsMimeTypes)
+        }
+
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(12), dp(20), dp(4))
+
+            addView(TextView(this@MainActivity).apply {
+                text = media.displayText
+                textSize = 15f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorTextStrong)
+                setPadding(0, 0, 0, dp(8))
+            })
+
+            addView(TextView(this@MainActivity).apply {
+                text = "两种导入都选择 .lrc 文件；逐字歌词需要包含 <时间戳> 逐字/逐词标记。"
+                textSize = 13f
+                setTextColor(colorTextMuted)
+                setPadding(0, 0, 0, dp(10))
+            })
+
+            addView(importLyricsChoiceRow(
+                title = "普通歌词（.lrc）",
+                subtitle = "只包含 [时间]整句歌词，用于普通滚动显示。",
+                primary = true
+            ) { launchImport(false) })
+
+            addView(importLyricsChoiceRow(
+                title = "逐字歌词（增强 .lrc）",
+                subtitle = "包含 <时间戳>字/词，导入后会转换为逐字歌词缓存。",
+                primary = false
+            ) { launchImport(true) })
+        }
+
+        dialog = AlertDialog.Builder(this)
+            .setTitle("选择导入类型")
+            .setView(content)
+            .setNegativeButton("取消", null)
+            .show()
+    }
+
+    private fun importLyricsChoiceRow(
+        title: String,
+        subtitle: String,
+        primary: Boolean,
+        onClick: () -> Unit
+    ): TextView {
+        return TextView(this).apply {
+            text = "$title\n$subtitle"
+            textSize = 15f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(if (primary) Color.WHITE else colorTextStrong)
+            setLineSpacing(dp(2).toFloat(), 1f)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+            val params = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            params.setMargins(0, dp(8), 0, 0)
+            layoutParams = params
+            background = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                if (primary) {
+                    setColor(colorAccent)
+                } else {
+                    setColor(colorSurfaceLight)
+                    setStroke(dp(1), colorStroke)
+                }
+            }
+            enableSoftPressFeedback(0.97f)
+            setOnClickListener {
+                onClick()
+                playTinyPulse(this)
+            }
+        }
+    }
+
+    private fun getDocumentDisplayName(uri: Uri): String {
+        val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
+        return runCatching {
+            contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
+            }
+        }.getOrNull()
+            ?: uri.lastPathSegment.orEmpty()
+    }
+
+    internal fun importLyricsForCurrentMedia(
+        uri: Uri,
+        media: CurrentMediaInfo,
+        overwrite: Boolean,
+        importAsWordByWord: Boolean = false
+    ) {
+        lyricsController.importLyricsForCurrentMedia(uri, media, overwrite, importAsWordByWord)
     }
 
     internal fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo) {
@@ -284,7 +428,7 @@ class MainActivity : AppCompatActivity() {
         return if (FloatingLyricsStyleStore.isClickThrough(this)) "点击穿透：开启" else "点击穿透：关闭"
     }
 
-    internal fun floatingPreviewText(text: String, style: FloatingLyricsStyle): TextView {
+    internal fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {
         return TextView(this).apply {
             this.text = text
             val params = LinearLayout.LayoutParams(

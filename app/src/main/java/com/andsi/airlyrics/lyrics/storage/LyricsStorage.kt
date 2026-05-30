@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
+import com.andsi.airlyrics.lyrics.KaraokeLine
+import com.andsi.airlyrics.lyrics.KaraokeToken
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import org.json.JSONArray
@@ -87,8 +89,10 @@ object LyricsStorage {
         val album: String,
         val durationMs: Long,
         val file: String,
+        val karaokeFile: String = "",
         val source: String,
         val provider: String,
+        val karaokeProvider: String = "",
         val createdAt: Long,
         val updatedAt: Long
     )
@@ -199,7 +203,7 @@ object LyricsStorage {
         duration: Long
     ): LocalLyricsInfo? {
         val indexed = findIndexEntry(context, title, artist, duration)
-        if (indexed != null) {
+        if (indexed != null && indexed.file.isNotBlank()) {
             return LocalLyricsInfo(
                 title = indexed.title,
                 artist = indexed.artist,
@@ -234,7 +238,7 @@ object LyricsStorage {
     }
 
     fun hasLocalLyrics(context: Context, title: String, artist: String, duration: Long): Boolean {
-        return getLocalLyricsInfo(context, title, artist, duration) != null
+        return readLocalLyrics(context, title, artist, duration) != null
     }
 
     fun readLocalLyrics(
@@ -244,7 +248,9 @@ object LyricsStorage {
         duration: Long
     ): String? {
         findIndexEntry(context, title, artist, duration)?.let { entry ->
-            readManagedLyrics(context, entry.file)?.let { return it }
+            if (entry.file.isNotBlank()) {
+                readManagedLyrics(context, entry.file)?.let { return it }
+            }
         }
 
         return readLegacyLyrics(context, title, artist, duration)
@@ -263,7 +269,7 @@ object LyricsStorage {
     ): Boolean {
         val normalizedKey = makeKey(title, artist, duration)
         val existing = findIndexEntry(context, title, artist, duration)
-        if (existing != null && !overwrite) return false
+        if (existing?.file?.isNotBlank() == true && !overwrite) return false
 
         val now = System.currentTimeMillis()
         val fileName = "${normalizedKey.take(16)}.lrc"
@@ -282,8 +288,10 @@ object LyricsStorage {
             album = album.trim(),
             durationMs = duration,
             file = relativeFile,
+            karaokeFile = existing?.karaokeFile.orEmpty(),
             source = source,
             provider = provider,
+            karaokeProvider = existing?.karaokeProvider.orEmpty(),
             createdAt = existing?.createdAt ?: now,
             updatedAt = now
         )
@@ -320,6 +328,123 @@ object LyricsStorage {
         )
     }
 
+    fun hasKaraokeLyrics(context: Context, title: String, artist: String, duration: Long): Boolean {
+        return findIndexEntry(context, title, artist, duration)?.karaokeFile?.isNotBlank() == true
+    }
+
+    fun readKaraokeLyrics(
+        context: Context,
+        title: String,
+        artist: String,
+        duration: Long
+    ): List<KaraokeLine> {
+        val entry = findIndexEntry(context, title, artist, duration) ?: return emptyList()
+        val rawJson = entry.karaokeFile
+            .takeIf { it.isNotBlank() }
+            ?.let { readManagedLyrics(context, it) }
+            ?: return emptyList()
+
+        return parseKaraokeJson(rawJson)
+    }
+
+    fun saveKaraokeLyrics(
+        context: Context,
+        title: String,
+        artist: String,
+        duration: Long,
+        karaokeLines: List<KaraokeLine>,
+        album: String = "",
+        source: String = SOURCE_DOWNLOADED,
+        provider: String = "Musixmatch",
+        overwrite: Boolean = true
+    ): Boolean {
+        if (karaokeLines.isEmpty()) return false
+
+        val normalizedKey = makeKey(title, artist, duration)
+        val existing = findIndexEntry(context, title, artist, duration)
+        if (existing?.karaokeFile?.isNotBlank() == true && !overwrite) return false
+
+        val now = System.currentTimeMillis()
+        val fileName = "${normalizedKey.take(16)}.karaoke.json"
+        val relativeFile = "$MANAGED_LYRICS_DIR/$fileName"
+        val json = karaokeLinesToJson(karaokeLines)
+
+        if (!writeManagedLyrics(context, fileName, json)) return false
+
+        val entries = readIndex(context)
+            .filterNot { isSameSong(it, title, artist, duration) || it.key == normalizedKey }
+            .toMutableList()
+
+        entries += LyricsIndexEntry(
+            key = normalizedKey,
+            title = title.trim(),
+            artist = artist.trim(),
+            album = album.trim(),
+            durationMs = duration,
+            file = existing?.file.orEmpty(),
+            karaokeFile = relativeFile,
+            source = existing?.source ?: source,
+            provider = existing?.provider ?: "local",
+            karaokeProvider = provider,
+            createdAt = existing?.createdAt ?: now,
+            updatedAt = now
+        )
+
+        writeIndex(context, entries)
+        return true
+    }
+
+    fun importKaraokeLyricsFromUri(
+        context: Context,
+        uri: Uri,
+        title: String,
+        artist: String,
+        duration: Long,
+        album: String = "",
+        overwrite: Boolean = true
+    ): Boolean {
+        val text = runCatching {
+            context.contentResolver.openInputStream(uri)
+                ?.bufferedReader()
+                ?.use { it.readText() }
+        }.getOrNull() ?: return false
+
+        val lines = parseKaraokeJson(text).ifEmpty { parseEnhancedLrcKaraoke(text) }
+        if (lines.isEmpty()) return false
+
+        val savedKaraoke = saveKaraokeLyrics(
+            context = context,
+            title = title,
+            artist = artist,
+            duration = duration,
+            karaokeLines = lines,
+            album = album,
+            source = SOURCE_MANUAL_IMPORT,
+            provider = "local",
+            overwrite = overwrite
+        )
+        if (!savedKaraoke) return false
+
+        // A word-by-word LRC also contains normal line text. Save a plain LRC shadow
+        // when the current song does not already have ordinary local lyrics, so a
+        // user can import only one enhanced .lrc and still get stable display text.
+        if (!hasLocalLyrics(context, title, artist, duration)) {
+            return saveLyrics(
+                context = context,
+                title = title,
+                artist = artist,
+                duration = duration,
+                lyrics = karaokeLinesToPlainLrc(lines),
+                album = album,
+                source = SOURCE_MANUAL_IMPORT,
+                provider = "local",
+                overwrite = false
+            )
+        }
+
+        return true
+    }
+
     fun deleteLocalLyrics(
         context: Context,
         title: String,
@@ -331,7 +456,12 @@ object LyricsStorage {
         var deletedAny = false
 
         matched.forEach { entry ->
-            deletedAny = deleteManagedLyrics(context, entry.file) || deletedAny
+            if (entry.file.isNotBlank()) {
+                deletedAny = deleteManagedLyrics(context, entry.file) || deletedAny
+            }
+            if (entry.karaokeFile.isNotBlank()) {
+                deletedAny = deleteManagedLyrics(context, entry.karaokeFile) || deletedAny
+            }
         }
 
         if (matched.isNotEmpty()) {
@@ -477,12 +607,14 @@ object LyricsStorage {
                     album = obj.optString("album"),
                     durationMs = obj.optLong("durationMs"),
                     file = obj.optString("file"),
+                    karaokeFile = obj.optString("karaokeFile"),
                     source = obj.optString("source", SOURCE_DOWNLOADED),
                     provider = obj.optString("provider", "local"),
+                    karaokeProvider = obj.optString("karaokeProvider"),
                     createdAt = obj.optLong("createdAt"),
                     updatedAt = obj.optLong("updatedAt")
                 )
-            }.filter { it.key.isNotBlank() && it.file.isNotBlank() }
+            }.filter { it.key.isNotBlank() && (it.file.isNotBlank() || it.karaokeFile.isNotBlank()) }
         }.getOrDefault(emptyList())
     }
 
@@ -496,8 +628,10 @@ object LyricsStorage {
                 put("album", entry.album)
                 put("durationMs", entry.durationMs)
                 put("file", entry.file)
+                put("karaokeFile", entry.karaokeFile)
                 put("source", entry.source)
                 put("provider", entry.provider)
+                put("karaokeProvider", entry.karaokeProvider)
                 put("createdAt", entry.createdAt)
                 put("updatedAt", entry.updatedAt)
             })
@@ -540,6 +674,163 @@ object LyricsStorage {
         val normalizedDuration = if (duration > 0L) duration / 1000L else 0L
         val raw = "${normalizeText(title)}|${normalizeText(artist)}|$normalizedDuration"
         return sha1(raw)
+    }
+
+    private fun karaokeLinesToJson(lines: List<KaraokeLine>): String {
+        val array = JSONArray()
+        lines.sortedBy { it.startMs }.forEach { line ->
+            array.put(JSONObject().apply {
+                put("startMs", line.startMs)
+                put("endMs", line.endMs)
+                put("text", line.text)
+                put("tokens", JSONArray().apply {
+                    line.tokens.forEach { token ->
+                        put(JSONObject().apply {
+                            put("text", token.text)
+                            put("startMs", token.startMs)
+                            put("endMs", token.endMs)
+                        })
+                    }
+                })
+            })
+        }
+        return array.toString(2)
+    }
+
+    private fun parseKaraokeJson(rawJson: String): List<KaraokeLine> {
+        if (rawJson.isBlank()) return emptyList()
+
+        return runCatching {
+            val array = JSONArray(rawJson)
+            buildList {
+                for (lineIndex in 0 until array.length()) {
+                    val line = array.optJSONObject(lineIndex) ?: continue
+                    val startMs = line.optLong("startMs", -1L)
+                    val endMs = line.optLong("endMs", -1L)
+                    val text = line.optString("text", "").trim()
+                    val tokenArray = line.optJSONArray("tokens") ?: JSONArray()
+                    if (startMs < 0L || endMs <= startMs || text.isBlank() || tokenArray.length() == 0) continue
+
+                    val tokens = buildList {
+                        for (tokenIndex in 0 until tokenArray.length()) {
+                            val token = tokenArray.optJSONObject(tokenIndex) ?: continue
+                            val tokenText = token.optString("text", "").trim()
+                            val tokenStartMs = token.optLong("startMs", -1L)
+                            val tokenEndMs = token.optLong("endMs", -1L)
+                            if (tokenText.isNotBlank() && tokenStartMs >= startMs && tokenEndMs > tokenStartMs) {
+                                add(KaraokeToken(tokenText, tokenStartMs, tokenEndMs))
+                            }
+                        }
+                    }
+
+                    if (tokens.isNotEmpty()) {
+                        add(KaraokeLine(startMs, endMs, text, tokens))
+                    }
+                }
+            }.sortedBy { it.startMs }
+        }.getOrDefault(emptyList())
+    }
+
+
+
+    private fun karaokeLinesToPlainLrc(lines: List<KaraokeLine>): String {
+        return lines
+            .sortedBy { it.startMs }
+            .joinToString("\n") { line ->
+                "[${formatLrcTimeTag(line.startMs)}]${line.text.trim()}"
+            }
+    }
+
+    private fun formatLrcTimeTag(timeMs: Long): String {
+        val minutes = timeMs / 60_000L
+        val seconds = (timeMs % 60_000L) / 1_000L
+        val centiseconds = (timeMs % 1_000L) / 10L
+        return "%02d:%02d.%02d".format(Locale.getDefault(), minutes, seconds, centiseconds)
+    }
+
+    private fun parseEnhancedLrcKaraoke(rawLrc: String): List<KaraokeLine> {
+        if (rawLrc.isBlank()) return emptyList()
+
+        data class RawEnhancedLine(
+            val startMs: Long,
+            val content: String,
+            val tokens: List<Pair<String, Long>>
+        )
+
+        val timeTagRegex = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
+        val wordTimeTagRegex = Regex("""<(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?>""")
+
+        val rawLines = rawLrc
+            .lineSequence()
+            .mapNotNull { rawLine ->
+                val line = rawLine.trim()
+                if (line.isBlank()) return@mapNotNull null
+
+                val lineStart = timeTagRegex.find(line)?.let { parseLrcTimeTag(it) }
+                    ?: return@mapNotNull null
+                val content = line.replace(timeTagRegex, "").trim()
+                val wordTags = wordTimeTagRegex.findAll(content).toList()
+                if (wordTags.isEmpty()) return@mapNotNull null
+
+                val tokens = wordTags.mapIndexedNotNull { index, match ->
+                    val startMs = parseLrcTimeTag(match) ?: return@mapIndexedNotNull null
+                    val textStart = match.range.last + 1
+                    val textEndExclusive = wordTags.getOrNull(index + 1)?.range?.first ?: content.length
+                    if (textStart > textEndExclusive || textStart > content.length) return@mapIndexedNotNull null
+                    val tokenText = content.substring(textStart, textEndExclusive)
+                        .replace(wordTimeTagRegex, "")
+                    if (tokenText.isBlank()) return@mapIndexedNotNull null
+                    tokenText to startMs
+                }.filter { (_, startMs) -> startMs >= lineStart }
+
+                if (tokens.isEmpty()) null else RawEnhancedLine(lineStart, content, tokens)
+            }
+            .sortedBy { it.startMs }
+            .toList()
+
+        if (rawLines.isEmpty()) return emptyList()
+
+        return rawLines.mapIndexedNotNull { index, rawLine ->
+            val nextLineStart = rawLines.getOrNull(index + 1)?.startMs
+            val tokenList = rawLine.tokens.mapIndexed { tokenIndex, (tokenText, tokenStartMs) ->
+                val nextTokenStart = rawLine.tokens.getOrNull(tokenIndex + 1)?.second
+                    ?: nextLineStart
+                    ?: (tokenStartMs + 400L)
+                KaraokeToken(
+                    text = tokenText,
+                    startMs = tokenStartMs,
+                    endMs = nextTokenStart.coerceAtLeast(tokenStartMs + 1L)
+                )
+            }
+
+            val lineText = tokenList.joinToString(separator = "") { it.text }
+                .replace(Regex("\\s+"), " ")
+                .trim()
+            if (lineText.isBlank() || tokenList.isEmpty()) return@mapIndexedNotNull null
+
+            val lineEnd = nextLineStart ?: tokenList.last().endMs
+            if (lineEnd <= rawLine.startMs) return@mapIndexedNotNull null
+
+            KaraokeLine(
+                startMs = rawLine.startMs,
+                endMs = lineEnd,
+                text = lineText,
+                tokens = tokenList
+            )
+        }
+    }
+
+    private fun parseLrcTimeTag(match: MatchResult): Long? {
+        val minutes = match.groupValues.getOrNull(1)?.toLongOrNull() ?: return null
+        val seconds = match.groupValues.getOrNull(2)?.toLongOrNull() ?: return null
+        val fractionRaw = match.groupValues.getOrNull(3).orEmpty()
+        val millis = when (fractionRaw.length) {
+            0 -> 0L
+            1 -> fractionRaw.toLongOrNull()?.times(100L) ?: return null
+            2 -> fractionRaw.toLongOrNull()?.times(10L) ?: return null
+            else -> fractionRaw.take(3).toLongOrNull() ?: return null
+        }
+        return minutes * 60_000L + seconds * 1_000L + millis
     }
 
     private fun makeLegacyFileName(title: String, artist: String, duration: Long): String {

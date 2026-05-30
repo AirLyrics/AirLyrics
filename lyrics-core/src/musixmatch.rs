@@ -1,5 +1,5 @@
 use crate::{NativeResult, normalize_optional_lrc};
-use musixmatch_inofficial::models::{SortOrder, Subtitle, SubtitleFormat, Track, TrackId, TranslationList};
+use musixmatch_inofficial::models::{RichsyncLine, SortOrder, Subtitle, SubtitleFormat, Track, TrackId, TranslationList};
 use musixmatch_inofficial::Musixmatch;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::OnceLock;
@@ -18,6 +18,7 @@ pub(crate) fn fetch_best_lyrics(
     album: &str,
     duration_ms: Option<u64>,
     translation_language: &str,
+    enable_karaoke: bool,
 ) -> Result<NativeResult, String> {
     if title.trim().is_empty() {
         return Err("empty title".into());
@@ -86,6 +87,23 @@ pub(crate) fn fetch_best_lyrics(
                 )
             })?;
 
+        let karaoke_json = if enable_karaoke {
+            match fetch_richsync_for_track(&client, &track, duration_seconds).await {
+                Ok(lines) => richsync_lines_to_karaoke_json(&lines),
+                Err(error) => {
+                    eprintln!(
+                        "AirLyricsLyrics: Musixmatch richsync unavailable track={} common={} error={}",
+                        track.track_id,
+                        track.commontrack_id,
+                        error
+                    );
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         let translated_lrc = if translation_language.is_empty() {
             None
         } else {
@@ -118,6 +136,7 @@ pub(crate) fn fetch_best_lyrics(
             lrc: Some(lrc),
             translated_lrc,
             merged_lrc: Some(merged_lrc),
+            karaoke_json,
             error_type: None,
             error: None,
         })
@@ -374,6 +393,114 @@ async fn fetch_lrc_with_matcher_fallback(
     }
 }
 
+
+async fn fetch_richsync_for_track(
+    client: &Musixmatch,
+    track: &Track,
+    duration_seconds: Option<f32>,
+) -> Result<Vec<RichsyncLine>, String> {
+    let mut errors = Vec::<String>::new();
+
+    let (duration, deviation, label) = if duration_seconds.is_some() {
+        (duration_seconds, Some(1.0_f32), "trackId+richsync+duration")
+    } else {
+        (None, None, "trackId+richsync")
+    };
+
+    match client
+        .track_richsync(TrackId::TrackId(track.track_id), duration, deviation)
+        .await
+    {
+        Ok(richsync) => match richsync.get_lines() {
+            Ok(lines) if lines.iter().any(|line| !line.l.is_empty()) => return Ok(lines),
+            Ok(_) => errors.push(format!("{label}: empty word list")),
+            Err(error) => errors.push(format!("{label}: failed to parse body: {error}")),
+        },
+        Err(error) => errors.push(format!("{label}: {error}")),
+    }
+
+    if track.commontrack_id != 0 {
+        match client
+            .track_richsync(TrackId::Commontrack(track.commontrack_id), None, None)
+            .await
+        {
+            Ok(richsync) => match richsync.get_lines() {
+                Ok(lines) if lines.iter().any(|line| !line.l.is_empty()) => return Ok(lines),
+                Ok(_) => errors.push("commontrackId+richsync: empty word list".to_string()),
+                Err(error) => errors.push(format!("commontrackId+richsync: failed to parse body: {error}")),
+            },
+            Err(error) => errors.push(format!("commontrackId+richsync: {error}")),
+        }
+    }
+
+    Err(errors.join("; "))
+}
+
+fn richsync_lines_to_karaoke_json(lines: &[RichsyncLine]) -> Option<String> {
+    let values = lines
+        .iter()
+        .filter_map(|line| {
+            let text = line.x.trim();
+            if text.is_empty() || line.l.is_empty() {
+                return None;
+            }
+
+            let start_ms = seconds_to_millis(line.ts);
+            let token_values = line
+                .l
+                .iter()
+                .filter_map(|word| {
+                    let value = word.c.trim();
+                    if value.is_empty() {
+                        return None;
+                    }
+                    let word_start = seconds_to_millis(line.ts + word.o);
+                    Some((value.to_string(), word_start))
+                })
+                .collect::<Vec<_>>();
+
+            if token_values.is_empty() {
+                None
+            } else {
+                let fallback_end_ms = token_values
+                    .last()
+                    .map(|(_, start)| start.saturating_add(500))
+                    .unwrap_or(start_ms.saturating_add(500));
+                let end_ms = seconds_to_millis(line.te).max(fallback_end_ms).max(start_ms.saturating_add(1));
+                let words = token_values
+                    .into_iter()
+                    .map(|(value, word_start)| {
+                        serde_json::json!({
+                            "text": value,
+                            "startMs": word_start,
+                        })
+                    })
+                    .collect::<Vec<_>>();
+
+                Some(serde_json::json!({
+                    "startMs": start_ms,
+                    "endMs": end_ms,
+                    "text": text,
+                    "tokens": words,
+                }))
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if values.is_empty() {
+        None
+    } else {
+        serde_json::to_string(&values).ok()
+    }
+}
+
+fn seconds_to_millis(value: f32) -> u64 {
+    if !value.is_finite() || value <= 0.0 {
+        0
+    } else {
+        (value * 1000.0).round() as u64
+    }
+}
 
 async fn fetch_translation_for_track(
     client: &Musixmatch,
