@@ -19,9 +19,8 @@
         android:theme="@style/Theme.AirLyrics">
 
         <activity
-            android:name=".app.SplashActivity"
-            android:exported="true"
-            android:theme="@style/Theme.AirLyrics.Splash">
+            android:name=".app.MainActivity"
+            android:exported="true">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -29,10 +28,6 @@
             </intent-filter>
 
         </activity>
-
-        <activity
-            android:name=".app.MainActivity"
-            android:exported="false" />
 
         <service
             android:name=".floating.FloatingLyricsService"
