@@ -62,7 +62,6 @@ Settings are split into feature files:
 
 ```text
 ui/pages/settings/SettingsHomePage.kt
-ui/pages/settings/ThemeSettingsPage.kt
 ui/pages/settings/FloatingSettingsPage.kt
 ui/pages/settings/LyricsSettingsPage.kt
 ui/pages/settings/SystemSettingsPage.kt

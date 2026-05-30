@@ -9,24 +9,11 @@ import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
-import com.andsi.airlyrics.ui.theme.colorAccentSoft
 
 internal fun createSettingsHomePage(activity: MainActivity): View  = with(activity) createSettingsHomePage@ {
     val container = pageContainer(activity)
 
     container.addView(settingsHomeHeader())
-
-    container.addView(
-        settingsCategoryCard(
-            title = "主题外观",
-            subtitle = "白天 / 暗黑模式、主界面配色和视觉预览。",
-            status = if (isDarkTheme()) "暗黑模式" else "白天模式",
-            accent = colorAccentSoft,
-            iconRes = R.drawable.ic_air_palette
-        ) {
-            uiActions.openSettingsSubPage(SettingsSubPage.THEME)
-        }
-    )
 
 
     container.addView(

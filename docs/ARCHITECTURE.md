@@ -140,7 +140,6 @@ Settings sub-pages are split by user-facing feature area:
 
 ```text
 SettingsHomePage.kt
-ThemeSettingsPage.kt
 FloatingSettingsPage.kt
 LyricsSettingsPage.kt
 SystemSettingsPage.kt
