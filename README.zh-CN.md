@@ -84,12 +84,17 @@ https://github.com/AndSi-327/AirLyrics/releases
 <table>
   <tr>
     <td align="center">
-      <img src="docs/assets/screenshot-media-source.jpg" width="260" alt="媒体流检测" />
+      <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="媒体流检测" />
       <br />
       <sub>媒体流检测</sub>
     </td>
     <td align="center">
-      <img src="docs/assets/screenshot-floating-settings.jpg" width="260" alt="悬浮窗自定义" />
+      <img src="docs/assets/screenshot-lyrics-source.jpg" width="240" alt="歌词获取与本地歌词设置" />
+      <br />
+      <sub>歌词获取</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="悬浮窗自定义" />
       <br />
       <sub>悬浮窗自定义</sub>
     </td>
@@ -174,12 +179,3 @@ Rust lyrics core 构建细节见 [RUST_NETEASE_LYRICS.md](docs/RUST_NETEASE_LYRI
 
 提交修改前，请先阅读 [CONTRIBUTING.md](docs/CONTRIBUTING.md)。
 
----
-
-<div align="center">
-
-AirLyrics
-
-Android 手机端悬浮歌词。
-
-</div>

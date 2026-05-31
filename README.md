@@ -84,12 +84,17 @@ After installation, grant the required permissions and select your music app as 
 <table>
   <tr>
     <td align="center">
-      <img src="docs/assets/screenshot-media-source.jpg" width="260" alt="Media source" />
+      <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="Media source" />
       <br />
       <sub>Media Source</sub>
     </td>
     <td align="center">
-      <img src="docs/assets/screenshot-floating-settings.jpg" width="260" alt="Floating window settings" />
+      <img src="docs/assets/screenshot-lyrics-source.jpg" width="240" alt="Lyrics search and local lyrics settings" />
+      <br />
+      <sub>Lyrics Search</sub>
+    </td>
+    <td align="center">
+      <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="Floating window settings" />
       <br />
       <sub>Customization</sub>
     </td>
@@ -174,12 +179,3 @@ Good areas to contribute:
 
 Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) before submitting changes.
 
----
-
-<div align="center">
-
-AirLyrics
-
-Floating lyrics for Android.
-
-</div>
