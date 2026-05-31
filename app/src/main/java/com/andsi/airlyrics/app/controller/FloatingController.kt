@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app.controller
 
+import com.andsi.airlyrics.R
+
 import android.content.Intent
 import android.provider.Settings
 import android.view.animation.OvershootInterpolator
@@ -7,14 +9,13 @@ import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import android.widget.Toast
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.renderCurrentPage
-import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.updateTabs
-import com.andsi.airlyrics.i18n.tr
 
 internal class FloatingController(
     private val activity: MainActivity
@@ -42,7 +43,7 @@ internal class FloatingController(
 
     fun reloadLyricsFromOnline() {
         if (!activity.quickFloatingVisible) {
-            Toast.makeText(activity, activity.tr("请先显示悬浮窗，再重新联网搜索歌词", "Show floating lyrics first, then search online."), Toast.LENGTH_LONG).show()
+            Toast.makeText(activity, activity.getString(R.string.ui_show_overlay_then_search_hint), Toast.LENGTH_LONG).show()
             return
         }
 
@@ -50,13 +51,13 @@ internal class FloatingController(
             action = BroadcastActions.RELOAD_ONLINE_LYRICS
         }
         activity.startLyricsService(intent)
-        Toast.makeText(activity, activity.tr("正在重新联网搜索歌词", "Searching online again"), Toast.LENGTH_SHORT).show()
+        Toast.makeText(activity, activity.getString(R.string.ui_searching_online_again), Toast.LENGTH_SHORT).show()
     }
 
     fun showLyrics(): Boolean {
         if (!Settings.canDrawOverlays(activity)) {
             if (!overlayPermissionHintShown) {
-                Toast.makeText(activity, activity.tr("请先开启悬浮窗权限", "Please enable overlay permission first"), Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, activity.getString(R.string.ui_enable_overlay_permission_first), Toast.LENGTH_LONG).show()
                 overlayPermissionHintShown = true
             }
             activity.requestOverlayPermission()

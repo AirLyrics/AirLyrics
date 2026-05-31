@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import com.andsi.airlyrics.R
+
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -8,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSourceHint
@@ -35,28 +36,28 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
     val autoSearch = LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
     val autoSave = LyricsSettingsStore.isAutoSaveLocalEnabled(this)
 
-    container.addView(settingsBackHeader(tr("歌词获取设置", "Lyrics")))
+    container.addView(settingsBackHeader(getString(R.string.ui_lyrics)))
 
     container.addView(createCurrentLyricsCard(activity))
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, tr("搜索策略", "Search strategy")))
-            addView(normalText(activity, tr("使用顺序固定为：手动导入歌词 > 本地缓存歌词 > 联网搜索歌词。", "Priority: manual imports > local cache > online search.")))
+            addView(bigText(activity, getString(R.string.ui_search_strategy)))
+            addView(normalText(activity, getString(R.string.ui_lyrics_priority_hint)))
 
-            val autoSearchButton = actionButton(activity, if (autoSearch) tr("无本地歌词时自动联网搜索：开启", "Online fallback: on") else tr("无本地歌词时自动联网搜索：关闭", "Online fallback: off")) { }
+            val autoSearchButton = actionButton(activity, if (autoSearch) getString(R.string.ui_online_fallback_on) else getString(R.string.ui_online_fallback_off)) { }
             autoSearchButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSearch()
-                autoSearchButton.text = if (enabled) tr("无本地歌词时自动联网搜索：开启", "Online fallback: on") else tr("无本地歌词时自动联网搜索：关闭", "Online fallback: off")
-                playLocalRefreshFeedback(activity, autoSearchButton, null, tr("已更新", "Updated"))
+                autoSearchButton.text = if (enabled) getString(R.string.ui_online_fallback_on) else getString(R.string.ui_online_fallback_off)
+                playLocalRefreshFeedback(activity, autoSearchButton, null, getString(R.string.ui_updated))
             }
             addView(autoSearchButton)
 
-            val autoSaveButton = actionButton(activity, if (autoSave) tr("自动保存联网歌词：开启", "Auto-save: on") else tr("自动保存联网歌词：关闭", "Auto-save: off")) { }
+            val autoSaveButton = actionButton(activity, if (autoSave) getString(R.string.ui_auto_save_on) else getString(R.string.ui_auto_save_off)) { }
             autoSaveButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSave()
-                autoSaveButton.text = if (enabled) tr("自动保存联网歌词：开启", "Auto-save: on") else tr("自动保存联网歌词：关闭", "Auto-save: off")
-                playLocalRefreshFeedback(activity, autoSaveButton, null, tr("已更新", "Updated"))
+                autoSaveButton.text = if (enabled) getString(R.string.ui_auto_save_on) else getString(R.string.ui_auto_save_off)
+                playLocalRefreshFeedback(activity, autoSaveButton, null, getString(R.string.ui_updated))
             }
             addView(autoSaveButton)
         }
@@ -64,8 +65,8 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, tr("歌词搜索来源", "Lyrics source")))
-            val sourceStatus = normalText(activity, tr("当前：", "Current: ") + localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(activity)))
+            addView(bigText(activity, getString(R.string.ui_lyrics_source)))
+            val sourceStatus = normalText(activity, getString(R.string.settings_current_value, localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(activity))))
             val sourceHint = smallHint(activity, localizedLyricsSourceHint(LyricsSearchSource.fromKey(selectedSource)))
             val sourceFeedback = TextView(activity).apply {
                 text = ""
@@ -88,9 +89,9 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
                         action = {
                             uiActions.selectLyricsSource(option.key)
                             val selected = source
-                            sourceStatus.text = tr("当前：", "Current: ") + localizedLyricsSourceTitle(selected)
+                            sourceStatus.text = getString(R.string.settings_current_value, localizedLyricsSourceTitle(selected))
                             sourceHint.text = localizedLyricsSourceHint(selected)
-                            playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, tr("已保存", "Saved"))
+                            playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, getString(R.string.ui_saved))
                         }
                     )
                 }
@@ -102,13 +103,13 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, tr("本地歌词目录", "Local lyrics folder")))
-            addView(normalText(activity, tr("保存目录：", "Save folder: ") + LyricsStorage.getLyricsDirRawPath(activity)))
-            addView(smallHint(activity, tr("手动导入歌词、自动保存歌词和歌词索引都会使用这个位置。", "Imports, auto-save, and the lyrics index use this folder.")))
-            addView(actionButton(activity, tr("选择歌词保存目录", "Choose lyrics save folder")) {
+            addView(bigText(activity, getString(R.string.ui_local_lyrics_folder)))
+            addView(normalText(activity, getString(R.string.ui_save_folder) + LyricsStorage.getLyricsDirRawPath(activity)))
+            addView(smallHint(activity, getString(R.string.ui_lyrics_folder_scope_hint)))
+            addView(actionButton(activity, getString(R.string.ui_choose_lyrics_save_folder)) {
                 uiActions.selectLyricsDirectory()
             })
-            addView(actionButton(activity, tr("复制歌词保存目录", "Copy lyrics save folder")) {
+            addView(actionButton(activity, getString(R.string.ui_copy_lyrics_save_folder)) {
                 uiActions.copyLyricsDirectory()
             })
         }
@@ -127,7 +128,7 @@ private fun karaokeStatusRow(activity: MainActivity, value: String): View = with
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
 
         addView(TextView(activity).apply {
-            text = tr("本地逐字歌词", "Word LRC")
+            text = getString(R.string.ui_enhanced_lrc)
             textSize = AirUiTokens.TextSize.Button
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -158,8 +159,8 @@ private fun karaokeStatusRow(activity: MainActivity, value: String): View = with
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
             setOnClickListener {
                 activity.showAirInfoDialog(
-                    title = tr("本地逐字歌词", "Local word-by-word"),
-                    message = tr("逐字歌词只支持手动导入本地 enhanced LRC。", "Word-by-word lyrics only support local enhanced LRC imports.")
+                    title = getString(R.string.ui_local_enhanced_lrc_title),
+                    message = getString(R.string.ui_enhanced_lrc_local_only_message)
                 )
             }
         })
@@ -191,8 +192,8 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
         }
 
         if (media == null) {
-            body.addView(normalText(activity, tr("当前没有可识别的播放媒体。", "No active media found.")))
-            body.addView(smallHint(activity, tr("先播放音乐并在媒体流页面选择播放器，再回来导入或管理歌词。", "Play music and choose a player on the Media page first, then manage lyrics here.")))
+            body.addView(normalText(activity, getString(R.string.ui_no_active_media_found)))
+            body.addView(smallHint(activity, getString(R.string.ui_manage_lyrics_select_player_hint)))
             return
         }
 
@@ -204,22 +205,22 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
         )
         val karaokeEnabled = LyricsSettingsStore.isKaraokeLyricsEnabled(activity)
         val karaokeSummary = when {
-            localWordByWord && karaokeEnabled -> tr("可用 · 本地逐字", "Available · local word-by-word")
-            localWordByWord -> tr("已导入 · 未开启", "Imported · off")
-            else -> tr("未导入", "Not imported")
+            localWordByWord && karaokeEnabled -> getString(R.string.ui_available_local_enhanced_lrc)
+            localWordByWord -> getString(R.string.ui_imported_off)
+            else -> getString(R.string.ui_not_imported)
         }
         val offsetMs = LyricsOffsetStore.getOffsetMs(activity, media)
 
         body.addView(normalText(activity, media.displayText))
-        body.addView(settingRow(activity, tr("歌词来源", "Lyrics source"), localInfo?.let { localizedLocalLyricsSource(it) } ?: tr("暂无普通本地歌词", "No plain LRC")))
-        body.addView(settingRow(activity, tr("普通歌词", "Plain lyrics"), localInfo?.friendlyTitle ?: tr("未绑定", "Not bound")))
+        body.addView(settingRow(activity, getString(R.string.ui_lyrics_source), localInfo?.let { localizedLocalLyricsSource(it) } ?: getString(R.string.ui_no_plain_lrc)))
+        body.addView(settingRow(activity, getString(R.string.ui_plain_lyrics), localInfo?.friendlyTitle ?: getString(R.string.ui_not_bound)))
         body.addView(karaokeStatusRow(activity, karaokeSummary))
-        body.addView(settingRow(activity, tr("当前偏移", "Current offset"), localizedOffsetDescription(offsetMs)))
+        body.addView(settingRow(activity, getString(R.string.ui_current_offset), localizedOffsetDescription(offsetMs)))
         if (offsetMs != 0L) {
-            body.addView(smallHint(activity, tr("歌词偏移按当前音乐保存，不会修改原始 LRC 或 enhanced LRC 文件。", "Lyrics offset is saved per song and does not modify the original LRC files.")))
+            body.addView(smallHint(activity, getString(R.string.ui_offset_per_song_hint)))
         }
 
-        body.addView(actionButton(activity, tr("为当前音乐导入歌词", "Import lyrics for current song")) {
+        body.addView(actionButton(activity, getString(R.string.ui_import_lyrics_for_current_song)) {
             uiActions.importLyricsForCurrentMedia()
         })
 
@@ -227,48 +228,48 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
             activity.showAirConfirmDialog(
                 title = label,
                 message = media.displayText + "\n\n" + message,
-                positiveText = tr("移除", "Remove")
+                positiveText = getString(R.string.ui_remove)
             ) {
                 uiActions.deleteLyricsForCurrentMedia(media, mode)
             }
         }
 
         if (localInfo != null) {
-            val plainLabel = if (localInfo.source == LyricsStorage.SOURCE_DOWNLOADED) tr("移除已下载普通歌词", "Remove downloaded LRC") else tr("移除普通歌词", "Remove plain LRC")
+            val plainLabel = if (localInfo.source == LyricsStorage.SOURCE_DOWNLOADED) getString(R.string.ui_remove_downloaded_lrc) else getString(R.string.ui_remove_plain_lrc)
             body.addView(actionButton(activity, plainLabel) {
                 confirmDeleteLyrics(
-                    label = tr("移除普通歌词？", "Remove plain LRC?"),
+                    label = getString(R.string.ui_remove_plain_lrc_confirm),
                     mode = LyricsStorage.DeleteMode.PLAIN,
-                    message = tr("只会删除这首歌关联的普通 LRC；如果已经导入逐字歌词，会继续保留。之后如果允许联网搜索，可以重新查找普通歌词。", "Deletes only this song’s plain LRC. Word LRC stays.")
+                    message = getString(R.string.ui_remove_plain_lrc_message)
                 )
             })
         }
 
         if (localWordByWord) {
-            body.addView(actionButton(activity, tr("移除逐字歌词", "Remove word LRC")) {
+            body.addView(actionButton(activity, getString(R.string.ui_remove_enhanced_lrc)) {
                 confirmDeleteLyrics(
-                    label = tr("移除逐字歌词？", "Remove word LRC?"),
+                    label = getString(R.string.ui_remove_enhanced_lrc_confirm),
                     mode = LyricsStorage.DeleteMode.KARAOKE,
-                    message = tr("只会删除这首歌关联的本地 enhanced LRC 逐字数据；普通歌词会继续保留。", "Deletes only this song’s enhanced LRC. Plain LRC stays.")
+                    message = getString(R.string.ui_remove_enhanced_lrc_message)
                 )
             })
         }
 
         if (localInfo != null && localWordByWord) {
-            body.addView(actionButton(activity, tr("移除全部本地歌词", "Remove all lyrics")) {
+            body.addView(actionButton(activity, getString(R.string.ui_remove_all_lyrics)) {
                 confirmDeleteLyrics(
-                    label = tr("移除全部本地歌词？", "Remove all lyrics?"),
+                    label = getString(R.string.ui_remove_all_lyrics_confirm),
                     mode = LyricsStorage.DeleteMode.ALL,
-                    message = tr("会同时删除这首歌的普通歌词和逐字歌词。这个操作更彻底，适合想重新绑定歌词时使用。", "Deletes both plain and word LRC for this song.")
+                    message = getString(R.string.ui_remove_all_lyrics_message)
                 )
             })
         }
 
-        body.addView(actionButton(activity, tr("重新联网搜索歌词", "Search online again")) {
+        body.addView(actionButton(activity, getString(R.string.ui_search_online_again)) {
             activity.showAirConfirmDialog(
-                title = tr("重新联网搜索歌词？", "Search online again?"),
-                message = tr("会绕过当前本地普通歌词重新搜索。找到后会覆盖保存为新的普通歌词缓存；逐字歌词只使用本地导入文件。", "Search online again and replace the plain LRC cache."),
-                positiveText = tr("搜索", "Search")
+                title = getString(R.string.ui_search_online_again_confirm),
+                message = getString(R.string.ui_search_online_replace_cache_msg),
+                positiveText = getString(R.string.ui_search)
             ) {
                 uiActions.reloadFloatingLyricsFromOnline()
             }
@@ -281,7 +282,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            addView(bigText(activity, tr("当前音乐歌词", "Current song lyrics")).apply {
+            addView(bigText(activity, getString(R.string.ui_current_song_lyrics)).apply {
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
@@ -298,7 +299,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
                 setOnClickListener {
                     animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
                     populate()
-                    playLocalRefreshFeedback(activity, target = body, feedback = feedback, message = tr("已刷新", "Refreshed"))
+                    playLocalRefreshFeedback(activity, target = body, feedback = feedback, message = getString(R.string.ui_refreshed))
                 }
             })
         })
@@ -355,8 +356,8 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
             listBody.addView(localLyricsRow(currentItem, onLyricsSaved = {
                 closeHeaderHint()
                 populate()
-                playLocalRefreshFeedback(activity, listBody, feedback, tr("已生效", "Applied"))
-            }, badgeText = tr("正在播放", "Now playing")))
+                playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
+            }, badgeText = getString(R.string.ui_now_playing)))
         } else {
             val media = getCurrentMediaSnapshot()?.takeUnless { it.isEmpty }
             listBody.addView(LinearLayout(activity).apply {
@@ -374,20 +375,20 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
                     setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
                 }
                 addView(TextView(activity).apply {
-                    text = tr("正在播放", "Now playing")
+                    text = getString(R.string.ui_now_playing)
                     textSize = AirUiTokens.TextSize.Tiny
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorAccent)
                     setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
                 })
                 addView(TextView(activity).apply {
-                    text = media?.displayText ?: tr("当前没有可识别的播放媒体", "No active media found")
+                    text = media?.displayText ?: getString(R.string.ui_no_active_media_found_short)
                     textSize = AirUiTokens.TextSize.Body
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorTextStrong)
                 })
                 addView(TextView(activity).apply {
-                    text = tr("当前音乐还没有绑定普通本地歌词", "No plain local lyrics are bound to the current song")
+                    text = getString(R.string.ui_no_plain_lrc_bound_to_song)
                     textSize = AirUiTokens.TextSize.Caption
                     setTextColor(colorTextMuted)
                     setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -396,7 +397,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
         }
 
         if (recentLyrics.isEmpty()) {
-            listBody.addView(normalText(activity, tr("还没有保存过歌词。播放歌曲并成功匹配，或为当前音乐导入歌词后，这里会出现 .lrc 文件。", "No saved lyrics yet. Play and match a song, or import lyrics for current media.")))
+            listBody.addView(normalText(activity, getString(R.string.ui_recent_lyrics_empty_hint)))
         } else {
             val currentName = currentItem?.name?.substringAfterLast('/')
             recentLyrics
@@ -405,7 +406,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
                     listBody.addView(localLyricsRow(item, onLyricsSaved = {
                         closeHeaderHint()
                         populate()
-                        playLocalRefreshFeedback(activity, listBody, feedback, tr("已生效", "Applied"))
+                        playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
                     }))
                 }
         }
@@ -417,12 +418,12 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            addView(bigText(activity, tr("最近的本地歌词", "Recent local lyrics")).apply {
+            addView(bigText(activity, getString(R.string.ui_recent_local_lyrics)).apply {
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             })
 
             val hintText = TextView(activity).apply {
-                text = tr("点击歌词可以预览或者修改", "Tap to preview or edit")
+                text = getString(R.string.ui_tap_to_preview_or_edit)
                 textSize = AirUiTokens.TextSize.Caption
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextMuted)
@@ -484,7 +485,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
                     animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
                     populate()
                     val count = LyricsStorage.listRecentLyrics(activity, limit = 8).size
-                    playLocalRefreshFeedback(activity, listBody, feedback, if (count > 0) tr("已刷新", "Refreshed") + " $count " + tr("首", "songs") else tr("已刷新", "Refreshed"))
+                    playLocalRefreshFeedback(activity, listBody, feedback, if (count > 0) getString(R.string.ui_refreshed) + " $count " + getString(R.string.ui_songs) else getString(R.string.ui_refreshed))
                 }
             })
         })

@@ -7,21 +7,7 @@ class LyricsLookupException(
     val errorType: LyricsLookupErrorType,
     val detailMessage: String,
     cause: Throwable? = null
-) : Exception(detailMessage, cause) {
-    @Deprecated("UI should use Context.localizedLyricsLookupMessage(error) to avoid translating provider names or user data.")
-    fun userMessage(): String {
-        return when (errorType) {
-            LyricsLookupErrorType.NotFound -> "$providerName 未找到歌词"
-            LyricsLookupErrorType.NeedCredential -> "$providerName 暂时需要访问凭据"
-            LyricsLookupErrorType.RateLimited -> "$providerName 请求过于频繁，请稍后再试"
-            LyricsLookupErrorType.RestrictedLyrics -> "$providerName 歌词受限，无法获取"
-            LyricsLookupErrorType.NetworkError -> "$providerName 网络请求失败"
-            LyricsLookupErrorType.ParseError -> "$providerName 歌词解析失败"
-            LyricsLookupErrorType.NativeError -> "$providerName 原生歌词模块异常"
-            LyricsLookupErrorType.Unknown -> "$providerName 查找失败"
-        }
-    }
-}
+) : Exception(detailMessage, cause)
 
 enum class LyricsLookupErrorType {
     NotFound,

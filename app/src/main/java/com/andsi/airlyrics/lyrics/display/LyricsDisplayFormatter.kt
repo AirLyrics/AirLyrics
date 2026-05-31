@@ -11,7 +11,7 @@ import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
  * user wants those lyrics rendered.
  */
 object LyricsDisplayFormatter {
-    private const val NO_TRANSLATION_TEXT = "当前歌词没有翻译"
+    private const val NO_TRANSLATION_TEXT = "No translation for this lyric"
 
     fun format(
         lines: List<LrcLine>,

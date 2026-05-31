@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.R
+
 import android.graphics.Color
 import android.app.Dialog
 import android.widget.FrameLayout
@@ -19,7 +21,7 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
-import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.bigText
@@ -46,7 +48,6 @@ import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
-import com.andsi.airlyrics.i18n.tr
 
 internal fun MainActivity.optionGrid(items: List<OptionItem>): LinearLayout {
     val activity = this
@@ -150,7 +151,7 @@ internal fun MainActivity.optionButton(item: OptionItem): TextView {
 
 internal fun MainActivity.applyOptionButtonState(button: TextView, title: String, selected: Boolean) {
     val activity = this
-    button.text = if (selected) "✓ ${localizeText(title)}" else localizeText(title)
+    button.text = if (selected) "✓ ${displayText(title)}" else displayText(title)
     button.setTextColor(if (selected) Color.WHITE else colorText)
     button.background = GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
@@ -174,7 +175,7 @@ internal fun MainActivity.sliderRow(
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
 
         val valueText = TextView(activity).apply {
-            text = "${localizeText(title)}: $safeValue$suffix"
+            text = getString(R.string.field_value_with_suffix, displayText(title), safeValue, suffix)
             textSize = AirUiTokens.TextSize.Body
             setTextColor(colorText)
             setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
@@ -187,7 +188,7 @@ internal fun MainActivity.sliderRow(
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val newValue = min + progress
-                    valueText.text = "${localizeText(title)}: $newValue$suffix"
+                    valueText.text = getString(R.string.field_value_with_suffix, displayText(title), newValue, suffix)
                     if (fromUser) onChanged(newValue)
                 }
 
@@ -211,14 +212,14 @@ internal fun MainActivity.colorControl(
     var rgbExpanded = false
 
     val standardColors = listOf(
-        tr("蓝", "Blue") to Color.rgb(66, 165, 245),
-        tr("紫", "Purple") to Color.rgb(126, 87, 194),
-        tr("粉", "Pink") to Color.rgb(236, 64, 122),
-        tr("青", "Cyan") to Color.rgb(38, 198, 218),
-        tr("绿", "Green") to Color.rgb(102, 187, 106),
-        tr("橙", "Orange") to Color.rgb(255, 167, 38),
-        tr("红", "Red") to Color.rgb(239, 83, 80),
-        tr("白", "White") to Color.WHITE
+        getString(R.string.ui_blue) to Color.rgb(66, 165, 245),
+        getString(R.string.ui_purple) to Color.rgb(126, 87, 194),
+        getString(R.string.ui_pink) to Color.rgb(236, 64, 122),
+        getString(R.string.ui_cyan) to Color.rgb(38, 198, 218),
+        getString(R.string.ui_green) to Color.rgb(102, 187, 106),
+        getString(R.string.ui_orange) to Color.rgb(255, 167, 38),
+        getString(R.string.ui_red) to Color.rgb(239, 83, 80),
+        getString(R.string.ui_white) to Color.WHITE
     )
 
     return LinearLayout(this).apply {
@@ -238,7 +239,7 @@ internal fun MainActivity.colorControl(
         }
         addView(swatchGrid)
 
-        val fineTuneButton = actionButton(activity, tr("展开 RGB 细调", "RGB tune")) { }
+        val fineTuneButton = actionButton(activity, getString(R.string.ui_rgb_tune)) { }
         val rgbPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -287,7 +288,7 @@ internal fun MainActivity.colorControl(
 
         fun refreshPreview(dispatch: Boolean) {
             val newColor = currentColor()
-            preview.text = "${localizeText(title)}: ${localizeText(FloatingLyricsStyleStore.colorSummary(newColor))}"
+            preview.text = getString(R.string.floating_color_summary, displayText(title), displayText(FloatingLyricsStyleStore.colorSummary(newColor)))
             preview.background = colorPreviewBackground(newColor)
             refreshSwatches()
             if (dispatch) onChanged(newColor)
@@ -303,7 +304,7 @@ internal fun MainActivity.colorControl(
                 setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
             }
             val valueText = TextView(activity).apply {
-                text = "${localizeText(sliderTitle)}: $initialValue"
+                text = getString(R.string.floating_slider_value, displayText(sliderTitle), initialValue)
                 textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorText)
                 setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
@@ -314,7 +315,7 @@ internal fun MainActivity.colorControl(
                 progress = initialValue.coerceIn(0, 255)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        valueText.text = "${localizeText(sliderTitle)}: $progress"
+                        valueText.text = getString(R.string.floating_slider_value, displayText(sliderTitle), progress)
                         if (fromUser) {
                             onValueChanged(progress)
                             refreshPreview(dispatch = true)
@@ -333,23 +334,23 @@ internal fun MainActivity.colorControl(
         val redSlider = colorSliderRow("R", red) { red = it }
         val greenSlider = colorSliderRow("G", green) { green = it }
         val blueSlider = colorSliderRow("B", blue) { blue = it }
-        val alphaSlider = colorSliderRow(tr("不透明度", "Opacity").toString(), alpha) { alpha = it }
+        val alphaSlider = colorSliderRow(getString(R.string.ui_opacity).toString(), alpha) { alpha = it }
 
         fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
             pair.first.progress = value.coerceIn(0, 255)
-            pair.second.text = "${localizeText(titleText)}: $value"
+            pair.second.text = getString(R.string.field_value, displayText(titleText), value)
         }
 
         fun syncSliders() {
             setSlider(redSlider, "R", red)
             setSlider(greenSlider, "G", green)
             setSlider(blueSlider, "B", blue)
-            setSlider(alphaSlider, tr("不透明度", "Opacity").toString(), alpha)
+            setSlider(alphaSlider, getString(R.string.ui_opacity).toString(), alpha)
         }
 
         fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
             return TextView(activity).apply {
-                text = localizeText(label)
+                text = displayText(label)
                 textSize = AirUiTokens.TextSize.Caption
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
@@ -365,7 +366,7 @@ internal fun MainActivity.colorControl(
 
         val swatches = standardColors.map { (label, swatchColor) ->
             Pair(label, swatchColor as Int?)
-        } + listOf(tr("自定义", "Custom") to null)
+        } + listOf(getString(R.string.ui_custom) to null)
 
         swatches.chunked(AirUiTokens.Layout.SwatchColumns).forEach { rowItems ->
             swatchGrid.addView(LinearLayout(activity).apply {
@@ -375,7 +376,7 @@ internal fun MainActivity.colorControl(
                         if (presetColor == null) {
                             rgbExpanded = true
                             rgbPanel.visibility = View.VISIBLE
-                            fineTuneButton.text = tr("收起 RGB 细调", "Hide RGB")
+                            fineTuneButton.text = getString(R.string.ui_hide_rgb)
                         } else {
                             red = Color.red(presetColor)
                             green = Color.green(presetColor)
@@ -408,7 +409,7 @@ internal fun MainActivity.colorControl(
         fineTuneButton.setOnClickListener {
             rgbExpanded = !rgbExpanded
             rgbPanel.visibility = if (rgbExpanded) View.VISIBLE else View.GONE
-            fineTuneButton.text = if (rgbExpanded) tr("收起 RGB 细调", "Hide RGB") else tr("展开 RGB 细调", "RGB tune")
+            fineTuneButton.text = if (rgbExpanded) getString(R.string.ui_hide_rgb) else getString(R.string.ui_rgb_tune)
             playTinyPulse(fineTuneButton)
         }
 
@@ -447,14 +448,14 @@ internal fun MainActivity.mediaSourceCard(controller: MediaController, selected:
     return card(this) {
         val title = controller.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
             .orEmpty()
-            .ifBlank { tr("未知歌曲", "Unknown song") }
+            .ifBlank { getString(R.string.ui_unknown_song) }
         val artist = controller.metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
             ?: controller.metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-            ?: tr("未知艺术家", "Unknown artist")
+            ?: getString(R.string.ui_unknown_artist)
         val appName = getAppName(controller.packageName)
         val state = getPlaybackStateText(controller.playbackState?.state)
 
-        addView(label(activity, if (selected) tr("已连接", "Connected") else tr("可选择", "Available"), if (selected) colorAccentLight else colorTextMuted).apply {
+        addView(label(activity, if (selected) getString(R.string.ui_connected) else getString(R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
             tag = "media_source_status:${controller.packageName}"
         })
         addView(bigText(activity, appName))
@@ -529,7 +530,7 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
         })
 
         addView(TextView(activity).apply {
-            text = localizeText(item.title)
+            text = displayText(item.title)
             textSize = AirUiTokens.TextSize.Button + 1f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
@@ -538,7 +539,7 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
         if (item.subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
                 tag = "floating_tile_subtitle:${item.title}"
-                text = localizeText(item.subtitle)
+                text = displayText(item.subtitle)
                 textSize = AirUiTokens.TextSize.Caption
                 setTextColor(colorTextMuted)
                 maxLines = 1
@@ -582,14 +583,14 @@ internal fun MainActivity.floatingFocusBubble(
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
                 addView(TextView(activity).apply {
-                    text = localizeText(title)
+                    text = displayText(title)
                     textSize = AirUiTokens.TextSize.Title
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorTextStrong)
                 })
                 if (subtitle.isNotBlank()) {
                     addView(TextView(activity).apply {
-                        text = localizeText(subtitle)
+                        text = displayText(subtitle)
                         textSize = AirUiTokens.TextSize.BodySmall
                         setTextColor(colorTextMuted)
                         setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -639,13 +640,13 @@ internal fun MainActivity.showFloatingSettingPanel(
         }
 
         addView(TextView(activity).apply {
-            text = localizeText(title)
+            text = displayText(title)
             textSize = AirUiTokens.TextSize.Title
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = localizeText(subtitle)
+            text = displayText(subtitle)
             textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
             setPadding(0, dp(AirUiTokens.Space.Sm), 0, dp(AirUiTokens.Space.Xl))

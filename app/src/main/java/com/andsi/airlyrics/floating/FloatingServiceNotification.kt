@@ -10,8 +10,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.common.BroadcastActions
-import com.andsi.airlyrics.i18n.localizeText
-import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.displayText
 
 /**
  * Builds the foreground-service notification used by the floating lyrics service.
@@ -35,10 +34,10 @@ object FloatingServiceNotification {
     fun create(context: Context, state: QuickControlState): Notification {
         ensureChannel(context)
 
-        val contentText = state.feedback?.let { "${state.summary(context)} · ${context.localizeText(it)}" } ?: state.summary(context)
+        val contentText = state.feedback?.let { "${state.summary(context)} · ${context.displayText(it)}" } ?: state.summary(context)
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setContentTitle(context.tr("AirLyrics 悬浮歌词", "AirLyrics Floating Lyrics"))
+            .setContentTitle(context.getString(R.string.ui_airlyrics_floating_lyrics))
             .setContentText(contentText)
             .setSmallIcon(R.drawable.ic_air_notification)
             .setOngoing(true)
@@ -49,7 +48,7 @@ object FloatingServiceNotification {
             .addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_menu_view,
-                    state.actionTitle(context, active = state.visible, activeText = context.tr("显示", "Show"), inactiveText = context.tr("显示", "Show")),
+                    state.actionTitle(context, active = state.visible, activeText = context.getString(R.string.ui_show), inactiveText = context.getString(R.string.ui_show)),
                     serviceActionIntent(context, BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE, 1001)
                 ).build()
             )
@@ -106,7 +105,7 @@ object FloatingServiceNotification {
     }
 
     private fun QuickControlState.summary(context: Context): String {
-        val visibleText = if (visible) context.tr("已显示", "Shown") else context.tr("已隐藏", "Hidden")
+        val visibleText = if (visible) context.getString(R.string.ui_shown) else context.getString(R.string.ui_hidden)
         return "$visibleText · ${windowModeText(context)}"
     }
 
@@ -115,15 +114,15 @@ object FloatingServiceNotification {
 
     private fun QuickControlState.windowModeText(context: Context): CharSequence {
         return when {
-            !locked && !clickThrough -> context.tr("调整模式", "Adjustment mode")
-            locked && clickThrough -> context.tr("锁定穿透", "Lock / touch")
-            locked && !clickThrough -> context.tr("已锁定 · 可触摸", "Locked · touchable")
-            else -> context.tr("可拖动 · 已穿透", "Draggable · click-through")
+            !locked && !clickThrough -> context.getString(R.string.ui_adjustment_mode)
+            locked && clickThrough -> context.getString(R.string.ui_lock_touch)
+            locked && !clickThrough -> context.getString(R.string.ui_locked_touchable)
+            else -> context.getString(R.string.ui_draggable_click_through)
         }
     }
 
     private fun QuickControlState.adjustModeActionTitle(context: Context): String {
-        return if (isAdjustMode) "● ${context.tr("调整模式", "Adjustment mode")}" else "○ ${context.tr("调整模式", "Adjustment mode")}"
+        return if (isAdjustMode) "● ${context.getString(R.string.ui_adjustment_mode)}" else "○ ${context.getString(R.string.ui_adjustment_mode)}"
     }
 
     private fun QuickControlState.actionTitle(
@@ -132,6 +131,6 @@ object FloatingServiceNotification {
         activeText: String,
         inactiveText: String
     ): String {
-        return if (active) "● ${context.localizeText(activeText)}" else "○ ${context.localizeText(inactiveText)}"
+        return if (active) "● ${context.displayText(activeText)}" else "○ ${context.displayText(inactiveText)}"
     }
 }

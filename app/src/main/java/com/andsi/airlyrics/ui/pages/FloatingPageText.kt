@@ -1,11 +1,12 @@
 package com.andsi.airlyrics.ui.pages
 
+import com.andsi.airlyrics.R
+
 import android.content.Context
 import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
@@ -29,60 +30,43 @@ internal fun MainActivity.floatingSectionTitle(title: CharSequence): TextView {
 
 internal fun Context.localizedFloatingPresetTitle(key: String): String {
     return when (key) {
-        "subtitle" -> tr("纯净字母", "Clean letters")
-        "bubble" -> tr("黑胶气泡", "Vinyl bubble")
+        "subtitle" -> getString(R.string.ui_clean_letters)
+        "bubble" -> getString(R.string.ui_vinyl_bubble)
         else -> localizedFloatingPresetTitle(FloatingLyricsStyleStore.DEFAULT_PRESET)
     }
 }
 
 internal fun Context.localizedFloatingGravityTitle(gravity: Int): String {
     return when (gravity) {
-        Gravity.START or Gravity.CENTER_VERTICAL -> tr("左对齐", "Left")
-        Gravity.END or Gravity.CENTER_VERTICAL -> tr("右对齐", "Right")
-        else -> tr("居中", "Center")
+        Gravity.START or Gravity.CENTER_VERTICAL -> getString(R.string.ui_left)
+        Gravity.END or Gravity.CENTER_VERTICAL -> getString(R.string.ui_right)
+        else -> getString(R.string.ui_center)
     }
 }
 
 internal fun Context.localizedContentDisplayTitle(mode: LyricsContentDisplayMode): String {
     return when (mode) {
-        LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> tr("原文 + 翻译", "Original + translation")
-        LyricsContentDisplayMode.ORIGINAL_ONLY -> tr("仅原文", "Original only")
-        LyricsContentDisplayMode.TRANSLATION_ONLY -> tr("仅翻译", "Translation only")
+        LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> getString(R.string.ui_original_translation)
+        LyricsContentDisplayMode.ORIGINAL_ONLY -> getString(R.string.ui_original_only)
+        LyricsContentDisplayMode.TRANSLATION_ONLY -> getString(R.string.ui_translation_only)
     }
 }
 
 internal fun Context.localizedLineDisplayTitle(mode: LyricsLineDisplayMode): String {
     return when (mode) {
-        LyricsLineDisplayMode.CURRENT_ONLY -> tr("当前句", "Current line")
-        LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> tr("上一句 + 当前句", "Previous + current")
-        LyricsLineDisplayMode.CURRENT_AND_NEXT -> tr("当前句 + 下一句", "Current + next")
-        LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> tr("上 + 当前 + 下", "Prev + current + next")
+        LyricsLineDisplayMode.CURRENT_ONLY -> getString(R.string.ui_current_line)
+        LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> getString(R.string.ui_previous_current)
+        LyricsLineDisplayMode.CURRENT_AND_NEXT -> getString(R.string.ui_current_next)
+        LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> getString(R.string.ui_prev_current_next)
     }
 }
 
 internal fun Context.localizedSwitchAnimationTitle(mode: LyricsSwitchAnimationMode): String {
     return when (mode) {
-        LyricsSwitchAnimationMode.NONE -> tr("关闭", "Off")
-        LyricsSwitchAnimationMode.FADE -> tr("柔和淡入", "Soft fade")
-        LyricsSwitchAnimationMode.SLIDE_UP -> tr("上滑淡入", "Slide up")
-        LyricsSwitchAnimationMode.SCALE_FADE -> tr("轻微缩放", "Scale fade")
-    }
-}
-
-internal fun Context.localizedFloatingModeTitle(title: String): String {
-    return when (title) {
-        LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION.title -> localizedContentDisplayTitle(LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION)
-        LyricsContentDisplayMode.ORIGINAL_ONLY.title -> localizedContentDisplayTitle(LyricsContentDisplayMode.ORIGINAL_ONLY)
-        LyricsContentDisplayMode.TRANSLATION_ONLY.title -> localizedContentDisplayTitle(LyricsContentDisplayMode.TRANSLATION_ONLY)
-        LyricsLineDisplayMode.CURRENT_ONLY.title -> localizedLineDisplayTitle(LyricsLineDisplayMode.CURRENT_ONLY)
-        LyricsLineDisplayMode.PREVIOUS_AND_CURRENT.title -> localizedLineDisplayTitle(LyricsLineDisplayMode.PREVIOUS_AND_CURRENT)
-        LyricsLineDisplayMode.CURRENT_AND_NEXT.title -> localizedLineDisplayTitle(LyricsLineDisplayMode.CURRENT_AND_NEXT)
-        LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT.title -> localizedLineDisplayTitle(LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT)
-        LyricsSwitchAnimationMode.NONE.title -> localizedSwitchAnimationTitle(LyricsSwitchAnimationMode.NONE)
-        LyricsSwitchAnimationMode.FADE.title -> localizedSwitchAnimationTitle(LyricsSwitchAnimationMode.FADE)
-        LyricsSwitchAnimationMode.SLIDE_UP.title -> localizedSwitchAnimationTitle(LyricsSwitchAnimationMode.SLIDE_UP)
-        LyricsSwitchAnimationMode.SCALE_FADE.title -> localizedSwitchAnimationTitle(LyricsSwitchAnimationMode.SCALE_FADE)
-        else -> title
+        LyricsSwitchAnimationMode.NONE -> getString(R.string.ui_off)
+        LyricsSwitchAnimationMode.FADE -> getString(R.string.ui_soft_fade)
+        LyricsSwitchAnimationMode.SLIDE_UP -> getString(R.string.ui_slide_up)
+        LyricsSwitchAnimationMode.SCALE_FADE -> getString(R.string.ui_scale_fade)
     }
 }
 

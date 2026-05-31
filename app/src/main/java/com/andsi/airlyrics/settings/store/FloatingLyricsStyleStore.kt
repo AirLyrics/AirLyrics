@@ -79,8 +79,8 @@ object FloatingLyricsStyleStore {
     ).associateBy { it.key }
 
     val presets = listOf(
-        FloatingLyricsPreset(PRESET_SUBTITLE, "纯净字母"),
-        FloatingLyricsPreset(PRESET_BUBBLE, "黑胶气泡")
+        FloatingLyricsPreset(PRESET_SUBTITLE, "Clean letters"),
+        FloatingLyricsPreset(PRESET_BUBBLE, "Vinyl bubble")
     )
 
     private fun prefs(context: Context): SharedPreferences {

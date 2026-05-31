@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.floating
 
+import com.andsi.airlyrics.R
+
 import android.app.NotificationManager
 import android.app.Service
 import android.content.BroadcastReceiver
@@ -14,6 +16,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.widget.Toast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
@@ -26,8 +29,7 @@ import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
-import com.andsi.airlyrics.i18n.localizeText
-import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 
 class FloatingLyricsService : Service() {
@@ -43,7 +45,7 @@ class FloatingLyricsService : Service() {
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
         karaokeEnabledProvider = { LyricsSettingsStore.isKaraokeLyricsEnabled(this) },
         karaokeHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).karaokeHighlightColor },
-        noTranslationTextProvider = { tr("当前歌词没有翻译", "No translation for this lyric").toString() }
+        noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric).toString() }
     )
     private val syncHandler = Handler(Looper.getMainLooper())
     private val lyricsLookupRunner = LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsRepository")
@@ -99,6 +101,7 @@ class FloatingLyricsService : Service() {
     }
 
     override fun onCreate() {
+        LanguageSettingsStore.applyAppLocale(this)
         super.onCreate()
 
         selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
@@ -171,7 +174,7 @@ class FloatingLyricsService : Service() {
         ignoreAutoSearchSetting: Boolean = false
     ) {
         if (currentMedia.isEmpty) {
-            clearLyricsState("♪ " + tr("等待媒体信息", "Waiting for media") + "...")
+            clearLyricsState("♪ " + getString(R.string.ui_waiting_for_media) + "...")
             return
         }
 
@@ -194,9 +197,9 @@ class FloatingLyricsService : Service() {
         MediaSourceStore.saveSelectedPackage(this, packageName)
         clearLyricsState(
             if (packageName == null) {
-                "♪ " + tr("尚未选择媒体来源，请进入 App 选择歌词来源", "No media source selected. Open the app and choose one.")
+                "♪ " + getString(R.string.ui_no_media_source_status)
             } else {
-                "♪ " + tr("已选择媒体来源，等待该播放器更新", "Media source selected. Waiting for that player to update") + "..."
+                "♪ " + getString(R.string.ui_media_source_waiting_status) + "..."
             }
         )
     }
@@ -227,9 +230,9 @@ class FloatingLyricsService : Service() {
     ) {
         renderer.show(
             if (media.isPlaying) {
-                "♪ ${tr("正在查找歌词", "Searching lyrics")}...\n${media.displayText}"
+                "♪ ${getString(R.string.ui_searching_lyrics)}...\n${media.displayText}"
             } else {
-                "Ⅱ ${tr("暂停中", "Paused")}\n${media.displayText}"
+                "Ⅱ ${getString(R.string.ui_paused)}\n${media.displayText}"
             }
         )
 
@@ -266,7 +269,7 @@ class FloatingLyricsService : Service() {
                 lyrics = lyricText,
                 translatedLyrics = lyricsResult.translatedLyrics,
                 karaokeLines = lyricsResult.karaokeLines,
-                emptyText = "♪ " + tr("歌词解析为空", "Parsed lyrics are empty") + "\n" + media.displayText
+                emptyText = "♪ " + getString(R.string.ui_parsed_lyrics_are_empty) + "\n" + media.displayText
             )
             return
         }
@@ -286,10 +289,10 @@ class FloatingLyricsService : Service() {
 
     private fun notFoundText(media: CurrentMediaInfo): String {
         return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
-            "♪ ${tr("仅使用本地歌词", "Using local lyrics only")}\n${media.displayText}\n${tr("未找到本地文件", "Local file not found")}"
+            "♪ ${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
         } else {
             val sourceTitle = localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(this))
-            "♪ ${media.displayText}\n${tr("当前来源：", "Source: ")}$sourceTitle\n${tr("未找到歌词", "Lyrics not found")}"
+            "♪ ${media.displayText}\n${getString(R.string.ui_source)}$sourceTitle\n${getString(R.string.ui_lyrics_not_found)}"
         }
     }
 
@@ -299,7 +302,7 @@ class FloatingLyricsService : Service() {
         val media = currentMedia
 
         if (media.title.isBlank()) {
-            renderer.show("♪ " + tr("当前没有正在播放的歌曲，无法绑定歌词", "No song is playing, so lyrics cannot be bound"))
+            renderer.show("♪ " + getString(R.string.ui_no_song_for_lyrics_binding))
             return
         }
 
@@ -314,7 +317,7 @@ class FloatingLyricsService : Service() {
         )
 
         if (!imported) {
-            renderer.show("♪ " + tr("导入歌词失败", "Lyrics import failed"))
+            renderer.show("♪ " + getString(R.string.ui_lyrics_import_failed))
             return
         }
 
@@ -331,10 +334,10 @@ class FloatingLyricsService : Service() {
             renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
             renderer.parseAndShow(
                 lyrics = localLyrics,
-                emptyText = "♪ " + tr("已导入歌词，但内容为空", "Lyrics imported, but the content is empty")
+                emptyText = "♪ " + getString(R.string.ui_lyrics_import_empty_error)
             )
         } else {
-            renderer.show("♪ " + tr("导入歌词失败", "Lyrics import failed"))
+            renderer.show("♪ " + getString(R.string.ui_lyrics_import_failed))
         }
     }
 
@@ -366,25 +369,25 @@ class FloatingLyricsService : Service() {
     private fun toggleVisibleFromNotification() {
         val nextVisible = !windowController.isVisible
         if (nextVisible) {
-            if (!showLyrics(feedback = tr("已显示", "Shown"))) {
-                refreshQuickControls(tr("需要悬浮窗权限", "Overlay permission required"))
-                showQuickFeedback(tr("请先开启悬浮窗权限", "Please enable overlay permission first"))
+            if (!showLyrics(feedback = getString(R.string.ui_shown))) {
+                refreshQuickControls(getString(R.string.ui_overlay_permission_required))
+                showQuickFeedback(getString(R.string.ui_enable_overlay_permission_first))
             }
         } else {
-            hideLyrics(feedback = tr("已隐藏", "Hidden"))
+            hideLyrics(feedback = getString(R.string.ui_hidden))
         }
     }
 
     private fun toggleLockFromNotification() {
         val nextLocked = !FloatingLyricsStyleStore.isLocked(this)
-        setLocked(locked = nextLocked, feedback = if (nextLocked) tr("已锁定", "Locked") else tr("已解锁", "Unlocked"))
+        setLocked(locked = nextLocked, feedback = if (nextLocked) getString(R.string.ui_locked) else getString(R.string.ui_unlocked))
     }
 
     private fun toggleClickThroughFromNotification() {
         val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(this)
         setClickThrough(
             clickThrough = nextClickThrough,
-            feedback = if (nextClickThrough) tr("已穿透", "Click-through on") else tr("可触摸", "Touchable")
+            feedback = if (nextClickThrough) getString(R.string.ui_click_through_enabled_feedback) else getString(R.string.ui_touchable)
         )
     }
 
@@ -397,9 +400,9 @@ class FloatingLyricsService : Service() {
         windowController.setClickThrough(!nextEditing)
 
         if (nextEditing) {
-            refreshQuickControls(tr("可拖动", "Draggable"))
+            refreshQuickControls(getString(R.string.ui_draggable))
         } else {
-            refreshQuickControls(tr("已锁定并穿透", "Locked + click-through"))
+            refreshQuickControls(getString(R.string.ui_locked_click_through))
         }
     }
 
@@ -420,7 +423,7 @@ class FloatingLyricsService : Service() {
     }
 
     private fun showQuickFeedback(message: String) {
-        Toast.makeText(this, localizeText(message), Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, displayText(message), Toast.LENGTH_SHORT).show()
     }
 
     private fun broadcastWindowVisibility(visible: Boolean) {

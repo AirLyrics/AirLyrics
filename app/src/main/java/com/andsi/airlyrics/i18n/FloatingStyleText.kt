@@ -1,17 +1,19 @@
 package com.andsi.airlyrics.i18n
 
+import com.andsi.airlyrics.R
+
 import android.content.Context
 import android.view.Gravity
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 
 internal fun Context.localizedFloatingPresetTitle(key: String): String = when (key) {
-    "subtitle" -> tr("纯净字母", "Clean letters")
-    "bubble" -> tr("黑胶气泡", "Vinyl bubble")
+    "subtitle" -> getString(R.string.ui_clean_letters)
+    "bubble" -> getString(R.string.ui_vinyl_bubble)
     else -> localizedFloatingPresetTitle(FloatingLyricsStyleStore.DEFAULT_PRESET)
 }
 
 internal fun Context.localizedFloatingGravityTitle(gravity: Int): String = when (gravity) {
-    Gravity.START or Gravity.CENTER_VERTICAL -> tr("左对齐", "Left")
-    Gravity.END or Gravity.CENTER_VERTICAL -> tr("右对齐", "Right")
-    else -> tr("居中", "Center")
+    Gravity.START or Gravity.CENTER_VERTICAL -> getString(R.string.ui_left)
+    Gravity.END or Gravity.CENTER_VERTICAL -> getString(R.string.ui_right)
+    else -> getString(R.string.ui_center)
 }

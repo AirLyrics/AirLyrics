@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app.controller
 
+import com.andsi.airlyrics.R
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -13,7 +15,6 @@ import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.media.MediaSourceStore
-import com.andsi.airlyrics.i18n.tr
 
 internal class LyricsController(
     private val activity: MainActivity
@@ -48,9 +49,9 @@ internal class LyricsController(
 
         if (imported) {
             val message = if (importAsWordByWord) {
-                activity.tr("已导入逐字歌词，悬浮窗显示中会立即刷新", "Word LRC imported. Floating lyrics will refresh.")
+                activity.getString(R.string.ui_enhanced_lrc_import_success)
             } else {
-                activity.tr("已导入普通歌词，悬浮窗显示中会立即刷新", "Plain LRC imported. Floating lyrics will refresh.")
+                activity.getString(R.string.ui_plain_lrc_import_success)
             }
             Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             activity.reloadFloatingLyrics()
@@ -58,11 +59,11 @@ internal class LyricsController(
         } else {
             if (importAsWordByWord) {
                 activity.showAirInfoDialog(
-                    title = activity.tr("逐字歌词导入失败", "Word-by-word import failed"),
-                    message = activity.tr("没有识别到 enhanced LRC 逐字时间戳。\n\n请确认文件是 .lrc，并使用类似格式：\n[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐字歌词\n\n普通 LRC 只有 [00:12.34]整句歌词，需要选择“普通歌词”导入。", "No enhanced LRC word timestamps were recognized.\n\nMake sure the file is .lrc and uses a format like:\n[00:12.34]<00:12.34>T<00:12.50>ext\n\nPlain LRC uses whole-line timestamps like [00:12.34]lyrics. Import it as Plain lyrics.")
+                    title = activity.getString(R.string.ui_enhanced_lrc_import_failed),
+                    message = activity.getString(R.string.ui_enhanced_lrc_no_word_time_error)
                 )
             } else {
-                Toast.makeText(activity, activity.tr("导入失败，请使用 [00:12.34]歌词 格式的 .lrc 文件", "Import failed. Use a .lrc file in [00:12.34]lyric format."), Toast.LENGTH_LONG).show()
+                Toast.makeText(activity, activity.getString(R.string.ui_lrc_import_format_error), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -78,18 +79,18 @@ internal class LyricsController(
 
         if (deleted) {
             val message = when (mode) {
-                LyricsStorage.DeleteMode.PLAIN -> activity.tr("已移除当前音乐的普通歌词", "Plain LRC removed for this song.")
-                LyricsStorage.DeleteMode.KARAOKE -> activity.tr("已移除当前音乐的逐字歌词", "Word LRC removed for this song.")
-                LyricsStorage.DeleteMode.ALL -> activity.tr("已移除当前音乐的全部本地歌词", "All local lyrics removed for this song.")
+                LyricsStorage.DeleteMode.PLAIN -> activity.getString(R.string.ui_plain_lrc_removed_for_this_song)
+                LyricsStorage.DeleteMode.KARAOKE -> activity.getString(R.string.ui_enhanced_lrc_removed_for_this_song)
+                LyricsStorage.DeleteMode.ALL -> activity.getString(R.string.ui_all_local_lyrics_removed)
             }
             Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             activity.reloadFloatingLyrics()
             activity.renderCurrentPage(animateContent = false, animateTabs = false)
         } else {
             val message = when (mode) {
-                LyricsStorage.DeleteMode.PLAIN -> activity.tr("当前音乐没有可移除的普通歌词", "No plain LRC to remove for this song.")
-                LyricsStorage.DeleteMode.KARAOKE -> activity.tr("当前音乐没有可移除的逐字歌词", "No word LRC to remove for this song.")
-                LyricsStorage.DeleteMode.ALL -> activity.tr("当前音乐没有可移除的本地歌词", "No local lyrics to remove for this song.")
+                LyricsStorage.DeleteMode.PLAIN -> activity.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)
+                LyricsStorage.DeleteMode.KARAOKE -> activity.getString(R.string.ui_no_enhanced_lrc_to_remove)
+                LyricsStorage.DeleteMode.ALL -> activity.getString(R.string.ui_no_local_lyrics_to_remove)
             }
             Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
         }
@@ -129,9 +130,9 @@ internal class LyricsController(
         val path = LyricsStorage.getLyricsDirRawPath(activity)
 
         val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText(activity.tr("歌词保存目录", "Lyrics save folder"), path))
+        clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.ui_lyrics_save_folder), path))
 
-        Toast.makeText(activity, activity.tr("歌词保存目录已复制", "Lyrics save folder copied"), Toast.LENGTH_LONG).show()
+        Toast.makeText(activity, activity.getString(R.string.ui_lyrics_save_folder_copied), Toast.LENGTH_LONG).show()
     }
 
 }

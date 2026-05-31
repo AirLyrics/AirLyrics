@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.pages
 
+import com.andsi.airlyrics.R
+
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -8,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -118,7 +119,7 @@ internal fun MainActivity.createFloatingPreviewCard(
         bodyView = bodyView,
         updateFold = { expanded ->
             bodyView.visibility = if (expanded) View.VISIBLE else View.GONE
-            toggleView.text = if (expanded) tr("收起", "Collapse") else tr("展开预览", "Expand preview")
+            toggleView.text = if (expanded) getString(R.string.ui_collapse) else getString(R.string.ui_expand_preview)
             card.requestLayout()
         }
     )

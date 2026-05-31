@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import com.andsi.airlyrics.R
+
 import android.graphics.Typeface
 import android.provider.Settings
 import android.view.Gravity
@@ -19,32 +21,31 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun createSystemSettingsPage(activity: MainActivity): View  = with(activity) createSystemSettingsPage@ {
     val container = pageContainer(activity)
-    container.addView(settingsBackHeader(tr("系统与权限", "System")))
+    container.addView(settingsBackHeader(getString(R.string.ui_system)))
 
     container.addView(languageChoiceCard(activity))
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, tr("权限状态", "Permissions")))
-            addView(settingRow(activity, tr("悬浮窗权限", "Overlay"), if (Settings.canDrawOverlays(activity)) tr("已开启", "On") else tr("未开启", "Off")))
-            addView(settingRow(activity, tr("通知权限", "Notify"), if (hasNotificationPermission()) tr("已开启", "On") else tr("未开启", "Off")))
-            addView(settingRow(activity, tr("通知访问权限", "Notif. access"), if (hasNotificationListenerAccess()) tr("已开启", "On") else tr("未开启", "Off")))
+            addView(bigText(activity, getString(R.string.ui_permissions)))
+            addView(settingRow(activity, getString(R.string.ui_overlay), if (Settings.canDrawOverlays(activity)) getString(R.string.ui_on) else getString(R.string.ui_off)))
+            addView(settingRow(activity, getString(R.string.ui_notify), if (hasNotificationPermission()) getString(R.string.ui_on) else getString(R.string.ui_off)))
+            addView(settingRow(activity, getString(R.string.ui_notif_access), if (hasNotificationListenerAccess()) getString(R.string.ui_on) else getString(R.string.ui_off)))
         }
     )
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, tr("快捷入口", "Shortcuts")))
+            addView(bigText(activity, getString(R.string.ui_shortcuts)))
             addView(horizontalButtons(activity,
-                tr("悬浮窗权限", "Overlay") to { uiActions.requestOverlayPermission() },
-                tr("通知权限", "Notify") to { uiActions.requestNotificationPermission() }
+                getString(R.string.ui_overlay) to { uiActions.requestOverlayPermission() },
+                getString(R.string.ui_notify) to { uiActions.requestNotificationPermission() }
             ))
-            addView(actionButton(activity, tr("打开通知访问设置", "Open access settings")) {
+            addView(actionButton(activity, getString(R.string.ui_open_access_settings)) {
                 uiActions.openNotificationListenerSettings()
             })
         }
@@ -64,7 +65,7 @@ private fun languageChoiceCard(activity: MainActivity): View = with(activity) la
         setOnClickListener { showLanguageDialog(activity) }
 
         addView(TextView(activity).apply {
-            text = "Language"
+            text = getString(R.string.ui_language)
             textSize = AirUiTokens.TextSize.PageTitle - 4f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
@@ -91,7 +92,7 @@ private fun showLanguageDialog(activity: MainActivity) = with(activity) showLang
     val currentMode = LanguageSettingsStore.getMode(activity)
     lateinit var dialog: android.app.Dialog
     dialog = showAirDialog(
-        title = "Language",
+        title = getString(R.string.ui_language),
         message = null,
         positiveText = null,
         body = {
@@ -100,9 +101,9 @@ private fun showLanguageDialog(activity: MainActivity) = with(activity) showLang
                 dialog.dismiss()
                 activity.refreshAfterLanguageChanged()
             }
-            addLanguageOption(activity, tr("跟随系统", "Follow system"), "Follow system", LanguageSettingsStore.MODE_SYSTEM, currentMode, selectMode)
-            addLanguageOption(activity, tr("简体中文", "Chinese (Simplified)"), "Chinese (Simplified)", LanguageSettingsStore.MODE_ZH_CN, currentMode, selectMode)
-            addLanguageOption(activity, "English", "English", LanguageSettingsStore.MODE_EN, currentMode, selectMode)
+            addLanguageOption(activity, getString(R.string.ui_follow_system), getString(R.string.ui_follow_system), LanguageSettingsStore.MODE_SYSTEM, currentMode, selectMode)
+            addLanguageOption(activity, getString(R.string.ui_chinese_simplified), getString(R.string.ui_chinese_simplified), LanguageSettingsStore.MODE_ZH_CN, currentMode, selectMode)
+            addLanguageOption(activity, getString(R.string.ui_english), getString(R.string.ui_english), LanguageSettingsStore.MODE_EN, currentMode, selectMode)
         }
     )
 }

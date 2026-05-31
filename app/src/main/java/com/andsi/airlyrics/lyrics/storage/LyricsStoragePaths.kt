@@ -23,7 +23,7 @@ internal object LyricsStoragePaths {
         val treeUri = getLyricsDirUri(context)
         return if (treeUri != null) {
             val dirName = DocumentFile.fromTreeUri(context, treeUri)?.name
-            if (dirName.isNullOrBlank()) "已选择用户目录" else "已选择：$dirName"
+            if (dirName.isNullOrBlank()) "Custom folder selected" else "Selected: $dirName"
         } else {
             fallbackLyricsDir(context).absolutePath
         }

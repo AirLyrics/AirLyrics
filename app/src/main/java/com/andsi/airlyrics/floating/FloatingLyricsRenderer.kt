@@ -28,7 +28,7 @@ class FloatingLyricsRenderer(
     private val switchAnimationModeProvider: () -> LyricsSwitchAnimationMode = { LyricsSwitchAnimationMode.default },
     private val karaokeEnabledProvider: () -> Boolean = { false },
     private val karaokeHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) },
-    private val noTranslationTextProvider: () -> String = { "当前歌词没有翻译" }
+    private val noTranslationTextProvider: () -> String = { "No translation for this lyric" }
 ) {
     private var currentLyrics: List<LrcLine> = emptyList()
     private var currentKaraokeLines: List<KaraokeLine> = emptyList()

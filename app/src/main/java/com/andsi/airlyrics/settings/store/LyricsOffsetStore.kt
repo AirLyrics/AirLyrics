@@ -79,15 +79,6 @@ object LyricsOffsetStore {
         return "$sign${"%.2f".format(Locale.getDefault(), kotlin.math.abs(offsetMs) / 1000f)}s"
     }
 
-    @Deprecated("UI should use Context.localizedOffsetDescription(offsetMs).")
-    fun description(offsetMs: Long): String {
-        return when {
-            offsetMs > 0L -> "歌词提前 ${formatOffset(offsetMs).removePrefix("+")}"
-            offsetMs < 0L -> "歌词延后 ${formatOffset(offsetMs).removePrefix("-")}"
-            else -> "未偏移"
-        }
-    }
-
 
     private fun nearbyDurationKeys(media: CurrentMediaInfo): List<String> {
         if (media.durationMs <= 0L) return emptyList()

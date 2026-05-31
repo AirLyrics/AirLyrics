@@ -100,7 +100,7 @@ object LyricsRepository {
                     ),
                     album = album,
                     source = LyricsStorage.SOURCE_DOWNLOADED,
-                    provider = onlineResult.providerName,
+                    provider = onlineResult.providerId,
                     overwrite = true
                 )
             }

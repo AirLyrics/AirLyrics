@@ -35,7 +35,6 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 
@@ -76,7 +75,7 @@ private object AboutTokens {
 
 internal fun createAboutSettingsPage(activity: MainActivity): View = with(activity) {
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
-    container.addView(settingsBackHeader(tr("关于", "About")))
+    container.addView(settingsBackHeader(getString(R.string.ui_about)))
     container.addView(aboutLogoHeader())
     container.addView(changeLogButton())
     return scroll(activity, container)
@@ -175,7 +174,7 @@ private fun MainActivity.githubIconButton(activity: MainActivity): View {
 private fun MainActivity.changeLogButton(): View {
     val activity = this
     return TextView(activity).apply {
-        text = "Change log"
+        text = getString(R.string.ui_changelog)
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
@@ -205,9 +204,9 @@ private fun MainActivity.changeLogButton(): View {
 
 private fun MainActivity.showUpdateLogDialog() {
     showAirDialog(
-        title = tr("更新日志", "Changelog"),
+        title = getString(R.string.ui_changelog),
         message = null,
-        positiveText = tr("知道了", "OK"),
+        positiveText = getString(R.string.ui_ok),
         body = {
             addView(TextView(this@showUpdateLogDialog).apply {
                 text = loadChangelogText()
@@ -221,7 +220,7 @@ private fun MainActivity.showUpdateLogDialog() {
 }
 
 private fun MainActivity.loadChangelogText(): String {
-    val fallback = tr("暂无更新日志。", "No changelog yet.")
+    val fallback = getString(R.string.ui_no_changelog_yet)
     return runCatching {
         assets.open("changelog.txt").bufferedReader(Charsets.UTF_8).use { it.readText() }
     }.getOrDefault(fallback)
@@ -309,7 +308,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
 
         val segment1 = VerticalMessageSegment(
             activity,
-            text = activity.tr("如果你喜欢这个项目", "Like it?").toString(),
+            text = activity.getString(R.string.ui_like_it).toString(),
             colors = listOf(
                 Color.rgb(255, 244, 250),
                 Color.rgb(255, 210, 228)
@@ -317,7 +316,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
         )
         val segment2 = VerticalMessageSegment(
             activity,
-            text = activity.tr("点个star!", "Give it a star!").toString(),
+            text = activity.getString(R.string.ui_give_it_a_star).toString(),
             colors = listOf(
                 Color.rgb(255, 188, 200),
                 Color.rgb(255, 152, 170)
@@ -325,7 +324,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
         )
         val segment3 = VerticalMessageSegment(
             activity,
-            text = activity.tr("我会非常非常非常开心的！", "Yay!").toString(),
+            text = activity.getString(R.string.ui_yay).toString(),
             colors = listOf(
                 Color.rgb(255, 238, 150),
                 Color.rgb(145, 203, 255)

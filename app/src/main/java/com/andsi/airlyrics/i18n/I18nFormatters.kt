@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.i18n
 
 import android.content.Context
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -10,25 +11,36 @@ import java.util.Date
 import java.util.Locale
 
 internal fun Context.localizedOffsetDescription(offsetMs: Long): String {
+    val value = LyricsOffsetStore.formatOffset(offsetMs).removePrefix("+").removePrefix("-")
     return when {
-        offsetMs > 0L -> tr("歌词提前", "Advanced") + " " + LyricsOffsetStore.formatOffset(offsetMs).removePrefix("+")
-        offsetMs < 0L -> tr("歌词延后", "Delayed") + " " + LyricsOffsetStore.formatOffset(offsetMs).removePrefix("-")
-        else -> tr("未偏移", "No offset")
+        offsetMs > 0L -> getString(R.string.lyrics_offset_advance, value)
+        offsetMs < 0L -> getString(R.string.lyrics_offset_delay, value)
+        else -> getString(R.string.ui_no_offset)
+    }
+}
+
+internal fun Context.localizedProviderName(providerIdOrName: String): String {
+    return when (providerIdOrName.trim().lowercase(Locale.ROOT)) {
+        "local", "local lyrics" -> getString(R.string.provider_local_lyrics)
+        "netease", "netease lyrics", "netease cloud music", "\u7f51\u6613\u4e91\u6b4c\u8bcd", "\u7f51\u6613\u4e91\u97f3\u4e50" -> getString(R.string.provider_netease_lyrics)
+        "musixmatch" -> getString(R.string.provider_musixmatch)
+        else -> providerIdOrName.ifBlank { getString(R.string.provider_local_lyrics) }
     }
 }
 
 internal fun Context.localizedLocalLyricsSource(source: String, provider: String): String {
     return when (source) {
-        LyricsStorage.SOURCE_MANUAL_IMPORT -> tr("手动导入", "Import")
+        LyricsStorage.SOURCE_MANUAL_IMPORT -> getString(R.string.ui_import)
         LyricsStorage.SOURCE_DOWNLOADED -> {
-            if (provider.isBlank() || provider == "local") {
-                tr("本地缓存", "Cache")
+            val providerName = localizedProviderName(provider)
+            if (provider.isBlank() || provider.trim().equals("local", ignoreCase = true)) {
+                getString(R.string.ui_cache)
             } else {
-                tr("本地缓存", "Cache") + " · " + provider
+                getString(R.string.local_source_cache_provider, providerName)
             }
         }
-        LyricsStorage.SOURCE_LEGACY -> tr("本地歌词", "Local")
-        else -> tr("本地歌词", "Local")
+        LyricsStorage.SOURCE_LEGACY -> getString(R.string.ui_local)
+        else -> getString(R.string.ui_local)
     }
 }
 
@@ -37,16 +49,16 @@ internal fun Context.localizedLocalLyricsSource(info: LyricsStorage.LocalLyricsI
 }
 
 internal fun Context.localizedLocalLyricsSubtitle(item: LyricsStorage.LocalLyricsItem): String {
-    val artistPart = item.artist.ifBlank { tr("未知歌手", "Unknown artist") }
+    val artistPart = item.artist.ifBlank { getString(R.string.ui_unknown_artist) }
     return artistPart + " · " + localizedLocalLyricsSource(item.source, item.provider)
 }
 
 internal fun Context.localizedLocalLyricsType(item: LyricsStorage.LocalLyricsItem): String {
     return when {
-        item.hasPlainLyrics && item.hasKaraokeLyrics -> tr("普通 + 逐字", "Plain + word")
-        item.hasKaraokeLyrics -> tr("逐字", "Word")
-        item.hasPlainLyrics -> tr("普通", "Plain")
-        else -> tr("未知类型", "Unknown type")
+        item.hasPlainLyrics && item.hasKaraokeLyrics -> getString(R.string.ui_plain_and_enhanced_lrc)
+        item.hasKaraokeLyrics -> getString(R.string.ui_enhanced)
+        item.hasPlainLyrics -> getString(R.string.ui_plain)
+        else -> getString(R.string.ui_unknown_type)
     }
 }
 
@@ -54,30 +66,29 @@ internal fun Context.localizedLocalLyricsMeta(item: LyricsStorage.LocalLyricsIte
     val dateText = if (item.modifiedTimeMillis > 0L) {
         SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(item.modifiedTimeMillis))
     } else {
-        tr("未知时间", "Unknown time")
+        getString(R.string.ui_unknown_time)
     }
 
     val sizeText = when {
         item.sizeBytes >= 1024 * 1024 -> "%.1f MB".format(item.sizeBytes / 1024f / 1024f)
         item.sizeBytes >= 1024 -> "%.1f KB".format(item.sizeBytes / 1024f)
         item.sizeBytes > 0 -> "${item.sizeBytes} B"
-        else -> tr("未知大小", "Unknown size")
+        else -> getString(R.string.ui_unknown_size)
     }
 
     return "$dateText · $sizeText"
 }
 
 internal fun Context.localizedLyricsLookupMessage(error: LyricsLookupException): String {
-    val providerName = error.providerName
-    val suffix = when (error.errorType) {
-        LyricsLookupErrorType.NotFound -> tr("未找到歌词", "found no lyrics")
-        LyricsLookupErrorType.NeedCredential -> tr("暂时需要访问凭据", "needs credentials")
-        LyricsLookupErrorType.RateLimited -> tr("请求过于频繁，请稍后再试", "is rate limited. Try again later")
-        LyricsLookupErrorType.RestrictedLyrics -> tr("歌词受限，无法获取", "lyrics are restricted")
-        LyricsLookupErrorType.NetworkError -> tr("网络请求失败", "network request failed")
-        LyricsLookupErrorType.ParseError -> tr("歌词解析失败", "lyrics parse failed")
-        LyricsLookupErrorType.NativeError -> tr("原生歌词模块异常", "native module error")
-        LyricsLookupErrorType.Unknown -> tr("查找失败", "lookup failed")
+    val providerName = localizedProviderName(error.providerId.ifBlank { error.providerName })
+    return when (error.errorType) {
+        LyricsLookupErrorType.NotFound -> getString(R.string.lyrics_lookup_not_found, providerName)
+        LyricsLookupErrorType.NeedCredential -> getString(R.string.lyrics_lookup_need_credentials, providerName)
+        LyricsLookupErrorType.RateLimited -> getString(R.string.lyrics_lookup_rate_limited, providerName)
+        LyricsLookupErrorType.RestrictedLyrics -> getString(R.string.lyrics_lookup_restricted, providerName)
+        LyricsLookupErrorType.NetworkError -> getString(R.string.lyrics_lookup_network_failed, providerName)
+        LyricsLookupErrorType.ParseError -> getString(R.string.lyrics_lookup_parse_failed, providerName)
+        LyricsLookupErrorType.NativeError -> getString(R.string.lyrics_lookup_native_error, providerName)
+        LyricsLookupErrorType.Unknown -> getString(R.string.lyrics_lookup_failed, providerName)
     }
-    return "$providerName $suffix"
 }

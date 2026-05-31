@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.pages
 
+import com.andsi.airlyrics.R
+
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.view.View
@@ -10,7 +12,6 @@ import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
-import com.andsi.airlyrics.i18n.tr
 
 internal fun createMediaPage(activity: MainActivity, animateContent: Boolean = true): View  = with(activity) createMediaPage@ {
     val container = pageContainer(activity, animateChanges = animateContent)
@@ -22,21 +23,21 @@ internal fun createMediaPage(activity: MainActivity, animateContent: Boolean = t
 
     container.addView(
         sectionTitle(activity, 
-            tr("媒体流", "Media"),
-            tr("选择要跟随的播放器，AirLyrics 会从这里读取歌曲状态。", "Choose the player AirLyrics follows.")
+            getString(R.string.ui_media),
+            getString(R.string.ui_choose_the_player_airlyrics_follows)
         )
     )
 
     container.addView(
         card(activity) {
-            addView(label(activity, tr("当前媒体", "Current media"), colorTextMuted))
+            addView(label(activity, getString(R.string.ui_current_media), colorTextMuted))
             if (selectedController != null) {
                 val title = selectedController.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
                     .orEmpty()
-                    .ifBlank { tr("未知歌曲", "Unknown song") }
+                    .ifBlank { getString(R.string.ui_unknown_song) }
                 val artist = selectedController.metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
                     ?: selectedController.metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-                    ?: tr("未知艺术家", "Unknown artist")
+                    ?: getString(R.string.ui_unknown_artist)
                 val appName = getAppName(selectedController.packageName)
                 val state = getPlaybackStateText(selectedController.playbackState?.state)
 
@@ -44,21 +45,21 @@ internal fun createMediaPage(activity: MainActivity, animateContent: Boolean = t
                 addView(normalText(activity, "$artist · $appName"))
                 addView(statusPill(activity, state, selectedController.playbackState?.state == PlaybackState.STATE_PLAYING))
             } else {
-                addView(bigText(activity, tr("还没有检测到媒体", "No media detected yet")))
-                addView(normalText(activity, tr("先开启通知访问权限，然后播放一首歌。", "Enable notification access, then play a song.")))
+                addView(bigText(activity, getString(R.string.ui_no_media_detected_yet)))
+                addView(normalText(activity, getString(R.string.ui_enable_notif_access_hint)))
             }
         }
     )
 
     container.addView(spacer(activity, 12))
-    container.addView(label(activity, tr("活跃播放器", "Active players"), colorTextMuted))
+    container.addView(label(activity, getString(R.string.ui_active_players), colorTextMuted))
 
     if (controllers.isEmpty()) {
         container.addView(
             card(activity) {
-                addView(bigText(activity, tr("等待音乐信号", "Waiting for music signal")))
-                addView(normalText(activity, tr("播放音乐后，这里会显示可选择的媒体流。", "Playable media streams will appear here after music starts.")))
-                addView(smallHint(activity, tr("如果一直没有显示，请确认通知访问权限已开启。", "If nothing appears, make sure notification access is enabled.")))
+                addView(bigText(activity, getString(R.string.ui_waiting_for_music_signal)))
+                addView(normalText(activity, getString(R.string.ui_media_streams_empty_hint)))
+                addView(smallHint(activity, getString(R.string.ui_media_empty_permission_hint)))
             }
         )
     } else {

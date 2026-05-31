@@ -19,7 +19,7 @@ data class NeteaseLyricsResult(
 
 object NeteaseLyricsProvider : LyricsProvider {
     override val id: String = "netease"
-    override val name: String = "网易云歌词"
+    override val name: String = "NetEase Lyrics"
 
     override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
         return fetchBestLyrics(

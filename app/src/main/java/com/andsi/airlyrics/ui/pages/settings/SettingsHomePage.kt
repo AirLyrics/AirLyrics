@@ -9,7 +9,6 @@ import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 
 internal fun createSettingsHomePage(activity: MainActivity): View  = with(activity) createSettingsHomePage@ {
@@ -20,9 +19,9 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
 
     container.addView(
         settingsCategoryCard(
-            title = tr("歌词获取设置", "Lyrics"),
-            subtitle = tr("歌词源、自动保存、下载目录和最近保存的 .lrc。", "Source, auto-save, folder, and recent .lrc files."),
-            status = "${localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) tr("自动保存", "Auto-save") else tr("不自动保存", "No auto-save")}",
+            title = getString(R.string.ui_lyrics),
+            subtitle = getString(R.string.ui_lyrics_settings_summary),
+            status = "${localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) getString(R.string.ui_auto_save) else getString(R.string.ui_no_auto_save)}",
             accent = colorAccentPink,
             iconRes = R.drawable.ic_air_music_note
         ) {
@@ -32,8 +31,8 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
 
     container.addView(
         settingsCategoryCard(
-            title = tr("系统与权限", "System"),
-            subtitle = tr("悬浮窗、通知权限、通知访问权限。", "Overlay and notification permissions."),
+            title = getString(R.string.ui_system),
+            subtitle = getString(R.string.ui_overlay_and_notification_permissions),
             status = permissionSummary(),
             accent = colorAccentMint,
             iconRes = R.drawable.ic_air_shield
@@ -44,8 +43,8 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
 
     container.addView(
         settingsCategoryCard(
-            title = tr("关于", "About"),
-            subtitle = tr("版本号、项目地址、更新记录。", "Version, project link, and changelog."),
+            title = getString(R.string.ui_about),
+            subtitle = getString(R.string.ui_version_project_link_and_changelog),
             status = "AirLyrics ${getAppVersionName()}",
             accent = colorAccentMint,
             iconRes = R.drawable.ic_air_info

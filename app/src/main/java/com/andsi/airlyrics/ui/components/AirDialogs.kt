@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.components
 
+import com.andsi.airlyrics.R
+
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
@@ -14,8 +16,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.i18n.localizeText
-import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -34,7 +35,7 @@ internal fun MainActivity.showAirInfoDialog(
     return showAirDialog(
         title = title,
         message = message,
-        positiveText = buttonText ?: tr("知道了", "OK")
+        positiveText = buttonText ?: getString(R.string.ui_ok)
     )
 }
 
@@ -49,7 +50,7 @@ internal fun MainActivity.showAirConfirmDialog(
         title = title,
         message = message,
         positiveText = positiveText,
-        negativeText = negativeText ?: tr("取消", "Cancel"),
+        negativeText = negativeText ?: getString(R.string.ui_cancel),
         onPositive = onPositive
     )
 }
@@ -75,7 +76,7 @@ internal fun MainActivity.showAirDialog(
         }
 
         addView(TextView(this@showAirDialog).apply {
-            text = localizeText(title)
+            text = displayText(title)
             textSize = AirUiTokens.TextSize.DialogTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
@@ -83,7 +84,7 @@ internal fun MainActivity.showAirDialog(
 
         if (!message.isNullOrBlank()) {
             addView(TextView(this@showAirDialog).apply {
-                text = localizeText(message)
+                text = displayText(message)
                 textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorTextMuted)
                 setLineSpacing(dp(AirUiTokens.Space.Xs).toFloat(), 1f)
@@ -93,7 +94,7 @@ internal fun MainActivity.showAirDialog(
 
         body?.invoke(this)
 
-        val resolvedPositiveText = if (positiveText == DEFAULT_POSITIVE_TEXT) tr("知道了", "OK") else positiveText
+        val resolvedPositiveText = if (positiveText == DEFAULT_POSITIVE_TEXT) getString(R.string.ui_ok) else positiveText
         if (!resolvedPositiveText.isNullOrBlank() || !negativeText.isNullOrBlank()) {
             addView(LinearLayout(this@showAirDialog).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -150,7 +151,7 @@ private fun MainActivity.dialogButton(
     onClick: () -> Unit
 ): TextView {
     return TextView(this).apply {
-        this.text = localizeText(text)
+        this.text = displayText(text)
         textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER

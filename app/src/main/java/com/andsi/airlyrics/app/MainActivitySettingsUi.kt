@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.R
+
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -15,7 +17,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -28,7 +30,6 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
 import com.andsi.airlyrics.i18n.localizedLocalLyricsType
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
@@ -44,7 +45,7 @@ internal fun MainActivity.settingsHomeHeader(): View {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
-                text = tr("设置", "Settings")
+                text = getString(R.string.ui_settings)
                 textSize = AirUiTokens.TextSize.PageTitle
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextStrong)
@@ -64,7 +65,7 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
-                text = tr("‹ 设置", "‹ Settings")
+                text = getString(R.string.ui_settings_back_label)
                 textSize = AirUiTokens.TextSize.Body
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -77,14 +78,14 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
             })
         })
         addView(TextView(activity).apply {
-            text = localizeText(title)
+            text = displayText(title)
             textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         if (subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
-                text = localizeText(subtitle)
+                text = displayText(subtitle)
                 textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorTextMuted)
                 setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -101,7 +102,7 @@ internal fun MainActivity.themeToggleButton(): TextView {
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         setTextColor(colorAccent)
-        contentDescription = if (isDarkTheme()) tr("切换到白天模式", "Switch to light mode") else tr("切换到暗黑模式", "Switch to dark mode")
+        contentDescription = if (isDarkTheme()) getString(R.string.ui_switch_to_light_mode) else getString(R.string.ui_switch_to_dark_mode)
         layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.ThemeToggleSize), dp(AirUiTokens.Layout.ThemeToggleSize)).apply {
             setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
         }
@@ -189,7 +190,7 @@ internal fun MainActivity.localLyricsRow(
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale + 0.01f)
         if (!badgeText.isNullOrBlank()) {
             addView(TextView(activity).apply {
-                text = localizeText(badgeText)
+                text = displayText(badgeText)
                 textSize = AirUiTokens.TextSize.Tiny
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -231,10 +232,7 @@ private fun MainActivity.openLocalLyricsTargetPicker(
             var pickerDialog: android.app.Dialog? = null
             pickerDialog = showAirDialog(
                 title = item.displayTitle,
-                message = tr(
-                    "这首歌同时有普通歌词和逐字歌词，请选择要打开的版本。",
-                    "This song has both plain and word-by-word lyrics. Choose which version to open."
-                ),
+                message = getString(R.string.ui_choose_lyrics_version_message),
                 positiveText = null,
                 negativeText = null,
                 body = {
@@ -242,11 +240,11 @@ private fun MainActivity.openLocalLyricsTargetPicker(
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.END or Gravity.CENTER_VERTICAL
                         setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
-                        addView(localLyricsDialogButton(tr("普通歌词", "Plain lyrics"), primary = false) {
+                        addView(localLyricsDialogButton(getString(R.string.ui_plain_lyrics), primary = false) {
                             pickerDialog?.dismiss()
                             openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
                         })
-                        addView(localLyricsDialogButton(tr("逐字歌词", "Word-by-word lyrics"), primary = true) {
+                        addView(localLyricsDialogButton(getString(R.string.ui_enhanced_lrc_lyrics), primary = true) {
                             pickerDialog?.dismiss()
                             openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
                         })
@@ -272,13 +270,13 @@ private fun MainActivity.openLocalLyricsEditor(
     val rawLyrics = LyricsStorage.readLocalLyricsItemText(this, item, target)
     if (rawLyrics == null) {
         showAirDialog(
-            title = tr("读取失败", "Read failed"),
+            title = getString(R.string.ui_read_failed),
             message = if (isKaraoke) {
-                tr("无法读取这份逐字歌词。", "Cannot read this word-by-word lyric file.")
+                getString(R.string.ui_cannot_read_enhanced_lrc_file)
             } else {
-                tr("无法读取这份歌词。", "Cannot read this lyric file.")
+                getString(R.string.ui_cannot_read_this_lyric_file)
             },
-            positiveText = tr("知道了", "OK")
+            positiveText = getString(R.string.ui_ok)
         )
         return
     }
@@ -307,15 +305,12 @@ private fun MainActivity.openLocalLyricsEditor(
     var editDialog: android.app.Dialog? = null
     editDialog = showAirDialog(
         title = if (isKaraoke) {
-            tr("${item.displayTitle} · 逐字歌词", "${item.displayTitle} · Word-by-word")
+            getString(R.string.ui_item_displaytitle_enhanced_lrc, item.displayTitle)
         } else {
             item.displayTitle
         },
         message = if (isKaraoke) {
-            tr(
-                "逐字歌词使用 enhanced LRC：行时间用 [00:12.34]，字词时间用 <00:12.34>。",
-                "Word-by-word lyrics use enhanced LRC: line time uses [00:12.34], word time uses <00:12.34>."
-            )
+            getString(R.string.ui_enhanced_lrc_format_hint)
         } else null,
         positiveText = null,
         negativeText = null,
@@ -326,14 +321,14 @@ private fun MainActivity.openLocalLyricsEditor(
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
                 setPadding(0, dp(AirUiTokens.Space.ButtonH), 0, 0)
 
-                addView(localLyricsDialogButton(tr("检查格式", "Check format"), primary = false) {
+                addView(localLyricsDialogButton(getString(R.string.ui_check_format), primary = false) {
                     if (isKaraoke) {
                         val validation = LyricsStorage.validateKaraokeLyricsItemText(editor.text.toString())
                         if (validation.saved) {
                             showAirDialog(
-                                title = tr("格式正确", "Format looks good"),
-                                message = tr("这份 enhanced LRC 可以保存。", "This enhanced LRC can be saved."),
-                                positiveText = tr("知道了", "OK")
+                                title = getString(R.string.ui_format_looks_good),
+                                message = getString(R.string.ui_this_enhanced_lrc_can_be_saved),
+                                positiveText = getString(R.string.ui_ok)
                             )
                         } else if (validation.invalidLineNumbers.isNotEmpty()) {
                             showEnhancedLyricsFormatErrorDialog(validation.invalidLineNumbers)
@@ -344,9 +339,9 @@ private fun MainActivity.openLocalLyricsEditor(
                         val validation = LrcParser.validateForStorage(editor.text.toString())
                         if (validation.isValid) {
                             showAirDialog(
-                                title = tr("格式正确", "Format looks good"),
-                                message = tr("这份普通 LRC 可以保存。", "This plain LRC can be saved."),
-                                positiveText = tr("知道了", "OK")
+                                title = getString(R.string.ui_format_looks_good),
+                                message = getString(R.string.ui_this_plain_lrc_can_be_saved),
+                                positiveText = getString(R.string.ui_ok)
                             )
                         } else {
                             showLyricsFormatErrorDialog(validation.invalidLineNumbers)
@@ -354,11 +349,11 @@ private fun MainActivity.openLocalLyricsEditor(
                     }
                 })
 
-                addView(localLyricsDialogButton(tr("关闭", "Close"), primary = false) {
+                addView(localLyricsDialogButton(getString(R.string.ui_close), primary = false) {
                     editDialog?.dismiss()
                 })
 
-                addView(localLyricsDialogButton(tr("保存修改", "Save changes"), primary = true) {
+                addView(localLyricsDialogButton(getString(R.string.ui_save_changes), primary = true) {
                     val result = if (isKaraoke) {
                         LyricsStorage.updateKaraokeLyricsItemTextWithResult(this@openLocalLyricsEditor, item, editor.text.toString())
                     } else {
@@ -378,12 +373,9 @@ private fun MainActivity.openLocalLyricsEditor(
                                 showEnhancedLyricsFormatErrorDialog(emptyList())
                             } else {
                                 showAirDialog(
-                                    title = tr("保存失败", "Save failed"),
-                                    message = tr(
-                                        "请确认内容是普通 LRC，并使用 [00:12.34]歌词 格式。",
-                                        "Make sure the content is plain LRC and uses [00:12.34]lyric format."
-                                    ),
-                                    positiveText = tr("知道了", "OK")
+                                    title = getString(R.string.ui_save_failed),
+                                    message = getString(R.string.ui_plain_lrc_edit_format_hint),
+                                    positiveText = getString(R.string.ui_ok)
                                 )
                             }
                         }
@@ -396,45 +388,33 @@ private fun MainActivity.openLocalLyricsEditor(
 
 private fun MainActivity.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     val message = if (invalidLineNumbers.isNotEmpty()) {
-        val lines = invalidLineNumbers.take(8).joinToString("、")
+        val lines = invalidLineNumbers.take(8).joinToString(", ")
         val suffix = if (invalidLineNumbers.size > 8) "…" else ""
-        tr(
-            "第 ${lines}${suffix} 行格式不正确。\n\n普通歌词需要使用 [00:12.34]歌词 格式；空行和 [ar:歌手] 这类 LRC 信息行可以保留。",
-            "Line ${lines}${suffix} has an invalid format.\n\nPlain lyrics must use the [00:12.34]lyric format. Blank lines and LRC metadata such as [ar:artist] are allowed."
-        )
+        getString(R.string.lyrics_plain_format_invalid_lines, lines, suffix)
     } else {
-        tr(
-            "没有找到可保存的有效歌词。请至少保留一行 [00:12.34]歌词。",
-            "No valid lyric line was found. Keep at least one [00:12.34]lyric line."
-        )
+        getString(R.string.ui_plain_lrc_no_valid_line_error)
     }
 
     showAirDialog(
-        title = tr("格式不正确", "Invalid format"),
+        title = getString(R.string.ui_invalid_format),
         message = message,
-        positiveText = tr("回去修改", "Back to edit")
+        positiveText = getString(R.string.ui_back_to_edit)
     )
 }
 
 private fun MainActivity.showEnhancedLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     val message = if (invalidLineNumbers.isNotEmpty()) {
-        val lines = invalidLineNumbers.take(8).joinToString("、")
+        val lines = invalidLineNumbers.take(8).joinToString(", ")
         val suffix = if (invalidLineNumbers.size > 8) "…" else ""
-        tr(
-            "第 ${lines}${suffix} 行格式不正确。\n\n逐字歌词需要使用 enhanced LRC 格式：行时间为 [00:12.34]，每个字词时间为 <00:12.34>歌词。",
-            "Line ${lines}${suffix} has an invalid format.\n\nWord-by-word lyrics must use enhanced LRC: line time is [00:12.34], and each word token uses <00:12.34>lyric."
-        )
+        getString(R.string.lyrics_enhanced_format_invalid_lines, lines, suffix)
     } else {
-        tr(
-            "没有找到可保存的逐字歌词。请至少保留一行 [00:12.34]<00:12.34>歌词。",
-            "No valid word-by-word lyric line was found. Keep at least one [00:12.34]<00:12.34>lyric line."
-        )
+        getString(R.string.ui_no_valid_enhanced_lrc_line_was_found)
     }
 
     showAirDialog(
-        title = tr("格式不正确", "Invalid format"),
+        title = getString(R.string.ui_invalid_format),
         message = message,
-        positiveText = tr("回去修改", "Back to edit")
+        positiveText = getString(R.string.ui_back_to_edit)
     )
 }
 
@@ -444,7 +424,7 @@ private fun MainActivity.localLyricsDialogButton(
     onClick: () -> Unit
 ): TextView {
     return TextView(this).apply {
-        this.text = localizeText(text)
+        this.text = displayText(text)
         textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
@@ -476,13 +456,13 @@ internal fun MainActivity.changelogItem(title: String, body: String): View {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Xxs))
         addView(TextView(activity).apply {
-            text = localizeText(title)
+            text = displayText(title)
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = localizeText(body)
+            text = displayText(body)
             textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
             setPadding(0, dp(AirUiTokens.Space.Xs), 0, 0)
@@ -496,7 +476,7 @@ internal fun MainActivity.permissionSummary(): String {
         hasNotificationPermission(),
         hasNotificationListenerAccess()
     ).count { it }
-    return if (com.andsi.airlyrics.i18n.AirLocalizer.isChinese(this)) "已开启 $opened / 3 项基础权限" else "$opened / 3 basic permissions enabled"
+    return getString(R.string.permissions_summary, opened, 3)
 }
 
 internal fun MainActivity.getAppVersionName(): String {

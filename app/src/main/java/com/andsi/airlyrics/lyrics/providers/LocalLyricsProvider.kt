@@ -8,7 +8,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 /** Reads lyrics from the user-selected local lyrics directory or the app fallback directory. */
 object LocalLyricsProvider : LyricsProvider {
     override val id: String = "local"
-    override val name: String = "本地歌词"
+    override val name: String = "Local lyrics"
 
     override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
         return runCatching {

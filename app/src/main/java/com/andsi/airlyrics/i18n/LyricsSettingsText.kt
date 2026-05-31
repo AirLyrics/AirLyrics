@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.i18n
 
+import com.andsi.airlyrics.R
+
 import android.content.Context
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
@@ -7,36 +9,33 @@ import com.andsi.airlyrics.settings.model.LyricsSearchSource
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
 
 internal fun Context.localizedLyricsSourceTitle(source: LyricsSearchSource): String = when (source) {
-    LyricsSearchSource.LOCAL_ONLY -> tr("只使用本地", "Local only")
-    LyricsSearchSource.NETEASE -> tr("网易云音乐", "NetEase Cloud Music")
-    LyricsSearchSource.MUSIXMATCH -> "Musixmatch"
+    LyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_local_only)
+    LyricsSearchSource.NETEASE -> getString(R.string.ui_netease_cloud_music)
+    LyricsSearchSource.MUSIXMATCH -> getString(R.string.provider_musixmatch)
 }
 
 internal fun Context.localizedLyricsSourceHint(source: LyricsSearchSource): String = when (source) {
-    LyricsSearchSource.LOCAL_ONLY -> tr("只读取本地歌词", "Read local lyrics only")
-    LyricsSearchSource.NETEASE -> tr("适合中国用户", "Good for Chinese songs")
-    LyricsSearchSource.MUSIXMATCH -> tr(
-        "适合国际用户，依据您的系统语言来自动获取翻译（如果有的话）",
-        "Good for international songs; uses your system language for translations when available"
-    )
+    LyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_read_local_lyrics_only)
+    LyricsSearchSource.NETEASE -> getString(R.string.ui_good_for_chinese_songs)
+    LyricsSearchSource.MUSIXMATCH -> getString(R.string.ui_musixmatch_source_hint)
 }
 
 internal fun Context.localizedLyricsContentModeTitle(mode: LyricsContentDisplayMode): String = when (mode) {
-    LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> tr("原文 + 翻译", "Original + translation")
-    LyricsContentDisplayMode.ORIGINAL_ONLY -> tr("仅原文", "Original only")
-    LyricsContentDisplayMode.TRANSLATION_ONLY -> tr("仅翻译", "Translation only")
+    LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> getString(R.string.ui_original_translation)
+    LyricsContentDisplayMode.ORIGINAL_ONLY -> getString(R.string.ui_original_only)
+    LyricsContentDisplayMode.TRANSLATION_ONLY -> getString(R.string.ui_translation_only)
 }
 
 internal fun Context.localizedLyricsLineModeTitle(mode: LyricsLineDisplayMode): String = when (mode) {
-    LyricsLineDisplayMode.CURRENT_ONLY -> tr("当前句", "Current line")
-    LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> tr("上一句 + 当前句", "Previous + current")
-    LyricsLineDisplayMode.CURRENT_AND_NEXT -> tr("当前句 + 下一句", "Current + next")
-    LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> tr("上 + 当前 + 下", "Previous + current + next")
+    LyricsLineDisplayMode.CURRENT_ONLY -> getString(R.string.ui_current_line)
+    LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> getString(R.string.ui_previous_current)
+    LyricsLineDisplayMode.CURRENT_AND_NEXT -> getString(R.string.ui_current_next)
+    LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> getString(R.string.ui_previous_current_next)
 }
 
 internal fun Context.localizedLyricsSwitchAnimationTitle(mode: LyricsSwitchAnimationMode): String = when (mode) {
-    LyricsSwitchAnimationMode.NONE -> tr("关闭", "Off")
-    LyricsSwitchAnimationMode.FADE -> tr("柔和淡入", "Fade")
-    LyricsSwitchAnimationMode.SLIDE_UP -> tr("上滑淡入", "Slide up")
-    LyricsSwitchAnimationMode.SCALE_FADE -> tr("轻微缩放", "Scale")
+    LyricsSwitchAnimationMode.NONE -> getString(R.string.ui_off)
+    LyricsSwitchAnimationMode.FADE -> getString(R.string.ui_fade)
+    LyricsSwitchAnimationMode.SLIDE_UP -> getString(R.string.ui_slide_up)
+    LyricsSwitchAnimationMode.SCALE_FADE -> getString(R.string.ui_scale)
 }

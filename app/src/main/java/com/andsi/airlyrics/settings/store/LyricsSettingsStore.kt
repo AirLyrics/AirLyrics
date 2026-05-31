@@ -23,11 +23,7 @@ object LyricsSettingsStore {
     const val SOURCE_MUSIXMATCH = "musixmatch"
 
     val sourceOptions = LyricsSearchSource.entries.map { source ->
-        LyricsSourceOption(
-            key = source.key,
-            title = source.title,
-            description = source.description
-        )
+        LyricsSourceOption(key = source.key)
     }
 
     fun getLyricsSearchSource(context: Context): LyricsSearchSource {

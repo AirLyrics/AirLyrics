@@ -4,9 +4,6 @@ import android.content.Context
 import android.net.Uri
 import com.andsi.airlyrics.lyrics.KaraokeLine
 import com.andsi.airlyrics.lyrics.parser.LrcParser
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Public facade for local lyric persistence.
@@ -37,27 +34,6 @@ object LyricsStorage {
         val displayTitle: String
             get() = title.ifBlank { friendlyNameFromFileName(name) }
 
-        @Deprecated("UI should use Context.localizedLocalLyricsSubtitle(item) so user data is never passed through text replacement.")
-        val displaySubtitle: String
-            get() {
-                val artistPart = artist.ifBlank { "未知歌手" }
-                val sourcePart = when (source) {
-                    SOURCE_MANUAL_IMPORT -> "手动导入"
-                    SOURCE_DOWNLOADED -> if (provider.isBlank() || provider == "local") "本地缓存" else "本地缓存 · $provider"
-                    SOURCE_LEGACY -> "本地歌词"
-                    else -> "本地歌词"
-                }
-                return "$artistPart · $sourcePart"
-            }
-
-        @Deprecated("UI should use Context.localizedLocalLyricsType(item).")
-        val lyricsTypeText: String
-            get() = when {
-                hasPlainLyrics && hasKaraokeLyrics -> "普通 + 逐字"
-                hasKaraokeLyrics -> "逐字"
-                hasPlainLyrics -> "普通"
-                else -> "未知类型"
-            }
 
         private fun friendlyNameFromFileName(fileName: String): String {
             return fileName
@@ -80,14 +56,6 @@ object LyricsStorage {
         val provider: String,
         val updatedAt: Long
     ) {
-        @Deprecated("UI should use Context.localizedLocalLyricsSource(info).")
-        val sourceText: String
-            get() = when (source) {
-                SOURCE_MANUAL_IMPORT -> "手动导入"
-                SOURCE_DOWNLOADED -> if (provider.isBlank() || provider == "local") "本地缓存" else "本地缓存 · $provider"
-                SOURCE_LEGACY -> "本地歌词"
-                else -> "本地歌词"
-            }
 
         val friendlyTitle: String
             get() = if (title.isNotBlank()) {
@@ -101,23 +69,6 @@ object LyricsStorage {
         return LocalLyricsLister.listRecent(context, limit)
     }
 
-    @Deprecated("UI should use Context.localizedLocalLyricsMeta(item).")
-    fun formatLocalLyricsItem(item: LocalLyricsItem): String {
-        val dateText = if (item.modifiedTimeMillis > 0L) {
-            SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()).format(Date(item.modifiedTimeMillis))
-        } else {
-            "未知时间"
-        }
-
-        val sizeText = when {
-            item.sizeBytes >= 1024 * 1024 -> "%.1f MB".format(item.sizeBytes / 1024f / 1024f)
-            item.sizeBytes >= 1024 -> "%.1f KB".format(item.sizeBytes / 1024f)
-            item.sizeBytes > 0 -> "${item.sizeBytes} B"
-            else -> "未知大小"
-        }
-
-        return "$dateText · $sizeText"
-    }
 
     fun readLocalLyricsItemText(context: Context, item: LocalLyricsItem): String? {
         val defaultTarget = if (item.hasPlainLyrics) LocalLyricsEditTarget.PLAIN else LocalLyricsEditTarget.KARAOKE

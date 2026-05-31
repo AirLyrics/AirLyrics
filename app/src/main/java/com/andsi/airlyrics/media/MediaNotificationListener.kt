@@ -13,6 +13,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.common.BroadcastActions
+import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 
 class MediaNotificationListener : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())
@@ -24,6 +25,7 @@ class MediaNotificationListener : NotificationListenerService() {
         MediaSessionManager.OnActiveSessionsChangedListener { setupMediaSessions(it) }
 
     override fun onCreate() {
+        LanguageSettingsStore.applyAppLocale(this)
         super.onCreate()
         mediaSessionManager = getSystemService(MEDIA_SESSION_SERVICE) as MediaSessionManager
     }
@@ -54,7 +56,7 @@ class MediaNotificationListener : NotificationListenerService() {
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
 
-        // 有些播放器只有通知变化时才刷新 session，所以这里延迟扫一次
+        // Some players refresh sessions only after notification changes, so scan once with a delay.
         handler.postDelayed({
             setupMediaSessions()
         }, 200)

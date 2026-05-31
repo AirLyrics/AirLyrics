@@ -2,6 +2,9 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import android.os.Build
+import com.andsi.airlyrics.R
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
 internal object LanguageSettingsStore {
@@ -30,6 +33,27 @@ internal object LanguageSettingsStore {
             .edit()
             .putString(KEY_MODE, normalized)
             .apply()
+        applyAppLocale(context)
+    }
+
+    fun applyAppLocale(context: Context) {
+        val tags = when (getMode(context)) {
+            MODE_ZH_CN -> MODE_ZH_CN
+            MODE_EN -> MODE_EN
+            else -> ""
+        }
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tags))
+
+        val locale = if (tags.isBlank()) {
+            context.resources.configuration.locales.get(0)
+        } else {
+            Locale.forLanguageTag(tags)
+        }
+        Locale.setDefault(locale)
+        val configuration = context.resources.configuration
+        configuration.setLocale(locale)
+        @Suppress("DEPRECATION")
+        context.resources.updateConfiguration(configuration, context.resources.displayMetrics)
     }
 
     fun isChinese(context: Context): Boolean {
@@ -42,9 +66,16 @@ internal object LanguageSettingsStore {
 
     fun currentDisplayName(context: Context): String {
         return when (getMode(context)) {
-            MODE_ZH_CN -> "简体中文"
+            MODE_ZH_CN -> context.getString(R.string.ui_chinese_simplified)
             MODE_EN -> "English"
-            else -> if (isSystemChinese(context)) "跟随系统 · 简体中文" else "System · English"
+            else -> {
+                val languageName = if (isSystemChinese(context)) {
+                    context.getString(R.string.ui_chinese_simplified)
+                } else {
+                    "English"
+                }
+                context.getString(R.string.ui_follow_system) + " · " + languageName
+            }
         }
     }
 

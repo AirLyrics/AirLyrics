@@ -1,11 +1,13 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.R
+
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
+import com.andsi.airlyrics.i18n.localizedAssetText
 
 import android.animation.LayoutTransition
 import android.app.Dialog
@@ -49,6 +51,7 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
+import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.app.AppNavigator
 import com.andsi.airlyrics.app.PermissionController
@@ -151,7 +154,7 @@ class MainActivity : AppCompatActivity() {
 
             val media = getCurrentMediaSnapshot()
             if (media == null || media.title.isBlank()) {
-                Toast.makeText(this, tr("请先播放并选择一首歌，再为当前音乐导入歌词", "Please play and select a song before importing lyrics"), Toast.LENGTH_LONG).show()
+                Toast.makeText(this, getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
                 return@registerForActivityResult
             }
 
@@ -162,9 +165,9 @@ class MainActivity : AppCompatActivity() {
 
             if (!isLikelyLyricsDocument(uri)) {
                 val message = if (importAsWordByWord) {
-                    tr("请选择 .lrc 逐字歌词文件", "Please choose a word-by-word .lrc file")
+                    getString(R.string.ui_please_choose_an_enhanced_lrc_file)
                 } else {
-                    tr("请选择 .lrc 普通歌词文件", "Please choose a plain .lrc lyrics file")
+                    getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
                 }
                 Toast.makeText(this, message, Toast.LENGTH_LONG).show()
                 return@registerForActivityResult
@@ -188,14 +191,14 @@ class MainActivity : AppCompatActivity() {
 
             if (exists) {
                 val overwriteMessage = media.displayText + "\n\n" + if (importAsWordByWord) {
-                    tr("这首歌已经有本地逐字歌词。覆盖后只替换逐字歌词缓存，普通歌词会继续保留。", "This song already has local word-by-word lyrics. Overwriting only replaces that cache; plain lyrics remain.")
+                    getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
                 } else {
-                    tr("这首歌已经有普通歌词。覆盖后只替换普通 LRC；如果已经导入逐字歌词，会继续保留。", "This song already has plain lyrics. Overwriting only replaces the plain LRC; word-by-word lyrics remain.")
+                    getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
                 }
                 showAirConfirmDialog(
-                    title = if (importAsWordByWord) tr("覆盖本地逐字歌词？", "Overwrite local word-by-word lyrics?") else tr("覆盖普通歌词？", "Overwrite plain lyrics?"),
+                    title = if (importAsWordByWord) getString(R.string.ui_overwrite_local_enhanced_lrc) else getString(R.string.ui_overwrite_plain_lyrics),
                     message = overwriteMessage,
-                    positiveText = tr("覆盖", "Overwrite")
+                    positiveText = getString(R.string.ui_overwrite)
                 ) {
                     importLyricsForCurrentMedia(
                         uri = uri,
@@ -224,16 +227,16 @@ class MainActivity : AppCompatActivity() {
             )
 
             LyricsStorage.saveLyricsDirUri(this, uri)
-            Toast.makeText(this, tr("已设置歌词保存目录", "Lyrics save folder set"), Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()
             renderCurrentPage(animateContent = false, animateTabs = false)
         }
 
     internal val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             val message = if (granted) {
-                tr("通知权限已开启", "Notification permission enabled")
+                getString(R.string.ui_notification_permission_enabled)
             } else {
-                tr("通知权限未开启，前台服务通知可能无法显示", "Notification permission is off; the foreground service notification may not show")
+                getString(R.string.ui_notif_permission_off_warning)
             }
 
             Toast.makeText(this, message, Toast.LENGTH_LONG).show()
@@ -265,6 +268,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        LanguageSettingsStore.applyAppLocale(this)
         super.onCreate(savedInstanceState)
         locked = FloatingLyricsStyleStore.isLocked(this)
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
@@ -311,7 +315,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun currentLyricsOffsetSummary(): String {
-        val media = getCurrentMediaSnapshot() ?: return tr("等待当前音乐", "Waiting for current song")
+        val media = getCurrentMediaSnapshot() ?: return getString(R.string.ui_waiting_for_current_song)
         return localizedOffsetDescription(LyricsOffsetStore.getOffsetMs(this, media))
     }
 
@@ -332,7 +336,7 @@ class MainActivity : AppCompatActivity() {
     internal fun showImportLyricsDialog() {
         val media = getCurrentMediaSnapshot()
         if (media == null || media.title.isBlank()) {
-            Toast.makeText(this, tr("请先播放并选择一首歌，再为当前音乐导入歌词", "Please play and select a song before importing lyrics"), Toast.LENGTH_LONG).show()
+            Toast.makeText(this, getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
             return
         }
 
@@ -357,35 +361,35 @@ class MainActivity : AppCompatActivity() {
             })
 
             addView(TextView(this@MainActivity).apply {
-                text = tr("建议使用 AirLyrics 统一 LRC 格式。普通歌词：[00:12.34]歌词；逐字歌词：[00:12.34]<00:12.34>字。", "Plain: [00:12.34]text. Word LRC: <00:12.34>w.")
+                text = getString(R.string.ui_plain_and_enhanced_lrc_examples_short)
                 textSize = AirUiTokens.TextSize.BodySmall
                 setTextColor(colorTextMuted)
                 setPadding(0, 0, 0, dp(AirUiTokens.Space.Xxl))
             })
 
             addView(importLyricsChoiceRow(
-                title = tr("普通歌词（.lrc）", "Plain lyrics (.lrc)"),
-                subtitle = tr("推荐格式：[00:12.34]这是一行歌词。导入后会保存为统一格式。", "Recommended: [00:12.34]This is a lyric line. It will be saved in normalized format."),
+                title = getString(R.string.ui_plain_lyrics_lrc),
+                subtitle = getString(R.string.ui_plain_lrc_recommended_format_hint),
                 primary = true
             ) { launchImport(false) })
 
             addView(importLyricsChoiceRow(
-                title = tr("逐字歌词（增强 .lrc）", "Word-by-word lyrics (enhanced .lrc)"),
-                subtitle = tr("推荐格式：[00:12.34]<00:12.34>这<00:12.50>是，用于逐字高亮。", "Recommended: [00:12.34]<00:12.34>T<00:12.50>ext for word highlighting."),
+                title = getString(R.string.ui_enhanced_lrc_lyrics_enhanced_lrc),
+                subtitle = getString(R.string.ui_recommended_enhanced_lrc_format),
                 primary = false
             ) { launchImport(true) })
 
             addView(importLyricsChoiceRow(
-                title = tr("歌词格式说明", "Lyrics format guide"),
-                subtitle = tr("查看普通 LRC 和 enhanced LRC 的示例。", "View examples for plain LRC and enhanced LRC."),
+                title = getString(R.string.ui_lyrics_format_guide),
+                subtitle = getString(R.string.ui_view_lrc_examples_hint),
                 primary = false
             ) { showLyricsFormatGuideDialog() })
         }
 
         dialog = showAirDialog(
-            title = tr("选择导入类型", "Choose import type"),
+            title = getString(R.string.ui_choose_import_type),
             positiveText = null,
-            negativeText = tr("取消", "Cancel"),
+            negativeText = getString(R.string.ui_cancel),
             body = {
                 addView(content)
             }
@@ -430,10 +434,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun showLyricsFormatGuideDialog() {
         showAirInfoDialog(
-            title = tr("歌词格式说明", "Lyrics format guide"),
-            message = tr(
-                "普通歌词推荐格式：\n[00:12.34]这是一行歌词\n[00:15.60]This is a lyric preview\n\n逐字歌词推荐格式（enhanced LRC）：\n[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐字歌词",
-                "Plain lyrics recommended format:\n[00:12.34]This is a lyric line\n[00:15.60]This is a lyric preview\n\nWord-by-word recommended format (enhanced LRC):\n[00:12.34]<00:12.34>T<00:12.50>ext"
+            title = getString(R.string.ui_lyrics_format_guide),
+            message = localizedAssetText(
+                baseName = "help/lyrics_format",
+                fallback = getString(R.string.ui_lyrics_format_guide_body)
             )
         )
     }
@@ -484,21 +488,27 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun floatingPreviewSummary(style: FloatingLyricsStyle): String {
-        return tr("当前：", "Current: ") + localizedFloatingPresetTitle(style.presetName) + " · ${style.textSizeSp.toInt()}sp · " + localizedFloatingGravityTitle(style.gravity) + " · " + tr("宽度", "Width") + " ${style.maxWidthPercent}%"
+        return getString(
+            R.string.floating_preview_summary,
+            localizedFloatingPresetTitle(style.presetName),
+            style.textSizeSp.toInt(),
+            localizedFloatingGravityTitle(style.gravity),
+            style.maxWidthPercent
+        )
     }
 
     internal fun floatingDisplaySummary(): String {
-        val lockedText = if (FloatingLyricsStyleStore.isLocked(this)) tr("锁定", "Locked") else tr("可拖动", "Draggable")
-        val clickThroughText = if (FloatingLyricsStyleStore.isClickThrough(this)) tr("穿透", "Click-through") else tr("可点击", "Clickable")
+        val lockedText = if (FloatingLyricsStyleStore.isLocked(this)) getString(R.string.ui_locked) else getString(R.string.ui_draggable)
+        val clickThroughText = if (FloatingLyricsStyleStore.isClickThrough(this)) getString(R.string.ui_click_through) else getString(R.string.ui_clickable)
         return "$lockedText · $clickThroughText"
     }
 
     internal fun floatingLockButtonText(): String {
-        return if (FloatingLyricsStyleStore.isLocked(this)) tr("拖动锁定：开启", "Drag lock: on") else tr("拖动锁定：关闭", "Drag lock: off")
+        return if (FloatingLyricsStyleStore.isLocked(this)) getString(R.string.ui_drag_lock_on) else getString(R.string.ui_drag_lock_off)
     }
 
     internal fun floatingClickThroughButtonText(): String {
-        return if (FloatingLyricsStyleStore.isClickThrough(this)) tr("点击穿透：开启", "Click-through: on") else tr("点击穿透：关闭", "Click-through: off")
+        return if (FloatingLyricsStyleStore.isClickThrough(this)) getString(R.string.ui_click_through_on) else getString(R.string.ui_click_through_off)
     }
 
     internal fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {

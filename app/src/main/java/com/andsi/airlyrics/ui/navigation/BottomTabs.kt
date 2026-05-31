@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.navigation
 
+import com.andsi.airlyrics.R
+
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -14,13 +16,12 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
-import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun createBottomTabs(activity: MainActivity): View  = with(activity) createBottomTabs@ {
@@ -63,9 +64,9 @@ internal fun createBottomTabs(activity: MainActivity): View  = with(activity) cr
     }
     tabRow = bar
 
-    addTab(activity, bar, Page.MEDIA, tr("媒体流", "Media"))
-    addTab(activity, bar, Page.FLOATING, tr("悬浮窗", "Floating"))
-    addTab(activity, bar, Page.SETTINGS, tr("设置", "Settings"))
+    addTab(activity, bar, Page.MEDIA, getString(R.string.ui_media))
+    addTab(activity, bar, Page.FLOATING, getString(R.string.ui_floating))
+    addTab(activity, bar, Page.SETTINGS, getString(R.string.ui_settings))
 
     shell.addView(tabHighlight)
     shell.addView(bar)
@@ -89,7 +90,7 @@ internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, ti
     }
 
     val tab = TextView(this).apply {
-        text = localizeText(title)
+        text = displayText(title)
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
@@ -109,7 +110,7 @@ internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, ti
 
 internal fun quickFloatingTabText(activity: MainActivity, visible: Boolean): SpannableString  = with(activity) quickFloatingTabText@ {
     val icon = if (visible) "×" else "♪"
-    val label = if (visible) tr("隐藏", "Hide") else tr("显示", "Show")
+    val label = if (visible) getString(R.string.ui_hide) else getString(R.string.ui_show)
     return SpannableString("$icon\n$label").apply {
         setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabIconTextSp, true), 0, icon.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabLabelTextSp, true), icon.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -129,9 +130,9 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
             quickFloatingTabText(activity, quickFloatingVisible)
         } else {
             when (page) {
-                Page.MEDIA -> tr("媒体流", "Media")
-                Page.FLOATING -> tr("悬浮窗", "Floating")
-                Page.SETTINGS -> tr("设置", "Settings")
+                Page.MEDIA -> getString(R.string.ui_media)
+                Page.FLOATING -> getString(R.string.ui_floating)
+                Page.SETTINGS -> getString(R.string.ui_settings)
             }
         }
         if (view.text.toString() != targetText.toString()) {
