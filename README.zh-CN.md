@@ -179,3 +179,17 @@ Rust lyrics core 构建细节见 [RUST_NETEASE_LYRICS.md](docs/RUST_NETEASE_LYRI
 
 提交修改前，请先阅读 [CONTRIBUTING.md](docs/CONTRIBUTING.md)。
 
+---
+
+## Credit
+
+- [waylyrics](https://github.com/waylyrics/waylyrics)
+
+---
+
+## 许可证
+
+AirLyrics 使用 MIT License 授权。
+
+详见 [LICENSE](LICENSE)。
+

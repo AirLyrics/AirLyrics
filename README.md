@@ -179,3 +179,17 @@ Good areas to contribute:
 
 Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) before submitting changes.
 
+---
+
+## Credit
+
+- [waylyrics](https://github.com/waylyrics/waylyrics)
+
+---
+
+## License
+
+AirLyrics is licensed under the MIT License.
+
+See [LICENSE](LICENSE) for details.
+

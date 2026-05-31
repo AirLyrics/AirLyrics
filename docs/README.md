@@ -30,3 +30,10 @@ This directory contains the project documentation for AirLyrics. The main README
 
 English documents use the normal file name, for example `LYRICS_FORMAT.md`.
 Simplified Chinese documents use `.zh-CN.md`, for example `LYRICS_FORMAT.zh-CN.md`.
+---
+
+## License
+
+AirLyrics is licensed under the MIT License.
+
+See [LICENSE](../LICENSE) for details.

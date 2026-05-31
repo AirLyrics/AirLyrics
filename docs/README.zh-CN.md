@@ -30,3 +30,10 @@
 
 英文文档使用普通文件名，例如 `LYRICS_FORMAT.md`。
 简体中文文档使用 `.zh-CN.md` 后缀，例如 `LYRICS_FORMAT.zh-CN.md`。
+---
+
+## 许可证
+
+AirLyrics 使用 MIT License 授权。
+
+详见 [LICENSE](../LICENSE)。
