@@ -633,12 +633,12 @@ internal fun createFloatingPage(activity: MainActivity): View  = with(activity) 
                             }
                             addView(statusText)
                             addView(horizontalButtons(activity,
-                                tr("提前 1s", "Advance 1s") to { applyLyricsOffsetDelta(1_000L, statusText) },
-                                tr("提前 0.1s", "Advance 0.1s") to { applyLyricsOffsetDelta(100L, statusText) }
+                                tr("延后 1s", "Delay 1s") to { applyLyricsOffsetDelta(-1_000L, statusText) },
+                                tr("提前 1s", "Advance 1s") to { applyLyricsOffsetDelta(1_000L, statusText) }
                             ))
                             addView(horizontalButtons(activity,
                                 tr("延后 0.1s", "Delay 0.1s") to { applyLyricsOffsetDelta(-100L, statusText) },
-                                tr("延后 1s", "Delay 1s") to { applyLyricsOffsetDelta(-1_000L, statusText) }
+                                tr("提前 0.1s", "Advance 0.1s") to { applyLyricsOffsetDelta(100L, statusText) }
                             ))
                             addView(actionButton(activity, tr("重置当前歌曲偏移", "Reset current song offset")) {
                                 resetLyricsOffset(statusText)

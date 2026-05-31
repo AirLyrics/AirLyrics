@@ -193,7 +193,8 @@ fn fetch_best_lyrics(
         .map_err(|e| format!("failed to create tokio runtime: {e}"))?;
 
     runtime.block_on(async move {
-        let api = NcmApi::new(false, "");
+        tokio::time::timeout(std::time::Duration::from_secs(12), async move {
+            let api = NcmApi::new(false, "");
         let keywords = build_search_keywords(title, artist, album);
         let mut best_candidates = Vec::new();
 
@@ -253,6 +254,7 @@ fn fetch_best_lyrics(
             error_type: None,
             error: None,
         })
+        }).await.map_err(|_| "netease lookup timed out".to_string())?
     })
 }
 

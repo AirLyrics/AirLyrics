@@ -330,7 +330,6 @@ internal object AirLocalizer {
         "白" to "White",
         "互动 Logo" to "Logo taps",
         "暂无普通本地歌词" to "No plain LRC",
-        "可预览，也可以直接修改普通 LRC 内容。" to "Preview or edit plain LRC.",
         "无法读取这份歌词" to "Cannot read this lyric file",
         "点击歌词可以预览或者修改" to "Tap to preview or edit",
         "选择歌词保存目录" to "Choose save folder",

@@ -17,9 +17,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.changelogItem
 import com.andsi.airlyrics.app.getAppVersionName
 import com.andsi.airlyrics.app.openUrl
 import com.andsi.airlyrics.app.settingsBackHeader
@@ -35,6 +33,7 @@ import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
+import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.i18n.tr
 
@@ -173,13 +172,24 @@ private fun MainActivity.showUpdateLogDialog() {
         message = null,
         positiveText = tr("知道了", "OK"),
         body = {
-            addView(changelogItem(tr("关于页改版", "About page redesign"), tr("移除了说明味太重的内容，改成更简洁的互动式关于页。", "Simplified the About page into a cleaner interactive page.")))
-            addView(changelogItem(tr("互动 Logo", "Logo taps"), tr("把猫趴云放进关于页，点击会有 Q 弹的小动画，可以一直戳。", "Added the cat-on-cloud logo with a bouncy tap animation.")))
-            addView(changelogItem(tr("关于页彩蛋", "About page easter egg"), tr("连续点击小猫，每 6 下会解锁一段竖排小字，共三段。", "Tap the cat repeatedly to unlock three vertical notes.")))
-            addView(changelogItem(tr("逐字歌词策略", "Word-by-word lyrics policy"), tr("不再联网查找逐字歌词，仅保留本地导入逐字歌词能力。", "Online word-by-word lookup was removed; local imports remain.")))
-            addView(changelogItem(tr("歌词偏移调节", "Offset tuning"), tr("支持用户手动调整歌词 offset，并保存到对应歌曲。", "Lyrics offset can be adjusted and saved per song.")))
+            addView(TextView(this@showUpdateLogDialog).apply {
+                text = loadChangelogText()
+                textSize = 14f
+                setTextColor(colorTextMuted)
+                setLineSpacing(dp(4).toFloat(), 1f)
+                setPadding(0, dp(12), 0, dp(4))
+            })
         }
     )
+}
+
+private fun MainActivity.loadChangelogText(): String {
+    val fallback = tr("暂无更新日志。", "No changelog yet.")
+    return runCatching {
+        assets.open("changelog.txt").bufferedReader(Charsets.UTF_8).use { it.readText() }
+    }.getOrDefault(fallback)
+        .trim()
+        .ifBlank { fallback }
 }
 
 private class InteractiveLogoView(

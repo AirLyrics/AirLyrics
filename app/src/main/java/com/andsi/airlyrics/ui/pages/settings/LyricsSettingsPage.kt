@@ -319,16 +319,97 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
         setTextColor(colorAccentMint)
         gravity = Gravity.CENTER_VERTICAL
     }
+    var closeHeaderHint: () -> Unit = {}
+
+    fun currentLocalLyricsItem(): LyricsStorage.LocalLyricsItem? {
+        val media = getCurrentMediaSnapshot()?.takeUnless { it.isEmpty } ?: return null
+        val info = LyricsStorage.getLocalLyricsInfo(
+            context = this,
+            title = media.title,
+            artist = media.artist,
+            duration = media.durationMs
+        ) ?: return null
+        val hasWordByWord = LyricsStorage.hasKaraokeLyrics(
+            context = this,
+            title = media.title,
+            artist = media.artist,
+            duration = media.durationMs
+        )
+        return LyricsStorage.LocalLyricsItem(
+            name = info.fileName,
+            modifiedTimeMillis = info.updatedAt,
+            sizeBytes = 0L,
+            title = info.title,
+            artist = info.artist,
+            source = info.source,
+            provider = info.provider,
+            hasPlainLyrics = true,
+            hasKaraokeLyrics = hasWordByWord
+        )
+    }
 
     fun populate() {
         listBody.removeAllViews()
+        val currentItem = currentLocalLyricsItem()
         val recentLyrics = LyricsStorage.listRecentLyrics(this, limit = 8)
+
+        if (currentItem != null) {
+            listBody.addView(localLyricsRow(currentItem, onLyricsSaved = {
+                closeHeaderHint()
+                populate()
+                playLocalRefreshFeedback(activity, listBody, feedback, tr("已生效", "Applied"))
+            }, badgeText = tr("正在播放", "Now playing")))
+        } else {
+            val media = getCurrentMediaSnapshot()?.takeUnless { it.isEmpty }
+            listBody.addView(LinearLayout(activity).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(10), dp(12), dp(10))
+                layoutParams = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    setMargins(0, dp(10), 0, 0)
+                }
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(colorSurfaceLight)
+                    setStroke(dp(1), colorStroke)
+                }
+                addView(TextView(activity).apply {
+                    text = tr("正在播放", "Now playing")
+                    textSize = 11f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(colorAccent)
+                    setPadding(0, 0, 0, dp(4))
+                })
+                addView(TextView(activity).apply {
+                    text = media?.displayText ?: tr("当前没有可识别的播放媒体", "No active media found")
+                    textSize = 14f
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(colorTextStrong)
+                })
+                addView(TextView(activity).apply {
+                    text = tr("当前音乐还没有绑定普通本地歌词", "No plain local lyrics are bound to the current song")
+                    textSize = 12f
+                    setTextColor(colorTextMuted)
+                    setPadding(0, dp(4), 0, 0)
+                })
+            })
+        }
+
         if (recentLyrics.isEmpty()) {
             listBody.addView(normalText(activity, tr("还没有保存过歌词。播放歌曲并成功匹配，或为当前音乐导入歌词后，这里会出现 .lrc 文件。", "No saved lyrics yet. Play and match a song, or import lyrics for current media.")))
         } else {
-            recentLyrics.forEach { item ->
-                listBody.addView(localLyricsRow(item))
-            }
+            val currentName = currentItem?.name?.substringAfterLast('/')
+            recentLyrics
+                .filterNot { item -> currentName != null && item.name.substringAfterLast('/') == currentName }
+                .forEach { item ->
+                    listBody.addView(localLyricsRow(item, onLyricsSaved = {
+                        closeHeaderHint()
+                        populate()
+                        playLocalRefreshFeedback(activity, listBody, feedback, tr("已生效", "Applied"))
+                    }))
+                }
         }
     }
 
@@ -350,6 +431,13 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
                 alpha = 0f
                 visibility = View.GONE
                 setPadding(dp(8), 0, 0, 0)
+            }
+            closeHeaderHint = {
+                if (hintText.visibility == View.VISIBLE || hintText.alpha > 0f) {
+                    hintText.animate().cancel()
+                    hintText.alpha = 0f
+                    hintText.visibility = View.GONE
+                }
             }
 
             addView(TextView(activity).apply {
@@ -394,6 +482,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
                 setPadding(dp(8), dp(4), dp(8), dp(4))
                 enableSoftPressFeedback(0.9f)
                 setOnClickListener {
+                    closeHeaderHint()
                     animate().rotationBy(360f).setDuration(420L).start()
                     populate()
                     val count = LyricsStorage.listRecentLyrics(activity, limit = 8).size

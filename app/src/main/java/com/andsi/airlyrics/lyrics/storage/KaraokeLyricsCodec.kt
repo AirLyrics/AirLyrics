@@ -60,6 +60,45 @@ internal object KaraokeLyricsCodec {
         }.getOrDefault(emptyList())
     }
 
+
+
+    fun linesToEnhancedLrc(lines: List<KaraokeLine>): String {
+        return lines
+            .sortedBy { it.startMs }
+            .joinToString("\n") { line ->
+                val tokenText = line.tokens
+                    .sortedBy { it.startMs }
+                    .joinToString(separator = "") { token ->
+                        "<${formatLrcTimeTag(token.startMs)}>${token.text}"
+                    }
+                "[${formatLrcTimeTag(line.startMs)}]$tokenText"
+            }
+    }
+
+    data class EnhancedLrcValidationResult(
+        val isValid: Boolean,
+        val invalidLineNumbers: List<Int> = emptyList()
+    )
+
+    fun validateEnhancedLrcForStorage(rawLrc: String): EnhancedLrcValidationResult {
+        val invalidLineNumbers = rawLrc
+            .lineSequence()
+            .mapIndexedNotNull { index, rawLine ->
+                val line = rawLine.trim()
+                if (line.isBlank() || Regex("""\[[A-Za-z][A-Za-z0-9_\-]*:.*]""").matches(line)) {
+                    return@mapIndexedNotNull null
+                }
+                if (parseEnhancedLrc(line).isEmpty()) index + 1 else null
+            }
+            .toList()
+
+        if (invalidLineNumbers.isNotEmpty()) {
+            return EnhancedLrcValidationResult(isValid = false, invalidLineNumbers = invalidLineNumbers)
+        }
+
+        return EnhancedLrcValidationResult(isValid = parseEnhancedLrc(rawLrc).isNotEmpty())
+    }
+
     fun linesToPlainLrc(lines: List<KaraokeLine>): String {
         return lines
             .sortedBy { it.startMs }

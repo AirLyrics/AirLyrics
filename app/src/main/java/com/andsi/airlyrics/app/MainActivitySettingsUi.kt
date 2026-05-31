@@ -13,7 +13,7 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
+import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.ui.components.bigText
@@ -165,7 +165,11 @@ internal fun MainActivity.settingsCategoryCard(
     }
 }
 
-internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): View {
+internal fun MainActivity.localLyricsRow(
+    item: LyricsStorage.LocalLyricsItem,
+    onLyricsSaved: (() -> Unit)? = null,
+    badgeText: CharSequence? = null
+): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -182,6 +186,15 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             setStroke(dp(1), colorStroke)
         }
         enableSoftPressFeedback(0.98f)
+        if (!badgeText.isNullOrBlank()) {
+            addView(TextView(activity).apply {
+                text = localizeText(badgeText)
+                textSize = 11f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorAccent)
+                setPadding(0, 0, 0, dp(4))
+            })
+        }
         addView(TextView(activity).apply {
             text = item.displayTitle
             textSize = 14f
@@ -202,51 +215,257 @@ internal fun MainActivity.localLyricsRow(item: LyricsStorage.LocalLyricsItem): V
             setPadding(0, dp(2), 0, 0)
         })
         setOnClickListener {
-            val rawLyrics = LyricsStorage.readLocalLyricsItemText(activity, item)
-            if (rawLyrics == null) {
-                Toast.makeText(activity, tr("无法读取这份歌词", "Cannot read this lyric file"), Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
+            activity.openLocalLyricsTargetPicker(item, onLyricsSaved)
+        }
+    }
+}
 
-            val editor = EditText(activity).apply {
-                setText(rawLyrics)
-                textSize = 13f
-                minLines = 8
-                maxLines = 18
-                gravity = Gravity.TOP or Gravity.START
-                inputType = InputType.TYPE_CLASS_TEXT or
-                    InputType.TYPE_TEXT_FLAG_MULTI_LINE or
-                    InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                setHorizontallyScrolling(false)
-                setSelection(0)
-                setTextColor(colorTextStrong)
-                setHintTextColor(colorTextMuted)
-                setPadding(dp(12), dp(10), dp(12), dp(10))
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(16).toFloat()
-                    setColor(colorSurfaceLight)
-                    setStroke(dp(1), colorStroke)
-                }
-            }
 
-            val canEdit = item.hasPlainLyrics && !item.name.endsWith(".karaoke.json", ignoreCase = true)
-            activity.showAirDialog(
+private fun MainActivity.openLocalLyricsTargetPicker(
+    item: LyricsStorage.LocalLyricsItem,
+    onLyricsSaved: (() -> Unit)?
+) {
+    when {
+        item.hasPlainLyrics && item.hasKaraokeLyrics -> {
+            var pickerDialog: android.app.Dialog? = null
+            pickerDialog = showAirDialog(
                 title = item.displayTitle,
-                message = if (canEdit) tr("可预览，也可以直接修改普通 LRC 内容。", "Preview or edit plain LRC.").toString() else tr("这份逐字歌词只能预览。", "This word-by-word file is preview-only.").toString(),
-                positiveText = if (canEdit) tr("保存修改", "Save changes").toString() else null,
-                negativeText = tr("关闭", "Off").toString(),
+                message = tr(
+                    "这首歌同时有普通歌词和逐字歌词，请选择要打开的版本。",
+                    "This song has both plain and word-by-word lyrics. Choose which version to open."
+                ),
+                positiveText = null,
+                negativeText = null,
                 body = {
-                    addView(editor)
+                    addView(LinearLayout(this@openLocalLyricsTargetPicker).apply {
+                        orientation = LinearLayout.HORIZONTAL
+                        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                        setPadding(0, dp(8), 0, 0)
+                        addView(localLyricsDialogButton(tr("普通歌词", "Plain lyrics"), primary = false) {
+                            pickerDialog?.dismiss()
+                            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
+                        })
+                        addView(localLyricsDialogButton(tr("逐字歌词", "Word-by-word lyrics"), primary = true) {
+                            pickerDialog?.dismiss()
+                            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
+                        })
+                    })
                 }
-            ) {
-                val saved = LyricsStorage.updateLocalLyricsItemText(activity, item, editor.text.toString())
-                Toast.makeText(
-                    activity,
-                    if (saved) tr("歌词已保存", "Lyrics saved") else tr("保存失败，请确认内容是 [00:12.34]歌词 格式", "Save failed. Make sure the content uses [00:12.34]lyric format."),
-                    Toast.LENGTH_SHORT
-                ).show()
+            )
+        }
+        item.hasKaraokeLyrics && !item.hasPlainLyrics -> {
+            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
+        }
+        else -> {
+            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
+        }
+    }
+}
+
+private fun MainActivity.openLocalLyricsEditor(
+    item: LyricsStorage.LocalLyricsItem,
+    target: LyricsStorage.LocalLyricsEditTarget,
+    onLyricsSaved: (() -> Unit)?
+) {
+    val isKaraoke = target == LyricsStorage.LocalLyricsEditTarget.KARAOKE
+    val rawLyrics = LyricsStorage.readLocalLyricsItemText(this, item, target)
+    if (rawLyrics == null) {
+        showAirDialog(
+            title = tr("读取失败", "Read failed"),
+            message = if (isKaraoke) {
+                tr("无法读取这份逐字歌词。", "Cannot read this word-by-word lyric file.")
+            } else {
+                tr("无法读取这份歌词。", "Cannot read this lyric file.")
+            },
+            positiveText = tr("知道了", "OK")
+        )
+        return
+    }
+
+    val editor = EditText(this).apply {
+        setText(rawLyrics)
+        textSize = 13f
+        minLines = 8
+        maxLines = 18
+        gravity = Gravity.TOP or Gravity.START
+        inputType = InputType.TYPE_CLASS_TEXT or
+            InputType.TYPE_TEXT_FLAG_MULTI_LINE or
+            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        setHorizontallyScrolling(false)
+        setSelection(0)
+        setTextColor(colorTextStrong)
+        setHintTextColor(colorTextMuted)
+        setPadding(dp(12), dp(10), dp(12), dp(10))
+        background = GradientDrawable().apply {
+            cornerRadius = dp(16).toFloat()
+            setColor(colorSurfaceLight)
+            setStroke(dp(1), colorStroke)
+        }
+    }
+
+    var editDialog: android.app.Dialog? = null
+    editDialog = showAirDialog(
+        title = if (isKaraoke) {
+            tr("${item.displayTitle} · 逐字歌词", "${item.displayTitle} · Word-by-word")
+        } else {
+            item.displayTitle
+        },
+        message = if (isKaraoke) {
+            tr(
+                "逐字歌词使用 enhanced LRC：行时间用 [00:12.34]，字词时间用 <00:12.34>。",
+                "Word-by-word lyrics use enhanced LRC: line time uses [00:12.34], word time uses <00:12.34>."
+            )
+        } else null,
+        positiveText = null,
+        negativeText = null,
+        body = {
+            addView(editor)
+            addView(LinearLayout(this@openLocalLyricsEditor).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                setPadding(0, dp(16), 0, 0)
+
+                addView(localLyricsDialogButton(tr("检查格式", "Check format"), primary = false) {
+                    if (isKaraoke) {
+                        val validation = LyricsStorage.validateKaraokeLyricsItemText(editor.text.toString())
+                        if (validation.saved) {
+                            showAirDialog(
+                                title = tr("格式正确", "Format looks good"),
+                                message = tr("这份 enhanced LRC 可以保存。", "This enhanced LRC can be saved."),
+                                positiveText = tr("知道了", "OK")
+                            )
+                        } else if (validation.invalidLineNumbers.isNotEmpty()) {
+                            showEnhancedLyricsFormatErrorDialog(validation.invalidLineNumbers)
+                        } else {
+                            showEnhancedLyricsFormatErrorDialog(emptyList())
+                        }
+                    } else {
+                        val validation = LrcParser.validateForStorage(editor.text.toString())
+                        if (validation.isValid) {
+                            showAirDialog(
+                                title = tr("格式正确", "Format looks good"),
+                                message = tr("这份普通 LRC 可以保存。", "This plain LRC can be saved."),
+                                positiveText = tr("知道了", "OK")
+                            )
+                        } else {
+                            showLyricsFormatErrorDialog(validation.invalidLineNumbers)
+                        }
+                    }
+                })
+
+                addView(localLyricsDialogButton(tr("关闭", "Close"), primary = false) {
+                    editDialog?.dismiss()
+                })
+
+                addView(localLyricsDialogButton(tr("保存修改", "Save changes"), primary = true) {
+                    val result = if (isKaraoke) {
+                        LyricsStorage.updateKaraokeLyricsItemTextWithResult(this@openLocalLyricsEditor, item, editor.text.toString())
+                    } else {
+                        LyricsStorage.updateLocalLyricsItemTextWithResult(this@openLocalLyricsEditor, item, editor.text.toString())
+                    }
+                    when {
+                        result.saved -> {
+                            editDialog?.dismiss()
+                            reloadFloatingLyrics()
+                            onLyricsSaved?.invoke()
+                        }
+                        result.invalidLineNumbers.isNotEmpty() -> {
+                            if (isKaraoke) showEnhancedLyricsFormatErrorDialog(result.invalidLineNumbers) else showLyricsFormatErrorDialog(result.invalidLineNumbers)
+                        }
+                        else -> {
+                            if (isKaraoke) {
+                                showEnhancedLyricsFormatErrorDialog(emptyList())
+                            } else {
+                                showAirDialog(
+                                    title = tr("保存失败", "Save failed"),
+                                    message = tr(
+                                        "请确认内容是普通 LRC，并使用 [00:12.34]歌词 格式。",
+                                        "Make sure the content is plain LRC and uses [00:12.34]lyric format."
+                                    ),
+                                    positiveText = tr("知道了", "OK")
+                                )
+                            }
+                        }
+                    }
+                })
+            })
+        }
+    )
+}
+
+private fun MainActivity.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
+    val message = if (invalidLineNumbers.isNotEmpty()) {
+        val lines = invalidLineNumbers.take(8).joinToString("、")
+        val suffix = if (invalidLineNumbers.size > 8) "…" else ""
+        tr(
+            "第 ${lines}${suffix} 行格式不正确。\n\n普通歌词需要使用 [00:12.34]歌词 格式；空行和 [ar:歌手] 这类 LRC 信息行可以保留。",
+            "Line ${lines}${suffix} has an invalid format.\n\nPlain lyrics must use the [00:12.34]lyric format. Blank lines and LRC metadata such as [ar:artist] are allowed."
+        )
+    } else {
+        tr(
+            "没有找到可保存的有效歌词。请至少保留一行 [00:12.34]歌词。",
+            "No valid lyric line was found. Keep at least one [00:12.34]lyric line."
+        )
+    }
+
+    showAirDialog(
+        title = tr("格式不正确", "Invalid format"),
+        message = message,
+        positiveText = tr("回去修改", "Back to edit")
+    )
+}
+
+private fun MainActivity.showEnhancedLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
+    val message = if (invalidLineNumbers.isNotEmpty()) {
+        val lines = invalidLineNumbers.take(8).joinToString("、")
+        val suffix = if (invalidLineNumbers.size > 8) "…" else ""
+        tr(
+            "第 ${lines}${suffix} 行格式不正确。\n\n逐字歌词需要使用 enhanced LRC 格式：行时间为 [00:12.34]，每个字词时间为 <00:12.34>歌词。",
+            "Line ${lines}${suffix} has an invalid format.\n\nWord-by-word lyrics must use enhanced LRC: line time is [00:12.34], and each word token uses <00:12.34>lyric."
+        )
+    } else {
+        tr(
+            "没有找到可保存的逐字歌词。请至少保留一行 [00:12.34]<00:12.34>歌词。",
+            "No valid word-by-word lyric line was found. Keep at least one [00:12.34]<00:12.34>lyric line."
+        )
+    }
+
+    showAirDialog(
+        title = tr("格式不正确", "Invalid format"),
+        message = message,
+        positiveText = tr("回去修改", "Back to edit")
+    )
+}
+
+private fun MainActivity.localLyricsDialogButton(
+    text: String,
+    primary: Boolean,
+    onClick: () -> Unit
+): TextView {
+    return TextView(this).apply {
+        this.text = localizeText(text)
+        textSize = 14f
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = Gravity.CENTER
+        setTextColor(if (primary) Color.WHITE else colorTextStrong)
+        setPadding(dp(14), dp(10), dp(14), dp(10))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            setMargins(dp(8), 0, 0, 0)
+        }
+        background = GradientDrawable().apply {
+            cornerRadius = dp(99).toFloat()
+            if (primary) {
+                setColor(colorAccent)
+            } else {
+                setColor(colorSurfaceLight)
+                setStroke(dp(1), colorStroke)
             }
         }
+        enableSoftPressFeedback(0.94f)
+        setOnClickListener { onClick() }
     }
 }
 

@@ -430,8 +430,8 @@ class MainActivity : AppCompatActivity() {
         showAirInfoDialog(
             title = tr("歌词格式说明", "Lyrics format guide"),
             message = tr(
-                "普通歌词推荐格式：\n[00:12.34]这是一行歌词\n[00:15.60]This is a lyric preview\n\n逐字歌词推荐 enhanced LRC：\n[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐字歌词\n\n普通歌词导入后会保存为统一的 [mm:ss.xx]歌词 格式。逐字歌词只支持本地导入。",
-                "Plain lyrics recommended format:\n[00:12.34]This is a lyric line\n[00:15.60]This is a lyric preview\n\nWord-by-word enhanced LRC:\n[00:12.34]<00:12.34>T<00:12.50>ext\n\nPlain lyrics are normalized to [mm:ss.xx]lyric format. Word-by-word lyrics only support local import."
+                "普通歌词推荐格式：\n[00:12.34]这是一行歌词\n[00:15.60]This is a lyric preview\n\n逐字歌词推荐格式（enhanced LRC）：\n[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐字歌词",
+                "Plain lyrics recommended format:\n[00:12.34]This is a lyric line\n[00:15.60]This is a lyric preview\n\nWord-by-word recommended format (enhanced LRC):\n[00:12.34]<00:12.34>T<00:12.50>ext"
             )
         )
     }

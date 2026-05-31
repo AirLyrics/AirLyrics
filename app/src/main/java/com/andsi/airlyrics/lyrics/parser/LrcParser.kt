@@ -79,6 +79,34 @@ object LrcParser {
         return formatLinesForStorage(parsePlainLines(lyrics))
     }
 
+    data class StorageValidationResult(
+        val isValid: Boolean,
+        val invalidLineNumbers: List<Int> = emptyList()
+    )
+
+    fun validateForStorage(lyrics: String): StorageValidationResult {
+        val invalidLineNumbers = lyrics
+            .lineSequence()
+            .mapIndexedNotNull { index, rawLine ->
+                if (isIgnorableStorageLine(rawLine)) return@mapIndexedNotNull null
+                if (parseTimedSegments(rawLine).isEmpty()) index + 1 else null
+            }
+            .toList()
+
+        if (invalidLineNumbers.isNotEmpty()) {
+            return StorageValidationResult(isValid = false, invalidLineNumbers = invalidLineNumbers)
+        }
+
+        return StorageValidationResult(isValid = normalizeForStorage(lyrics).isNotBlank())
+    }
+
+
+    private fun isIgnorableStorageLine(rawLine: String): Boolean {
+        val line = rawLine.trim()
+        if (line.isBlank()) return true
+        return Regex("""\[[A-Za-z][A-Za-z0-9_\-]*:.*]""").matches(line)
+    }
+
     private fun formatLinesForStorage(lines: List<LrcLine>): String {
         return lines
             .filter { it.text.isNotBlank() || !it.translation.isNullOrBlank() }
