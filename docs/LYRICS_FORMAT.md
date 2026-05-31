@@ -2,13 +2,13 @@
 
 [English](LYRICS_FORMAT.md) · [简体中文](LYRICS_FORMAT.zh-CN.md)
 
-AirLyrics supports local `.lrc` import. Local import is the recommended path when online lyrics are missing, inaccurate or not synchronized with your track.
+AirLyrics supports local `.lrc` import. Use local import when online lyrics are missing, inaccurate or out of sync.
 
 ## Normal LRC
 
 Normal LRC displays one timed line at a time.
 
-Recommended format:
+Preferred format:
 
 ```lrc
 [00:12.34]This is a lyric line
@@ -26,7 +26,7 @@ Notes:
 - `mm` is minutes.
 - `ss` is seconds.
 - `xx` is centiseconds.
-- Keep one main timestamp and one lyric sentence per line when possible.
+- Use one main timestamp and one lyric sentence per line when possible.
 
 ## Translation lines
 
@@ -47,9 +47,9 @@ Display behavior depends on the selected lyrics content mode:
 
 ## Enhanced / word-by-word LRC
 
-Enhanced lyrics are supported mainly through local import. They use line timestamps plus inline word timestamps.
+Enhanced lyrics mainly come from local import. They use line timestamps plus inline word timestamps.
 
-Recommended format:
+Preferred format:
 
 ```lrc
 [00:12.34]<00:12.34>I <00:12.60>love <00:12.95>you
@@ -80,11 +80,11 @@ It also attempts to recover compact exports like:
 [00:00:58]Line A[00:01:20]Line B[00:02:18]Line C
 ```
 
-This compact style is not recommended for manual editing.
+This compact style is hard to edit by hand.
 
-## Not recommended
+## Problematic patterns
 
-Avoid these patterns when creating lyrics manually:
+When creating lyrics manually, watch for:
 
 - Untimed plain text only.
 - Very long lines without natural spaces.
@@ -94,7 +94,7 @@ Avoid these patterns when creating lyrics manually:
 
 ## Import behavior
 
-When importing, AirLyrics asks whether the file should be treated as normal lyrics or enhanced lyrics.
+During import, AirLyrics asks whether the file is normal lyrics or enhanced lyrics.
 
 - Normal lyrics are saved as line-based LRC.
 - Enhanced lyrics are saved separately so word timing can be reused.
@@ -103,7 +103,7 @@ When importing, AirLyrics asks whether the file should be treated as normal lyri
 
 ## Test samples
 
-Manual test files are available in:
+Manual test files:
 
 ```text
 docs/test-lyrics-samples/

@@ -2,7 +2,7 @@
 
 [English](TESTING.md) · [简体中文](TESTING.zh-CN.md)
 
-AirLyrics should be tested at three levels: unit tests, Android instrumentation tests and manual device checks.
+AirLyrics test coverage has three layers: unit tests, Android instrumentation tests and manual device checks.
 
 ## Unit tests
 

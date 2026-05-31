@@ -2,9 +2,9 @@
 
 [English](CONTRIBUTING.md) · [简体中文](CONTRIBUTING.zh-CN.md)
 
-Thanks for helping AirLyrics. The project is small, but the code is split by responsibility. Please keep changes narrow and easy to review.
+Thanks for helping AirLyrics. Keep changes narrow and easy to review.
 
-## Recommended environment
+## Environment
 
 - Android Studio or IntelliJ IDEA
 - JDK 17
@@ -18,7 +18,7 @@ For Kotlin-only checks, use the skip flag when native libraries are already pres
 ./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
 ```
 
-For a real APK, build with the native libraries included.
+Release builds include native libraries.
 
 ## Before opening a PR
 
@@ -57,7 +57,7 @@ If your change touches local lyrics storage, import behavior, parser logic or An
 4. Apply the setting in the runtime module that uses it.
 5. Update docs and tests when the behavior is user-visible.
 
-Avoid direct `SharedPreferences` access from UI pages or services unless a new store is being created.
+Use settings stores instead of direct `SharedPreferences` access from UI pages or services.
 
 ## Adding a lyrics provider
 
@@ -67,7 +67,7 @@ Avoid direct `SharedPreferences` access from UI pages or services unless a new s
 4. Handle network failures, no-result cases and ambiguous matches safely.
 5. Keep enhanced / word-by-word lyrics import local-first unless the app design changes.
 
-Providers must return data. They should not update UI directly.
+Providers return data and do not update UI directly.
 
 ## Localization rules
 
@@ -88,4 +88,4 @@ lyrics-core/target/
 local.properties
 ```
 
-Generated APKs and local machine configuration should stay out of the repository.
+Generated APKs and local machine configuration stay out of the repository.

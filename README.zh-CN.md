@@ -107,7 +107,7 @@ https://github.com/AndSi-327/android-floating-lyrics/releases
 
 ## 权限说明
 
-AirLyrics 需要以下 Android 权限才能正常工作。
+AirLyrics 会用到以下 Android 权限：
 
 | 权限 | 用途 |
 | --- | --- |
@@ -119,11 +119,11 @@ AirLyrics 需要以下 Android 权限才能正常工作。
 
 ## 文档
 
-更多说明可以查看 docs 目录。
+项目文档见 docs 目录。
 
 | 文档 | 说明 |
 | --- | --- |
-| [文档首页](docs/README.zh-CN.md) | 按主题查看全部中文文档 |
+| [文档首页](docs/README.zh-CN.md) | 中文文档索引 |
 | [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
 | [贡献指南](docs/CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与代码位置 |
 | [测试指南](docs/TESTING.zh-CN.md) | 构建、单元测试与手动测试清单 |
@@ -161,7 +161,6 @@ APK 会生成在：
 app/build/outputs/apk/debug/
 ```
 
-Rust lyrics core 构建细节见 [RUST_NETEASE_LYRICS.md](docs/RUST_NETEASE_LYRICS.md)。
 
 ---
 
@@ -177,7 +176,7 @@ Rust lyrics core 构建细节见 [RUST_NETEASE_LYRICS.md](docs/RUST_NETEASE_LYRI
 - 文档改进
 - UI 文案润色
 
-提交修改前，请先阅读 [CONTRIBUTING.md](docs/CONTRIBUTING.md)。
+贡献说明：[CONTRIBUTING.md](docs/CONTRIBUTING.md)。
 
 ---
 
@@ -191,5 +190,5 @@ Rust lyrics core 构建细节见 [RUST_NETEASE_LYRICS.md](docs/RUST_NETEASE_LYRI
 
 AirLyrics 使用 MIT License 授权。
 
-详见 [LICENSE](LICENSE)。
+见 [LICENSE](LICENSE)。
 

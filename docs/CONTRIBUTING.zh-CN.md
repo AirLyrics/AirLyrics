@@ -2,23 +2,23 @@
 
 [English](CONTRIBUTING.md) · [简体中文](CONTRIBUTING.zh-CN.md)
 
-感谢帮助 AirLyrics。项目规模不大，但代码已经按职责拆开。提交时尽量保持改动范围清晰，方便 review。
+感谢帮助 AirLyrics。提交时保持改动范围清晰，便于 review。
 
-## 推荐环境
+## 开发环境
 
 - Android Studio 或 IntelliJ IDEA
 - JDK 17
 - Android SDK
-- 如果需要重建原生歌词核心，需要 Android NDK
-- 如果需要重建 `lyrics-core`，需要 Rust toolchain 和 `cargo-ndk`
+- 重建原生歌词核心需要 Android NDK
+- 重建 `lyrics-core` 需要 Rust toolchain 和 `cargo-ndk`
 
-只检查 Kotlin 代码，并且本地已经有 native libraries 时，可以使用跳过 Rust 构建的参数：
+本地已有 native libraries 时，Kotlin 检查可跳过 Rust 构建：
 
 ```bash
 ./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
 ```
 
-真正打 APK 时需要包含原生库。
+正式 APK 需要包含原生库。
 
 ## 提交 PR 前
 
@@ -73,7 +73,7 @@ Provider 只返回数据，不直接更新 UI。
 
 - 不要随意修改已有 string key。
 - 保持 `%1$s` 等 placeholder 不变。
-- UI 文案尽量短。
+- UI 文案保持简短。
 - 不要翻译歌曲名、歌手名、文件名、包名和路径。
 - 提交前运行 `./scripts/check_localization.sh`。
 

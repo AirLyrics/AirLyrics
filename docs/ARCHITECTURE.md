@@ -2,9 +2,9 @@
 
 [English](ARCHITECTURE.md) · [简体中文](ARCHITECTURE.zh-CN.md)
 
-AirLyrics is an Android floating lyrics app. The Android app is written in Kotlin and uses a Rust native lyrics core for online provider access.
+AirLyrics is an Android floating lyrics app written in Kotlin, with a Rust native lyrics core for online providers.
 
-The current architecture is split around responsibilities instead of screens only: media detection, lyrics lookup, local lyrics storage, floating-window rendering, settings persistence and UI pages each have their own home.
+The code is split by responsibility: media detection, lyrics lookup, local storage, floating-window rendering, settings persistence and UI pages.
 
 ## Runtime flow
 
@@ -37,7 +37,7 @@ common/           Shared constants
 
 ## App shell
 
-`MainActivity` owns Android lifecycle glue: activity result launchers, permission flows, broadcast receivers and navigation dispatch. Feature logic is delegated to controllers and page files.
+`MainActivity` handles Activity results, permission flows, broadcast receivers and navigation dispatch. Feature logic lives in controllers and page files.
 
 Important files:
 
@@ -54,7 +54,7 @@ app/controller/FloatingController.kt
 
 `MediaNotificationListener` reads active media notifications and broadcasts snapshots. `MediaSourceStore` remembers the selected media package so AirLyrics can follow the right player when multiple apps expose playback state.
 
-The Media page shows current media and available players. Refresh actions update only the relevant media state instead of rebuilding the whole app shell.
+The Media page shows current media and available players. Refresh actions update the media state without rebuilding the app shell.
 
 ## Lyrics lookup
 
@@ -65,7 +65,7 @@ The Media page shows current media and available players. Refresh actions update
 3. Optional save of online result into local storage.
 4. Optional local enhanced / word-by-word lyrics attachment when the feature is enabled.
 
-`LyricsFetcher` remains as a compatibility wrapper for older call sites. New code should prefer `LyricsRepository` or the app-level lyrics controller.
+`LyricsFetcher` remains as a compatibility wrapper for older call sites. New code uses `LyricsRepository` or the app-level lyrics controller.
 
 ## Floating lyrics
 
@@ -75,8 +75,8 @@ The floating window supports style changes, lock state, touch-through behavior, 
 
 ## Settings
 
-Settings are stored through dedicated stores under `settings/store/`. UI pages should not directly write raw `SharedPreferences` keys unless a new store is being introduced.
+Settings are stored through dedicated stores under `settings/store/`. UI pages avoid direct `SharedPreferences` writes.
 
 ## Localization
 
-Short UI strings live in Android resources. Longer documents and changelog-style text are handled as files. See [Localization](LOCALIZATION.md).
+Short UI strings live in Android resources. Longer text lives in files.

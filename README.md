@@ -107,7 +107,7 @@ After installation, grant the required permissions and select your music app as 
 
 ## Permissions
 
-AirLyrics requires several Android permissions to work properly.
+AirLyrics uses these Android permissions:
 
 | Permission | Purpose |
 | --- | --- |
@@ -119,11 +119,11 @@ AirLyrics requires several Android permissions to work properly.
 
 ## Documentation
 
-More details are available in the docs directory.
+See the docs directory for project documentation.
 
 | Document | Description |
 | --- | --- |
-| [Documentation Home](docs/README.md) | Browse all English documentation by topic |
+| [Documentation Home](docs/README.md) | English documentation index |
 | [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics |
 | [Contributing](docs/CONTRIBUTING.md) | Development environment, workflow and code map |
 | [Testing](docs/TESTING.md) | Build, automated tests and manual release checks |
@@ -161,7 +161,6 @@ The APK will be generated under:
 app/build/outputs/apk/debug/
 ```
 
-For Rust lyrics core build details, see [RUST_NETEASE_LYRICS.md](docs/RUST_NETEASE_LYRICS.md).
 
 ---
 
@@ -177,7 +176,7 @@ Good areas to contribute:
 - Documentation improvements
 - UI text polishing
 
-Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) before submitting changes.
+Contribution guide: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ---
 
@@ -191,5 +190,5 @@ Please read [CONTRIBUTING.md](docs/CONTRIBUTING.md) before submitting changes.
 
 AirLyrics is licensed under the MIT License.
 
-See [LICENSE](LICENSE) for details.
+See [LICENSE](LICENSE).
 

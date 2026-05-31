@@ -2,7 +2,7 @@
 
 [English](TESTING.md) · [简体中文](TESTING.zh-CN.md)
 
-AirLyrics 应该从三个层级测试：单元测试、Android instrumentation tests 和真机手动检查。
+AirLyrics 测试分三层：单元测试、Android instrumentation tests 和真机手动检查。
 
 ## 单元测试
 
