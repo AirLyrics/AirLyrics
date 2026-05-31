@@ -643,7 +643,13 @@ class MainActivity : AppCompatActivity() {
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = colorSurface
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val lightFlag = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            val lightStatusFlag = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+            val lightNavigationFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            } else {
+                0
+            }
+            val lightFlag = lightStatusFlag or lightNavigationFlag
             window.decorView.systemUiVisibility = if (isDarkTheme()) {
                 window.decorView.systemUiVisibility and lightFlag.inv()
             } else {

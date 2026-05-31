@@ -1,14 +1,63 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 }
 
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.isFile) {
+        file.inputStream().use(::load)
+    }
+}
+
+fun signingValue(vararg keys: String): String? {
+    for (key in keys) {
+        providers.gradleProperty(key).orNull?.takeIf { it.isNotBlank() }?.let { return it }
+        providers.environmentVariable(key).orNull?.takeIf { it.isNotBlank() }?.let { return it }
+        localProperties.getProperty(key)?.takeIf { it.isNotBlank() }?.let { return it }
+    }
+    return null
+}
+
+val releaseStoreFile = signingValue(
+    "airlyrics.release.storeFile",
+    "AIRLYRICS_RELEASE_STORE_FILE",
+    "RELEASE_STORE_FILE",
+    "STORE_FILE"
+)
+val releaseStorePassword = signingValue(
+    "airlyrics.release.storePassword",
+    "AIRLYRICS_RELEASE_STORE_PASSWORD",
+    "RELEASE_STORE_PASSWORD",
+    "STORE_PASSWORD"
+)
+val releaseKeyAlias = signingValue(
+    "airlyrics.release.keyAlias",
+    "AIRLYRICS_RELEASE_KEY_ALIAS",
+    "RELEASE_KEY_ALIAS",
+    "KEY_ALIAS"
+)
+val releaseKeyPassword = signingValue(
+    "airlyrics.release.keyPassword",
+    "AIRLYRICS_RELEASE_KEY_PASSWORD",
+    "RELEASE_KEY_PASSWORD",
+    "KEY_PASSWORD"
+)
+val releaseSigningValues = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+)
+val hasReleaseSigning = releaseSigningValues.all { !it.isNullOrBlank() }
+val hasPartialReleaseSigning = releaseSigningValues.any { !it.isNullOrBlank() } && !hasReleaseSigning
+
+fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } ?: rootProject.file(path)
+
 android {
     namespace = "com.andsi.airlyrics"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.andsi.airlyrics"
@@ -23,9 +72,34 @@ android {
         }
     }
 
+    signingConfigs {
+        if (hasPartialReleaseSigning) {
+            throw GradleException(
+                "Incomplete release signing configuration. Please set all four values: " +
+                    "airlyrics.release.storeFile, airlyrics.release.storePassword, " +
+                    "airlyrics.release.keyAlias, airlyrics.release.keyPassword."
+            )
+        }
+        if (hasReleaseSigning) {
+            create("release") {
+                val resolvedStoreFile = releaseSigningStoreFile(releaseStoreFile!!)
+                if (!resolvedStoreFile.isFile) {
+                    throw GradleException("Release keystore not found: ${resolvedStoreFile.absolutePath}")
+                }
+                storeFile = resolvedStoreFile
+                storePassword = releaseStorePassword!!
+                keyAlias = releaseKeyAlias!!
+                keyPassword = releaseKeyPassword!!
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
