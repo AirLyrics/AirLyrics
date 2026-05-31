@@ -8,7 +8,7 @@ rust-version = "1.80.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-jni = "0.21"
+jni = "0.22"
 ncmapi = { version = "0.1.13", package = "ncmapi2" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
