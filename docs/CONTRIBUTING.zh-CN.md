@@ -10,20 +10,21 @@
 
 ## 提交 PR 前
 
-大多数改动只需要运行基础检查：
+请在提交 PR 前尽量运行以下基础检查：
 
 ```bash
+./gradlew lint -Pairlyrics.skipRustBuild=true
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
 ```
 
-如果您的改动涉及歌词解析、本地歌词存储、歌词导入、Android 存储权限或 SAF 文件夹行为，请额外在真机或模拟器上运行：
+如果改动涉及歌词解析、本地歌词存储、歌词导入、Android 存储权限或 SAF 文件夹行为，请额外在真机或模拟器上运行：
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest -Pairlyrics.skipRustBuild=true
 ```
 
-如果只是修改 README、文档、注释或少量不影响运行逻辑的文本内容，通常不需要运行 Android instrumentation tests。
+注意：`connectedDebugAndroidTest` 可能会卸载或覆盖设备上已安装的 AirLyrics。运行前请确认测试设备上的数据可以被清除，建议使用测试机或模拟器。
 
 ## 相关规范
 

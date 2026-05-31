@@ -8,22 +8,23 @@ To make review easier, please keep each PR focused on one purpose. Avoid mixing 
 
 If available, images or videos can make the explanation easier to understand.
 
-## Before opening a PR
+## Before submitting a PR
 
-Most changes only need the basic checks:
+Please run the basic checks before submitting a PR:
 
 ```bash
+./gradlew lint -Pairlyrics.skipRustBuild=true
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
 ```
 
-If your change touches lyrics parsing, local lyrics storage, lyrics import, Android storage permissions or SAF folder behavior, please also run this on a real device or emulator:
+If your changes affect lyrics parsing, local lyrics storage, lyrics import, Android storage permissions, or SAF folder behavior, also run the following check on a real device or emulator:
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest -Pairlyrics.skipRustBuild=true
 ```
 
-If you only changed the README, documentation, comments or a small amount of text that does not affect runtime behavior, Android instrumentation tests are usually not required.
+Note: `connectedDebugAndroidTest` may uninstall or overwrite the AirLyrics app already installed on the device. Please make sure the test device can safely lose its existing app data. A test device or emulator is recommended.
 
 ## Related guidelines
 
