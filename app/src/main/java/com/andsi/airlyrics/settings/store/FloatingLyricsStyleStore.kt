@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
 import com.andsi.airlyrics.settings.model.FloatingLyricsPreset
@@ -32,28 +33,76 @@ object FloatingLyricsStyleStore {
     private const val DEFAULT_X = 100
     private const val DEFAULT_Y = 300
 
-    val presets = listOf(
-        FloatingLyricsPreset("subtitle", "纯净字母"),
-        FloatingLyricsPreset("bubble", "黑胶气泡")
+    const val PRESET_SUBTITLE = "subtitle"
+    const val PRESET_BUBBLE = "bubble"
+    const val DEFAULT_PRESET = PRESET_BUBBLE
+
+    private data class PresetValues(
+        val key: String,
+        val textColor: Int = Color.WHITE,
+        val karaokeHighlightColor: Int = Color.rgb(120, 220, 255),
+        val shadowColor: Int = Color.BLACK,
+        val shadowRadius: Float,
+        val backgroundEnabled: Boolean,
+        val backgroundColor: Int,
+        val backgroundAlpha: Int,
+        val cornerRadiusDp: Int,
+        val paddingHorizontalDp: Int,
+        val paddingVerticalDp: Int,
+        val maxWidthPercent: Int,
+        val gravity: Int = Gravity.CENTER
     )
 
+    private val presetValues = listOf(
+        PresetValues(
+            key = PRESET_SUBTITLE,
+            shadowRadius = 14f,
+            backgroundEnabled = false,
+            backgroundColor = Color.TRANSPARENT,
+            backgroundAlpha = 0,
+            cornerRadiusDp = 0,
+            paddingHorizontalDp = 12,
+            paddingVerticalDp = 8,
+            maxWidthPercent = 92
+        ),
+        PresetValues(
+            key = PRESET_BUBBLE,
+            shadowRadius = 8f,
+            backgroundEnabled = true,
+            backgroundColor = Color.rgb(10, 14, 24),
+            backgroundAlpha = 170,
+            cornerRadiusDp = 20,
+            paddingHorizontalDp = 18,
+            paddingVerticalDp = 10,
+            maxWidthPercent = 85
+        )
+    ).associateBy { it.key }
+
+    val presets = listOf(
+        FloatingLyricsPreset(PRESET_SUBTITLE, "纯净字母"),
+        FloatingLyricsPreset(PRESET_BUBBLE, "黑胶气泡")
+    )
+
+    private fun prefs(context: Context): SharedPreferences {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    private fun normalizePreset(key: String?): String {
+        return if (key != null && presetValues.containsKey(key)) key else DEFAULT_PRESET
+    }
 
     fun isPreviewExpanded(context: Context): Boolean {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_PREVIEW_EXPANDED, true)
+        return prefs(context).getBoolean(KEY_PREVIEW_EXPANDED, true)
     }
 
     fun setPreviewExpanded(context: Context, expanded: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_PREVIEW_EXPANDED, expanded)
-            .apply()
+        prefs(context).edit().putBoolean(KEY_PREVIEW_EXPANDED, expanded).apply()
     }
 
     fun getStyle(context: Context): FloatingLyricsStyle {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = prefs(context)
         return FloatingLyricsStyle(
-            presetName = prefs.getString(KEY_PRESET, "bubble") ?: "bubble",
+            presetName = normalizePreset(prefs.getString(KEY_PRESET, DEFAULT_PRESET)),
             textSizeSp = prefs.getFloat(KEY_TEXT_SIZE, 28f),
             textColor = prefs.getInt(KEY_TEXT_COLOR, Color.WHITE),
             karaokeHighlightColor = prefs.getInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255)),
@@ -71,95 +120,38 @@ object FloatingLyricsStyleStore {
     }
 
     fun applyPreset(context: Context, preset: String) {
-        val editor = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-        when (preset) {
-            "transparent" -> editor
-                .putString(KEY_PRESET, preset)
-                .putInt(KEY_TEXT_COLOR, Color.WHITE)
-                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255))
-                .putInt(KEY_SHADOW_COLOR, Color.BLACK)
-                .putFloat(KEY_SHADOW_RADIUS, 8f)
-                .putBoolean(KEY_BACKGROUND_ENABLED, false)
-                .putInt(KEY_BACKGROUND_COLOR, Color.TRANSPARENT)
-                .putInt(KEY_BACKGROUND_ALPHA, 0)
-                .putInt(KEY_CORNER_RADIUS, 0)
-                .putInt(KEY_PADDING_HORIZONTAL, 16)
-                .putInt(KEY_PADDING_VERTICAL, 8)
-                .putInt(KEY_MAX_WIDTH_PERCENT, 88)
-                .putInt(KEY_GRAVITY, Gravity.CENTER)
-
-            "neon" -> editor
-                .putString(KEY_PRESET, preset)
-                .putInt(KEY_TEXT_COLOR, Color.rgb(176, 226, 255))
-                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(255, 235, 120))
-                .putInt(KEY_SHADOW_COLOR, Color.rgb(66, 170, 255))
-                .putFloat(KEY_SHADOW_RADIUS, 12f)
-                .putBoolean(KEY_BACKGROUND_ENABLED, true)
-                .putInt(KEY_BACKGROUND_COLOR, Color.rgb(8, 14, 30))
-                .putInt(KEY_BACKGROUND_ALPHA, 155)
-                .putInt(KEY_CORNER_RADIUS, 22)
-                .putInt(KEY_PADDING_HORIZONTAL, 20)
-                .putInt(KEY_PADDING_VERTICAL, 10)
-                .putInt(KEY_MAX_WIDTH_PERCENT, 86)
-                .putInt(KEY_GRAVITY, Gravity.CENTER)
-
-            "subtitle" -> editor
-                .putString(KEY_PRESET, preset)
-                .putInt(KEY_TEXT_COLOR, Color.WHITE)
-                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255))
-                .putInt(KEY_SHADOW_COLOR, Color.BLACK)
-                .putFloat(KEY_SHADOW_RADIUS, 14f)
-                .putBoolean(KEY_BACKGROUND_ENABLED, false)
-                .putInt(KEY_BACKGROUND_COLOR, Color.TRANSPARENT)
-                .putInt(KEY_BACKGROUND_ALPHA, 0)
-                .putInt(KEY_CORNER_RADIUS, 0)
-                .putInt(KEY_PADDING_HORIZONTAL, 12)
-                .putInt(KEY_PADDING_VERTICAL, 8)
-                .putInt(KEY_MAX_WIDTH_PERCENT, 92)
-                .putInt(KEY_GRAVITY, Gravity.CENTER)
-
-            else -> editor
-                .putString(KEY_PRESET, "bubble")
-                .putInt(KEY_TEXT_COLOR, Color.WHITE)
-                .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255))
-                .putInt(KEY_SHADOW_COLOR, Color.BLACK)
-                .putFloat(KEY_SHADOW_RADIUS, 8f)
-                .putBoolean(KEY_BACKGROUND_ENABLED, true)
-                .putInt(KEY_BACKGROUND_COLOR, Color.rgb(10, 14, 24))
-                .putInt(KEY_BACKGROUND_ALPHA, 170)
-                .putInt(KEY_CORNER_RADIUS, 20)
-                .putInt(KEY_PADDING_HORIZONTAL, 18)
-                .putInt(KEY_PADDING_VERTICAL, 10)
-                .putInt(KEY_MAX_WIDTH_PERCENT, 85)
-                .putInt(KEY_GRAVITY, Gravity.CENTER)
-        }
-        editor.apply()
+        val values = presetValues[normalizePreset(preset)] ?: return
+        prefs(context).edit()
+            .putString(KEY_PRESET, values.key)
+            .putInt(KEY_TEXT_COLOR, values.textColor)
+            .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, values.karaokeHighlightColor)
+            .putInt(KEY_SHADOW_COLOR, values.shadowColor)
+            .putFloat(KEY_SHADOW_RADIUS, values.shadowRadius)
+            .putBoolean(KEY_BACKGROUND_ENABLED, values.backgroundEnabled)
+            .putInt(KEY_BACKGROUND_COLOR, values.backgroundColor)
+            .putInt(KEY_BACKGROUND_ALPHA, values.backgroundAlpha)
+            .putInt(KEY_CORNER_RADIUS, values.cornerRadiusDp)
+            .putInt(KEY_PADDING_HORIZONTAL, values.paddingHorizontalDp)
+            .putInt(KEY_PADDING_VERTICAL, values.paddingVerticalDp)
+            .putInt(KEY_MAX_WIDTH_PERCENT, values.maxWidthPercent)
+            .putInt(KEY_GRAVITY, values.gravity)
+            .apply()
     }
 
     fun setTextSize(context: Context, textSizeSp: Float) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putFloat(KEY_TEXT_SIZE, textSizeSp.coerceIn(14f, 56f))
-            .apply()
+        prefs(context).edit().putFloat(KEY_TEXT_SIZE, textSizeSp.coerceIn(14f, 56f)).apply()
     }
 
     fun setTextColor(context: Context, color: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_TEXT_COLOR, color)
-            .apply()
+        prefs(context).edit().putInt(KEY_TEXT_COLOR, color).apply()
     }
 
     fun setKaraokeHighlightColor(context: Context, color: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color)
-            .apply()
+        prefs(context).edit().putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color).apply()
     }
 
     fun setBackgroundColor(context: Context, color: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
+        prefs(context).edit()
             .putBoolean(KEY_BACKGROUND_ENABLED, Color.alpha(color) > 0)
             .putInt(KEY_BACKGROUND_COLOR, Color.rgb(Color.red(color), Color.green(color), Color.blue(color)))
             .putInt(KEY_BACKGROUND_ALPHA, Color.alpha(color))
@@ -167,100 +159,65 @@ object FloatingLyricsStyleStore {
     }
 
     fun setBackgroundEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_BACKGROUND_ENABLED, enabled)
-            .apply()
+        prefs(context).edit().putBoolean(KEY_BACKGROUND_ENABLED, enabled).apply()
     }
 
     fun setGravity(context: Context, gravity: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_GRAVITY, gravity)
-            .apply()
+        prefs(context).edit().putInt(KEY_GRAVITY, gravity).apply()
     }
 
     fun setShadowColor(context: Context, color: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_SHADOW_COLOR, color)
-            .apply()
+        prefs(context).edit().putInt(KEY_SHADOW_COLOR, color).apply()
     }
 
     fun setShadowRadius(context: Context, radius: Float) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putFloat(KEY_SHADOW_RADIUS, radius.coerceIn(0f, 24f))
-            .apply()
+        prefs(context).edit().putFloat(KEY_SHADOW_RADIUS, radius.coerceIn(0f, 24f)).apply()
     }
 
     fun setCornerRadius(context: Context, radiusDp: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_CORNER_RADIUS, radiusDp.coerceIn(0, 36))
-            .apply()
+        prefs(context).edit().putInt(KEY_CORNER_RADIUS, radiusDp.coerceIn(0, 36)).apply()
     }
 
     fun setPaddingHorizontal(context: Context, paddingDp: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_PADDING_HORIZONTAL, paddingDp.coerceIn(0, 36))
-            .apply()
+        prefs(context).edit().putInt(KEY_PADDING_HORIZONTAL, paddingDp.coerceIn(0, 36)).apply()
     }
 
     fun setPaddingVertical(context: Context, paddingDp: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_PADDING_VERTICAL, paddingDp.coerceIn(0, 28))
-            .apply()
+        prefs(context).edit().putInt(KEY_PADDING_VERTICAL, paddingDp.coerceIn(0, 28)).apply()
     }
 
     fun setMaxWidthPercent(context: Context, percent: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_MAX_WIDTH_PERCENT, percent.coerceIn(45, 100))
-            .apply()
+        prefs(context).edit().putInt(KEY_MAX_WIDTH_PERCENT, percent.coerceIn(45, 100)).apply()
     }
 
     fun setLocked(context: Context, locked: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_LOCKED, locked)
-            .apply()
+        prefs(context).edit().putBoolean(KEY_LOCKED, locked).apply()
     }
 
     fun isLocked(context: Context): Boolean {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_LOCKED, false)
+        return prefs(context).getBoolean(KEY_LOCKED, false)
     }
 
     fun setClickThrough(context: Context, clickThrough: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_CLICK_THROUGH, clickThrough)
-            .apply()
+        prefs(context).edit().putBoolean(KEY_CLICK_THROUGH, clickThrough).apply()
     }
 
     fun isClickThrough(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = prefs(context)
         return prefs.getBoolean(KEY_CLICK_THROUGH, prefs.getBoolean(KEY_LOCKED, false))
     }
 
     fun savePosition(context: Context, x: Int, y: Int) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putInt(KEY_POS_X, x)
-            .putInt(KEY_POS_Y, y)
-            .apply()
+        prefs(context).edit().putInt(KEY_POS_X, x).putInt(KEY_POS_Y, y).apply()
     }
 
     fun getPosition(context: Context): Pair<Int, Int> {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val prefs = prefs(context)
         return prefs.getInt(KEY_POS_X, DEFAULT_X) to prefs.getInt(KEY_POS_Y, DEFAULT_Y)
     }
 
     fun getPresetTitle(key: String): String {
-        return presets.firstOrNull { it.key == key }?.title ?: "黑胶气泡"
+        return presets.firstOrNull { it.key == normalizePreset(key) }?.title ?: "黑胶气泡"
     }
 
     fun colorSummary(color: Int): String {

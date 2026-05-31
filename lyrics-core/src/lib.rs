@@ -4,8 +4,8 @@ use jni::JNIEnv;
 use ncmapi::types::{Album, Artist, LyricResp, SearchSongResp, Song};
 use ncmapi::NcmApi;
 use serde::Serialize;
-use std::collections::BTreeMap;
 
+mod lrc;
 mod musixmatch;
 
 #[derive(Debug, Clone)]
@@ -451,8 +451,8 @@ fn merge_lrc(original: Option<&str>, translated: Option<&str>) -> Option<String>
         return Some(original.to_string());
     }
 
-    let original_lines = parse_lrc_lines(original);
-    let translated_lines = parse_lrc_lines(translated);
+    let original_lines = lrc::parse_lrc_lines(original);
+    let translated_lines = lrc::parse_lrc_lines(translated);
 
     if original_lines.is_empty() {
         return Some(translated.to_string());
@@ -466,91 +466,9 @@ fn merge_lrc(original: Option<&str>, translated: Option<&str>) -> Option<String>
                 text = format!("{} / {}", text.trim(), translated_text.trim());
             }
         }
-        merged.push_str(&format!("[{}]{}\n", format_lrc_time(time), text));
+        merged.push_str(&format!("[{}]{}\n", lrc::format_lrc_time(time), text));
     }
 
     Some(merged)
 }
 
-fn parse_lrc_lines(lrc: &str) -> BTreeMap<u64, String> {
-    let mut lines = BTreeMap::new();
-    for raw in lrc.lines() {
-        let tags = extract_time_tags(raw);
-        if tags.is_empty() {
-            continue;
-        }
-        let text = strip_time_tags(raw).trim().to_string();
-        if text.is_empty() {
-            continue;
-        }
-        for tag in tags {
-            lines.insert(tag, text.clone());
-        }
-    }
-    lines
-}
-
-fn extract_time_tags(line: &str) -> Vec<u64> {
-    let mut times = Vec::new();
-    let bytes = line.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            if let Some(end_rel) = line[i..].find(']') {
-                let end = i + end_rel;
-                if let Some(time) = parse_time_tag(&line[i + 1..end]) {
-                    times.push(time);
-                }
-                i = end + 1;
-                continue;
-            }
-        }
-        i += 1;
-    }
-    times
-}
-
-fn strip_time_tags(line: &str) -> String {
-    let mut output = String::new();
-    let bytes = line.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            if let Some(end_rel) = line[i..].find(']') {
-                let end = i + end_rel;
-                if parse_time_tag(&line[i + 1..end]).is_some() {
-                    i = end + 1;
-                    continue;
-                }
-            }
-        }
-        if let Some(ch) = line[i..].chars().next() {
-            output.push(ch);
-            i += ch.len_utf8();
-        } else {
-            break;
-        }
-    }
-    output
-}
-
-fn parse_time_tag(value: &str) -> Option<u64> {
-    let (minute, rest) = value.split_once(':')?;
-    let (second, fraction) = rest.split_once('.').unwrap_or((rest, ""));
-    let minutes = minute.parse::<u64>().ok()?;
-    let seconds = second.parse::<u64>().ok()?;
-    let millis = match fraction.len() {
-        0 => 0,
-        1 => fraction.parse::<u64>().ok()? * 100,
-        2 => fraction.parse::<u64>().ok()? * 10,
-        _ => fraction.chars().take(3).collect::<String>().parse::<u64>().ok()?,
-    };
-    Some(minutes * 60_000 + seconds * 1_000 + millis)
-}
-
-fn format_lrc_time(time_ms: u64) -> String {
-    let minutes = time_ms / 60_000;
-    let seconds = (time_ms % 60_000) / 1_000;
-    let millis = time_ms % 1_000;
-    format!("{:02}:{:02}.{:03}", minutes, seconds, millis)
-}

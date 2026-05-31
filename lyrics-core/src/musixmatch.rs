@@ -1,3 +1,4 @@
+use crate::lrc;
 use crate::{NativeResult, normalize_optional_lrc};
 use musixmatch_inofficial::models::{SortOrder, Subtitle, SubtitleFormat, Track, TrackId, TranslationList};
 use musixmatch_inofficial::Musixmatch;
@@ -414,7 +415,7 @@ fn translation_list_to_lrc(original_lrc: &str, translation_list: &TranslationLis
         return None;
     }
 
-    let original_lines = parse_lrc_entries(original_lrc);
+    let original_lines = lrc::parse_lrc_entries(original_lrc);
     if original_lines.is_empty() {
         return None;
     }
@@ -443,7 +444,7 @@ fn translation_list_to_lrc(original_lrc: &str, translation_list: &TranslationLis
 
         if let Some(translated) = translated {
             if !translated.trim().is_empty() {
-                output.push_str(&format!("[{}]{}\n", format_lrc_time(time_ms), translated.trim()));
+                output.push_str(&format!("[{}]{}\n", lrc::format_lrc_time(time_ms), translated.trim()));
                 matched_count += 1;
             }
         }
@@ -462,8 +463,8 @@ fn merge_lrc_like_netease(original_lrc: &str, translated_lrc: Option<&str>) -> O
         return Some(original_lrc.to_string());
     }
 
-    let original_lines = parse_lrc_entries(original_lrc);
-    let translated_lines = parse_lrc_entries(translated_lrc)
+    let original_lines = lrc::parse_lrc_entries(original_lrc);
+    let translated_lines = lrc::parse_lrc_entries(translated_lrc)
         .into_iter()
         .collect::<HashMap<_, _>>();
 
@@ -482,106 +483,10 @@ fn merge_lrc_like_netease(original_lrc: &str, translated_lrc: Option<&str>) -> O
         } else {
             text.trim().to_string()
         };
-        merged.push_str(&format!("[{}]{}\n", format_lrc_time(time_ms), merged_text));
+        merged.push_str(&format!("[{}]{}\n", lrc::format_lrc_time(time_ms), merged_text));
     }
 
     Some(merged)
-}
-
-fn parse_lrc_entries(lrc: &str) -> Vec<(u64, String)> {
-    let mut entries = Vec::new();
-    for raw in lrc.lines() {
-        let times = extract_lrc_time_tags(raw);
-        if times.is_empty() {
-            continue;
-        }
-        let text = strip_lrc_time_tags(raw).trim().to_string();
-        if text.is_empty() {
-            continue;
-        }
-        for time in times {
-            entries.push((time, text.clone()));
-        }
-    }
-    entries.sort_by_key(|(time, _)| *time);
-    entries
-}
-
-fn extract_lrc_time_tags(line: &str) -> Vec<u64> {
-    let mut times = Vec::new();
-    let bytes = line.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            if let Some(end_rel) = line[i..].find(']') {
-                let end = i + end_rel;
-                if let Some(time) = parse_lrc_time_tag(&line[i + 1..end]) {
-                    times.push(time);
-                }
-                i = end + 1;
-                continue;
-            }
-        }
-        i += 1;
-    }
-    times
-}
-
-fn strip_lrc_time_tags(line: &str) -> String {
-    let mut output = String::new();
-    let bytes = line.as_bytes();
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] == b'[' {
-            if let Some(end_rel) = line[i..].find(']') {
-                let end = i + end_rel;
-                if parse_lrc_time_tag(&line[i + 1..end]).is_some() {
-                    i = end + 1;
-                    continue;
-                }
-            }
-        }
-        if let Some(ch) = line[i..].chars().next() {
-            output.push(ch);
-            i += ch.len_utf8();
-        } else {
-            break;
-        }
-    }
-    output
-}
-
-fn parse_lrc_time_tag(tag: &str) -> Option<u64> {
-    let mut parts = tag.split(':');
-    let minutes = parts.next()?.parse::<u64>().ok()?;
-    let seconds_part = parts.next()?;
-    if parts.next().is_some() {
-        return None;
-    }
-
-    let mut second_parts = seconds_part.split('.');
-    let seconds = second_parts.next()?.parse::<u64>().ok()?;
-    let fraction = second_parts.next().unwrap_or("0");
-    if second_parts.next().is_some() || seconds >= 60 {
-        return None;
-    }
-
-    let millis = match fraction.len() {
-        0 => 0,
-        1 => fraction.parse::<u64>().ok()? * 100,
-        2 => fraction.parse::<u64>().ok()? * 10,
-        _ => fraction.get(0..3)?.parse::<u64>().ok()?,
-    };
-
-    Some(minutes * 60_000 + seconds * 1000 + millis)
-}
-
-fn format_lrc_time(time_ms: u64) -> String {
-    let total_seconds = time_ms / 1000;
-    let minutes = total_seconds / 60;
-    let seconds = total_seconds % 60;
-    let centiseconds = (time_ms % 1000) / 10;
-    format!("{:02}:{:02}.{:02}", minutes, seconds, centiseconds)
 }
 
 fn normalize_translation_language(value: &str) -> String {
