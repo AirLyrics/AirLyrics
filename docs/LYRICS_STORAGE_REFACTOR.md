@@ -1,22 +1,51 @@
-# LyricsStorage refactor notes
+# Lyrics Storage Refactor
 
-`LyricsStorage` is now a public facade instead of a 1000-line storage blob. Public callers keep using the same API, while implementation details live in small focused files.
+[English](LYRICS_STORAGE_REFACTOR.md) · [简体中文](LYRICS_STORAGE_REFACTOR.zh-CN.md)
 
-## Files
+The local lyrics storage code is split into smaller helpers. `LyricsStorage` remains the public facade for callers, while file IO, index handling and path resolution live in dedicated files.
 
-- `LyricsStorage.kt`: public API, small orchestration, public nested models kept for compatibility.
-- `LyricsStoragePaths.kt`: selected SAF directory, fallback app directory, managed directory, index file location.
-- `LyricsFileStore.kt`: raw file reads/writes/deletes, URI import text decoding, legacy file access.
-- `LyricsIndexStore.kt`: `lyrics_index.json` parse/write/find logic.
-- `LyricsIndexEntry.kt`: internal index row model.
-- `SongIdentity.kt`: song matching, normalized key generation, legacy filename generation.
-- `KaraokeLyricsCodec.kt`: enhanced LRC parsing, karaoke JSON codec, plain LRC shadow generation.
-- `LocalLyricsLister.kt`: recent local lyrics listing and metadata merge.
-- `StorageConstants.kt`: internal storage constants shared by the helpers.
+## Current storage files
 
-## Rules
+```text
+lyrics/storage/LyricsStorage.kt        Public facade used by app code
+lyrics/storage/LyricsStoragePaths.kt   SAF tree URI, managed lyrics dir and index file resolution
+lyrics/storage/LyricsFileStore.kt      File read/write/delete helpers
+lyrics/storage/LyricsIndexStore.kt     JSON index persistence
+lyrics/storage/LocalLyricsLister.kt    Recent/local lyrics listing
+lyrics/storage/KaraokeLyricsCodec.kt   Enhanced lyrics serialization
+lyrics/storage/SongIdentity.kt         Stable song identity normalization
+lyrics/storage/StorageConstants.kt     Storage keys and file names
+```
 
-- Keep user-facing API in `LyricsStorage` unless there is a clear reason to expose a new class.
-- Keep disk details out of UI code.
-- Keep pure codecs in `KaraokeLyricsCodec` so they stay easy to unit test.
-- Keep song matching in `SongIdentity`; do not duplicate title/artist matching logic.
+## Storage model
+
+AirLyrics uses a managed lyrics folder selected by the user when available. Imported or auto-saved lyrics are stored there together with an index file.
+
+```text
+lyrics/
+  lyrics_index.json
+  *.lrc
+  enhanced / karaoke data handled by storage codec
+```
+
+The exact file names are normalized through song identity helpers to avoid unsafe path characters.
+
+## Lookup priority
+
+Local storage is not just a cache. It is the user's correction layer and therefore has priority over online lookup.
+
+Normal priority:
+
+1. Manual import.
+2. Local saved lyrics.
+3. Online lookup when enabled.
+4. Auto-save online result when enabled.
+
+## Refactor rules
+
+- Keep `LyricsStorage` as a stable facade.
+- Put path and SAF details in `LyricsStoragePaths`.
+- Put raw file operations in `LyricsFileStore`.
+- Put index JSON logic in `LyricsIndexStore`.
+- Put enhanced lyrics encoding in `KaraokeLyricsCodec`.
+- Do not add UI text or dialogs to storage classes.

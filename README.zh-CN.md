@@ -12,14 +12,14 @@ Android 手机端悬浮歌词应用。
 
 <br />
 
-[下载](https://github.com/AndSi-327/AirLyrics/releases) · [文档](docs/) · [反馈问题](https://github.com/AndSi-327/AirLyrics/issues)
+[下载](https://github.com/AndSi-327/android-floating-lyrics/releases) · [文档](docs/README.zh-CN.md) · [反馈问题](https://github.com/AndSi-327/android-floating-lyrics/issues)
 
 <br />
 
 [![Platform](https://img.shields.io/badge/platform-Android-brightgreen?style=flat-square)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-Android-blueviolet?style=flat-square)]()
 [![Rust](https://img.shields.io/badge/Rust-lyrics--core-orange?style=flat-square)]()
-[![Release](https://img.shields.io/github/v/release/AndSi-327/AirLyrics?style=flat-square)](https://github.com/AndSi-327/AirLyrics/releases)
+[![Release](https://img.shields.io/github/v/release/AndSi-327/android-floating-lyrics?style=flat-square)](https://github.com/AndSi-327/android-floating-lyrics/releases)
 
 </div>
 
@@ -45,7 +45,7 @@ AirLyrics 正在持续开发中。
 
 从 GitHub Releases 下载最新 APK：
 
-https://github.com/AndSi-327/AirLyrics/releases
+https://github.com/AndSi-327/android-floating-lyrics/releases
 
 安装后，请授予必要权限，并选择需要跟随的音乐应用。
 
@@ -123,11 +123,11 @@ AirLyrics 需要以下 Android 权限才能正常工作。
 
 | 文档 | 说明 |
 | --- | --- |
-| [LYRICS_FORMAT.md](docs/LYRICS_FORMAT.md) | 歌词格式与本地导入说明 |
-| [LOCALIZATION.md](docs/LOCALIZATION.md) | 翻译与本地化指南 |
-| [TESTING.md](docs/TESTING.md) | 测试清单 |
-| [CONTRIBUTING.md](docs/CONTRIBUTING.md) | 贡献指南 |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | 项目架构说明 |
+| [文档首页](docs/README.zh-CN.md) | 按主题查看全部中文文档 |
+| [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
+| [贡献指南](docs/CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与代码位置 |
+| [测试指南](docs/TESTING.zh-CN.md) | 构建、单元测试与手动测试清单 |
+| [项目架构](docs/ARCHITECTURE.zh-CN.md) | 模块划分与运行流程 |
 
 ---
 
@@ -145,8 +145,8 @@ AirLyrics 需要以下 Android 权限才能正常工作。
 ### 克隆仓库
 
 ```bash
-git clone https://github.com/AndSi-327/AirLyrics.git
-cd AirLyrics
+git clone https://github.com/AndSi-327/android-floating-lyrics.git
+cd android-floating-lyrics
 ```
 
 ### 构建

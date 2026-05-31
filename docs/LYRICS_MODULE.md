@@ -1,54 +1,71 @@
-# Lyrics module
+# Lyrics Module
 
-This module owns lyrics lookup, parsing, storage, and provider orchestration.
+[English](LYRICS_MODULE.md) · [简体中文](LYRICS_MODULE.zh-CN.md)
 
-## Main entry points
+The lyrics module owns lookup, provider routing, parsing, local storage and display formatting.
 
-- `LyricsRepository` is the only lookup entry point new code should call.
-- `LyricsProvider` is the interface for adding a new lyrics source.
-- `LocalLyricsProvider` checks imported/saved `.lrc` files.
-- `NeteaseLyricsProvider` wraps the Rust NetEase lookup bridge.
-- `MusixmatchLyricsProvider` wraps the Rust Musixmatch ordinary LRC/translation bridge.
-- `LyricsFetcher` remains as a compatibility wrapper for older callback-style code.
+## Main flow
 
-## Lookup order
-
-1. Local ordinary lyrics always win.
-2. If the user selected local-only mode, lookup stops there.
-3. Otherwise, `LyricsRepository` uses the selected online provider for ordinary LRC lyrics.
-4. Successful online ordinary lyrics can be saved locally when auto-save is enabled.
-5. Word-by-word lyrics are local-only: `LyricsStorage` only attaches them from imported enhanced LRC files saved as `.karaoke.json`.
-
-## Adding a provider
-
-1. Create a new object or class implementing `LyricsProvider`.
-2. Return a normalized `LyricsProviderResult`.
-3. Register the provider inside `LyricsRepository.onlineProviders`.
-4. Add a user-facing option through `LyricsSearchSource` / `LyricsSettingsStore.sourceOptions`.
-
-Keep provider-specific network parsing inside the provider. UI and services should not know how each source works.
-
-## Local word-by-word lyrics
-
-AirLyrics does not search online providers for word-by-word lyrics. Users can import an enhanced LRC file for the current song, for example:
-
-```lrc
-[00:01.00]<00:01.00>你<00:01.20>好
+```text
+LyricsRepository.findLyrics(...)
+  -> LocalLyricsProvider.fetch(...)
+  -> selected online provider when allowed
+  -> optional LyricsStorage.saveLyrics(...)
+  -> optional local karaoke attachment
 ```
 
-The import flow stores parsed word-by-word timing as `.karaoke.json`. It also creates a plain `.lrc` shadow when needed, so the floating window always has ordinary line text to render.
+Local lyrics are checked first so user-imported files and saved corrections win over online results.
 
-## Provider errors
+## Important files
 
-Online providers should return `Result.success(null)` only for a clean miss such as "not found".
-Temporary or actionable failures should use `LyricsLookupException` so the floating service can show a useful message:
+```text
+lyrics/LyricsRepository.kt                 Central lookup entry point
+lyrics/LyricsFetcher.kt                    Compatibility wrapper for older call sites
+lyrics/LyricsProvider.kt                   Provider interface and result model
+lyrics/LyricsLookupCancellation.kt         Single-worker latest-request-wins runner
+lyrics/parser/LrcParser.kt                 LRC parsing and line lookup
+lyrics/display/LyricsDisplayFormatter.kt   Original / translation display formatting
+lyrics/providers/LocalLyricsProvider.kt    Local imported/saved source
+lyrics/providers/NeteaseLyricsProvider.kt  NetEase provider bridge
+lyrics/providers/MusixmatchLyricsProvider.kt Musixmatch provider bridge
+lyrics/storage/                            Local file, index and karaoke storage
+```
 
-- `NeedCredential`
-- `RateLimited`
-- `RestrictedLyrics`
-- `NetworkError`
-- `ParseError`
-- `NativeError`
-- `Unknown`
+## Lookup settings
 
-This is especially important for Musixmatch because the unofficial API may change anonymous access behavior.
+`LyricsSettings` controls:
+
+- Search source: local only, NetEase Cloud Music, Musixmatch.
+- Whether online fallback is enabled.
+- Whether successful online lyrics are auto-saved locally.
+- Original / translation display mode.
+- Current / neighboring line display range.
+- Line switch animation.
+- Whether enhanced / word-by-word lyrics are used.
+
+## Provider contract
+
+Providers return `LyricsProviderResult`. They should handle no-result cases without touching UI directly. UI and service layers decide how to display errors or empty states.
+
+## Parser responsibilities
+
+`LrcParser` handles:
+
+- Normal timestamped LRC.
+- Multiple timestamps on one line.
+- Compact exported LRC.
+- Original and translation merge for storage.
+- Current-line lookup.
+- Enhanced / word-by-word line parsing.
+
+## Storage responsibilities
+
+`lyrics/storage/` handles:
+
+- Managed lyrics folder selection.
+- Local lyrics file save/read/delete.
+- Lyrics index metadata.
+- Karaoke / enhanced lyrics codec.
+- Song identity normalization.
+
+Do not add UI behavior to storage classes.

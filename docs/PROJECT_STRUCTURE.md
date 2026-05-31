@@ -1,86 +1,58 @@
-# AirLyrics project structure
+# Project Structure
 
-AirLyrics is split by responsibility so contributors can find the right room before touching code.
+[English](PROJECT_STRUCTURE.md) · [简体中文](PROJECT_STRUCTURE.zh-CN.md)
+
+Use this as a quick map before editing code.
 
 ```text
 app/src/main/java/com/andsi/airlyrics/
-  app/                            App shell, lifecycle, navigation, actions and Activity-scoped helpers.
-    controller/                   Thin coordinators for media, lyrics and floating-window actions.
-    MainActivity*Ui.kt            Activity-scoped UI helpers extracted out of MainActivity.
-  lyrics/                         Lyrics lookup, providers, repository and LRC parsing.
-  media/                          Android media notification/session state.
-  settings/                       Persistent settings stores and setting data models.
-    model/
-    store/
-  floating/                       Foreground service, floating window, lyric renderer and service notification.
+  app/                         MainActivity shell, render helpers, actions and controllers
+    controller/                Media, lyrics and floating-window coordinators
+  common/                      Shared broadcast/action constants
+  floating/                    Foreground service, window controller and lyric renderer
+    model/                     Current media data used by floating service
+  i18n/                        Localized labels and formatting helpers
+  lyrics/                      Lookup repository, providers, parser, formatter and storage
+    display/                   Display formatting for original/translation modes
+    parser/                    LRC parser and line lookup
+    providers/                 Local, NetEase and Musixmatch providers
+    storage/                   Local lyrics files, index, paths and karaoke codec
+  media/                       Notification listener and selected media source store
+  settings/
+    model/                     Settings data contracts
+    store/                     Persistent settings stores
   ui/
-    components/                   Reusable View helpers and small widgets.
-    navigation/                   Page enums and bottom-tab UI.
-    pages/                        Top-level app pages.
-      settings/                   Settings sub-pages split by feature area.
-    theme/                        Palette and theme extension helpers.
-    widgets/                      Custom drawable/view widgets.
-  common/                         Shared constants and small utilities.
+    components/                Reusable View helpers and dialogs
+    model/                     UI action contract
+    navigation/                Page enums and bottom tabs
+    pages/                     Media and floating pages
+      settings/                Settings home, lyrics, system and about pages
+    theme/                     Palette and theme helpers
+    tokens/                    Spacing, text size and motion constants
+    widgets/                   Custom View widgets
 ```
 
-## Feature modules
+## Native module
 
 ```text
-lyrics/
-  LyricsRepository.kt             Unified lyrics lookup entry point.
-  LyricsProvider.kt               Provider interface for online/local lyrics sources.
-  LocalLyricsProvider.kt          Local imported/saved lyrics source.
-  NeteaseLyricsProvider.kt        NetEase lyrics provider.
-  MusixmatchLyricsProvider.kt     Musixmatch lyrics provider.
-  LyricsStorage.kt                Local .lrc import/read/save helpers.
-  LrcParser.kt                    LRC timestamp parser and current-line lookup.
-
-media/
-  MediaNotificationListener.kt    Reads media sessions and broadcasts playback state.
-  MediaSourceStore.kt             Saves the selected media package.
-
-settings/
-  model/                          Settings data models.
-  store/                          SharedPreferences access points.
+lyrics-core/                   Rust native lyrics core
 ```
 
-## Floating module
+The Android app loads `libairlyrics_lyrics.so` from `app/src/main/jniLibs/`.
+
+## Resource highlights
 
 ```text
-floating/FloatingLyricsService.kt        Service coordinator and command receiver.
-floating/FloatingWindowController.kt     WindowManager view creation, dragging, style and visibility.
-floating/FloatingLyricsRenderer.kt       Parsed lyric lines and current-line rendering.
-floating/model/CurrentMediaInfo.kt             Current media snapshot.
-floating/FloatingServiceNotification.kt  Foreground-service notification.
+app/src/main/res/values/strings.xml          English fallback strings
+app/src/main/res/values-zh-rCN/strings.xml   Simplified Chinese strings
+app/src/main/assets/changelog.txt            English changelog shown in About page
+scripts/check_localization.sh                Resource key validation script
 ```
 
-`FloatingLyricsService` should stay small. Add window details to `FloatingWindowController`, lyric timing details to `FloatingLyricsRenderer`, and notification details to `FloatingServiceNotification`.
+## Rule of thumb
 
-## Settings pages
-
-Settings are split into feature files:
-
-```text
-ui/pages/settings/SettingsHomePage.kt
-ui/pages/settings/FloatingSettingsPage.kt
-ui/pages/settings/LyricsSettingsPage.kt
-ui/pages/settings/SystemSettingsPage.kt
-ui/pages/settings/AboutPage.kt
-```
-
-When adding a new setting:
-
-1. Add the data field to `settings/model/` when it belongs to persisted app state.
-2. Add read/write functions to the matching `settings/store/*Store.kt`.
-3. Add the UI control to the matching `ui/pages/settings/*Page.kt`.
-4. Services/controllers should read settings from the store, not directly from `SharedPreferences`.
-
-## Lyrics providers
-
-Lyrics lookup goes through `LyricsRepository`. To add a new source, implement `LyricsProvider`, register it in the repository, then expose it in `LyricsSettingsStore` and `LyricsSettingsPage`. Online sources are for ordinary LRC/translation lookup; word-by-word lyrics stay local-only through enhanced LRC import.
-
-## More docs
-
-- `ARCHITECTURE.md` explains runtime flow and module boundaries.
-- `CONTRIBUTING.md` explains build, commit, and contribution workflow.
-- `MUSIXMATCH_TESTING.md` explains the Musixmatch ordinary-lyrics smoke-test flow.
+- UI page layout belongs under `ui/pages/`.
+- Persistent setting logic belongs under `settings/store/`.
+- Runtime floating-window behavior belongs under `floating/`.
+- Lyrics lookup and parsing belong under `lyrics/`.
+- Media-source detection belongs under `media/`.

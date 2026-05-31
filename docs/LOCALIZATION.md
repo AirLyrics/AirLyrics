@@ -1,63 +1,94 @@
-# Localization Guide
+# Localization
 
-AirLyrics uses English as the default fallback language. Simplified Chinese is maintained by the author.
+[English](LOCALIZATION.md) · [简体中文](LOCALIZATION.zh-CN.md)
 
-## UI strings
+AirLyrics uses English as the fallback language and Simplified Chinese as the first maintained translation.
 
-Short UI text lives in Android string resources:
+## String resources
 
-- `app/src/main/res/values/strings.xml` is the default English fallback.
-- `app/src/main/res/values-zh-rCN/strings.xml` is Simplified Chinese.
-- New languages should add a new Android resource folder, for example `values-ja/strings.xml`.
+Short UI text lives in Android resources:
 
-Do not edit string names when translating. Translate values only.
+```text
+app/src/main/res/values/strings.xml          English fallback
+app/src/main/res/values-zh-rCN/strings.xml   Simplified Chinese
+```
 
-## Long help text
+Add new languages by creating a new Android resource directory, for example:
 
-Localized help documents live in assets:
+```text
+app/src/main/res/values-ja/strings.xml
+```
 
-- `app/src/main/assets/help/lyrics_format.en.md`
-- `app/src/main/assets/help/lyrics_format.zh-CN.md`
-- `app/src/main/assets/help/fuzzy_matching.en.md`
-- `app/src/main/assets/help/fuzzy_matching.zh-CN.md`
+Translate values only. Keep string names unchanged.
 
-New languages can add files such as `lyrics_format.ja.md` and `fuzzy_matching.ja.md`.
+## Code-side localized labels
 
-## Changelog
+Some setting labels are produced by helper files under `i18n/`, such as:
 
-The changelog is maintained in English only:
+```text
+i18n/Localization.kt
+i18n/LyricsSettingsText.kt
+i18n/FloatingStyleText.kt
+i18n/I18nFormatters.kt
+```
 
-- `app/src/main/assets/changelog.txt`
+When adding a new enum option, update both the enum and the corresponding localized label helper.
 
-Please do not add localized changelog copies unless this policy changes.
+## Changelog policy
 
-## Terms
+The in-app changelog is loaded from:
 
-- AirLyrics: do not translate
-- LRC: do not translate
-- Plain LRC: 普通歌词
-- Enhanced LRC: 逐字歌词
-- Online lyrics: 联网歌词
-- Local lyrics: 本地歌词
-- Lyrics offset: 歌词偏移
-- Fuzzy matching: 弱匹配
-- Click-through: 触摸穿透
-- Floating lyrics: 悬浮歌词
+```text
+app/src/main/assets/changelog.txt
+```
 
-## Before submitting
+It is currently maintained in English only.
 
-Run the localization checker before opening a PR:
+## Documentation language policy
+
+Repository docs are paired:
+
+```text
+SOME_DOC.md          English
+SOME_DOC.zh-CN.md    Simplified Chinese
+```
+
+English README links to English docs. Chinese README links to Chinese docs.
+
+## Validation
+
+Run:
 
 ```bash
 ./scripts/check_localization.sh
 ```
 
-Every localized `strings.xml` must keep the same string names as `app/src/main/res/values/strings.xml`. Do not add generated/hash-like keys such as `ui_title_a1b2c3`; use stable semantic names instead.
+The checker should fail when localized resources miss required keys, contain unexpected keys, or use generated-looking key names.
 
-## Placeholders
+## Placeholders and formatting
 
-Keep placeholders such as `%1$s`, `%2$d`, and line breaks intact. They are used by Android formatting.
+Keep placeholders exactly the same:
 
-## User data
+```text
+%1$s
+%2$d
+%%
+```
 
-Do not translate or pass user data through localization helpers: song titles, artist names, album names, file names, lyrics, paths, and player names must remain unchanged.
+Do not change required line breaks when a string is intentionally multiline.
+
+## Terms
+
+| English | Simplified Chinese |
+| --- | --- |
+| Floating lyrics | 悬浮歌词 |
+| Media source | 媒体源 |
+| Online lyrics search | 联网歌词搜索 |
+| Local lyrics import | 本地歌词导入 |
+| Enhanced lyrics | 增强歌词 / 逐字歌词 |
+| Word-by-word lyrics | 逐字歌词 |
+| Lyrics offset | 歌词偏移 |
+| Touch-through | 触摸穿透 |
+| Auto-save | 自动保存 |
+
+Do not translate app names, package names, file names, song titles, artist names, album names, lyrics, paths or user-selected folders.

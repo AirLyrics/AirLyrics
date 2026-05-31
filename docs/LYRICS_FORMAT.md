@@ -1,128 +1,110 @@
-# AirLyrics 歌词文件格式
+# Lyrics Format
 
-AirLyrics 支持导入 `.lrc` 文件。为了避免不同歌词工具导出的格式差异导致显示异常，建议把手动导入的歌词统一整理成下面的格式。
+[English](LYRICS_FORMAT.md) · [简体中文](LYRICS_FORMAT.zh-CN.md)
 
-## 普通歌词推荐格式
+AirLyrics supports local `.lrc` import. Local import is the recommended path when online lyrics are missing, inaccurate or not synchronized with your track.
 
-普通歌词用于逐行滚动显示。推荐每一行只写一个时间戳和一句歌词：
+## Normal LRC
+
+Normal LRC displays one timed line at a time.
+
+Recommended format:
 
 ```lrc
-[00:12.34]这是一行歌词
-[00:15.60]This is a lyric line
+[00:12.34]This is a lyric line
+[00:15.60]This is the next line
 ```
 
-格式说明：
+Format:
 
 ```text
-[mm:ss.xx]歌词文本
+[mm:ss.xx]lyric text
 ```
 
-其中：
+Notes:
 
-- `mm` 是分钟。
-- `ss` 是秒。
-- `xx` 是百分秒，例如 `.34` 表示 340 毫秒附近。
-- 时间戳后面直接跟歌词文本，不需要额外空格。
+- `mm` is minutes.
+- `ss` is seconds.
+- `xx` is centiseconds.
+- Keep one main timestamp and one lyric sentence per line when possible.
 
-## 普通歌词完整示例
+## Translation lines
+
+AirLyrics can display original lyrics with translated lyrics when translation lines are available.
+
+A common local format is alternating original and translated lines with the same timestamp:
 
 ```lrc
-[00:00.58]这是一行歌词预览
-[00:03.20]This is a lyric preview
-[00:06.00]歌词会按照时间逐行显示
-[00:09.50]Lyrics will scroll line by line
+[00:12.34]大好きだって 大切だって
+[00:12.34]I love you, I love you
 ```
 
-## 逐字歌词推荐格式
+Display behavior depends on the selected lyrics content mode:
 
-逐字高亮只支持本地导入 enhanced LRC。普通 LRC 只能逐行滚动，不能逐字高亮。
+- Original + translation
+- Original only
+- Translation only
 
-推荐格式：
+## Enhanced / word-by-word LRC
+
+Enhanced lyrics are supported mainly through local import. They use line timestamps plus inline word timestamps.
+
+Recommended format:
 
 ```lrc
-[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐<00:12.90>字<00:13.10>歌<00:13.30>词
+[00:12.34]<00:12.34>I <00:12.60>love <00:12.95>you
 ```
 
-格式说明：
+Format:
 
 ```text
-[整句开始时间]<字词开始时间>字<字词开始时间>词
+[line start]<word start>word<word start>word
 ```
 
-整句的 `[时间]` 决定这一行歌词什么时候出现，行内的 `<时间>` 决定每个字词什么时候高亮。
+The line timestamp decides when the line appears. Inline timestamps decide word-by-word highlighting.
 
-## 逐字歌词完整示例
+## Supported variants
+
+The parser tries to tolerate common variants:
 
 ```lrc
-[00:00.50]<00:00.50>这<00:00.70>是<00:00.90>一<00:01.10>行<00:01.30>歌<00:01.50>词<00:01.70>预<00:01.90>览
-[00:03.00]<00:03.00>This <00:03.30>is <00:03.60>a <00:03.90>lyric <00:04.30>preview
+[00:12.34]Lyric
+[00:12:34]Lyric
+[01:02.345]Lyric
+[00:12.34][00:15.60]Repeated lyric
 ```
 
-## AirLyrics 会尽量兼容的格式
-
-导入时，AirLyrics 会尽量兼容一些常见变体，例如：
+It also attempts to recover compact exports like:
 
 ```lrc
-[00:12.34]歌词
-[00:12:34]歌词
-[01:02.345]歌词
-[00:12.34][00:15.60]重复歌词
+[00:00:58]Line A[00:01:20]Line B[00:02:18]Line C
 ```
 
-也会尝试解析一些工具导出的紧凑格式：
+This compact style is not recommended for manual editing.
 
-```lrc
-[00:00:58]歌词A[00:01:20]歌词B[00:02:18]歌词C
-```
+## Not recommended
 
-不过这种格式不推荐手动维护。导入后，AirLyrics 会把普通歌词保存为统一的 `[mm:ss.xx]歌词` 格式，之后显示会优先读取规范化后的本地缓存。
+Avoid these patterns when creating lyrics manually:
 
-## 不推荐或不支持的格式
+- Untimed plain text only.
+- Very long lines without natural spaces.
+- Mixed unrelated songs in one file.
+- Wrong duration or wrong song version.
+- Enhanced lyrics selected for a plain LRC file.
 
-下面这些格式容易导入失败，或者显示结果不稳定：
+## Import behavior
+
+When importing, AirLyrics asks whether the file should be treated as normal lyrics or enhanced lyrics.
+
+- Normal lyrics are saved as line-based LRC.
+- Enhanced lyrics are saved separately so word timing can be reused.
+- Local lyrics have priority over online lookup.
+- Lyrics offset can be adjusted later from the app.
+
+## Test samples
+
+Manual test files are available in:
 
 ```text
-00:12.34 歌词
-12.34 歌词
-纯文本歌词，没有时间戳
+docs/test-lyrics-samples/
 ```
-
-下面这种普通 LRC 不能用于逐字高亮：
-
-```lrc
-[00:12.34]这是一行普通歌词
-```
-
-如果选择“逐字歌词”导入，文件里必须包含 `<00:12.34>` 这样的行内时间戳。
-
-## 常见问题
-
-### 为什么导入成功后显示不对？
-
-优先检查文件是不是一行里塞进了很多时间戳，或者时间戳后面没有正确分隔歌词。建议整理成每行一个时间戳：
-
-```lrc
-[00:00.58]第一句
-[00:01.20]第二句
-[00:02.18]第三句
-```
-
-### 普通歌词和逐字歌词有什么区别？
-
-普通歌词：
-
-```lrc
-[00:12.34]这是一行歌词
-```
-
-逐字歌词：
-
-```lrc
-[00:12.34]<00:12.34>这<00:12.50>是<00:12.70>逐字歌词
-```
-
-普通歌词用于整句滚动显示。逐字歌词用于高亮已经唱到的字词。
-
-### 联网搜索会提供逐字歌词吗？
-
-不会。AirLyrics 的联网搜索只用于普通歌词。逐字歌词只支持本地 enhanced LRC 导入。

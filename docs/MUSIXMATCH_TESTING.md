@@ -1,67 +1,56 @@
-# Musixmatch source testing checklist
+# Musixmatch Testing
 
-Musixmatch is available as a user-selected lyrics search source. Local lyrics are still checked first.
+[English](MUSIXMATCH_TESTING.md) · [简体中文](MUSIXMATCH_TESTING.zh-CN.md)
 
-## Build commands
+Musixmatch is one of the selectable online lyrics sources. It is useful for international songs, but availability depends on Musixmatch coverage and network behavior.
 
-Use the full build when testing Musixmatch because the Rust library must include the Musixmatch provider:
+## Select Musixmatch
 
-```bash
-./gradlew :app:assembleDebug
-```
+1. Open Settings.
+2. Open Lyrics settings.
+3. Choose Musixmatch as the lyrics source.
+4. Keep online fallback enabled.
+5. Play a track with clean title and artist metadata.
+6. Refresh lyrics.
 
-Use the skip flag only when checking Kotlin/UI changes that do not touch Rust:
+## Recommended smoke test
 
-```bash
-./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
-```
+Use a popular track with:
 
-## Manual test flow
+- Clear title.
+- Clear artist.
+- No long remix/live/version suffix.
+- Stable duration.
 
-1. Open AirLyrics.
-2. Go to Settings -> Lyrics settings.
-3. Set lyrics search source to `Musixmatch`.
-4. Play an overseas song with title, artist and duration metadata.
-5. Show the floating lyrics window.
-6. Verify that the floating window shows ordinary synchronized LRC lyrics.
-7. Stop playback, restart the same song, and verify local cache is used first after successful save.
+Avoid first tests with covers, live versions, sped-up edits or region-specific releases.
 
-Musixmatch testing does not cover word-by-word lyrics. Word-by-word display is local-only and should be tested by importing an enhanced LRC file from the app.
+## Translation behavior
 
-## Expected source behavior
+Musixmatch translation availability depends on the source result. AirLyrics does not guarantee that translation lines exist for every song.
 
-- `只使用本地`: no online request; missing lyrics should show a local-only missing message.
-- `网易云音乐`: local first, then NetEase.
-- `Musixmatch`: local first, then Musixmatch.
+To see translations when available, set the floating lyrics content mode to original + translation or translation only.
 
-## Useful log filter
+## Expected outcomes
 
-```bash
-adb logcat | grep -E 'AirLyricsLyrics|Musixmatch|airlyrics'
-```
+A successful lookup may produce:
 
-## Failure messages worth checking
+- Original lyrics only.
+- Original lyrics with translation.
+- No usable result.
+- A provider error or rate limit.
 
-- `Musixmatch 未找到歌词`: normal miss, try another song or clean metadata.
-- `Musixmatch 网络请求失败`: network, DNS, proxy or TLS problem.
-- `Musixmatch 请求过于频繁，请稍后再试`: rate-limit or temporary block.
-- `Musixmatch 暂时需要访问凭据`: Musixmatch changed anonymous access; credentials support may be needed.
-- `Musixmatch 歌词受限，无法获取`: restricted lyrics.
+No usable result should not crash the app. The user should still be able to import local lyrics.
 
-## Good first songs
-
-Use popular English/Japanese tracks with clean title and artist metadata. Avoid remixes, live versions, sped-up edits and titles with long bracket suffixes for the first smoke test.
-
-## Translation language test
-
-Musixmatch no longer exposes a manual translation-language selector in the app UI.
-
-When Musixmatch is selected, AirLyrics uses the device's default system language as the translation language code. For example, a Chinese system tries `zh`, and an English system tries `en`. Translation is still optional and depends on Musixmatch coverage. If the original lyrics succeed but translation is unavailable, the lookup still succeeds and the app keeps showing original lyrics.
-
-The floating-window page only controls how lyrics are displayed, such as original / translation content mode, current / previous / next line range, and whether locally imported enhanced LRC word-by-word timing is preferred. When testing translation, set the floating-window display mode to `原文 + 翻译` or `仅翻译`.
-
-Useful log filter:
+## Debugging
 
 ```bash
 adb logcat | grep -E 'AirLyricsLyrics|Musixmatch|translation|airlyrics'
 ```
+
+Check:
+
+- Whether the selected source is Musixmatch.
+- Whether online fallback is enabled.
+- Whether local lyrics are already taking priority.
+- Whether the media app exposes correct title and artist.
+- Whether the provider returns no lyrics, restricted lyrics or a temporary network error.

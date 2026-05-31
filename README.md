@@ -12,14 +12,14 @@ A lightweight Android app that automatically detects media playback and displays
 
 <br />
 
-[Download](https://github.com/AndSi-327/AirLyrics/releases) · [Documentation](docs/) · [Report Bug](https://github.com/AndSi-327/AirLyrics/issues)
+[Download](https://github.com/AndSi-327/android-floating-lyrics/releases) · [Documentation](docs/README.md) · [Report Bug](https://github.com/AndSi-327/android-floating-lyrics/issues)
 
 <br />
 
 [![Platform](https://img.shields.io/badge/platform-Android-brightgreen?style=flat-square)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-Android-blueviolet?style=flat-square)]()
 [![Rust](https://img.shields.io/badge/Rust-lyrics--core-orange?style=flat-square)]()
-[![Release](https://img.shields.io/github/v/release/AndSi-327/AirLyrics?style=flat-square)](https://github.com/AndSi-327/AirLyrics/releases)
+[![Release](https://img.shields.io/github/v/release/AndSi-327/android-floating-lyrics?style=flat-square)](https://github.com/AndSi-327/android-floating-lyrics/releases)
 
 </div>
 
@@ -45,7 +45,7 @@ The app is usable, but compatibility may vary depending on Android version, devi
 
 Download the latest APK from GitHub Releases:
 
-https://github.com/AndSi-327/AirLyrics/releases
+https://github.com/AndSi-327/android-floating-lyrics/releases
 
 After installation, grant the required permissions and select your music app as the media source.
 
@@ -123,11 +123,11 @@ More details are available in the docs directory.
 
 | Document | Description |
 | --- | --- |
-| [LYRICS_FORMAT.md](docs/LYRICS_FORMAT.md) | Supported lyrics formats and local import behavior |
-| [LOCALIZATION.md](docs/LOCALIZATION.md) | Translation and localization guide |
-| [TESTING.md](docs/TESTING.md) | Testing checklist |
-| [CONTRIBUTING.md](docs/CONTRIBUTING.md) | Contribution guide |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Project architecture |
+| [Documentation Home](docs/README.md) | Browse all English documentation by topic |
+| [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics |
+| [Contributing](docs/CONTRIBUTING.md) | Development environment, workflow and code map |
+| [Testing](docs/TESTING.md) | Build, automated tests and manual release checks |
+| [Architecture](docs/ARCHITECTURE.md) | Module layout and runtime flow |
 
 ---
 
@@ -145,8 +145,8 @@ More details are available in the docs directory.
 ### Clone
 
 ```bash
-git clone https://github.com/AndSi-327/AirLyrics.git
-cd AirLyrics
+git clone https://github.com/AndSi-327/android-floating-lyrics.git
+cd android-floating-lyrics
 ```
 
 ### Build

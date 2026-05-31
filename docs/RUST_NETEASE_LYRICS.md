@@ -1,63 +1,87 @@
-# Air Lyrics Rust NetEase lyric core
+# Rust Lyrics Core
 
-This branch makes NetEase Cloud Music the main online lyric provider through a Rust native core, following the same dependency route used by Waylyrics:
+[English](RUST_NETEASE_LYRICS.md) · [简体中文](RUST_NETEASE_LYRICS.zh-CN.md)
 
-- Rust crate: `lyrics-core`
-- NetEase API library: `ncmapi2` through the `ncmapi` package alias
-- Android bridge: hand-written JNI
-- Kotlin entry point: `NeteaseLyricsProvider`
+AirLyrics uses a Rust native library for online lyrics provider work. The Android side talks to it through JNI wrapper classes.
+
+## Native module
+
+```text
+lyrics-core/
+  src/lib.rs
+  src/lrc.rs
+  src/musixmatch.rs
+  Cargo.toml
+```
+
+The Android app loads:
+
+```text
+libairlyrics_lyrics.so
+```
+
+from:
+
+```text
+app/src/main/jniLibs/
+```
+
+## Android bridge
+
+```text
+lyrics/providers/NeteaseLyricsNative.kt
+lyrics/providers/NeteaseLyricsProvider.kt
+lyrics/providers/MusixmatchLyricsNative.kt
+lyrics/providers/MusixmatchLyricsProvider.kt
+```
+
+Provider classes convert Kotlin requests into native calls and convert native JSON/results back into `LyricsProviderResult`.
 
 ## Build requirements
 
-Install Rust and the Android native toolchain first:
+- Rust toolchain
+- Android NDK
+- `cargo-ndk`
+
+Install target and tool:
 
 ```bash
 rustup target add aarch64-linux-android
 cargo install cargo-ndk
 ```
 
-Make sure Android Studio / SDK Manager has an NDK installed. Then build normally:
+Build the app normally:
 
 ```bash
 ./gradlew :app:assembleDebug
 ```
 
-The Gradle task `buildRustLyrics` runs before `preBuild` and writes native libraries into:
-
-```text
-app/src/main/jniLibs/arm64-v8a/libairlyrics_lyrics.so
-app/src/main/jniLibs/armeabi-v7a/libairlyrics_lyrics.so
-app/src/main/jniLibs/x86_64/libairlyrics_lyrics.so
-```
-
-For Kotlin-only checks on a machine without Rust/cargo-ndk, use:
+For Kotlin-only development checks when native libraries are already available:
 
 ```bash
 ./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
 ```
 
-That skip flag is only for development checks. A real APK needs the Rust `.so` files.
+The skip flag is not a replacement for a real release build.
 
-## Runtime flow
+## Provider behavior
 
-```text
-FloatingLyricsService
-  -> local cached .lrc first
-  -> LyricsFetcher
-  -> NeteaseLyricsProvider
-  -> NeteaseLyricsNative.fetchBestLyricsJson(...)
-  -> Rust ncmapi2 search + lyric
-  -> merged LRC saved back to local cache
+The online provider path is selected by `LyricsSettingsStore` and routed through `LyricsRepository`.
+
+Local lyrics still win before native online lookup runs.
+
+## Debugging
+
+Useful filters:
+
+```bash
+adb logcat | grep -E 'AirLyricsLyrics|Netease|Musixmatch|airlyrics'
 ```
 
-LRCLIB is no longer used by `LyricsFetcher`. NetEase Rust is the main online provider.
+Common failure areas:
 
-## Matching logic
-
-The Rust side searches with:
-
-1. title + album + artist
-2. title + artist
-3. title
-
-Candidates are scored by title, artist, duration, and album similarity. Live/remix/cover/instrumental style variants receive a penalty. The final lyric result returns original LRC, translated LRC, and a merged LRC used by the Android display.
+- Native library missing for the device ABI.
+- NDK or Rust target not installed.
+- Provider network failure.
+- Online source returned no suitable match.
+- Native call timed out or was cancelled by a newer request.

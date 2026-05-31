@@ -1,22 +1,49 @@
-# Lyrics lookup cancellation
+# Lyrics Lookup Cancellation
 
-AirLyrics uses a latest-request-wins lookup model for song changes, manual refreshes, online reloads, media-source switches, imports, and service shutdown.
+[English](LYRICS_LOOKUP_CANCELLATION.md) · [简体中文](LYRICS_LOOKUP_CANCELLATION.zh-CN.md)
 
-`LyricsLookupRunner` now owns a single-worker executor instead of an unbounded cached thread pool. This keeps lookup concurrency bounded to one worker, prevents rapid song/source changes from creating a pile of background threads, and makes queued stale requests cancellable before they start.
+AirLyrics uses a latest-request-wins model for lyrics lookup. This prevents rapid song changes, refresh taps or source switches from delivering stale lyrics to the UI.
 
-Cancellation has four layers:
+## Main class
 
-1. Replacing a lookup cancels the previous `LyricsLookupHandle`.
+```text
+lyrics/LyricsLookupCancellation.kt
+```
+
+`LyricsLookupRunner` owns a single worker executor. Submitting a new lookup cancels the previous active handle before starting the new one.
+
+## Cancellation layers
+
+1. The active `LyricsLookupHandle` is cancelled when a newer request arrives.
 2. `Future.cancel(true)` interrupts the worker thread.
-3. `LyricsLookupCancellationToken` carries a request key plus generation number and is checked before local lookup, before online lookup, after provider return, and before local cache save.
-4. Rust/JNI provider calls are wrapped in native-side timeouts, currently 12 seconds for NetEase and 15 seconds for Musixmatch, so native network work cannot block indefinitely under normal provider behavior.
+3. `LyricsLookupCancellationToken` marks cancellation and is checked between lookup stages.
+4. Callback delivery verifies that the token is still active before updating the caller.
 
-The Rust/JNI boundary is still cooperative: Java cannot forcefully kill native code in the middle of a blocking operation. The important guarantees are:
+## Checked stages
 
-- cancelled lookup results are never delivered to the UI;
-- cancelled lookups do not save stale lyrics after a newer request has replaced them;
-- rapid refresh/source/song changes do not create unbounded lookup threads;
-- queued stale requests are cancelled before they run;
-- native provider calls have bounded lookup windows.
+`LyricsRepository` checks cancellation before and after important work:
 
-`LyricsLookupRunnerTest` covers the two core behaviors: a running lookup is replaced without delivering its result, and a queued lookup is cancelled before it starts when a newer request arrives.
+- Before reading settings.
+- Before local provider lookup.
+- Before online provider lookup.
+- After provider return.
+- Before local cache save.
+- Before returning the final result.
+
+Native Rust/JNI calls are cooperative at the boundary: a request may only stop once the native call returns or times out, but cancelled results are still blocked from reaching the UI.
+
+## When to cancel
+
+Cancel active lookup on:
+
+- Song change.
+- Manual refresh.
+- Media source switch.
+- Lyrics source switch.
+- Local import replacing current lyrics.
+- Floating service shutdown.
+- Activity/service lifecycle cleanup.
+
+## Rule
+
+Never rely only on comparing old song titles after the result returns. Cancel the work and verify the generation token before callback delivery.

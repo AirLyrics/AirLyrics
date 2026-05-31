@@ -1,213 +1,82 @@
-# Air Lyrics Architecture
+# Architecture
 
-Air Lyrics is an Android floating-lyrics app with a Kotlin Android shell and a Rust lyrics core. The Android side is intentionally split by responsibility so contributors can work on one feature area without reading the whole project.
+[English](ARCHITECTURE.md) · [简体中文](ARCHITECTURE.zh-CN.md)
 
-## Top-level layout
+AirLyrics is an Android floating lyrics app. The Android app is written in Kotlin and uses a Rust native lyrics core for online provider access.
 
-```text
-app/                 Android app module
-lyrics-core/          Rust lyrics/native module
-gradle/               Gradle Wrapper files
-PROJECT_STRUCTURE.md  Quick source-tree map
-ARCHITECTURE.md       This document
-CONTRIBUTING.md       Contributor workflow
-```
-
-## Android source layout
-
-```text
-app/src/main/java/com/andsi/airlyrics/
-  app/
-    MainActivity.kt
-    controller/
-  lyrics/
-  media/
-  settings/
-    model/
-    store/
-  floating/
-  ui/
-    components/
-    navigation/
-    pages/
-    pages/settings/
-    theme/
-    widgets/
-  common/
-```
-
-## Main responsibilities
-
-### MainActivity
-
-`MainActivity.kt` is the app shell. It owns lifecycle wiring, Activity Result launchers, broadcast receivers, and thin delegation methods. New feature logic should not be added directly to it.
-
-Nearby `app/` helpers split the old Activity responsibilities:
-
-```text
-MainActivityRenderer.kt      Root view creation and page rendering.
-MainUiActionsFactory.kt      Central UI action callbacks.
-MainActivitySettingsUi.kt    Settings-page shared UI helpers.
-MainActivityFloatingUi.kt    Floating-style controls and media-source cards.
-MainActivityMediaUi.kt       Media refresh button and visual refresh helpers.
-controller/                  Coordinators for media, lyrics, and floating actions.
-```
-
-When adding a feature, prefer a page/component/controller/store file first. Only touch `MainActivity.kt` when the feature needs lifecycle, permission, launcher, or broadcast wiring.
-
-### media
-
-This module owns Android media-session observation and selected-player state.
-
-Important files:
-
-```text
-MediaNotificationListener.kt  Reads active media notifications and broadcasts updates.
-MediaSourceStore.kt           Persists the selected media package.
-```
-
-Use this module when changing player detection, playback state sync, or media-source selection.
-
-### lyrics
-
-This module owns lyric lookup, provider routing, local lyric import/cache, and LRC parsing.
-
-Important files:
-
-```text
-LyricsRepository.kt       Single lookup entry point used by the service.
-LyricsProvider.kt         Interface for pluggable lyric sources.
-LocalLyricsProvider.kt    Local imported/saved lyric source.
-NeteaseLyricsProvider.kt  NetEase online lyric source.
-MusixmatchLyricsProvider.kt  Musixmatch online lyric source.
-LyricsStorage.kt          Local .lrc storage and imported enhanced LRC word-by-word cache.
-LrcParser.kt              Timestamped lyric parsing and current-line lookup.
-```
-
-To add a lyric source, create a new provider implementing `LyricsProvider`, then register it in `LyricsRepository` and expose the option in `LyricsSettingsStore`. Online providers should return ordinary LRC/translation data only; word-by-word lyrics are intentionally local-only through enhanced LRC import.
-
-### settings
-
-This module is the single settings center. UI and services should read/write settings through stores instead of directly touching `SharedPreferences`.
-
-Important files:
-
-```text
-model/ThemeSettings.kt
-model/FloatingLyricsStyle.kt
-model/LyricsSettings.kt
-store/ThemeSettingsStore.kt
-store/FloatingLyricsStyleStore.kt
-store/LyricsSettingsStore.kt
-store/QuickFloatingStore.kt
-```
-
-When adding a new setting, add it to a model first, then add store read/write methods, then wire UI and runtime behavior to that store.
-
-### floating
-
-This module owns the Android foreground service and the floating lyrics window.
-
-Important files:
-
-```text
-FloatingLyricsService.kt        Service command router, media receiver, lyric loading coordinator.
-FloatingWindowController.kt     WindowManager view creation, show/hide, drag, lock, click-through, style application.
-FloatingLyricsRenderer.kt       Parsed lyric state and current-line rendering.
-CurrentMediaInfo.kt             Current media snapshot used by service logic.
-FloatingServiceNotification.kt  Foreground-service notification setup.
-```
-
-`FloatingLyricsService` should stay as an orchestration layer. Window details belong in `FloatingWindowController`; rendering details belong in `FloatingLyricsRenderer`.
-
-### ui/components
-
-Reusable view helpers and small UI building blocks. Put repeated rows, cards, text helpers, buttons, and animations here.
-
-### ui/pages
-
-Top-level app pages:
-
-```text
-MediaPage.kt
-FloatingPage.kt
-SettingsPages.kt
-```
-
-### ui/pages/settings
-
-Settings sub-pages are split by user-facing feature area:
-
-```text
-SettingsHomePage.kt
-FloatingSettingsPage.kt
-LyricsSettingsPage.kt
-SystemSettingsPage.kt
-AboutPage.kt
-```
-
-This is the preferred place for settings UI changes.
-
-### ui/theme
-
-Theme palettes, color definitions, and MainActivity theme helpers. Runtime persistence lives in `settings/store`, not here.
-
-### util
-
-Shared constants and small app-wide utilities. Broadcast/service action strings live in `BroadcastActions.kt`.
+The current architecture is split around responsibilities instead of screens only: media detection, lyrics lookup, local lyrics storage, floating-window rendering, settings persistence and UI pages each have their own home.
 
 ## Runtime flow
 
 ```text
-MediaNotificationListener
-  -> BroadcastActions.MEDIA_UPDATE
-  -> FloatingLyricsService
+Music app
+  -> Android media notification / media session
+  -> MediaNotificationListener
+  -> MainActivity / FloatingLyricsService
   -> LyricsRepository
-  -> LyricsProvider / LocalLyricsProvider
+      -> LocalLyricsProvider
+      -> NeteaseLyricsProvider or MusixmatchLyricsProvider
+      -> LyricsStorage optional local save
   -> FloatingLyricsRenderer
-  -> FloatingWindowController.textView
+  -> FloatingWindowController
 ```
 
-A simplified flow:
+Local lyrics are always checked first unless a caller explicitly bypasses local lookup. Online lookup only runs when the user's settings allow it.
 
-1. The notification listener observes playback metadata and state.
-2. It sends a local app broadcast with title, artist, package, playing state, duration, and position.
-3. `FloatingLyricsService` accepts updates only from the selected media source.
-4. The service asks `LyricsRepository` for lyrics.
-5. The repository checks local lyrics first, then the selected online provider.
-6. The renderer parses LRC timestamps and updates the current lyric line.
-7. The window controller owns the visible floating TextView.
-
-## Design rules
-
-Prefer these boundaries:
+## Android modules
 
 ```text
-UI pages              call settings stores and service commands
-Settings stores       own SharedPreferences keys
-Lyrics repository     owns provider order and cache policy
-Lyrics providers      own one source only
-Floating service      orchestrates, but avoids UI/window details
-Floating controller   owns WindowManager and view styling
-Renderer              owns parsed lyrics and current-line timing
+app/              Activity shell, navigation, permission launchers and controllers
+media/            Media notification/session reading and selected-player persistence
+lyrics/           Lyrics repository, providers, parser, display formatter and storage
+floating/         Foreground service, WindowManager controller and renderer
+settings/         Data models and SharedPreferences stores
+ui/               Pages, reusable components, navigation, theme and widgets
+common/           Shared constants
 ```
 
-Avoid these patterns:
+## App shell
+
+`MainActivity` owns Android lifecycle glue: activity result launchers, permission flows, broadcast receivers and navigation dispatch. Feature logic is delegated to controllers and page files.
+
+Important files:
 
 ```text
-Direct SharedPreferences access from random UI files
-New broadcast action strings scattered across classes
-New lyric-source logic inside FloatingLyricsService
-WindowManager details inside MainActivity
-Large page-specific UI blocks inside MainActivity
+app/MainActivity.kt
+app/MainActivityRenderer.kt
+app/MainUiActionsFactory.kt
+app/controller/AppMediaController.kt
+app/controller/LyricsController.kt
+app/controller/FloatingController.kt
 ```
 
-## Build notes
+## Media detection
 
-Common debug build during Android-only work:
+`MediaNotificationListener` reads active media notifications and broadcasts snapshots. `MediaSourceStore` remembers the selected media package so AirLyrics can follow the right player when multiple apps expose playback state.
 
-```bash
-./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
-```
+The Media page shows current media and available players. Refresh actions update only the relevant media state instead of rebuilding the whole app shell.
 
-Full native rebuild requires Rust Android targets and `cargo-ndk`.
+## Lyrics lookup
+
+`LyricsRepository` is the central entry point. Its normal lookup order is:
+
+1. Local imported or saved lyrics.
+2. Online provider selected in settings.
+3. Optional save of online result into local storage.
+4. Optional local enhanced / word-by-word lyrics attachment when the feature is enabled.
+
+`LyricsFetcher` remains as a compatibility wrapper for older call sites. New code should prefer `LyricsRepository` or the app-level lyrics controller.
+
+## Floating lyrics
+
+`FloatingLyricsService` is the foreground service coordinator. Window details belong to `FloatingWindowController`, while parsed lyric timing and text updates belong to `FloatingLyricsRenderer`.
+
+The floating window supports style changes, lock state, touch-through behavior, position persistence, line switching animation and karaoke highlight rendering when enhanced lyrics are available.
+
+## Settings
+
+Settings are stored through dedicated stores under `settings/store/`. UI pages should not directly write raw `SharedPreferences` keys unless a new store is being introduced.
+
+## Localization
+
+Short UI strings live in Android resources. Longer documents and changelog-style text are handled as files. See [Localization](LOCALIZATION.md).
