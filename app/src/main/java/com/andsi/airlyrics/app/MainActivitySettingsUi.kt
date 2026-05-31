@@ -32,19 +32,20 @@ import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
 import com.andsi.airlyrics.i18n.localizedLocalLyricsType
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun MainActivity.settingsHomeHeader(): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, 0, 0, dp(14))
+        setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg))
 
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
                 text = tr("设置", "Settings")
-                textSize = 22f
+                textSize = AirUiTokens.TextSize.PageTitle
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextStrong)
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -58,18 +59,18 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, 0, 0, dp(14))
+        setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg))
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(TextView(activity).apply {
                 text = tr("‹ 设置", "‹ Settings")
-                textSize = 14f
+                textSize = AirUiTokens.TextSize.Body
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
-                setPadding(0, 0, 0, dp(10))
+                setPadding(0, 0, 0, dp(AirUiTokens.Space.Xxl))
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                enableSoftPressFeedback(0.94f)
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                 setOnClickListener {
                     uiActions.backToSettingsHome()
                 }
@@ -77,16 +78,16 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
         })
         addView(TextView(activity).apply {
             text = localizeText(title)
-            textSize = 22f
+            textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         if (subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
                 text = localizeText(subtitle)
-                textSize = 14f
+                textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorTextMuted)
-                setPadding(0, dp(4), 0, 0)
+                setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
             })
         }
     }
@@ -96,21 +97,21 @@ internal fun MainActivity.themeToggleButton(): TextView {
     val activity = this
     return TextView(this).apply {
         text = if (isDarkTheme()) "☀" else "☾"
-        textSize = 18f
+        textSize = AirUiTokens.TextSize.PageTitle - 4f
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         setTextColor(colorAccent)
         contentDescription = if (isDarkTheme()) tr("切换到白天模式", "Switch to light mode") else tr("切换到暗黑模式", "Switch to dark mode")
-        layoutParams = LinearLayout.LayoutParams(dp(42), dp(42)).apply {
-            setMargins(dp(10), 0, 0, 0)
+        layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.ThemeToggleSize), dp(AirUiTokens.Layout.ThemeToggleSize)).apply {
+            setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
         }
         background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(colorSurfaceLight)
-            setStroke(dp(1), colorStroke)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
-        elevation = dp(2).toFloat()
-        enableSoftPressFeedback(0.9f)
+        elevation = dp(AirUiTokens.Space.Xxs).toFloat()
+        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {
             uiActions.toggleThemeMode()
         }
@@ -129,12 +130,12 @@ internal fun MainActivity.settingsCategoryCard(
     return card(this) {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        enableSoftPressFeedback(0.985f)
+        enableSoftPressFeedback(AirUiTokens.Motion.FloatingCardPressScale)
         setOnClickListener { onClick() }
 
         addView(FrameLayout(activity).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(46), dp(46)).apply {
-                setMargins(0, 0, dp(14), 0)
+            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.SettingsIconBubbleSize), dp(AirUiTokens.Layout.SettingsIconBubbleSize)).apply {
+                setMargins(0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), 0)
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -144,7 +145,7 @@ internal fun MainActivity.settingsCategoryCard(
                 setImageResource(iconRes)
                 setColorFilter(Color.WHITE)
                 scaleType = ImageView.ScaleType.CENTER
-                layoutParams = FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER)
+                layoutParams = FrameLayout.LayoutParams(dp(AirUiTokens.Radius.Card), dp(AirUiTokens.Radius.Card), Gravity.CENTER)
             })
         })
 
@@ -158,7 +159,7 @@ internal fun MainActivity.settingsCategoryCard(
 
         addView(TextView(activity).apply {
             text = "›"
-            textSize = 28f
+            textSize = AirUiTokens.Layout.ChevronTextSp
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccent)
         })
@@ -173,46 +174,46 @@ internal fun MainActivity.localLyricsRow(
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(12), dp(10), dp(12), dp(10))
+        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, dp(10), 0, 0)
+        params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
         layoutParams = params
         background = GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
             setColor(colorSurfaceLight)
-            setStroke(dp(1), colorStroke)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
-        enableSoftPressFeedback(0.98f)
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale + 0.01f)
         if (!badgeText.isNullOrBlank()) {
             addView(TextView(activity).apply {
                 text = localizeText(badgeText)
-                textSize = 11f
+                textSize = AirUiTokens.TextSize.Tiny
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
-                setPadding(0, 0, 0, dp(4))
+                setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
             })
         }
         addView(TextView(activity).apply {
             text = item.displayTitle
-            textSize = 14f
+            textSize = AirUiTokens.TextSize.Body
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
             text = "${localizedLocalLyricsSubtitle(item)} · ${localizedLocalLyricsType(item)}"
-            textSize = 12f
+            textSize = AirUiTokens.TextSize.Caption
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccentMint)
-            setPadding(0, dp(4), 0, 0)
+            setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
         })
         addView(TextView(activity).apply {
             text = localizedLocalLyricsMeta(item)
-            textSize = 12f
+            textSize = AirUiTokens.TextSize.Caption
             setTextColor(colorTextMuted)
-            setPadding(0, dp(2), 0, 0)
+            setPadding(0, dp(AirUiTokens.Space.Xxs), 0, 0)
         })
         setOnClickListener {
             activity.openLocalLyricsTargetPicker(item, onLyricsSaved)
@@ -240,7 +241,7 @@ private fun MainActivity.openLocalLyricsTargetPicker(
                     addView(LinearLayout(this@openLocalLyricsTargetPicker).apply {
                         orientation = LinearLayout.HORIZONTAL
                         gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                        setPadding(0, dp(8), 0, 0)
+                        setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
                         addView(localLyricsDialogButton(tr("普通歌词", "Plain lyrics"), primary = false) {
                             pickerDialog?.dismiss()
                             openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
@@ -284,7 +285,7 @@ private fun MainActivity.openLocalLyricsEditor(
 
     val editor = EditText(this).apply {
         setText(rawLyrics)
-        textSize = 13f
+        textSize = AirUiTokens.TextSize.BodySmall
         minLines = 8
         maxLines = 18
         gravity = Gravity.TOP or Gravity.START
@@ -295,11 +296,11 @@ private fun MainActivity.openLocalLyricsEditor(
         setSelection(0)
         setTextColor(colorTextStrong)
         setHintTextColor(colorTextMuted)
-        setPadding(dp(12), dp(10), dp(12), dp(10))
+        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
         background = GradientDrawable().apply {
-            cornerRadius = dp(16).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Sm).toFloat()
             setColor(colorSurfaceLight)
-            setStroke(dp(1), colorStroke)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
     }
 
@@ -323,7 +324,7 @@ private fun MainActivity.openLocalLyricsEditor(
             addView(LinearLayout(this@openLocalLyricsEditor).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                setPadding(0, dp(16), 0, 0)
+                setPadding(0, dp(AirUiTokens.Space.ButtonH), 0, 0)
 
                 addView(localLyricsDialogButton(tr("检查格式", "Check format"), primary = false) {
                     if (isKaraoke) {
@@ -444,27 +445,27 @@ private fun MainActivity.localLyricsDialogButton(
 ): TextView {
     return TextView(this).apply {
         this.text = localizeText(text)
-        textSize = 14f
+        textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         setTextColor(if (primary) Color.WHITE else colorTextStrong)
-        setPadding(dp(14), dp(10), dp(14), dp(10))
+        setPadding(dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply {
-            setMargins(dp(8), 0, 0, 0)
+            setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
         }
         background = GradientDrawable().apply {
-            cornerRadius = dp(99).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
             if (primary) {
                 setColor(colorAccent)
             } else {
                 setColor(colorSurfaceLight)
-                setStroke(dp(1), colorStroke)
+                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
             }
         }
-        enableSoftPressFeedback(0.94f)
+        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener { onClick() }
     }
 }
@@ -473,18 +474,18 @@ internal fun MainActivity.changelogItem(title: String, body: String): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(10), 0, dp(2))
+        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Xxs))
         addView(TextView(activity).apply {
             text = localizeText(title)
-            textSize = 15f
+            textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
             text = localizeText(body)
-            textSize = 13f
+            textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
-            setPadding(0, dp(3), 0, 0)
+            setPadding(0, dp(AirUiTokens.Space.Xs), 0, 0)
         })
     }
 }

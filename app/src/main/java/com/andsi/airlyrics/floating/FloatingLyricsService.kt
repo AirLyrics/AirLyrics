@@ -25,6 +25,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
@@ -287,7 +288,7 @@ class FloatingLyricsService : Service() {
         return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
             "♪ ${tr("仅使用本地歌词", "Using local lyrics only")}\n${media.displayText}\n${tr("未找到本地文件", "Local file not found")}"
         } else {
-            val sourceTitle = localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))
+            val sourceTitle = localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(this))
             "♪ ${media.displayText}\n${tr("当前来源：", "Source: ")}$sourceTitle\n${tr("未找到歌词", "Lyrics not found")}"
         }
     }

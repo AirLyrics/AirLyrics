@@ -21,21 +21,22 @@ import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun createBottomTabs(activity: MainActivity): View  = with(activity) createBottomTabs@ {
     val shell = FrameLayout(this).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(86)
+            dp(AirUiTokens.Layout.BottomBarHeight)
         )
-        setPadding(dp(12), dp(8), dp(12), dp(12))
+        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         clipToPadding = false
         clipChildren = false
         background = GradientDrawable().apply {
             setColor(colorSurface)
             cornerRadii = floatArrayOf(
-                dp(24).toFloat(), dp(24).toFloat(),
-                dp(24).toFloat(), dp(24).toFloat(),
+                dp(AirUiTokens.Radius.Card).toFloat(), dp(AirUiTokens.Radius.Card).toFloat(),
+                dp(AirUiTokens.Radius.Card).toFloat(), dp(AirUiTokens.Radius.Card).toFloat(),
                 0f, 0f,
                 0f, 0f
             )
@@ -73,11 +74,11 @@ internal fun createBottomTabs(activity: MainActivity): View  = with(activity) cr
 
 internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, title: String) = with(activity) addTab@ {
     val slot = FrameLayout(this).apply {
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, AirUiTokens.Motion.RestScale)
         clipToPadding = false
         clipChildren = false
         isClickable = true
-        enableSoftPressFeedback(0.97f)
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             if (page == Page.FLOATING && currentPage == Page.FLOATING) {
                 uiActions.toggleFloatingFromNav()
@@ -90,10 +91,10 @@ internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, ti
     val tab = TextView(this).apply {
         text = localizeText(title)
         gravity = Gravity.CENTER
-        textSize = 15f
+        textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
         includeFontPadding = false
-        setPadding(dp(18), dp(8), dp(18), dp(8))
+        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.Xl))
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -110,8 +111,8 @@ internal fun quickFloatingTabText(activity: MainActivity, visible: Boolean): Spa
     val icon = if (visible) "×" else "♪"
     val label = if (visible) tr("隐藏", "Hide") else tr("显示", "Show")
     return SpannableString("$icon\n$label").apply {
-        setSpan(AbsoluteSizeSpan(24, true), 0, icon.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        setSpan(AbsoluteSizeSpan(10, true), icon.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabIconTextSp, true), 0, icon.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabLabelTextSp, true), icon.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 }
 
@@ -135,24 +136,24 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
         }
         if (view.text.toString() != targetText.toString()) {
             view.animate().cancel()
-            view.alpha = 0.55f
-            view.scaleX = 0.92f
-            view.scaleY = 0.92f
+            view.alpha = AirUiTokens.Layout.TabTextSwapAlpha
+            view.scaleX = AirUiTokens.Layout.TabTextSwapScale
+            view.scaleY = AirUiTokens.Layout.TabTextSwapScale
             view.text = targetText
         }
-        view.textSize = 15f
-        view.setLineSpacing(0f, 0.92f)
+        view.textSize = AirUiTokens.TextSize.Button
+        view.setLineSpacing(0f, AirUiTokens.Layout.TabTextSwapScale)
         view.setTextColor(if (selected) Color.WHITE else colorTextMuted)
         view.background = null
-        val targetScale = if (quickControlSelected) 1.14f else if (selected) 1.02f else 1f
-        val targetAlpha = if (selected) 1f else 0.86f
+        val targetScale = if (quickControlSelected) AirUiTokens.Layout.TabQuickScale else if (selected) AirUiTokens.Layout.TabSelectedScale else AirUiTokens.Motion.RestScale
+        val targetAlpha = if (selected) AirUiTokens.Motion.RestScale else AirUiTokens.Layout.TabUnselectedAlpha
         if (animate) {
             view.animate()
                 .scaleX(targetScale)
                 .scaleY(targetScale)
                 .alpha(targetAlpha)
-                .setDuration(190L)
-                .setInterpolator(OvershootInterpolator(1.08f))
+                .setDuration(AirUiTokens.Layout.TabAnimationMs)
+                .setInterpolator(OvershootInterpolator(AirUiTokens.Layout.TabOvershoot))
                 .start()
         } else {
             view.animate().cancel()
@@ -167,12 +168,12 @@ internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit =
         val highlight = tabHighlight ?: return@post
         val selectedSlot = selectedTab.parent as? View ?: selectedTab
         val textWidth = measureTabTextWidth(activity, selectedTab)
-        val horizontalPadding = if (currentPage == Page.FLOATING) dp(62) else dp(58)
+        val horizontalPadding = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingPadding) else dp(AirUiTokens.Layout.BottomTabDefaultPadding)
         val targetWidth = (textWidth + horizontalPadding).coerceIn(
-            dp(104).toFloat(),
-            if (currentPage == Page.FLOATING) dp(136).toFloat() else dp(144).toFloat()
+            dp(AirUiTokens.Layout.BottomTabMinWidth).toFloat(),
+            if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingMaxWidth).toFloat() else dp(AirUiTokens.Layout.BottomTabDefaultMaxWidth).toFloat()
         )
-        val targetHeight = if (currentPage == Page.FLOATING) dp(56).toFloat() else dp(48).toFloat()
+        val targetHeight = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingHeight).toFloat() else dp(AirUiTokens.Layout.BottomTabDefaultHeight).toFloat()
 
         val slotLocation = IntArray(2)
         val highlightLocation = IntArray(2)

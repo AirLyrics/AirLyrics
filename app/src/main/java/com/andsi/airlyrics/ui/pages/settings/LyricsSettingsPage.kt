@@ -8,10 +8,11 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.i18n.tr
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
+import com.andsi.airlyrics.i18n.localizedLyricsSourceHint
+import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.liveOptionGrid
 import com.andsi.airlyrics.app.*
@@ -26,6 +27,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(activity) createLyricsSettingsPage@ {
     val container = pageContainer(activity, animateChanges = false)
@@ -63,20 +65,14 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
     container.addView(
         card(activity) {
             addView(bigText(activity, tr("歌词搜索来源", "Lyrics source")))
-            fun sourceHintText(key: String): String = when (LyricsSearchSource.fromKey(key)) {
-                LyricsSearchSource.LOCAL_ONLY -> tr("只读取本地歌词", "Read local lyrics only")
-                LyricsSearchSource.NETEASE -> tr("适合中国用户", "Good for Chinese songs")
-                LyricsSearchSource.MUSIXMATCH -> tr("适合国际用户，依据您的系统语言来自动获取翻译（如果有的话）", "Good for international songs; uses your system language for translations when available")
-            }
-
-            val sourceStatus = normalText(activity, tr("当前：", "Current: ") + localizeText(LyricsSettingsStore.getLyricsSourceTitle(activity)))
-            val sourceHint = smallHint(activity, sourceHintText(selectedSource))
+            val sourceStatus = normalText(activity, tr("当前：", "Current: ") + localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(activity)))
+            val sourceHint = smallHint(activity, localizedLyricsSourceHint(LyricsSearchSource.fromKey(selectedSource)))
             val sourceFeedback = TextView(activity).apply {
                 text = ""
-                textSize = 12f
+                textSize = AirUiTokens.TextSize.Caption
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccentMint)
-                setPadding(0, dp(4), 0, 0)
+                setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
             }
             addView(sourceStatus)
             addView(sourceHint)
@@ -84,14 +80,16 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
             lateinit var sourceGrid: LinearLayout
             sourceGrid = liveOptionGrid(
                 LyricsSettingsStore.sourceOptions.map { option ->
+                    val source = LyricsSearchSource.fromKey(option.key)
                     KeyedOptionItem(
                         key = option.key,
-                        title = option.title,
+                        title = localizedLyricsSourceTitle(source),
                         selected = option.key == selectedSource,
                         action = {
                             uiActions.selectLyricsSource(option.key)
-                            sourceStatus.text = tr("当前：", "Current: ") + localizeText(option.title)
-                            sourceHint.text = localizeText(sourceHintText(option.key))
+                            val selected = source
+                            sourceStatus.text = tr("当前：", "Current: ") + localizedLyricsSourceTitle(selected)
+                            sourceHint.text = localizedLyricsSourceHint(selected)
                             playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, tr("已保存", "Saved"))
                         }
                     )
@@ -126,38 +124,38 @@ private fun karaokeStatusRow(activity: MainActivity, value: String): View = with
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, dp(10), 0, dp(4))
+        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
 
         addView(TextView(activity).apply {
             text = tr("本地逐字歌词", "Word LRC")
-            textSize = 15f
+            textSize = AirUiTokens.TextSize.Button
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
 
         addView(TextView(activity).apply {
-            text = localizeText(value)
-            textSize = 13f
+            text = value
+            textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
             gravity = Gravity.CENTER_VERTICAL
         })
 
         addView(TextView(activity).apply {
             text = "!"
-            textSize = 12f
+            textSize = AirUiTokens.TextSize.Caption
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setTextColor(colorTextMuted)
-            setPadding(0, 0, 0, dp(1))
+            setPadding(0, 0, 0, dp(AirUiTokens.Stroke.Hairline))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(colorSurfaceLight)
-                setStroke(dp(1), colorStroke)
+                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
             }
-            layoutParams = LinearLayout.LayoutParams(dp(22), dp(22)).apply {
-                setMargins(dp(8), 0, 0, 0)
+            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
+                setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
             }
-            enableSoftPressFeedback(0.9f)
+            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
             setOnClickListener {
                 activity.showAirInfoDialog(
                     title = tr("本地逐字歌词", "Local word-by-word"),
@@ -174,7 +172,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
     }
     val feedback = TextView(this).apply {
         text = ""
-        textSize = 12f
+        textSize = AirUiTokens.TextSize.Caption
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorAccentMint)
         gravity = Gravity.CENTER_VERTICAL
@@ -287,18 +285,18 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, 0, dp(8), 0)
+                setMargins(0, 0, dp(AirUiTokens.Space.Xl), 0)
             })
             addView(TextView(activity).apply {
                 text = "↻"
-                textSize = 22f
+                textSize = AirUiTokens.TextSize.PageTitle
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
                 gravity = Gravity.CENTER
-                setPadding(dp(8), dp(4), dp(8), dp(4))
-                enableSoftPressFeedback(0.9f)
+                setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm))
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                 setOnClickListener {
-                    animate().rotationBy(360f).setDuration(420L).start()
+                    animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
                     populate()
                     playLocalRefreshFeedback(activity, target = body, feedback = feedback, message = tr("已刷新", "Refreshed"))
                 }
@@ -314,7 +312,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
     }
     val feedback = TextView(this).apply {
         text = ""
-        textSize = 12f
+        textSize = AirUiTokens.TextSize.Caption
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorAccentMint)
         gravity = Gravity.CENTER_VERTICAL
@@ -363,36 +361,36 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
             val media = getCurrentMediaSnapshot()?.takeUnless { it.isEmpty }
             listBody.addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(10), dp(12), dp(10))
+                setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
                 ).apply {
-                    setMargins(0, dp(10), 0, 0)
+                    setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
                 }
                 background = GradientDrawable().apply {
-                    cornerRadius = dp(18).toFloat()
+                    cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
                     setColor(colorSurfaceLight)
-                    setStroke(dp(1), colorStroke)
+                    setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
                 }
                 addView(TextView(activity).apply {
                     text = tr("正在播放", "Now playing")
-                    textSize = 11f
+                    textSize = AirUiTokens.TextSize.Tiny
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorAccent)
-                    setPadding(0, 0, 0, dp(4))
+                    setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
                 })
                 addView(TextView(activity).apply {
                     text = media?.displayText ?: tr("当前没有可识别的播放媒体", "No active media found")
-                    textSize = 14f
+                    textSize = AirUiTokens.TextSize.Body
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorTextStrong)
                 })
                 addView(TextView(activity).apply {
                     text = tr("当前音乐还没有绑定普通本地歌词", "No plain local lyrics are bound to the current song")
-                    textSize = 12f
+                    textSize = AirUiTokens.TextSize.Caption
                     setTextColor(colorTextMuted)
-                    setPadding(0, dp(4), 0, 0)
+                    setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
                 })
             })
         }
@@ -425,12 +423,12 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
 
             val hintText = TextView(activity).apply {
                 text = tr("点击歌词可以预览或者修改", "Tap to preview or edit")
-                textSize = 12f
+                textSize = AirUiTokens.TextSize.Caption
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextMuted)
                 alpha = 0f
                 visibility = View.GONE
-                setPadding(dp(8), 0, 0, 0)
+                setPadding(dp(AirUiTokens.Space.Xl), 0, 0, 0)
             }
             closeHeaderHint = {
                 if (hintText.visibility == View.VISIBLE || hintText.alpha > 0f) {
@@ -442,48 +440,48 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
 
             addView(TextView(activity).apply {
                 text = "!"
-                textSize = 12f
+                textSize = AirUiTokens.TextSize.Caption
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 setTextColor(colorTextMuted)
-                setPadding(0, 0, 0, dp(1))
+                setPadding(0, 0, 0, dp(AirUiTokens.Stroke.Hairline))
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(colorSurfaceLight)
-                    setStroke(dp(1), colorStroke)
+                    setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
                 }
-                layoutParams = LinearLayout.LayoutParams(dp(22), dp(22)).apply {
-                    setMargins(dp(8), 0, 0, 0)
+                layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
+                    setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
                 }
-                enableSoftPressFeedback(0.9f)
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                 setOnClickListener {
                     if (hintText.visibility == View.VISIBLE) {
-                        hintText.animate().alpha(0f).setDuration(120L).withEndAction {
+                        hintText.animate().alpha(0f).setDuration(AirUiTokens.Motion.HintOutMs).withEndAction {
                             hintText.visibility = View.GONE
                         }.start()
                     } else {
                         hintText.visibility = View.VISIBLE
                         hintText.alpha = 0f
-                        hintText.animate().alpha(1f).setDuration(160L).start()
+                        hintText.animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).start()
                     }
                 }
             })
             addView(hintText)
             addView(View(activity), LinearLayout.LayoutParams(0, 1, 1f))
             addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, 0, dp(8), 0)
+                setMargins(0, 0, dp(AirUiTokens.Space.Xl), 0)
             })
             addView(TextView(activity).apply {
                 text = "↻"
-                textSize = 22f
+                textSize = AirUiTokens.TextSize.PageTitle
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
                 gravity = Gravity.CENTER
-                setPadding(dp(8), dp(4), dp(8), dp(4))
-                enableSoftPressFeedback(0.9f)
+                setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm))
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                 setOnClickListener {
                     closeHeaderHint()
-                    animate().rotationBy(360f).setDuration(420L).start()
+                    animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
                     populate()
                     val count = LyricsStorage.listRecentLyrics(activity, limit = 8).size
                     playLocalRefreshFeedback(activity, listBody, feedback, if (count > 0) tr("已刷新", "Refreshed") + " $count " + tr("首", "songs") else tr("已刷新", "Refreshed"))
@@ -496,18 +494,18 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
 
 private fun playLocalRefreshFeedback(activity: MainActivity, target: View, feedback: TextView?, message: String) = with(activity) playLocalRefreshFeedback@ {
     feedback?.apply {
-        text = localizeText(message)
+        text = message
         alpha = 0f
-        animate().alpha(1f).setDuration(160L).withEndAction {
-            postDelayed({ animate().alpha(0f).setDuration(240L).withEndAction { text = "" }.start() }, 900L)
+        animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).withEndAction {
+            postDelayed({ animate().alpha(0f).setDuration(AirUiTokens.Motion.FeedbackOutMs).withEndAction { text = "" }.start() }, AirUiTokens.Motion.FeedbackHoldMs)
         }.start()
     }
 
     target.alpha = 0.72f
-    target.translationY = dp(3).toFloat()
+    target.translationY = dp(AirUiTokens.Space.Xs).toFloat()
     target.animate()
         .alpha(1f)
         .translationY(0f)
-        .setDuration(220L)
+        .setDuration(AirUiTokens.Motion.ChildEnterMs)
         .start()
 }

@@ -53,9 +53,6 @@ object LyricsSettingsStore {
         setLyricsSearchSource(context, LyricsSearchSource.fromKey(source))
     }
 
-    fun getLyricsSourceTitle(context: Context): String {
-        return getLyricsSearchSource(context).title
-    }
 
     fun isAutoSearchOnlineEnabled(context: Context): Boolean {
         if (getLyricsSearchSource(context) == LyricsSearchSource.LOCAL_ONLY) return false

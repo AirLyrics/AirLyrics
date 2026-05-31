@@ -20,6 +20,7 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun createSystemSettingsPage(activity: MainActivity): View  = with(activity) createSystemSettingsPage@ {
     val container = pageContainer(activity)
@@ -56,15 +57,15 @@ private fun languageChoiceCard(activity: MainActivity): View = with(activity) la
     return card(activity) {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(18), dp(18), dp(18), dp(18))
+        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH))
         isClickable = true
         isFocusable = true
-        enableSoftPressFeedback(0.97f)
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener { showLanguageDialog(activity) }
 
         addView(TextView(activity).apply {
             text = "Language"
-            textSize = 18f
+            textSize = AirUiTokens.TextSize.PageTitle - 4f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -72,14 +73,14 @@ private fun languageChoiceCard(activity: MainActivity): View = with(activity) la
 
         addView(TextView(activity).apply {
             text = LanguageSettingsStore.currentDisplayName(activity)
-            textSize = 15f
+            textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccent)
         })
 
         addView(TextView(activity).apply {
             text = "  ›"
-            textSize = 22f
+            textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccent)
         })
@@ -117,23 +118,23 @@ private fun LinearLayout.addLanguageOption(
     val selected = mode == currentMode
     addView(TextView(activity).apply {
         text = if (selected) "✓ $title\n$subtitle" else "$title\n$subtitle"
-        textSize = 15f
+        textSize = AirUiTokens.TextSize.Button
         typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         setTextColor(if (selected) Color.WHITE else activity.colorTextStrong)
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(activity.dp(14), activity.dp(11), activity.dp(14), activity.dp(11))
+        setPadding(activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV), activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, activity.dp(10), 0, 0)
+        params.setMargins(0, activity.dp(AirUiTokens.Space.Xxl), 0, 0)
         layoutParams = params
         background = GradientDrawable().apply {
-            cornerRadius = activity.dp(18).toFloat()
+            cornerRadius = activity.dp(AirUiTokens.Radius.Md).toFloat()
             setColor(if (selected) activity.colorAccent else activity.colorSurfaceLight)
-            setStroke(activity.dp(1), if (selected) activity.colorAccent else activity.colorStroke)
+            setStroke(activity.dp(AirUiTokens.Stroke.Hairline), if (selected) activity.colorAccent else activity.colorStroke)
         }
-        enableSoftPressFeedback(0.97f)
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             onSelect(mode)
         }

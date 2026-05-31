@@ -13,6 +13,7 @@ import com.andsi.airlyrics.ui.pages.createFloatingPage
 import com.andsi.airlyrics.ui.pages.createMediaPage
 import com.andsi.airlyrics.ui.pages.createSettingsPage
 import com.andsi.airlyrics.ui.theme.colorBackground
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun MainActivity.createMainView(): View {
     val root = LinearLayout(this).apply {
@@ -23,7 +24,7 @@ internal fun MainActivity.createMainView(): View {
     val topSafeArea = View(this).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(44)
+            dp(AirUiTokens.Layout.TopSafeAreaHeight)
         )
     }
 

@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.controller
 import android.content.Intent
 import android.provider.Settings
 import android.view.animation.OvershootInterpolator
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import android.widget.Toast
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.renderCurrentPage
@@ -100,15 +101,15 @@ internal class FloatingController(
     fun toggleFromNav() {
         val selectedTab = activity.tabViews[Page.FLOATING]
         selectedTab?.animate()
-            ?.scaleX(0.92f)
-            ?.scaleY(0.92f)
-            ?.setDuration(70L)
+            ?.scaleX(AirUiTokens.Layout.TabTextSwapScale)
+            ?.scaleY(AirUiTokens.Layout.TabTextSwapScale)
+            ?.setDuration(AirUiTokens.Layout.NavTapDownMs)
             ?.withEndAction {
                 selectedTab.animate()
-                    .scaleX(1.14f)
-                    .scaleY(1.14f)
-                    .setDuration(180L)
-                    .setInterpolator(OvershootInterpolator(1.45f))
+                    .scaleX(AirUiTokens.Layout.TabQuickScale)
+                    .scaleY(AirUiTokens.Layout.TabQuickScale)
+                    .setDuration(AirUiTokens.Layout.NavTapUpMs)
+                    .setInterpolator(OvershootInterpolator(AirUiTokens.Layout.NavTapOvershoot))
                     .start()
             }
             ?.start()

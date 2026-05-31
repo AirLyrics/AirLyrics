@@ -22,6 +22,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 private const val DEFAULT_POSITIVE_TEXT = "__airlyrics_default_positive__"
 
@@ -66,16 +67,16 @@ internal fun MainActivity.showAirDialog(
 
     val panel = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(22), dp(20), dp(22), dp(16))
+        setPadding(dp(AirUiTokens.Space.DialogH), dp(AirUiTokens.Space.DialogTop), dp(AirUiTokens.Space.DialogH), dp(AirUiTokens.Space.DialogBottom))
         background = GradientDrawable().apply {
-            cornerRadius = dp(28).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Dialog).toFloat()
             setColor(colorCard)
-            setStroke(dp(1), colorStroke)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
 
         addView(TextView(this@showAirDialog).apply {
             text = localizeText(title)
-            textSize = 21f
+            textSize = AirUiTokens.TextSize.DialogTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
@@ -83,10 +84,10 @@ internal fun MainActivity.showAirDialog(
         if (!message.isNullOrBlank()) {
             addView(TextView(this@showAirDialog).apply {
                 text = localizeText(message)
-                textSize = 14f
+                textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorTextMuted)
-                setLineSpacing(dp(3).toFloat(), 1f)
-                setPadding(0, dp(12), 0, dp(4))
+                setLineSpacing(dp(AirUiTokens.Space.Xs).toFloat(), 1f)
+                setPadding(0, dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), 0, dp(AirUiTokens.Space.Sm))
             })
         }
 
@@ -97,7 +98,7 @@ internal fun MainActivity.showAirDialog(
             addView(LinearLayout(this@showAirDialog).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                setPadding(0, dp(16), 0, 0)
+                setPadding(0, dp(AirUiTokens.Space.CardV), 0, 0)
 
                 if (!negativeText.isNullOrBlank()) {
                     addView(dialogButton(negativeText, primary = false) {
@@ -126,7 +127,7 @@ internal fun MainActivity.showAirDialog(
     }
 
     val root = FrameLayout(this).apply {
-        setPadding(dp(18), dp(18), dp(18), dp(18))
+        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH))
         addView(outer)
     }
 
@@ -135,7 +136,7 @@ internal fun MainActivity.showAirDialog(
         dialog.window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            setDimAmount(0.28f)
+            setDimAmount(AirUiTokens.Layout.DialogDimAmount)
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
     }
@@ -150,27 +151,27 @@ private fun MainActivity.dialogButton(
 ): TextView {
     return TextView(this).apply {
         this.text = localizeText(text)
-        textSize = 14f
+        textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
         setTextColor(if (primary) Color.WHITE else colorTextStrong)
-        setPadding(dp(16), dp(10), dp(16), dp(10))
+        setPadding(dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.Xxl))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply {
-            setMargins(dp(8), 0, 0, 0)
+            setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
         }
         background = GradientDrawable().apply {
-            cornerRadius = dp(99).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
             if (primary) {
                 setColor(colorAccent)
             } else {
                 setColor(colorSurfaceLight)
-                setStroke(dp(1), colorStroke)
+                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
             }
         }
-        enableSoftPressFeedback(0.94f)
+        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener { onClick() }
     }
 }

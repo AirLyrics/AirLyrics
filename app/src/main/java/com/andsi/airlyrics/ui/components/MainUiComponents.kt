@@ -23,6 +23,7 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun pageContainer(activity: MainActivity, animateChanges: Boolean = true): LinearLayout  = with(activity) pageContainer@ {
     return LinearLayout(this).apply {
@@ -30,7 +31,7 @@ internal fun pageContainer(activity: MainActivity, animateChanges: Boolean = tru
         if (animateChanges) {
             layoutTransition = softLayoutTransition()
         }
-        setPadding(dp(20), dp(6), dp(20), dp(24))
+        setPadding(dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.PageTop), dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.PageBottom))
     }
 }
 
@@ -47,18 +48,18 @@ internal fun scroll(activity: MainActivity, child: View, animateChildren: Boolea
 internal fun sectionTitle(activity: MainActivity, title: String, subtitle: String): View  = with(activity) sectionTitle@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, 0, 0, dp(14))
+        setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl))
         addView(TextView(activity).apply {
             text = localizeText(title)
-            textSize = 22f
+            textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
             text = localizeText(subtitle)
-            textSize = 14f
+            textSize = AirUiTokens.TextSize.Body
             setTextColor(colorTextMuted)
-            setPadding(0, dp(4), 0, 0)
+            setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
         })
     }
 }
@@ -66,18 +67,18 @@ internal fun sectionTitle(activity: MainActivity, title: String, subtitle: Strin
 internal fun card(activity: MainActivity, content: LinearLayout.() -> Unit): LinearLayout = with(activity) card@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(18), dp(16), dp(18), dp(16))
+        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardV))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, 0, 0, dp(12))
+        params.setMargins(0, 0, 0, dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         layoutParams = params
-        elevation = dp(2).toFloat()
+        elevation = dp(AirUiTokens.Space.Xxs).toFloat()
         background = GradientDrawable().apply {
-            cornerRadius = dp(24).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Card).toFloat()
             setColor(colorCard)
-            setStroke(dp(1), colorStroke)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
         content()
     }
@@ -86,18 +87,18 @@ internal fun card(activity: MainActivity, content: LinearLayout.() -> Unit): Lin
 internal fun floatingStatusPreviewCard(activity: MainActivity, content: LinearLayout.() -> Unit): LinearLayout = with(activity) floatingStatusPreviewCard@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(12), dp(10), dp(12), dp(10))
+        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, 0, 0, dp(8))
+        params.setMargins(0, 0, 0, dp(AirUiTokens.Space.Xl))
         layoutParams = params
-        elevation = dp(4).toFloat()
+        elevation = dp(AirUiTokens.Space.Sm).toFloat()
         background = GradientDrawable().apply {
-            cornerRadius = dp(20).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Preview).toFloat()
             setColor(colorCard)
-            setStroke(dp(1), colorAccentSoft)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
         }
         content()
     }
@@ -107,21 +108,21 @@ internal fun actionButton(activity: MainActivity, text: String, onClick: () -> U
     return TextView(this).apply {
         this.text = localizeText(text)
         gravity = Gravity.CENTER
-        textSize = 15f
+        textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(Color.WHITE)
-        setPadding(dp(16), dp(12), dp(16), dp(12))
+        setPadding(dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, dp(10), 0, 0)
+        params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
         layoutParams = params
         background = GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
             setColor(colorAccent)
         }
-        enableSoftPressFeedback(0.97f)
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             onClick()
             playTinyPulse(this)
@@ -136,23 +137,23 @@ internal fun horizontalButtons(activity: MainActivity, vararg buttons: Pair<Stri
             addView(TextView(activity).apply {
                 text = localizeText(pair.first)
                 gravity = Gravity.CENTER
-                textSize = 15f
+                textSize = AirUiTokens.TextSize.Button
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.WHITE)
-                setPadding(dp(14), dp(12), dp(14), dp(12))
+                setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
                 val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 params.setMargins(
-                    if (index == 0) 0 else dp(6),
-                    dp(10),
-                    if (index == buttons.lastIndex) 0 else dp(6),
+                    if (index == 0) 0 else dp(AirUiTokens.Space.Lg),
+                    dp(AirUiTokens.Space.Xxl),
+                    if (index == buttons.lastIndex) 0 else dp(AirUiTokens.Space.Lg),
                     0
                 )
                 layoutParams = params
                 background = GradientDrawable().apply {
-                    cornerRadius = dp(18).toFloat()
+                    cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
                     setColor(colorAccent)
                 }
-                enableSoftPressFeedback(0.96f)
+                enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
                 setOnClickListener {
                     pair.second()
                     playTinyPulse(this)
@@ -166,18 +167,18 @@ internal fun settingRow(activity: MainActivity, name: String, value: String): Vi
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, dp(10), 0, dp(4))
+        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
 
         addView(TextView(activity).apply {
             text = localizeText(name)
-            textSize = 15f
+            textSize = AirUiTokens.TextSize.Button
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
         })
 
         addView(TextView(activity).apply {
             text = localizeText(value)
-            textSize = 13f
+            textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
         })
     }
@@ -186,17 +187,17 @@ internal fun settingRow(activity: MainActivity, name: String, value: String): Vi
 internal fun statusPill(activity: MainActivity, text: String, playing: Boolean): TextView  = with(activity) statusPill@ {
     return TextView(this).apply {
         this.text = localizeText(text)
-        textSize = 13f
+        textSize = AirUiTokens.TextSize.BodySmall
         setTextColor(if (playing) Color.WHITE else colorTextMuted)
-        setPadding(dp(12), dp(6), dp(12), dp(6))
+        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Lg))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, dp(12), 0, 0)
+        params.setMargins(0, dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), 0, 0)
         layoutParams = params
         background = GradientDrawable().apply {
-            cornerRadius = dp(99).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
             setColor(if (playing) colorAccent else colorSurfaceLight)
         }
     }
@@ -205,17 +206,17 @@ internal fun statusPill(activity: MainActivity, text: String, playing: Boolean):
 internal fun label(activity: MainActivity, text: String, color: Int): TextView  = with(activity) label@ {
     return TextView(this).apply {
         this.text = localizeText(text)
-        textSize = 13f
+        textSize = AirUiTokens.TextSize.BodySmall
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(color)
-        setPadding(0, 0, 0, dp(8))
+        setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl))
     }
 }
 
 internal fun bigText(activity: MainActivity, text: String): TextView  = with(activity) bigText@ {
     return TextView(this).apply {
         this.text = localizeText(text)
-        textSize = 20f
+        textSize = AirUiTokens.TextSize.Title
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorTextStrong)
     }
@@ -224,18 +225,18 @@ internal fun bigText(activity: MainActivity, text: String): TextView  = with(act
 internal fun normalText(activity: MainActivity, text: String): TextView  = with(activity) normalText@ {
     return TextView(this).apply {
         this.text = localizeText(text)
-        textSize = 14f
+        textSize = AirUiTokens.TextSize.Body
         setTextColor(colorText)
-        setPadding(0, dp(5), 0, 0)
+        setPadding(0, dp(AirUiTokens.Space.Md), 0, 0)
     }
 }
 
 internal fun smallHint(activity: MainActivity, text: String): TextView  = with(activity) smallHint@ {
     return TextView(this).apply {
         this.text = localizeText(text)
-        textSize = 13f
+        textSize = AirUiTokens.TextSize.BodySmall
         setTextColor(colorTextMuted)
-        setPadding(0, dp(8), 0, 0)
+        setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
     }
 }
 
@@ -246,29 +247,29 @@ internal fun spacer(activity: MainActivity, height: Int): View  = with(activity)
 }
 
 internal fun animatePageEnter(activity: MainActivity, view: View, fromRight: Boolean) = with(activity) animatePageEnter@ {
-    val distance = dp(26).toFloat() * if (fromRight) 1f else -1f
+    val distance = dp(AirUiTokens.Layout.PageEnterDistance).toFloat() * if (fromRight) 1f else -1f
     view.alpha = 0f
     view.translationX = distance
     view.animate()
-        .alpha(1f)
+        .alpha(AirUiTokens.Motion.RestAlpha)
         .translationX(0f)
-        .setDuration(230L)
+        .setDuration(AirUiTokens.Motion.PageEnterMs)
         .setInterpolator(DecelerateInterpolator())
         .start()
 }
 
 internal fun animateChildrenCascade(activity: MainActivity, root: View) = with(activity) animateChildrenCascade@ {
     val parent = root as? ViewGroup ?: return
-    val delayStep = 24L
+    val delayStep = AirUiTokens.Motion.ChildDelayStepMs
     for (index in 0 until parent.childCount) {
         val child = parent.getChildAt(index)
         child.alpha = 0f
-        child.translationY = dp(12).toFloat()
+        child.translationY = dp(AirUiTokens.Layout.ChildEnterDistance).toFloat()
         child.animate()
-            .alpha(1f)
+            .alpha(AirUiTokens.Motion.RestAlpha)
             .translationY(0f)
-            .setStartDelay((index.coerceAtMost(8)) * delayStep)
-            .setDuration(220L)
+            .setStartDelay((index.coerceAtMost(AirUiTokens.Layout.ChildEnterMaxIndex)) * delayStep)
+            .setDuration(AirUiTokens.Motion.ChildEnterMs)
             .setInterpolator(DecelerateInterpolator())
             .start()
     }
@@ -277,29 +278,29 @@ internal fun animateChildrenCascade(activity: MainActivity, root: View) = with(a
 internal fun softLayoutTransition(): LayoutTransition {
     return LayoutTransition().apply {
         enableTransitionType(LayoutTransition.CHANGING)
-        setDuration(170L)
+        setDuration(AirUiTokens.Motion.LayoutChangeMs)
     }
 }
 
-internal fun View.enableSoftPressFeedback(pressedScale: Float = 0.97f) {
+internal fun View.enableSoftPressFeedback(pressedScale: Float = AirUiTokens.Motion.DefaultPressScale) {
     setOnTouchListener { v, event ->
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 v.animate()
-                    .scaleX(pressedScale)
-                    .scaleY(pressedScale)
-                    .alpha(0.88f)
-                    .setDuration(70L)
+                   .scaleX(pressedScale)
+                   .scaleY(pressedScale)
+                    .alpha(AirUiTokens.Motion.PressAlpha)
+                    .setDuration(AirUiTokens.Motion.PressDownMs)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 v.animate()
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .alpha(1f)
-                    .setDuration(150L)
-                    .setInterpolator(OvershootInterpolator(0.52f))
+                    .scaleX(AirUiTokens.Motion.RestScale)
+                    .scaleY(AirUiTokens.Motion.RestScale)
+                    .alpha(AirUiTokens.Motion.RestAlpha)
+                    .setDuration(AirUiTokens.Motion.PressUpMs)
+                    .setInterpolator(OvershootInterpolator(AirUiTokens.Motion.OvershootSoft))
                     .start()
             }
         }
@@ -309,16 +310,16 @@ internal fun View.enableSoftPressFeedback(pressedScale: Float = 0.97f) {
 
 internal fun playTinyPulse(view: View) {
     view.animate()
-        .scaleX(1.025f)
-        .scaleY(1.025f)
-        .setDuration(80L)
+        .scaleX(AirUiTokens.Motion.TinyPulseScale)
+        .scaleY(AirUiTokens.Motion.TinyPulseScale)
+        .setDuration(AirUiTokens.Motion.PulseUpMs)
         .setInterpolator(DecelerateInterpolator())
         .withEndAction {
             view.animate()
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(140L)
-                .setInterpolator(OvershootInterpolator(0.48f))
+                .scaleX(AirUiTokens.Motion.RestScale)
+                .scaleY(AirUiTokens.Motion.RestScale)
+                .setDuration(AirUiTokens.Motion.PulseDownMs)
+                .setInterpolator(OvershootInterpolator(AirUiTokens.Motion.OvershootTiny))
                 .start()
         }
         .start()

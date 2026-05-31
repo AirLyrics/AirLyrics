@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import android.view.View
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizeText
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.*
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
@@ -11,6 +10,7 @@ import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 
 internal fun createSettingsHomePage(activity: MainActivity): View  = with(activity) createSettingsHomePage@ {
     val container = pageContainer(activity)
@@ -22,7 +22,7 @@ internal fun createSettingsHomePage(activity: MainActivity): View  = with(activi
         settingsCategoryCard(
             title = tr("歌词获取设置", "Lyrics"),
             subtitle = tr("歌词源、自动保存、下载目录和最近保存的 .lrc。", "Source, auto-save, folder, and recent .lrc files."),
-            status = "${localizeText(LyricsSettingsStore.getLyricsSourceTitle(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) tr("自动保存", "Auto-save") else tr("不自动保存", "No auto-save")}",
+            status = "${localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) tr("自动保存", "Auto-save") else tr("不自动保存", "No auto-save")}",
             accent = colorAccentPink,
             iconRes = R.drawable.ic_air_music_note
         ) {

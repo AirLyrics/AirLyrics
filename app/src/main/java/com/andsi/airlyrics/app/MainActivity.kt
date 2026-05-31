@@ -1,8 +1,10 @@
 package com.andsi.airlyrics.app
 
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.i18n.localizeText
+import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
+import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 
 import android.animation.LayoutTransition
@@ -344,21 +346,21 @@ class MainActivity : AppCompatActivity() {
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(12), dp(20), dp(4))
+            setPadding(dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.Sm))
 
             addView(TextView(this@MainActivity).apply {
                 text = media.displayText
-                textSize = 15f
+                textSize = AirUiTokens.TextSize.Button
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextStrong)
-                setPadding(0, 0, 0, dp(8))
+                setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl))
             })
 
             addView(TextView(this@MainActivity).apply {
                 text = tr("建议使用 AirLyrics 统一 LRC 格式。普通歌词：[00:12.34]歌词；逐字歌词：[00:12.34]<00:12.34>字。", "Plain: [00:12.34]text. Word LRC: <00:12.34>w.")
-                textSize = 13f
+                textSize = AirUiTokens.TextSize.BodySmall
                 setTextColor(colorTextMuted)
-                setPadding(0, 0, 0, dp(10))
+                setPadding(0, 0, 0, dp(AirUiTokens.Space.Xxl))
             })
 
             addView(importLyricsChoiceRow(
@@ -398,24 +400,24 @@ class MainActivity : AppCompatActivity() {
     ): TextView {
         return TextView(this).apply {
             text = "$title\n$subtitle"
-            textSize = 15f
+            textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(if (primary) Color.WHITE else colorTextStrong)
-            setLineSpacing(dp(2).toFloat(), 1f)
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setLineSpacing(dp(AirUiTokens.Space.Xxs).toFloat(), 1f)
+            setPadding(dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
             val params = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            params.setMargins(0, dp(8), 0, 0)
+            params.setMargins(0, dp(AirUiTokens.Space.Xl), 0, 0)
             layoutParams = params
             background = GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
+                cornerRadius = dp(AirUiTokens.Radius.Sm).toFloat()
                 if (primary) {
                     setColor(colorAccent)
                 } else {
                     setColor(colorSurfaceLight)
-                    setStroke(dp(1), colorStroke)
+                    setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
                 }
             }
             enableSoftPressFeedback(0.97f)
@@ -482,7 +484,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun floatingPreviewSummary(style: FloatingLyricsStyle): String {
-        return tr("当前：", "Current: ") + localizeText(FloatingLyricsStyleStore.getPresetTitle(style.presetName)) + " · ${style.textSizeSp.toInt()}sp · " + localizeText(FloatingLyricsStyleStore.getGravityTitle(style.gravity)) + " · " + tr("宽度", "Width") + " ${style.maxWidthPercent}%"
+        return tr("当前：", "Current: ") + localizedFloatingPresetTitle(style.presetName) + " · ${style.textSizeSp.toInt()}sp · " + localizedFloatingGravityTitle(style.gravity) + " · " + tr("宽度", "Width") + " ${style.maxWidthPercent}%"
     }
 
     internal fun floatingDisplaySummary(): String {
@@ -506,14 +508,14 @@ class MainActivity : AppCompatActivity() {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            params.setMargins(0, dp(10), 0, dp(4))
+            params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
             layoutParams = params
             applyFloatingPreviewStyle(style)
         }
     }
 
     internal fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle) {
-        textSize = 20f
+        textSize = AirUiTokens.TextSize.Title
         typeface = Typeface.DEFAULT_BOLD
         gravity = style.gravity
         setTextColor(style.textColor)
@@ -609,14 +611,14 @@ class MainActivity : AppCompatActivity() {
         val oldContainer = contentContainer
         oldContainer?.animate()
             ?.alpha(0f)
-            ?.setDuration(90L)
+            ?.setDuration(AirUiTokens.Layout.FastFadeMs)
             ?.withEndAction {
                 setContentView(createMainView())
                 renderCurrentPage()
                 contentContainer?.alpha = 0f
                 contentContainer?.animate()
                     ?.alpha(1f)
-                    ?.setDuration(180L)
+                    ?.setDuration(AirUiTokens.Layout.RestoreFadeMs)
                     ?.setInterpolator(DecelerateInterpolator())
                     ?.start()
             }

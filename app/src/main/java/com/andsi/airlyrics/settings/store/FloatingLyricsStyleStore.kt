@@ -216,9 +216,6 @@ object FloatingLyricsStyleStore {
         return prefs.getInt(KEY_POS_X, DEFAULT_X) to prefs.getInt(KEY_POS_Y, DEFAULT_Y)
     }
 
-    fun getPresetTitle(key: String): String {
-        return presets.firstOrNull { it.key == normalizePreset(key) }?.title ?: "黑胶气泡"
-    }
 
     fun colorSummary(color: Int): String {
         return "R${Color.red(color)} G${Color.green(color)} B${Color.blue(color)} A${Color.alpha(color)}"
@@ -233,11 +230,4 @@ object FloatingLyricsStyleStore {
         )
     }
 
-    fun getGravityTitle(gravity: Int): String {
-        return when (gravity) {
-            Gravity.START or Gravity.CENTER_VERTICAL -> "左对齐"
-            Gravity.END or Gravity.CENTER_VERTICAL -> "右对齐"
-            else -> "居中"
-        }
-    }
 }

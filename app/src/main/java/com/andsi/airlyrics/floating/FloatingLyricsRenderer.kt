@@ -8,6 +8,7 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.view.animation.DecelerateInterpolator
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import android.widget.TextView
 import com.andsi.airlyrics.lyrics.KaraokeLine
 import com.andsi.airlyrics.lyrics.display.LyricsDisplayFormatter
@@ -411,8 +412,8 @@ class FloatingLyricsRenderer(
         view.animate().cancel()
         view.alpha = 1f
         view.translationY = 0f
-        view.scaleX = 1f
-        view.scaleY = 1f
+        view.scaleX = AirUiTokens.Motion.RestScale
+        view.scaleY = AirUiTokens.Motion.RestScale
         view.text = text
         lastRenderedText = text.toString()
     }
@@ -438,24 +439,24 @@ class FloatingLyricsRenderer(
             LyricsSwitchAnimationMode.FADE -> {
                 view.alpha = 0f
                 view.translationY = 0f
-                view.scaleX = 1f
-                view.scaleY = 1f
+                view.scaleX = AirUiTokens.Motion.RestScale
+                view.scaleY = AirUiTokens.Motion.RestScale
                 view.animate()
-                    .alpha(1f)
-                    .setDuration(170L)
+                    .alpha(AirUiTokens.Motion.RestAlpha)
+                    .setDuration(AirUiTokens.Layout.LyricsFadeMs)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
             }
 
             LyricsSwitchAnimationMode.SLIDE_UP -> {
                 view.alpha = 0f
-                view.translationY = dp(view, 8).toFloat()
-                view.scaleX = 1f
-                view.scaleY = 1f
+                view.translationY = dp(view, AirUiTokens.Layout.LyricsSlideDistanceDp).toFloat()
+                view.scaleX = AirUiTokens.Motion.RestScale
+                view.scaleY = AirUiTokens.Motion.RestScale
                 view.animate()
-                    .alpha(1f)
+                    .alpha(AirUiTokens.Motion.RestAlpha)
                     .translationY(0f)
-                    .setDuration(190L)
+                    .setDuration(AirUiTokens.Layout.LyricsSlideMs)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
             }
@@ -463,13 +464,13 @@ class FloatingLyricsRenderer(
             LyricsSwitchAnimationMode.SCALE_FADE -> {
                 view.alpha = 0f
                 view.translationY = 0f
-                view.scaleX = 0.96f
-                view.scaleY = 0.96f
+                view.scaleX = AirUiTokens.Layout.LyricsScaleStart
+                view.scaleY = AirUiTokens.Layout.LyricsScaleStart
                 view.animate()
-                    .alpha(1f)
-                    .scaleX(1f)
-                    .scaleY(1f)
-                    .setDuration(180L)
+                    .alpha(AirUiTokens.Motion.RestAlpha)
+                    .scaleX(AirUiTokens.Motion.RestScale)
+                    .scaleY(AirUiTokens.Motion.RestScale)
+                    .setDuration(AirUiTokens.Layout.LyricsScaleFadeMs)
                     .setInterpolator(DecelerateInterpolator())
                     .start()
             }
@@ -481,8 +482,8 @@ class FloatingLyricsRenderer(
             view.animate().cancel()
             view.alpha = 1f
             view.translationY = 0f
-            view.scaleX = 1f
-            view.scaleY = 1f
+            view.scaleX = AirUiTokens.Motion.RestScale
+            view.scaleY = AirUiTokens.Motion.RestScale
         }
     }
 

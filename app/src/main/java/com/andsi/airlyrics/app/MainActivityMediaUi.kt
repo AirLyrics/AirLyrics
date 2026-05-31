@@ -24,6 +24,7 @@ import com.andsi.airlyrics.ui.theme.colorAccentLight
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.i18n.tr
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 internal fun MainActivity.refreshMediaButton(): View {
     val activity = this
@@ -45,7 +46,7 @@ internal fun MainActivity.refreshMediaButton(): View {
 
         row.isEnabled = mediaRefreshState != RefreshState.REFRESHING
         row.background = GradientDrawable().apply {
-            cornerRadius = dp(18).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
             setColor(buttonColor)
         }
         labelView.text = buttonText
@@ -54,8 +55,8 @@ internal fun MainActivity.refreshMediaButton(): View {
         if (mediaRefreshState == RefreshState.REFRESHING && progressView == null) {
             progressView = ProgressBar(activity).apply {
                 isIndeterminate = true
-                layoutParams = LinearLayout.LayoutParams(dp(22), dp(22)).apply {
-                    setMargins(0, 0, dp(10), 0)
+                layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
+                    setMargins(0, 0, dp(AirUiTokens.Space.Xxl), 0)
                 }
             }
             row.addView(progressView, 0)
@@ -65,18 +66,18 @@ internal fun MainActivity.refreshMediaButton(): View {
         }
 
         if (animateDone && mediaRefreshState == RefreshState.DONE) {
-            row.rotation = -2f
+            row.rotation = AirUiTokens.Layout.MediaDoneRotation
             row.animate()
                 .rotation(0f)
-                .scaleX(1.018f)
-                .scaleY(1.018f)
-                .setDuration(150L)
-                .setInterpolator(OvershootInterpolator(0.65f))
+                                .scaleX(AirUiTokens.Layout.MediaDoneScale)
+                                .scaleY(AirUiTokens.Layout.MediaDoneScale)
+                .setDuration(AirUiTokens.Motion.PressUpMs)
+                .setInterpolator(OvershootInterpolator(AirUiTokens.Layout.MediaDoneOvershoot))
                 .withEndAction {
                     row.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .setDuration(130L)
+                                        .scaleX(AirUiTokens.Motion.RestScale)
+                                        .scaleY(AirUiTokens.Motion.RestScale)
+                        .setDuration(AirUiTokens.Layout.MediaDoneSettleMs)
                         .setInterpolator(DecelerateInterpolator())
                         .start()
                 }
@@ -87,19 +88,19 @@ internal fun MainActivity.refreshMediaButton(): View {
     row = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER
-        setPadding(dp(16), dp(12), dp(16), dp(12))
+        setPadding(dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, dp(10), 0, 0)
+        params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
         layoutParams = params
-        enableSoftPressFeedback(0.97f)
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
     }
 
     labelView = TextView(this).apply {
         gravity = Gravity.CENTER
-        textSize = 15f
+        textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
     }
     row.addView(labelView)
@@ -127,8 +128,8 @@ internal fun MainActivity.startMediaRefreshFeedback(onStateChanged: () -> Unit) 
             if (currentPage == Page.MEDIA) {
                 renderCurrentPage(animateContent = false, animateTabs = false)
             }
-        }, 260L)
-    }, 650L)
+        }, AirUiTokens.Layout.MediaDoneRefreshMs)
+    }, AirUiTokens.Layout.MediaRefreshingMs)
 }
 
 internal fun MainActivity.updateMediaSourceSelectionVisuals(selectedPackage: String) {

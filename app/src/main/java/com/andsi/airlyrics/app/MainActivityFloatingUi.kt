@@ -45,22 +45,23 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.tr
 
 internal fun MainActivity.optionGrid(items: List<OptionItem>): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        items.chunked(2).forEach { rowItems ->
+        items.chunked(AirUiTokens.Layout.OptionColumns).forEach { rowItems ->
             addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 rowItems.forEachIndexed { index, item ->
                     addView(optionButton(item).apply {
                         val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                         params.setMargins(
-                            if (index == 0) 0 else dp(6),
-                            dp(10),
-                            if (index == rowItems.lastIndex) 0 else dp(6),
+                            if (index == 0) 0 else dp(AirUiTokens.Space.Lg),
+                            dp(AirUiTokens.Space.Xxl),
+                            if (index == rowItems.lastIndex) 0 else dp(AirUiTokens.Space.Lg),
                             0
                         )
                         layoutParams = params
@@ -69,7 +70,7 @@ internal fun MainActivity.optionGrid(items: List<OptionItem>): LinearLayout {
                 if (rowItems.size == 1) {
                     addView(View(activity).apply {
                         layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
-                            setMargins(dp(6), 0, 0, 0)
+                            setMargins(dp(AirUiTokens.Space.Lg), 0, 0, 0)
                         }
                     })
                 }
@@ -90,17 +91,17 @@ internal fun MainActivity.liveOptionGrid(items: List<KeyedOptionItem>): LinearLa
             }
         }
 
-        items.chunked(2).forEach { rowItems ->
+        items.chunked(AirUiTokens.Layout.OptionColumns).forEach { rowItems ->
             addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 rowItems.forEachIndexed { index, item ->
                     val button = TextView(activity).apply {
                         gravity = Gravity.CENTER
-                        textSize = 14f
+                        textSize = AirUiTokens.TextSize.Body
                         typeface = Typeface.DEFAULT_BOLD
-                        setPadding(dp(12), dp(11), dp(12), dp(11))
+                        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ControlV), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ControlV))
                         applyOptionButtonState(this, item.title, item.selected)
-                        enableSoftPressFeedback(0.96f)
+                        enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
                         setOnClickListener {
                             item.action()
                             refreshSelection(item.key)
@@ -111,9 +112,9 @@ internal fun MainActivity.liveOptionGrid(items: List<KeyedOptionItem>): LinearLa
                     addView(button.apply {
                         val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                         params.setMargins(
-                            if (index == 0) 0 else dp(6),
-                            dp(10),
-                            if (index == rowItems.lastIndex) 0 else dp(6),
+                            if (index == 0) 0 else dp(AirUiTokens.Space.Lg),
+                            dp(AirUiTokens.Space.Xxl),
+                            if (index == rowItems.lastIndex) 0 else dp(AirUiTokens.Space.Lg),
                             0
                         )
                         layoutParams = params
@@ -122,7 +123,7 @@ internal fun MainActivity.liveOptionGrid(items: List<KeyedOptionItem>): LinearLa
                 if (rowItems.size == 1) {
                     addView(View(activity).apply {
                         layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
-                            setMargins(dp(6), 0, 0, 0)
+                            setMargins(dp(AirUiTokens.Space.Lg), 0, 0, 0)
                         }
                     })
                 }
@@ -135,11 +136,11 @@ internal fun MainActivity.optionButton(item: OptionItem): TextView {
     val activity = this
     return TextView(this).apply {
         gravity = Gravity.CENTER
-        textSize = 14f
+        textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
-        setPadding(dp(12), dp(11), dp(12), dp(11))
+        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ControlV), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ControlV))
         applyOptionButtonState(this, item.title, item.selected)
-        enableSoftPressFeedback(0.96f)
+        enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
         setOnClickListener {
             item.action()
             playTinyPulse(this)
@@ -152,9 +153,9 @@ internal fun MainActivity.applyOptionButtonState(button: TextView, title: String
     button.text = if (selected) "✓ ${localizeText(title)}" else localizeText(title)
     button.setTextColor(if (selected) Color.WHITE else colorText)
     button.background = GradientDrawable().apply {
-        cornerRadius = dp(18).toFloat()
+        cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
         setColor(if (selected) colorAccent else colorSurfaceLight)
-        setStroke(dp(1), if (selected) colorAccentLight else colorStroke)
+        setStroke(dp(AirUiTokens.Stroke.Hairline), if (selected) colorAccentLight else colorStroke)
     }
 }
 
@@ -170,13 +171,13 @@ internal fun MainActivity.sliderRow(
     val safeValue = value.coerceIn(min, max)
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(8), 0, dp(4))
+        setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
 
         val valueText = TextView(activity).apply {
             text = "${localizeText(title)}: $safeValue$suffix"
-            textSize = 14f
+            textSize = AirUiTokens.TextSize.Body
             setTextColor(colorText)
-            setPadding(0, 0, 0, dp(6))
+            setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
         }
         addView(valueText)
 
@@ -222,12 +223,12 @@ internal fun MainActivity.colorControl(
 
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(6), 0, 0)
+        setPadding(0, dp(AirUiTokens.Space.Lg), 0, 0)
 
         val preview = TextView(activity).apply {
-            textSize = 14f
+            textSize = AirUiTokens.TextSize.Body
             setTextColor(colorText)
-            setPadding(dp(12), dp(10), dp(12), dp(10))
+            setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
         }
         addView(preview)
 
@@ -241,7 +242,7 @@ internal fun MainActivity.colorControl(
         val rgbPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
-            setPadding(0, dp(6), 0, 0)
+            setPadding(0, dp(AirUiTokens.Space.Lg), 0, 0)
         }
         addView(fineTuneButton)
         addView(rgbPanel)
@@ -260,7 +261,7 @@ internal fun MainActivity.colorControl(
 
         fun swatchBackground(swatchColor: Int, selected: Boolean): GradientDrawable {
             return GradientDrawable().apply {
-                cornerRadius = dp(16).toFloat()
+                cornerRadius = dp(AirUiTokens.Space.ButtonH).toFloat()
                 setColor(swatchColor)
                 setStroke(dp(if (selected) 3 else 1), if (selected) colorAccent else colorStroke)
             }
@@ -299,13 +300,13 @@ internal fun MainActivity.colorControl(
         ): Pair<SeekBar, TextView> {
             val row = LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(0, dp(8), 0, dp(4))
+                setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
             }
             val valueText = TextView(activity).apply {
                 text = "${localizeText(sliderTitle)}: $initialValue"
-                textSize = 14f
+                textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorText)
-                setPadding(0, 0, 0, dp(6))
+                setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
             }
             row.addView(valueText)
             val seekBar = SeekBar(activity).apply {
@@ -349,11 +350,11 @@ internal fun MainActivity.colorControl(
         fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
             return TextView(activity).apply {
                 text = localizeText(label)
-                textSize = 12f
+                textSize = AirUiTokens.TextSize.Caption
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
-                setPadding(dp(6), 0, dp(6), 0)
-                enableSoftPressFeedback(0.9f)
+                setPadding(dp(AirUiTokens.Space.Lg), 0, dp(AirUiTokens.Space.Lg), 0)
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                 setOnClickListener {
                     onClick()
                     playTinyPulse(this)
@@ -366,7 +367,7 @@ internal fun MainActivity.colorControl(
             Pair(label, swatchColor as Int?)
         } + listOf(tr("自定义", "Custom") to null)
 
-        swatches.chunked(3).forEach { rowItems ->
+        swatches.chunked(AirUiTokens.Layout.SwatchColumns).forEach { rowItems ->
             swatchGrid.addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 rowItems.forEachIndexed { index, (label, presetColor) ->
@@ -384,20 +385,20 @@ internal fun MainActivity.colorControl(
                         }
                     }
                     addView(button.apply {
-                        layoutParams = LinearLayout.LayoutParams(0, dp(42), 1f).apply {
+                        layoutParams = LinearLayout.LayoutParams(0, dp(AirUiTokens.Layout.ColorSwatchHeight), 1f).apply {
                             setMargins(
-                                if (index == 0) 0 else dp(5),
-                                dp(8),
-                                if (index == rowItems.lastIndex) 0 else dp(5),
+                                if (index == 0) 0 else dp(AirUiTokens.Space.Md),
+                                dp(AirUiTokens.Space.Xl),
+                                if (index == rowItems.lastIndex) 0 else dp(AirUiTokens.Space.Md),
                                 0
                             )
                         }
                     })
                 }
-                repeat(3 - rowItems.size) {
+                repeat(AirUiTokens.Layout.SwatchColumns - rowItems.size) {
                     addView(View(activity).apply {
                         layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
-                            setMargins(dp(5), 0, 0, 0)
+                            setMargins(dp(AirUiTokens.Space.Md), 0, 0, 0)
                         }
                     })
                 }
@@ -419,9 +420,9 @@ internal fun MainActivity.colorControl(
 internal fun MainActivity.colorPreviewBackground(color: Int): GradientDrawable {
     val activity = this
     return GradientDrawable().apply {
-        cornerRadius = dp(18).toFloat()
+        cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
         setColor(withAlpha(color, 42))
-        setStroke(dp(1), withAlpha(color, 190))
+        setStroke(dp(AirUiTokens.Stroke.Hairline), withAlpha(color, 190))
     }
 }
 
@@ -459,7 +460,7 @@ internal fun MainActivity.mediaSourceCard(controller: MediaController, selected:
         addView(bigText(activity, appName))
         addView(normalText(activity, "$title - $artist"))
         addView(smallHint(activity, state))
-        enableSoftPressFeedback(0.985f)
+        enableSoftPressFeedback(AirUiTokens.Motion.FloatingCardPressScale)
         setOnClickListener {
             uiActions.selectMediaSource(controller.packageName, this)
         }
@@ -471,17 +472,17 @@ internal fun MainActivity.settingGrid(vararg items: FloatingSettingTile): Linear
     val tileItems = items.toList()
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        tileItems.chunked(2).forEach { rowItems ->
+        tileItems.chunked(AirUiTokens.Layout.OptionColumns).forEach { rowItems ->
             addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
                 rowItems.forEachIndexed { index, item ->
                     addView(floatingTile(item).apply {
-                        val params = LinearLayout.LayoutParams(0, dp(112), 1f)
+                        val params = LinearLayout.LayoutParams(0, dp(AirUiTokens.Layout.FloatingTileHeight), 1f)
                         params.setMargins(
-                            if (index == 0) 0 else dp(6),
+                            if (index == 0) 0 else dp(AirUiTokens.Space.Lg),
                             0,
-                            if (index == rowItems.lastIndex) 0 else dp(6),
-                            dp(12)
+                            if (index == rowItems.lastIndex) 0 else dp(AirUiTokens.Space.Lg),
+                            dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs)
                         )
                         layoutParams = params
                     })
@@ -489,7 +490,7 @@ internal fun MainActivity.settingGrid(vararg items: FloatingSettingTile): Linear
                 if (rowItems.size == 1) {
                     addView(View(activity).apply {
                         layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
-                            setMargins(dp(6), 0, 0, 0)
+                            setMargins(dp(AirUiTokens.Space.Lg), 0, 0, 0)
                         }
                     })
                 }
@@ -504,16 +505,16 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
         tag = "floating_tile:${item.title}"
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(14), dp(12), dp(14), dp(12))
+        setPadding(dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         background = GradientDrawable().apply {
-            cornerRadius = dp(24).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Card).toFloat()
             setColor(colorCard)
-            setStroke(dp(1), colorStroke)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
 
         addView(FrameLayout(activity).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(40), dp(40)).apply {
-                setMargins(0, 0, 0, dp(10))
+            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.FloatingTileIconSize), dp(AirUiTokens.Layout.FloatingTileIconSize)).apply {
+                setMargins(0, 0, 0, dp(AirUiTokens.Space.Xxl))
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
@@ -523,13 +524,13 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
                 setImageResource(item.iconRes)
                 setColorFilter(Color.WHITE)
                 scaleType = ImageView.ScaleType.CENTER
-                layoutParams = FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER)
+                layoutParams = FrameLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize), Gravity.CENTER)
             })
         })
 
         addView(TextView(activity).apply {
             text = localizeText(item.title)
-            textSize = 16f
+            textSize = AirUiTokens.TextSize.Button + 1f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
@@ -538,14 +539,14 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
             addView(TextView(activity).apply {
                 tag = "floating_tile_subtitle:${item.title}"
                 text = localizeText(item.subtitle)
-                textSize = 12f
+                textSize = AirUiTokens.TextSize.Caption
                 setTextColor(colorTextMuted)
                 maxLines = 1
-                setPadding(0, dp(4), 0, 0)
+                setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
             })
         }
 
-        enableSoftPressFeedback(0.975f)
+        enableSoftPressFeedback(AirUiTokens.Motion.FloatingTilePressScale)
         setOnClickListener { item.onClick(this) }
     }
 }
@@ -559,19 +560,19 @@ internal fun MainActivity.floatingFocusBubble(
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(20), dp(16), dp(20), dp(18))
-        elevation = dp(10).toFloat()
+        setPadding(dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Radius.Md))
+        elevation = dp(AirUiTokens.Space.Xxl).toFloat()
         background = GradientDrawable().apply {
-            cornerRadius = dp(28).toFloat()
+            cornerRadius = dp(AirUiTokens.Radius.Dialog).toFloat()
             setColor(colorBubble)
-            setStroke(dp(1), colorAccentSoft)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
         }
         layoutParams = FrameLayout.LayoutParams(
-            (resources.displayMetrics.widthPixels - dp(72)).coerceAtMost(dp(360)),
+            (resources.displayMetrics.widthPixels - dp(AirUiTokens.Layout.FloatingPanelWidthInset)).coerceAtMost(dp(AirUiTokens.Layout.FloatingPanelMaxWidth)),
             ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.CENTER
         ).apply {
-            setMargins(dp(18), dp(18), dp(18), dp(18))
+            setMargins(dp(AirUiTokens.Radius.Md), dp(AirUiTokens.Radius.Md), dp(AirUiTokens.Radius.Md), dp(AirUiTokens.Radius.Md))
         }
 
         addView(LinearLayout(activity).apply {
@@ -582,33 +583,33 @@ internal fun MainActivity.floatingFocusBubble(
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
                 addView(TextView(activity).apply {
                     text = localizeText(title)
-                    textSize = 20f
+                    textSize = AirUiTokens.TextSize.Title
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorTextStrong)
                 })
                 if (subtitle.isNotBlank()) {
                     addView(TextView(activity).apply {
                         text = localizeText(subtitle)
-                        textSize = 13f
+                        textSize = AirUiTokens.TextSize.BodySmall
                         setTextColor(colorTextMuted)
-                        setPadding(0, dp(4), 0, 0)
+                        setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
                     })
                 }
             })
             addView(TextView(activity).apply {
                 text = "×"
                 gravity = Gravity.CENTER
-                textSize = 18f
+                textSize = AirUiTokens.TextSize.PageTitle - 4f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextMuted)
-                layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply {
-                    setMargins(dp(10), 0, 0, 0)
+                layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.DialogCloseSize), dp(AirUiTokens.Layout.DialogCloseSize)).apply {
+                    setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
                 }
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(colorSurfaceLight)
                 }
-                enableSoftPressFeedback(0.9f)
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                 setOnClickListener { onClose() }
             })
         })
@@ -625,29 +626,29 @@ internal fun MainActivity.showFloatingSettingPanel(
     val activity = this
     val panel = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(dp(20), dp(16), dp(20), dp(20))
+        setPadding(dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.PageH))
         background = GradientDrawable().apply {
             cornerRadii = floatArrayOf(
-                dp(28).toFloat(), dp(28).toFloat(),
-                dp(28).toFloat(), dp(28).toFloat(),
+                dp(AirUiTokens.Radius.Dialog).toFloat(), dp(AirUiTokens.Radius.Dialog).toFloat(),
+                dp(AirUiTokens.Radius.Dialog).toFloat(), dp(AirUiTokens.Radius.Dialog).toFloat(),
                 0f, 0f,
                 0f, 0f
             )
             setColor(colorSurface)
-            setStroke(dp(1), colorStroke)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
 
         addView(TextView(activity).apply {
             text = localizeText(title)
-            textSize = 20f
+            textSize = AirUiTokens.TextSize.Title
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
             text = localizeText(subtitle)
-            textSize = 13f
+            textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
-            setPadding(0, dp(4), 0, dp(8))
+            setPadding(0, dp(AirUiTokens.Space.Sm), 0, dp(AirUiTokens.Space.Xl))
         })
         content()
     }
@@ -658,7 +659,7 @@ internal fun MainActivity.showFloatingSettingPanel(
     dialog.setOnShowListener {
         dialog.window?.let { window ->
             window.setBackgroundDrawableResource(android.R.color.transparent)
-            window.setDimAmount(0.08f)
+            window.setDimAmount(AirUiTokens.Layout.SheetDimAmount)
             window.setGravity(Gravity.BOTTOM)
             window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         }
