@@ -158,7 +158,7 @@ private fun MainActivity.githubIconButton(activity: MainActivity): View {
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {
             playTinyPulse(this)
-            openUrl("https://github.com/AndSi-327/android-floating-lyrics")
+            openUrl("https://github.com/AirLyrics/AirLyrics")
         }
 
         addView(ImageView(activity).apply {

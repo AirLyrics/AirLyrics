@@ -12,14 +12,14 @@ Android 手机端悬浮歌词应用。
 
 <br />
 
-[下载](https://github.com/AndSi-327/android-floating-lyrics/releases) · [文档](docs/README.zh-CN.md) · [反馈问题](https://github.com/AndSi-327/android-floating-lyrics/issues)
+[下载](https://github.com/AirLyrics/AirLyrics/releases) · [文档](docs/README.zh-CN.md) · [反馈问题](https://github.com/AirLyrics/AirLyrics/issues)
 
 <br />
 
 [![Platform](https://img.shields.io/badge/platform-Android-brightgreen?style=flat-square)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-Android-blueviolet?style=flat-square)]()
 [![Rust](https://img.shields.io/badge/Rust-lyrics--core-orange?style=flat-square)]()
-[![Release](https://img.shields.io/github/v/release/AndSi-327/android-floating-lyrics?style=flat-square)](https://github.com/AndSi-327/android-floating-lyrics/releases)
+[![Release](https://img.shields.io/github/v/release/AirLyrics/AirLyrics?style=flat-square)](https://github.com/AirLyrics/AirLyrics/releases)
 
 </div>
 
@@ -45,7 +45,7 @@ AirLyrics 正在持续开发中。
 
 从 GitHub Releases 下载最新 APK：
 
-https://github.com/AndSi-327/android-floating-lyrics/releases
+https://github.com/AirLyrics/AirLyrics/releases
 
 安装后，请您授予必要权限，并选择需要跟随的音乐应用。
 
@@ -146,8 +146,8 @@ AirLyrics 会用到以下 Android 权限：
 ### 克隆仓库
 
 ```bash
-git clone https://github.com/AndSi-327/android-floating-lyrics.git
-cd android-floating-lyrics
+git clone https://github.com/AirLyrics/AirLyrics.git
+cd AirLyrics
 ```
 
 ### 构建

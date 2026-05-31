@@ -12,14 +12,14 @@ A lightweight Android floating lyrics app that automatically detects current med
 
 <br />
 
-[Download](https://github.com/AndSi-327/android-floating-lyrics/releases) · [Documentation](docs/README.md) · [Report Bug](https://github.com/AndSi-327/android-floating-lyrics/issues)
+[Download](https://github.com/AirLyrics/AirLyrics/releases) · [Documentation](docs/README.md) · [Report Bug](https://github.com/AirLyrics/AirLyrics/issues)
 
 <br />
 
 [![Platform](https://img.shields.io/badge/platform-Android-brightgreen?style=flat-square)]()
 [![Kotlin](https://img.shields.io/badge/Kotlin-Android-blueviolet?style=flat-square)]()
 [![Rust](https://img.shields.io/badge/Rust-lyrics--core-orange?style=flat-square)]()
-[![Release](https://img.shields.io/github/v/release/AndSi-327/android-floating-lyrics?style=flat-square)](https://github.com/AndSi-327/android-floating-lyrics/releases)
+[![Release](https://img.shields.io/github/v/release/AirLyrics/AirLyrics?style=flat-square)](https://github.com/AirLyrics/AirLyrics/releases)
 
 </div>
 
@@ -45,7 +45,7 @@ The app is already usable, but compatibility may vary depending on Android versi
 
 Download the latest APK from GitHub Releases:
 
-https://github.com/AndSi-327/android-floating-lyrics/releases
+https://github.com/AirLyrics/AirLyrics/releases
 
 After installation, grant the required permissions and select the music app you want AirLyrics to follow.
 
@@ -146,8 +146,8 @@ Android Studio is recommended when configuring Android SDK related settings.
 ### Clone
 
 ```bash
-git clone https://github.com/AndSi-327/android-floating-lyrics.git
-cd android-floating-lyrics
+git clone https://github.com/AirLyrics/AirLyrics.git
+cd AirLyrics
 ```
 
 ### Build
