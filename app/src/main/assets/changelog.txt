@@ -1,5 +1,4 @@
 2026-05-31
 
 - v0.1.0
-- transfer repository to AirLyrics
 - Prepare signed release APK build

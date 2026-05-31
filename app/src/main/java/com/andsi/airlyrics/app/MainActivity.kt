@@ -45,7 +45,11 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
@@ -274,6 +278,7 @@ class MainActivity : AppCompatActivity() {
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
         quickFloatingVisible = isQuickFloatingVisible()
         applySystemBarsTheme()
+        registerBackNavigationCallback()
         setContentView(createMainView())
         registerFloatingWindowStateReceiver()
         registerMediaStatusReceiver()
@@ -291,10 +296,15 @@ class MainActivity : AppCompatActivity() {
         renderCurrentPage()
     }
 
-    @Deprecated("Use OnBackPressedDispatcher")
-    override fun onBackPressed() {
-        if (handleBackNavigation()) return
-        super.onBackPressed()
+    private fun registerBackNavigationCallback() {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (handleBackNavigation()) return
+                isEnabled = false
+                onBackPressedDispatcher.onBackPressed()
+                isEnabled = true
+            }
+        })
     }
 
     internal fun handleBackNavigation(): Boolean {
@@ -640,22 +650,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun applySystemBarsTheme() {
-        window.statusBarColor = Color.BLACK
-        window.navigationBarColor = colorSurface
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val lightStatusFlag = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
-            val lightNavigationFlag = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        val lightTheme = !isDarkTheme()
+        enableEdgeToEdge(
+            statusBarStyle = if (lightTheme) {
+                SystemBarStyle.light(Color.BLACK, Color.BLACK)
             } else {
-                0
-            }
-            val lightFlag = lightStatusFlag or lightNavigationFlag
-            window.decorView.systemUiVisibility = if (isDarkTheme()) {
-                window.decorView.systemUiVisibility and lightFlag.inv()
+                SystemBarStyle.dark(Color.BLACK)
+            },
+            navigationBarStyle = if (lightTheme) {
+                SystemBarStyle.light(colorSurface, colorSurface)
             } else {
-                window.decorView.systemUiVisibility or lightFlag
+                SystemBarStyle.dark(colorSurface)
             }
-        }
+        )
     }
 
     internal fun getPlaybackStateText(state: Int?): String {
@@ -718,22 +725,22 @@ class MainActivity : AppCompatActivity() {
             addAction(BroadcastActions.WINDOW_VISIBILITY_CHANGED)
             addAction(BroadcastActions.QUICK_CONTROL_CHANGED)
         }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(floatingWindowStateReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(floatingWindowStateReceiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            this,
+            floatingWindowStateReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     internal fun registerMediaStatusReceiver() {
         val filter = IntentFilter(BroadcastActions.MEDIA_UPDATE)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(mediaStatusReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(mediaStatusReceiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            this,
+            mediaStatusReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     internal fun startLyricsService(intent: Intent) {

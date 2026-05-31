@@ -63,7 +63,7 @@ class LyricsStorageInstrumentedTest {
         val recentItem = LyricsStorage.listRecentLyrics(context, limit = 10)
             .firstOrNull { it.title == title && it.artist == artist }
         assertNotNull(recentItem)
-        assertEquals("$title - $artist", recentItem!!.friendlyTitle)
+        assertEquals(title, recentItem!!.displayTitle)
         assertTrue(recentItem.hasPlainLyrics)
         assertFalse(recentItem.hasKaraokeLyrics)
 

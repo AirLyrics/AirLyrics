@@ -9,12 +9,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
-import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
@@ -155,12 +155,12 @@ class FloatingLyricsService : Service() {
 
     private fun registerMediaReceiver() {
         val filter = IntentFilter(BroadcastActions.MEDIA_UPDATE)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(mediaReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(mediaReceiver, filter)
-        }
+        ContextCompat.registerReceiver(
+            this,
+            mediaReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     private fun applyLyricsOffset(offsetMs: Long) {

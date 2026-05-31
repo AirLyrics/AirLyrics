@@ -175,7 +175,7 @@ internal fun MainActivity.sliderRow(
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
 
         val valueText = TextView(activity).apply {
-            text = getString(R.string.field_value_with_suffix, displayText(title), safeValue, suffix)
+            text = getString(R.string.field_value_with_suffix, displayText(title), safeValue.toString(), suffix)
             textSize = AirUiTokens.TextSize.Body
             setTextColor(colorText)
             setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
@@ -188,7 +188,7 @@ internal fun MainActivity.sliderRow(
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val newValue = min + progress
-                    valueText.text = getString(R.string.field_value_with_suffix, displayText(title), newValue, suffix)
+                    valueText.text = getString(R.string.field_value_with_suffix, displayText(title), newValue.toString(), suffix)
                     if (fromUser) onChanged(newValue)
                 }
 
@@ -338,7 +338,7 @@ internal fun MainActivity.colorControl(
 
         fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
             pair.first.progress = value.coerceIn(0, 255)
-            pair.second.text = getString(R.string.field_value, displayText(titleText), value)
+            pair.second.text = getString(R.string.field_value, displayText(titleText), value.toString())
         }
 
         fun syncSliders() {
