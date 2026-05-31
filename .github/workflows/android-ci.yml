@@ -1,0 +1,37 @@
+name: Android CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  check:
+    name: Check, test and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make scripts executable
+        run: chmod +x ./gradlew ./scripts/check_localization.sh
+
+      - name: Check localization
+        run: ./scripts/check_localization.sh
+
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true --no-daemon
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug -Pairlyrics.skipRustBuild=true --no-daemon
