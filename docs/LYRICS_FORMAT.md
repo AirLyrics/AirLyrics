@@ -2,17 +2,17 @@
 
 [English](LYRICS_FORMAT.md) · [简体中文](LYRICS_FORMAT.zh-CN.md)
 
-AirLyrics supports local `.lrc` import. Use local import when online lyrics are missing, inaccurate or out of sync.
+AirLyrics supports local `.lrc` file import. Use local import when online lyrics are missing, inaccurate or out of sync.
 
 ## Normal LRC
 
-Normal LRC displays one timed line at a time.
+Normal LRC is used to display lyrics line by line.
 
 Preferred format:
 
 ```lrc
 [00:12.34]This is a lyric line
-[00:15.60]This is the next line
+[00:15.60]This is the next lyric line
 ```
 
 Format:
@@ -23,23 +23,23 @@ Format:
 
 Notes:
 
-- `mm` is minutes.
-- `ss` is seconds.
-- `xx` is centiseconds.
-- Use one main timestamp and one lyric sentence per line when possible.
+- `mm` means minutes.
+- `ss` means seconds.
+- `xx` means centiseconds.
+- When editing lyrics manually, put one main timestamp and one lyric sentence on each line.
 
-## Translation lines
+## Translated lyrics
 
-AirLyrics can display original lyrics with translated lyrics when translation lines are available.
+When translation lines are available, AirLyrics can display original lyrics and translated lyrics.
 
-A common local format is alternating original and translated lines with the same timestamp:
+A common local format is to put original and translated lines alternately under the same timestamp:
 
 ```lrc
 [00:12.34]大好きだって 大切だって
 [00:12.34]I love you, I love you
 ```
 
-Display behavior depends on the selected lyrics content mode:
+The actual display depends on the lyrics content mode:
 
 - Original + translation
 - Original only
@@ -47,7 +47,7 @@ Display behavior depends on the selected lyrics content mode:
 
 ## Enhanced / word-by-word LRC
 
-Enhanced lyrics mainly come from local import. They use line timestamps plus inline word timestamps.
+Word-by-word lyrics are mainly supported through local import. They contain a line timestamp and inline word timestamps.
 
 Preferred format:
 
@@ -61,11 +61,11 @@ Format:
 [line start]<word start>word<word start>word
 ```
 
-The line timestamp decides when the line appears. Inline timestamps decide word-by-word highlighting.
+The line timestamp decides when the line appears. Inline timestamps decide word highlight timing.
 
 ## Supported variants
 
-The parser tries to tolerate common variants:
+The parser supports these common variants:
 
 ```lrc
 [00:12.34]Lyric
@@ -74,37 +74,20 @@ The parser tries to tolerate common variants:
 [00:12.34][00:15.60]Repeated lyric
 ```
 
-It also attempts to recover compact exports like:
+It also tries to recover compact exports from some tools:
 
 ```lrc
 [00:00:58]Line A[00:01:20]Line B[00:02:18]Line C
 ```
 
-This compact style is hard to edit by hand.
+However, this compact format is not recommended for manual maintenance.
 
-## Problematic patterns
+## Not recommended
 
-When creating lyrics manually, watch for:
+When creating lyrics manually, watch out for:
 
-- Untimed plain text only.
+- Plain text without timestamps.
 - Very long lines without natural spaces.
-- Mixed unrelated songs in one file.
-- Wrong duration or wrong song version.
-- Enhanced lyrics selected for a plain LRC file.
-
-## Import behavior
-
-During import, AirLyrics asks whether the file is normal lyrics or enhanced lyrics.
-
-- Normal lyrics are saved as line-based LRC.
-- Enhanced lyrics are saved separately so word timing can be reused.
-- Local lyrics have priority over online lookup.
-- Lyrics offset can be adjusted later from the app.
-
-## Test samples
-
-Manual test files:
-
-```text
-docs/test-lyrics-samples/
-```
+- Multiple unrelated songs mixed in one file.
+- A song version or duration that does not match.
+- Importing a normal LRC file as word-by-word lyrics.

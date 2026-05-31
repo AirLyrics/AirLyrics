@@ -47,7 +47,7 @@ AirLyrics 正在持续开发中。
 
 https://github.com/AndSi-327/android-floating-lyrics/releases
 
-安装后，请授予必要权限，并选择需要跟随的音乐应用。
+安装后，请您授予必要权限，并选择需要跟随的音乐应用。
 
 ---
 
@@ -68,12 +68,9 @@ https://github.com/AndSi-327/android-floating-lyrics/releases
 ## 快速开始
 
 1. 安装 AirLyrics。
-2. 授予悬浮窗权限。
-3. 授予通知访问权限。
-4. 选择当前播放的媒体源。
-5. 启动悬浮歌词。
-6. 在音乐应用中播放歌曲。
-7. 联网搜索歌词，或手动导入本地歌词。
+2. 授予必要权限。
+3. 选择当前播放的媒体源。
+4. 显示悬浮歌词。
 
 ---
 
@@ -126,7 +123,6 @@ AirLyrics 会用到以下 Android 权限：
 | [文档首页](docs/README.zh-CN.md) | 中文文档索引 |
 | [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
 | [贡献指南](docs/CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与代码位置 |
-| [测试指南](docs/TESTING.zh-CN.md) | 构建、单元测试与手动测试清单 |
 | [项目架构](docs/ARCHITECTURE.zh-CN.md) | 模块划分与运行流程 |
 
 ---
@@ -135,12 +131,17 @@ AirLyrics 会用到以下 Android 权限：
 
 ### 环境要求
 
-- Android Studio
-- JDK 17
+- JDK 21
 - Android SDK
-- Android NDK
-- Rust toolchain
-- cargo-ndk
+- Android NDK `26.3.11579264` 推荐
+- Rust stable via `rustup`
+- `cargo-ndk`
+- Rust Android targets for the app ABIs:
+  - `aarch64-linux-android` for `arm64-v8a`
+  - `armv7-linux-androideabi` for `armeabi-v7a`
+  - `x86_64-linux-android` for `x86_64`
+
+构建 SDK 相关配置时，推荐使用 Android Studio。
 
 ### 克隆仓库
 
@@ -166,7 +167,7 @@ app/build/outputs/apk/debug/
 
 ## 贡献
 
-欢迎提交贡献。
+欢迎您提交贡献。
 
 适合贡献的方向：
 
@@ -176,7 +177,7 @@ app/build/outputs/apk/debug/
 - 文档改进
 - UI 文案润色
 
-贡献说明：[CONTRIBUTING.md](docs/CONTRIBUTING.md)。
+贡献说明：[CONTRIBUTING.zh-CN.md](docs/CONTRIBUTING.zh-CN.md)。
 
 ---
 

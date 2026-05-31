@@ -2,82 +2,70 @@
 
 [English](CONTRIBUTING.md) · [简体中文](CONTRIBUTING.zh-CN.md)
 
-感谢帮助 AirLyrics。提交时保持改动范围清晰，便于 review。
+感谢您愿意为 AirLyrics 做贡献。
 
-## 开发环境
+为了方便 review，请尽量让每个 PR 只做一件事。不要把无关的格式化、重构和功能改动混在一起。
 
-- Android Studio 或 IntelliJ IDEA
-- JDK 17
-- Android SDK
-- 重建原生歌词核心需要 Android NDK
-- 重建 `lyrics-core` 需要 Rust toolchain 和 `cargo-ndk`
-
-本地已有 native libraries 时，Kotlin 检查可跳过 Rust 构建：
-
-```bash
-./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
-```
-
-正式 APK 需要包含原生库。
+在说明中可以使用图片或者视频，会更加清晰
 
 ## 提交 PR 前
+
+大多数改动只需要运行基础检查：
 
 ```bash
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
 ```
 
-如果改动涉及本地歌词存储、导入行为、解析器逻辑或 Android 存储权限，还应在真机或模拟器上运行 instrumentation tests：
+如果您的改动涉及歌词解析、本地歌词存储、歌词导入、Android 存储权限或 SAF 文件夹行为，请额外在真机或模拟器上运行：
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest -Pairlyrics.skipRustBuild=true
 ```
 
-## 代码位置速查
+如果只是修改 README、文档、注释或少量不影响运行逻辑的文本内容，通常不需要运行 Android instrumentation tests。
 
-| 任务 | 主要位置 |
-| --- | --- |
-| 媒体检测 | `media/` 和 `app/controller/AppMediaController.kt` |
-| 歌词查询 | `lyrics/LyricsRepository.kt` 和 `lyrics/providers/` |
-| 本地歌词存储 | `lyrics/storage/` |
-| LRC 解析 | `lyrics/parser/LrcParser.kt` |
-| 悬浮窗运行时 | `floating/` |
-| 悬浮窗页面 UI | `ui/pages/FloatingPage.kt` 及相关文件 |
-| 歌词设置 UI | `ui/pages/settings/LyricsSettingsPage.kt` |
-| 系统权限 UI | `ui/pages/settings/SystemSettingsPage.kt` |
-| 持久化设置 | `settings/model/` 和 `settings/store/` |
-| UI 主题 / tokens | `ui/theme/` 和 `ui/tokens/` |
-| 本地化 | Android 字符串资源和 `i18n/` 辅助 |
+## 相关规范
 
-## 添加一个设置
+### 添加一个设置
 
-1. 在 `settings/model/` 添加或扩展数据模型。
-2. 在匹配的 `settings/store/*Store.kt` 中添加读写逻辑。
-3. 更新对应 UI 页面。
-4. 在实际使用这个设置的运行时模块中应用它。
-5. 如果行为对用户可见，同步更新文档和测试。
+新增设置时，请按现有结构接入，不要只在 UI 页面里临时保存状态。
 
-不要在 UI 页面或服务中直接读写裸 `SharedPreferences`，除非正在创建新的 Store。
+1. 在 `settings/model/` 添加或扩展设置数据模型。
+2. 在对应的 `settings/store/*Store.kt` 中添加读取和保存逻辑。
+3. 更新对应 UI 页面，让用户可以查看或修改这个设置。
+4. 在真正使用该设置的模块中读取并应用它，例如悬浮窗渲染、歌词查询或歌词存储逻辑。
+5. 如果这个设置改变了用户可见行为，请同步更新相关文档或测试。
 
-## 添加歌词 Provider
+不要在 UI 页面或 Service 中直接读写裸 `SharedPreferences`，除非您正在创建新的 Store。
+
+### 添加歌词 Provider
+
+新增歌词来源时，请保持 Provider 的职责单一。
 
 1. 在 `lyrics/providers/` 下实现 `LyricsProvider`。
 2. 注册到 `LyricsRepository`。
-3. 在设置中暴露用户可选择的来源。
+3. 如果需要让用户手动选择来源，请在设置中暴露这个 Provider。
 4. 安全处理网络失败、无结果和模糊匹配。
 5. 除非应用设计改变，否则 enhanced / word-by-word 歌词应继续以本地导入优先。
 
-Provider 只返回数据，不直接更新 UI。
+Provider 只负责获取和返回歌词数据，不应该直接更新 UI。
 
-## 本地化规则
+### 本地化规则
+
+修改 UI 文案时，请注意：
 
 - 不要随意修改已有 string key。
-- 保持 `%1$s` 等 placeholder 不变。
-- UI 文案保持简短。
+- 保持 `%1$s`、`%2$d` 等 placeholder 不变。
+- UI 文案尽量简短。
 - 不要翻译歌曲名、歌手名、文件名、包名和路径。
 - 提交前运行 `./scripts/check_localization.sh`。
 
+如果新增了 string 资源，请同时补充对应语言的文本，避免界面出现缺失翻译。
+
 ## 不要提交的文件
+
+注意不要提交本地构建产物或本机配置，例如：
 
 ```text
 .gradle/
@@ -88,4 +76,4 @@ lyrics-core/target/
 local.properties
 ```
 
-生成的 APK 和本机配置不要进仓库。
+生成的 APK、签名文件、本机 SDK 路径和 IDE 缓存都不应该进入仓库。

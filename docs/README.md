@@ -2,13 +2,12 @@
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
-Project documentation for AirLyrics.
+This directory contains project documentation for AirLyrics.
 
 | Document | Description |
 | --- | --- |
-| [Lyrics Format](LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics |
-| [Contributing](CONTRIBUTING.md) | Development environment, workflow and contribution rules |
-| [Testing](TESTING.md) | Build, automated tests and manual release checks |
+| [Lyrics Format](LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format |
+| [Contributing](CONTRIBUTING.md) | Development environment, PR workflow and contribution rules |
 | [Architecture](ARCHITECTURE.md) | Module layout and runtime flow |
 
 ## License

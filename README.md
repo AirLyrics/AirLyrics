@@ -6,7 +6,7 @@
 
 Android floating lyrics app.
 
-A lightweight Android app that automatically detects media playback and displays synced lyrics in a customizable floating window.
+A lightweight Android floating lyrics app that automatically detects current media playback and displays synced lyrics in a customizable floating window.
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
@@ -37,7 +37,7 @@ A lightweight Android app that automatically detects media playback and displays
 
 AirLyrics is under active development.
 
-The app is usable, but compatibility may vary depending on Android version, device manufacturer, and the music app being used.
+The app is already usable, but compatibility may vary depending on Android version, device manufacturer and music app.
 
 ---
 
@@ -47,33 +47,30 @@ Download the latest APK from GitHub Releases:
 
 https://github.com/AndSi-327/android-floating-lyrics/releases
 
-After installation, grant the required permissions and select your music app as the media source.
+After installation, grant the required permissions and select the music app you want AirLyrics to follow.
 
 ---
 
 ## Features
 
 - Automatically detects current media playback
-- Displays synced lyrics in a floating window above other apps
+- Displays synced lyrics above other apps
 - Provides online lyrics search
 - Supports local lyrics import
 - Supports enhanced / word-by-word lyrics import
 - Customizable floating window style
 - Adjustable lyrics offset
-- Supports original and translated lyrics
-- Supports light and dark themes
+- Supports original / translated lyrics display
+- Supports light / dark themes
 
 ---
 
 ## Quick Start
 
 1. Install AirLyrics.
-2. Grant overlay permission.
-3. Grant notification access.
-4. Select the current media source.
-5. Start the floating lyrics window.
-6. Play music in your music app.
-7. Search lyrics online or import local lyrics manually.
+2. Grant permissions.
+3. Select the current media source.
+4. Show the floating lyrics window.
 
 ---
 
@@ -84,7 +81,7 @@ After installation, grant the required permissions and select your music app as 
 <table>
   <tr>
     <td align="center">
-      <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="Media source" />
+      <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="Media source detection" />
       <br />
       <sub>Media Source</sub>
     </td>
@@ -94,9 +91,9 @@ After installation, grant the required permissions and select your music app as 
       <sub>Lyrics Search</sub>
     </td>
     <td align="center">
-      <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="Floating window settings" />
+      <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="Floating window customization" />
       <br />
-      <sub>Customization</sub>
+      <sub>Floating Customization</sub>
     </td>
   </tr>
 </table>
@@ -119,14 +116,13 @@ AirLyrics uses these Android permissions:
 
 ## Documentation
 
-See the docs directory for project documentation.
+Project documentation is in the docs directory.
 
 | Document | Description |
 | --- | --- |
 | [Documentation Home](docs/README.md) | English documentation index |
-| [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics |
-| [Contributing](docs/CONTRIBUTING.md) | Development environment, workflow and code map |
-| [Testing](docs/TESTING.md) | Build, automated tests and manual release checks |
+| [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format |
+| [Contributing](docs/CONTRIBUTING.md) | Development environment, PR workflow and code locations |
 | [Architecture](docs/ARCHITECTURE.md) | Module layout and runtime flow |
 
 ---
@@ -135,12 +131,17 @@ See the docs directory for project documentation.
 
 ### Requirements
 
-- Android Studio
-- JDK 17
+- JDK 21
 - Android SDK
-- Android NDK
-- Rust toolchain
-- cargo-ndk
+- Android NDK `26.3.11579264` recommended
+- Rust stable via `rustup`
+- `cargo-ndk`
+- Rust Android targets for the app ABIs:
+  - `aarch64-linux-android` for `arm64-v8a`
+  - `armv7-linux-androideabi` for `armeabi-v7a`
+  - `x86_64-linux-android` for `x86_64`
+
+Android Studio is recommended when configuring Android SDK related settings.
 
 ### Clone
 
@@ -160,7 +161,6 @@ The APK will be generated under:
 ```txt
 app/build/outputs/apk/debug/
 ```
-
 
 ---
 
@@ -191,4 +191,3 @@ Contribution guide: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 AirLyrics is licensed under the MIT License.
 
 See [LICENSE](LICENSE).
-

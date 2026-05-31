@@ -8,7 +8,6 @@
 | --- | --- |
 | [歌词格式](LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
 | [贡献指南](CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与贡献规则 |
-| [测试指南](TESTING.zh-CN.md) | 构建、自动化测试与手动检查 |
 | [项目架构](ARCHITECTURE.zh-CN.md) | 模块划分与运行流程 |
 
 ## 许可证
