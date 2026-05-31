@@ -1,0 +1,45 @@
+name: PR Checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, unit tests, and localization
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare scripts
+        run: |
+          chmod +x ./gradlew
+          chmod +x ./scripts/check_localization.sh
+
+      - name: Run lint
+        run: ./gradlew lint -Pairlyrics.skipRustBuild=true
+
+      - name: Run unit tests
+        run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
+
+      - name: Check localization
+        run: ./scripts/check_localization.sh
