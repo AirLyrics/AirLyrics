@@ -3,7 +3,7 @@ agp = "9.2.1"
 coreKtx = "1.16.0"
 appcompat = "1.7.1"
 material = "1.10.0"
-activityKtx = "1.8.0"
+activityKtx = "1.13.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
