@@ -2,3 +2,5 @@
 
 - v0.1.0
 - Prepare signed release APK build
+- Fix bugs caused by dependabot
+- Add USER_GUIDE in github documentation
