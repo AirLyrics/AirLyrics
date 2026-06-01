@@ -95,12 +95,16 @@ fn parse_time_tag(value: &str) -> Option<u64> {
         0 => 0,
         1 => fraction.parse::<u64>().ok()? * 100,
         2 => fraction.parse::<u64>().ok()? * 10,
-        _ => fraction.chars().take(3).collect::<String>().parse::<u64>().ok()?,
+        _ => fraction
+            .chars()
+            .take(3)
+            .collect::<String>()
+            .parse::<u64>()
+            .ok()?,
     };
 
     Some(minutes * 60_000 + seconds * 1_000 + millis)
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,6 +1,8 @@
 use crate::lrc;
-use crate::{NativeResult, normalize_optional_lrc};
-use musixmatch_inofficial::models::{SortOrder, Subtitle, SubtitleFormat, Track, TrackId, TranslationList};
+use crate::{normalize_optional_lrc, NativeResult};
+use musixmatch_inofficial::models::{
+    SortOrder, Subtitle, SubtitleFormat, Track, TrackId, TranslationList,
+};
 use musixmatch_inofficial::Musixmatch;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::OnceLock;
@@ -33,99 +35,96 @@ pub(crate) fn fetch_best_lyrics(
     runtime.block_on(async move {
         tokio::time::timeout(std::time::Duration::from_secs(15), async move {
             let client = get_client()?;
-        let title = clean_query_part(title);
-        let artist = clean_query_part(artist);
-        let album = clean_query_part(album);
-        let duration_seconds = duration_ms
-            .filter(|value| *value > 0)
-            .map(|value| value as f32 / 1000.0);
-        let translation_language = normalize_translation_language(translation_language);
+            let title = clean_query_part(title);
+            let artist = clean_query_part(artist);
+            let album = clean_query_part(album);
+            let duration_seconds = duration_ms
+                .filter(|value| *value > 0)
+                .map(|value| value as f32 / 1000.0);
+            let translation_language = normalize_translation_language(translation_language);
 
-        let (track, candidate_debug) = find_best_track(
-            &client,
-            &title,
-            &artist,
-            &album,
-            duration_ms,
-        )
-        .await?;
+            let (track, candidate_debug) =
+                find_best_track(&client, &title, &artist, &album, duration_ms).await?;
 
-        let (subtitle, subtitle_debug) = match fetch_subtitle_for_track(
-            &client,
-            &track,
-            duration_seconds,
-        )
-        .await
-        {
-            Ok(value) => value,
-            Err(candidate_error) => {
-                // Keep the old matcher as a final fallback. Some Musixmatch tracks can be
-                // found by matcher.subtitle even when track.search gives an ID whose subtitle
-                // endpoint refuses the request.
-                match fetch_lrc_with_matcher_fallback(&client, &title, &artist, duration_seconds).await {
-                    Ok(subtitle) => (
-                        subtitle,
-                        format!("track subtitle failed: {candidate_error}; matcher fallback succeeded"),
-                    ),
-                    Err(matcher_error) => {
-                        return Err(format!(
-                            "musixmatch found candidates but no usable subtitle; query=title='{title}' artist='{artist}' durationMs={}; candidates=[{}]; subtitleErrors=[{candidate_error}; matcherFallback={matcher_error}]",
-                            duration_ms.unwrap_or_default(),
-                            candidate_debug,
-                        ));
+            let (subtitle, subtitle_debug) =
+                match fetch_subtitle_for_track(&client, &track, duration_seconds).await {
+                    Ok(value) => value,
+                    Err(candidate_error) => {
+                        // Keep the old matcher as a final fallback. Some Musixmatch tracks can be
+                        // found by matcher.subtitle even when track.search gives an ID whose subtitle
+                        // endpoint refuses the request.
+                        match fetch_lrc_with_matcher_fallback(
+                            &client,
+                            &title,
+                            &artist,
+                            duration_seconds,
+                        )
+                        .await
+                        {
+                            Ok(subtitle) => (
+                                subtitle,
+                                format!(
+                                    "track subtitle failed: {candidate_error}; matcher fallback succeeded"
+                                ),
+                            ),
+                            Err(matcher_error) => {
+                                return Err(format!(
+                                    "musixmatch found candidates but no usable subtitle; query=title='{title}' artist='{artist}' durationMs={}; candidates=[{}]; subtitleErrors=[{candidate_error}; matcherFallback={matcher_error}]",
+                                    duration_ms.unwrap_or_default(),
+                                    candidate_debug,
+                                ));
+                            }
+                        }
                     }
-                }
-            }
-        };
+                };
 
-        let lrc = normalize_optional_lrc(subtitle.subtitle_body)
-            .ok_or_else(|| {
+            let lrc = normalize_optional_lrc(subtitle.subtitle_body).ok_or_else(|| {
                 format!(
                     "musixmatch returned empty subtitle; selectedTrack={} - {} ({}) subtitleId={} debug={subtitle_debug}",
-                    track.track_name,
-                    track.artist_name,
-                    track.track_id,
-                    subtitle.subtitle_id,
+                    track.track_name, track.artist_name, track.track_id, subtitle.subtitle_id,
                 )
             })?;
 
-        let translated_lrc = if translation_language.is_empty() {
-            None
-        } else {
-            match fetch_translation_for_track(&client, &track, &translation_language).await {
-                Ok(translation_list) => translation_list_to_lrc(&lrc, &translation_list),
-                Err(error) => {
-                    eprintln!(
-                        "AirLyricsLyrics: Musixmatch translation failed lang={} track={} common={} error={}",
-                        translation_language,
-                        track.track_id,
-                        track.commontrack_id,
-                        error
-                    );
-                    None
+            let translated_lrc = if translation_language.is_empty() {
+                None
+            } else {
+                match fetch_translation_for_track(&client, &track, &translation_language).await {
+                    Ok(translation_list) => translation_list_to_lrc(&lrc, &translation_list),
+                    Err(error) => {
+                        eprintln!(
+                            "AirLyricsLyrics: Musixmatch translation failed lang={} track={} common={} error={}",
+                            translation_language, track.track_id, track.commontrack_id, error
+                        );
+                        None
+                    }
                 }
-            }
-        };
+            };
 
-        let merged_lrc = merge_lrc_like_netease(&lrc, translated_lrc.as_deref())
-            .unwrap_or_else(|| lrc.clone());
+            let merged_lrc = merge_lrc_like_netease(&lrc, translated_lrc.as_deref())
+                .unwrap_or_else(|| lrc.clone());
 
-        Ok(NativeResult {
-            ok: true,
-            source: "musixmatch-rust",
-            id: Some(track.track_id.to_string()),
-            title: Some(track.track_name),
-            artist: Some(track.artist_name),
-            album: if track.album_name.is_empty() { None } else { Some(track.album_name) },
-            duration_ms: Some((track.track_length as u64) * 1000),
-            lrc: Some(lrc),
-            translated_lrc,
-            merged_lrc: Some(merged_lrc),
-            karaoke_json: None,
-            error_type: None,
-            error: None,
+            Ok(NativeResult {
+                ok: true,
+                source: "musixmatch-rust",
+                id: Some(track.track_id.to_string()),
+                title: Some(track.track_name),
+                artist: Some(track.artist_name),
+                album: if track.album_name.is_empty() {
+                    None
+                } else {
+                    Some(track.album_name)
+                },
+                duration_ms: Some((track.track_length as u64) * 1000),
+                lrc: Some(lrc),
+                translated_lrc,
+                merged_lrc: Some(merged_lrc),
+                karaoke_json: None,
+                error_type: None,
+                error: None,
+            })
         })
-        }).await.map_err(|_| "musixmatch lookup timed out".to_string())?
+        .await
+        .map_err(|_| "musixmatch lookup timed out".to_string())?
     })
 }
 
@@ -237,10 +236,7 @@ impl SearchAttempt {
         if self.require_lyrics {
             query = query.f_has_lyrics();
         }
-        query
-            .send(12, 1)
-            .await
-            .map_err(|error| error.to_string())
+        query.send(12, 1).await.map_err(|error| error.to_string())
     }
 }
 
@@ -379,7 +375,6 @@ async fn fetch_lrc_with_matcher_fallback(
     }
 }
 
-
 async fn fetch_translation_for_track(
     client: &Musixmatch,
     track: &Track,
@@ -410,7 +405,10 @@ async fn fetch_translation_for_track(
     Err(errors.join("; "))
 }
 
-fn translation_list_to_lrc(original_lrc: &str, translation_list: &TranslationList) -> Option<String> {
+fn translation_list_to_lrc(
+    original_lrc: &str,
+    translation_list: &TranslationList,
+) -> Option<String> {
     if translation_list.is_empty() {
         return None;
     }
@@ -427,7 +425,10 @@ fn translation_list_to_lrc(original_lrc: &str, translation_list: &TranslationLis
         if matched.is_empty() || translated.is_empty() {
             continue;
         }
-        translations.entry(matched).or_default().push_back(translated);
+        translations
+            .entry(matched)
+            .or_default()
+            .push_back(translated);
     }
 
     if translations.is_empty() {
@@ -444,7 +445,11 @@ fn translation_list_to_lrc(original_lrc: &str, translation_list: &TranslationLis
 
         if let Some(translated) = translated {
             if !translated.trim().is_empty() {
-                output.push_str(&format!("[{}]{}\n", lrc::format_lrc_time(time_ms), translated.trim()));
+                output.push_str(&format!(
+                    "[{}]{}\n",
+                    lrc::format_lrc_time(time_ms),
+                    translated.trim()
+                ));
                 matched_count += 1;
             }
         }
@@ -483,7 +488,11 @@ fn merge_lrc_like_netease(original_lrc: &str, translated_lrc: Option<&str>) -> O
         } else {
             text.trim().to_string()
         };
-        merged.push_str(&format!("[{}]{}\n", lrc::format_lrc_time(time_ms), merged_text));
+        merged.push_str(&format!(
+            "[{}]{}\n",
+            lrc::format_lrc_time(time_ms),
+            merged_text
+        ));
     }
 
     Some(merged)
@@ -645,7 +654,13 @@ fn normalize_for_score(value: &str) -> String {
     relaxed
         .to_lowercase()
         .chars()
-        .map(|ch| if ch.is_alphanumeric() || ch.is_whitespace() { ch } else { ' ' })
+        .map(|ch| {
+            if ch.is_alphanumeric() || ch.is_whitespace() {
+                ch
+            } else {
+                ' '
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()

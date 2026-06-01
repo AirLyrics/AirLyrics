@@ -77,7 +77,11 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
     let translation_language = jstring_to_string(&mut env, translation_language);
-    let duration_ms = if duration_ms > 0 { Some(duration_ms as u64) } else { None };
+    let duration_ms = if duration_ms > 0 {
+        Some(duration_ms as u64)
+    } else {
+        None
+    };
 
     let result = std::panic::catch_unwind(|| {
         musixmatch::fetch_best_lyrics(
@@ -89,10 +93,16 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
             false,
         )
     })
-        .unwrap_or_else(|_| Err("native panic while fetching musixmatch lyrics".to_string()));
+    .unwrap_or_else(|_| Err("native panic while fetching musixmatch lyrics".to_string()));
 
     let json = match result {
-        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| fallback_error("musixmatch-rust", "SerializeError", "failed to serialize native result")),
+        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| {
+            fallback_error(
+                "musixmatch-rust",
+                "SerializeError",
+                "failed to serialize native result",
+            )
+        }),
         Err(err) => fallback_error("musixmatch-rust", classify_error(&err), &err),
     };
 
@@ -112,13 +122,24 @@ fn fetch_netease_lyrics_json(
     let title = jstring_to_string(&mut env, title);
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
-    let duration_ms = if duration_ms > 0 { Some(duration_ms as u64) } else { None };
+    let duration_ms = if duration_ms > 0 {
+        Some(duration_ms as u64)
+    } else {
+        None
+    };
 
-    let result = std::panic::catch_unwind(|| fetch_best_lyrics(&title, &artist, &album, duration_ms))
-        .unwrap_or_else(|_| Err("native panic while fetching lyrics".to_string()));
+    let result =
+        std::panic::catch_unwind(|| fetch_best_lyrics(&title, &artist, &album, duration_ms))
+            .unwrap_or_else(|_| Err("native panic while fetching lyrics".to_string()));
 
     let json = match result {
-        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| fallback_error("netease-rust", "SerializeError", "failed to serialize native result")),
+        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| {
+            fallback_error(
+                "netease-rust",
+                "SerializeError",
+                "failed to serialize native result",
+            )
+        }),
         Err(err) => fallback_error("netease-rust", classify_error(&err), &err),
     };
 
@@ -156,7 +177,10 @@ fn fallback_error(source: &'static str, error_type: &'static str, message: &str)
 
 fn classify_error(message: &str) -> &'static str {
     let lower = message.to_lowercase();
-    if lower.contains("missingcredentials") || lower.contains("credential") || lower.contains("token") {
+    if lower.contains("missingcredentials")
+        || lower.contains("credential")
+        || lower.contains("token")
+    {
         "NeedCredential"
     } else if lower.contains("rate") || lower.contains("429") {
         "RateLimited"
@@ -170,7 +194,11 @@ fn classify_error(message: &str) -> &'static str {
         || lower.contains("404")
     {
         "NotFound"
-    } else if lower.contains("network") || lower.contains("timeout") || lower.contains("failed to connect") || lower.contains("dns") {
+    } else if lower.contains("network")
+        || lower.contains("timeout")
+        || lower.contains("failed to connect")
+        || lower.contains("dns")
+    {
         "NetworkError"
     } else {
         "Unknown"
@@ -195,70 +223,86 @@ fn fetch_best_lyrics(
     runtime.block_on(async move {
         tokio::time::timeout(std::time::Duration::from_secs(12), async move {
             let api = NcmApi::new(false, "");
-        let keywords = build_search_keywords(title, artist, album);
-        let mut best_candidates = Vec::new();
+            let keywords = build_search_keywords(title, artist, album);
+            let mut best_candidates = Vec::new();
 
-        for keyword in keywords {
-            let response = api.search(&keyword, None).await
-                .map_err(|e| format!("netease search failed: {e}"))?;
-            let search_resp: SearchSongResp = response.deserialize()
-                .map_err(|e| format!("failed to decode search response: {e}"))?;
+            for keyword in keywords {
+                let response = api
+                    .search(&keyword, None)
+                    .await
+                    .map_err(|e| format!("netease search failed: {e}"))?;
+                let search_resp: SearchSongResp = response
+                    .deserialize()
+                    .map_err(|e| format!("failed to decode search response: {e}"))?;
 
-            let Some(result) = search_resp.result else { continue };
+                let Some(result) = search_resp.result else {
+                    continue;
+                };
 
-            for song in result.songs.iter() {
-                if let Some(candidate) = map_song(song, title, artist, album, duration_ms) {
-                    best_candidates.push(candidate);
+                for song in result.songs.iter() {
+                    if let Some(candidate) = map_song(song, title, artist, album, duration_ms) {
+                        best_candidates.push(candidate);
+                    }
+                }
+
+                if !best_candidates.is_empty() {
+                    break;
                 }
             }
 
-            if !best_candidates.is_empty() {
-                break;
+            let best = best_candidates
+                .into_iter()
+                .max_by(|a, b| {
+                    a.score
+                        .partial_cmp(&b.score)
+                        .unwrap_or(std::cmp::Ordering::Equal)
+                })
+                .ok_or_else(|| "netease returned no song candidates".to_string())?;
+
+            let song_id = best
+                .id
+                .parse::<usize>()
+                .map_err(|e| format!("invalid netease song id {}: {e}", best.id))?;
+            let lyric_response = api
+                .lyric(song_id)
+                .await
+                .map_err(|e| format!("netease lyric query failed: {e}"))?;
+            let lyric_resp: LyricResp = lyric_response
+                .deserialize()
+                .map_err(|e| format!("failed to decode lyric response: {e}"))?;
+
+            let lrc = lyric_resp.lrc.and_then(|v| normalize_optional_lrc(v.lyric));
+            let translated_lrc = lyric_resp
+                .tlyric
+                .and_then(|v| normalize_optional_lrc(v.lyric));
+            let merged_lrc = merge_lrc(lrc.as_deref(), translated_lrc.as_deref())
+                .or_else(|| lrc.clone())
+                .or_else(|| translated_lrc.clone());
+
+            if merged_lrc.as_deref().unwrap_or_default().trim().is_empty() {
+                return Err("netease lyric is empty".to_string());
             }
-        }
 
-        let best = best_candidates
-            .into_iter()
-            .max_by(|a, b| a.score.partial_cmp(&b.score).unwrap_or(std::cmp::Ordering::Equal))
-            .ok_or_else(|| "netease returned no song candidates".to_string())?;
-
-        let song_id = best.id.parse::<usize>()
-            .map_err(|e| format!("invalid netease song id {}: {e}", best.id))?;
-        let lyric_response = api.lyric(song_id).await
-            .map_err(|e| format!("netease lyric query failed: {e}"))?;
-        let lyric_resp: LyricResp = lyric_response.deserialize()
-            .map_err(|e| format!("failed to decode lyric response: {e}"))?;
-
-        let lrc = lyric_resp.lrc.and_then(|v| normalize_optional_lrc(v.lyric));
-        let translated_lrc = lyric_resp.tlyric.and_then(|v| normalize_optional_lrc(v.lyric));
-        let merged_lrc = merge_lrc(lrc.as_deref(), translated_lrc.as_deref())
-            .or_else(|| lrc.clone())
-            .or_else(|| translated_lrc.clone());
-
-        if merged_lrc.as_deref().unwrap_or_default().trim().is_empty() {
-            return Err("netease lyric is empty".to_string());
-        }
-
-        Ok(NativeResult {
-            ok: true,
-            source: "netease-rust",
-            id: Some(best.id),
-            title: Some(best.title),
-            artist: Some(best.artist),
-            album: Some(best.album),
-            duration_ms: Some(best.duration_ms),
-            lrc,
-            translated_lrc,
-            merged_lrc,
-            karaoke_json: None,
-            error_type: None,
-            error: None,
+            Ok(NativeResult {
+                ok: true,
+                source: "netease-rust",
+                id: Some(best.id),
+                title: Some(best.title),
+                artist: Some(best.artist),
+                album: Some(best.album),
+                duration_ms: Some(best.duration_ms),
+                lrc,
+                translated_lrc,
+                merged_lrc,
+                karaoke_json: None,
+                error_type: None,
+                error: None,
+            })
         })
-        }).await.map_err(|_| "netease lookup timed out".to_string())?
+        .await
+        .map_err(|_| "netease lookup timed out".to_string())?
     })
 }
-
-
 
 fn build_search_keywords(title: &str, artist: &str, album: &str) -> Vec<String> {
     let mut keywords = Vec::new();
@@ -332,7 +376,8 @@ fn map_song(
         .map(|target| duration_similarity(target, *duration as u64))
         .unwrap_or(0.0);
 
-    let mut score = title_score * 0.50 + artist_score * 0.28 + duration_score * 0.17 + album_score * 0.05;
+    let mut score =
+        title_score * 0.50 + artist_score * 0.28 + duration_score * 0.17 + album_score * 0.05;
     score -= version_penalty(name);
 
     if title_score < 0.18 && artist_score < 0.18 {
@@ -376,7 +421,16 @@ fn duration_similarity(target: u64, candidate: u64) -> f64 {
 fn version_penalty(title: &str) -> f64 {
     let lower = title.to_lowercase();
     let bad_words = [
-        "live", "remix", "cover", "instrumental", "伴奏", "现场", "现场版", "翻唱", "纯音乐", "dj版",
+        "live",
+        "remix",
+        "cover",
+        "instrumental",
+        "伴奏",
+        "现场",
+        "现场版",
+        "翻唱",
+        "纯音乐",
+        "dj版",
     ];
 
     bad_words
@@ -422,7 +476,11 @@ fn dice_coefficient(a: &str, b: &str) -> f64 {
     let b_chars: Vec<char> = b.chars().collect();
 
     if a_chars.len() == 1 || b_chars.len() == 1 {
-        return if a_chars.iter().any(|c| b_chars.contains(c)) { 0.5 } else { 0.0 };
+        return if a_chars.iter().any(|c| b_chars.contains(c)) {
+            0.5
+        } else {
+            0.0
+        };
     }
 
     let a_bigrams = bigrams(&a_chars);
