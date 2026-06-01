@@ -529,4 +529,3 @@ fn merge_lrc(original: Option<&str>, translated: Option<&str>) -> Option<String>
 
     Some(merged)
 }
-
