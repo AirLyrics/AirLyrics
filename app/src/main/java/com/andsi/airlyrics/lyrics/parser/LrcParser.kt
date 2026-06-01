@@ -217,6 +217,7 @@ object LrcParser {
     private fun parseTimeTag(match: MatchResult): Long? {
         val minutes = match.groupValues[1].toLongOrNull() ?: return null
         val seconds = match.groupValues[2].toLongOrNull() ?: return null
+        if (seconds >= 60) return null
         val fractionRaw = match.groupValues.getOrNull(3).orEmpty()
 
         val millis = when (fractionRaw.length) {

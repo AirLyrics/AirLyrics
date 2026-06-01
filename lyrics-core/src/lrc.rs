@@ -100,3 +100,56 @@ fn parse_time_tag(value: &str) -> Option<u64> {
 
     Some(minutes * 60_000 + seconds * 1_000 + millis)
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_lrc_entries_supports_multiple_timestamps_and_sorts() {
+        let entries = parse_lrc_entries("[00:02.50]second\n[00:01.00][00:03.00]shared");
+
+        assert_eq!(
+            entries,
+            vec![
+                (1_000, "shared".to_string()),
+                (2_500, "second".to_string()),
+                (3_000, "shared".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_lrc_entries_ignores_metadata_and_invalid_seconds() {
+        let entries = parse_lrc_entries("[ar:Artist]\n[00:60.00]bad\n[01:00.00]good");
+
+        assert_eq!(entries, vec![(60_000, "good".to_string())]);
+    }
+
+    #[test]
+    fn parse_lrc_entries_supports_millisecond_fraction_widths() {
+        let entries = parse_lrc_entries("[00:01.1]a\n[00:02.12]b\n[00:03.1234]c");
+
+        assert_eq!(
+            entries,
+            vec![
+                (1_100, "a".to_string()),
+                (2_120, "b".to_string()),
+                (3_123, "c".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn format_lrc_time_uses_three_digit_milliseconds() {
+        assert_eq!(format_lrc_time(62_345), "01:02.345");
+    }
+
+    #[test]
+    fn parse_lrc_lines_keeps_latest_text_for_duplicate_timestamps() {
+        let lines = parse_lrc_lines("[00:01.00]first\n[00:01.00]second");
+
+        assert_eq!(lines.get(&1_000), Some(&"second".to_string()));
+    }
+}
