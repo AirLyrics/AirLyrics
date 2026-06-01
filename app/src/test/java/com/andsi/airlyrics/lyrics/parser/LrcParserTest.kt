@@ -81,4 +81,47 @@ class LrcParserTest {
         assertEquals(1, LrcParser.findCurrentIndex(lines, 2_500L))
         assertEquals(2, LrcParser.findCurrentIndex(lines, 99_000L))
     }
+
+    @Test
+    fun parse_ignoresMetadataTagsAndBlankLines() {
+        val lines = LrcParser.parse(
+            """
+            [ar:Artist]
+
+            [ti:Title]
+            [00:01.00]hello
+            """.trimIndent()
+        )
+
+        assertEquals(1, lines.size)
+        assertEquals("hello", lines.single().text)
+    }
+
+    @Test
+    fun parse_ignoresInvalidSecondValues() {
+        val lines = LrcParser.parse(
+            """
+            [00:60.00]bad
+            [01:00.00]good
+            """.trimIndent()
+        )
+
+        assertEquals(listOf("good"), lines.map { it.text })
+    }
+
+    @Test
+    fun validateForStorage_reportsOnlyNonIgnorableInvalidLines() {
+        val result = LrcParser.validateForStorage(
+            """
+            [ar:Artist]
+            not timed
+            [00:01.00]valid
+            [bad]also invalid
+            """.trimIndent()
+        )
+
+        assertEquals(false, result.isValid)
+        assertEquals(listOf(2, 4), result.invalidLineNumbers)
+    }
+
 }
