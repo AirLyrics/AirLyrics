@@ -1,6 +1,5 @@
 [versions]
 androidxTestCore = "1.7.0"
-kotlin = "2.2.21"
 robolectric = "4.13"
 agp = "9.2.1"
 coreKtx = "1.16.0"
@@ -17,5 +16,4 @@ material = { group = "com.google.android.material", name = "material", version.r
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 
 [plugins]
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
