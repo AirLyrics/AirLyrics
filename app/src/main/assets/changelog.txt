@@ -6,3 +6,4 @@
 - Add USER_GUIDE in github documentation
 - Update USER_GUIDE and README
 - Release apk
+- Bugfix: the lyrics keep running after killing the media source app
