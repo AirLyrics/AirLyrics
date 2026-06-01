@@ -1,6 +1,8 @@
 2026-05-31
 
-- v0.1.0
+- v1.0.0
 - Prepare signed release APK build
 - Fix bugs caused by dependabot
 - Add USER_GUIDE in github documentation
+- Update USER_GUIDE and README
+- Release apk
