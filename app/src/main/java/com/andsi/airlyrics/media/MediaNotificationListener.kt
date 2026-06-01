@@ -55,11 +55,12 @@ class MediaNotificationListener : NotificationListenerService() {
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         super.onNotificationPosted(sbn)
+        scheduleMediaSessionRescan()
+    }
 
-        // Some players refresh sessions only after notification changes, so scan once with a delay.
-        handler.postDelayed({
-            setupMediaSessions()
-        }, 200)
+    override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        super.onNotificationRemoved(sbn)
+        scheduleMediaSessionRescan()
     }
 
     private fun setupMediaSessions(activeSessions: List<MediaController>? = null) {
@@ -75,6 +76,7 @@ class MediaNotificationListener : NotificationListenerService() {
                         controllers[packageName]?.unregisterCallback(callback)
                     }
                     controllers.remove(packageName)
+                    publishMediaSourceLost(packageName)
                 }
 
             for (controller in sessions) {
@@ -102,6 +104,7 @@ class MediaNotificationListener : NotificationListenerService() {
                     override fun onSessionDestroyed() {
                         callbacks.remove(packageName)
                         controllers.remove(packageName)
+                        publishMediaSourceLost(packageName)
                     }
                 }
 
@@ -116,12 +119,35 @@ class MediaNotificationListener : NotificationListenerService() {
         }
     }
 
+    private fun scheduleMediaSessionRescan() {
+        // Some players refresh sessions only after notification changes, so scan once with a delay.
+        handler.postDelayed({
+            setupMediaSessions()
+        }, 200)
+    }
+
     private fun clearControllers() {
+        val lostPackages = controllers.keys.toList()
         callbacks.forEach { (packageName, callback) ->
             controllers[packageName]?.unregisterCallback(callback)
         }
         callbacks.clear()
         controllers.clear()
+        lostPackages.forEach { publishMediaSourceLost(it) }
+    }
+
+    private fun publishMediaSourceLost(packageName: String) {
+        if (packageName.isBlank()) return
+
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "media source lost: source=$packageName")
+        }
+
+        val intent = Intent(BroadcastActions.MEDIA_SOURCE_LOST).apply {
+            setPackage(this@MediaNotificationListener.packageName)
+            putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, packageName)
+        }
+        sendBroadcast(intent)
     }
 
     private fun publishMediaInfo(controller: MediaController) {

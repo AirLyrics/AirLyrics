@@ -19,6 +19,7 @@ object BroadcastActions {
     const val NOTIFICATION_TOGGLE_ADJUST_MODE = "com.andsi.airlyrics.NOTIFICATION_TOGGLE_ADJUST_MODE"
     const val QUICK_CONTROL_CHANGED = "com.andsi.airlyrics.QUICK_CONTROL_CHANGED"
     const val MEDIA_UPDATE = "com.andsi.airlyrics.MEDIA_UPDATE"
+    const val MEDIA_SOURCE_LOST = "com.andsi.airlyrics.MEDIA_SOURCE_LOST"
     const val IMPORT_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
     const val SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
     const val APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"

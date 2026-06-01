@@ -64,9 +64,16 @@ class FloatingLyricsService : Service() {
 
     private val mediaReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action != BroadcastActions.MEDIA_UPDATE) return
-
+            val action = intent?.action ?: return
             val sourcePackage = intent.getStringExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE).orEmpty()
+
+            if (action == BroadcastActions.MEDIA_SOURCE_LOST) {
+                handleMediaSourceLost(sourcePackage)
+                return
+            }
+
+            if (action != BroadcastActions.MEDIA_UPDATE) return
+
             val title = intent.getStringExtra("title").orEmpty()
             val artist = intent.getStringExtra("artist").orEmpty()
             val album = intent.getStringExtra("album").orEmpty()
@@ -154,13 +161,30 @@ class FloatingLyricsService : Service() {
     }
 
     private fun registerMediaReceiver() {
-        val filter = IntentFilter(BroadcastActions.MEDIA_UPDATE)
+        val filter = IntentFilter().apply {
+            addAction(BroadcastActions.MEDIA_UPDATE)
+            addAction(BroadcastActions.MEDIA_SOURCE_LOST)
+        }
         ContextCompat.registerReceiver(
             this,
             mediaReceiver,
             filter,
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+    }
+
+    private fun handleMediaSourceLost(sourcePackage: String) {
+        if (sourcePackage.isBlank()) return
+        if (sourcePackage != selectedSourcePackage) return
+        if (currentMedia.isEmpty || currentMedia.sourcePackage != sourcePackage) return
+
+        val pausedPosition = renderer.getEstimatedPositionMs()
+        currentMedia = currentMedia.copy(
+            isPlaying = false,
+            positionMs = pausedPosition
+        )
+        renderer.updatePlayback(positionMs = pausedPosition, isPlaying = false)
+        renderer.refresh()
     }
 
     private fun applyLyricsOffset(offsetMs: Long) {

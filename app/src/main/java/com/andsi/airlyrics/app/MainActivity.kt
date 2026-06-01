@@ -144,8 +144,10 @@ class MainActivity : AppCompatActivity() {
 
     internal val mediaStatusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action != BroadcastActions.MEDIA_UPDATE) return
-            scheduleMediaPageRefresh()
+            when (intent?.action) {
+                BroadcastActions.MEDIA_UPDATE,
+                BroadcastActions.MEDIA_SOURCE_LOST -> scheduleMediaPageRefresh()
+            }
         }
     }
 
@@ -734,7 +736,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun registerMediaStatusReceiver() {
-        val filter = IntentFilter(BroadcastActions.MEDIA_UPDATE)
+        val filter = IntentFilter().apply {
+            addAction(BroadcastActions.MEDIA_UPDATE)
+            addAction(BroadcastActions.MEDIA_SOURCE_LOST)
+        }
         ContextCompat.registerReceiver(
             this,
             mediaStatusReceiver,
