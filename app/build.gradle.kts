@@ -55,6 +55,38 @@ val hasPartialReleaseSigning = releaseSigningValues.any { !it.isNullOrBlank() } 
 
 fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } ?: rootProject.file(path)
 
+fun isReleaseTaskName(name: String): Boolean {
+    val simpleName = name.substringAfterLast(":")
+    return simpleName.contains("Release", ignoreCase = true)
+}
+
+gradle.taskGraph.whenReady {
+    val requiresReleaseSigning = allTasks.any { isReleaseTaskName(it.name) }
+
+    if (requiresReleaseSigning && hasPartialReleaseSigning) {
+        throw GradleException(
+            "Incomplete release signing configuration. Please set all four values: " +
+                "airlyrics.release.storeFile, airlyrics.release.storePassword, " +
+                "airlyrics.release.keyAlias, airlyrics.release.keyPassword."
+        )
+    }
+
+    if (requiresReleaseSigning && !hasReleaseSigning) {
+        throw GradleException(
+            "Release signing configuration is required for release builds. Please set all four values: " +
+                "airlyrics.release.storeFile, airlyrics.release.storePassword, " +
+                "airlyrics.release.keyAlias, airlyrics.release.keyPassword."
+        )
+    }
+
+    if (requiresReleaseSigning && hasReleaseSigning) {
+        val resolvedStoreFile = releaseSigningStoreFile(releaseStoreFile!!)
+        if (!resolvedStoreFile.isFile) {
+            throw GradleException("Release keystore not found: ${resolvedStoreFile.absolutePath}")
+        }
+    }
+}
+
 android {
     namespace = "com.andsi.airlyrics"
     compileSdk = 36
@@ -74,19 +106,9 @@ android {
     }
 
     signingConfigs {
-        if (hasPartialReleaseSigning) {
-            throw GradleException(
-                "Incomplete release signing configuration. Please set all four values: " +
-                    "airlyrics.release.storeFile, airlyrics.release.storePassword, " +
-                    "airlyrics.release.keyAlias, airlyrics.release.keyPassword."
-            )
-        }
         if (hasReleaseSigning) {
             create("release") {
                 val resolvedStoreFile = releaseSigningStoreFile(releaseStoreFile!!)
-                if (!resolvedStoreFile.isFile) {
-                    throw GradleException("Release keystore not found: ${resolvedStoreFile.absolutePath}")
-                }
                 storeFile = resolvedStoreFile
                 storePassword = releaseStorePassword!!
                 keyAlias = releaseKeyAlias!!

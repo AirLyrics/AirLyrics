@@ -357,7 +357,7 @@ async fn fetch_lrc_with_matcher_fallback(
             .matcher_subtitle(title, artist, SubtitleFormat::Lrc, Some(duration), Some(12.0))
             .await
         {
-            Ok(subtitle) => return Ok(subtitle),
+            Ok(subtitle) => Ok(subtitle),
             Err(first_error) => client
                 .matcher_subtitle(title, artist, SubtitleFormat::Lrc, None, None)
                 .await
