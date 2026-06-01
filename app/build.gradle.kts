@@ -2,6 +2,7 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
 }
 
 val localProperties = Properties().apply {
@@ -58,6 +59,7 @@ fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } 
 android {
     namespace = "com.andsi.airlyrics"
     compileSdk = 36
+    ndkVersion = "26.3.11579264"
 
     defaultConfig {
         applicationId = "com.andsi.airlyrics"
@@ -111,9 +113,19 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 dependencies {
@@ -125,9 +137,11 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20260522")
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.robolectric)
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
-    androidTestImplementation("androidx.test:core:1.7.0")
+    androidTestImplementation(libs.androidx.test.core)
 }
 
 

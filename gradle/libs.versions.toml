@@ -1,4 +1,7 @@
 [versions]
+androidxTestCore = "1.7.0"
+kotlin = "2.2.21"
+robolectric = "4.13"
 agp = "9.2.1"
 coreKtx = "1.16.0"
 appcompat = "1.7.1"
@@ -6,11 +9,13 @@ material = "1.14.0"
 activityKtx = "1.13.0"
 
 [libraries]
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
 
 [plugins]
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "agp" }
-
