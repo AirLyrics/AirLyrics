@@ -1,5 +1,7 @@
 # User Guide
 
+[English](USER_GUIDE.md) · [简体中文](USER_GUIDE.zh-CN.md)
+
 Thank you for reading this guide!
 
 ## Table of Contents

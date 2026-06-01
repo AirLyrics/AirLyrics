@@ -1,5 +1,7 @@
 # 用户说明书
 
+[English](USER_GUIDE.md) · [简体中文](USER_GUIDE.zh-CN.md)
+
 感谢您愿意使用这份说明书！
 
 ## 目录
