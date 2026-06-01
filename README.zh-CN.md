@@ -121,6 +121,7 @@ AirLyrics 会用到以下 Android 权限：
 | 文档 | 说明 |
 | --- | --- |
 | [文档首页](docs/README.zh-CN.md) | 中文文档索引 |
+| [使用说明书](docs/USER_GUIDE.zh-CN.md) | 项目使用说明 |
 | [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
 | [贡献指南](docs/CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与代码位置 |
 | [项目架构](docs/ARCHITECTURE.zh-CN.md) | 模块划分与运行流程 |
@@ -136,10 +137,10 @@ AirLyrics 会用到以下 Android 权限：
 - Android NDK `26.3.11579264` 推荐
 - Rust stable via `rustup`
 - `cargo-ndk`
-- Rust Android targets for the app ABIs:
-  - `aarch64-linux-android` for `arm64-v8a`
-  - `armv7-linux-androideabi` for `armeabi-v7a`
-  - `x86_64-linux-android` for `x86_64`
+- Rust Android target：
+  - 默认 `arm64-v8a` 构建需要 `aarch64-linux-android`
+- 可选 Rust Android target：
+  - 仅在使用 `-Pairlyrics.buildX86_64=true` 构建时需要 `x86_64-linux-android`
 
 构建 SDK 相关配置时，推荐使用 Android Studio。
 

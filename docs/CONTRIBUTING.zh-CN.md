@@ -13,9 +13,24 @@
 请在提交 PR 前尽量运行以下基础检查：
 
 ```bash
-./gradlew lint -Pairlyrics.skipRustBuild=true
+./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
+```
+
+如果修改了 Android UI 或应用集成逻辑，也可以在不重新构建 Rust 的情况下构建 debug APK：
+
+```bash
+./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
+```
+
+如果修改了 Rust 歌词核心，请额外运行：
+
+```bash
+cd lyrics-core
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
 ```
 
 如果改动涉及歌词解析、本地歌词存储、歌词导入、Android 存储权限或 SAF 文件夹行为，请额外在真机或模拟器上运行：
@@ -42,7 +57,9 @@
 
 ### 添加歌词 Provider
 
-新增歌词来源时，请保持 Provider 的职责单一。
+AirLyrics 是悬浮歌词应用，不是找歌词项目。除非目前的歌词源已经基本无法满足正常使用，否则不建议继续添加在线歌词源，优先建议用户手动导入本地歌词。
+
+确实需要新增歌词来源时，请保持 Provider 的职责单一。
 
 1. 在 `lyrics/providers/` 下实现 `LyricsProvider`。
 2. 注册到 `LyricsRepository`。

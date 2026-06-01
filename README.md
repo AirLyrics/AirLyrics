@@ -121,6 +121,7 @@ Project documentation is in the docs directory.
 | Document | Description |
 | --- | --- |
 | [Documentation Home](docs/README.md) | English documentation index |
+| [User Guide](docs/USER_GUIDE.md) | Project usage guide |
 | [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format |
 | [Contributing](docs/CONTRIBUTING.md) | Development environment, PR workflow and code locations |
 | [Architecture](docs/ARCHITECTURE.md) | Module layout and runtime flow |
@@ -136,10 +137,10 @@ Project documentation is in the docs directory.
 - Android NDK `26.3.11579264` recommended
 - Rust stable via `rustup`
 - `cargo-ndk`
-- Rust Android targets for the app ABIs:
-  - `aarch64-linux-android` for `arm64-v8a`
-  - `armv7-linux-androideabi` for `armeabi-v7a`
-  - `x86_64-linux-android` for `x86_64`
+- Rust Android target:
+  - `aarch64-linux-android` is required for the default `arm64-v8a` build
+- Optional Rust Android target:
+  - `x86_64-linux-android` is only needed when building with `-Pairlyrics.buildX86_64=true`
 
 Android Studio is recommended when configuring Android SDK related settings.
 

@@ -13,9 +13,24 @@ If available, images or videos can make the explanation easier to understand.
 Please run the basic checks before submitting a PR:
 
 ```bash
-./gradlew lint -Pairlyrics.skipRustBuild=true
+./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
+```
+
+If you changed Android UI or app integration code, you can also build a debug APK without rebuilding Rust:
+
+```bash
+./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
+```
+
+If you changed the Rust lyric core, also run:
+
+```bash
+cd lyrics-core
+cargo fmt --check
+cargo clippy --all-targets -- -D warnings
+cargo test
 ```
 
 If your changes affect lyrics parsing, local lyrics storage, lyrics import, Android storage permissions, or SAF folder behavior, also run the following check on a real device or emulator:
@@ -42,7 +57,9 @@ Do not read or write raw `SharedPreferences` directly from UI pages or Services 
 
 ### Adding a lyrics provider
 
-When adding a lyrics source, keep the Provider responsibility narrow.
+AirLyrics is a floating lyrics app, not a lyrics search project. Unless the current lyrics sources can no longer satisfy normal use, please prefer manual local lyrics import instead of adding more online providers.
+
+When a new provider is truly needed, keep the Provider responsibility narrow.
 
 1. Implement `LyricsProvider` under `lyrics/providers/`.
 2. Register it in `LyricsRepository`.
