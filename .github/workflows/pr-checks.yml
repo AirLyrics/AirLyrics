@@ -5,13 +5,18 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  checks:
-    name: Lint, unit tests, and localization
+  android-quality:
+    name: Android lint, tests, and localization
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +27,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
@@ -35,11 +40,64 @@ jobs:
           chmod +x ./gradlew
           chmod +x ./scripts/check_localization.sh
 
-      - name: Run lint
-        run: ./gradlew lint -Pairlyrics.skipRustBuild=true
+      - name: Run Android lint
+        run: ./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true --stacktrace
 
-      - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
+      - name: Run JVM unit tests
+        run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true --stacktrace
 
       - name: Check localization
         run: ./scripts/check_localization.sh
+
+      - name: Upload Android lint reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-lint-reports
+          path: |
+            app/build/reports/lint-results-*.html
+            app/build/reports/lint-results-*.xml
+          if-no-files-found: ignore
+
+      - name: Upload JVM test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unit-test-reports
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+
+  android-debug-build:
+    name: Debug APK build without Rust rebuild
+    runs-on: ubuntu-latest
+    needs: android-quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Prepare Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true --stacktrace
+
+      - name: Upload debug APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: airlyrics-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore

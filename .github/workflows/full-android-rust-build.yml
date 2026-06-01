@@ -1,0 +1,77 @@
+name: Full Android Rust Build
+
+on:
+  pull_request:
+    paths:
+      - 'lyrics-core/**'
+      - 'app/build.gradle.kts'
+      - 'gradle/libs.versions.toml'
+      - 'app/src/main/java/com/andsi/airlyrics/lyrics/providers/**Native*.kt'
+      - '.github/workflows/full-android-rust-build.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'lyrics-core/**'
+      - 'app/build.gradle.kts'
+      - 'gradle/libs.versions.toml'
+      - 'app/src/main/java/com/andsi/airlyrics/lyrics/providers/**Native*.kt'
+      - '.github/workflows/full-android-rust-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: full-android-rust-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-arm64-debug-apk:
+    name: Build arm64 debug APK with Rust JNI
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;26.3.11579264"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/26.3.11579264" >> "$GITHUB_ENV"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@1.80.0
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Prepare Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Build debug APK with Rust core
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: airlyrics-debug-apk-with-rust
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

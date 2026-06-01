@@ -1,0 +1,53 @@
+name: Rust Checks
+
+on:
+  pull_request:
+    paths:
+      - 'lyrics-core/**'
+      - '.github/workflows/rust-checks.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'lyrics-core/**'
+      - '.github/workflows/rust-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust-quality:
+    name: Rust fmt, clippy, and tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: lyrics-core
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@1.80.0
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: lyrics-core
+
+      - name: Check Rust formatting
+        run: cargo fmt --check
+
+      - name: Run Rust clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run Rust tests
+        run: cargo test
