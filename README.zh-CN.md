@@ -47,6 +47,8 @@ AirLyrics 正在持续开发中。
 
 https://github.com/AirLyrics/AirLyrics/releases
 
+系统要求：Android 8.0 或更高版本。
+
 安装后，请您授予必要权限，并选择需要跟随的音乐应用。
 
 ---
