@@ -346,4 +346,5 @@ Enhanced LRC recommended format:
     <string name="ui_width">Width</string>
     <string name="ui_window_layout">Window layout</string>
     <string name="ui_yay">Yay!</string>
+    <string name="ui_overlay_update_failed">Overlay update failed</string>
 </resources>

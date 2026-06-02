@@ -122,7 +122,20 @@ class FloatingLyricsService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        runCatching {
+            handleCommand(intent)
+        }.onFailure {
+            // Keep the overlay's current truth intact for non-window command failures.
+            // WindowManager operations already hide/broadcast from FloatingWindowController.
+            refreshQuickControls(getString(R.string.ui_overlay_update_failed))
+        }
+
+        return START_STICKY
+    }
+
+    private fun handleCommand(intent: Intent?) {
         when (intent?.action) {
+            null -> restoreFromDesiredState()
             BroadcastActions.SHOW -> showLyrics(feedback = null)
             BroadcastActions.HIDE -> {
                 hideLyrics(feedback = null)
@@ -137,8 +150,9 @@ class FloatingLyricsService : Service() {
             BroadcastActions.NOTIFICATION_TOGGLE_CLICK_THROUGH -> toggleClickThroughFromNotification()
             BroadcastActions.NOTIFICATION_TOGGLE_ADJUST_MODE -> toggleAdjustModeFromNotification()
             BroadcastActions.APPLY_STYLE -> {
-                windowController.applyStyle()
-                renderer.refresh()
+                val applied = windowController.applyStyle()
+                if (applied) renderer.refresh()
+                refreshQuickControls(if (applied) null else getString(R.string.ui_overlay_update_failed))
             }
             BroadcastActions.RELOAD_LYRICS -> reloadCurrentLyrics()
             BroadcastActions.APPLY_LYRICS_OFFSET -> applyLyricsOffset(
@@ -156,8 +170,6 @@ class FloatingLyricsService : Service() {
                 importLyrics(uri = uri, overwrite = intent.getBooleanExtra(BroadcastActions.EXTRA_OVERWRITE_LYRICS, true))
             }
         }
-
-        return START_STICKY
     }
 
     private fun registerMediaReceiver() {
@@ -365,35 +377,61 @@ class FloatingLyricsService : Service() {
         }
     }
 
+    private fun restoreFromDesiredState() {
+        selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
+        if (QuickFloatingStore.isDesiredVisible(this)) {
+            showLyrics(feedback = null)
+        } else {
+            broadcastWindowVisibility(false)
+            refreshQuickControls()
+        }
+    }
+
     private fun showLyrics(feedback: String? = null): Boolean {
-        val shown = windowController.show()
-        QuickFloatingStore.setVisible(this, shown)
+        QuickFloatingStore.setDesiredVisible(this, true)
+        val shown = runCatching { windowController.show() }.getOrElse {
+            windowController.hide()
+            false
+        }
+        if (!shown) {
+            QuickFloatingStore.setDesiredVisible(this, false)
+            broadcastWindowVisibility(false)
+        }
         refreshQuickControls(feedback)
         return shown
     }
 
     private fun hideLyrics(feedback: String? = null) {
-        if (::windowController.isInitialized) {
-            windowController.hide()
+        QuickFloatingStore.setDesiredVisible(this, false)
+        val hidden = if (::windowController.isInitialized) {
+            runCatching { windowController.hide() }.getOrDefault(false)
+        } else {
+            true
         }
-        QuickFloatingStore.setVisible(this, false)
+        val stillVisible = ::windowController.isInitialized && windowController.isVisible
+        if (hidden || !stillVisible) {
+            broadcastWindowVisibility(false)
+        }
         refreshQuickControls(feedback)
     }
 
-    private fun setLocked(locked: Boolean, feedback: String? = null) {
-        windowController.setLocked(locked)
-        refreshQuickControls(feedback)
+    private fun setLocked(locked: Boolean, feedback: String? = null): Boolean {
+        val updated = windowController.setLocked(locked)
+        refreshQuickControls(if (updated) feedback else getString(R.string.ui_overlay_update_failed))
+        return updated
     }
 
-    private fun setClickThrough(clickThrough: Boolean, feedback: String? = null) {
-        windowController.setClickThrough(clickThrough)
-        refreshQuickControls(feedback)
+    private fun setClickThrough(clickThrough: Boolean, feedback: String? = null): Boolean {
+        val updated = windowController.setClickThrough(clickThrough)
+        refreshQuickControls(if (updated) feedback else getString(R.string.ui_overlay_update_failed))
+        return updated
     }
 
     private fun toggleVisibleFromNotification() {
         val nextVisible = !windowController.isVisible
         if (nextVisible) {
             if (!showLyrics(feedback = getString(R.string.ui_shown))) {
+                QuickFloatingStore.setDesiredVisible(this, false)
                 refreshQuickControls(getString(R.string.ui_overlay_permission_required))
                 showQuickFeedback(getString(R.string.ui_enable_overlay_permission_first))
             }
@@ -420,10 +458,12 @@ class FloatingLyricsService : Service() {
             !FloatingLyricsStyleStore.isClickThrough(this)
         val nextEditing = !currentlyEditing
 
-        windowController.setLocked(!nextEditing)
-        windowController.setClickThrough(!nextEditing)
+        val lockedUpdated = windowController.setLocked(!nextEditing)
+        val clickThroughUpdated = windowController.setClickThrough(!nextEditing)
 
-        if (nextEditing) {
+        if (!lockedUpdated || !clickThroughUpdated) {
+            refreshQuickControls(getString(R.string.ui_overlay_update_failed))
+        } else if (nextEditing) {
             refreshQuickControls(getString(R.string.ui_draggable))
         } else {
             refreshQuickControls(getString(R.string.ui_locked_click_through))
@@ -461,9 +501,10 @@ class FloatingLyricsService : Service() {
     }
 
     private fun broadcastQuickControlState() {
+        val actualVisible = ::windowController.isInitialized && windowController.isVisible
         val intent = Intent(BroadcastActions.QUICK_CONTROL_CHANGED).apply {
             setPackage(packageName)
-            putExtra(BroadcastActions.EXTRA_WINDOW_VISIBLE, ::windowController.isInitialized && windowController.isVisible)
+            putExtra(BroadcastActions.EXTRA_WINDOW_VISIBLE, actualVisible)
             putExtra(BroadcastActions.EXTRA_LOCKED, FloatingLyricsStyleStore.isLocked(this@FloatingLyricsService))
             putExtra(BroadcastActions.EXTRA_CLICK_THROUGH, FloatingLyricsStyleStore.isClickThrough(this@FloatingLyricsService))
         }
@@ -477,6 +518,7 @@ class FloatingLyricsService : Service() {
         if (::windowController.isInitialized) {
             windowController.hide(notifyVisibilityChanged = false)
         }
+        broadcastWindowVisibility(false)
         super.onDestroy()
     }
 

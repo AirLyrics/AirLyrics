@@ -347,4 +347,5 @@ This is a lyric preview</string>
     <string name="ui_width">宽度</string>
     <string name="ui_window_layout">窗口布局</string>
     <string name="ui_yay">我会非常非常非常开心的！</string>
+    <string name="ui_overlay_update_failed">悬浮窗更新失败</string>
 </resources>

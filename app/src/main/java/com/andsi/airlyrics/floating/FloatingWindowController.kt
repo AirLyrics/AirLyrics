@@ -13,7 +13,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.i18n.displayText
 
 /**
  * Owns the floating lyrics window itself: creation, removal, dragging,
@@ -43,12 +42,15 @@ class FloatingWindowController(
         get() = lyricsView != null
 
     fun show(): Boolean {
-        if (!Settings.canDrawOverlays(context)) return false
+        if (!Settings.canDrawOverlays(context)) {
+            hideAfterFailure()
+            return false
+        }
 
         lyricsView?.let {
-            applyStyle()
-            onVisibilityChanged(true)
-            return true
+            val refreshed = applyStyle()
+            if (refreshed) onVisibilityChanged(true)
+            return refreshed
         }
 
         val view = TextView(context).apply {
@@ -71,18 +73,25 @@ class FloatingWindowController(
 
         view.setOnTouchListener { _, event -> handleTouch(view, event) }
 
-        lyricsView = view
-        params = layoutParams
-        applyStyle(view)
-        windowManager.addView(view, layoutParams)
-        onVisibilityChanged(true)
-        return true
+        return runCatching {
+            applyStyle(view)
+            windowManager.addView(view, layoutParams)
+            lyricsView = view
+            params = layoutParams
+            onVisibilityChanged(true)
+            true
+        }.getOrElse {
+            hideAfterFailure()
+            false
+        }
     }
 
-    fun hide(notifyVisibilityChanged: Boolean = true) {
+    fun hide(notifyVisibilityChanged: Boolean = true): Boolean {
         val view = lyricsView
-        if (view != null) {
-            runCatching { windowManager.removeView(view) }
+        val removed = if (view != null) {
+            runCatching { windowManager.removeView(view) }.isSuccess
+        } else {
+            true
         }
 
         lyricsView = null
@@ -90,27 +99,41 @@ class FloatingWindowController(
         if (notifyVisibilityChanged) {
             onVisibilityChanged(false)
         }
+        return removed
     }
 
     fun setText(text: CharSequence) {
-        lyricsView?.text = text
+        runCatching { lyricsView?.text = text }
+            .onFailure { hideAfterFailure() }
     }
 
-    fun applyStyle() {
-        val view = lyricsView ?: return
-        applyStyle(view)
-        val p = params ?: return
-        windowManager.updateViewLayout(view, p)
+    fun applyStyle(): Boolean {
+        val view = lyricsView ?: return true
+        val p = params ?: return true
+        return runCatching {
+            applyStyle(view)
+            windowManager.updateViewLayout(view, p)
+            true
+        }.getOrElse {
+            hideAfterFailure()
+            false
+        }
     }
 
-    fun setLocked(locked: Boolean) {
+    fun setLocked(locked: Boolean): Boolean {
+        val previousLocked = FloatingLyricsStyleStore.isLocked(context)
         FloatingLyricsStyleStore.setLocked(context, locked)
-        updateWindowBehavior()
+        val updated = updateWindowBehavior()
+        if (!updated) FloatingLyricsStyleStore.setLocked(context, previousLocked)
+        return updated
     }
 
-    fun setClickThrough(clickThrough: Boolean) {
+    fun setClickThrough(clickThrough: Boolean): Boolean {
+        val previousClickThrough = FloatingLyricsStyleStore.isClickThrough(context)
         FloatingLyricsStyleStore.setClickThrough(context, clickThrough)
-        updateWindowBehavior()
+        val updated = updateWindowBehavior()
+        if (!updated) FloatingLyricsStyleStore.setClickThrough(context, previousClickThrough)
+        return updated
     }
 
     private fun handleTouch(view: View, event: MotionEvent): Boolean {
@@ -132,8 +155,9 @@ class FloatingWindowController(
             MotionEvent.ACTION_MOVE -> {
                 p.x = startX + (event.rawX - touchStartX).toInt()
                 p.y = startY + (event.rawY - touchStartY).toInt()
-                windowManager.updateViewLayout(view, p)
-                true
+                runCatching { windowManager.updateViewLayout(view, p) }
+                    .onFailure { hideAfterFailure() }
+                    .isSuccess
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -179,11 +203,21 @@ class FloatingWindowController(
         }
     }
 
-    private fun updateWindowBehavior() {
-        val view = lyricsView ?: return
-        val p = params ?: return
-        p.flags = windowFlagsForCurrentBehavior()
-        windowManager.updateViewLayout(view, p)
+    private fun updateWindowBehavior(): Boolean {
+        val view = lyricsView ?: return true
+        val p = params ?: return true
+        return runCatching {
+            p.flags = windowFlagsForCurrentBehavior()
+            windowManager.updateViewLayout(view, p)
+            true
+        }.getOrElse {
+            hideAfterFailure()
+            false
+        }
+    }
+
+    private fun hideAfterFailure() {
+        hide(notifyVisibilityChanged = true)
     }
 
     private fun windowFlagsForCurrentBehavior(): Int {

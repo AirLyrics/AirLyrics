@@ -258,7 +258,7 @@ class MainActivity : AppCompatActivity() {
 
             val visible = intent.getBooleanExtra(
                 BroadcastActions.EXTRA_WINDOW_VISIBLE,
-                isQuickFloatingVisible()
+                quickFloatingVisible
             )
             locked = intent.getBooleanExtra(
                 BroadcastActions.EXTRA_LOCKED,
@@ -268,7 +268,7 @@ class MainActivity : AppCompatActivity() {
                 BroadcastActions.EXTRA_CLICK_THROUGH,
                 FloatingLyricsStyleStore.isClickThrough(this@MainActivity)
             )
-            updateQuickFloatingVisible(visible)
+            updateQuickFloatingActualVisible(visible)
             updateTabs(this@MainActivity)
         }
     }
@@ -278,7 +278,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         locked = FloatingLyricsStyleStore.isLocked(this)
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
-        quickFloatingVisible = isQuickFloatingVisible()
+        quickFloatingVisible = false
         applySystemBarsTheme()
         registerBackNavigationCallback()
         setContentView(createMainView())
@@ -293,7 +293,6 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         locked = FloatingLyricsStyleStore.isLocked(this)
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
-        quickFloatingVisible = isQuickFloatingVisible()
         restoreFloatingLyricsIfNeeded()
         renderCurrentPage()
     }
@@ -582,6 +581,10 @@ class MainActivity : AppCompatActivity() {
         floatingController.updateQuickFloatingVisible(visible)
     }
 
+    internal fun updateQuickFloatingActualVisible(visible: Boolean) {
+        floatingController.updateQuickFloatingActualVisible(visible)
+    }
+
     internal fun toggleLock() {
         floatingController.toggleLock()
     }
@@ -749,11 +752,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun startLyricsService(intent: Intent) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
-        } else {
-            startService(intent)
-        }
+        startLyricsServiceSafely(intent)
+    }
+
+    internal fun startLyricsServiceSafely(intent: Intent): Boolean {
+        return runCatching {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        }.isSuccess
     }
 
     internal fun dp(value: Int): Int {
