@@ -4,7 +4,6 @@ import android.content.res.Resources
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
-import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsSearchRequest
@@ -89,11 +88,10 @@ object MusixmatchLyricsProvider : LyricsProvider {
                     }
                     return@runCatching null
                 }
-                throw LyricsLookupException(
+                throw json.toNativeLyricsLookupException(
                     providerId = id,
                     providerName = name,
-                    errorType = errorType,
-                    detailMessage = json.optString("error", "Musixmatch lookup failed")
+                    defaultMessage = "Musixmatch lookup failed"
                 )
             }
 
@@ -136,6 +134,9 @@ object MusixmatchLyricsProvider : LyricsProvider {
                 errorType = json.optString("error_type", "").ifBlank { null },
                 errorMessage = json.optString("error", "").ifBlank { null }
             )
-        }
+        }.recoverNativeLoadFailure(
+            providerId = id,
+            providerName = name
+        )
     }
 }

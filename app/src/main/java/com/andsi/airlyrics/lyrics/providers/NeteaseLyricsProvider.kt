@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.providers
 
+import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsSearchRequest
@@ -60,7 +61,16 @@ object NeteaseLyricsProvider : LyricsProvider {
 
             val json = JSONObject(jsonText)
             if (!json.optBoolean("ok", false)) {
-                return@runCatching null
+                val errorType = LyricsLookupErrorType.fromNativeName(json.optString("error_type", ""))
+                if (errorType == LyricsLookupErrorType.NotFound) {
+                    return@runCatching null
+                }
+
+                throw json.toNativeLyricsLookupException(
+                    providerId = id,
+                    providerName = name,
+                    defaultMessage = "NetEase lookup failed"
+                )
             }
 
             val originalLrc = json.optString("lrc", "")
@@ -84,6 +94,9 @@ object NeteaseLyricsProvider : LyricsProvider {
                 lrc = primaryLrc,
                 translatedLrc = translatedLrc
             )
-        }
+        }.recoverNativeLoadFailure(
+            providerId = id,
+            providerName = name
+        )
     }
 }
