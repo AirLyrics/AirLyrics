@@ -12,7 +12,7 @@ A lightweight Android floating lyrics app that automatically detects current med
 
 <br />
 
-[Download](https://github.com/AirLyrics/AirLyrics/releases) · [Documentation](docs/README.md) · [Report Bug](https://github.com/AirLyrics/AirLyrics/issues)
+[Download](https://github.com/AirLyrics/AirLyrics/releases) · [Documentation](docs/README.md) · [Privacy](PRIVACY.md) · [Report Bug](https://github.com/AirLyrics/AirLyrics/issues)
 
 <br />
 
@@ -114,6 +114,8 @@ AirLyrics uses these Android permissions:
 | Notification access | Detect current media playback |
 | File picker | Import local lyrics files |
 
+See [Privacy Policy](PRIVACY.md) for details about permissions, local data and online lyrics search.
+
 ---
 
 ## Documentation
@@ -123,6 +125,7 @@ Project documentation is in the docs directory.
 | Document | Description |
 | --- | --- |
 | [Documentation Home](docs/README.md) | English documentation index |
+| [Privacy Policy](PRIVACY.md) | Permissions, local data and online lyrics search privacy notes |
 | [User Guide](docs/USER_GUIDE.md) | Project usage guide |
 | [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format |
 | [Contributing](docs/CONTRIBUTING.md) | Development environment, PR workflow and code locations |

@@ -1,0 +1,7 @@
+v1.0.0
+
+• Prepare signed release APK build
+• Fix bugs caused by dependency updates
+• Add user guide and update documentation
+• Release APK
+• Fix lyrics continuing after the media source app is killed

@@ -12,7 +12,7 @@ Android 手机端悬浮歌词应用。
 
 <br />
 
-[下载](https://github.com/AirLyrics/AirLyrics/releases) · [文档](docs/README.zh-CN.md) · [反馈问题](https://github.com/AirLyrics/AirLyrics/issues)
+[下载](https://github.com/AirLyrics/AirLyrics/releases) · [文档](docs/README.zh-CN.md) · [隐私](PRIVACY.zh-CN.md) · [反馈问题](https://github.com/AirLyrics/AirLyrics/issues)
 
 <br />
 
@@ -114,6 +114,8 @@ AirLyrics 会用到以下 Android 权限：
 | 通知访问权限 | 检测当前播放媒体信息 |
 | 文件选择器 | 导入本地歌词文件 |
 
+权限、本地数据与联网歌词搜索的说明见 [隐私政策](PRIVACY.zh-CN.md)。
+
 ---
 
 ## 文档
@@ -123,6 +125,7 @@ AirLyrics 会用到以下 Android 权限：
 | 文档 | 说明 |
 | --- | --- |
 | [文档首页](docs/README.zh-CN.md) | 中文文档索引 |
+| [隐私政策](PRIVACY.zh-CN.md) | 权限、本地数据与联网歌词搜索说明 |
 | [使用说明书](docs/USER_GUIDE.zh-CN.md) | 项目使用说明 |
 | [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
 | [贡献指南](docs/CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与代码位置 |
