@@ -71,13 +71,6 @@ gradle.taskGraph.whenReady {
         )
     }
 
-    if (requiresReleaseSigning && !hasReleaseSigning) {
-        throw GradleException(
-            "Release signing configuration is required for release builds. Please set all four values: " +
-                "airlyrics.release.storeFile, airlyrics.release.storePassword, " +
-                "airlyrics.release.keyAlias, airlyrics.release.keyPassword."
-        )
-    }
 
     if (requiresReleaseSigning && hasReleaseSigning) {
         val resolvedStoreFile = releaseSigningStoreFile(releaseStoreFile!!)
@@ -96,8 +89,8 @@ android {
         applicationId = "com.andsi.airlyrics"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.0.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
