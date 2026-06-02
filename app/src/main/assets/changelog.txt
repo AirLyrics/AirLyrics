@@ -7,5 +7,8 @@
 - Update USER_GUIDE and README
 - Release apk
 - Bugfix: the lyrics keep running after killing the media source app
+
+2026-6-2
 - Bugfix: fix floating lyrics UI and service state sync
+- Bugfix: Prevent stalled lyrics lookups from blocking new requests
 
