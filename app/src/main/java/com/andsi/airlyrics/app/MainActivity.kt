@@ -751,10 +751,6 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    internal fun startLyricsService(intent: Intent) {
-        startLyricsServiceSafely(intent)
-    }
-
     internal fun startLyricsServiceSafely(intent: Intent): Boolean {
         return runCatching {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -207,7 +207,7 @@ internal class FloatingController(
     }
 
     fun notifySourceChangedIfVisible(packageName: String?) {
-        if (!activity.quickFloatingVisible && !QuickFloatingStore.isDesiredVisible(activity)) return
+        if (!activity.quickFloatingVisible) return
 
         sendFloatingCommand(BroadcastActions.SELECT_MEDIA_SOURCE) {
             putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, packageName)
