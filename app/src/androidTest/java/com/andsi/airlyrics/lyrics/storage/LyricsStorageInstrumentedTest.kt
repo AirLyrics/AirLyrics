@@ -15,6 +15,9 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 @RunWith(AndroidJUnit4::class)
 class LyricsStorageInstrumentedTest {
@@ -120,6 +123,39 @@ class LyricsStorageInstrumentedTest {
         assertTrue(LyricsStorage.saveLyrics(context, title, artist, duration, first, overwrite = true))
         assertFalse(LyricsStorage.saveLyrics(context, title, artist, duration, second, overwrite = false))
         assertEquals(first, LyricsStorage.readLocalLyrics(context, title, artist, duration))
+    }
+
+    @Test
+    fun concurrentSaveLyrics_keepsEveryIndexEntry() {
+        val count = 32
+        val startGate = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(8)
+        val futures = (0 until count).map { index ->
+            executor.submit<Boolean> {
+                startGate.await()
+                LyricsStorage.saveLyrics(
+                    context = context,
+                    title = "Concurrent Song $index",
+                    artist = "AndSi",
+                    duration = 400_000L + index,
+                    lyrics = "[00:01.00]line $index",
+                    provider = "concurrent-test"
+                )
+            }
+        }
+
+        startGate.countDown()
+        futures.forEach { future -> assertTrue(future.get(10, TimeUnit.SECONDS)) }
+        executor.shutdown()
+        assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS))
+
+        val entries = LyricsIndexStore.read(context)
+            .filter { it.provider == "concurrent-test" }
+
+        assertEquals(count, entries.size)
+        (0 until count).forEach { index ->
+            assertTrue(entries.any { it.title == "Concurrent Song $index" })
+        }
     }
 
     private fun resetStorage() {
