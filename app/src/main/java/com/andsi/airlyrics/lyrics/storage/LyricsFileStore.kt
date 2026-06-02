@@ -3,23 +3,60 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.charset.Charset
 
 internal object LyricsFileStore {
-    fun readTextFromUri(context: Context, uri: Uri): String? {
-        val bytes = runCatching {
-            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-        }.getOrNull() ?: return null
+    const val MAX_IMPORTED_LYRICS_BYTES = 30 * 1024 * 1024
 
-        if (bytes.isEmpty()) return ""
+    sealed class ReadTextResult {
+        data class Success(val text: String) : ReadTextResult()
+        object TooLarge : ReadTextResult()
+        object Failed : ReadTextResult()
+    }
+
+    fun readTextFromUri(context: Context, uri: Uri): String? {
+        return when (val result = readTextFromUriWithResult(context, uri)) {
+            is ReadTextResult.Success -> result.text
+            ReadTextResult.TooLarge,
+            ReadTextResult.Failed -> null
+        }
+    }
+
+    fun readTextFromUriWithResult(
+        context: Context,
+        uri: Uri,
+        maxBytes: Int = MAX_IMPORTED_LYRICS_BYTES
+    ): ReadTextResult {
+        val bytes = runCatching {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val output = ByteArrayOutputStream()
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var total = 0
+
+                while (true) {
+                    val read = input.read(buffer)
+                    if (read == -1) break
+
+                    if (read > maxBytes - total) return ReadTextResult.TooLarge
+                    output.write(buffer, 0, read)
+                    total += read
+                }
+
+                output.toByteArray()
+            }
+        }.getOrNull() ?: return ReadTextResult.Failed
+
+        if (bytes.isEmpty()) return ReadTextResult.Success("")
 
         val utf8 = bytes.toString(Charsets.UTF_8)
-        if ('\uFFFD' !in utf8) return utf8
+        if ('\uFFFD' !in utf8) return ReadTextResult.Success(utf8)
 
-        return runCatching {
-            bytes.toString(Charset.forName("GB18030"))
-        }.getOrElse { utf8 }
+        return ReadTextResult.Success(
+            runCatching { bytes.toString(Charset.forName("GB18030")) }
+                .getOrElse { utf8 }
+        )
     }
 
     fun looksLikeTimedLrc(text: String): Boolean {

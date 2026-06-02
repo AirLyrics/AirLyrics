@@ -113,6 +113,7 @@ import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
+import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
     private val activityState = MainActivityState()
@@ -139,8 +140,13 @@ class MainActivity : AppCompatActivity() {
     private val floatingController: FloatingController by lazy { FloatingController(this) }
     internal val appMediaController: AppMediaController by lazy { AppMediaController(this) }
     private val lyricsController: LyricsController by lazy { LyricsController(this) }
+    private val appIoExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "airlyrics-app-io").apply { isDaemon = true }
+    }
 
     internal val mediaRefreshHandler = Handler(Looper.getMainLooper())
+    internal var currentLyricsLoadGeneration = 0
+    internal var recentLyricsLoadGeneration = 0
 
     internal val mediaStatusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -179,48 +185,17 @@ class MainActivity : AppCompatActivity() {
                 return@registerForActivityResult
             }
 
-            val exists = if (importAsWordByWord) {
-                LyricsStorage.hasKaraokeLyrics(
-                    context = this,
-                    title = media.title,
-                    artist = media.artist,
-                    duration = media.durationMs
-                )
-            } else {
-                LyricsStorage.hasLocalLyrics(
-                    context = this,
-                    title = media.title,
-                    artist = media.artist,
-                    duration = media.durationMs
-                )
+            if (isLyricsDocumentTooLarge(uri)) {
+                Toast.makeText(this, getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
             }
 
-            if (exists) {
-                val overwriteMessage = media.displayText + "\n\n" + if (importAsWordByWord) {
-                    getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
-                } else {
-                    getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
-                }
-                showAirConfirmDialog(
-                    title = if (importAsWordByWord) getString(R.string.ui_overwrite_local_enhanced_lrc) else getString(R.string.ui_overwrite_plain_lyrics),
-                    message = overwriteMessage,
-                    positiveText = getString(R.string.ui_overwrite)
-                ) {
-                    importLyricsForCurrentMedia(
-                        uri = uri,
-                        media = media,
-                        overwrite = true,
-                        importAsWordByWord = importAsWordByWord
-                    )
-                }
-            } else {
-                importLyricsForCurrentMedia(
-                    uri = uri,
-                    media = media,
-                    overwrite = false,
-                    importAsWordByWord = importAsWordByWord
-                )
-            }
+            importLyricsForCurrentMedia(
+                uri = uri,
+                media = media,
+                overwrite = false,
+                importAsWordByWord = importAsWordByWord
+            )
         }
 
     internal val selectLyricsDirLauncher =
@@ -479,6 +454,36 @@ class MainActivity : AppCompatActivity() {
             }
         }.getOrNull()
             ?: uri.lastPathSegment.orEmpty()
+    }
+
+    private fun isLyricsDocumentTooLarge(uri: Uri): Boolean {
+        val projection = arrayOf(OpenableColumns.SIZE)
+        val size = runCatching {
+            contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (index >= 0 && cursor.moveToFirst() && !cursor.isNull(index)) {
+                    cursor.getLong(index)
+                } else {
+                    null
+                }
+            }
+        }.getOrNull() ?: return false
+
+        return size > MAX_IMPORT_LYRICS_BYTES
+    }
+
+    internal fun runOnAppIo(block: () -> Unit) {
+        appIoExecutor.execute(block)
+    }
+
+    internal fun runOnMainThread(block: () -> Unit) {
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            block()
+        } else {
+            runOnUiThread {
+                if (!isDestroyed) block()
+            }
+        }
     }
 
     internal fun importLyricsForCurrentMedia(
@@ -767,9 +772,14 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         mediaRefreshHandler.removeCallbacksAndMessages(null)
+        appIoExecutor.shutdownNow()
         runCatching { unregisterReceiver(floatingWindowStateReceiver) }
         runCatching { unregisterReceiver(mediaStatusReceiver) }
         super.onDestroy()
+    }
+
+    private companion object {
+        const val MAX_IMPORT_LYRICS_BYTES = 30L * 1024L * 1024L
     }
 
 

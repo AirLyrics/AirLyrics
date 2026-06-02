@@ -243,6 +243,10 @@ Enhanced LRC recommended format:
     <string name="ui_please_choose_an_enhanced_lrc_file">Please choose an Enhanced LRC .lrc file</string>
     <string name="ui_enable_overlay_permission_first">Please enable overlay permission first</string>
     <string name="ui_select_song_before_importing">Please play and select a song before importing lyrics</string>
+    <string name="ui_importing_lyrics">Importing lyrics…</string>
+    <string name="ui_lrc_file_too_large">Lyrics file is too large. Please choose a file smaller than 30 MB.</string>
+    <string name="ui_loading">Loading…</string>
+    <string name="ui_saving">Saving…</string>
     <string name="ui_please_play_and_select_a_song_first">Please play and select a song first</string>
     <string name="ui_preferred">Preferred</string>
     <string name="ui_prev_current_next">Prev + current + next</string>

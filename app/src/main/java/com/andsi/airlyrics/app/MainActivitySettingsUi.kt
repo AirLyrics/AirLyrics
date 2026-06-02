@@ -15,6 +15,7 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.i18n.displayText
@@ -34,6 +35,9 @@ import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
 import com.andsi.airlyrics.i18n.localizedLocalLyricsType
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import java.util.concurrent.atomic.AtomicInteger
+
+private val localLyricsEditorLoadGeneration = AtomicInteger(0)
 
 internal fun MainActivity.settingsHomeHeader(): View {
     val activity = this
@@ -267,20 +271,39 @@ private fun MainActivity.openLocalLyricsEditor(
     onLyricsSaved: (() -> Unit)?
 ) {
     val isKaraoke = target == LyricsStorage.LocalLyricsEditTarget.KARAOKE
-    val rawLyrics = LyricsStorage.readLocalLyricsItemText(this, item, target)
-    if (rawLyrics == null) {
-        showAirDialog(
-            title = getString(R.string.ui_read_failed),
-            message = if (isKaraoke) {
-                getString(R.string.ui_cannot_read_enhanced_lrc_file)
-            } else {
-                getString(R.string.ui_cannot_read_this_lyric_file)
-            },
-            positiveText = getString(R.string.ui_ok)
-        )
-        return
-    }
+    val loadGeneration = localLyricsEditorLoadGeneration.incrementAndGet()
+    Toast.makeText(this, getString(R.string.ui_loading), Toast.LENGTH_SHORT).show()
 
+    runOnAppIo {
+        val rawLyrics = LyricsStorage.readLocalLyricsItemText(this, item, target)
+        runOnMainThread {
+            if (loadGeneration != localLyricsEditorLoadGeneration.get()) return@runOnMainThread
+
+            if (rawLyrics == null) {
+                showAirDialog(
+                    title = getString(R.string.ui_read_failed),
+                    message = if (isKaraoke) {
+                        getString(R.string.ui_cannot_read_enhanced_lrc_file)
+                    } else {
+                        getString(R.string.ui_cannot_read_this_lyric_file)
+                    },
+                    positiveText = getString(R.string.ui_ok)
+                )
+                return@runOnMainThread
+            }
+
+            showLocalLyricsEditorDialog(item, target, rawLyrics, onLyricsSaved)
+        }
+    }
+}
+
+private fun MainActivity.showLocalLyricsEditorDialog(
+    item: LyricsStorage.LocalLyricsItem,
+    target: LyricsStorage.LocalLyricsEditTarget,
+    rawLyrics: String,
+    onLyricsSaved: (() -> Unit)?
+) {
+    val isKaraoke = target == LyricsStorage.LocalLyricsEditTarget.KARAOKE
     val editor = EditText(this).apply {
         setText(rawLyrics)
         textSize = AirUiTokens.TextSize.BodySmall
@@ -303,6 +326,14 @@ private fun MainActivity.openLocalLyricsEditor(
     }
 
     var editDialog: android.app.Dialog? = null
+    var isSaving = false
+    lateinit var saveButton: TextView
+    fun setSavingState(saving: Boolean) {
+        isSaving = saving
+        saveButton.isEnabled = !saving
+        saveButton.alpha = if (saving) 0.55f else 1f
+    }
+
     editDialog = showAirDialog(
         title = if (isKaraoke) {
             getString(R.string.ui_item_displaytitle_enhanced_lrc, item.displayTitle)
@@ -316,7 +347,7 @@ private fun MainActivity.openLocalLyricsEditor(
         negativeText = null,
         body = {
             addView(editor)
-            addView(LinearLayout(this@openLocalLyricsEditor).apply {
+            addView(LinearLayout(this@showLocalLyricsEditorDialog).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.END or Gravity.CENTER_VERTICAL
                 setPadding(0, dp(AirUiTokens.Space.ButtonH), 0, 0)
@@ -353,34 +384,45 @@ private fun MainActivity.openLocalLyricsEditor(
                     editDialog?.dismiss()
                 })
 
-                addView(localLyricsDialogButton(getString(R.string.ui_save_changes), primary = true) {
-                    val result = if (isKaraoke) {
-                        LyricsStorage.updateKaraokeLyricsItemTextWithResult(this@openLocalLyricsEditor, item, editor.text.toString())
-                    } else {
-                        LyricsStorage.updateLocalLyricsItemTextWithResult(this@openLocalLyricsEditor, item, editor.text.toString())
-                    }
-                    when {
-                        result.saved -> {
-                            editDialog?.dismiss()
-                            reloadFloatingLyrics()
-                            onLyricsSaved?.invoke()
+                saveButton = localLyricsDialogButton(getString(R.string.ui_save_changes), primary = true) {
+                    if (isSaving) return@localLyricsDialogButton
+                    val newText = editor.text.toString()
+                    setSavingState(true)
+                    Toast.makeText(this@showLocalLyricsEditorDialog, getString(R.string.ui_saving), Toast.LENGTH_SHORT).show()
+                    runOnAppIo {
+                        val result = if (isKaraoke) {
+                            LyricsStorage.updateKaraokeLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
+                        } else {
+                            LyricsStorage.updateLocalLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
                         }
-                        result.invalidLineNumbers.isNotEmpty() -> {
-                            if (isKaraoke) showEnhancedLyricsFormatErrorDialog(result.invalidLineNumbers) else showLyricsFormatErrorDialog(result.invalidLineNumbers)
-                        }
-                        else -> {
-                            if (isKaraoke) {
-                                showEnhancedLyricsFormatErrorDialog(emptyList())
-                            } else {
-                                showAirDialog(
-                                    title = getString(R.string.ui_save_failed),
-                                    message = getString(R.string.ui_plain_lrc_edit_format_hint),
-                                    positiveText = getString(R.string.ui_ok)
-                                )
+                        runOnMainThread {
+                            when {
+                                result.saved -> {
+                                    editDialog?.dismiss()
+                                    reloadFloatingLyrics()
+                                    onLyricsSaved?.invoke()
+                                }
+                                result.invalidLineNumbers.isNotEmpty() -> {
+                                    setSavingState(false)
+                                    if (isKaraoke) showEnhancedLyricsFormatErrorDialog(result.invalidLineNumbers) else showLyricsFormatErrorDialog(result.invalidLineNumbers)
+                                }
+                                else -> {
+                                    setSavingState(false)
+                                    if (isKaraoke) {
+                                        showEnhancedLyricsFormatErrorDialog(emptyList())
+                                    } else {
+                                        showAirDialog(
+                                            title = getString(R.string.ui_save_failed),
+                                            message = getString(R.string.ui_plain_lrc_edit_format_hint),
+                                            positiveText = getString(R.string.ui_ok)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
-                })
+                }
+                addView(saveButton)
             })
         }
     )

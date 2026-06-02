@@ -24,6 +24,8 @@ object LyricsStorage {
 
     enum class LocalLyricsEditTarget { PLAIN, KARAOKE }
 
+    enum class ImportLyricsResult { SAVED, TOO_LARGE, INVALID_FORMAT, SAVE_FAILED }
+
     data class LocalLyricsItem(
         val name: String,
         val modifiedTimeMillis: Long,
@@ -296,14 +298,40 @@ object LyricsStorage {
         duration: Long,
         album: String = "",
         overwrite: Boolean = true
-    ): Boolean {
-        val text = LyricsFileStore.readTextFromUri(context, uri) ?: return false
-        if (!LyricsFileStore.looksLikeTimedLrc(text)) return false
+    ): Boolean = importLyricsFromUriWithResult(
+        context = context,
+        uri = uri,
+        title = title,
+        artist = artist,
+        duration = duration,
+        album = album,
+        overwrite = overwrite
+    ) == ImportLyricsResult.SAVED
+
+    fun importLyricsFromUriWithResult(
+        context: Context,
+        uri: Uri,
+        title: String,
+        artist: String,
+        duration: Long,
+        album: String = "",
+        overwrite: Boolean = true
+    ): ImportLyricsResult {
+        val text = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
+            is LyricsFileStore.ReadTextResult.Success -> result.text
+            LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TOO_LARGE
+            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SAVE_FAILED
+        }
+        if (!LyricsFileStore.looksLikeTimedLrc(text)) return ImportLyricsResult.INVALID_FORMAT
 
         val normalizedLyrics = LrcParser.normalizeForStorage(text)
-        if (normalizedLyrics.isBlank()) return false
+        if (normalizedLyrics.isBlank()) return ImportLyricsResult.INVALID_FORMAT
 
-        return saveLyrics(context, title, artist, duration, normalizedLyrics, album, SOURCE_MANUAL_IMPORT, "local", overwrite)
+        return if (saveLyrics(context, title, artist, duration, normalizedLyrics, album, SOURCE_MANUAL_IMPORT, "local", overwrite)) {
+            ImportLyricsResult.SAVED
+        } else {
+            ImportLyricsResult.SAVE_FAILED
+        }
     }
 
     fun hasKaraokeLyrics(context: Context, title: String, artist: String, duration: Long): Boolean = withStorageLock {
@@ -376,17 +404,39 @@ object LyricsStorage {
         duration: Long,
         album: String = "",
         overwrite: Boolean = true
-    ): Boolean {
-        val text = LyricsFileStore.readTextFromUri(context, uri) ?: return false
+    ): Boolean = importKaraokeLyricsFromUriWithResult(
+        context = context,
+        uri = uri,
+        title = title,
+        artist = artist,
+        duration = duration,
+        album = album,
+        overwrite = overwrite
+    ) == ImportLyricsResult.SAVED
+
+    fun importKaraokeLyricsFromUriWithResult(
+        context: Context,
+        uri: Uri,
+        title: String,
+        artist: String,
+        duration: Long,
+        album: String = "",
+        overwrite: Boolean = true
+    ): ImportLyricsResult {
+        val text = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
+            is LyricsFileStore.ReadTextResult.Success -> result.text
+            LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TOO_LARGE
+            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SAVE_FAILED
+        }
         val lines = KaraokeLyricsCodec.parseJson(text).ifEmpty { KaraokeLyricsCodec.parseEnhancedLrc(text) }
-        if (lines.isEmpty()) return false
+        if (lines.isEmpty()) return ImportLyricsResult.INVALID_FORMAT
 
         return withStorageLock {
             val savedKaraoke = saveKaraokeLyrics(context, title, artist, duration, lines, album, SOURCE_MANUAL_IMPORT, "local", overwrite)
-            if (!savedKaraoke) return@withStorageLock false
+            if (!savedKaraoke) return@withStorageLock ImportLyricsResult.SAVE_FAILED
 
             if (!hasLocalLyrics(context, title, artist, duration)) {
-                return@withStorageLock saveLyrics(
+                val savedPlain = saveLyrics(
                     context = context,
                     title = title,
                     artist = artist,
@@ -397,9 +447,10 @@ object LyricsStorage {
                     provider = "local",
                     overwrite = false
                 )
+                return@withStorageLock if (savedPlain) ImportLyricsResult.SAVED else ImportLyricsResult.SAVE_FAILED
             }
 
-            true
+            ImportLyricsResult.SAVED
         }
     }
 
