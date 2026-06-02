@@ -11,4 +11,6 @@
 2026-6-2
 - Bugfix: fix floating lyrics UI and service state sync
 - Bugfix: Prevent stalled lyrics lookups from blocking new requests
+- Bugfix: Debounce media session rescans and cleanup listener lifecycle
+- Bugfix: Fix floating notification visibility action text
 
