@@ -123,7 +123,7 @@ class FloatingLyricsService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         runCatching {
-            handleCommand(intent)
+            handleCommand(intent, startId)
         }.onFailure {
             // Keep the overlay's current truth intact for non-window command failures.
             // WindowManager operations already hide/broadcast from FloatingWindowController.
@@ -133,13 +133,13 @@ class FloatingLyricsService : Service() {
         return START_STICKY
     }
 
-    private fun handleCommand(intent: Intent?) {
+    private fun handleCommand(intent: Intent?, startId: Int) {
         when (intent?.action) {
             null -> restoreFromDesiredState()
             BroadcastActions.SHOW -> showLyrics(feedback = null)
             BroadcastActions.HIDE -> {
                 hideLyrics(feedback = null)
-                stopSelf()
+                stopSelf(startId)
             }
             BroadcastActions.LOCK -> setLocked(locked = true, feedback = null)
             BroadcastActions.UNLOCK -> setLocked(locked = false, feedback = null)
