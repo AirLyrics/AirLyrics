@@ -24,6 +24,10 @@ class MediaNotificationListener : NotificationListenerService() {
     private val activeSessionsChangedListener =
         MediaSessionManager.OnActiveSessionsChangedListener { setupMediaSessions(it) }
 
+    private val rescanRunnable = Runnable {
+        setupMediaSessions()
+    }
+
     override fun onCreate() {
         LanguageSettingsStore.applyAppLocale(this)
         super.onCreate()
@@ -48,9 +52,13 @@ class MediaNotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
+        cleanupMediaSessions()
         super.onListenerDisconnected()
-        mediaSessionManager?.removeOnActiveSessionsChangedListener(activeSessionsChangedListener)
-        clearControllers()
+    }
+
+    override fun onDestroy() {
+        cleanupMediaSessions()
+        super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -120,10 +128,21 @@ class MediaNotificationListener : NotificationListenerService() {
     }
 
     private fun scheduleMediaSessionRescan() {
-        // Some players refresh sessions only after notification changes, so scan once with a delay.
-        handler.postDelayed({
-            setupMediaSessions()
-        }, 200)
+        // Some players refresh sessions only after notification changes, so scan once after the burst.
+        handler.removeCallbacks(rescanRunnable)
+        handler.postDelayed(rescanRunnable, MEDIA_SESSION_RESCAN_DELAY_MS)
+    }
+
+    private fun cleanupMediaSessions() {
+        handler.removeCallbacksAndMessages(null)
+
+        runCatching {
+            mediaSessionManager?.removeOnActiveSessionsChangedListener(activeSessionsChangedListener)
+        }.onFailure { e ->
+            Log.w(TAG, "Failed to remove active session listener", e)
+        }
+
+        clearControllers()
     }
 
     private fun clearControllers() {
@@ -189,5 +208,6 @@ class MediaNotificationListener : NotificationListenerService() {
 
     companion object {
         private const val TAG = "MediaNotificationListener"
+        private const val MEDIA_SESSION_RESCAN_DELAY_MS = 200L
     }
 }
