@@ -14,7 +14,7 @@ Thank you for reading this guide!
 ## First Launch
 
 1. Go to the Settings page first and grant the required permissions. Some devices may have issues granting permissions. If that happens, you can search for a solution for your specific device model.
-2. Return to the Media Source page and select the active player you want to listen to. Note: AirLyrics will not automatically select a media source on first launch, so please make sure to select one manually.
+2. Return to the Media Source page and select the active player you want to listen to. Note: On first launch, the app will automatically select a media stream that is currently playing. If no player is currently playing, nothing will be selected, and you will need to choose one manually later.
 3. Go to the Floating Window page and tap the show button at the bottom to display the floating window. After that, you can adjust the floating window style on this page according to your preferences.
 
 ## Select Media Source
