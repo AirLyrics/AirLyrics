@@ -48,7 +48,7 @@ object FloatingServiceNotification {
             .addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_menu_view,
-                    state.actionTitle(context, active = state.visible, activeText = context.getString(R.string.ui_show), inactiveText = context.getString(R.string.ui_show)),
+                    state.actionTitle(context, active = state.visible, activeText = context.getString(R.string.ui_hide), inactiveText = context.getString(R.string.ui_show)),
                     serviceActionIntent(context, BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE, 1001)
                 ).build()
             )
