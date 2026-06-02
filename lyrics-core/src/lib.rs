@@ -223,84 +223,87 @@ fn fetch_best_lyrics(
         .map_err(|e| format!("failed to create tokio runtime: {e}"))?;
 
     runtime.block_on(async move {
-        tokio::time::timeout(std::time::Duration::from_secs(NETEASE_LOOKUP_TIMEOUT_SECS), async move {
-            let api = NcmApi::new(false, "");
-            let keywords = build_search_keywords(title, artist, album);
-            let mut best_candidates = Vec::new();
+        tokio::time::timeout(
+            std::time::Duration::from_secs(NETEASE_LOOKUP_TIMEOUT_SECS),
+            async move {
+                let api = NcmApi::new(false, "");
+                let keywords = build_search_keywords(title, artist, album);
+                let mut best_candidates = Vec::new();
 
-            for keyword in keywords {
-                let response = api
-                    .search(&keyword, None)
-                    .await
-                    .map_err(|e| format!("netease search failed: {e}"))?;
-                let search_resp: SearchSongResp = response
-                    .deserialize()
-                    .map_err(|e| format!("failed to decode search response: {e}"))?;
+                for keyword in keywords {
+                    let response = api
+                        .search(&keyword, None)
+                        .await
+                        .map_err(|e| format!("netease search failed: {e}"))?;
+                    let search_resp: SearchSongResp = response
+                        .deserialize()
+                        .map_err(|e| format!("failed to decode search response: {e}"))?;
 
-                let Some(result) = search_resp.result else {
-                    continue;
-                };
+                    let Some(result) = search_resp.result else {
+                        continue;
+                    };
 
-                for song in result.songs.iter() {
-                    if let Some(candidate) = map_song(song, title, artist, album, duration_ms) {
-                        best_candidates.push(candidate);
+                    for song in result.songs.iter() {
+                        if let Some(candidate) = map_song(song, title, artist, album, duration_ms) {
+                            best_candidates.push(candidate);
+                        }
+                    }
+
+                    if !best_candidates.is_empty() {
+                        break;
                     }
                 }
 
-                if !best_candidates.is_empty() {
-                    break;
+                let best = best_candidates
+                    .into_iter()
+                    .max_by(|a, b| {
+                        a.score
+                            .partial_cmp(&b.score)
+                            .unwrap_or(std::cmp::Ordering::Equal)
+                    })
+                    .ok_or_else(|| "netease returned no song candidates".to_string())?;
+
+                let song_id = best
+                    .id
+                    .parse::<usize>()
+                    .map_err(|e| format!("invalid netease song id {}: {e}", best.id))?;
+                let lyric_response = api
+                    .lyric(song_id)
+                    .await
+                    .map_err(|e| format!("netease lyric query failed: {e}"))?;
+                let lyric_resp: LyricResp = lyric_response
+                    .deserialize()
+                    .map_err(|e| format!("failed to decode lyric response: {e}"))?;
+
+                let lrc = lyric_resp.lrc.and_then(|v| normalize_optional_lrc(v.lyric));
+                let translated_lrc = lyric_resp
+                    .tlyric
+                    .and_then(|v| normalize_optional_lrc(v.lyric));
+                let merged_lrc = merge_lrc(lrc.as_deref(), translated_lrc.as_deref())
+                    .or_else(|| lrc.clone())
+                    .or_else(|| translated_lrc.clone());
+
+                if merged_lrc.as_deref().unwrap_or_default().trim().is_empty() {
+                    return Err("netease lyric is empty".to_string());
                 }
-            }
 
-            let best = best_candidates
-                .into_iter()
-                .max_by(|a, b| {
-                    a.score
-                        .partial_cmp(&b.score)
-                        .unwrap_or(std::cmp::Ordering::Equal)
+                Ok(NativeResult {
+                    ok: true,
+                    source: "netease-rust",
+                    id: Some(best.id),
+                    title: Some(best.title),
+                    artist: Some(best.artist),
+                    album: Some(best.album),
+                    duration_ms: Some(best.duration_ms),
+                    lrc,
+                    translated_lrc,
+                    merged_lrc,
+                    karaoke_json: None,
+                    error_type: None,
+                    error: None,
                 })
-                .ok_or_else(|| "netease returned no song candidates".to_string())?;
-
-            let song_id = best
-                .id
-                .parse::<usize>()
-                .map_err(|e| format!("invalid netease song id {}: {e}", best.id))?;
-            let lyric_response = api
-                .lyric(song_id)
-                .await
-                .map_err(|e| format!("netease lyric query failed: {e}"))?;
-            let lyric_resp: LyricResp = lyric_response
-                .deserialize()
-                .map_err(|e| format!("failed to decode lyric response: {e}"))?;
-
-            let lrc = lyric_resp.lrc.and_then(|v| normalize_optional_lrc(v.lyric));
-            let translated_lrc = lyric_resp
-                .tlyric
-                .and_then(|v| normalize_optional_lrc(v.lyric));
-            let merged_lrc = merge_lrc(lrc.as_deref(), translated_lrc.as_deref())
-                .or_else(|| lrc.clone())
-                .or_else(|| translated_lrc.clone());
-
-            if merged_lrc.as_deref().unwrap_or_default().trim().is_empty() {
-                return Err("netease lyric is empty".to_string());
-            }
-
-            Ok(NativeResult {
-                ok: true,
-                source: "netease-rust",
-                id: Some(best.id),
-                title: Some(best.title),
-                artist: Some(best.artist),
-                album: Some(best.album),
-                duration_ms: Some(best.duration_ms),
-                lrc,
-                translated_lrc,
-                merged_lrc,
-                karaoke_json: None,
-                error_type: None,
-                error: None,
-            })
-        })
+            },
+        )
         .await
         .map_err(|_| "netease lookup timed out".to_string())?
     })
