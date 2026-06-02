@@ -29,7 +29,7 @@ pub(crate) fn format_lrc_time(time_ms: u64) -> String {
     let minutes = time_ms / 60_000;
     let seconds = (time_ms % 60_000) / 1_000;
     let millis = time_ms % 1_000;
-    format!("{:02}:{:02}.{:03}", minutes, seconds, millis)
+    format!("{minutes:02}:{seconds:02}.{millis:03}",)
 }
 
 fn extract_time_tags(line: &str) -> Vec<u64> {
