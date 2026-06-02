@@ -9,6 +9,8 @@ use std::sync::OnceLock;
 
 static MUSIXMATCH_CLIENT: OnceLock<Musixmatch> = OnceLock::new();
 
+const MUSIXMATCH_LOOKUP_TIMEOUT_SECS: u64 = 8;
+
 #[derive(Clone, Debug)]
 struct ScoredTrack {
     track: Track,
@@ -33,7 +35,7 @@ pub(crate) fn fetch_best_lyrics(
         .map_err(|e| format!("failed to create tokio runtime: {e}"))?;
 
     runtime.block_on(async move {
-        tokio::time::timeout(std::time::Duration::from_secs(15), async move {
+        tokio::time::timeout(std::time::Duration::from_secs(MUSIXMATCH_LOOKUP_TIMEOUT_SECS), async move {
             let client = get_client()?;
             let title = clean_query_part(title);
             let artist = clean_query_part(artist);

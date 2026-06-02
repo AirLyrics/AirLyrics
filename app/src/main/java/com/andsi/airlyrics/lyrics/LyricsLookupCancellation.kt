@@ -4,10 +4,12 @@ import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.CancellationException
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.FutureTask
+import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -59,10 +61,21 @@ fun interface LyricsLookupCallbackDispatcher {
     fun dispatch(block: () -> Unit)
 }
 
+private const val DEFAULT_MAX_PARALLEL_LOOKUPS = 3
+private const val DEFAULT_LOOKUP_QUEUE_CAPACITY = 1
+
 class LyricsLookupRunner(
     threadNamePrefix: String,
     private val callbackDispatcher: LyricsLookupCallbackDispatcher = mainThreadDispatcher(),
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor(namedThreadFactory(threadNamePrefix))
+    private val executor: ExecutorService = ThreadPoolExecutor(
+        DEFAULT_MAX_PARALLEL_LOOKUPS,
+        DEFAULT_MAX_PARALLEL_LOOKUPS,
+        30L,
+        TimeUnit.SECONDS,
+        LinkedBlockingDeque<Runnable>(DEFAULT_LOOKUP_QUEUE_CAPACITY),
+        namedThreadFactory(threadNamePrefix),
+        ThreadPoolExecutor.DiscardOldestPolicy()
+    )
 ) {
     private val lock = Any()
     private var nextGeneration = 0L
@@ -139,6 +152,9 @@ class LyricsLookupRunner(
         activeHandle?.cancel()
         activeToken = null
         activeHandle = null
+
+        // Drop queued stale lookups so only the latest request can start after cancellation.
+        (executor as? ThreadPoolExecutor)?.queue?.clear()
     }
 
     private fun isStillActive(token: LyricsLookupCancellationToken): Boolean {

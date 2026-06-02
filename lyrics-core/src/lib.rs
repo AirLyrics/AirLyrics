@@ -8,6 +8,8 @@ use serde::Serialize;
 mod lrc;
 mod musixmatch;
 
+const NETEASE_LOOKUP_TIMEOUT_SECS: u64 = 6;
+
 #[derive(Debug, Clone)]
 struct Candidate {
     id: String,
@@ -221,7 +223,7 @@ fn fetch_best_lyrics(
         .map_err(|e| format!("failed to create tokio runtime: {e}"))?;
 
     runtime.block_on(async move {
-        tokio::time::timeout(std::time::Duration::from_secs(12), async move {
+        tokio::time::timeout(std::time::Duration::from_secs(NETEASE_LOOKUP_TIMEOUT_SECS), async move {
             let api = NcmApi::new(false, "");
             let keywords = build_search_keywords(title, artist, album);
             let mut best_candidates = Vec::new();
