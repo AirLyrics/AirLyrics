@@ -1,9 +1,5 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.AirLyrics" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-    </style>
+<resources>
+    <style name="Base.Theme.AirLyrics" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
 
     <style name="Theme.AirLyrics" parent="Base.Theme.AirLyrics" />
 </resources>
