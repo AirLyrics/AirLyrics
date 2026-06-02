@@ -1,16 +1,21 @@
-2026-05-31
+v1.0.1 - 2026-06-02
 
-- v1.0.0
-- Prepare signed release APK build
-- Fix bugs caused by dependabot
-- Add USER_GUIDE in github documentation
-- Update USER_GUIDE and README
-- Release apk
-- Bugfix: the lyrics keep running after killing the media source app
+Fixed
+- Kept the floating lyrics UI and service state in sync after visibility changes.
+- Prevented stalled lyrics lookups from blocking newer lyrics requests.
+- Cleaned up NotificationListener lifecycle handling and debounced media session rescans.
+- Improved floating notification visibility action text and error feedback.
+- Reduced main-thread I/O risk during lyrics and service state handling.
 
-2026-6-2
-- Bugfix: fix floating lyrics UI and service state sync
-- Bugfix: Prevent stalled lyrics lookups from blocking new requests
-- Bugfix: Debounce media session rescans and cleanup listener lifecycle
-- Bugfix: Fix floating notification visibility action text
+Changed
+- Release builds can now produce unsigned APKs when no local release keystore is configured.
+- Incomplete release signing configuration still fails early to avoid accidental broken signed builds.
 
+v1.0.0 - 2026-05-31
+
+Added
+- Initial APK release.
+- Floating synced lyrics display for Android.
+- Current media playback detection through notification access.
+- Online lyrics search and local lyrics import.
+- User guide and project documentation.

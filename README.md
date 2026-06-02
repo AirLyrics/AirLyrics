@@ -4,8 +4,6 @@
 
 # AirLyrics
 
-Android floating lyrics app.
-
 A lightweight Android floating lyrics app that automatically detects current media playback and displays synced lyrics in a customizable floating window.
 
 [English](README.md) · [简体中文](README.zh-CN.md)
@@ -43,9 +41,7 @@ The app is already usable, but compatibility may vary depending on Android versi
 
 ## Download
 
-Download the latest APK from GitHub Releases:
-
-https://github.com/AirLyrics/AirLyrics/releases
+Download the latest APK from [GitHub Releases](https://github.com/AirLyrics/AirLyrics/releases).
 
 System requirement: Android 8.0 or later.
 
@@ -139,7 +135,7 @@ Project documentation is in the docs directory.
 
 - JDK 21
 - Android SDK
-- Android NDK `26.3.11579264` recommended
+- Android NDK `26.3.11579264` required
 - Rust stable via `rustup`
 - `cargo-ndk`
 - Rust Android target:

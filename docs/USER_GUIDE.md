@@ -13,8 +13,8 @@ Thank you for reading this guide!
 
 ## First Launch
 
-1. Go to the Settings page first and grant the required permissions. Some devices may have issues granting permissions. If that happens, you can search for a solution for your specific device model.
-2. Return to the Media Source page and select the active player you want to listen to. Note: On first launch, the app will automatically select a media stream that is currently playing. If no player is currently playing, nothing will be selected, and you will need to choose one manually later.
+1. Go to the Settings page first and grant the required permissions. Some devices may handle permission pages differently, so follow your device's system prompts if they appear.
+2. Return to the Media Source page. On first launch, if a media stream is already playing, AirLyrics will automatically select it. If no media stream is playing, nothing will be selected and you will need to choose one manually later.
 3. Go to the Floating Window page and tap the show button at the bottom to display the floating window. After that, you can adjust the floating window style on this page according to your preferences.
 
 ## Select Media Source
@@ -23,7 +23,7 @@ On this page, you can choose the media source you want to listen to.
 
 If no media source is displayed, please check whether the required permissions have been enabled.
 
-AirLyrics will not automatically connect to a media source on first launch. If lyrics do not display correctly after enabling the floating window, please first confirm that a media source has been selected.
+On first launch, AirLyrics automatically selects a media stream only when one is already playing. If lyrics do not display correctly after enabling the floating window, please first confirm that a media source has been selected.
 
 ## Configure Floating Window
 
@@ -50,7 +50,7 @@ You can enable or disable it depending on your own usage.
 Basic features will not be explained too much here. This section only covers a few things worth noting:
 
 1. **Lyrics save directory**  
-   It is recommended to use the default save directory. I have not tested what may happen when using special directories. If you encounter a bug, feel free to report it.
+   The default save directory is recommended. If you choose a custom directory, make sure AirLyrics can access it through the system file picker.
 
 2. **Uninstalling the app will remove files in the default directory**  
    This also means all lyrics saved in the default directory will be removed, so please be careful.
@@ -67,4 +67,4 @@ Basic features will not be explained too much here. This section only covers a f
 
 ---
 
-I am not very good at writing guides, so if this guide helps you, that would be really nice.
+I am not very good at writing guides, so if this guide helps you, that would be really nice.:)

@@ -4,8 +4,6 @@
 
 # AirLyrics
 
-Android 手机端悬浮歌词应用。
-
 一个轻量的 Android 悬浮歌词软件，可以自动检测当前播放媒体，并在可自定义的悬浮窗中显示同步歌词。
 
 [English](README.md) · [简体中文](README.zh-CN.md)
@@ -43,9 +41,7 @@ AirLyrics 正在持续开发中。
 
 ## 下载
 
-从 GitHub Releases 下载最新 APK：
-
-https://github.com/AirLyrics/AirLyrics/releases
+从 [GitHub Releases](https://github.com/AirLyrics/AirLyrics/releases) 下载最新 APK。
 
 系统要求：Android 8.0 或更高版本。
 
@@ -139,7 +135,7 @@ AirLyrics 会用到以下 Android 权限：
 
 - JDK 21
 - Android SDK
-- Android NDK `26.3.11579264` 推荐
+- Android NDK `26.3.11579264` 必需
 - Rust stable via `rustup`
 - `cargo-ndk`
 - Rust Android target：
