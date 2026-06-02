@@ -19,6 +19,38 @@ internal object LyricsStoragePaths {
         return value?.let { Uri.parse(it) }
     }
 
+
+    fun validateLyricsDir(context: Context, uri: Uri): Boolean {
+        return runCatching {
+            val root = DocumentFile.fromTreeUri(context, uri) ?: return false
+            if (!root.canRead() || !root.canWrite()) return false
+
+            val existingManagedDir = root.findFile(MANAGED_LYRICS_DIR)
+            val managedDir = when {
+                existingManagedDir == null -> root.createDirectory(MANAGED_LYRICS_DIR) ?: return false
+                existingManagedDir.isDirectory -> existingManagedDir
+                else -> return false
+            }
+            if (!managedDir.canRead() || !managedDir.canWrite()) return false
+
+            val existingIndex = root.findFile(INDEX_FILE_NAME)
+            if (existingIndex == null) {
+                val createdIndex = root.createFile("application/json", INDEX_FILE_NAME) ?: return false
+                context.contentResolver.openOutputStream(createdIndex.uri, "wt")
+                    ?.bufferedWriter()
+                    ?.use { it.write("[]") }
+                    ?: return false
+            } else {
+                if (!existingIndex.isFile) return false
+                context.contentResolver.openInputStream(existingIndex.uri)
+                    ?.use { }
+                    ?: return false
+            }
+
+            true
+        }.getOrDefault(false)
+    }
+
     fun getLyricsDirDisplayPath(context: Context): String {
         val treeUri = getLyricsDirUri(context)
         return if (treeUri != null) {
@@ -49,13 +81,22 @@ internal object LyricsStoragePaths {
 
     fun managedDocumentDir(context: Context): DocumentFile? {
         val root = documentRoot(context) ?: return null
-        val existing = root.findFile(MANAGED_LYRICS_DIR)?.takeIf { it.isDirectory }
-        return existing ?: root.createDirectory(MANAGED_LYRICS_DIR)
+        val existing = root.findFile(MANAGED_LYRICS_DIR)
+        return when {
+            existing == null -> root.createDirectory(MANAGED_LYRICS_DIR)
+            existing.isDirectory -> existing
+            else -> null
+        }
     }
 
     fun indexDocumentFile(context: Context, create: Boolean): DocumentFile? {
         val root = documentRoot(context) ?: return null
         val existing = root.findFile(INDEX_FILE_NAME)
-        return existing ?: if (create) root.createFile("application/json", INDEX_FILE_NAME) else null
+        return when {
+            existing == null && create -> root.createFile("application/json", INDEX_FILE_NAME)
+            existing == null -> null
+            existing.isFile -> existing
+            else -> null
+        }
     }
 }

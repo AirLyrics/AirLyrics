@@ -161,6 +161,8 @@ This is a lyric preview</string>
     <string name="ui_lyrics_parse_failed">歌词解析失败</string>
     <string name="ui_lyrics_save_folder">歌词保存目录</string>
     <string name="ui_lyrics_save_folder_copied">歌词保存目录已复制</string>
+    <string name="ui_lyrics_folder_permission_failed">无法保留这个目录的长期访问权限，请选择其他目录。</string>
+    <string name="ui_lyrics_folder_write_failed">无法写入这个目录，请选择其他目录。</string>
     <string name="ui_lyrics_save_folder_set">已设置歌词保存目录</string>
     <string name="ui_lyrics_source">歌词搜索来源</string>
     <string name="ui_plain_lrc_edit_format_hint">请确认内容是普通 LRC，并使用 [00:12.34]歌词 格式。</string>

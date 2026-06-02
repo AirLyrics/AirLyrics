@@ -171,9 +171,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             val importAsWordByWord = pendingImportAsWordByWord
-            runCatching {
-                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
 
             if (!isLikelyLyricsDocument(uri)) {
                 val message = if (importAsWordByWord) {
@@ -202,10 +199,22 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri == null) return@registerForActivityResult
 
-            contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
+            val permissionGranted = runCatching {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }.isSuccess
+
+            if (!permissionGranted) {
+                Toast.makeText(this, getString(R.string.ui_lyrics_folder_permission_failed), Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
+            }
+
+            if (!LyricsStorage.validateLyricsDir(this, uri)) {
+                Toast.makeText(this, getString(R.string.ui_lyrics_folder_write_failed), Toast.LENGTH_LONG).show()
+                return@registerForActivityResult
+            }
 
             LyricsStorage.saveLyricsDirUri(this, uri)
             Toast.makeText(this, getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()

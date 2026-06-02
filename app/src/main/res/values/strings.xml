@@ -160,6 +160,8 @@
     <string name="ui_lyrics_parse_failed">lyrics parse failed</string>
     <string name="ui_lyrics_save_folder">Lyrics save folder</string>
     <string name="ui_lyrics_save_folder_copied">Lyrics save folder copied</string>
+    <string name="ui_lyrics_folder_permission_failed">Cannot keep long-term access to this folder. Please choose another folder.</string>
+    <string name="ui_lyrics_folder_write_failed">Cannot write to this folder. Please choose another folder.</string>
     <string name="ui_lyrics_save_folder_set">Lyrics save folder set</string>
     <string name="ui_lyrics_source">Lyrics source</string>
     <string name="ui_plain_lrc_edit_format_hint">Make sure the content is plain LRC and uses [00:12.34]lyric format.</string>

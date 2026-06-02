@@ -204,6 +204,8 @@ object LyricsStorage {
 
     fun saveLyricsDirUri(context: Context, uri: Uri) = LyricsStoragePaths.saveLyricsDirUri(context, uri)
 
+    fun validateLyricsDir(context: Context, uri: Uri): Boolean = LyricsStoragePaths.validateLyricsDir(context, uri)
+
     fun getLyricsDirUri(context: Context): Uri? = LyricsStoragePaths.getLyricsDirUri(context)
 
     @Deprecated("UI should compose the save-folder label with a keyed formatter instead of translating the full path.")
