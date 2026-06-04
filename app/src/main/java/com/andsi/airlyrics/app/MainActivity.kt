@@ -726,6 +726,7 @@ class MainActivity : AppCompatActivity() {
     }
 
 
+    // Coalesces frequent media updates into a single lightweight page refresh.
     internal fun scheduleMediaPageRefresh() {
         if (currentPage != Page.MEDIA) return
         if (mediaPageRefreshScheduled) return
