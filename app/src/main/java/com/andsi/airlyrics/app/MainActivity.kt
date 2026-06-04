@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app
 import com.andsi.airlyrics.R
 
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
@@ -29,7 +30,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.OpenableColumns
 import android.provider.Settings
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import android.view.Gravity
@@ -172,7 +172,7 @@ class MainActivity : AppCompatActivity() {
 
             val importAsWordByWord = pendingImportAsWordByWord
 
-            if (!isLikelyLyricsDocument(uri)) {
+            if (!LyricsImportValidator.isLikelyLyricsDocument(this, uri)) {
                 val message = if (importAsWordByWord) {
                     getString(R.string.ui_please_choose_an_enhanced_lrc_file)
                 } else {
@@ -182,7 +182,7 @@ class MainActivity : AppCompatActivity() {
                 return@registerForActivityResult
             }
 
-            if (isLyricsDocumentTooLarge(uri)) {
+            if (LyricsImportValidator.isLyricsDocumentTooLarge(this, uri)) {
                 Toast.makeText(this, getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
                 return@registerForActivityResult
             }
@@ -438,48 +438,6 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
-    private fun isLikelyLyricsDocument(uri: Uri): Boolean {
-        val fileName = getDocumentDisplayName(uri).lowercase()
-        val path = uri.lastPathSegment.orEmpty().lowercase()
-        val mimeType = contentResolver.getType(uri).orEmpty().lowercase()
-
-        return fileName.endsWith(".lrc") ||
-            path.endsWith(".lrc") ||
-            path.contains(".lrc") ||
-            mimeType.isBlank() ||
-            mimeType.startsWith("text/") ||
-            mimeType == "application/x-lrc" ||
-            mimeType == "application/lrc" ||
-            mimeType == "application/octet-stream"
-    }
-
-    private fun getDocumentDisplayName(uri: Uri): String {
-        val projection = arrayOf(OpenableColumns.DISPLAY_NAME)
-        return runCatching {
-            contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                if (index >= 0 && cursor.moveToFirst()) cursor.getString(index) else null
-            }
-        }.getOrNull()
-            ?: uri.lastPathSegment.orEmpty()
-    }
-
-    private fun isLyricsDocumentTooLarge(uri: Uri): Boolean {
-        val projection = arrayOf(OpenableColumns.SIZE)
-        val size = runCatching {
-            contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
-                val index = cursor.getColumnIndex(OpenableColumns.SIZE)
-                if (index >= 0 && cursor.moveToFirst() && !cursor.isNull(index)) {
-                    cursor.getLong(index)
-                } else {
-                    null
-                }
-            }
-        }.getOrNull() ?: return false
-
-        return size > MAX_IMPORT_LYRICS_BYTES
-    }
 
     internal fun runOnAppIo(block: () -> Unit) {
         appIoExecutor.execute(block)
@@ -787,10 +745,5 @@ class MainActivity : AppCompatActivity() {
         runCatching { unregisterReceiver(mediaStatusReceiver) }
         super.onDestroy()
     }
-
-    private companion object {
-        const val MAX_IMPORT_LYRICS_BYTES = 30L * 1024L * 1024L
-    }
-
 
 }
