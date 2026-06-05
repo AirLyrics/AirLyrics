@@ -1,12 +1,12 @@
 package com.andsi.airlyrics.app.controller
 
+import com.andsi.airlyrics.app.state.MainFloatingState
 import com.andsi.airlyrics.R
 
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
-import com.andsi.airlyrics.app.MainFloatingState
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService
