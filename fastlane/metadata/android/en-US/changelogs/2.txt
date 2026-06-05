@@ -1,0 +1,8 @@
+v1.0.1
+
+• Kept the floating lyrics UI and service state in sync after visibility changes.
+• Prevented stalled lyrics lookups from blocking newer lyrics requests.
+• Cleaned up NotificationListener lifecycle handling and debounced media session rescans.
+• Improved floating notification visibility action text and error feedback.
+• Reduced main-thread I/O risk during lyrics and service state handling.
+• Improved release build behavior for unsigned APKs and incomplete signing configuration.

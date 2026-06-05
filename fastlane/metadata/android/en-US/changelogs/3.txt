@@ -1,0 +1,3 @@
+v1.0.2
+
+• Refactored MainActivity to reduce its responsibilities and make the main app structure easier to maintain.

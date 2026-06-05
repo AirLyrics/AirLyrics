@@ -1,3 +1,8 @@
+v1.0.2 - 2026-06-05
+
+Changed
+- Refactored MainActivity to reduce its responsibilities and make the main app structure easier to maintain.
+
 v1.0.1 - 2026-06-02
 
 Fixed
