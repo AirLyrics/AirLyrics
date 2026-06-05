@@ -1,5 +1,6 @@
-package com.andsi.airlyrics.app
+package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.app.platform.AppNavigator
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 

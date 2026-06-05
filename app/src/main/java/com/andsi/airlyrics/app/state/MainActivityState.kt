@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.app
+package com.andsi.airlyrics.app.state
 
 import com.andsi.airlyrics.ui.model.MainUiState
 import com.andsi.airlyrics.ui.model.RefreshState

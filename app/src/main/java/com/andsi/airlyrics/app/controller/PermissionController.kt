@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.app
+package com.andsi.airlyrics.app.controller
 
 import android.content.Context
 import android.content.Intent

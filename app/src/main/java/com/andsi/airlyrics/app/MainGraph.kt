@@ -1,5 +1,11 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.app.controller.PermissionController
+import com.andsi.airlyrics.app.host.MainActivityUiHost
+import com.andsi.airlyrics.app.host.createMainUiActions
+import com.andsi.airlyrics.app.host.updateMediaSourceSelectionVisualsImpl
+import com.andsi.airlyrics.app.render.MainActivityViewRefs
+import com.andsi.airlyrics.app.state.MainActivityState
 import android.app.Dialog
 import android.content.Intent
 import android.graphics.Color

@@ -1,5 +1,6 @@
-package com.andsi.airlyrics.app
+package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.app.MainGraph
 import android.content.Intent
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore

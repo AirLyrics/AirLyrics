@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.app
+package com.andsi.airlyrics.app.render
 
 import android.widget.FrameLayout
 import android.widget.LinearLayout

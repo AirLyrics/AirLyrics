@@ -1,5 +1,8 @@
-package com.andsi.airlyrics.app
+package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.app.controller.PermissionController
+import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
