@@ -43,7 +43,7 @@ internal fun MainActivity.createMainUiActions(): MainUiActions {
             startActivity(Intent(ACTION_NOTIFICATION_LISTENER_SETTINGS))
         },
         selectLyricsDirectory = {
-            selectLyricsDirLauncher.launch(null)
+            launchers.selectLyricsDirectory()
         },
         copyLyricsDirectory = ::showLyricsDir,
         importLyricsForCurrentMedia = ::showImportLyricsDialog,

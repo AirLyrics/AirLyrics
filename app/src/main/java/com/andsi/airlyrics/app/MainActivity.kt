@@ -30,8 +30,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
-import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -47,11 +45,9 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
@@ -60,6 +56,7 @@ import com.andsi.airlyrics.app.PermissionController
 import com.andsi.airlyrics.app.controller.AppMediaController
 import com.andsi.airlyrics.app.controller.FloatingController
 import com.andsi.airlyrics.app.controller.LyricsController
+import com.andsi.airlyrics.app.lifecycle.MainLaunchers
 import com.andsi.airlyrics.app.render.MainHandRenderer
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.ui.components.actionButton
@@ -172,6 +169,8 @@ class MainActivity : AppCompatActivity() {
         get() = graph.mainHandRenderer
     internal val uiInvalidator: UiInvalidator
         get() = graph.uiInvalidator
+    internal val launchers: MainLaunchers
+        get() = graph.launchers
     private val floatingController: FloatingController
         get() = graph.floatingController
     internal val appMediaController: AppMediaController
@@ -190,79 +189,71 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private val lyricsDocumentMimeTypes = arrayOf("*/*", "application/x-lrc", "application/lrc", "text/lrc", "text/plain", "text/*", "application/octet-stream")
-    internal val importLyricsLauncher =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri == null) return@registerForActivityResult
-
-            val media = getCurrentMediaSnapshot()
-            if (media == null || media.title.isBlank()) {
-                Toast.makeText(this, getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
-            }
-
-            val importAsWordByWord = pendingImportAsWordByWord
-
-            if (!LyricsImportValidator.isLikelyLyricsDocument(this, uri)) {
-                val message = if (importAsWordByWord) {
-                    getString(R.string.ui_please_choose_an_enhanced_lrc_file)
-                } else {
-                    getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
-                }
-                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
-            }
-
-            if (LyricsImportValidator.isLyricsDocumentTooLarge(this, uri)) {
-                Toast.makeText(this, getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
-            }
-
-            importLyricsForCurrentMedia(
-                uri = uri,
-                media = media,
-                overwrite = false,
-                importAsWordByWord = importAsWordByWord
-            )
+    internal fun handleLyricsFileSelected(uri: Uri) {
+        val media = getCurrentMediaSnapshot()
+        if (media == null || media.title.isBlank()) {
+            Toast.makeText(this, getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
+            return
         }
 
-    internal val selectLyricsDirLauncher =
-        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-            if (uri == null) return@registerForActivityResult
+        val importAsWordByWord = pendingImportAsWordByWord
 
-            val permissionGranted = runCatching {
-                contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-            }.isSuccess
-
-            if (!permissionGranted) {
-                Toast.makeText(this, getString(R.string.ui_lyrics_folder_permission_failed), Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
-            }
-
-            if (!LyricsStorage.validateLyricsDir(this, uri)) {
-                Toast.makeText(this, getString(R.string.ui_lyrics_folder_write_failed), Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
-            }
-
-            LyricsStorage.saveLyricsDirUri(this, uri)
-            Toast.makeText(this, getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()
-            renderCurrentPage(animateContent = false, animateTabs = false)
-        }
-
-    internal val notificationPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            val message = if (granted) {
-                getString(R.string.ui_notification_permission_enabled)
+        if (!LyricsImportValidator.isLikelyLyricsDocument(this, uri)) {
+            val message = if (importAsWordByWord) {
+                getString(R.string.ui_please_choose_an_enhanced_lrc_file)
             } else {
-                getString(R.string.ui_notif_permission_off_warning)
+                getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
             }
-
             Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-            renderCurrentPage()
+            return
         }
+
+        if (LyricsImportValidator.isLyricsDocumentTooLarge(this, uri)) {
+            Toast.makeText(this, getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        importLyricsForCurrentMedia(
+            uri = uri,
+            media = media,
+            overwrite = false,
+            importAsWordByWord = importAsWordByWord
+        )
+    }
+
+    internal fun handleLyricsDirectorySelected(uri: Uri) {
+        val permissionGranted = runCatching {
+            contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }.isSuccess
+
+        if (!permissionGranted) {
+            Toast.makeText(this, getString(R.string.ui_lyrics_folder_permission_failed), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (!LyricsStorage.validateLyricsDir(this, uri)) {
+            Toast.makeText(this, getString(R.string.ui_lyrics_folder_write_failed), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        LyricsStorage.saveLyricsDirUri(this, uri)
+        Toast.makeText(this, getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()
+        renderCurrentPage(animateContent = false, animateTabs = false)
+    }
+
+    internal fun handleNotificationPermissionResult(granted: Boolean) {
+        val message = if (granted) {
+            getString(R.string.ui_notification_permission_enabled)
+        } else {
+            getString(R.string.ui_notif_permission_off_warning)
+        }
+
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        renderCurrentPage()
+    }
 
     internal val floatingWindowStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -348,7 +339,7 @@ class MainActivity : AppCompatActivity() {
         fun launchImport(asWordByWord: Boolean) {
             pendingImportAsWordByWord = asWordByWord
             dialog?.dismiss()
-            importLyricsLauncher.launch(lyricsDocumentMimeTypes)
+            launchers.selectLyricsFile()
         }
 
         val content = LinearLayout(this).apply {
@@ -686,7 +677,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal fun requestNotificationPermissionIfNeeded() {
-        PermissionController.requestNotificationPermissionIfNeeded(this)
+        PermissionController.requestNotificationPermissionIfNeeded(
+            activity = this,
+            requestPermission = launchers::requestNotificationPermission
+        )
     }
 
 

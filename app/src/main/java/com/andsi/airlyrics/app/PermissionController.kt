@@ -31,7 +31,10 @@ internal object PermissionController {
         }
     }
 
-    fun requestNotificationPermissionIfNeeded(activity: MainActivity) {
+    fun requestNotificationPermissionIfNeeded(
+        activity: MainActivity,
+        requestPermission: (String) -> Unit
+    ) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
             openAppNotificationSettings(activity)
             return
@@ -42,7 +45,7 @@ internal object PermissionController {
             return
         }
 
-        activity.notificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        requestPermission(android.Manifest.permission.POST_NOTIFICATIONS)
     }
 
     private fun openAppNotificationSettings(activity: MainActivity) {

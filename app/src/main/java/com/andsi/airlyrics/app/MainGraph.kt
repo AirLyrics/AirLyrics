@@ -7,6 +7,7 @@ import androidx.activity.OnBackPressedCallback
 import com.andsi.airlyrics.app.controller.AppMediaController
 import com.andsi.airlyrics.app.controller.FloatingController
 import com.andsi.airlyrics.app.controller.LyricsController
+import com.andsi.airlyrics.app.lifecycle.MainLaunchers
 import com.andsi.airlyrics.app.render.MainHandRenderer
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
@@ -26,6 +27,13 @@ internal class MainGraph(
     private val activity: MainActivity
 ) {
     val state: MainActivityState = MainActivityState()
+
+    val launchers: MainLaunchers = MainLaunchers(
+        activity = activity,
+        onLyricsFileSelected = activity::handleLyricsFileSelected,
+        onLyricsDirectorySelected = activity::handleLyricsDirectorySelected,
+        onNotificationPermissionResult = activity::handleNotificationPermissionResult
+    )
 
     val mainHandRenderer: MainHandRenderer by lazy { MainHandRenderer(activity) }
     val uiInvalidator: UiInvalidator
