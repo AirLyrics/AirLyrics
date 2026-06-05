@@ -116,19 +116,22 @@ import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
-    private val activityState = MainActivityState()
+    internal val state = MainActivityState()
     private val viewRefs = MainActivityViewRefs()
 
-    internal var locked by activityState::locked
-    internal var clickThrough by activityState::clickThrough
-    internal var currentPage by activityState::currentPage
-    internal var settingsSubPage by activityState::settingsSubPage
-    internal var quickFloatingVisible by activityState::quickFloatingVisible
-    internal val pageScrollY by activityState::pageScrollY
-    internal var renderedPage by activityState::renderedPage
-    internal var renderedSettingsSubPage by activityState::renderedSettingsSubPage
-    internal var mediaRefreshState by activityState::mediaRefreshState
-    internal var mediaPageRefreshScheduled by activityState::mediaPageRefreshScheduled
+    internal var locked by state::locked
+    internal var clickThrough by state::clickThrough
+    internal var currentPage by state::currentPage
+    internal var settingsSubPage by state::settingsSubPage
+    internal var quickFloatingVisible by state::quickFloatingVisible
+    internal val pageScrollY by state::pageScrollY
+    internal var renderedPage by state::renderedPage
+    internal var renderedSettingsSubPage by state::renderedSettingsSubPage
+    internal var mediaRefreshState by state::mediaRefreshState
+    internal var mediaPageRefreshScheduled by state::mediaPageRefreshScheduled
+    internal var currentLyricsLoadGeneration by state::currentLyricsLoadGeneration
+    internal var recentLyricsLoadGeneration by state::recentLyricsLoadGeneration
+    private var pendingImportAsWordByWord by state::pendingImportAsWordByWord
 
     internal var contentContainer by viewRefs::contentContainer
     internal val tabViews by viewRefs::tabViews
@@ -145,8 +148,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     internal val mediaRefreshHandler = Handler(Looper.getMainLooper())
-    internal var currentLyricsLoadGeneration = 0
-    internal var recentLyricsLoadGeneration = 0
 
     internal val mediaStatusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -156,8 +157,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-    private var pendingImportAsWordByWord = false
 
     private val lyricsDocumentMimeTypes = arrayOf("*/*", "application/x-lrc", "application/lrc", "text/lrc", "text/plain", "text/*", "application/octet-stream")
     internal val importLyricsLauncher =

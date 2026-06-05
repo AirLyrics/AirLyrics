@@ -20,4 +20,7 @@ internal class MainActivityState {
     var renderedSettingsSubPage: SettingsSubPage = SettingsSubPage.HOME
     var mediaRefreshState: RefreshState = RefreshState.IDLE
     var mediaPageRefreshScheduled: Boolean = false
+    var currentLyricsLoadGeneration: Int = 0
+    var recentLyricsLoadGeneration: Int = 0
+    var pendingImportAsWordByWord: Boolean = false
 }
