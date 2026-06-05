@@ -8,6 +8,7 @@ import com.andsi.airlyrics.app.controller.AppMediaController
 import com.andsi.airlyrics.app.controller.FloatingController
 import com.andsi.airlyrics.app.controller.LyricsController
 import com.andsi.airlyrics.app.lifecycle.MainLaunchers
+import com.andsi.airlyrics.app.lifecycle.MainReceivers
 import com.andsi.airlyrics.app.render.MainHandRenderer
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
@@ -49,6 +50,14 @@ internal class MainGraph(
 
     val mediaRefreshHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
 
+    private val receivers: MainReceivers by lazy {
+        MainReceivers(
+            context = activity,
+            onMediaChanged = appMediaController::handleMediaStatusBroadcast,
+            onFloatingStateChanged = floatingController::handleWindowStateBroadcast
+        )
+    }
+
     private val appIoExecutor by lazy {
         Executors.newSingleThreadExecutor { runnable ->
             Thread(runnable, "airlyrics-app-io").apply { isDaemon = true }
@@ -67,8 +76,7 @@ internal class MainGraph(
         activity.applySystemBarsTheme()
         registerBackNavigationCallback()
         activity.setContentView(mainHandRenderer.createMainView())
-        activity.registerFloatingWindowStateReceiver()
-        activity.registerMediaStatusReceiver()
+        receivers.register()
         activity.autoSelectMediaSourceOnceIfNeeded()
         activity.restoreFloatingLyricsIfNeeded()
         uiInvalidator.refresh()
@@ -88,8 +96,7 @@ internal class MainGraph(
     fun onDestroy() {
         mediaRefreshHandler.removeCallbacksAndMessages(null)
         appIoExecutor.shutdownNow()
-        runCatching { activity.unregisterReceiver(activity.floatingWindowStateReceiver) }
-        runCatching { activity.unregisterReceiver(activity.mediaStatusReceiver) }
+        receivers.unregister()
     }
 
     private fun registerBackNavigationCallback() {

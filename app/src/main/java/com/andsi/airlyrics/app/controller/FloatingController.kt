@@ -21,6 +21,28 @@ internal class FloatingController(
 ) {
     private var overlayPermissionHintShown = false
 
+    fun handleWindowStateBroadcast(intent: Intent) {
+        val action = intent.action ?: return
+        if (action != BroadcastActions.WINDOW_VISIBILITY_CHANGED &&
+            action != BroadcastActions.QUICK_CONTROL_CHANGED
+        ) return
+
+        val visible = intent.getBooleanExtra(
+            BroadcastActions.EXTRA_WINDOW_VISIBLE,
+            activity.quickFloatingVisible
+        )
+        activity.locked = intent.getBooleanExtra(
+            BroadcastActions.EXTRA_LOCKED,
+            FloatingLyricsStyleStore.isLocked(activity)
+        )
+        activity.clickThrough = intent.getBooleanExtra(
+            BroadcastActions.EXTRA_CLICK_THROUGH,
+            FloatingLyricsStyleStore.isClickThrough(activity)
+        )
+        updateQuickFloatingActualVisible(visible)
+        invalidator.refreshFloatingState()
+    }
+
     fun reloadLyrics() {
         if (!activity.quickFloatingVisible) return
         sendFloatingCommand(BroadcastActions.RELOAD_LYRICS)

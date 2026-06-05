@@ -12,12 +12,9 @@ import com.andsi.airlyrics.i18n.localizedAssetText
 
 import android.animation.LayoutTransition
 import android.app.Dialog
-import android.content.BroadcastReceiver
 import android.content.ClipData
 import android.content.ClipboardManager
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Typeface
@@ -45,7 +42,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.core.content.ContextCompat
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
@@ -84,7 +80,6 @@ import com.andsi.airlyrics.ui.components.statusPill
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.createBottomTabs
-import com.andsi.airlyrics.ui.navigation.updateTabs
 import com.andsi.airlyrics.ui.pages.createFloatingPage
 import com.andsi.airlyrics.ui.pages.createMediaPage
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
@@ -106,7 +101,6 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
@@ -180,15 +174,6 @@ class MainActivity : AppCompatActivity() {
     internal val mediaRefreshHandler: Handler
         get() = graph.mediaRefreshHandler
 
-    internal val mediaStatusReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent?.action) {
-                BroadcastActions.MEDIA_UPDATE,
-                BroadcastActions.MEDIA_SOURCE_LOST -> scheduleMediaPageRefresh()
-            }
-        }
-    }
-
     internal fun handleLyricsFileSelected(uri: Uri) {
         val media = getCurrentMediaSnapshot()
         if (media == null || media.title.isBlank()) {
@@ -253,30 +238,6 @@ class MainActivity : AppCompatActivity() {
 
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         renderCurrentPage()
-    }
-
-    internal val floatingWindowStateReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val action = intent?.action ?: return
-            if (action != BroadcastActions.WINDOW_VISIBILITY_CHANGED &&
-                action != BroadcastActions.QUICK_CONTROL_CHANGED
-            ) return
-
-            val visible = intent.getBooleanExtra(
-                BroadcastActions.EXTRA_WINDOW_VISIBLE,
-                quickFloatingVisible
-            )
-            locked = intent.getBooleanExtra(
-                BroadcastActions.EXTRA_LOCKED,
-                FloatingLyricsStyleStore.isLocked(this@MainActivity)
-            )
-            clickThrough = intent.getBooleanExtra(
-                BroadcastActions.EXTRA_CLICK_THROUGH,
-                FloatingLyricsStyleStore.isClickThrough(this@MainActivity)
-            )
-            updateQuickFloatingActualVisible(visible)
-            updateTabs(this@MainActivity)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -696,32 +657,6 @@ class MainActivity : AppCompatActivity() {
                 renderCurrentPage(animateContent = false, animateTabs = false)
             }
         }, 120L)
-    }
-
-    internal fun registerFloatingWindowStateReceiver() {
-        val filter = IntentFilter().apply {
-            addAction(BroadcastActions.WINDOW_VISIBILITY_CHANGED)
-            addAction(BroadcastActions.QUICK_CONTROL_CHANGED)
-        }
-        ContextCompat.registerReceiver(
-            this,
-            floatingWindowStateReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
-    }
-
-    internal fun registerMediaStatusReceiver() {
-        val filter = IntentFilter().apply {
-            addAction(BroadcastActions.MEDIA_UPDATE)
-            addAction(BroadcastActions.MEDIA_SOURCE_LOST)
-        }
-        ContextCompat.registerReceiver(
-            this,
-            mediaStatusReceiver,
-            filter,
-            ContextCompat.RECEIVER_NOT_EXPORTED
-        )
     }
 
     internal fun startLyricsServiceSafely(intent: Intent): Boolean {

@@ -4,12 +4,14 @@ import com.andsi.airlyrics.R
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.view.View
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.updateMediaSourceSelectionVisuals
+import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.media.MediaNotificationListener
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
@@ -17,6 +19,13 @@ import com.andsi.airlyrics.ui.components.playTinyPulse
 internal class AppMediaController(
     private val activity: MainActivity
 ) {
+    fun handleMediaStatusBroadcast(intent: Intent) {
+        when (intent.action) {
+            BroadcastActions.MEDIA_UPDATE,
+            BroadcastActions.MEDIA_SOURCE_LOST -> activity.scheduleMediaPageRefresh()
+        }
+    }
+
     fun autoSelectSourceOnceIfNeeded() {
         if (MediaSourceStore.getSelectedPackage(activity) != null) return
 
