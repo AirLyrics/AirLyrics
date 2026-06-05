@@ -9,17 +9,18 @@ import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.net.Uri
 import android.widget.Toast
-import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.ui.components.showAirConfirmDialog
-import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.media.MediaSourceStore
 
 internal class LyricsController(
-    private val activity: MainActivity,
-    private val invalidator: UiInvalidator
+    private val context: Context,
+    private val invalidator: UiInvalidator,
+    private val taskRunner: MainTaskRunner,
+    private val dialogHost: MainDialogHost,
+    private val mediaControllerProvider: MediaControllerProvider,
+    private val floatingLyricsReloader: FloatingLyricsReloader
 ) {
     fun importLyricsForCurrentMedia(
         uri: Uri,
@@ -27,22 +28,22 @@ internal class LyricsController(
         overwrite: Boolean,
         importAsWordByWord: Boolean = false
     ) {
-        activity.runOnAppIo {
+        taskRunner.runOnAppIo {
             if (!overwrite && hasLyricsForMedia(media, importAsWordByWord)) {
-                activity.runOnMainThread {
+                taskRunner.runOnMainThread {
                     val overwriteMessage = media.displayText + "\n\n" + if (importAsWordByWord) {
-                        activity.getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
+                        context.getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
                     } else {
-                        activity.getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
+                        context.getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
                     }
-                    activity.showAirConfirmDialog(
+                    dialogHost.showConfirmDialog(
                         title = if (importAsWordByWord) {
-                            activity.getString(R.string.ui_overwrite_local_enhanced_lrc)
+                            context.getString(R.string.ui_overwrite_local_enhanced_lrc)
                         } else {
-                            activity.getString(R.string.ui_overwrite_plain_lyrics)
+                            context.getString(R.string.ui_overwrite_plain_lyrics)
                         },
                         message = overwriteMessage,
-                        positiveText = activity.getString(R.string.ui_overwrite)
+                        positiveText = context.getString(R.string.ui_overwrite)
                     ) {
                         importLyricsForCurrentMedia(
                             uri = uri,
@@ -55,13 +56,13 @@ internal class LyricsController(
                 return@runOnAppIo
             }
 
-            activity.runOnMainThread {
-                Toast.makeText(activity, activity.getString(R.string.ui_importing_lyrics), Toast.LENGTH_SHORT).show()
+            taskRunner.runOnMainThread {
+                Toast.makeText(context, context.getString(R.string.ui_importing_lyrics), Toast.LENGTH_SHORT).show()
             }
 
             val result = if (importAsWordByWord) {
                 LyricsStorage.importKaraokeLyricsFromUriWithResult(
-                    context = activity,
+                    context = context,
                     uri = uri,
                     title = media.title,
                     artist = media.artist,
@@ -71,7 +72,7 @@ internal class LyricsController(
                 )
             } else {
                 LyricsStorage.importLyricsFromUriWithResult(
-                    context = activity,
+                    context = context,
                     uri = uri,
                     title = media.title,
                     artist = media.artist,
@@ -81,7 +82,7 @@ internal class LyricsController(
                 )
             }
 
-            activity.runOnMainThread {
+            taskRunner.runOnMainThread {
                 handleImportResult(result, importAsWordByWord)
             }
         }
@@ -90,14 +91,14 @@ internal class LyricsController(
     private fun hasLyricsForMedia(media: CurrentMediaInfo, importAsWordByWord: Boolean): Boolean {
         return if (importAsWordByWord) {
             LyricsStorage.hasKaraokeLyrics(
-                context = activity,
+                context = context,
                 title = media.title,
                 artist = media.artist,
                 duration = media.durationMs
             )
         } else {
             LyricsStorage.hasLocalLyrics(
-                context = activity,
+                context = context,
                 title = media.title,
                 artist = media.artist,
                 duration = media.durationMs
@@ -112,73 +113,73 @@ internal class LyricsController(
         when (result) {
             LyricsStorage.ImportLyricsResult.SAVED -> {
                 val message = if (importAsWordByWord) {
-                    activity.getString(R.string.ui_enhanced_lrc_import_success)
+                    context.getString(R.string.ui_enhanced_lrc_import_success)
                 } else {
-                    activity.getString(R.string.ui_plain_lrc_import_success)
+                    context.getString(R.string.ui_plain_lrc_import_success)
                 }
-                Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
-                activity.reloadFloatingLyrics()
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                floatingLyricsReloader.reloadFloatingLyrics()
                 invalidator.refresh(animateContent = false, animateTabs = false)
             }
             LyricsStorage.ImportLyricsResult.TOO_LARGE -> {
-                Toast.makeText(activity, activity.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
             }
             LyricsStorage.ImportLyricsResult.INVALID_FORMAT -> {
                 if (importAsWordByWord) {
-                    activity.showAirInfoDialog(
-                        title = activity.getString(R.string.ui_enhanced_lrc_import_failed),
-                        message = activity.getString(R.string.ui_enhanced_lrc_no_word_time_error)
+                    dialogHost.showInfoDialog(
+                        title = context.getString(R.string.ui_enhanced_lrc_import_failed),
+                        message = context.getString(R.string.ui_enhanced_lrc_no_word_time_error)
                     )
                 } else {
-                    Toast.makeText(activity, activity.getString(R.string.ui_lrc_import_format_error), Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, context.getString(R.string.ui_lrc_import_format_error), Toast.LENGTH_LONG).show()
                 }
             }
             LyricsStorage.ImportLyricsResult.SAVE_FAILED -> {
                 val message = if (importAsWordByWord) {
-                    activity.getString(R.string.ui_enhanced_lrc_import_failed)
+                    context.getString(R.string.ui_enhanced_lrc_import_failed)
                 } else {
-                    activity.getString(R.string.ui_lrc_import_format_error)
+                    context.getString(R.string.ui_lrc_import_format_error)
                 }
-                Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         }
     }
 
     fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
-        activity.runOnAppIo {
+        taskRunner.runOnAppIo {
             val deleted = LyricsStorage.deleteLocalLyrics(
-                context = activity,
+                context = context,
                 title = media.title,
                 artist = media.artist,
                 duration = media.durationMs,
                 mode = mode
             )
 
-            activity.runOnMainThread {
+            taskRunner.runOnMainThread {
                 if (deleted) {
                     val message = when (mode) {
-                        LyricsStorage.DeleteMode.PLAIN -> activity.getString(R.string.ui_plain_lrc_removed_for_this_song)
-                        LyricsStorage.DeleteMode.KARAOKE -> activity.getString(R.string.ui_enhanced_lrc_removed_for_this_song)
-                        LyricsStorage.DeleteMode.ALL -> activity.getString(R.string.ui_all_local_lyrics_removed)
+                        LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_plain_lrc_removed_for_this_song)
+                        LyricsStorage.DeleteMode.KARAOKE -> context.getString(R.string.ui_enhanced_lrc_removed_for_this_song)
+                        LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_all_local_lyrics_removed)
                     }
-                    Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
-                    activity.reloadFloatingLyrics()
+                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    floatingLyricsReloader.reloadFloatingLyrics()
                     invalidator.refresh(animateContent = false, animateTabs = false)
                 } else {
                     val message = when (mode) {
-                        LyricsStorage.DeleteMode.PLAIN -> activity.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)
-                        LyricsStorage.DeleteMode.KARAOKE -> activity.getString(R.string.ui_no_enhanced_lrc_to_remove)
-                        LyricsStorage.DeleteMode.ALL -> activity.getString(R.string.ui_no_local_lyrics_to_remove)
+                        LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)
+                        LyricsStorage.DeleteMode.KARAOKE -> context.getString(R.string.ui_no_enhanced_lrc_to_remove)
+                        LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_no_local_lyrics_to_remove)
                     }
-                    Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
 
     fun getCurrentMediaSnapshot(): CurrentMediaInfo? {
-        val selectedPackage = MediaSourceStore.getSelectedPackage(activity)
-        val controllers = activity.getActiveMediaControllers().filter { it.metadata != null || it.playbackState != null }
+        val selectedPackage = MediaSourceStore.getSelectedPackage(context)
+        val controllers = mediaControllerProvider.getActiveControllers().filter { it.metadata != null || it.playbackState != null }
         val controller = controllers.firstOrNull { it.packageName == selectedPackage }
             ?: controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
             ?: controllers.firstOrNull()
@@ -207,12 +208,11 @@ internal class LyricsController(
     }
 
     fun showLyricsDir() {
-        val path = LyricsStorage.getLyricsDirRawPath(activity)
+        val path = LyricsStorage.getLyricsDirRawPath(context)
 
-        val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText(activity.getString(R.string.ui_lyrics_save_folder), path))
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.ui_lyrics_save_folder), path))
 
-        Toast.makeText(activity, activity.getString(R.string.ui_lyrics_save_folder_copied), Toast.LENGTH_LONG).show()
+        Toast.makeText(context, context.getString(R.string.ui_lyrics_save_folder_copied), Toast.LENGTH_LONG).show()
     }
-
 }

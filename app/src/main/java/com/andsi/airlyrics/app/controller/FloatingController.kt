@@ -2,22 +2,24 @@ package com.andsi.airlyrics.app.controller
 
 import com.andsi.airlyrics.R
 
+import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import android.view.animation.OvershootInterpolator
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import android.widget.Toast
-import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.app.MainFloatingState
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
-import com.andsi.airlyrics.ui.navigation.Page
 
 internal class FloatingController(
-    private val activity: MainActivity,
-    private val invalidator: UiInvalidator
+    private val context: Context,
+    private val state: MainFloatingState,
+    private val invalidator: UiInvalidator,
+    private val serviceStarter: MainServiceStarter,
+    private val overlayPermissionRequester: OverlayPermissionRequester,
+    private val navFeedback: FloatingNavFeedback
 ) {
     private var overlayPermissionHintShown = false
 
@@ -29,27 +31,27 @@ internal class FloatingController(
 
         val visible = intent.getBooleanExtra(
             BroadcastActions.EXTRA_WINDOW_VISIBLE,
-            activity.quickFloatingVisible
+            state.quickFloatingVisible
         )
-        activity.locked = intent.getBooleanExtra(
+        state.locked = intent.getBooleanExtra(
             BroadcastActions.EXTRA_LOCKED,
-            FloatingLyricsStyleStore.isLocked(activity)
+            FloatingLyricsStyleStore.isLocked(context)
         )
-        activity.clickThrough = intent.getBooleanExtra(
+        state.clickThrough = intent.getBooleanExtra(
             BroadcastActions.EXTRA_CLICK_THROUGH,
-            FloatingLyricsStyleStore.isClickThrough(activity)
+            FloatingLyricsStyleStore.isClickThrough(context)
         )
         updateQuickFloatingActualVisible(visible)
         invalidator.refreshFloatingState()
     }
 
     fun reloadLyrics() {
-        if (!activity.quickFloatingVisible) return
+        if (!state.quickFloatingVisible) return
         sendFloatingCommand(BroadcastActions.RELOAD_LYRICS)
     }
 
     fun applyLyricsOffset(offsetMs: Long) {
-        if (!activity.quickFloatingVisible) return
+        if (!state.quickFloatingVisible) return
 
         sendFloatingCommand(BroadcastActions.APPLY_LYRICS_OFFSET) {
             putExtra(BroadcastActions.EXTRA_LYRICS_OFFSET_MS, offsetMs)
@@ -57,26 +59,26 @@ internal class FloatingController(
     }
 
     fun reloadLyricsFromOnline() {
-        if (!activity.quickFloatingVisible) {
-            Toast.makeText(activity, activity.getString(R.string.ui_show_overlay_then_search_hint), Toast.LENGTH_LONG).show()
+        if (!state.quickFloatingVisible) {
+            Toast.makeText(context, context.getString(R.string.ui_show_overlay_then_search_hint), Toast.LENGTH_LONG).show()
             return
         }
 
         if (sendFloatingCommand(BroadcastActions.RELOAD_ONLINE_LYRICS)) {
-            Toast.makeText(activity, activity.getString(R.string.ui_searching_online_again), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.ui_searching_online_again), Toast.LENGTH_SHORT).show()
         }
     }
 
     fun showLyrics(): Boolean {
-        if (!Settings.canDrawOverlays(activity)) {
+        if (!Settings.canDrawOverlays(context)) {
             if (!overlayPermissionHintShown) {
-                Toast.makeText(activity, activity.getString(R.string.ui_enable_overlay_permission_first), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.ui_enable_overlay_permission_first), Toast.LENGTH_LONG).show()
                 overlayPermissionHintShown = true
             }
             setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingState()
-            activity.requestOverlayPermission()
+            overlayPermissionRequester.requestOverlayPermission()
             return false
         }
 
@@ -94,16 +96,16 @@ internal class FloatingController(
         setDesiredVisible(false)
         val sent = sendFloatingCommand(BroadcastActions.HIDE)
         if (!sent) {
-            Toast.makeText(activity, activity.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
             invalidator.refreshFloatingState()
         }
         return sent
     }
 
     fun restoreVisibleWindowIfNeeded() {
-        if (!QuickFloatingStore.isDesiredVisible(activity)) return
+        if (!QuickFloatingStore.isDesiredVisible(context)) return
 
-        if (!Settings.canDrawOverlays(activity)) {
+        if (!Settings.canDrawOverlays(context)) {
             setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingState()
@@ -119,22 +121,9 @@ internal class FloatingController(
     }
 
     fun toggleFromNav() {
-        val selectedTab = activity.tabViews[Page.FLOATING]
-        selectedTab?.animate()
-            ?.scaleX(AirUiTokens.Layout.TabTextSwapScale)
-            ?.scaleY(AirUiTokens.Layout.TabTextSwapScale)
-            ?.setDuration(AirUiTokens.Layout.NavTapDownMs)
-            ?.withEndAction {
-                selectedTab.animate()
-                    .scaleX(AirUiTokens.Layout.TabQuickScale)
-                    .scaleY(AirUiTokens.Layout.TabQuickScale)
-                    .setDuration(AirUiTokens.Layout.NavTapUpMs)
-                    .setInterpolator(OvershootInterpolator(AirUiTokens.Layout.NavTapOvershoot))
-                    .start()
-            }
-            ?.start()
+        navFeedback.playFloatingNavToggleFeedback()
 
-        if (activity.quickFloatingVisible) {
+        if (state.quickFloatingVisible) {
             hideLyrics()
         } else {
             showLyrics()
@@ -142,7 +131,7 @@ internal class FloatingController(
     }
 
     fun isQuickFloatingVisible(): Boolean {
-        return activity.quickFloatingVisible
+        return state.quickFloatingVisible
     }
 
     /** Compatibility entry point: callers use this for UI/actual state. */
@@ -151,34 +140,34 @@ internal class FloatingController(
     }
 
     fun updateQuickFloatingActualVisible(visible: Boolean) {
-        activity.quickFloatingVisible = visible
+        state.quickFloatingVisible = visible
     }
 
     private fun setDesiredVisible(visible: Boolean) {
-        QuickFloatingStore.setDesiredVisible(activity, visible)
+        QuickFloatingStore.setDesiredVisible(context, visible)
     }
 
     fun toggleLock() {
-        val nextLocked = !FloatingLyricsStyleStore.isLocked(activity)
+        val nextLocked = !FloatingLyricsStyleStore.isLocked(context)
 
-        if (!activity.quickFloatingVisible) {
-            activity.locked = nextLocked
-            FloatingLyricsStyleStore.setLocked(activity, nextLocked)
+        if (!state.quickFloatingVisible) {
+            state.locked = nextLocked
+            FloatingLyricsStyleStore.setLocked(context, nextLocked)
             invalidator.refresh()
             return
         }
 
         if (!sendFloatingCommand(if (nextLocked) BroadcastActions.LOCK else BroadcastActions.UNLOCK)) {
-            Toast.makeText(activity, activity.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
     fun toggleClickThrough() {
-        val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(activity)
+        val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(context)
 
-        if (!activity.quickFloatingVisible) {
-            activity.clickThrough = nextClickThrough
-            FloatingLyricsStyleStore.setClickThrough(activity, nextClickThrough)
+        if (!state.quickFloatingVisible) {
+            state.clickThrough = nextClickThrough
+            FloatingLyricsStyleStore.setClickThrough(context, nextClickThrough)
             invalidator.refresh()
             return
         }
@@ -191,45 +180,45 @@ internal class FloatingController(
             }
         )
         if (!sent) {
-            Toast.makeText(activity, activity.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
     fun applyPreset(preset: String) {
-        FloatingLyricsStyleStore.applyPreset(activity, preset)
+        FloatingLyricsStyleStore.applyPreset(context, preset)
         notifyStyleChanged()
     }
 
     fun applyTextSize(textSizeSp: Float, refreshPage: Boolean = true) {
-        FloatingLyricsStyleStore.setTextSize(activity, textSizeSp)
+        FloatingLyricsStyleStore.setTextSize(context, textSizeSp)
         notifyStyleChanged()
         if (refreshPage) invalidator.refresh()
     }
 
     fun applyTextColor(color: Int, refreshPage: Boolean = true) {
-        FloatingLyricsStyleStore.setTextColor(activity, color)
+        FloatingLyricsStyleStore.setTextColor(context, color)
         notifyStyleChanged()
         if (refreshPage) invalidator.refresh()
     }
 
     fun applyBackgroundColor(color: Int, refreshPage: Boolean = true) {
-        FloatingLyricsStyleStore.setBackgroundColor(activity, color)
+        FloatingLyricsStyleStore.setBackgroundColor(context, color)
         notifyStyleChanged()
         if (refreshPage) invalidator.refresh()
     }
 
     fun applyGravity(gravity: Int) {
-        FloatingLyricsStyleStore.setGravity(activity, gravity)
+        FloatingLyricsStyleStore.setGravity(context, gravity)
         notifyStyleChanged()
     }
 
     fun notifyStyleChanged() {
-        if (!activity.quickFloatingVisible) return
+        if (!state.quickFloatingVisible) return
         sendFloatingCommand(BroadcastActions.APPLY_STYLE)
     }
 
     fun notifySourceChangedIfVisible(packageName: String?) {
-        if (!activity.quickFloatingVisible) return
+        if (!state.quickFloatingVisible) return
 
         sendFloatingCommand(BroadcastActions.SELECT_MEDIA_SOURCE) {
             putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, packageName)
@@ -240,10 +229,10 @@ internal class FloatingController(
         action: String,
         configure: Intent.() -> Unit = {}
     ): Boolean {
-        val intent = Intent(activity, FloatingLyricsService::class.java).apply {
+        val intent = Intent(context, FloatingLyricsService::class.java).apply {
             this.action = action
             configure()
         }
-        return activity.startLyricsServiceSafely(intent)
+        return serviceStarter.startLyricsServiceSafely(intent)
     }
 }
