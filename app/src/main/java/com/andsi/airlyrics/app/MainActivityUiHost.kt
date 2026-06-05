@@ -1,57 +1,88 @@
 package com.andsi.airlyrics.app
 
+import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.session.MediaController
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
+import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.theme.colorSurface
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
-/** Bridges the old hand-written screen helpers to the UI-facing host boundary. */
+/** Bridges hand-written main UI helpers to the UI-facing host boundary. */
 internal class MainActivityUiHost(
-    private val owner: MainActivity
-) : MainUiHost(owner, owner.state) {
+    private val graph: MainGraph
+) : MainUiHost(graph.activity, graph.state) {
+    private val viewRefs: MainActivityViewRefs
+        get() = graph.viewRefs
+
     override val actions: MainUiActions
-        get() = owner.uiActions
+        get() = graph.uiActions
 
     override val tabViews: MutableMap<Page, TextView>
-        get() = owner.tabViews
+        get() = viewRefs.tabViews
     override var tabRow: LinearLayout?
-        get() = owner.tabRow
-        set(value) { owner.tabRow = value }
+        get() = viewRefs.tabRow
+        set(value) { viewRefs.tabRow = value }
     override var tabHighlight: WaterTabHighlightView?
-        get() = owner.tabHighlight
-        set(value) { owner.tabHighlight = value }
+        get() = viewRefs.tabHighlight
+        set(value) { viewRefs.tabHighlight = value }
     override var floatingPanelBackHandler: (() -> Boolean)?
-        get() = owner.floatingPanelBackHandler
-        set(value) { owner.floatingPanelBackHandler = value }
+        get() = viewRefs.floatingPanelBackHandler
+        set(value) { viewRefs.floatingPanelBackHandler = value }
+    override var contentContainer: FrameLayout?
+        get() = viewRefs.contentContainer
+        set(value) { viewRefs.contentContainer = value }
+    override val mediaRefreshHandler
+        get() = graph.mediaRefreshHandler
 
-    override fun dp(value: Int): Int = owner.dp(value)
-    override fun isDarkTheme(): Boolean = owner.isDarkTheme()
+    override fun refreshCurrentPage(animateContent: Boolean, animateTabs: Boolean) {
+        graph.uiInvalidator.refresh(animateContent, animateTabs)
+    }
 
-    override fun getActiveMediaControllers(): List<MediaController> = owner.getActiveMediaControllers()
-    override fun getAppName(packageName: String): String = owner.getAppName(packageName)
-    override fun getPlaybackStateText(state: Int?): String = owner.getPlaybackStateText(state)
-    override fun getCurrentMediaSnapshot(): CurrentMediaInfo? = owner.getCurrentMediaSnapshot()
-    override fun runOnAppIo(block: () -> Unit) = owner.runOnAppIo(block)
-    override fun runOnMainThread(block: () -> Unit) = owner.runOnMainThread(block)
+    override fun rebuildMainView() {
+        graph.uiInvalidator.recreateForThemeChange()
+    }
 
-    override fun refreshMediaButton(): View = owner.refreshMediaButton()
-    override fun mediaSourceCard(controller: MediaController, selected: Boolean): View = owner.mediaSourceCard(controller, selected)
+    override fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
+    override fun isDarkTheme(): Boolean = ThemeSettingsStore.isDark(this)
 
-    override fun optionGrid(items: List<OptionItem>): LinearLayout = owner.optionGrid(items)
-    override fun liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout = owner.liveOptionGrid(items)
-    override fun optionButton(item: OptionItem): TextView = owner.optionButton(item)
-    override fun applyOptionButtonState(button: TextView, title: String, selected: Boolean) = owner.applyOptionButtonState(button, title, selected)
+    override fun getActiveMediaControllers(): List<MediaController> = graph.appMediaController.getActiveControllers()
+    override fun getAppName(packageName: String): String = graph.appMediaController.getAppName(packageName)
+    override fun getPlaybackStateText(state: Int?): String = graph.appMediaController.getPlaybackStateText(state)
+    override fun getCurrentMediaSnapshot(): CurrentMediaInfo? = graph.lyricsController.getCurrentMediaSnapshot()
+    override fun runOnAppIo(block: () -> Unit) = graph.runOnAppIo(block)
+    override fun runOnMainThread(block: () -> Unit) = graph.runOnMainThread(block)
+
+    override fun refreshMediaButton(): View = refreshMediaButtonImpl()
+    override fun mediaSourceCard(controller: MediaController, selected: Boolean): View = mediaSourceCardImpl(controller, selected)
+
+    override fun optionGrid(items: List<OptionItem>): LinearLayout = optionGridImpl(items)
+    override fun liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout = liveOptionGridImpl(items)
+    override fun optionButton(item: OptionItem): TextView = optionButtonImpl(item)
+    override fun applyOptionButtonState(button: TextView, title: String, selected: Boolean) = applyOptionButtonStateImpl(button, title, selected)
     override fun sliderRow(
         title: String,
         value: Int,
@@ -59,45 +90,94 @@ internal class MainActivityUiHost(
         max: Int,
         suffix: String,
         onChanged: (Int) -> Unit
-    ): LinearLayout = owner.sliderRow(title, value, min, max, suffix, onChanged)
-    override fun colorControl(title: String, color: Int, onChanged: (Int) -> Unit): LinearLayout = owner.colorControl(title, color, onChanged)
-    override fun colorPreviewBackground(color: Int): GradientDrawable = owner.colorPreviewBackground(color)
-    override fun isDarkColor(color: Int): Boolean = owner.isDarkColor(color)
-    override fun withAlpha(color: Int, alpha: Int): Int = owner.withAlpha(color, alpha)
-    override fun settingGrid(vararg items: FloatingSettingTile): LinearLayout = owner.settingGrid(*items)
-    override fun floatingTile(item: FloatingSettingTile): LinearLayout = owner.floatingTile(item)
+    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, onChanged)
+    override fun colorControl(title: String, color: Int, onChanged: (Int) -> Unit): LinearLayout = colorControlImpl(title, color, onChanged)
+    override fun colorPreviewBackground(color: Int): GradientDrawable = colorPreviewBackgroundImpl(color)
+    override fun isDarkColor(color: Int): Boolean = isDarkColorImpl(color)
+    override fun withAlpha(color: Int, alpha: Int): Int = withAlphaImpl(color, alpha)
+    override fun settingGrid(vararg items: FloatingSettingTile): LinearLayout = settingGridImpl(*items)
+    override fun floatingTile(item: FloatingSettingTile): LinearLayout = floatingTileImpl(item)
     override fun floatingFocusBubble(
         title: String,
         subtitle: String,
         onClose: () -> Unit,
         content: LinearLayout.() -> Unit
-    ): LinearLayout = owner.floatingFocusBubble(title, subtitle, onClose, content)
+    ): LinearLayout = floatingFocusBubbleImpl(title, subtitle, onClose, content)
     override fun showFloatingSettingPanel(
         title: String,
         subtitle: String,
         content: LinearLayout.() -> Unit
-    ) = owner.showFloatingSettingPanel(title, subtitle, content)
+    ) = showFloatingSettingPanelImpl(title, subtitle, content)
 
-    override fun floatingPreviewSummary(style: FloatingLyricsStyle): String = owner.floatingPreviewSummary(style)
-    override fun floatingDisplaySummary(): String = owner.floatingDisplaySummary()
-    override fun floatingLockButtonText(): String = owner.floatingLockButtonText()
-    override fun floatingClickThroughButtonText(): String = owner.floatingClickThroughButtonText()
-    override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView = owner.floatingPreviewText(text, style)
-    override fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle) {
-        with(owner) {
-            this@applyFloatingPreviewStyle.applyFloatingPreviewStyle(style)
+    override fun floatingPreviewSummary(style: FloatingLyricsStyle): String {
+        return getString(
+            R.string.floating_preview_summary,
+            localizedFloatingPresetTitle(style.presetName),
+            style.textSizeSp.toInt(),
+            localizedFloatingGravityTitle(style.gravity),
+            style.maxWidthPercent
+        )
+    }
+
+    override fun floatingDisplaySummary(): String {
+        val lockedText = if (FloatingLyricsStyleStore.isLocked(this)) getString(R.string.ui_locked) else getString(R.string.ui_draggable)
+        val clickThroughText = if (FloatingLyricsStyleStore.isClickThrough(this)) getString(R.string.ui_click_through) else getString(R.string.ui_clickable)
+        return "$lockedText · $clickThroughText"
+    }
+
+    override fun floatingLockButtonText(): String {
+        return if (FloatingLyricsStyleStore.isLocked(this)) getString(R.string.ui_drag_lock_on) else getString(R.string.ui_drag_lock_off)
+    }
+
+    override fun floatingClickThroughButtonText(): String {
+        return if (FloatingLyricsStyleStore.isClickThrough(this)) getString(R.string.ui_click_through_on) else getString(R.string.ui_click_through_off)
+    }
+
+    override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {
+        return TextView(this).apply {
+            this.text = text
+            val params = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
+            layoutParams = params
+            applyFloatingPreviewStyle(style)
         }
     }
-    override fun applyFloatingPreset(preset: String) = owner.applyFloatingPreset(preset)
-    override fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean) = owner.applyFloatingTextSize(textSizeSp, refreshPage)
-    override fun applyFloatingTextColor(color: Int, refreshPage: Boolean) = owner.applyFloatingTextColor(color, refreshPage)
-    override fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean) = owner.applyFloatingBackgroundColor(color, refreshPage)
-    override fun applyFloatingGravity(gravity: Int) = owner.applyFloatingGravity(gravity)
-    override fun notifyFloatingStyleChanged() = owner.notifyFloatingStyleChanged()
 
-    override fun settingsHomeHeader(): View = owner.settingsHomeHeader()
-    override fun settingsBackHeader(title: String, subtitle: String): View = owner.settingsBackHeader(title, subtitle)
-    override fun themeToggleButton(): TextView = owner.themeToggleButton()
+    override fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle) {
+        textSize = AirUiTokens.TextSize.Title
+        typeface = Typeface.DEFAULT_BOLD
+        gravity = style.gravity
+        setTextColor(style.textColor)
+        setShadowLayer(style.shadowRadius, 0f, 0f, style.shadowColor)
+        setPadding(
+            dp(style.paddingHorizontalDp.coerceAtMost(24)),
+            dp(style.paddingVerticalDp.coerceAtMost(12)),
+            dp(style.paddingHorizontalDp.coerceAtMost(24)),
+            dp(style.paddingVerticalDp.coerceAtMost(12))
+        )
+        background = if (style.backgroundEnabled) {
+            GradientDrawable().apply {
+                cornerRadius = dp(style.cornerRadiusDp.coerceAtMost(24)).toFloat()
+                setColor(withAlpha(style.backgroundColor, style.backgroundAlpha))
+            }
+        } else {
+            null
+        }
+    }
+
+    override fun applyFloatingPreset(preset: String) = graph.floatingController.applyPreset(preset)
+    override fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean) = graph.floatingController.applyTextSize(textSizeSp, refreshPage)
+    override fun applyFloatingTextColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyTextColor(color, refreshPage)
+    override fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyBackgroundColor(color, refreshPage)
+    override fun applyFloatingGravity(gravity: Int) = graph.floatingController.applyGravity(gravity)
+    override fun notifyFloatingStyleChanged() = graph.floatingController.notifyStyleChanged()
+
+    override fun settingsHomeHeader(): View = settingsHomeHeaderImpl()
+    override fun settingsBackHeader(title: String, subtitle: String): View = settingsBackHeaderImpl(title, subtitle)
+    override fun themeToggleButton(): TextView = themeToggleButtonImpl()
     override fun settingsCategoryCard(
         title: String,
         subtitle: String,
@@ -105,20 +185,61 @@ internal class MainActivityUiHost(
         accent: Int,
         iconRes: Int,
         onClick: () -> Unit
-    ): View = owner.settingsCategoryCard(title, subtitle, status, accent, iconRes, onClick)
+    ): View = settingsCategoryCardImpl(title, subtitle, status, accent, iconRes, onClick)
     override fun localLyricsRow(
         item: LyricsStorage.LocalLyricsItem,
         onLyricsSaved: (() -> Unit)?,
         badgeText: CharSequence?
-    ): View = owner.localLyricsRow(item, onLyricsSaved, badgeText)
-    override fun changelogItem(title: String, body: String): View = owner.changelogItem(title, body)
-    override fun permissionSummary(): String = owner.permissionSummary()
-    override fun getAppVersionName(): String = owner.getAppVersionName()
-    override fun openUrl(url: String) = owner.openUrl(url)
-    override fun refreshAfterLanguageChanged() = owner.refreshAfterLanguageChanged()
+    ): View = localLyricsRowImpl(item, onLyricsSaved, badgeText)
+    override fun changelogItem(title: String, body: String): View = changelogItemImpl(title, body)
+    override fun permissionSummary(): String = permissionSummaryImpl()
+    override fun getAppVersionName(): String = getAppVersionNameImpl()
+    override fun openUrl(url: String) = openUrlImpl(url)
+    override fun refreshAfterLanguageChanged() = refreshAfterLanguageChangedImpl()
 
-    override fun hasNotificationPermission(): Boolean = owner.hasNotificationPermission()
-    override fun hasNotificationListenerAccess(): Boolean = owner.hasNotificationListenerAccess()
+    override fun hasNotificationPermission(): Boolean = PermissionController.hasNotificationPermission(this)
+    override fun hasNotificationListenerAccess(): Boolean = PermissionController.hasNotificationListenerAccess(this)
 
-    override fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) = owner.deleteLyricsForCurrentMedia(media, mode)
+    override fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
+        graph.lyricsController.deleteLyricsForCurrentMedia(media, mode)
+    }
+
+    fun toggleThemeMode() {
+        val nextDark = !isDarkTheme()
+        ThemeSettingsStore.setDark(this, nextDark)
+        applySystemBarsTheme()
+        val oldContainer = contentContainer
+        oldContainer?.animate()
+            ?.alpha(0f)
+            ?.setDuration(AirUiTokens.Layout.FastFadeMs)
+            ?.withEndAction {
+                rebuildMainView()
+                contentContainer?.alpha = 0f
+                contentContainer?.animate()
+                    ?.alpha(1f)
+                    ?.setDuration(AirUiTokens.Layout.RestoreFadeMs)
+                    ?.setInterpolator(DecelerateInterpolator())
+                    ?.start()
+            }
+            ?.start()
+            ?: run {
+                rebuildMainView()
+            }
+    }
+
+    fun applySystemBarsTheme() {
+        val lightTheme = !isDarkTheme()
+        activity.enableEdgeToEdge(
+            statusBarStyle = if (lightTheme) {
+                SystemBarStyle.light(Color.BLACK, Color.BLACK)
+            } else {
+                SystemBarStyle.dark(Color.BLACK)
+            },
+            navigationBarStyle = if (lightTheme) {
+                SystemBarStyle.light(colorSurface, colorSurface)
+            } else {
+                SystemBarStyle.dark(colorSurface)
+            }
+        )
+    }
 }

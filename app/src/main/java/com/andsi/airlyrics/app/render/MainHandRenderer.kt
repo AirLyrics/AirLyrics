@@ -1,44 +1,112 @@
 package com.andsi.airlyrics.app.render
 
 import android.view.View
-import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.createMainView
-import com.andsi.airlyrics.app.recreateMainViewForThemeChange
-import com.andsi.airlyrics.app.renderCurrentPage
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.ScrollView
+import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.ui.components.animatePageEnter
+import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.navigation.createBottomTabs
+import com.andsi.airlyrics.ui.navigation.updateTabs
+import com.andsi.airlyrics.ui.pages.createFloatingPage
+import com.andsi.airlyrics.ui.pages.createMediaPage
+import com.andsi.airlyrics.ui.pages.createSettingsPage
+import com.andsi.airlyrics.ui.theme.colorBackground
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-/**
- * Transitional shell around the current hand-written MainActivity UI.
- *
- * This class intentionally delegates to the existing functions for now, so
- * page layout, animation timings, spacing, and the final easter egg stay
- * byte-for-byte under the old renderer's control during this step.
- */
+/** Renderer for the existing hand-written main UI. */
 internal class MainHandRenderer(
-    private val activity: MainActivity
+    private val graph: MainGraph
 ) : UiInvalidator {
+    private val host
+        get() = graph.uiHost
+    private val state
+        get() = graph.state
 
     fun createMainView(): View {
-        return activity.createMainView()
+        val root = LinearLayout(host).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(host.colorBackground)
+        }
+
+        val topSafeArea = View(host).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                host.dp(AirUiTokens.Layout.TopSafeAreaHeight)
+            )
+        }
+
+        host.contentContainer = FrameLayout(host).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        }
+
+        root.addView(topSafeArea)
+        root.addView(host.contentContainer)
+        root.addView(createBottomTabs(host))
+        return root
     }
 
     override fun refresh(
         animateContent: Boolean,
         animateTabs: Boolean
     ) {
-        activity.renderCurrentPage(
-            animateContent = animateContent,
-            animateTabs = animateTabs
-        )
+        val container = host.contentContainer ?: return
+        (container.getChildAt(0) as? ScrollView)?.let { scrollView ->
+            state.pageScrollY[state.renderedPage] = scrollView.scrollY
+        }
+
+        val oldPage = state.renderedPage
+        val oldSubPage = state.renderedSettingsSubPage
+        val shouldAnimate = animateContent &&
+            container.childCount > 0 &&
+            (state.currentPage != oldPage || state.settingsSubPage != oldSubPage)
+        val slideFromRight = when {
+            state.currentPage != oldPage -> state.currentPage.ordinal > oldPage.ordinal
+            state.currentPage == Page.SETTINGS -> state.settingsSubPage.ordinal > oldSubPage.ordinal
+            else -> true
+        }
+
+        container.removeAllViews()
+        updateTabs(host, animate = animateTabs)
+        if (state.currentPage != Page.FLOATING) {
+            host.floatingPanelBackHandler = null
+        }
+
+        val pageView = when (state.currentPage) {
+            Page.MEDIA -> createMediaPage(host, animateContent = animateContent)
+            Page.FLOATING -> createFloatingPage(host)
+            Page.SETTINGS -> createSettingsPage(host)
+        }
+
+        val restoreY = state.pageScrollY[state.currentPage] ?: 0
+        container.addView(pageView)
+        if (shouldAnimate) animatePageEnter(host, pageView, slideFromRight)
+        state.renderedPage = state.currentPage
+        state.renderedSettingsSubPage = state.settingsSubPage
+
+        (pageView as? ScrollView)?.let { scrollView ->
+            scrollView.scrollTo(0, restoreY)
+            scrollView.post {
+                scrollView.scrollTo(0, restoreY)
+            }
+        }
     }
 
     override fun refreshFloatingState() {
-        activity.renderCurrentPage(
+        refresh(
             animateContent = false,
             animateTabs = true
         )
     }
 
     override fun recreateForThemeChange() {
-        activity.recreateMainViewForThemeChange()
+        graph.activity.setContentView(createMainView())
+        refresh()
     }
 }

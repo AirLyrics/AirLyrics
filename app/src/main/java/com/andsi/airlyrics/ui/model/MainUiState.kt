@@ -9,6 +9,11 @@ internal interface MainUiState {
     var locked: Boolean
     var clickThrough: Boolean
     var quickFloatingVisible: Boolean
+    val pageScrollY: MutableMap<Page, Int>
+    var renderedPage: Page
+    var renderedSettingsSubPage: SettingsSubPage
+    var mediaRefreshState: RefreshState
+    var mediaPageRefreshScheduled: Boolean
     var currentLyricsLoadGeneration: Int
     var recentLyricsLoadGeneration: Int
 }

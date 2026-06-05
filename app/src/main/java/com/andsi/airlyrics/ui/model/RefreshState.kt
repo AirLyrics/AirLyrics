@@ -1,3 +1,3 @@
-package com.andsi.airlyrics.app
+package com.andsi.airlyrics.ui.model
 
 internal enum class RefreshState { IDLE, REFRESHING, DONE }

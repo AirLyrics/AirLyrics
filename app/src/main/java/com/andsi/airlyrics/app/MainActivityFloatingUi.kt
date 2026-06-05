@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.app
 
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.ui.model.MainUiHost
 
 import android.graphics.Color
 import android.app.Dialog
@@ -49,7 +50,7 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-internal fun MainActivity.optionGrid(items: List<OptionItem>): LinearLayout {
+internal fun MainUiHost.optionGridImpl(items: List<OptionItem>): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -80,7 +81,7 @@ internal fun MainActivity.optionGrid(items: List<OptionItem>): LinearLayout {
     }
 }
 
-internal fun MainActivity.liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout {
+internal fun MainUiHost.liveOptionGridImpl(items: List<KeyedOptionItem>): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -133,7 +134,7 @@ internal fun MainActivity.liveOptionGrid(items: List<KeyedOptionItem>): LinearLa
     }
 }
 
-internal fun MainActivity.optionButton(item: OptionItem): TextView {
+internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
     val activity = this
     return TextView(this).apply {
         gravity = Gravity.CENTER
@@ -149,7 +150,7 @@ internal fun MainActivity.optionButton(item: OptionItem): TextView {
     }
 }
 
-internal fun MainActivity.applyOptionButtonState(button: TextView, title: String, selected: Boolean) {
+internal fun MainUiHost.applyOptionButtonStateImpl(button: TextView, title: String, selected: Boolean) {
     val activity = this
     button.text = if (selected) "✓ ${displayText(title)}" else displayText(title)
     button.setTextColor(if (selected) Color.WHITE else colorText)
@@ -160,7 +161,7 @@ internal fun MainActivity.applyOptionButtonState(button: TextView, title: String
     }
 }
 
-internal fun MainActivity.sliderRow(
+internal fun MainUiHost.sliderRowImpl(
     title: String,
     value: Int,
     min: Int,
@@ -199,7 +200,7 @@ internal fun MainActivity.sliderRow(
     }
 }
 
-internal fun MainActivity.colorControl(
+internal fun MainUiHost.colorControlImpl(
     title: String,
     color: Int,
     onChanged: (Int) -> Unit
@@ -239,7 +240,7 @@ internal fun MainActivity.colorControl(
         }
         addView(swatchGrid)
 
-        val fineTuneButton = actionButton(uiHost, getString(R.string.ui_rgb_tune)) { }
+        val fineTuneButton = actionButton(activity, getString(R.string.ui_rgb_tune)) { }
         val rgbPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -418,7 +419,7 @@ internal fun MainActivity.colorControl(
     }
 }
 
-internal fun MainActivity.colorPreviewBackground(color: Int): GradientDrawable {
+internal fun MainUiHost.colorPreviewBackgroundImpl(color: Int): GradientDrawable {
     val activity = this
     return GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
@@ -427,13 +428,13 @@ internal fun MainActivity.colorPreviewBackground(color: Int): GradientDrawable {
     }
 }
 
-internal fun MainActivity.isDarkColor(color: Int): Boolean {
+internal fun MainUiHost.isDarkColorImpl(color: Int): Boolean {
     val activity = this
     val luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color))
     return luminance < 150
 }
 
-internal fun MainActivity.withAlpha(color: Int, alpha: Int): Int {
+internal fun MainUiHost.withAlphaImpl(color: Int, alpha: Int): Int {
     val activity = this
     return Color.argb(
         alpha.coerceIn(0, 255),
@@ -443,9 +444,9 @@ internal fun MainActivity.withAlpha(color: Int, alpha: Int): Int {
     )
 }
 
-internal fun MainActivity.mediaSourceCard(controller: MediaController, selected: Boolean): View {
+internal fun MainUiHost.mediaSourceCardImpl(controller: MediaController, selected: Boolean): View {
     val activity = this
-    return card(uiHost) {
+    return card(activity) {
         val title = controller.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
             .orEmpty()
             .ifBlank { getString(R.string.ui_unknown_song) }
@@ -455,12 +456,12 @@ internal fun MainActivity.mediaSourceCard(controller: MediaController, selected:
         val appName = getAppName(controller.packageName)
         val state = getPlaybackStateText(controller.playbackState?.state)
 
-        addView(label(uiHost, if (selected) getString(R.string.ui_connected) else getString(R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
+        addView(label(activity, if (selected) getString(R.string.ui_connected) else getString(R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
             tag = "media_source_status:${controller.packageName}"
         })
-        addView(bigText(uiHost, appName))
-        addView(normalText(uiHost, "$title - $artist"))
-        addView(smallHint(uiHost, state))
+        addView(bigText(activity, appName))
+        addView(normalText(activity, "$title - $artist"))
+        addView(smallHint(activity, state))
         enableSoftPressFeedback(AirUiTokens.Motion.FloatingCardPressScale)
         setOnClickListener {
             uiActions.selectMediaSource(controller.packageName, this)
@@ -468,7 +469,7 @@ internal fun MainActivity.mediaSourceCard(controller: MediaController, selected:
     }
 }
 
-internal fun MainActivity.settingGrid(vararg items: FloatingSettingTile): LinearLayout {
+internal fun MainUiHost.settingGridImpl(vararg items: FloatingSettingTile): LinearLayout {
     val activity = this
     val tileItems = items.toList()
     return LinearLayout(this).apply {
@@ -500,7 +501,7 @@ internal fun MainActivity.settingGrid(vararg items: FloatingSettingTile): Linear
     }
 }
 
-internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout {
+internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
         tag = "floating_tile:${item.title}"
@@ -552,7 +553,7 @@ internal fun MainActivity.floatingTile(item: FloatingSettingTile): LinearLayout 
     }
 }
 
-internal fun MainActivity.floatingFocusBubble(
+internal fun MainUiHost.floatingFocusBubbleImpl(
     title: String,
     subtitle: String,
     onClose: () -> Unit,
@@ -614,12 +615,12 @@ internal fun MainActivity.floatingFocusBubble(
                 setOnClickListener { onClose() }
             })
         })
-        addView(spacer(uiHost, 8))
+        addView(spacer(activity, 8))
         content()
     }
 }
 
-internal fun MainActivity.showFloatingSettingPanel(
+internal fun MainUiHost.showFloatingSettingPanelImpl(
     title: String,
     subtitle: String,
     content: LinearLayout.() -> Unit

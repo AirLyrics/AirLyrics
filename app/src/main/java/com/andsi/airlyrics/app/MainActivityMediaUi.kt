@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.app
 
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.ui.model.RefreshState
+import com.andsi.airlyrics.ui.model.MainUiHost
 
 import android.view.View
 import android.graphics.Color
@@ -27,7 +29,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-internal fun MainActivity.refreshMediaButton(): View {
+internal fun MainUiHost.refreshMediaButtonImpl(): View {
     val activity = this
     lateinit var row: LinearLayout
     lateinit var labelView: TextView
@@ -110,13 +112,13 @@ internal fun MainActivity.refreshMediaButton(): View {
     row.setOnClickListener {
         if (mediaRefreshState == RefreshState.REFRESHING) return@setOnClickListener
         playTinyPulse(row)
-        startMediaRefreshFeedback { applyButtonState(animateDone = true) }
+        startMediaRefreshFeedbackImpl { applyButtonState(animateDone = true) }
         applyButtonState()
     }
     return row
 }
 
-internal fun MainActivity.startMediaRefreshFeedback(onStateChanged: () -> Unit) {
+internal fun MainUiHost.startMediaRefreshFeedbackImpl(onStateChanged: () -> Unit) {
     val activity = this
     mediaRefreshHandler.removeCallbacksAndMessages(null)
     mediaRefreshState = RefreshState.REFRESHING
@@ -127,13 +129,13 @@ internal fun MainActivity.startMediaRefreshFeedback(onStateChanged: () -> Unit) 
         onStateChanged()
         mediaRefreshHandler.postDelayed({
             if (currentPage == Page.MEDIA) {
-                renderCurrentPage(animateContent = false, animateTabs = false)
+                refreshCurrentPage(animateContent = false, animateTabs = false)
             }
         }, AirUiTokens.Layout.MediaDoneRefreshMs)
     }, AirUiTokens.Layout.MediaRefreshingMs)
 }
 
-internal fun MainActivity.updateMediaSourceSelectionVisuals(selectedPackage: String) {
+internal fun MainUiHost.updateMediaSourceSelectionVisualsImpl(selectedPackage: String) {
     val activity = this
     val root = contentContainer ?: return
     fun visit(view: View) {

@@ -7,66 +7,63 @@ import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
-internal fun MainActivity.createMainUiActions(): MainUiActions {
+internal fun MainGraph.createMainUiActions(): MainUiActions {
     return MainUiActions(
         selectPage = { page ->
-            if (currentPage != page || page == Page.SETTINGS) {
-                currentPage = page
+            if (state.currentPage != page || page == Page.SETTINGS) {
+                state.currentPage = page
                 if (page == Page.SETTINGS) {
-                    settingsSubPage = SettingsSubPage.HOME
+                    state.settingsSubPage = SettingsSubPage.HOME
                 }
-                renderCurrentPage()
+                uiInvalidator.refresh()
             }
         },
         openSettingsSubPage = { subPage ->
-            settingsSubPage = subPage
-            renderCurrentPage()
+            state.settingsSubPage = subPage
+            uiInvalidator.refresh()
         },
         backToSettingsHome = {
-            settingsSubPage = SettingsSubPage.HOME
-            renderCurrentPage()
+            state.settingsSubPage = SettingsSubPage.HOME
+            uiInvalidator.refresh()
         },
-        toggleThemeMode = ::toggleThemeMode,
-        toggleFloatingFromNav = ::toggleFloatingFromNav,
-        showFloatingLyrics = { showFloatingLyrics() },
-        hideFloatingLyrics = { hideFloatingLyrics() },
-        toggleLock = ::toggleLock,
-        toggleClickThrough = ::toggleClickThrough,
-        reloadFloatingLyrics = ::reloadFloatingLyrics,
-        reloadFloatingLyricsFromOnline = ::reloadFloatingLyricsFromOnline,
+        toggleThemeMode = uiHost::toggleThemeMode,
+        toggleFloatingFromNav = floatingController::toggleFromNav,
+        showFloatingLyrics = { floatingController.showLyrics() },
+        hideFloatingLyrics = { floatingController.hideLyrics() },
+        toggleLock = floatingController::toggleLock,
+        toggleClickThrough = floatingController::toggleClickThrough,
+        reloadFloatingLyrics = floatingController::reloadLyrics,
+        reloadFloatingLyricsFromOnline = floatingController::reloadLyricsFromOnline,
         currentLyricsOffsetSummary = ::currentLyricsOffsetSummary,
         adjustLyricsOffsetForCurrentMedia = ::adjustLyricsOffsetForCurrentMedia,
         resetLyricsOffsetForCurrentMedia = ::resetLyricsOffsetForCurrentMedia,
         requestOverlayPermission = ::requestOverlayPermission,
         requestNotificationPermission = ::requestNotificationPermissionIfNeeded,
         openNotificationListenerSettings = {
-            startActivity(Intent(ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            activity.startActivity(Intent(ACTION_NOTIFICATION_LISTENER_SETTINGS))
         },
         selectLyricsDirectory = {
             launchers.selectLyricsDirectory()
         },
-        copyLyricsDirectory = ::showLyricsDir,
+        copyLyricsDirectory = lyricsController::showLyricsDir,
         importLyricsForCurrentMedia = ::showImportLyricsDialog,
-        deleteLyricsForCurrentMedia = ::deleteLyricsForCurrentMedia,
+        deleteLyricsForCurrentMedia = lyricsController::deleteLyricsForCurrentMedia,
         toggleLyricsAutoSearch = {
-            val enabled = !LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
-            LyricsSettingsStore.setAutoSearchOnlineEnabled(this, enabled)
-            reloadFloatingLyrics()
+            val enabled = !LyricsSettingsStore.isAutoSearchOnlineEnabled(activity)
+            LyricsSettingsStore.setAutoSearchOnlineEnabled(activity, enabled)
+            floatingController.reloadLyrics()
             enabled
         },
         toggleLyricsAutoSave = {
-            val enabled = !LyricsSettingsStore.isAutoSaveLocalEnabled(this)
-            LyricsSettingsStore.setAutoSaveLocalEnabled(this, enabled)
+            val enabled = !LyricsSettingsStore.isAutoSaveLocalEnabled(activity)
+            LyricsSettingsStore.setAutoSaveLocalEnabled(activity, enabled)
             enabled
         },
         selectLyricsSource = { sourceKey ->
-            LyricsSettingsStore.setLyricsSource(this, sourceKey)
-            reloadFloatingLyrics()
+            LyricsSettingsStore.setLyricsSource(activity, sourceKey)
+            floatingController.reloadLyrics()
         },
-        openUrl = ::openUrl,
-        selectMediaSource = { packageName, sourceCard ->
-            appMediaController.selectSource(packageName, sourceCard)
-        }
+        openUrl = uiHost::openUrl,
+        selectMediaSource = appMediaController::selectSource
     )
 }
-

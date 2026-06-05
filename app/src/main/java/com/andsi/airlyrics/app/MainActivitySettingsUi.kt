@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.app
 
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.ui.model.MainUiHost
 
 import android.graphics.Color
 import android.graphics.Typeface
@@ -39,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 private val localLyricsEditorLoadGeneration = AtomicInteger(0)
 
-internal fun MainActivity.settingsHomeHeader(): View {
+internal fun MainUiHost.settingsHomeHeaderImpl(): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -60,7 +61,7 @@ internal fun MainActivity.settingsHomeHeader(): View {
     }
 }
 
-internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = ""): View {
+internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String = ""): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -98,7 +99,7 @@ internal fun MainActivity.settingsBackHeader(title: String, subtitle: String = "
     }
 }
 
-internal fun MainActivity.themeToggleButton(): TextView {
+internal fun MainUiHost.themeToggleButtonImpl(): TextView {
     val activity = this
     return TextView(this).apply {
         text = if (isDarkTheme()) "☀" else "☾"
@@ -123,7 +124,7 @@ internal fun MainActivity.themeToggleButton(): TextView {
     }
 }
 
-internal fun MainActivity.settingsCategoryCard(
+internal fun MainUiHost.settingsCategoryCardImpl(
     title: String,
     subtitle: String,
     status: String,
@@ -132,7 +133,7 @@ internal fun MainActivity.settingsCategoryCard(
     onClick: () -> Unit
 ): View {
     val activity = this
-    return card(uiHost) {
+    return card(activity) {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         enableSoftPressFeedback(AirUiTokens.Motion.FloatingCardPressScale)
@@ -157,9 +158,9 @@ internal fun MainActivity.settingsCategoryCard(
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            addView(bigText(uiHost, title))
-            addView(normalText(uiHost, subtitle))
-            addView(smallHint(uiHost, status))
+            addView(bigText(activity, title))
+            addView(normalText(activity, subtitle))
+            addView(smallHint(activity, status))
         })
 
         addView(TextView(activity).apply {
@@ -171,7 +172,7 @@ internal fun MainActivity.settingsCategoryCard(
     }
 }
 
-internal fun MainActivity.localLyricsRow(
+internal fun MainUiHost.localLyricsRowImpl(
     item: LyricsStorage.LocalLyricsItem,
     onLyricsSaved: (() -> Unit)? = null,
     badgeText: CharSequence? = null
@@ -227,7 +228,7 @@ internal fun MainActivity.localLyricsRow(
 }
 
 
-private fun MainActivity.openLocalLyricsTargetPicker(
+private fun MainUiHost.openLocalLyricsTargetPicker(
     item: LyricsStorage.LocalLyricsItem,
     onLyricsSaved: (() -> Unit)?
 ) {
@@ -265,7 +266,7 @@ private fun MainActivity.openLocalLyricsTargetPicker(
     }
 }
 
-private fun MainActivity.openLocalLyricsEditor(
+private fun MainUiHost.openLocalLyricsEditor(
     item: LyricsStorage.LocalLyricsItem,
     target: LyricsStorage.LocalLyricsEditTarget,
     onLyricsSaved: (() -> Unit)?
@@ -297,7 +298,7 @@ private fun MainActivity.openLocalLyricsEditor(
     }
 }
 
-private fun MainActivity.showLocalLyricsEditorDialog(
+private fun MainUiHost.showLocalLyricsEditorDialog(
     item: LyricsStorage.LocalLyricsItem,
     target: LyricsStorage.LocalLyricsEditTarget,
     rawLyrics: String,
@@ -399,7 +400,7 @@ private fun MainActivity.showLocalLyricsEditorDialog(
                             when {
                                 result.saved -> {
                                     editDialog?.dismiss()
-                                    reloadFloatingLyrics()
+                                    uiActions.reloadFloatingLyrics()
                                     onLyricsSaved?.invoke()
                                 }
                                 result.invalidLineNumbers.isNotEmpty() -> {
@@ -428,7 +429,7 @@ private fun MainActivity.showLocalLyricsEditorDialog(
     )
 }
 
-private fun MainActivity.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
+private fun MainUiHost.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     val message = if (invalidLineNumbers.isNotEmpty()) {
         val lines = invalidLineNumbers.take(8).joinToString(", ")
         val suffix = if (invalidLineNumbers.size > 8) "…" else ""
@@ -444,7 +445,7 @@ private fun MainActivity.showLyricsFormatErrorDialog(invalidLineNumbers: List<In
     )
 }
 
-private fun MainActivity.showEnhancedLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
+private fun MainUiHost.showEnhancedLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     val message = if (invalidLineNumbers.isNotEmpty()) {
         val lines = invalidLineNumbers.take(8).joinToString(", ")
         val suffix = if (invalidLineNumbers.size > 8) "…" else ""
@@ -460,7 +461,7 @@ private fun MainActivity.showEnhancedLyricsFormatErrorDialog(invalidLineNumbers:
     )
 }
 
-private fun MainActivity.localLyricsDialogButton(
+private fun MainUiHost.localLyricsDialogButton(
     text: String,
     primary: Boolean,
     onClick: () -> Unit
@@ -492,7 +493,7 @@ private fun MainActivity.localLyricsDialogButton(
     }
 }
 
-internal fun MainActivity.changelogItem(title: String, body: String): View {
+internal fun MainUiHost.changelogItemImpl(title: String, body: String): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -512,7 +513,7 @@ internal fun MainActivity.changelogItem(title: String, body: String): View {
     }
 }
 
-internal fun MainActivity.permissionSummary(): String {
+internal fun MainUiHost.permissionSummaryImpl(): String {
     val opened = listOf(
         Settings.canDrawOverlays(this),
         hasNotificationPermission(),
@@ -521,7 +522,7 @@ internal fun MainActivity.permissionSummary(): String {
     return getString(R.string.permissions_summary, opened, 3)
 }
 
-internal fun MainActivity.getAppVersionName(): String {
+internal fun MainUiHost.getAppVersionNameImpl(): String {
     return try {
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         packageInfo.versionName ?: "1.0"
@@ -530,13 +531,13 @@ internal fun MainActivity.getAppVersionName(): String {
     }
 }
 
-internal fun MainActivity.openUrl(url: String) {
+internal fun MainUiHost.openUrlImpl(url: String) {
     AppNavigator.openUrl(this, url)
 }
 
 
-internal fun MainActivity.refreshAfterLanguageChanged() {
-    setContentView(createMainView())
-    renderCurrentPage()
-    reloadFloatingLyrics()
+internal fun MainUiHost.refreshAfterLanguageChangedImpl() {
+    rebuildMainView()
+    refreshCurrentPage()
+    uiActions.reloadFloatingLyrics()
 }

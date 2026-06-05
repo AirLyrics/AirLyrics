@@ -2,7 +2,9 @@ package com.andsi.airlyrics.ui.model
 
 import android.content.ContextWrapper
 import android.media.session.MediaController
+import android.os.Handler
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -48,12 +50,30 @@ internal abstract class MainUiHost(
     var recentLyricsLoadGeneration: Int
         get() = uiState.recentLyricsLoadGeneration
         set(value) { uiState.recentLyricsLoadGeneration = value }
+    val pageScrollY: MutableMap<Page, Int>
+        get() = uiState.pageScrollY
+    var renderedPage: Page
+        get() = uiState.renderedPage
+        set(value) { uiState.renderedPage = value }
+    var renderedSettingsSubPage: SettingsSubPage
+        get() = uiState.renderedSettingsSubPage
+        set(value) { uiState.renderedSettingsSubPage = value }
+    var mediaRefreshState: RefreshState
+        get() = uiState.mediaRefreshState
+        set(value) { uiState.mediaRefreshState = value }
+    var mediaPageRefreshScheduled: Boolean
+        get() = uiState.mediaPageRefreshScheduled
+        set(value) { uiState.mediaPageRefreshScheduled = value }
 
     abstract val tabViews: MutableMap<Page, TextView>
     abstract var tabRow: LinearLayout?
     abstract var tabHighlight: WaterTabHighlightView?
     abstract var floatingPanelBackHandler: (() -> Boolean)?
+    abstract var contentContainer: FrameLayout?
+    abstract val mediaRefreshHandler: Handler
 
+    abstract fun refreshCurrentPage(animateContent: Boolean = true, animateTabs: Boolean = true)
+    abstract fun rebuildMainView()
     abstract fun dp(value: Int): Int
     abstract fun isDarkTheme(): Boolean
 

@@ -6,12 +6,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
-/**
- * View references owned by [MainActivity].
- *
- * Keeping them grouped separately makes MainActivity less like a drawer full of
- * unrelated mutable fields, without changing the existing UI flow.
- */
+/** View references owned by [MainGraph] for the hand-written main UI. */
 internal class MainActivityViewRefs {
     var contentContainer: FrameLayout? = null
     val tabViews: MutableMap<Page, TextView> = mutableMapOf()
