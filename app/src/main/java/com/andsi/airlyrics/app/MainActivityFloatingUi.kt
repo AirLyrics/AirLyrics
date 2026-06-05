@@ -239,7 +239,7 @@ internal fun MainActivity.colorControl(
         }
         addView(swatchGrid)
 
-        val fineTuneButton = actionButton(activity, getString(R.string.ui_rgb_tune)) { }
+        val fineTuneButton = actionButton(uiHost, getString(R.string.ui_rgb_tune)) { }
         val rgbPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
@@ -445,7 +445,7 @@ internal fun MainActivity.withAlpha(color: Int, alpha: Int): Int {
 
 internal fun MainActivity.mediaSourceCard(controller: MediaController, selected: Boolean): View {
     val activity = this
-    return card(this) {
+    return card(uiHost) {
         val title = controller.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
             .orEmpty()
             .ifBlank { getString(R.string.ui_unknown_song) }
@@ -455,12 +455,12 @@ internal fun MainActivity.mediaSourceCard(controller: MediaController, selected:
         val appName = getAppName(controller.packageName)
         val state = getPlaybackStateText(controller.playbackState?.state)
 
-        addView(label(activity, if (selected) getString(R.string.ui_connected) else getString(R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
+        addView(label(uiHost, if (selected) getString(R.string.ui_connected) else getString(R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
             tag = "media_source_status:${controller.packageName}"
         })
-        addView(bigText(activity, appName))
-        addView(normalText(activity, "$title - $artist"))
-        addView(smallHint(activity, state))
+        addView(bigText(uiHost, appName))
+        addView(normalText(uiHost, "$title - $artist"))
+        addView(smallHint(uiHost, state))
         enableSoftPressFeedback(AirUiTokens.Motion.FloatingCardPressScale)
         setOnClickListener {
             uiActions.selectMediaSource(controller.packageName, this)
@@ -614,7 +614,7 @@ internal fun MainActivity.floatingFocusBubble(
                 setOnClickListener { onClose() }
             })
         })
-        addView(spacer(activity, 8))
+        addView(spacer(uiHost, 8))
         content()
     }
 }

@@ -132,7 +132,7 @@ internal fun MainActivity.settingsCategoryCard(
     onClick: () -> Unit
 ): View {
     val activity = this
-    return card(this) {
+    return card(uiHost) {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         enableSoftPressFeedback(AirUiTokens.Motion.FloatingCardPressScale)
@@ -157,9 +157,9 @@ internal fun MainActivity.settingsCategoryCard(
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            addView(bigText(activity, title))
-            addView(normalText(activity, subtitle))
-            addView(smallHint(activity, status))
+            addView(bigText(uiHost, title))
+            addView(normalText(uiHost, subtitle))
+            addView(smallHint(uiHost, status))
         })
 
         addView(TextView(activity).apply {
