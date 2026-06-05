@@ -62,6 +62,8 @@ import com.andsi.airlyrics.app.PermissionController
 import com.andsi.airlyrics.app.controller.AppMediaController
 import com.andsi.airlyrics.app.controller.FloatingController
 import com.andsi.airlyrics.app.controller.LyricsController
+import com.andsi.airlyrics.app.render.MainHandRenderer
+import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.animateChildrenCascade
 import com.andsi.airlyrics.ui.components.animatePageEnter
@@ -140,9 +142,12 @@ class MainActivity : AppCompatActivity() {
     internal var floatingPanelBackHandler by viewRefs::floatingPanelBackHandler
 
     internal val uiActions: MainUiActions by lazy { createMainUiActions() }
-    private val floatingController: FloatingController by lazy { FloatingController(this) }
+    internal val mainHandRenderer: MainHandRenderer by lazy { MainHandRenderer(this) }
+    internal val uiInvalidator: UiInvalidator
+        get() = mainHandRenderer
+    private val floatingController: FloatingController by lazy { FloatingController(this, uiInvalidator) }
     internal val appMediaController: AppMediaController by lazy { AppMediaController(this) }
-    private val lyricsController: LyricsController by lazy { LyricsController(this) }
+    private val lyricsController: LyricsController by lazy { LyricsController(this, uiInvalidator) }
     private val appIoExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "airlyrics-app-io").apply { isDaemon = true }
     }
@@ -264,7 +269,7 @@ class MainActivity : AppCompatActivity() {
         quickFloatingVisible = false
         applySystemBarsTheme()
         registerBackNavigationCallback()
-        setContentView(createMainView())
+        setContentView(mainHandRenderer.createMainView())
         registerFloatingWindowStateReceiver()
         registerMediaStatusReceiver()
         autoSelectMediaSourceOnceIfNeeded()
@@ -609,8 +614,7 @@ class MainActivity : AppCompatActivity() {
             ?.alpha(0f)
             ?.setDuration(AirUiTokens.Layout.FastFadeMs)
             ?.withEndAction {
-                setContentView(createMainView())
-                renderCurrentPage()
+                uiInvalidator.recreateForThemeChange()
                 contentContainer?.alpha = 0f
                 contentContainer?.animate()
                     ?.alpha(1f)
@@ -620,8 +624,7 @@ class MainActivity : AppCompatActivity() {
             }
             ?.start()
             ?: run {
-                setContentView(createMainView())
-                renderCurrentPage()
+                uiInvalidator.recreateForThemeChange()
             }
     }
 

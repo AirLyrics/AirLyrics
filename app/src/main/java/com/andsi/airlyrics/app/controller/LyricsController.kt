@@ -10,7 +10,7 @@ import android.media.session.PlaybackState
 import android.net.Uri
 import android.widget.Toast
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.renderCurrentPage
+import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
@@ -18,7 +18,8 @@ import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.media.MediaSourceStore
 
 internal class LyricsController(
-    private val activity: MainActivity
+    private val activity: MainActivity,
+    private val invalidator: UiInvalidator
 ) {
     fun importLyricsForCurrentMedia(
         uri: Uri,
@@ -117,7 +118,7 @@ internal class LyricsController(
                 }
                 Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                 activity.reloadFloatingLyrics()
-                activity.renderCurrentPage(animateContent = false, animateTabs = false)
+                invalidator.refresh(animateContent = false, animateTabs = false)
             }
             LyricsStorage.ImportLyricsResult.TOO_LARGE -> {
                 Toast.makeText(activity, activity.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
@@ -162,7 +163,7 @@ internal class LyricsController(
                     }
                     Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
                     activity.reloadFloatingLyrics()
-                    activity.renderCurrentPage(animateContent = false, animateTabs = false)
+                    invalidator.refresh(animateContent = false, animateTabs = false)
                 } else {
                     val message = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> activity.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)

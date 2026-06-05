@@ -83,3 +83,8 @@ internal fun MainActivity.renderCurrentPage(animateContent: Boolean = true, anim
     }
 }
 
+
+internal fun MainActivity.recreateMainViewForThemeChange() {
+    setContentView(createMainView())
+    renderCurrentPage()
+}

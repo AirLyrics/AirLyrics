@@ -8,16 +8,16 @@ import android.view.animation.OvershootInterpolator
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import android.widget.Toast
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.renderCurrentPage
+import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.ui.navigation.Page
-import com.andsi.airlyrics.ui.navigation.updateTabs
 
 internal class FloatingController(
-    private val activity: MainActivity
+    private val activity: MainActivity,
+    private val invalidator: UiInvalidator
 ) {
     private var overlayPermissionHintShown = false
 
@@ -53,7 +53,7 @@ internal class FloatingController(
             }
             setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
-            updateTabs(activity)
+            invalidator.refreshFloatingState()
             activity.requestOverlayPermission()
             return false
         }
@@ -63,7 +63,7 @@ internal class FloatingController(
         if (!sent) {
             setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
-            updateTabs(activity)
+            invalidator.refreshFloatingState()
         }
         return sent
     }
@@ -73,7 +73,7 @@ internal class FloatingController(
         val sent = sendFloatingCommand(BroadcastActions.HIDE)
         if (!sent) {
             Toast.makeText(activity, activity.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
-            updateTabs(activity)
+            invalidator.refreshFloatingState()
         }
         return sent
     }
@@ -84,7 +84,7 @@ internal class FloatingController(
         if (!Settings.canDrawOverlays(activity)) {
             setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
-            updateTabs(activity)
+            invalidator.refreshFloatingState()
             return
         }
 
@@ -92,7 +92,7 @@ internal class FloatingController(
         if (!sent) {
             setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
-            updateTabs(activity)
+            invalidator.refreshFloatingState()
         }
     }
 
@@ -142,7 +142,7 @@ internal class FloatingController(
         if (!activity.quickFloatingVisible) {
             activity.locked = nextLocked
             FloatingLyricsStyleStore.setLocked(activity, nextLocked)
-            activity.renderCurrentPage()
+            invalidator.refresh()
             return
         }
 
@@ -157,7 +157,7 @@ internal class FloatingController(
         if (!activity.quickFloatingVisible) {
             activity.clickThrough = nextClickThrough
             FloatingLyricsStyleStore.setClickThrough(activity, nextClickThrough)
-            activity.renderCurrentPage()
+            invalidator.refresh()
             return
         }
 
@@ -181,19 +181,19 @@ internal class FloatingController(
     fun applyTextSize(textSizeSp: Float, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setTextSize(activity, textSizeSp)
         notifyStyleChanged()
-        if (refreshPage) activity.renderCurrentPage()
+        if (refreshPage) invalidator.refresh()
     }
 
     fun applyTextColor(color: Int, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setTextColor(activity, color)
         notifyStyleChanged()
-        if (refreshPage) activity.renderCurrentPage()
+        if (refreshPage) invalidator.refresh()
     }
 
     fun applyBackgroundColor(color: Int, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setBackgroundColor(activity, color)
         notifyStyleChanged()
-        if (refreshPage) activity.renderCurrentPage()
+        if (refreshPage) invalidator.refresh()
     }
 
     fun applyGravity(gravity: Int) {
