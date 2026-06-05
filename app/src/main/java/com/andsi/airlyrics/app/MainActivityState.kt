@@ -4,10 +4,10 @@ import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
 /**
- * Mutable UI and feature state owned by [MainActivity].
+ * Mutable UI and feature state owned by [MainGraph].
  *
- * This keeps Activity-level state in one small container, while preserving the
- * current Activity APIs used by the existing View code.
+ * MainActivity still exposes compatibility proxies for the existing View code,
+ * but the graph now creates the state container during main screen wiring.
  */
 internal class MainActivityState {
     var locked: Boolean = false

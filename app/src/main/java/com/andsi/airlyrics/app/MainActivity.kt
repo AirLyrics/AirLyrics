@@ -45,7 +45,6 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -55,7 +54,6 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
-import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.app.AppNavigator
 import com.andsi.airlyrics.app.PermissionController
@@ -115,25 +113,52 @@ import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
-import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
-    internal val state = MainActivityState()
+    private lateinit var graph: MainGraph
+
+    internal val state: MainActivityState
+        get() = graph.state
     private val viewRefs = MainActivityViewRefs()
 
-    internal var locked by state::locked
-    internal var clickThrough by state::clickThrough
-    internal var currentPage by state::currentPage
-    internal var settingsSubPage by state::settingsSubPage
-    internal var quickFloatingVisible by state::quickFloatingVisible
-    internal val pageScrollY by state::pageScrollY
-    internal var renderedPage by state::renderedPage
-    internal var renderedSettingsSubPage by state::renderedSettingsSubPage
-    internal var mediaRefreshState by state::mediaRefreshState
-    internal var mediaPageRefreshScheduled by state::mediaPageRefreshScheduled
-    internal var currentLyricsLoadGeneration by state::currentLyricsLoadGeneration
-    internal var recentLyricsLoadGeneration by state::recentLyricsLoadGeneration
-    private var pendingImportAsWordByWord by state::pendingImportAsWordByWord
+    internal var locked: Boolean
+        get() = state.locked
+        set(value) { state.locked = value }
+    internal var clickThrough: Boolean
+        get() = state.clickThrough
+        set(value) { state.clickThrough = value }
+    internal var currentPage: Page
+        get() = state.currentPage
+        set(value) { state.currentPage = value }
+    internal var settingsSubPage: SettingsSubPage
+        get() = state.settingsSubPage
+        set(value) { state.settingsSubPage = value }
+    internal var quickFloatingVisible: Boolean
+        get() = state.quickFloatingVisible
+        set(value) { state.quickFloatingVisible = value }
+    internal val pageScrollY: MutableMap<Page, Int>
+        get() = state.pageScrollY
+    internal var renderedPage: Page
+        get() = state.renderedPage
+        set(value) { state.renderedPage = value }
+    internal var renderedSettingsSubPage: SettingsSubPage
+        get() = state.renderedSettingsSubPage
+        set(value) { state.renderedSettingsSubPage = value }
+    internal var mediaRefreshState: RefreshState
+        get() = state.mediaRefreshState
+        set(value) { state.mediaRefreshState = value }
+    internal var mediaPageRefreshScheduled: Boolean
+        get() = state.mediaPageRefreshScheduled
+        set(value) { state.mediaPageRefreshScheduled = value }
+    internal var currentLyricsLoadGeneration: Int
+        get() = state.currentLyricsLoadGeneration
+        set(value) { state.currentLyricsLoadGeneration = value }
+    internal var recentLyricsLoadGeneration: Int
+        get() = state.recentLyricsLoadGeneration
+        set(value) { state.recentLyricsLoadGeneration = value }
+    private var pendingImportAsWordByWord: Boolean
+        get() = state.pendingImportAsWordByWord
+        set(value) { state.pendingImportAsWordByWord = value }
 
     internal var contentContainer by viewRefs::contentContainer
     internal val tabViews by viewRefs::tabViews
@@ -141,18 +166,20 @@ class MainActivity : AppCompatActivity() {
     internal var tabHighlight by viewRefs::tabHighlight
     internal var floatingPanelBackHandler by viewRefs::floatingPanelBackHandler
 
-    internal val uiActions: MainUiActions by lazy { createMainUiActions() }
-    internal val mainHandRenderer: MainHandRenderer by lazy { MainHandRenderer(this) }
+    internal val uiActions: MainUiActions
+        get() = graph.uiActions
+    internal val mainHandRenderer: MainHandRenderer
+        get() = graph.mainHandRenderer
     internal val uiInvalidator: UiInvalidator
-        get() = mainHandRenderer
-    private val floatingController: FloatingController by lazy { FloatingController(this, uiInvalidator) }
-    internal val appMediaController: AppMediaController by lazy { AppMediaController(this) }
-    private val lyricsController: LyricsController by lazy { LyricsController(this, uiInvalidator) }
-    private val appIoExecutor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "airlyrics-app-io").apply { isDaemon = true }
-    }
-
-    internal val mediaRefreshHandler = Handler(Looper.getMainLooper())
+        get() = graph.uiInvalidator
+    private val floatingController: FloatingController
+        get() = graph.floatingController
+    internal val appMediaController: AppMediaController
+        get() = graph.appMediaController
+    private val lyricsController: LyricsController
+        get() = graph.lyricsController
+    internal val mediaRefreshHandler: Handler
+        get() = graph.mediaRefreshHandler
 
     internal val mediaStatusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -262,38 +289,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        LanguageSettingsStore.applyAppLocale(this)
+        graph = MainGraph(this)
+        graph.beforeSuperOnCreate()
         super.onCreate(savedInstanceState)
-        locked = FloatingLyricsStyleStore.isLocked(this)
-        clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
-        quickFloatingVisible = false
-        applySystemBarsTheme()
-        registerBackNavigationCallback()
-        setContentView(mainHandRenderer.createMainView())
-        registerFloatingWindowStateReceiver()
-        registerMediaStatusReceiver()
-        autoSelectMediaSourceOnceIfNeeded()
-        restoreFloatingLyricsIfNeeded()
-        renderCurrentPage()
+        graph.onCreate(savedInstanceState)
     }
 
     override fun onResume() {
         super.onResume()
-        locked = FloatingLyricsStyleStore.isLocked(this)
-        clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
-        restoreFloatingLyricsIfNeeded()
-        renderCurrentPage()
-    }
-
-    private fun registerBackNavigationCallback() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (handleBackNavigation()) return
-                isEnabled = false
-                onBackPressedDispatcher.onBackPressed()
-                isEnabled = true
-            }
-        })
+        graph.onResume()
     }
 
     internal fun handleBackNavigation(): Boolean {
@@ -444,7 +448,7 @@ class MainActivity : AppCompatActivity() {
 
 
     internal fun runOnAppIo(block: () -> Unit) {
-        appIoExecutor.execute(block)
+        graph.runOnAppIo(block)
     }
 
     internal fun runOnMainThread(block: () -> Unit) {
@@ -741,10 +745,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        mediaRefreshHandler.removeCallbacksAndMessages(null)
-        appIoExecutor.shutdownNow()
-        runCatching { unregisterReceiver(floatingWindowStateReceiver) }
-        runCatching { unregisterReceiver(mediaStatusReceiver) }
+        if (::graph.isInitialized) {
+            graph.onDestroy()
+        }
         super.onDestroy()
     }
 
