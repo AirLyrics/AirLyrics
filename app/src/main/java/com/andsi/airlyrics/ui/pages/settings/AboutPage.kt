@@ -17,10 +17,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.getAppVersionName
-import com.andsi.airlyrics.app.openUrl
-import com.andsi.airlyrics.app.settingsBackHeader
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -73,7 +70,7 @@ private object AboutTokens {
     const val SegmentShadowAlpha = 68
 }
 
-internal fun createAboutSettingsPage(activity: MainActivity): View = with(activity) {
+internal fun createAboutSettingsPage(activity: MainUiHost): View = with(activity) {
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
     container.addView(settingsBackHeader(getString(R.string.ui_about)))
     container.addView(aboutLogoHeader())
@@ -81,7 +78,7 @@ internal fun createAboutSettingsPage(activity: MainActivity): View = with(activi
     return scroll(activity, container)
 }
 
-private fun MainActivity.aboutLogoHeader(): View {
+private fun MainUiHost.aboutLogoHeader(): View {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -145,7 +142,7 @@ private fun MainActivity.aboutLogoHeader(): View {
     }
 }
 
-private fun MainActivity.githubIconButton(activity: MainActivity): View {
+private fun MainUiHost.githubIconButton(activity: MainUiHost): View {
     return FrameLayout(activity).apply {
         layoutParams = LinearLayout.LayoutParams(dp(AboutTokens.GithubButtonWidthDp), dp(AboutTokens.GithubButtonHeightDp))
         background = GradientDrawable().apply {
@@ -171,7 +168,7 @@ private fun MainActivity.githubIconButton(activity: MainActivity): View {
     }
 }
 
-private fun MainActivity.changeLogButton(): View {
+private fun MainUiHost.changeLogButton(): View {
     val activity = this
     return TextView(activity).apply {
         text = getString(R.string.ui_changelog)
@@ -202,7 +199,7 @@ private fun MainActivity.changeLogButton(): View {
     }
 }
 
-private fun MainActivity.showUpdateLogDialog() {
+private fun MainUiHost.showUpdateLogDialog() {
     showAirDialog(
         title = getString(R.string.ui_changelog),
         message = null,
@@ -219,7 +216,7 @@ private fun MainActivity.showUpdateLogDialog() {
     )
 }
 
-private fun MainActivity.loadChangelogText(): String {
+private fun MainUiHost.loadChangelogText(): String {
     val fallback = getString(R.string.ui_no_changelog_yet)
     return runCatching {
         assets.open("changelog.txt").bufferedReader(Charsets.UTF_8).use { it.readText() }
@@ -229,7 +226,7 @@ private fun MainActivity.loadChangelogText(): String {
 }
 
 private class InteractiveLogoView(
-    activity: MainActivity,
+    activity: MainUiHost,
     private val onExtraClick: () -> Unit
 ) : LinearLayout(activity) {
     init {
@@ -255,7 +252,7 @@ private class InteractiveLogoView(
         }
     }
 
-    private fun bounce(activity: MainActivity) {
+    private fun bounce(activity: MainUiHost) {
         animate().cancel()
         animate()
             .scaleX(AboutTokens.LogoPressScale)
@@ -285,7 +282,7 @@ private class InteractiveLogoView(
     }
 }
 
-private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
+private class EasterEggOverlay(activity: MainUiHost) : FrameLayout(activity) {
     private var clickCount = 0
     private val segmentViews = mutableListOf<VerticalMessageSegment>()
 
@@ -388,7 +385,7 @@ private class EasterEggOverlay(activity: MainActivity) : FrameLayout(activity) {
 }
 
 private class VerticalMessageSegment(
-    activity: MainActivity,
+    activity: MainUiHost,
     text: String,
     private val colors: List<Int>
 ) : LinearLayout(activity) {

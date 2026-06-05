@@ -15,7 +15,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -24,7 +24,7 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-internal fun createBottomTabs(activity: MainActivity): View  = with(activity) createBottomTabs@ {
+internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) createBottomTabs@ {
     val shell = FrameLayout(this).apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -73,7 +73,7 @@ internal fun createBottomTabs(activity: MainActivity): View  = with(activity) cr
     return shell
 }
 
-internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, title: String) = with(activity) addTab@ {
+internal fun addTab(activity: MainUiHost, parent: LinearLayout, page: Page, title: String) = with(activity) addTab@ {
     val slot = FrameLayout(this).apply {
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, AirUiTokens.Motion.RestScale)
         clipToPadding = false
@@ -108,7 +108,7 @@ internal fun addTab(activity: MainActivity, parent: LinearLayout, page: Page, ti
     parent.addView(slot)
 }
 
-internal fun quickFloatingTabText(activity: MainActivity, visible: Boolean): SpannableString  = with(activity) quickFloatingTabText@ {
+internal fun quickFloatingTabText(activity: MainUiHost, visible: Boolean): SpannableString  = with(activity) quickFloatingTabText@ {
     val icon = if (visible) "×" else "♪"
     val label = if (visible) getString(R.string.ui_hide) else getString(R.string.ui_show)
     return SpannableString("$icon\n$label").apply {
@@ -117,12 +117,12 @@ internal fun quickFloatingTabText(activity: MainActivity, visible: Boolean): Spa
     }
 }
 
-internal fun measureTabTextWidth(activity: MainActivity, tab: TextView): Float  = with(activity) measureTabTextWidth@ {
+internal fun measureTabTextWidth(activity: MainUiHost, tab: TextView): Float  = with(activity) measureTabTextWidth@ {
     val lines = tab.text.toString().split('\n')
     return lines.maxOfOrNull { tab.paint.measureText(it) } ?: tab.paint.measureText(tab.text.toString())
 }
 
-internal fun updateTabs(activity: MainActivity, animate: Boolean = true): Unit = with(activity) updateTabs@ {
+internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = with(activity) updateTabs@ {
     tabViews.forEach { (page, view) ->
         val selected = page == currentPage
         val quickControlSelected = page == Page.FLOATING && selected

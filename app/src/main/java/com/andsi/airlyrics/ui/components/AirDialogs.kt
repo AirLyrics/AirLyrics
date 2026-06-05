@@ -15,7 +15,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -27,7 +27,7 @@ import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 private const val DEFAULT_POSITIVE_TEXT = "__airlyrics_default_positive__"
 
-internal fun MainActivity.showAirInfoDialog(
+internal fun MainUiHost.showAirInfoDialog(
     title: String,
     message: String,
     buttonText: String? = null
@@ -39,7 +39,7 @@ internal fun MainActivity.showAirInfoDialog(
     )
 }
 
-internal fun MainActivity.showAirConfirmDialog(
+internal fun MainUiHost.showAirConfirmDialog(
     title: String,
     message: String,
     positiveText: String,
@@ -55,7 +55,7 @@ internal fun MainActivity.showAirConfirmDialog(
     )
 }
 
-internal fun MainActivity.showAirDialog(
+internal fun MainUiHost.showAirDialog(
     title: String,
     message: String? = null,
     positiveText: String? = DEFAULT_POSITIVE_TEXT,
@@ -145,7 +145,7 @@ internal fun MainActivity.showAirDialog(
     return dialog
 }
 
-private fun MainActivity.dialogButton(
+private fun MainUiHost.dialogButton(
     text: String,
     primary: Boolean,
     onClick: () -> Unit

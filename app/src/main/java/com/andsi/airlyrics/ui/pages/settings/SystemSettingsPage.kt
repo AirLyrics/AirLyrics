@@ -9,8 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.*
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -23,7 +22,7 @@ import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-internal fun createSystemSettingsPage(activity: MainActivity): View  = with(activity) createSystemSettingsPage@ {
+internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activity) createSystemSettingsPage@ {
     val container = pageContainer(activity)
     container.addView(settingsBackHeader(getString(R.string.ui_system)))
 
@@ -54,7 +53,7 @@ internal fun createSystemSettingsPage(activity: MainActivity): View  = with(acti
     return scroll(activity, container)
 }
 
-private fun languageChoiceCard(activity: MainActivity): View = with(activity) languageChoiceCard@ {
+private fun languageChoiceCard(activity: MainUiHost): View = with(activity) languageChoiceCard@ {
     return card(activity) {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -88,7 +87,7 @@ private fun languageChoiceCard(activity: MainActivity): View = with(activity) la
     }
 }
 
-private fun showLanguageDialog(activity: MainActivity) = with(activity) showLanguageDialog@ {
+private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLanguageDialog@ {
     val currentMode = LanguageSettingsStore.getMode(activity)
     lateinit var dialog: android.app.Dialog
     dialog = showAirDialog(
@@ -109,7 +108,7 @@ private fun showLanguageDialog(activity: MainActivity) = with(activity) showLang
 }
 
 private fun LinearLayout.addLanguageOption(
-    activity: MainActivity,
+    activity: MainUiHost,
     title: String,
     subtitle: String,
     mode: String,

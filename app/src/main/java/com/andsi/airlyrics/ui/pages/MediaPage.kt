@@ -5,15 +5,13 @@ import com.andsi.airlyrics.R
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.view.View
-import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.refreshMediaButton
-import com.andsi.airlyrics.app.mediaSourceCard
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
 
-internal fun createMediaPage(activity: MainActivity, animateContent: Boolean = true): View  = with(activity) createMediaPage@ {
+internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = true): View  = with(activity) createMediaPage@ {
     val container = pageContainer(activity, animateChanges = animateContent)
     val controllers = getActiveMediaControllers().filter { it.metadata != null || it.playbackState != null }
     val selectedPackage = MediaSourceStore.getSelectedPackage(this)

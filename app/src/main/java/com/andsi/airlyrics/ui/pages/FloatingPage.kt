@@ -22,18 +22,13 @@ import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
-import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.sliderRow
-import com.andsi.airlyrics.app.colorControl
-import com.andsi.airlyrics.app.liveOptionGrid
-import com.andsi.airlyrics.app.settingGrid
-import com.andsi.airlyrics.app.floatingFocusBubble
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
 
-internal fun createFloatingPage(activity: MainActivity): View  = with(activity) createFloatingPage@ {
+internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) createFloatingPage@ {
     val rootFrame = FrameLayout(this)
     val root = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL

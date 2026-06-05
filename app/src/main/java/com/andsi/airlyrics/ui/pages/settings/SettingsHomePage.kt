@@ -2,8 +2,7 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import android.view.View
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.*
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
@@ -11,7 +10,7 @@ import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 
-internal fun createSettingsHomePage(activity: MainActivity): View  = with(activity) createSettingsHomePage@ {
+internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity) createSettingsHomePage@ {
     val container = pageContainer(activity)
 
     container.addView(settingsHomeHeader())

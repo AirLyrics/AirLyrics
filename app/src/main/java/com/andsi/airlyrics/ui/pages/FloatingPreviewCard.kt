@@ -9,7 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -29,7 +29,7 @@ internal data class FloatingPreviewCardHandle(
     val updateFold: (Boolean) -> Unit
 )
 
-internal fun MainActivity.createFloatingPreviewCard(
+internal fun MainUiHost.createFloatingPreviewCard(
     isExpanded: () -> Boolean,
     setExpanded: (Boolean) -> Unit,
     style: () -> FloatingLyricsStyle,

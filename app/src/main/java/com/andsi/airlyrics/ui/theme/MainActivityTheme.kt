@@ -1,36 +1,36 @@
 package com.andsi.airlyrics.ui.theme
 
-import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 
-internal val MainActivity.airLyricsPalette: AirLyricsPalette
+internal val MainUiHost.airLyricsPalette: AirLyricsPalette
     get() = AirLyricsTheme.palette(ThemeSettingsStore.isDark(this))
 
-internal val MainActivity.colorBackground: Int
+internal val MainUiHost.colorBackground: Int
     get() = airLyricsPalette.background
-internal val MainActivity.colorSurface: Int
+internal val MainUiHost.colorSurface: Int
     get() = airLyricsPalette.surface
-internal val MainActivity.colorSurfaceLight: Int
+internal val MainUiHost.colorSurfaceLight: Int
     get() = airLyricsPalette.surfaceLight
-internal val MainActivity.colorCard: Int
+internal val MainUiHost.colorCard: Int
     get() = airLyricsPalette.card
-internal val MainActivity.colorBubble: Int
+internal val MainUiHost.colorBubble: Int
     get() = airLyricsPalette.bubble
-internal val MainActivity.colorStroke: Int
+internal val MainUiHost.colorStroke: Int
     get() = airLyricsPalette.stroke
-internal val MainActivity.colorAccent: Int
+internal val MainUiHost.colorAccent: Int
     get() = airLyricsPalette.accent
-internal val MainActivity.colorAccentLight: Int
+internal val MainUiHost.colorAccentLight: Int
     get() = airLyricsPalette.accentLight
-internal val MainActivity.colorAccentSoft: Int
+internal val MainUiHost.colorAccentSoft: Int
     get() = airLyricsPalette.accentSoft
-internal val MainActivity.colorAccentPink: Int
+internal val MainUiHost.colorAccentPink: Int
     get() = airLyricsPalette.accentPink
-internal val MainActivity.colorAccentMint: Int
+internal val MainUiHost.colorAccentMint: Int
     get() = airLyricsPalette.accentMint
-internal val MainActivity.colorTextStrong: Int
+internal val MainUiHost.colorTextStrong: Int
     get() = airLyricsPalette.textStrong
-internal val MainActivity.colorText: Int
+internal val MainUiHost.colorText: Int
     get() = airLyricsPalette.text
-internal val MainActivity.colorTextMuted: Int
+internal val MainUiHost.colorTextMuted: Int
     get() = airLyricsPalette.textMuted

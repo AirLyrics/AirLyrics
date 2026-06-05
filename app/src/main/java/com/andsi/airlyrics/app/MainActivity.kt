@@ -157,6 +157,8 @@ class MainActivity : AppCompatActivity() {
     internal var tabHighlight by viewRefs::tabHighlight
     internal var floatingPanelBackHandler by viewRefs::floatingPanelBackHandler
 
+    internal val uiHost: MainActivityUiHost
+        get() = graph.uiHost
     internal val uiActions: MainUiActions
         get() = graph.uiActions
     internal val mainHandRenderer: MainHandRenderer

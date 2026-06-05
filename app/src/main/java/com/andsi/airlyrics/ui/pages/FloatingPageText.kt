@@ -6,14 +6,14 @@ import android.content.Context
 import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.TextView
-import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-internal fun MainActivity.floatingSectionTitle(title: CharSequence): TextView {
+internal fun MainUiHost.floatingSectionTitle(title: CharSequence): TextView {
     return TextView(this).apply {
         text = title
         textSize = FloatingPageTokens.SECTION_TITLE_TEXT_SP

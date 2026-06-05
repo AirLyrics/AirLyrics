@@ -15,9 +15,7 @@ import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSourceHint
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
-import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.app.liveOptionGrid
-import com.andsi.airlyrics.app.*
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
@@ -31,7 +29,7 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(activity) createLyricsSettingsPage@ {
+internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activity) createLyricsSettingsPage@ {
     val container = pageContainer(activity, animateChanges = false)
     val selectedSource = LyricsSettingsStore.getLyricsSource(this)
     val autoSearch = LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
@@ -122,7 +120,7 @@ internal fun createLyricsSettingsPage(activity: MainActivity): View  = with(acti
 }
 
 
-private fun karaokeStatusRow(activity: MainActivity, value: String): View = with(activity) karaokeStatusRow@ {
+private fun karaokeStatusRow(activity: MainUiHost, value: String): View = with(activity) karaokeStatusRow@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -168,7 +166,7 @@ private fun karaokeStatusRow(activity: MainActivity, value: String): View = with
     }
 }
 
-private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activity) createCurrentLyricsCard@ {
+private fun createCurrentLyricsCard(activity: MainUiHost): View  = with(activity) createCurrentLyricsCard@ {
     data class CurrentLyricsUiState(
         val media: CurrentMediaInfo?,
         val localInfo: LyricsStorage.LocalLyricsInfo?,
@@ -336,7 +334,7 @@ private fun createCurrentLyricsCard(activity: MainActivity): View  = with(activi
     }
 }
 
-private fun createRecentLyricsCard(activity: MainActivity): View  = with(activity) createRecentLyricsCard@ {
+private fun createRecentLyricsCard(activity: MainUiHost): View  = with(activity) createRecentLyricsCard@ {
     val listBody = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
     }
@@ -550,7 +548,7 @@ private fun createRecentLyricsCard(activity: MainActivity): View  = with(activit
     }
 }
 
-private fun playLocalRefreshFeedback(activity: MainActivity, target: View, feedback: TextView?, message: String) = with(activity) playLocalRefreshFeedback@ {
+private fun playLocalRefreshFeedback(activity: MainUiHost, target: View, feedback: TextView?, message: String) = with(activity) playLocalRefreshFeedback@ {
     feedback?.apply {
         text = message
         alpha = 0f

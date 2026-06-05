@@ -50,6 +50,7 @@ internal class MainGraph(
         onNotificationPermissionResult = activity::handleNotificationPermissionResult
     )
 
+    val uiHost: MainActivityUiHost by lazy { MainActivityUiHost(activity) }
     val mainHandRenderer: MainHandRenderer by lazy { MainHandRenderer(activity) }
     val uiInvalidator: UiInvalidator
         get() = mainHandRenderer

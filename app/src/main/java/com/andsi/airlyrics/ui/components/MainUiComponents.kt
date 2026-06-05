@@ -13,7 +13,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
@@ -25,7 +25,7 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-internal fun pageContainer(activity: MainActivity, animateChanges: Boolean = true): LinearLayout  = with(activity) pageContainer@ {
+internal fun pageContainer(activity: MainUiHost, animateChanges: Boolean = true): LinearLayout  = with(activity) pageContainer@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         if (animateChanges) {
@@ -35,7 +35,7 @@ internal fun pageContainer(activity: MainActivity, animateChanges: Boolean = tru
     }
 }
 
-internal fun scroll(activity: MainActivity, child: View, animateChildren: Boolean = true): ScrollView  = with(activity) scroll@ {
+internal fun scroll(activity: MainUiHost, child: View, animateChildren: Boolean = true): ScrollView  = with(activity) scroll@ {
     return ScrollView(this).apply {
         isFillViewport = false
         addView(child)
@@ -45,7 +45,7 @@ internal fun scroll(activity: MainActivity, child: View, animateChildren: Boolea
     }
 }
 
-internal fun sectionTitle(activity: MainActivity, title: String, subtitle: String): View  = with(activity) sectionTitle@ {
+internal fun sectionTitle(activity: MainUiHost, title: String, subtitle: String): View  = with(activity) sectionTitle@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl))
@@ -64,7 +64,7 @@ internal fun sectionTitle(activity: MainActivity, title: String, subtitle: Strin
     }
 }
 
-internal fun card(activity: MainActivity, content: LinearLayout.() -> Unit): LinearLayout = with(activity) card@ {
+internal fun card(activity: MainUiHost, content: LinearLayout.() -> Unit): LinearLayout = with(activity) card@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardV))
@@ -84,7 +84,7 @@ internal fun card(activity: MainActivity, content: LinearLayout.() -> Unit): Lin
     }
 }
 
-internal fun floatingStatusPreviewCard(activity: MainActivity, content: LinearLayout.() -> Unit): LinearLayout = with(activity) floatingStatusPreviewCard@ {
+internal fun floatingStatusPreviewCard(activity: MainUiHost, content: LinearLayout.() -> Unit): LinearLayout = with(activity) floatingStatusPreviewCard@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
@@ -104,7 +104,7 @@ internal fun floatingStatusPreviewCard(activity: MainActivity, content: LinearLa
     }
 }
 
-internal fun actionButton(activity: MainActivity, text: String, onClick: () -> Unit): TextView = with(activity) actionButton@ {
+internal fun actionButton(activity: MainUiHost, text: String, onClick: () -> Unit): TextView = with(activity) actionButton@ {
     return TextView(this).apply {
         this.text = displayText(text)
         gravity = Gravity.CENTER
@@ -130,7 +130,7 @@ internal fun actionButton(activity: MainActivity, text: String, onClick: () -> U
     }
 }
 
-internal fun horizontalButtons(activity: MainActivity, vararg buttons: Pair<String, () -> Unit>): LinearLayout = with(activity) horizontalButtons@ {
+internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String, () -> Unit>): LinearLayout = with(activity) horizontalButtons@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         buttons.forEachIndexed { index, pair ->
@@ -163,7 +163,7 @@ internal fun horizontalButtons(activity: MainActivity, vararg buttons: Pair<Stri
     }
 }
 
-internal fun settingRow(activity: MainActivity, name: String, value: String): View  = with(activity) settingRow@ {
+internal fun settingRow(activity: MainUiHost, name: String, value: String): View  = with(activity) settingRow@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -184,7 +184,7 @@ internal fun settingRow(activity: MainActivity, name: String, value: String): Vi
     }
 }
 
-internal fun statusPill(activity: MainActivity, text: String, playing: Boolean): TextView  = with(activity) statusPill@ {
+internal fun statusPill(activity: MainUiHost, text: String, playing: Boolean): TextView  = with(activity) statusPill@ {
     return TextView(this).apply {
         this.text = displayText(text)
         textSize = AirUiTokens.TextSize.BodySmall
@@ -203,7 +203,7 @@ internal fun statusPill(activity: MainActivity, text: String, playing: Boolean):
     }
 }
 
-internal fun label(activity: MainActivity, text: String, color: Int): TextView  = with(activity) label@ {
+internal fun label(activity: MainUiHost, text: String, color: Int): TextView  = with(activity) label@ {
     return TextView(this).apply {
         this.text = displayText(text)
         textSize = AirUiTokens.TextSize.BodySmall
@@ -213,7 +213,7 @@ internal fun label(activity: MainActivity, text: String, color: Int): TextView  
     }
 }
 
-internal fun bigText(activity: MainActivity, text: String): TextView  = with(activity) bigText@ {
+internal fun bigText(activity: MainUiHost, text: String): TextView  = with(activity) bigText@ {
     return TextView(this).apply {
         this.text = displayText(text)
         textSize = AirUiTokens.TextSize.Title
@@ -222,7 +222,7 @@ internal fun bigText(activity: MainActivity, text: String): TextView  = with(act
     }
 }
 
-internal fun normalText(activity: MainActivity, text: String): TextView  = with(activity) normalText@ {
+internal fun normalText(activity: MainUiHost, text: String): TextView  = with(activity) normalText@ {
     return TextView(this).apply {
         this.text = displayText(text)
         textSize = AirUiTokens.TextSize.Body
@@ -231,7 +231,7 @@ internal fun normalText(activity: MainActivity, text: String): TextView  = with(
     }
 }
 
-internal fun smallHint(activity: MainActivity, text: String): TextView  = with(activity) smallHint@ {
+internal fun smallHint(activity: MainUiHost, text: String): TextView  = with(activity) smallHint@ {
     return TextView(this).apply {
         this.text = displayText(text)
         textSize = AirUiTokens.TextSize.BodySmall
@@ -240,13 +240,13 @@ internal fun smallHint(activity: MainActivity, text: String): TextView  = with(a
     }
 }
 
-internal fun spacer(activity: MainActivity, height: Int): View  = with(activity) spacer@ {
+internal fun spacer(activity: MainUiHost, height: Int): View  = with(activity) spacer@ {
     return View(this).apply {
         layoutParams = LinearLayout.LayoutParams(1, dp(height))
     }
 }
 
-internal fun animatePageEnter(activity: MainActivity, view: View, fromRight: Boolean) = with(activity) animatePageEnter@ {
+internal fun animatePageEnter(activity: MainUiHost, view: View, fromRight: Boolean) = with(activity) animatePageEnter@ {
     val distance = dp(AirUiTokens.Layout.PageEnterDistance).toFloat() * if (fromRight) 1f else -1f
     view.alpha = 0f
     view.translationX = distance
@@ -258,7 +258,7 @@ internal fun animatePageEnter(activity: MainActivity, view: View, fromRight: Boo
         .start()
 }
 
-internal fun animateChildrenCascade(activity: MainActivity, root: View) = with(activity) animateChildrenCascade@ {
+internal fun animateChildrenCascade(activity: MainUiHost, root: View) = with(activity) animateChildrenCascade@ {
     val parent = root as? ViewGroup ?: return
     val delayStep = AirUiTokens.Motion.ChildDelayStepMs
     for (index in 0 until parent.childCount) {

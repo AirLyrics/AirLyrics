@@ -18,7 +18,7 @@ import com.andsi.airlyrics.ui.tokens.AirUiTokens
 internal fun MainActivity.createMainView(): View {
     val root = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setBackgroundColor(colorBackground)
+        setBackgroundColor(uiHost.colorBackground)
     }
 
     val topSafeArea = View(this).apply {
@@ -38,7 +38,7 @@ internal fun MainActivity.createMainView(): View {
 
     root.addView(topSafeArea)
     root.addView(contentContainer)
-    root.addView(createBottomTabs(this))
+    root.addView(createBottomTabs(uiHost))
     return root
 }
 
@@ -58,20 +58,20 @@ internal fun MainActivity.renderCurrentPage(animateContent: Boolean = true, anim
     }
 
     container.removeAllViews()
-    updateTabs(this, animate = animateTabs)
+    updateTabs(uiHost, animate = animateTabs)
     if (currentPage != Page.FLOATING) {
         floatingPanelBackHandler = null
     }
 
     val pageView = when (currentPage) {
-        Page.MEDIA -> createMediaPage(this, animateContent = animateContent)
-        Page.FLOATING -> createFloatingPage(this)
-        Page.SETTINGS -> createSettingsPage(this)
+        Page.MEDIA -> createMediaPage(uiHost, animateContent = animateContent)
+        Page.FLOATING -> createFloatingPage(uiHost)
+        Page.SETTINGS -> createSettingsPage(uiHost)
     }
 
     val restoreY = pageScrollY[currentPage] ?: 0
     container.addView(pageView)
-    if (shouldAnimate) animatePageEnter(this, pageView, slideFromRight)
+    if (shouldAnimate) animatePageEnter(uiHost, pageView, slideFromRight)
     renderedPage = currentPage
     renderedSettingsSubPage = settingsSubPage
 
