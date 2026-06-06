@@ -4,6 +4,7 @@ import com.andsi.airlyrics.R
 
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -480,77 +481,91 @@ private fun createRecentLyricsCard(activity: MainUiHost): View  = with(activity)
     populateRecentLyrics(false)
 
     return card(activity) {
+        val hintText = TextView(activity).apply {
+            text = getString(R.string.ui_tap_to_preview_or_edit)
+            textSize = AirUiTokens.TextSize.Caption
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorTextMuted)
+            alpha = 0f
+            visibility = View.GONE
+            setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
+        }
+        closeHeaderHint = {
+            if (hintText.visibility == View.VISIBLE || hintText.alpha > 0f) {
+                hintText.animate().cancel()
+                hintText.alpha = 0f
+                hintText.visibility = View.GONE
+            }
+        }
+
         addView(LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(bigText(activity, getString(R.string.ui_recent_local_lyrics)).apply {
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            })
+            orientation = LinearLayout.VERTICAL
+            addView(LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
 
-            val hintText = TextView(activity).apply {
-                text = getString(R.string.ui_tap_to_preview_or_edit)
-                textSize = AirUiTokens.TextSize.Caption
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorTextMuted)
-                alpha = 0f
-                visibility = View.GONE
-                setPadding(dp(AirUiTokens.Space.Xl), 0, 0, 0)
-            }
-            closeHeaderHint = {
-                if (hintText.visibility == View.VISIBLE || hintText.alpha > 0f) {
-                    hintText.animate().cancel()
-                    hintText.alpha = 0f
-                    hintText.visibility = View.GONE
-                }
-            }
+                addView(LinearLayout(activity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
 
-            addView(TextView(activity).apply {
-                text = "!"
-                textSize = AirUiTokens.TextSize.Caption
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                setTextColor(colorTextMuted)
-                setPadding(0, 0, 0, dp(AirUiTokens.Stroke.Hairline))
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.OVAL
-                    setColor(colorSurfaceLight)
-                    setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-                }
-                layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
-                    setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
-                }
-                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                setOnClickListener {
-                    if (hintText.visibility == View.VISIBLE) {
-                        hintText.animate().alpha(0f).setDuration(AirUiTokens.Motion.HintOutMs).withEndAction {
-                            hintText.visibility = View.GONE
-                        }.start()
-                    } else {
-                        hintText.visibility = View.VISIBLE
-                        hintText.alpha = 0f
-                        hintText.animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).start()
+                    addView(bigText(activity, getString(R.string.ui_recent_local_lyrics)).apply {
+                        maxLines = 1
+                        ellipsize = TextUtils.TruncateAt.END
+                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    })
+
+                    addView(TextView(activity).apply {
+                        text = "!"
+                        textSize = AirUiTokens.TextSize.Caption
+                        typeface = Typeface.DEFAULT_BOLD
+                        gravity = Gravity.CENTER
+                        setTextColor(colorTextMuted)
+                        setPadding(0, 0, 0, dp(AirUiTokens.Stroke.Hairline))
+                        background = GradientDrawable().apply {
+                            shape = GradientDrawable.OVAL
+                            setColor(colorSurfaceLight)
+                            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+                        }
+                        layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
+                            setMargins(dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Xl), 0)
+                        }
+                        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+                        setOnClickListener {
+                            if (hintText.visibility == View.VISIBLE) {
+                                hintText.animate().alpha(0f).setDuration(AirUiTokens.Motion.HintOutMs).withEndAction {
+                                    hintText.visibility = View.GONE
+                                }.start()
+                            } else {
+                                hintText.visibility = View.VISIBLE
+                                hintText.alpha = 0f
+                                hintText.animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).start()
+                            }
+                        }
+                    })
+                })
+
+                addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    setMargins(0, 0, dp(AirUiTokens.Space.Lg), 0)
+                })
+
+                addView(TextView(activity).apply {
+                    text = "↻"
+                    textSize = AirUiTokens.TextSize.PageTitle
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(colorAccent)
+                    gravity = Gravity.CENTER
+                    setPadding(dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Sm))
+                    enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+                    setOnClickListener {
+                        closeHeaderHint()
+                        animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
+                        populateRecentLyrics(true)
                     }
-                }
+                })
             })
+
             addView(hintText)
-            addView(View(activity), LinearLayout.LayoutParams(0, 1, 1f))
-            addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, 0, dp(AirUiTokens.Space.Xl), 0)
-            })
-            addView(TextView(activity).apply {
-                text = "↻"
-                textSize = AirUiTokens.TextSize.PageTitle
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorAccent)
-                gravity = Gravity.CENTER
-                setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm))
-                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                setOnClickListener {
-                    closeHeaderHint()
-                    animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
-                    populateRecentLyrics(true)
-                }
-            })
         })
         addView(listBody)
     }
