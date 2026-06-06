@@ -56,6 +56,7 @@
     <string name="ui_cannot_read_this_lyric_file">无法读取这份歌词。</string>
     <string name="ui_center">居中</string>
     <string name="ui_changelog">更新日志</string>
+    <string name="ui_view_full_changelog">查看完整更新日志</string>
     <string name="ui_check_format">检查格式</string>
     <string name="ui_chinese_simplified">简体中文</string>
     <string name="ui_choose_import_type">选择导入类型</string>
@@ -321,7 +322,7 @@ This is a lyric preview</string>
     <string name="ui_switch_to_dark_mode">切换到暗黑模式</string>
     <string name="ui_switch_to_light_mode">切换到白天模式</string>
     <string name="ui_system">系统与权限</string>
-    <string name="ui_tap_to_preview_or_edit">点击歌词可以预览或者修改</string>
+    <string name="ui_tap_to_preview_or_edit">点条目预览或编辑</string>
     <string name="ui_text">文字</string>
     <string name="ui_text_alignment">文字对齐</string>
     <string name="ui_text_color">文字颜色</string>
@@ -351,6 +352,7 @@ This is a lyric preview</string>
     <string name="ui_waiting_for_media">等待媒体信息</string>
     <string name="ui_waiting_for_media_message">♪ 等待媒体信息...</string>
     <string name="ui_waiting_for_music_signal">等待音乐信号</string>
+    <string name="ui_whats_new">当前版本更新</string>
     <string name="ui_white">白</string>
     <string name="ui_width">宽度</string>
     <string name="ui_window_layout">窗口布局</string>

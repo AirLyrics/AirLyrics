@@ -56,6 +56,7 @@
     <string name="ui_cannot_read_this_lyric_file">Cannot read this lyric file.</string>
     <string name="ui_center">Center</string>
     <string name="ui_changelog">Changelog</string>
+    <string name="ui_view_full_changelog">View full changelog</string>
     <string name="ui_check_format">Check format</string>
     <string name="ui_chinese_simplified">Chinese (Simplified)</string>
     <string name="ui_choose_import_type">Choose import type</string>
@@ -320,7 +321,7 @@ Enhanced LRC recommended format:
     <string name="ui_switch_to_dark_mode">Switch to dark mode</string>
     <string name="ui_switch_to_light_mode">Switch to light mode</string>
     <string name="ui_system">System</string>
-    <string name="ui_tap_to_preview_or_edit">Tap to preview or edit</string>
+    <string name="ui_tap_to_preview_or_edit">Tap item to preview/edit</string>
     <string name="ui_text">Text</string>
     <string name="ui_text_alignment">Text alignment</string>
     <string name="ui_text_color">Text color</string>
@@ -350,6 +351,7 @@ Enhanced LRC recommended format:
     <string name="ui_waiting_for_media">Waiting for media</string>
     <string name="ui_waiting_for_media_message">♪ Waiting for media...</string>
     <string name="ui_waiting_for_music_signal">Waiting for music signal</string>
+    <string name="ui_whats_new">What's new</string>
     <string name="ui_white">White</string>
     <string name="ui_width">Width</string>
     <string name="ui_window_layout">Window layout</string>

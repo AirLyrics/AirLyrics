@@ -1,0 +1,5 @@
+v1.0.4
+
+• Fix bottom tabs being clipped by Android three-button navigation.
+• Keep the recent local lyrics refresh button visible when the help hint is shown.
+• Show only current release notes by default, with a full changelog button.

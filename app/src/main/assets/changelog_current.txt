@@ -1,0 +1,8 @@
+v1.0.4 - 2026-06-07
+
+Fixed
+- Respected the Android navigation bar inset so bottom tabs are no longer clipped by three-button navigation.
+- Kept the recent local lyrics refresh button visible when the inline help hint is shown.
+
+Changed
+- The changelog dialog now shows only the current release by default, with a button to view the full changelog.
