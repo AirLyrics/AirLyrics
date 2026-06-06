@@ -272,8 +272,12 @@ private fun createCurrentLyricsCard(activity: MainUiHost): View  = with(activity
         val loadGeneration = ++currentLyricsLoadGeneration
         val media = getCurrentMediaSnapshot()
         val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(activity, it) } ?: 0L
-        body.removeAllViews()
-        body.addView(normalText(activity, getString(R.string.ui_loading)))
+        if (showRefreshFeedback) {
+            showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
+        } else {
+            body.removeAllViews()
+            body.addView(normalText(activity, getString(R.string.ui_loading)))
+        }
 
         runOnAppIo {
             val localInfo = media?.let {
@@ -455,8 +459,12 @@ private fun createRecentLyricsCard(activity: MainUiHost): View  = with(activity)
     populateRecentLyrics = { showRefreshFeedback ->
         val loadGeneration = ++recentLyricsLoadGeneration
         val media = getCurrentMediaSnapshot()?.takeUnless { it.isEmpty }
-        listBody.removeAllViews()
-        listBody.addView(normalText(activity, getString(R.string.ui_loading)))
+        if (showRefreshFeedback) {
+            showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
+        } else {
+            listBody.removeAllViews()
+            listBody.addView(normalText(activity, getString(R.string.ui_loading)))
+        }
 
         runOnAppIo {
             val currentItem = currentLocalLyricsItem(media)
@@ -545,6 +553,15 @@ private fun createRecentLyricsCard(activity: MainUiHost): View  = with(activity)
             })
         })
         addView(listBody)
+    }
+}
+
+
+private fun showInlineRefreshFeedback(feedback: TextView?, message: String) {
+    feedback?.apply {
+        animate().cancel()
+        text = message
+        alpha = 1f
     }
 }
 
