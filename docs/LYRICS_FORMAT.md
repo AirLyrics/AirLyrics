@@ -32,12 +32,26 @@ Notes:
 
 When translation lines are available, AirLyrics can display original lyrics and translated lyrics.
 
-A common local format is to put original and translated lines alternately under the same timestamp:
+Preferred local format:
+
+```lrc
+[00:12.34]大好きだって 大切だって / I love you, I love you
+```
+
+AirLyrics also supports original and translated lines written under the same timestamp when importing or saving normal LRC:
 
 ```lrc
 [00:12.34]大好きだって 大切だって
 [00:12.34]I love you, I love you
 ```
+
+During import, this will be normalized to:
+
+```lrc
+[00:12.34]大好きだって 大切だって / I love you, I love you
+```
+
+If several translation lines share the same timestamp, the first line is treated as the original lyric and later different lines are kept as translations.
 
 The actual display depends on the lyrics content mode:
 
@@ -62,6 +76,21 @@ Format:
 ```
 
 The line timestamp decides when the line appears. Inline timestamps decide word highlight timing.
+
+Word-by-word imports may also include translation lines under the same line timestamp:
+
+```lrc
+[00:12.34]<00:12.34>大<00:12.60>好き<00:12.95>だって
+[00:12.34]I love you, I love you
+```
+
+When the song does not already have normal lyrics, AirLyrics automatically generates normal LRC from the word-by-word lyrics. If same-timestamp translation lines are present, the generated normal LRC includes them:
+
+```lrc
+[00:12.34]大好きだって / I love you, I love you
+```
+
+When the song already has normal lyrics, importing word-by-word lyrics does not overwrite them. This keeps existing translations and manual edits safe.
 
 ## Supported variants
 
@@ -91,3 +120,4 @@ When creating lyrics manually, watch out for:
 - Multiple unrelated songs mixed in one file.
 - A song version or duration that does not match.
 - Importing a normal LRC file as word-by-word lyrics.
+- Expecting word-by-word import to overwrite existing normal lyrics automatically. Existing normal lyrics are kept unless you delete or replace them yourself.

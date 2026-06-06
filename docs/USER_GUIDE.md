@@ -59,8 +59,8 @@ Basic features will not be explained too much here. This section only covers a f
    AirLyrics includes a quick lyrics editing window. If you want to learn about the lyrics format, please refer to the related instructions.
 
 4. **Importing word-by-word lyrics**  
-   If you import word-by-word lyrics for a song that does not have normal lyrics, AirLyrics will automatically generate normal lyrics based on the word-by-word lyrics.  
-   Because of this, it is highly recommended to remove the existing local lyrics for the song before importing word-by-word lyrics.
+   If you import word-by-word lyrics for a song that does not have normal lyrics, AirLyrics will automatically generate normal lyrics based on the word-by-word lyrics. If the word-by-word file contains same-timestamp translation lines, the generated normal lyrics will include those translations.  
+   If the song already has normal lyrics, importing word-by-word lyrics will keep the existing normal lyrics and only add or replace the word-by-word lyrics.
 
 5. **Delete word-by-word lyrics option**  
    This option will only appear when the current lyrics contain word-by-word lyrics.
