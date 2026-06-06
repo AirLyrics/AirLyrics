@@ -7,6 +7,9 @@ import org.json.JSONObject
 import java.util.Locale
 
 internal object KaraokeLyricsCodec {
+    private val timeTagRegex = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
+    private val wordTimeTagRegex = Regex("""<(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?>""")
+
     fun linesToJson(lines: List<KaraokeLine>): String {
         val array = JSONArray()
         lines.sortedBy { it.startMs }.forEach { line ->
@@ -60,7 +63,24 @@ internal object KaraokeLyricsCodec {
         }.getOrDefault(emptyList())
     }
 
+    data class ParsedKaraokeImport(
+        val karaokeLines: List<KaraokeLine>,
+        val plainLrc: String,
+        val hasTranslation: Boolean
+    )
 
+    fun parseImport(rawText: String): ParsedKaraokeImport {
+        val jsonLines = parseJson(rawText)
+        if (jsonLines.isNotEmpty()) {
+            return ParsedKaraokeImport(
+                karaokeLines = jsonLines,
+                plainLrc = linesToPlainLrc(jsonLines),
+                hasTranslation = false
+            )
+        }
+
+        return parseEnhancedLrcImport(rawText)
+    }
 
     fun linesToEnhancedLrc(lines: List<KaraokeLine>): String {
         return lines
@@ -100,57 +120,62 @@ internal object KaraokeLyricsCodec {
     }
 
     fun linesToPlainLrc(lines: List<KaraokeLine>): String {
-        return lines
-            .sortedBy { it.startMs }
-            .joinToString("\n") { line ->
-                "[${formatLrcTimeTag(line.startMs)}]${line.text.trim()}"
-            }
+        return linesToPlainLrc(lines, emptyMap())
     }
 
     fun parseEnhancedLrc(rawLrc: String): List<KaraokeLine> {
-        if (rawLrc.isBlank()) return emptyList()
+        return parseEnhancedLrcImport(rawLrc).karaokeLines
+    }
 
-        data class RawEnhancedLine(
-            val startMs: Long,
-            val content: String,
-            val tokens: List<Pair<String, Long>>
-        )
+    private data class RawEnhancedLine(
+        val startMs: Long,
+        val tokens: List<Pair<String, Long>>
+    )
 
-        val timeTagRegex = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
-        val wordTimeTagRegex = Regex("""<(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?>""")
+    private data class TimedTextSegment(
+        val startMs: Long,
+        val text: String
+    )
 
-        val rawLines = rawLrc
-            .lineSequence()
-            .mapNotNull { rawLine ->
-                val line = rawLine.trim()
-                if (line.isBlank()) return@mapNotNull null
+    private fun parseEnhancedLrcImport(rawLrc: String): ParsedKaraokeImport {
+        if (rawLrc.isBlank()) {
+            return ParsedKaraokeImport(emptyList(), plainLrc = "", hasTranslation = false)
+        }
 
-                val lineStart = timeTagRegex.find(line)?.let { parseTimeTag(it) }
-                    ?: return@mapNotNull null
-                val content = line.replace(timeTagRegex, "").trim()
-                val wordTags = wordTimeTagRegex.findAll(content).toList()
-                if (wordTags.isEmpty()) return@mapNotNull null
+        val rawLines = mutableListOf<RawEnhancedLine>()
+        val translationCandidates = mutableListOf<TimedTextSegment>()
 
-                val tokens = wordTags.mapIndexedNotNull { index, match ->
-                    val startMs = parseTimeTag(match) ?: return@mapIndexedNotNull null
-                    val textStart = match.range.last + 1
-                    val textEndExclusive = wordTags.getOrNull(index + 1)?.range?.first ?: content.length
-                    if (textStart > textEndExclusive || textStart > content.length) return@mapIndexedNotNull null
-                    val tokenText = content.substring(textStart, textEndExclusive)
-                        .replace(wordTimeTagRegex, "")
-                    if (tokenText.isBlank()) return@mapIndexedNotNull null
-                    tokenText to startMs
-                }.filter { (_, startMs) -> startMs >= lineStart }
+        rawLrc.lineSequence().forEach { rawLine ->
+            val line = rawLine.trim()
+            if (line.isBlank() || isMetadataLine(line)) return@forEach
 
-                if (tokens.isEmpty()) null else RawEnhancedLine(lineStart, content, tokens)
+            val rawEnhancedLine = parseRawEnhancedLine(line)
+            if (rawEnhancedLine != null) {
+                rawLines += rawEnhancedLine
+                return@forEach
             }
-            .sortedBy { it.startMs }
-            .toList()
 
-        if (rawLines.isEmpty()) return emptyList()
+            if (wordTimeTagRegex.containsMatchIn(line)) return@forEach
 
-        return rawLines.mapIndexedNotNull { index, rawLine ->
-            val nextLineStart = rawLines.getOrNull(index + 1)?.startMs
+            translationCandidates += parseTimedTextSegments(line)
+        }
+
+        val sortedRawLines = rawLines.sortedBy { it.startMs }
+        if (sortedRawLines.isEmpty()) {
+            return ParsedKaraokeImport(emptyList(), plainLrc = "", hasTranslation = false)
+        }
+
+        val karaokeStartTimes = sortedRawLines.map { it.startMs }.toSet()
+        val translationsByStartMs = translationCandidates
+            .filter { it.startMs in karaokeStartTimes }
+            .groupBy(
+                keySelector = { it.startMs },
+                valueTransform = { it.text }
+            )
+            .mapValues { (_, values) -> values.distinct() }
+
+        val karaokeLines = sortedRawLines.mapIndexedNotNull { index, rawLine ->
+            val nextLineStart = sortedRawLines.getOrNull(index + 1)?.startMs
             val tokenList = rawLine.tokens.mapIndexed { tokenIndex, (tokenText, tokenStartMs) ->
                 val nextTokenStart = rawLine.tokens.getOrNull(tokenIndex + 1)?.second
                     ?: nextLineStart
@@ -177,6 +202,119 @@ internal object KaraokeLyricsCodec {
                 tokens = tokenList
             )
         }
+
+        if (karaokeLines.isEmpty()) {
+            return ParsedKaraokeImport(emptyList(), plainLrc = "", hasTranslation = false)
+        }
+
+        val effectiveTranslations = translationsByStartMs
+            .mapValues { (startMs, translations) ->
+                val originalText = karaokeLines.firstOrNull { it.startMs == startMs }?.text.orEmpty()
+                translations
+                    .flatMap { splitTranslationParts(it) }
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() && it != originalText }
+                    .distinct()
+            }
+            .filterValues { it.isNotEmpty() }
+
+        return ParsedKaraokeImport(
+            karaokeLines = karaokeLines,
+            plainLrc = linesToPlainLrc(karaokeLines, effectiveTranslations),
+            hasTranslation = effectiveTranslations.isNotEmpty()
+        )
+    }
+
+    private fun parseRawEnhancedLine(line: String): RawEnhancedLine? {
+        val lineStart = timeTagRegex.find(line)?.let { parseTimeTag(it) }
+            ?: return null
+        val content = line.replace(timeTagRegex, "").trim()
+        val wordTags = wordTimeTagRegex.findAll(content).toList()
+        if (wordTags.isEmpty()) return null
+
+        val tokens = wordTags.mapIndexedNotNull { index, match ->
+            val startMs = parseTimeTag(match) ?: return@mapIndexedNotNull null
+            val textStart = match.range.last + 1
+            val textEndExclusive = wordTags.getOrNull(index + 1)?.range?.first ?: content.length
+            if (textStart > textEndExclusive || textStart > content.length) return@mapIndexedNotNull null
+            val tokenText = content.substring(textStart, textEndExclusive)
+                .replace(wordTimeTagRegex, "")
+            if (tokenText.isBlank()) return@mapIndexedNotNull null
+            tokenText to startMs
+        }.filter { (_, startMs) -> startMs >= lineStart }
+
+        return if (tokens.isEmpty()) null else RawEnhancedLine(lineStart, tokens)
+    }
+
+    private fun parseTimedTextSegments(line: String): List<TimedTextSegment> {
+        val matches = timeTagRegex.findAll(line).toList()
+        if (matches.isEmpty()) return emptyList()
+
+        val segments = mutableListOf<TimedTextSegment>()
+        val pendingTimeTags = mutableListOf<MatchResult>()
+
+        matches.forEachIndexed { index, match ->
+            pendingTimeTags += match
+
+            val segmentStart = match.range.last + 1
+            val segmentEnd = matches.getOrNull(index + 1)?.range?.first ?: line.length
+            if (segmentStart > segmentEnd) return@forEachIndexed
+
+            val text = normalizeTimedText(line.substring(segmentStart, segmentEnd).trim())
+            if (text.isBlank()) return@forEachIndexed
+
+            pendingTimeTags.mapNotNullTo(segments) { pendingMatch ->
+                val timeMs = parseTimeTag(pendingMatch) ?: return@mapNotNullTo null
+                TimedTextSegment(timeMs, text)
+            }
+            pendingTimeTags.clear()
+        }
+
+        return segments
+    }
+
+    private fun linesToPlainLrc(
+        lines: List<KaraokeLine>,
+        translationsByStartMs: Map<Long, List<String>>
+    ): String {
+        return lines
+            .sortedBy { it.startMs }
+            .joinToString("\n") { line ->
+                val originalText = line.text.trim()
+                val translation = translationsByStartMs[line.startMs]
+                    .orEmpty()
+                    .flatMap { splitTranslationParts(it) }
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() && it != originalText }
+                    .distinct()
+                    .joinToString(" / ")
+                val storedText = if (translation.isNotBlank()) {
+                    "$originalText / $translation"
+                } else {
+                    originalText
+                }
+                "[${formatLrcTimeTag(line.startMs)}]$storedText"
+            }
+    }
+
+    private fun splitTranslationParts(text: String): List<String> {
+        return normalizeTimedText(text)
+            .lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+    }
+
+    private fun normalizeTimedText(text: String): String {
+        return text
+            .replace(" / ", "\n")
+            .replace("／", "\n")
+            .lines()
+            .joinToString("\n") { it.trim() }
+            .trim()
+    }
+
+    private fun isMetadataLine(line: String): Boolean {
+        return Regex("""\[[A-Za-z][A-Za-z0-9_\-]*:.*]""").matches(line)
     }
 
     private fun formatLrcTimeTag(timeMs: Long): String {

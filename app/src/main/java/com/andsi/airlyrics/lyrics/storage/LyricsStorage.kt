@@ -430,7 +430,8 @@ object LyricsStorage {
             LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TOO_LARGE
             LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SAVE_FAILED
         }
-        val lines = KaraokeLyricsCodec.parseJson(text).ifEmpty { KaraokeLyricsCodec.parseEnhancedLrc(text) }
+        val parsedImport = KaraokeLyricsCodec.parseImport(text)
+        val lines = parsedImport.karaokeLines
         if (lines.isEmpty()) return ImportLyricsResult.INVALID_FORMAT
 
         return withStorageLock {
@@ -443,7 +444,7 @@ object LyricsStorage {
                     title = title,
                     artist = artist,
                     duration = duration,
-                    lyrics = KaraokeLyricsCodec.linesToPlainLrc(lines),
+                    lyrics = parsedImport.plainLrc,
                     album = album,
                     source = SOURCE_MANUAL_IMPORT,
                     provider = "local",
@@ -507,6 +508,10 @@ object LyricsStorage {
     fun karaokeLinesToJsonForTest(lines: List<KaraokeLine>): String = KaraokeLyricsCodec.linesToJson(lines)
 
     fun karaokeLinesToPlainLrcForTest(lines: List<KaraokeLine>): String = KaraokeLyricsCodec.linesToPlainLrc(lines)
+
+    fun parseKaraokeImportPlainLrcForTest(rawText: String): String = KaraokeLyricsCodec.parseImport(rawText).plainLrc
+
+    fun parseKaraokeImportHasTranslationForTest(rawText: String): Boolean = KaraokeLyricsCodec.parseImport(rawText).hasTranslation
 
     fun karaokeLinesToEnhancedLrcForTest(lines: List<KaraokeLine>): String = KaraokeLyricsCodec.linesToEnhancedLrc(lines)
 }

@@ -62,6 +62,47 @@ class LyricsStorageKaraokeCodecTest {
         assertEquals("[00:01.23]hello\n[01:02.34]world", plain)
     }
 
+
+
+    @Test
+    fun parseKaraokeImport_buildsPlainLrcWithSameTimestampTranslation() {
+        val plain = LyricsStorage.parseKaraokeImportPlainLrcForTest(
+            """
+            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
+            [00:10.00]你的背影
+            [00:12.00]<00:12.00>next
+            [00:12.00]下一句
+            """.trimIndent()
+        )
+
+        assertEquals("[00:10.00]君の背中 / 你的背影\n[00:12.00]next / 下一句", plain)
+    }
+
+    @Test
+    fun parseKaraokeImport_ignoresUnmatchedTranslationLine() {
+        val plain = LyricsStorage.parseKaraokeImportPlainLrcForTest(
+            """
+            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
+            [00:11.00]不会被误合并的翻译
+            """.trimIndent()
+        )
+
+        assertEquals("[00:10.00]君の背中", plain)
+    }
+
+    @Test
+    fun parseKaraokeImport_reportsTranslationPresence() {
+        assertTrue(
+            LyricsStorage.parseKaraokeImportHasTranslationForTest(
+                """
+                [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
+                [00:10.00]你的背影
+                """.trimIndent()
+            )
+        )
+    }
+
+
     @Test
     fun karaokeJsonRoundTrip_preservesValidLines() {
         val original = listOf(
