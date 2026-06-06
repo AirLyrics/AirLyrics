@@ -76,7 +76,9 @@ object LrcParser {
      * row using [mm:ss.xx] text.
      */
     fun normalizeForStorage(lyrics: String): String {
-        return formatLinesForStorage(parsePlainLines(lyrics))
+        return formatLinesForStorage(
+            parsePlainLines(lyrics, mergeSameTimestampTranslations = true)
+        )
     }
 
     data class StorageValidationResult(
@@ -113,22 +115,81 @@ object LrcParser {
             .joinToString("\n") { line ->
                 val text = when {
                     line.text.isNotBlank() && !line.translation.isNullOrBlank() -> {
-                        "${line.text.trim()} / ${line.translation.trim()}"
+                        "${line.text.trim()} / ${formatTranslationForStorage(line.translation)}"
                     }
                     line.text.isNotBlank() -> line.text.trim()
-                    !line.translation.isNullOrBlank() -> line.translation.trim()
+                    !line.translation.isNullOrBlank() -> formatTranslationForStorage(line.translation)
                     else -> ""
                 }
                 "[${formatTimeTag(line.timeMs)}]$text"
             }
     }
 
-    private fun parsePlainLines(lyrics: String): List<LrcLine> {
-        return lyrics
+    private fun parsePlainLines(
+        lyrics: String,
+        mergeSameTimestampTranslations: Boolean = false
+    ): List<LrcLine> {
+        val lines = lyrics
             .lineSequence()
             .flatMap { rawLine -> parseTimedSegments(rawLine).asSequence() }
             .sortedBy { it.timeMs }
             .toList()
+
+        return if (mergeSameTimestampTranslations) {
+            mergeSameTimestampLines(lines)
+        } else {
+            lines
+        }
+    }
+
+    private fun mergeSameTimestampLines(lines: List<LrcLine>): List<LrcLine> {
+        if (lines.size <= 1) return lines
+
+        return lines
+            .groupBy { it.timeMs }
+            .flatMap { (_, sameTimeLines) -> mergeSameTimestampGroup(sameTimeLines) }
+            .sortedBy { it.timeMs }
+    }
+
+    private fun mergeSameTimestampGroup(lines: List<LrcLine>): List<LrcLine> {
+        if (lines.size <= 1) return lines
+
+        val originalText = lines.first().text.trim()
+        val translationParts = mutableListOf<String>()
+
+        fun addTranslationPart(value: String?) {
+            value.orEmpty()
+                .lines()
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+                .filter { it != originalText }
+                .forEach { part ->
+                    if (part !in translationParts) translationParts += part
+                }
+        }
+
+        addTranslationPart(lines.first().translation)
+        lines.drop(1).forEach { line ->
+            addTranslationPart(line.text)
+            addTranslationPart(line.translation)
+        }
+
+        return listOf(
+            lines.first().copy(
+                text = originalText,
+                translation = translationParts
+                    .takeIf { it.isNotEmpty() }
+                    ?.joinToString("\n")
+            )
+        )
+    }
+
+    private fun formatTranslationForStorage(translation: String?): String {
+        return translation.orEmpty()
+            .lines()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString(" / ")
     }
 
     /**
