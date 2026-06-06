@@ -6,7 +6,7 @@
     <string name="floating_preview_summary">Current: %1$s · %2$dsp · %3$s · Width %4$d%%</string>
     <string name="floating_slider_value">%1$s: %2$d</string>
     <string name="local_source_cache_provider">Cache · %1$s</string>
-    <string name="lyrics_enhanced_format_invalid_lines">Line %1$s%2$s has an invalid format.\n\nEnhanced LRC must use [00:12.34] for line time and &lt;00:12.34&gt; for word tokens.</string>
+    <string name="lyrics_enhanced_format_invalid_lines">Line %1$s%2$s has an invalid format.\n\nEnhanced LRC lyric lines must use [00:12.34] for line time and &lt;00:12.34&gt; for word tokens. Same-timestamp translation lines may use plain [00:12.34]text.</string>
     <string name="lyrics_lookup_failed">%1$s lookup failed</string>
     <string name="lyrics_lookup_native_error">%1$s native module error</string>
     <string name="lyrics_lookup_need_credentials">%1$s needs credentials</string>
@@ -232,11 +232,13 @@ Plain LRC uses whole-line timestamps like [00:12.34]lyrics. Import it as Plain L
     <string name="ui_plain_lyrics">Plain lyrics</string>
     <string name="ui_plain_lyrics_lrc">Plain lyrics (.lrc)</string>
     <string name="ui_lyrics_format_guide_body">Plain LRC recommended format:
-[00:12.34]This is a lyric line
-[00:15.60]This is a lyric preview
+[00:12.34]Original lyric / Translation
+[00:12.34]Original lyric
+[00:12.34]Translation
 
 Enhanced LRC recommended format:
-[00:12.34]&lt;00:12.34&gt;T&lt;00:12.50&gt;ext</string>
+[00:12.34]&lt;00:12.34&gt;T&lt;00:12.50&gt;ext
+[00:12.34]Translation</string>
     <string name="ui_manage_lyrics_select_player_hint">Play music and choose a player on the Media page first, then manage lyrics here.</string>
     <string name="ui_media_streams_empty_hint">Playable media streams will appear here after music starts.</string>
     <string name="ui_playback_error">Playback error</string>

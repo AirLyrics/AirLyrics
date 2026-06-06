@@ -6,7 +6,7 @@
     <string name="floating_preview_summary">当前：%1$s · %2$dsp · %3$s · 宽度 %4$d%%</string>
     <string name="floating_slider_value">%1$s：%2$d</string>
     <string name="local_source_cache_provider">本地缓存 · %1$s</string>
-    <string name="lyrics_enhanced_format_invalid_lines">第 %1$s%2$s 行格式不正确。\n\n逐字歌词需要使用 Enhanced LRC 格式：行时间为 [00:12.34]，每个字词时间为 &lt;00:12.34&gt;歌词。</string>
+    <string name="lyrics_enhanced_format_invalid_lines">第 %1$s%2$s 行格式不正确。\n\n逐字歌词原文行需要使用 Enhanced LRC 格式：行时间为 [00:12.34]，每个字词时间为 &lt;00:12.34&gt;歌词。同时间戳翻译行可以使用普通 [00:12.34]翻译 格式。</string>
     <string name="lyrics_lookup_failed">%1$s 查找失败</string>
     <string name="lyrics_lookup_native_error">%1$s 原生歌词模块异常</string>
     <string name="lyrics_lookup_need_credentials">%1$s 暂时需要访问凭据</string>
@@ -233,11 +233,13 @@ This is a lyric preview</string>
     <string name="ui_plain_lyrics">普通歌词</string>
     <string name="ui_plain_lyrics_lrc">普通歌词（.lrc）</string>
     <string name="ui_lyrics_format_guide_body">普通歌词推荐格式：
-[00:12.34]这是一行歌词
-[00:15.60]This is a lyric preview
+[00:12.34]原文歌词 / 翻译歌词
+[00:12.34]原文歌词
+[00:12.34]翻译歌词
 
 逐字歌词推荐格式：
-[00:12.34]&lt;00:12.34&gt;这&lt;00:12.50&gt;是&lt;00:12.70&gt;逐字歌词</string>
+[00:12.34]&lt;00:12.34&gt;这&lt;00:12.50&gt;是&lt;00:12.70&gt;逐字歌词
+[00:12.34]翻译歌词</string>
     <string name="ui_manage_lyrics_select_player_hint">先播放音乐并在媒体流页面选择播放器，再回来导入或管理歌词。</string>
     <string name="ui_media_streams_empty_hint">播放音乐后，这里会显示可选择的媒体流。</string>
     <string name="ui_playback_error">播放异常</string>
