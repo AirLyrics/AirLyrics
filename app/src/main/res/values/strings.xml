@@ -351,7 +351,7 @@ Enhanced LRC recommended format:
     <string name="ui_waiting_for_media">Waiting for media</string>
     <string name="ui_waiting_for_media_message">♪ Waiting for media...</string>
     <string name="ui_waiting_for_music_signal">Waiting for music signal</string>
-    <string name="ui_whats_new">What's new</string>
+    <string name="ui_whats_new">New in this version</string>
     <string name="ui_white">White</string>
     <string name="ui_width">Width</string>
     <string name="ui_window_layout">Window layout</string>
