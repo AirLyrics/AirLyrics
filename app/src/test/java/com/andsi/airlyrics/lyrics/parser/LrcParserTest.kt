@@ -124,4 +124,45 @@ class LrcParserTest {
         assertEquals(listOf(2, 4), result.invalidLineNumbers)
     }
 
+    @Test
+    fun normalizeForStorage_mergesSameTimestampLinesAsTranslation() {
+        val normalized = LrcParser.normalizeForStorage(
+            """
+            [00:10.00]君の背中
+            [00:10.00]你的背影
+            [00:20.00]次の原文
+            [00:20.00]下一句翻译
+            """.trimIndent()
+        )
+
+        assertEquals(
+            "[00:10.00]君の背中 / 你的背影\n[00:20.00]次の原文 / 下一句翻译",
+            normalized
+        )
+    }
+
+    @Test
+    fun normalizeForStorage_mergesCompactSameTimestampSegmentsAsTranslation() {
+        val normalized = LrcParser.normalizeForStorage(
+            "[00:10.00]君の背中[00:10.00]你的背影"
+        )
+
+        assertEquals("[00:10.00]君の背中 / 你的背影", normalized)
+    }
+
+    @Test
+    fun parse_keepsSameTimestampLinesSeparateForRuntimeCompatibility() {
+        val lines = LrcParser.parse(
+            """
+            [00:10.00]君の背中
+            [00:10.00]你的背影
+            """.trimIndent()
+        )
+
+        assertEquals(2, lines.size)
+        assertEquals(listOf("君の背中", "你的背影"), lines.map { it.text })
+        assertNull(lines[0].translation)
+        assertNull(lines[1].translation)
+    }
+
 }
