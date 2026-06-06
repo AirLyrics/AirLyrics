@@ -54,8 +54,8 @@ After installation, grant the required permissions and select the music app you 
 - Automatically detects current media playback
 - Displays synced lyrics above other apps
 - Provides online lyrics search
-- Supports local lyrics import
-- Supports enhanced / word-by-word lyrics import
+- Supports local lyrics import, including same-timestamp translation lines
+- Supports enhanced / word-by-word lyrics import with translation-aware normal lyric generation
 - Customizable floating window style
 - Adjustable lyrics offset
 - Supports original / translated lyrics display
