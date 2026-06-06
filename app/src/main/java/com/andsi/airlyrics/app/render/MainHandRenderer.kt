@@ -5,6 +5,8 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.ui.components.animatePageEnter
 import com.andsi.airlyrics.ui.navigation.Page
@@ -46,10 +48,44 @@ internal class MainHandRenderer(
             )
         }
 
+        val bottomTabs = createBottomTabs(host)
+
         root.addView(topSafeArea)
         root.addView(host.contentContainer)
-        root.addView(createBottomTabs(host))
+        root.addView(bottomTabs)
+
+        applyBottomNavigationInsets(root, bottomTabs)
+
         return root
+    }
+
+    private fun applyBottomNavigationInsets(
+        root: View,
+        bottomTabs: View
+    ) {
+        val baseBottomTabsHeight = host.dp(AirUiTokens.Layout.BottomBarHeight)
+        val baseBottomTabsPaddingBottom = bottomTabs.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+
+            bottomTabs.layoutParams = (bottomTabs.layoutParams as LinearLayout.LayoutParams).apply {
+                height = baseBottomTabsHeight + navigationBars.bottom
+            }
+
+            bottomTabs.setPadding(
+                bottomTabs.paddingLeft,
+                bottomTabs.paddingTop,
+                bottomTabs.paddingRight,
+                baseBottomTabsPaddingBottom + navigationBars.bottom
+            )
+
+            insets
+        }
+
+        root.post {
+            ViewCompat.requestApplyInsets(root)
+        }
     }
 
     override fun refresh(
