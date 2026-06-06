@@ -35,7 +35,7 @@ lyrics in a customizable floating window.
 
 ## Status
 
-AirLyrics is in maintenance mode.
+AirLyrics is stable and actively maintained.
 
 The current release is intended for daily use. Future updates will mainly focus on bug fixes,
 compatibility improvements, documentation updates, and reviewing issues or pull requests.
@@ -139,10 +139,15 @@ Project documentation is in the docs directory.
 
 ### Requirements
 
-- JDK 17 - Android SDK - Android NDK `26.3.11579264` required - Rust stable via `rustup` -
-  `cargo-ndk` - Rust Android target: - `aarch64-linux-android` is required for the default
-  `arm64-v8a` build - Optional Rust Android target: - `x86_64-linux-android` is only needed when
-  building with `-Pairlyrics.buildX86_64=true`
+- JDK 17
+- Android SDK
+- Android NDK `26.3.11579264` required
+- Rust stable via `rustup`
+- `cargo-ndk`
+- Rust Android target:
+  - `aarch64-linux-android` is required for the default `arm64-v8a` build
+- Optional Rust Android target:
+  - `x86_64-linux-android` is only needed when building with `-Pairlyrics.buildX86_64=true`
 
 Android Studio is recommended when configuring Android SDK related settings.
 
@@ -169,13 +174,16 @@ app/build/outputs/apk/debug/
 
 ## Contributing
 
-Contributions are welcome. AirLyrics is in maintenance mode, so small and focused changes are
-preferred.
+Contributions are welcome. AirLyrics is stable and actively maintained, so small and focused
+changes are preferred.
 
 Good areas to contribute:
 
-- Bug reports - Compatibility testing - Translation improvements - Documentation improvements - UI
-  text polishing
+- Bug reports
+- Compatibility testing
+- Translation improvements
+- Documentation improvements
+- UI text polishing
 
 Contribution guide: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 

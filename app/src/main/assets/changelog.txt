@@ -6,7 +6,7 @@ Added
 
 Changed
 - Updated lyrics format documentation for translated normal LRC and translated word-by-word LRC.
-- Polished project documentation and README to reflect maintenance mode.
+- Polished project documentation and README to reflect the stable actively maintained project status.
 
 Fixed
 - Prevented floating window style changes from rebuilding the floating settings page when visible, so sliders and color controls stay usable while editing.
