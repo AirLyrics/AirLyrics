@@ -4,7 +4,7 @@
 
 Thank you for contributing to AirLyrics.
 
-AirLyrics is currently maintained in a maintenance-first mode.
+AirLyrics is stable and actively maintained, with maintenance-focused updates.
 
 Bug fixes, compatibility fixes, translation updates, documentation improvements, and small UI text
 polishing are welcome.

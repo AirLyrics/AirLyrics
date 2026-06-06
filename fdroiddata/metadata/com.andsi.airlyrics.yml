@@ -27,12 +27,12 @@ Repo: https://github.com/AirLyrics/AirLyrics
 Builds:
   - versionName: 1.0.3
     versionCode: 4
-    commit: v1.0.3
+    commit: f3faf901c182c201a5fe73d8dd56421d90673967
     timeout: 20000
     ndk: 26.3.11579264
     sudo:
       - apt-get update
-      - apt-get install -y --no-install-recommends curl ca-certificates clang make perl pkg-config
+      - apt-get install -y --no-install-recommends curl ca-certificates clang make perl pkg-config rustup
     init:
       - rustup toolchain install 1.88.0
       - rustup default 1.88.0
@@ -44,7 +44,7 @@ Builds:
       - ./gradlew --no-daemon :app:assembleRelease
     output: app/build/outputs/apk/release/app-release-unsigned.apk
 
-AutoUpdateMode: Version v%v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 1.0.3
 CurrentVersionCode: 4
