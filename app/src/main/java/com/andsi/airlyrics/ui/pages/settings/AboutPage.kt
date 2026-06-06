@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import android.app.Dialog
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
@@ -200,26 +201,92 @@ private fun MainUiHost.changeLogButton(): View {
 }
 
 private fun MainUiHost.showUpdateLogDialog() {
-    showAirDialog(
-        title = getString(R.string.ui_changelog),
+    var dialog: Dialog? = null
+    dialog = showAirDialog(
+        title = getString(R.string.ui_whats_new),
         message = null,
         positiveText = getString(R.string.ui_ok),
         body = {
-            addView(TextView(this@showUpdateLogDialog).apply {
-                text = loadChangelogText()
-                textSize = AirUiTokens.TextSize.Body
-                setTextColor(colorTextMuted)
-                setLineSpacing(dp(AirUiTokens.Space.Sm).toFloat(), 1f)
-                setPadding(0, dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), 0, dp(AirUiTokens.Space.Sm))
+            addView(changelogTextView(loadCurrentChangelogText()))
+            addView(changelogDialogButton(getString(R.string.ui_view_full_changelog)) {
+                dialog?.dismiss()
+                showFullUpdateLogDialog()
             })
         }
     )
 }
 
+private fun MainUiHost.showFullUpdateLogDialog() {
+    showAirDialog(
+        title = getString(R.string.ui_changelog),
+        message = null,
+        positiveText = getString(R.string.ui_ok),
+        body = {
+            addView(changelogTextView(loadChangelogText()))
+        }
+    )
+}
+
+private fun MainUiHost.changelogTextView(text: String): View {
+    return TextView(this).apply {
+        this.text = text
+        textSize = AirUiTokens.TextSize.Body
+        setTextColor(colorTextMuted)
+        setLineSpacing(dp(AirUiTokens.Space.Sm).toFloat(), 1f)
+        setPadding(0, dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), 0, dp(AirUiTokens.Space.Sm))
+    }
+}
+
+private fun MainUiHost.changelogDialogButton(
+    text: String,
+    onClick: () -> Unit
+): View {
+    return TextView(this).apply {
+        this.text = text
+        gravity = Gravity.CENTER
+        textSize = AirUiTokens.TextSize.Button
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(colorAccent)
+        setPadding(dp(AboutTokens.ChangeLogHorizontalPaddingDp), dp(AboutTokens.ChangeLogVerticalPaddingDp), dp(AboutTokens.ChangeLogHorizontalPaddingDp), dp(AboutTokens.ChangeLogVerticalPaddingDp))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            gravity = Gravity.CENTER_HORIZONTAL
+            setMargins(0, dp(AirUiTokens.Space.Xl), 0, 0)
+        }
+        background = GradientDrawable().apply {
+            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
+            setColor(colorSurfaceLight)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
+        }
+        isClickable = true
+        isFocusable = true
+        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale + 0.01f)
+        setOnClickListener {
+            playTinyPulse(this)
+            onClick()
+        }
+    }
+}
+
+private fun MainUiHost.loadCurrentChangelogText(): String {
+    return loadAssetText(
+        assetName = "changelog_current.txt",
+        fallback = loadChangelogText()
+    )
+}
+
 private fun MainUiHost.loadChangelogText(): String {
-    val fallback = getString(R.string.ui_no_changelog_yet)
+    return loadAssetText(
+        assetName = "changelog.txt",
+        fallback = getString(R.string.ui_no_changelog_yet)
+    )
+}
+
+private fun MainUiHost.loadAssetText(assetName: String, fallback: String): String {
     return runCatching {
-        assets.open("changelog.txt").bufferedReader(Charsets.UTF_8).use { it.readText() }
+        assets.open(assetName).bufferedReader(Charsets.UTF_8).use { it.readText() }
     }.getOrDefault(fallback)
         .trim()
         .ifBlank { fallback }
