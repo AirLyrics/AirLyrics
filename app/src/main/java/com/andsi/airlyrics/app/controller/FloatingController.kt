@@ -29,20 +29,31 @@ internal class FloatingController(
             action != BroadcastActions.QUICK_CONTROL_CHANGED
         ) return
 
+        val previousVisible = state.quickFloatingVisible
+        val previousLocked = state.locked
+        val previousClickThrough = state.clickThrough
         val visible = intent.getBooleanExtra(
             BroadcastActions.EXTRA_WINDOW_VISIBLE,
             state.quickFloatingVisible
         )
-        state.locked = intent.getBooleanExtra(
+        val locked = intent.getBooleanExtra(
             BroadcastActions.EXTRA_LOCKED,
             FloatingLyricsStyleStore.isLocked(context)
         )
-        state.clickThrough = intent.getBooleanExtra(
+        val clickThrough = intent.getBooleanExtra(
             BroadcastActions.EXTRA_CLICK_THROUGH,
             FloatingLyricsStyleStore.isClickThrough(context)
         )
+        state.locked = locked
+        state.clickThrough = clickThrough
         updateQuickFloatingActualVisible(visible)
-        invalidator.refreshFloatingState()
+
+        val floatingStateChanged = previousVisible != visible ||
+            previousLocked != locked ||
+            previousClickThrough != clickThrough
+        if (action == BroadcastActions.WINDOW_VISIBILITY_CHANGED || floatingStateChanged) {
+            invalidator.refreshFloatingState()
+        }
     }
 
     fun reloadLyrics() {

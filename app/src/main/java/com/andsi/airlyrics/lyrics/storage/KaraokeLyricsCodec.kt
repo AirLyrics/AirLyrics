@@ -105,10 +105,10 @@ internal object KaraokeLyricsCodec {
             .lineSequence()
             .mapIndexedNotNull { index, rawLine ->
                 val line = rawLine.trim()
-                if (line.isBlank() || Regex("""\[[A-Za-z][A-Za-z0-9_\-]*:.*]""").matches(line)) {
+                if (line.isBlank() || isMetadataLine(line)) {
                     return@mapIndexedNotNull null
                 }
-                if (parseEnhancedLrc(line).isEmpty()) index + 1 else null
+                if (isValidEnhancedLrcImportLine(line)) null else index + 1
             }
             .toList()
 
@@ -223,6 +223,13 @@ internal object KaraokeLyricsCodec {
             plainLrc = linesToPlainLrc(karaokeLines, effectiveTranslations),
             hasTranslation = effectiveTranslations.isNotEmpty()
         )
+    }
+
+
+    private fun isValidEnhancedLrcImportLine(line: String): Boolean {
+        if (parseRawEnhancedLine(line) != null) return true
+        if (wordTimeTagRegex.containsMatchIn(line)) return false
+        return parseTimedTextSegments(line).isNotEmpty()
     }
 
     private fun parseRawEnhancedLine(line: String): RawEnhancedLine? {

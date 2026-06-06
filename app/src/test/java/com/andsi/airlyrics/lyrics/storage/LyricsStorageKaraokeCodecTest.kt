@@ -104,6 +104,20 @@ class LyricsStorageKaraokeCodecTest {
 
 
     @Test
+    fun validateEnhancedLrcForStorage_allowsSameTimestampTranslationLines() {
+        val result = KaraokeLyricsCodec.validateEnhancedLrcForStorage(
+            """
+            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
+            [00:10.00]你的背影
+            """.trimIndent()
+        )
+
+        assertTrue(result.isValid)
+        assertEquals(emptyList<Int>(), result.invalidLineNumbers)
+    }
+
+
+    @Test
     fun karaokeJsonRoundTrip_preservesValidLines() {
         val original = listOf(
             KaraokeLine(
