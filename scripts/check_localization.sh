@@ -134,9 +134,19 @@ if len(resources) == len(resource_paths):
         fail(f'Kotlin references missing string resources: {missing_refs}')
 
 print('Checking changelog policy...')
-localized_changelogs = sorted(Path('app/src/main/assets').glob('changelog_*.txt'))
+allowed_changelog_variants = {
+    Path('app/src/main/assets/changelog_current.txt'),
+}
+localized_changelogs = sorted(
+    path for path in Path('app/src/main/assets').glob('changelog_*.txt')
+    if path not in allowed_changelog_variants
+)
 if localized_changelogs:
-    fail('Localized changelog files are not allowed. Use app/src/main/assets/changelog.txt only: ' + ', '.join(map(str, localized_changelogs)))
+    fail(
+        'Localized changelog files are not allowed. '
+        'Use app/src/main/assets/changelog.txt and app/src/main/assets/changelog_current.txt only: '
+        + ', '.join(map(str, localized_changelogs))
+    )
 
 if errors:
     print('Localization check failed:')
