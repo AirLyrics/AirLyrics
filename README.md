@@ -4,13 +4,15 @@
 
 # AirLyrics
 
-A lightweight Android floating lyrics app that automatically detects current media playback and displays synced lyrics in a customizable floating window.
+A lightweight Android floating lyrics app that detects current media playback and shows synced
+lyrics in a customizable floating window.
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 <br />
 
-[Download](https://github.com/AirLyrics/AirLyrics/releases) · [Documentation](docs/README.md) · [Privacy](PRIVACY.md) · [Report Bug](https://github.com/AirLyrics/AirLyrics/issues)
+[Download](https://github.com/AirLyrics/AirLyrics/releases) · [Documentation](docs/README.md) ·
+[Privacy](PRIVACY.md) · [Report Bug](https://github.com/AirLyrics/AirLyrics/issues)
 
 <br />
 
@@ -33,9 +35,12 @@ A lightweight Android floating lyrics app that automatically detects current med
 
 ## Status
 
-AirLyrics is under active development.
+AirLyrics is in maintenance mode.
 
-The app is already usable, but compatibility may vary depending on Android version, device manufacturer and music app.
+The current release is intended for daily use. Future updates will mainly focus on bug fixes,
+compatibility improvements, documentation updates, and reviewing issues or pull requests.
+
+Compatibility may still vary depending on Android version, device manufacturer and music app.
 
 ---
 
@@ -45,7 +50,8 @@ Download the latest APK from [GitHub Releases](https://github.com/AirLyrics/AirL
 
 System requirement: Android 8.0 or later.
 
-After installation, grant the required permissions and select the music app you want AirLyrics to follow.
+After installation, grant the required permissions and select the music app you want AirLyrics to
+follow.
 
 ---
 
@@ -133,15 +139,10 @@ Project documentation is in the docs directory.
 
 ### Requirements
 
-- JDK 21
-- Android SDK
-- Android NDK `26.3.11579264` required
-- Rust stable via `rustup`
-- `cargo-ndk`
-- Rust Android target:
-  - `aarch64-linux-android` is required for the default `arm64-v8a` build
-- Optional Rust Android target:
-  - `x86_64-linux-android` is only needed when building with `-Pairlyrics.buildX86_64=true`
+- JDK 21 - Android SDK - Android NDK `26.3.11579264` required - Rust stable via `rustup` -
+  `cargo-ndk` - Rust Android target: - `aarch64-linux-android` is required for the default
+  `arm64-v8a` build - Optional Rust Android target: - `x86_64-linux-android` is only needed when
+  building with `-Pairlyrics.buildX86_64=true`
 
 Android Studio is recommended when configuring Android SDK related settings.
 
@@ -168,21 +169,19 @@ app/build/outputs/apk/debug/
 
 ## Contributing
 
-Contributions are welcome.
+Contributions are welcome. AirLyrics is in maintenance mode, so small and focused changes are
+preferred.
 
 Good areas to contribute:
 
-- Bug reports
-- Compatibility testing
-- Translation improvements
-- Documentation improvements
-- UI text polishing
+- Bug reports - Compatibility testing - Translation improvements - Documentation improvements - UI
+  text polishing
 
 Contribution guide: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ---
 
-## Credit
+## Credits
 
 - [waylyrics](https://github.com/waylyrics/waylyrics)
 

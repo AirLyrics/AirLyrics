@@ -10,7 +10,8 @@
 
 <br />
 
-[下载](https://github.com/AirLyrics/AirLyrics/releases) · [文档](docs/README.zh-CN.md) · [隐私](PRIVACY.zh-CN.md) · [反馈问题](https://github.com/AirLyrics/AirLyrics/issues)
+[下载](https://github.com/AirLyrics/AirLyrics/releases) · [文档](docs/README.zh-CN.md) ·
+[隐私](PRIVACY.zh-CN.md) · [反馈问题](https://github.com/AirLyrics/AirLyrics/issues)
 
 <br />
 
@@ -33,9 +34,12 @@
 
 ## 状态
 
-AirLyrics 正在持续开发中。
+AirLyrics 目前处于维护模式。
 
-应用已经可以使用，但兼容性可能会受到 Android 版本、设备厂商和音乐应用的影响。
+当前版本已经适合作为日常悬浮歌词工具使用。后续更新会主要集中在 bug 修复、兼容性改进、文档更新，
+以及处理 issue 或 pull request。
+
+应用兼容性仍可能受到 Android 版本、设备厂商和音乐应用的影响。
 
 ---
 
@@ -169,7 +173,7 @@ app/build/outputs/apk/debug/
 
 ## 贡献
 
-欢迎您提交贡献。
+欢迎您提交贡献。AirLyrics 目前处于维护模式，因此更推荐小而明确的改动。
 
 适合贡献的方向：
 
@@ -183,7 +187,7 @@ app/build/outputs/apk/debug/
 
 ---
 
-## Credit
+## 鸣谢
 
 - [waylyrics](https://github.com/waylyrics/waylyrics)
 
