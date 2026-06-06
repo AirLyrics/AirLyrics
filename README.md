@@ -139,7 +139,7 @@ Project documentation is in the docs directory.
 
 ### Requirements
 
-- JDK 21 - Android SDK - Android NDK `26.3.11579264` required - Rust stable via `rustup` -
+- JDK 17 - Android SDK - Android NDK `26.3.11579264` required - Rust stable via `rustup` -
   `cargo-ndk` - Rust Android target: - `aarch64-linux-android` is required for the default
   `arm64-v8a` build - Optional Rust Android target: - `x86_64-linux-android` is only needed when
   building with `-Pairlyrics.buildX86_64=true`

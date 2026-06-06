@@ -3,5 +3,6 @@ v1.0.3
 • Normal LRC import can now recognize same-timestamp original and translated lines.
 • Word-by-word lyrics import can now use same-timestamp translation lines when generating normal lyrics.
 • Updated lyrics format documentation for translated normal and word-by-word lyrics.
+• Polished project documentation and README to reflect maintenance mode.
 • Fixed floating window settings refreshing while using sliders or color controls.
 • Reduced flicker when refreshing current-song lyrics and recent local lyrics.

@@ -137,7 +137,7 @@ AirLyrics 会用到以下 Android 权限：
 
 ### 环境要求
 
-- JDK 21
+- JDK 17
 - Android SDK
 - Android NDK `26.3.11579264` 必需
 - Rust stable via `rustup`
