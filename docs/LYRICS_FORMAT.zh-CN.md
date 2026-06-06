@@ -84,7 +84,8 @@ AirLyrics 支持本地导入 `.lrc` 文件。联网歌词缺失、不准确或�
 [00:12.34]I love you, I love you
 ```
 
-如果当前歌曲没有普通歌词，AirLyrics 会根据逐字歌词自动生成普通 LRC。存在同时间戳翻译行时，生成的普通 LRC 也会包含翻译：
+如果当前歌曲没有普通歌词，AirLyrics 会根据逐字歌词自动生成普通 LRC。
+存在同时间戳翻译行时，生成的普通 LRC 也会包含翻译：
 
 ```lrc
 [00:12.34]大好きだって / I love you, I love you

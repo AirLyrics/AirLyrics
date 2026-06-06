@@ -2,7 +2,8 @@
 
 [English](ARCHITECTURE.md) · [简体中文](ARCHITECTURE.zh-CN.md)
 
-AirLyrics 是一个 Android 手机端悬浮歌词应用，Android 端使用 Kotlin，联网歌词 Provider 通过 Rust 原生歌词核心接入。
+AirLyrics 是一个 Android 手机端悬浮歌词应用。Android 端使用 Kotlin，
+联网歌词 Provider 通过 Rust 原生歌词核心接入。
 
 代码按职责拆分：媒体检测、歌词查询、本地歌词存储、悬浮窗渲染、设置持久化和 UI 页面。
 
@@ -52,7 +53,8 @@ app/controller/FloatingController.kt
 
 ## 媒体检测
 
-`MediaNotificationListener` 读取活跃媒体通知并广播播放快照。`MediaSourceStore` 记住选中的媒体包名，处理多个音乐应用同时存在的情况。
+`MediaNotificationListener` 读取活跃媒体通知并广播播放快照。
+`MediaSourceStore` 记住选中的媒体包名，处理多个音乐应用同时存在的情况。
 
 媒体页面展示当前媒体与可用播放器。刷新操作只更新相关媒体状态，不重建整个界面。
 
@@ -69,7 +71,8 @@ app/controller/FloatingController.kt
 
 ## 悬浮歌词
 
-`FloatingLyricsService` 是前台服务协调器。窗口细节属于 `FloatingWindowController`，歌词时间轴和文本更新属于 `FloatingLyricsRenderer`。
+`FloatingLyricsService` 是前台服务协调器。窗口细节属于 `FloatingWindowController`，
+歌词时间轴和文本更新属于 `FloatingLyricsRenderer`。
 
 悬浮窗支持样式修改、锁定、触摸穿透、位置保存、切行动画，以及存在增强歌词时的逐字高亮。
 

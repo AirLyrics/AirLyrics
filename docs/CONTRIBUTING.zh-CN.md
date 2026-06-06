@@ -4,9 +4,15 @@
 
 感谢您愿意为 AirLyrics 做贡献。
 
+AirLyrics 目前以维护为主。
+
+欢迎提交 bug 修复、兼容性修复、翻译更新、文档改进，以及小范围的 UI 文案润色。
+
+如果准备添加较大的功能或改变现有行为，请先开 issue 讨论方向，再开始实现。
+
 为了方便 review，请尽量让每个 PR 只做一件事。不要把无关的格式化、重构和功能改动混在一起。
 
-在说明中可以使用图片或者视频，会更加清晰
+在说明中可以使用图片或者视频，这会更清晰。
 
 ## 提交 PR 前
 
@@ -33,13 +39,15 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-如果改动涉及歌词解析、本地歌词存储、歌词导入、Android 存储权限或 SAF 文件夹行为，请额外在真机或模拟器上运行：
+如果改动涉及歌词解析、本地歌词存储、歌词导入、Android 存储权限或 SAF 文件夹行为，
+请额外在真机或模拟器上运行：
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest -Pairlyrics.skipRustBuild=true
 ```
 
-注意：`connectedDebugAndroidTest` 可能会卸载或覆盖设备上已安装的 AirLyrics。运行前请确认测试设备上的数据可以被清除，建议使用测试机或模拟器。
+注意：`connectedDebugAndroidTest` 可能会卸载或覆盖设备上已安装的 AirLyrics。
+运行前请确认测试设备上的数据可以被清除，建议使用测试机或模拟器。
 
 ## 相关规范
 
@@ -57,7 +65,8 @@ cargo test
 
 ### 添加歌词 Provider
 
-AirLyrics 是悬浮歌词应用，不是找歌词项目。除非目前的歌词源已经基本无法满足正常使用，否则不建议继续添加在线歌词源，优先建议用户手动导入本地歌词。
+AirLyrics 是悬浮歌词应用，不是找歌词项目。除非目前的歌词源已经基本无法满足正常使用，
+否则不建议继续添加在线歌词源，优先建议用户手动导入本地歌词。
 
 确实需要新增歌词来源时，请保持 Provider 的职责单一。
 

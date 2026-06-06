@@ -4,7 +4,16 @@
 
 Thank you for contributing to AirLyrics.
 
-To make review easier, please keep each PR focused on one purpose. Avoid mixing unrelated formatting, refactoring and feature changes in the same PR.
+AirLyrics is currently maintained in a maintenance-first mode.
+
+Bug fixes, compatibility fixes, translation updates, documentation improvements, and small UI text
+polishing are welcome.
+
+For larger features or behavior changes, please open an issue first so the direction can be
+discussed before implementation.
+
+To make review easier, please keep each PR focused on one purpose. Avoid mixing unrelated
+formatting, refactoring and feature changes in the same PR.
 
 If available, images or videos can make the explanation easier to understand.
 
@@ -18,7 +27,8 @@ Please run the basic checks before submitting a PR:
 ./scripts/check_localization.sh
 ```
 
-If you changed Android UI or app integration code, you can also build a debug APK without rebuilding Rust:
+If you changed Android UI or app integration code, you can also build a debug APK without rebuilding
+Rust:
 
 ```bash
 ./gradlew :app:assembleDebug -Pairlyrics.skipRustBuild=true
@@ -33,19 +43,23 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-If your changes affect lyrics parsing, local lyrics storage, lyrics import, Android storage permissions, or SAF folder behavior, also run the following check on a real device or emulator:
+If your changes affect lyrics parsing, local lyrics storage, lyrics import, Android storage
+permissions, or SAF folder behavior, also run this check on a real device or emulator:
 
 ```bash
 ./gradlew :app:connectedDebugAndroidTest -Pairlyrics.skipRustBuild=true
 ```
 
-Note: `connectedDebugAndroidTest` may uninstall or overwrite the AirLyrics app already installed on the device. Please make sure the test device can safely lose its existing app data. A test device or emulator is recommended.
+Note: `connectedDebugAndroidTest` may uninstall or overwrite the AirLyrics app already installed on
+the device. Please make sure the test device can safely lose its existing app data. A test device or
+emulator is recommended.
 
 ## Related guidelines
 
 ### Adding a setting
 
-When adding a setting, please connect it through the existing structure instead of storing temporary state only in a UI page.
+When adding a setting, please connect it through the existing structure instead of storing temporary
+state only in a UI page.
 
 1. Add or extend a settings data model under `settings/model/`.
 2. Add read and save logic in the matching `settings/store/*Store.kt`.
@@ -53,11 +67,14 @@ When adding a setting, please connect it through the existing structure instead 
 4. Read and apply the setting in the module that actually uses it, such as floating window rendering, lyrics lookup or lyrics storage.
 5. If the setting changes user-visible behavior, please update the related documentation or tests.
 
-Do not read or write raw `SharedPreferences` directly from UI pages or Services unless you are creating a new Store.
+Do not read or write raw `SharedPreferences` directly from UI pages or Services unless you are
+creating a new Store.
 
 ### Adding a lyrics provider
 
-AirLyrics is a floating lyrics app, not a lyrics search project. Unless the current lyrics sources can no longer satisfy normal use, please prefer manual local lyrics import instead of adding more online providers.
+AirLyrics is a floating lyrics app, not a lyrics search project. Unless the current lyrics sources
+can no longer satisfy normal use, please prefer manual local lyrics import instead of adding more
+online providers.
 
 When a new provider is truly needed, keep the Provider responsibility narrow.
 
@@ -79,7 +96,8 @@ When changing UI text, please note:
 - Do not translate song titles, artist names, file names, package names or paths.
 - Run `./scripts/check_localization.sh` before submitting.
 
-If you add new string resources, please also provide text for the corresponding languages to avoid missing translations in the UI.
+If you add new string resources, please also provide text for the corresponding languages to avoid
+missing translations in the UI.
 
 ## Files not to commit
 
