@@ -61,6 +61,25 @@ class LyricsDisplayFormatterTest {
     }
 
     @Test
+    fun format_metadataLinesRenderRegardlessOfContentMode() {
+        val rendered = LyricsDisplayFormatter.format(
+            lines = listOf(
+                LrcLine(
+                    timeMs = 0L,
+                    text = "[ar:Artist]\n[ti:Title]",
+                    isMetadata = true
+                )
+            ),
+            currentIndex = 0,
+            contentMode = LyricsContentDisplayMode.TRANSLATION_ONLY,
+            lineMode = LyricsLineDisplayMode.CURRENT_ONLY,
+            noTranslationText = "暂无翻译"
+        )
+
+        assertEquals("[ar:Artist]\n[ti:Title]", rendered)
+    }
+
+    @Test
     fun format_previousCurrentNextSkipsOutOfBoundsIndexes() {
         val rendered = LyricsDisplayFormatter.format(
             lines = lines,

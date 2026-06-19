@@ -41,6 +41,27 @@ class LrcParserTest {
     }
 
     @Test
+    fun parse_keepsTimedCreditLinesAsLyricsWithoutSplittingSlash() {
+        val lines = LrcParser.parse(
+            """
+            [00:00.00]作词 : 七条レタス
+            [00:00.28]作曲 : 宇佐美宏 / 哈哇哇
+            [00:00.56]はわわ
+            """.trimIndent()
+        )
+
+        assertEquals(3, lines.size)
+        assertEquals(false, lines[0].isMetadata)
+        assertEquals("作词 : 七条レタス", lines[0].text)
+        assertNull(lines[0].translation)
+        assertEquals(false, lines[1].isMetadata)
+        assertEquals("作曲 : 宇佐美宏 / 哈哇哇", lines[1].text)
+        assertNull(lines[1].translation)
+        assertEquals(false, lines[2].isMetadata)
+        assertEquals("はわわ", lines[2].text)
+    }
+
+    @Test
     fun parseWithTranslation_matchesNearbyTranslationWithoutDuplicatingOriginal() {
         val original = """
             [00:10.00]Original A
@@ -61,15 +82,63 @@ class LrcParserTest {
     }
 
     @Test
+    fun parseWithTranslation_doesNotMatchFirstLyricTranslationToTimedCredits() {
+        val original = """
+            [00:00.00]作词 : 七条レタス
+            [00:00.28]作曲 : 宇佐美宏 / 哈哇哇
+            [00:00.56]はわわ
+        """.trimIndent()
+        val translated = "[00:00.56]哈哇哇"
+
+        val lines = LrcParser.parseWithTranslation(original, translated)
+
+        assertEquals(3, lines.size)
+        assertNull(lines[0].translation)
+        assertNull(lines[1].translation)
+        assertEquals("哈哇哇", lines[2].translation)
+    }
+
+    @Test
+    fun parseWithTranslation_prefersExactLaterLineOverEarlierNearbyLine() {
+        val original = """
+            [00:00.28]intro
+            [00:00.56]はわわ
+        """.trimIndent()
+        val translated = "[00:00.56]哈哇哇"
+
+        val lines = LrcParser.parseWithTranslation(original, translated)
+
+        assertNull(lines[0].translation)
+        assertEquals("哈哇哇", lines[1].translation)
+    }
+
+    @Test
     fun normalizeForStorage_outputsStableOneLinePerLyricFormat() {
         val normalized = LrcParser.normalizeForStorage(
             """
+            [ar:Artist]
             [00:02:5]two point five
             [00:01.00]one / 一
             """.trimIndent()
         )
 
-        assertEquals("[00:01.00]one / 一\n[00:02.50]two point five", normalized)
+        assertEquals("[ar:Artist]\n[00:01.00]one / 一\n[00:02.50]two point five", normalized)
+    }
+
+    @Test
+    fun normalizeForStorage_keepsTimedCreditLinesSeparateFromSameTimeLyrics() {
+        val normalized = LrcParser.normalizeForStorage(
+            """
+            [00:00.00]作词 : 七条レタス
+            [00:00.00]はわわ
+            [00:00.00]哈哇哇
+            """.trimIndent()
+        )
+
+        assertEquals(
+            "[00:00.00]作词 : 七条レタス\n[00:00.00]はわわ / 哈哇哇",
+            normalized
+        )
     }
 
     @Test
@@ -83,7 +152,7 @@ class LrcParserTest {
     }
 
     @Test
-    fun parse_ignoresMetadataTagsAndBlankLines() {
+    fun parse_keepsMetadataTagsAsInitialDisplayLine() {
         val lines = LrcParser.parse(
             """
             [ar:Artist]
@@ -93,8 +162,13 @@ class LrcParserTest {
             """.trimIndent()
         )
 
-        assertEquals(1, lines.size)
-        assertEquals("hello", lines.single().text)
+        assertEquals(2, lines.size)
+        assertEquals(0L, lines[0].timeMs)
+        assertEquals("[ar:Artist]\n[ti:Title]", lines[0].text)
+        assertEquals(true, lines[0].isMetadata)
+        assertEquals("hello", lines[1].text)
+        assertEquals(0, LrcParser.findCurrentIndex(lines, 0L))
+        assertEquals(1, LrcParser.findCurrentIndex(lines, 1_000L))
     }
 
     @Test
@@ -137,6 +211,22 @@ class LrcParserTest {
 
         assertEquals(
             "[00:10.00]君の背中 / 你的背影\n[00:20.00]次の原文 / 下一句翻译",
+            normalized
+        )
+    }
+
+    @Test
+    fun normalizeForStorage_mergesSameTimestampLinesAfterSortingInput() {
+        val normalized = LrcParser.normalizeForStorage(
+            """
+            [00:20.00]次の原文
+            [00:10.00]君の背中
+            [00:10.00]你的背影
+            """.trimIndent()
+        )
+
+        assertEquals(
+            "[00:10.00]君の背中 / 你的背影\n[00:20.00]次の原文",
             normalized
         )
     }
