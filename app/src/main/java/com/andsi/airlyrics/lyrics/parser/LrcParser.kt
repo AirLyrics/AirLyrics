@@ -9,17 +9,6 @@ data class LrcLine(
     val isMetadata: Boolean = false
 ) {
     fun hasTranslation(): Boolean = !translation.isNullOrBlank()
-
-    fun defaultDisplayText(): String {
-        val original = text.trim()
-        val translated = translation.orEmpty().trim()
-        return when {
-            original.isNotBlank() && translated.isNotBlank() -> "$original\n$translated"
-            original.isNotBlank() -> original
-            translated.isNotBlank() -> translated
-            else -> ""
-        }
-    }
 }
 
 object LrcParser {
@@ -83,10 +72,6 @@ object LrcParser {
         }
 
         return StorageValidationResult(isValid = normalizeForStorage(lyrics).isNotBlank())
-    }
-
-    fun findCurrentLine(lines: List<LrcLine>, positionMs: Long): LrcLine? {
-        return findCurrentIndex(lines, positionMs)?.let { lines[it] }
     }
 
     fun findCurrentIndex(lines: List<LrcLine>, positionMs: Long): Int? {
@@ -251,7 +236,7 @@ private fun buildMetadataDisplayLine(metadataLines: List<String>): LrcLine? {
 
 private fun formatLinesForStorage(lines: List<LrcLine>): String {
     return lines
-        .filter { it.text.isNotBlank() || !it.translation.isNullOrBlank() }
+        .filter { it.text.isNotBlank() || it.hasTranslation() }
         .joinToString("\n", transform = ::formatLineForStorage)
 }
 
@@ -261,11 +246,11 @@ private fun formatLineForStorage(line: LrcLine): String {
     }
 
     val text = when {
-        line.text.isNotBlank() && !line.translation.isNullOrBlank() -> {
+        line.text.isNotBlank() && line.hasTranslation() -> {
             "${line.text.trim()} / ${formatTranslationForStorage(line.translation)}"
         }
         line.text.isNotBlank() -> line.text.trim()
-        !line.translation.isNullOrBlank() -> formatTranslationForStorage(line.translation)
+        line.hasTranslation() -> formatTranslationForStorage(line.translation)
         else -> ""
     }
     return "[${formatTimeTag(line.timeMs)}]$text"

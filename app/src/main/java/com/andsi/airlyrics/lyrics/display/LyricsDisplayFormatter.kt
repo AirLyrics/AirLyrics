@@ -60,13 +60,15 @@ object LyricsDisplayFormatter {
             LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
                 buildList {
                     if (original.isNotBlank()) add(original)
-                    if (translation.isNotBlank()) add(translation)
+                    if (line.hasTranslation()) add(translation)
                 }.joinToString("\n")
             }
 
             LyricsContentDisplayMode.ORIGINAL_ONLY -> original
 
-            LyricsContentDisplayMode.TRANSLATION_ONLY -> translation
+            LyricsContentDisplayMode.TRANSLATION_ONLY -> {
+                if (line.hasTranslation()) translation else ""
+            }
         }
     }
 }

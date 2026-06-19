@@ -179,7 +179,7 @@ class FloatingLyricsRenderer(
                             else original
                         )
                     }
-                    if (translation.isNotBlank()) {
+                    if (line.hasTranslation()) {
                         if (block.isNotEmpty()) block.append('\n')
                         block.append(translation)
                     }
@@ -197,7 +197,7 @@ class FloatingLyricsRenderer(
                 }
 
                 LyricsContentDisplayMode.TRANSLATION_ONLY -> {
-                    if (translation.isNotBlank()) renderedLines += translation
+                    if (line.hasTranslation()) renderedLines += translation
                 }
             }
         }

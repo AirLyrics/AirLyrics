@@ -37,7 +37,7 @@ class LrcParserTest {
         assertEquals(1, lines.size)
         assertEquals("星が降らない街", lines[0].text)
         assertEquals("星星不落的街道", lines[0].translation)
-        assertEquals("星が降らない街\n星星不落的街道", lines[0].defaultDisplayText())
+        assertEquals(true, lines[0].hasTranslation())
     }
 
     @Test
