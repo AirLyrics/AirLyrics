@@ -162,6 +162,11 @@ class FloatingLyricsRenderer(
             val line = currentLyrics[index]
             val original = line.text.trim()
             val translation = line.translation.orEmpty().trim()
+            if (line.isMetadata) {
+                if (original.isNotBlank()) renderedLines += original
+                return@forEach
+            }
+
             val isCurrent = index == currentIndex
             val karaokeLine = if (isCurrent) findKaraokeLineForLrc(line, positionMs) else null
 
@@ -224,6 +229,7 @@ class FloatingLyricsRenderer(
     }
 
     private fun findKaraokeLineForLrc(line: LrcLine, positionMs: Long): KaraokeLine? {
+        if (line.isMetadata) return null
         if (currentKaraokeLines.isEmpty()) return null
 
         fun List<KaraokeLine>.bestCompatible(maxDistanceMs: Long): KaraokeLine? {

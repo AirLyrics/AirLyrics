@@ -54,6 +54,7 @@ object LyricsDisplayFormatter {
     private fun renderLine(line: LrcLine, contentMode: LyricsContentDisplayMode): String {
         val original = line.text.trim()
         val translation = line.translation.orEmpty().trim()
+        if (line.isMetadata) return original
 
         return when (contentMode) {
             LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
