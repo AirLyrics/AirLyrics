@@ -3,7 +3,9 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.net.Uri
 import com.andsi.airlyrics.lyrics.KaraokeLine
+import com.andsi.airlyrics.lyrics.parser.KaraokeLrcParser
 import com.andsi.airlyrics.lyrics.parser.LrcParser
+import com.andsi.airlyrics.lyrics.parser.ParsedKaraokeImport
 
 /**
  * Public facade for local lyric persistence.
@@ -99,10 +101,10 @@ object LyricsStorage {
                     ?.takeIf { it.isNotBlank() }
                     ?.let { LyricsFileStore.readManagedLyrics(context, it) }
                     ?: return@withStorageLock null
-                val karaokeLines = KaraokeLyricsCodec.parseJson(rawKaraoke).ifEmpty {
-                    KaraokeLyricsCodec.parseEnhancedLrc(rawKaraoke)
+                val karaokeDocument = parseStoredKaraokeText(rawKaraoke)
+                karaokeDocument.lines.takeIf { it.isNotEmpty() }?.let {
+                    KaraokeLrcParser.linesToEnhancedLrc(it, karaokeDocument.metadataLines)
                 }
-                karaokeLines.takeIf { it.isNotEmpty() }?.let { KaraokeLyricsCodec.linesToEnhancedLrc(it) }
             }
         }
     }
@@ -158,7 +160,7 @@ object LyricsStorage {
     }
 
     fun validateKaraokeLyricsItemText(text: String): LocalLyricsUpdateResult {
-        val validation = KaraokeLyricsCodec.validateEnhancedLrcForStorage(text)
+        val validation = KaraokeLrcParser.validateForStorage(text)
         return LocalLyricsUpdateResult(
             saved = validation.isValid,
             invalidLineNumbers = validation.invalidLineNumbers
@@ -172,7 +174,7 @@ object LyricsStorage {
     ): LocalLyricsUpdateResult {
         if (!item.hasKaraokeLyrics) return LocalLyricsUpdateResult(saved = false)
 
-        val validation = KaraokeLyricsCodec.validateEnhancedLrcForStorage(text)
+        val validation = KaraokeLrcParser.validateForStorage(text)
         if (!validation.isValid) {
             return LocalLyricsUpdateResult(
                 saved = false,
@@ -180,9 +182,10 @@ object LyricsStorage {
             )
         }
 
-        val karaokeLines = KaraokeLyricsCodec.parseEnhancedLrc(text)
+        val parsedKaraoke = KaraokeLrcParser.parseImport(text)
+        val karaokeLines = parsedKaraoke.karaokeLines
         if (karaokeLines.isEmpty()) return LocalLyricsUpdateResult(saved = false)
-        val json = KaraokeLyricsCodec.linesToJson(karaokeLines)
+        val json = KaraokeLyricsCodec.linesToJson(karaokeLines, parsedKaraoke.metadataLines)
 
         return withStorageLock {
             val entry = LyricsIndexStore.findByFileName(context, item.name)
@@ -359,7 +362,8 @@ object LyricsStorage {
         album: String = "",
         source: String = SOURCE_DOWNLOADED,
         provider: String = "local",
-        overwrite: Boolean = true
+        overwrite: Boolean = true,
+        metadataLines: List<String> = emptyList()
     ): Boolean {
         if (karaokeLines.isEmpty()) return false
 
@@ -371,7 +375,7 @@ object LyricsStorage {
             val now = System.currentTimeMillis()
             val fileName = "${normalizedKey.take(16)}.karaoke.json"
             val relativeFile = "$MANAGED_LYRICS_DIR/$fileName"
-            val json = KaraokeLyricsCodec.linesToJson(karaokeLines)
+            val json = KaraokeLyricsCodec.linesToJson(karaokeLines, metadataLines)
             if (!LyricsFileStore.writeManagedLyrics(context, fileName, json)) return@withStorageLock false
 
             val entries = LyricsIndexStore.read(context)
@@ -430,12 +434,23 @@ object LyricsStorage {
             LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TOO_LARGE
             LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SAVE_FAILED
         }
-        val parsedImport = KaraokeLyricsCodec.parseImport(text)
+        val parsedImport = parseKaraokeImportText(text)
         val lines = parsedImport.karaokeLines
         if (lines.isEmpty()) return ImportLyricsResult.INVALID_FORMAT
 
         return withStorageLock {
-            val savedKaraoke = saveKaraokeLyrics(context, title, artist, duration, lines, album, SOURCE_MANUAL_IMPORT, "local", overwrite)
+            val savedKaraoke = saveKaraokeLyrics(
+                context = context,
+                title = title,
+                artist = artist,
+                duration = duration,
+                karaokeLines = lines,
+                album = album,
+                source = SOURCE_MANUAL_IMPORT,
+                provider = "local",
+                overwrite = overwrite,
+                metadataLines = parsedImport.metadataLines
+            )
             if (!savedKaraoke) return@withStorageLock ImportLyricsResult.SAVE_FAILED
 
             if (!hasLocalLyrics(context, title, artist, duration)) {
@@ -455,6 +470,31 @@ object LyricsStorage {
 
             ImportLyricsResult.SAVED
         }
+    }
+
+    private fun parseStoredKaraokeText(rawText: String): KaraokeLyricsCodec.KaraokeLyricsDocument {
+        val document = KaraokeLyricsCodec.parseDocumentJson(rawText)
+        if (document.lines.isNotEmpty()) return document
+
+        val parsedLrc = KaraokeLrcParser.parseImport(rawText)
+        return KaraokeLyricsCodec.KaraokeLyricsDocument(
+            lines = parsedLrc.karaokeLines,
+            metadataLines = parsedLrc.metadataLines
+        )
+    }
+
+    private fun parseKaraokeImportText(rawText: String): ParsedKaraokeImport {
+        val document = KaraokeLyricsCodec.parseDocumentJson(rawText)
+        if (document.lines.isNotEmpty()) {
+            return ParsedKaraokeImport(
+                karaokeLines = document.lines,
+                plainLrc = KaraokeLrcParser.linesToPlainLrc(document.lines, document.metadataLines),
+                hasTranslation = false,
+                metadataLines = document.metadataLines
+            )
+        }
+
+        return KaraokeLrcParser.parseImport(rawText)
     }
 
     fun deleteLocalLyrics(context: Context, title: String, artist: String, duration: Long, mode: DeleteMode = DeleteMode.ALL): Boolean = withStorageLock {
@@ -501,17 +541,31 @@ object LyricsStorage {
     }
 
     /** Test seams for pure karaoke codec coverage. */
-    fun parseEnhancedLrcKaraokeForTest(rawLrc: String): List<KaraokeLine> = KaraokeLyricsCodec.parseEnhancedLrc(rawLrc)
+    fun parseEnhancedLrcKaraokeForTest(rawLrc: String): List<KaraokeLine> = KaraokeLrcParser.parse(rawLrc)
 
     fun parseKaraokeJsonForTest(rawJson: String): List<KaraokeLine> = KaraokeLyricsCodec.parseJson(rawJson)
 
     fun karaokeLinesToJsonForTest(lines: List<KaraokeLine>): String = KaraokeLyricsCodec.linesToJson(lines)
 
-    fun karaokeLinesToPlainLrcForTest(lines: List<KaraokeLine>): String = KaraokeLyricsCodec.linesToPlainLrc(lines)
+    fun karaokeLinesToJsonForTest(lines: List<KaraokeLine>, metadataLines: List<String>): String {
+        return KaraokeLyricsCodec.linesToJson(lines, metadataLines)
+    }
 
-    fun parseKaraokeImportPlainLrcForTest(rawText: String): String = KaraokeLyricsCodec.parseImport(rawText).plainLrc
+    fun parseKaraokeJsonMetadataForTest(rawJson: String): List<String> {
+        return KaraokeLyricsCodec.parseDocumentJson(rawJson).metadataLines
+    }
 
-    fun parseKaraokeImportHasTranslationForTest(rawText: String): Boolean = KaraokeLyricsCodec.parseImport(rawText).hasTranslation
+    fun karaokeLinesToPlainLrcForTest(lines: List<KaraokeLine>): String = KaraokeLrcParser.linesToPlainLrc(lines)
 
-    fun karaokeLinesToEnhancedLrcForTest(lines: List<KaraokeLine>): String = KaraokeLyricsCodec.linesToEnhancedLrc(lines)
+    fun parseKaraokeImportPlainLrcForTest(rawText: String): String = parseKaraokeImportText(rawText).plainLrc
+
+    fun parseKaraokeImportHasTranslationForTest(rawText: String): Boolean = parseKaraokeImportText(rawText).hasTranslation
+
+    fun parseKaraokeImportMetadataForTest(rawText: String): List<String> = parseKaraokeImportText(rawText).metadataLines
+
+    fun karaokeLinesToEnhancedLrcForTest(lines: List<KaraokeLine>): String = KaraokeLrcParser.linesToEnhancedLrc(lines)
+
+    fun karaokeLinesToEnhancedLrcForTest(lines: List<KaraokeLine>, metadataLines: List<String>): String {
+        return KaraokeLrcParser.linesToEnhancedLrc(lines, metadataLines)
+    }
 }
