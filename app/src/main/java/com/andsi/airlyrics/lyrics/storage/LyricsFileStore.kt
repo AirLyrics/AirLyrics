@@ -51,10 +51,6 @@ internal object LyricsFileStore {
         )
     }
 
-    fun looksLikeTimedLrc(text: String): Boolean {
-        return Regex("""\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?]""").containsMatchIn(text)
-    }
-
     fun readLyricsFileByName(context: Context, fileName: String): String? {
         val safeName = fileName.substringAfterLast('/')
         val treeUri = LyricsStoragePaths.getLyricsDirUri(context)

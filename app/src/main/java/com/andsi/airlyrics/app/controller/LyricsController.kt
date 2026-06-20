@@ -11,6 +11,8 @@ import android.net.Uri
 import android.widget.Toast
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.MediaSourceStore
 
@@ -111,7 +113,7 @@ internal class LyricsController(
         importAsWordByWord: Boolean
     ) {
         when (result) {
-            LyricsStorage.ImportLyricsResult.SAVED -> {
+            LyricsStorage.ImportLyricsResult.Saved -> {
                 val message = if (importAsWordByWord) {
                     context.getString(R.string.ui_enhanced_lrc_import_success)
                 } else {
@@ -121,20 +123,13 @@ internal class LyricsController(
                 floatingLyricsReloader.reloadFloatingLyrics()
                 invalidator.refresh(animateContent = false, animateTabs = false)
             }
-            LyricsStorage.ImportLyricsResult.TOO_LARGE -> {
+            LyricsStorage.ImportLyricsResult.TooLarge -> {
                 Toast.makeText(context, context.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
             }
-            LyricsStorage.ImportLyricsResult.INVALID_FORMAT -> {
-                if (importAsWordByWord) {
-                    dialogHost.showInfoDialog(
-                        title = context.getString(R.string.ui_enhanced_lrc_import_failed),
-                        message = context.getString(R.string.ui_enhanced_lrc_no_word_time_error)
-                    )
-                } else {
-                    Toast.makeText(context, context.getString(R.string.ui_lrc_import_format_error), Toast.LENGTH_LONG).show()
-                }
+            is LyricsStorage.ImportLyricsResult.InvalidFormat -> {
+                showImportFormatError(result.invalidLineNumbers, importAsWordByWord)
             }
-            LyricsStorage.ImportLyricsResult.SAVE_FAILED -> {
+            LyricsStorage.ImportLyricsResult.SaveFailed -> {
                 val message = if (importAsWordByWord) {
                     context.getString(R.string.ui_enhanced_lrc_import_failed)
                 } else {
@@ -143,6 +138,21 @@ internal class LyricsController(
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun showImportFormatError(
+        invalidLineNumbers: List<Int>,
+        importAsWordByWord: Boolean
+    ) {
+        val message = if (importAsWordByWord) {
+            context.enhancedLyricsFormatErrorMessage(invalidLineNumbers)
+        } else {
+            context.plainLyricsFormatErrorMessage(invalidLineNumbers)
+        }
+        dialogHost.showInfoDialog(
+            title = context.getString(R.string.ui_invalid_format),
+            message = message
+        )
     }
 
     fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {

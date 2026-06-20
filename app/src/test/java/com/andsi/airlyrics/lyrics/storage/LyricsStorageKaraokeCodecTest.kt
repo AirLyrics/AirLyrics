@@ -115,6 +115,33 @@ class LyricsStorageKaraokeCodecTest {
     }
 
     @Test
+    fun validateEnhancedLrcForStorage_ignoresMetadataAndReportsInvalidLines() {
+        val result = KaraokeLrcParser.validateForStorage(
+            """
+            [ar:Artist]
+            not timed
+            [00:10.00]<00:10.00>valid
+            """.trimIndent()
+        )
+
+        assertEquals(false, result.isValid)
+        assertEquals(listOf(2), result.invalidLineNumbers)
+    }
+
+    @Test
+    fun validateEnhancedLrcForStorage_rejectsInvalidSecondValues() {
+        val result = KaraokeLrcParser.validateForStorage(
+            """
+            [00:60.00]<00:60.00>bad
+            [01:00.00]<01:00.00>good
+            """.trimIndent()
+        )
+
+        assertEquals(false, result.isValid)
+        assertEquals(listOf(1), result.invalidLineNumbers)
+    }
+
+    @Test
     fun parseKaraokeImport_preservesMetadataInPlainLrc() {
         val raw = """
             [ar:Artist]

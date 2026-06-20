@@ -71,7 +71,14 @@ object LrcParser {
             return StorageValidationResult(isValid = false, invalidLineNumbers = invalidLineNumbers)
         }
 
-        return StorageValidationResult(isValid = normalizeForStorage(lyrics).isNotBlank())
+        val hasLyricLine = parsePlainLines(
+            lyrics,
+            mergeSameTimestampTranslations = true
+        ).any { line ->
+            !line.isMetadata && (line.text.isNotBlank() || line.hasTranslation())
+        }
+
+        return StorageValidationResult(isValid = hasLyricLine)
     }
 
     fun findCurrentIndex(lines: List<LrcLine>, positionMs: Long): Int? {

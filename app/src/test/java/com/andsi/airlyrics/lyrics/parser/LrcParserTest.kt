@@ -199,6 +199,27 @@ class LrcParserTest {
     }
 
     @Test
+    fun validateForStorage_keepsMetadataIgnorableButRequiresLyricLine() {
+        val metadataOnly = LrcParser.validateForStorage(
+            """
+            [ar:Artist]
+            [ti:Title]
+            """.trimIndent()
+        )
+        val withLyric = LrcParser.validateForStorage(
+            """
+            [ar:Artist]
+            [00:01.00]valid
+            """.trimIndent()
+        )
+
+        assertEquals(false, metadataOnly.isValid)
+        assertEquals(emptyList<Int>(), metadataOnly.invalidLineNumbers)
+        assertEquals(true, withLyric.isValid)
+        assertEquals(emptyList<Int>(), withLyric.invalidLineNumbers)
+    }
+
+    @Test
     fun normalizeForStorage_mergesSameTimestampLinesAsTranslation() {
         val normalized = LrcParser.normalizeForStorage(
             """
