@@ -50,9 +50,6 @@ Download the latest APK from [GitHub Releases](https://github.com/AirLyrics/AirL
 
 System requirement: Android 8.0 or later.
 
-After installation, grant the required permissions and select the music app you want AirLyrics to
-follow.
-
 ---
 
 ## Features
