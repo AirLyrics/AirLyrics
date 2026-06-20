@@ -31,6 +31,7 @@ internal fun Context.localizedProviderName(providerIdOrName: String): String {
 internal fun Context.localizedLocalLyricsSource(source: String, provider: String): String {
     return when (source) {
         LyricsStorage.SOURCE_MANUAL_IMPORT -> getString(R.string.ui_import)
+        LyricsStorage.SOURCE_KARAOKE_FALLBACK -> getString(R.string.ui_generated_from_enhanced_lrc)
         LyricsStorage.SOURCE_DOWNLOADED -> {
             val providerName = localizedProviderName(provider)
             if (provider.isBlank() || provider.trim().equals("local", ignoreCase = true)) {

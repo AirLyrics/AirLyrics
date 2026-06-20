@@ -128,6 +128,7 @@ This is a lyric preview</string>
     <string name="ui_horizontal_padding">横向内边距</string>
     <string name="ui_media_empty_permission_hint">如果一直没有显示，请确认通知访问权限已开启。</string>
     <string name="ui_import">手动导入</string>
+    <string name="ui_generated_from_enhanced_lrc">由逐字歌词生成</string>
     <string name="ui_lrc_import_format_error">导入失败，请使用 [00:12.34]歌词 格式的 .lrc 文件</string>
     <string name="ui_import_lyrics_for_current_song">为当前音乐导入歌词</string>
     <string name="ui_imported_off">已导入 · 未开启</string>
@@ -180,12 +181,6 @@ This is a lyric preview</string>
     <string name="ui_no_auto_save">不自动保存</string>
     <string name="ui_no_changelog_yet">暂无更新日志。</string>
     <string name="ui_no_enhanced_lrc_to_remove">当前音乐没有可移除的逐字歌词</string>
-    <string name="ui_enhanced_lrc_no_word_time_error">没有识别到逐字歌词时间戳。
-
-请确认文件是 .lrc，并使用类似格式：
-[00:12.34]&lt;00:12.34&gt;这&lt;00:12.50&gt;是&lt;00:12.70&gt;逐字歌词
-
-普通歌词只有 [00:12.34]整句歌词，需要选择“普通歌词”导入。</string>
     <string name="ui_no_local_lyrics_to_remove">当前音乐没有可移除的本地歌词</string>
     <string name="ui_no_media_detected_yet">还没有检测到媒体</string>
     <string name="ui_no_media_source_status">尚未选择媒体来源，请进入 App 选择歌词来源</string>

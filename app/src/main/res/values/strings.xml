@@ -127,6 +127,7 @@
     <string name="ui_horizontal_padding">Horizontal padding</string>
     <string name="ui_media_empty_permission_hint">If nothing appears, make sure notification access is enabled.</string>
     <string name="ui_import">Import</string>
+    <string name="ui_generated_from_enhanced_lrc">Generated from Enhanced LRC</string>
     <string name="ui_lrc_import_format_error">Import failed. Use a .lrc file in [00:12.34]lyric format.</string>
     <string name="ui_import_lyrics_for_current_song">Import lyrics for current song</string>
     <string name="ui_imported_off">Imported · off</string>
@@ -179,12 +180,6 @@
     <string name="ui_no_auto_save">No auto-save</string>
     <string name="ui_no_changelog_yet">No changelog yet.</string>
     <string name="ui_no_enhanced_lrc_to_remove">No Enhanced LRC to remove for this song.</string>
-    <string name="ui_enhanced_lrc_no_word_time_error">No Enhanced LRC word timestamps were recognized.
-
-Make sure the file is .lrc and uses a format like:
-[00:12.34]&lt;00:12.34&gt;T&lt;00:12.50&gt;ext
-
-Plain LRC uses whole-line timestamps like [00:12.34]lyrics. Import it as Plain LRC.</string>
     <string name="ui_no_local_lyrics_to_remove">No local lyrics to remove for this song.</string>
     <string name="ui_no_media_detected_yet">No media detected yet</string>
     <string name="ui_no_media_source_status">No media source selected. Open the app and choose one.</string>
