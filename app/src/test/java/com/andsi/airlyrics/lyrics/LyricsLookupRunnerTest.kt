@@ -28,7 +28,7 @@ class LyricsLookupRunnerTest {
         val firstStarted = CountDownLatch(1)
         val firstCanReturn = CountDownLatch(1)
         val secondCallback = CountDownLatch(1)
-        val firstWasCancelled = AtomicBoolean(false)
+        val firstWasCanceled = AtomicBoolean(false)
         val callbacks = Collections.synchronizedList(mutableListOf<String>())
 
         runner.submit(
@@ -36,7 +36,7 @@ class LyricsLookupRunnerTest {
             lookup = { token ->
                 firstStarted.countDown()
                 awaitEvenIfInterrupted(firstCanReturn)
-                firstWasCancelled.set(token.isCancellationRequested)
+                firstWasCanceled.set(token.isCancellationRequested)
                 Result.success("old")
             },
             callback = { key, result -> callbacks += "$key:${result.getOrNull()}" }
@@ -59,7 +59,7 @@ class LyricsLookupRunnerTest {
         firstCanReturn.countDown()
 
         assertTrue(secondCallback.await(2, TimeUnit.SECONDS))
-        assertTrue(firstWasCancelled.get())
+        assertTrue(firstWasCanceled.get())
         assertEquals(listOf("second:new"), callbacks.toList())
     }
 
@@ -117,7 +117,7 @@ class LyricsLookupRunnerTest {
             try {
                 latch.await(20, TimeUnit.MILLISECONDS)
             } catch (_: InterruptedException) {
-                // A cancelled lookup is expected to be interrupted. Keep this test lookup alive
+                // A canceled lookup is expected to be interrupted. Keep this test lookup alive
                 // until the test releases it so queued-request cancellation can be verified.
             }
         }

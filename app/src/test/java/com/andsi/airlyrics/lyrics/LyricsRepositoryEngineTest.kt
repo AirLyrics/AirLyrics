@@ -181,7 +181,7 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun findLyrics_stopsWhenCancellationTokenIsAlreadyCancelled() {
+    fun findLyrics_stopsWhenCancellationTokenIsAlreadyCanceled() {
         val local = FakeProvider("local", Result.success(result("local", "[00:01.00]local")))
         val engine = engine(local = local)
         val token = LyricsLookupCancellationToken(requestKey = "song", generation = 1L)

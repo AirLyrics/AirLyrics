@@ -15,9 +15,9 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * Cooperative cancellation token for lyrics lookups.
  *
- * Cancelling a lookup marks the token and interrupts the worker. Kotlin/file based lookup stages
+ * Canceling a lookup marks the token and interrupts the worker. Kotlin/file based lookup stages
  * check the token between steps, while Rust/JNI provider calls may only stop after the native call
- * returns or times out. Results from cancelled tokens are never delivered back to the UI.
+ * returns or times out. Results from canceled tokens are never delivered back to the UI.
  */
 class LyricsLookupCancellationToken internal constructor(
     val requestKey: String,
@@ -33,7 +33,7 @@ class LyricsLookupCancellationToken internal constructor(
 
     fun throwIfCancellationRequested() {
         if (isCancellationRequested || Thread.currentThread().isInterrupted) {
-            throw CancellationException("Lyrics lookup was cancelled: $requestKey#$generation")
+            throw CancellationException("Lyrics lookup was canceled: $requestKey#$generation")
         }
     }
 }
@@ -46,15 +46,6 @@ class LyricsLookupHandle internal constructor(
         token.cancel()
         future.cancel(true)
     }
-
-    val requestKey: String
-        get() = token.requestKey
-
-    val generation: Long
-        get() = token.generation
-
-    val isCancellationRequested: Boolean
-        get() = token.isCancellationRequested
 }
 
 fun interface LyricsLookupCallbackDispatcher {
@@ -72,7 +63,7 @@ class LyricsLookupRunner(
         DEFAULT_MAX_PARALLEL_LOOKUPS,
         30L,
         TimeUnit.SECONDS,
-        LinkedBlockingDeque<Runnable>(DEFAULT_LOOKUP_QUEUE_CAPACITY),
+        LinkedBlockingDeque(DEFAULT_LOOKUP_QUEUE_CAPACITY),
         namedThreadFactory(threadNamePrefix),
         ThreadPoolExecutor.DiscardOldestPolicy()
     )
@@ -95,7 +86,7 @@ class LyricsLookupRunner(
             }
         }
 
-        val task = FutureTask<Unit>(lookupWorker@{
+        val task = FutureTask lookupWorker@{
             val result = runCatching {
                 token.throwIfCancellationRequested()
                 val lookupResult = lookup(token)
@@ -118,7 +109,7 @@ class LyricsLookupRunner(
                 clearIfActive(token)
                 callback(token.requestKey, result)
             }
-        })
+        }
 
         val handle = LyricsLookupHandle(token, task)
         val shouldExecute = synchronized(lock) {
