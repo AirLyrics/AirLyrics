@@ -20,13 +20,21 @@ object LyricsStorage {
 
     const val SOURCE_MANUAL_IMPORT = "manual_import"
     const val SOURCE_DOWNLOADED = "downloaded"
+    const val SOURCE_KARAOKE_FALLBACK = "karaoke_fallback"
     const val SOURCE_LEGACY = "legacy"
 
     enum class DeleteMode { PLAIN, KARAOKE, ALL }
 
     enum class LocalLyricsEditTarget { PLAIN, KARAOKE }
 
-    enum class ImportLyricsResult { SAVED, TOO_LARGE, INVALID_FORMAT, SAVE_FAILED }
+    sealed class ImportLyricsResult {
+        object Saved : ImportLyricsResult()
+        object TooLarge : ImportLyricsResult()
+        data class InvalidFormat(
+            val invalidLineNumbers: List<Int> = emptyList()
+        ) : ImportLyricsResult()
+        object SaveFailed : ImportLyricsResult()
+    }
 
     data class LocalLyricsItem(
         val name: String,
@@ -185,6 +193,14 @@ object LyricsStorage {
             if (!LyricsFileStore.writeManagedLyrics(context, karaokeFileName, json)) {
                 return@withStorageLock LocalLyricsUpdateResult(saved = false)
             }
+            if (entry.shouldSyncGeneratedPlainFallback()) {
+                val plainFileName = entry.file.substringAfterLast('/').takeIf { it.isNotBlank() }
+                    ?: return@withStorageLock LocalLyricsUpdateResult(saved = false)
+                val fallbackPlainLrc = buildGeneratedPlainFallback(context, entry, parsedKaraoke)
+                if (fallbackPlainLrc.isBlank() || !LyricsFileStore.writeManagedLyrics(context, plainFileName, fallbackPlainLrc)) {
+                    return@withStorageLock LocalLyricsUpdateResult(saved = false)
+                }
+            }
 
             val now = System.currentTimeMillis()
             val updated = LyricsIndexStore.read(context).map { indexed ->
@@ -296,7 +312,7 @@ object LyricsStorage {
         duration = duration,
         album = album,
         overwrite = overwrite
-    ) == ImportLyricsResult.SAVED
+    ) is ImportLyricsResult.Saved
 
     fun importLyricsFromUriWithResult(
         context: Context,
@@ -309,18 +325,22 @@ object LyricsStorage {
     ): ImportLyricsResult {
         val text = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
             is LyricsFileStore.ReadTextResult.Success -> result.text
-            LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TOO_LARGE
-            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SAVE_FAILED
+            LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TooLarge
+            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SaveFailed
         }
-        if (!LyricsFileStore.looksLikeTimedLrc(text)) return ImportLyricsResult.INVALID_FORMAT
+
+        val validation = LrcParser.validateForStorage(text)
+        if (!validation.isValid) {
+            return ImportLyricsResult.InvalidFormat(validation.invalidLineNumbers)
+        }
 
         val normalizedLyrics = LrcParser.normalizeForStorage(text)
-        if (normalizedLyrics.isBlank()) return ImportLyricsResult.INVALID_FORMAT
+        if (normalizedLyrics.isBlank()) return ImportLyricsResult.InvalidFormat()
 
         return if (saveLyrics(context, title, artist, duration, normalizedLyrics, album, SOURCE_MANUAL_IMPORT, "local", overwrite)) {
-            ImportLyricsResult.SAVED
+            ImportLyricsResult.Saved
         } else {
-            ImportLyricsResult.SAVE_FAILED
+            ImportLyricsResult.SaveFailed
         }
     }
 
@@ -398,12 +418,21 @@ object LyricsStorage {
     ): ImportLyricsResult {
         val text = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
             is LyricsFileStore.ReadTextResult.Success -> result.text
-            LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TOO_LARGE
-            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SAVE_FAILED
+            LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TooLarge
+            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SaveFailed
         }
-        val parsedImport = parseKaraokeImportText(text)
+        val document = KaraokeLyricsCodec.parseDocumentJson(text)
+        val parsedImport = if (document.lines.isNotEmpty()) {
+            document.toParsedKaraokeImport()
+        } else {
+            val validation = KaraokeLrcParser.validateForStorage(text)
+            if (!validation.isValid) {
+                return ImportLyricsResult.InvalidFormat(validation.invalidLineNumbers)
+            }
+            KaraokeLrcParser.parseImport(text)
+        }
         val lines = parsedImport.karaokeLines
-        if (lines.isEmpty()) return ImportLyricsResult.INVALID_FORMAT
+        if (lines.isEmpty()) return ImportLyricsResult.InvalidFormat()
 
         return withStorageLock {
             val savedKaraoke = saveKaraokeLyrics(
@@ -418,7 +447,7 @@ object LyricsStorage {
                 overwrite = overwrite,
                 metadataLines = parsedImport.metadataLines
             )
-            if (!savedKaraoke) return@withStorageLock ImportLyricsResult.SAVE_FAILED
+            if (!savedKaraoke) return@withStorageLock ImportLyricsResult.SaveFailed
 
             if (!hasLocalLyrics(context, title, artist, duration)) {
                 val savedPlain = saveLyrics(
@@ -428,14 +457,14 @@ object LyricsStorage {
                     duration = duration,
                     lyrics = parsedImport.plainLrc,
                     album = album,
-                    source = SOURCE_MANUAL_IMPORT,
+                    source = SOURCE_KARAOKE_FALLBACK,
                     provider = "local",
                     overwrite = false
                 )
-                return@withStorageLock if (savedPlain) ImportLyricsResult.SAVED else ImportLyricsResult.SAVE_FAILED
+                return@withStorageLock if (savedPlain) ImportLyricsResult.Saved else ImportLyricsResult.SaveFailed
             }
 
-            ImportLyricsResult.SAVED
+            ImportLyricsResult.Saved
         }
     }
 
@@ -450,18 +479,53 @@ object LyricsStorage {
         )
     }
 
-    private fun parseKaraokeImportText(rawText: String): ParsedKaraokeImport {
-        val document = KaraokeLyricsCodec.parseDocumentJson(rawText)
-        if (document.lines.isNotEmpty()) {
-            return ParsedKaraokeImport(
-                karaokeLines = document.lines,
-                plainLrc = KaraokeLrcParser.linesToPlainLrc(document.lines, document.metadataLines),
-                hasTranslation = false,
-                metadataLines = document.metadataLines
-            )
-        }
+    private fun KaraokeLyricsCodec.KaraokeLyricsDocument.toParsedKaraokeImport(): ParsedKaraokeImport {
+        return ParsedKaraokeImport(
+            karaokeLines = lines,
+            plainLrc = KaraokeLrcParser.linesToPlainLrc(lines, metadataLines),
+            hasTranslation = false,
+            metadataLines = metadataLines
+        )
+    }
 
-        return KaraokeLrcParser.parseImport(rawText)
+    private fun LyricsIndexEntry.shouldSyncGeneratedPlainFallback(): Boolean {
+        return source == SOURCE_KARAOKE_FALLBACK && file.isNotBlank()
+    }
+
+    private fun buildGeneratedPlainFallback(
+        context: Context,
+        entry: LyricsIndexEntry,
+        parsedKaraoke: ParsedKaraokeImport
+    ): String {
+        if (parsedKaraoke.hasTranslation) return parsedKaraoke.plainLrc
+
+        val existingPlain = entry.file
+            .takeIf { it.isNotBlank() }
+            ?.let { LyricsFileStore.readManagedLyrics(context, it) }
+            .orEmpty()
+        val translationsByStartMs = plainTranslationsByStartMs(existingPlain)
+        if (translationsByStartMs.isEmpty()) return parsedKaraoke.plainLrc
+
+        return KaraokeLrcParser.linesToPlainLrc(
+            lines = parsedKaraoke.karaokeLines,
+            metadataLines = parsedKaraoke.metadataLines,
+            translationsByStartMs = translationsByStartMs
+        )
+    }
+
+    private fun plainTranslationsByStartMs(plainLrc: String): Map<Long, List<String>> {
+        if (plainLrc.isBlank()) return emptyMap()
+
+        return LrcParser.parse(plainLrc)
+            .asSequence()
+            .filter { !it.isMetadata && it.hasTranslation() }
+            .associate { line ->
+                line.timeMs to line.translation.orEmpty()
+                    .lines()
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+            }
+            .filterValues { it.isNotEmpty() }
     }
 
     fun deleteLocalLyrics(context: Context, title: String, artist: String, duration: Long, mode: DeleteMode = DeleteMode.ALL): Boolean = withStorageLock {

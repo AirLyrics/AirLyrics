@@ -94,6 +94,14 @@ object KaraokeLrcParser {
     ): String {
         return linesToPlainLrc(lines, metadataLines, emptyMap())
     }
+
+    fun linesToPlainLrc(
+        lines: List<KaraokeLine>,
+        metadataLines: List<String>,
+        translationsByStartMs: Map<Long, List<String>>
+    ): String {
+        return formatPlainLrc(lines, metadataLines, translationsByStartMs)
+    }
 }
 
 private const val FALLBACK_TOKEN_DURATION_MS = 400L
@@ -283,7 +291,7 @@ private fun parseTimedTextSegments(line: String): List<TimedTextSegment> {
     return segments
 }
 
-private fun linesToPlainLrc(
+private fun formatPlainLrc(
     lines: List<KaraokeLine>,
     metadataLines: List<String>,
     translationsByStartMs: Map<Long, List<String>>
@@ -364,6 +372,7 @@ private fun formatLrcTimeTag(timeMs: Long): String {
 private fun parseTimeTag(match: MatchResult): Long? {
     val minutes = match.groupValues.getOrNull(1)?.toLongOrNull() ?: return null
     val seconds = match.groupValues.getOrNull(2)?.toLongOrNull() ?: return null
+    if (seconds >= 60) return null
     val fractionRaw = match.groupValues.getOrNull(3).orEmpty()
     val millis = when (fractionRaw.length) {
         0 -> 0L

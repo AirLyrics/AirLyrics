@@ -226,13 +226,14 @@ internal class MainGraph(
     }
 
     fun handleLyricsFileSelected(uri: Uri) {
-        val media = lyricsController.getCurrentMediaSnapshot()
+        val media = state.pendingImportMedia ?: lyricsController.getCurrentMediaSnapshot()
         if (media == null || media.title.isBlank()) {
             Toast.makeText(activity, activity.getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
             return
         }
 
         val importAsWordByWord = state.pendingImportAsWordByWord
+        state.pendingImportMedia = null
 
         if (!LyricsImportValidator.isLikelyLyricsDocument(activity, uri)) {
             val message = if (importAsWordByWord) {
@@ -326,6 +327,7 @@ internal class MainGraph(
 
         fun launchImport(asWordByWord: Boolean) {
             state.pendingImportAsWordByWord = asWordByWord
+            state.pendingImportMedia = media
             dialog?.dismiss()
             launchers.selectLyricsFile()
         }

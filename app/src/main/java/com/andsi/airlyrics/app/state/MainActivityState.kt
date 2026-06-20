@@ -2,6 +2,7 @@ package com.andsi.airlyrics.app.state
 
 import com.andsi.airlyrics.ui.model.MainUiState
 import com.andsi.airlyrics.ui.model.RefreshState
+import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
@@ -26,4 +27,5 @@ internal class MainActivityState : MainFloatingState, MainUiState {
     override var currentLyricsLoadGeneration: Int = 0
     override var recentLyricsLoadGeneration: Int = 0
     var pendingImportAsWordByWord: Boolean = false
+    var pendingImportMedia: CurrentMediaInfo? = null
 }

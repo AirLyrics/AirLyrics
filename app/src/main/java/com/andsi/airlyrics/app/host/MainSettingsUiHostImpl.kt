@@ -19,6 +19,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.andsi.airlyrics.lyrics.parser.LrcParser
+import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.components.bigText
@@ -431,33 +433,17 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
 }
 
 private fun MainUiHost.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
-    val message = if (invalidLineNumbers.isNotEmpty()) {
-        val lines = invalidLineNumbers.take(8).joinToString(", ")
-        val suffix = if (invalidLineNumbers.size > 8) "…" else ""
-        getString(R.string.lyrics_plain_format_invalid_lines, lines, suffix)
-    } else {
-        getString(R.string.ui_plain_lrc_no_valid_line_error)
-    }
-
     showAirDialog(
         title = getString(R.string.ui_invalid_format),
-        message = message,
+        message = plainLyricsFormatErrorMessage(invalidLineNumbers),
         positiveText = getString(R.string.ui_back_to_edit)
     )
 }
 
 private fun MainUiHost.showEnhancedLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
-    val message = if (invalidLineNumbers.isNotEmpty()) {
-        val lines = invalidLineNumbers.take(8).joinToString(", ")
-        val suffix = if (invalidLineNumbers.size > 8) "…" else ""
-        getString(R.string.lyrics_enhanced_format_invalid_lines, lines, suffix)
-    } else {
-        getString(R.string.ui_no_valid_enhanced_lrc_line_was_found)
-    }
-
     showAirDialog(
         title = getString(R.string.ui_invalid_format),
-        message = message,
+        message = enhancedLyricsFormatErrorMessage(invalidLineNumbers),
         positiveText = getString(R.string.ui_back_to_edit)
     )
 }
