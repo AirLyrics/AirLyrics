@@ -16,14 +16,6 @@ internal object LyricsFileStore {
         object Failed : ReadTextResult()
     }
 
-    fun readTextFromUri(context: Context, uri: Uri): String? {
-        return when (val result = readTextFromUriWithResult(context, uri)) {
-            is ReadTextResult.Success -> result.text
-            ReadTextResult.TooLarge,
-            ReadTextResult.Failed -> null
-        }
-    }
-
     fun readTextFromUriWithResult(
         context: Context,
         uri: Uri,

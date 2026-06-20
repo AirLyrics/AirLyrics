@@ -10,7 +10,7 @@ import org.junit.Test
 class LyricsStorageKaraokeCodecTest {
     @Test
     fun parseEnhancedLrcKaraoke_buildsWordTimingLines() {
-        val lines = LyricsStorage.parseEnhancedLrcKaraokeForTest(
+        val lines = KaraokeLrcParser.parse(
             """
             [00:10.00]<00:10.00>he<00:10.30>llo <00:10.60>world
             [00:12.00]<00:12.00>next
@@ -28,7 +28,7 @@ class LyricsStorageKaraokeCodecTest {
 
     @Test
     fun parseEnhancedLrcKaraoke_ignoresInvalidOrUntimedLines() {
-        val lines = LyricsStorage.parseEnhancedLrcKaraokeForTest(
+        val lines = KaraokeLrcParser.parse(
             """
             plain text
             [00:01.00]no word tags
@@ -43,7 +43,7 @@ class LyricsStorageKaraokeCodecTest {
 
     @Test
     fun karaokeLinesToPlainLrc_preservesLineTextAndTiming() {
-        val plain = LyricsStorage.karaokeLinesToPlainLrcForTest(
+        val plain = KaraokeLrcParser.linesToPlainLrc(
             listOf(
                 KaraokeLine(
                     startMs = 1_230L,
@@ -63,30 +63,28 @@ class LyricsStorageKaraokeCodecTest {
         assertEquals("[00:01.23]hello\n[01:02.34]world", plain)
     }
 
-
-
     @Test
     fun parseKaraokeImport_buildsPlainLrcWithSameTimestampTranslation() {
-        val plain = LyricsStorage.parseKaraokeImportPlainLrcForTest(
+        val plain = KaraokeLrcParser.parseImport(
             """
             [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
             [00:10.00]你的背影
             [00:12.00]<00:12.00>next
             [00:12.00]下一句
             """.trimIndent()
-        )
+        ).plainLrc
 
         assertEquals("[00:10.00]君の背中 / 你的背影\n[00:12.00]next / 下一句", plain)
     }
 
     @Test
     fun parseKaraokeImport_ignoresUnmatchedTranslationLine() {
-        val plain = LyricsStorage.parseKaraokeImportPlainLrcForTest(
+        val plain = KaraokeLrcParser.parseImport(
             """
             [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
             [00:11.00]不会被误合并的翻译
             """.trimIndent()
-        )
+        ).plainLrc
 
         assertEquals("[00:10.00]君の背中", plain)
     }
@@ -94,15 +92,14 @@ class LyricsStorageKaraokeCodecTest {
     @Test
     fun parseKaraokeImport_reportsTranslationPresence() {
         assertTrue(
-            LyricsStorage.parseKaraokeImportHasTranslationForTest(
+            KaraokeLrcParser.parseImport(
                 """
                 [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
                 [00:10.00]你的背影
                 """.trimIndent()
-            )
+            ).hasTranslation
         )
     }
-
 
     @Test
     fun validateEnhancedLrcForStorage_allowsSameTimestampTranslationLines() {
@@ -126,10 +123,12 @@ class LyricsStorageKaraokeCodecTest {
             [00:10.00]你的背影
         """.trimIndent()
 
-        assertEquals(listOf("[ar:Artist]", "[ti:Title]"), LyricsStorage.parseKaraokeImportMetadataForTest(raw))
+        val parsed = KaraokeLrcParser.parseImport(raw)
+
+        assertEquals(listOf("[ar:Artist]", "[ti:Title]"), parsed.metadataLines)
         assertEquals(
             "[ar:Artist]\n[ti:Title]\n[00:10.00]君の背中 / 你的背影",
-            LyricsStorage.parseKaraokeImportPlainLrcForTest(raw)
+            parsed.plainLrc
         )
     }
 
@@ -144,7 +143,7 @@ class LyricsStorageKaraokeCodecTest {
             )
         )
 
-        val enhancedLrc = LyricsStorage.karaokeLinesToEnhancedLrcForTest(
+        val enhancedLrc = KaraokeLrcParser.linesToEnhancedLrc(
             lines = lines,
             metadataLines = listOf("[ar:Artist]", "[ti:Title]")
         )
@@ -166,8 +165,8 @@ class LyricsStorageKaraokeCodecTest {
             )
         )
 
-        val json = LyricsStorage.karaokeLinesToJsonForTest(original)
-        val parsed = LyricsStorage.parseKaraokeJsonForTest(json)
+        val json = KaraokeLyricsCodec.linesToJson(original)
+        val parsed = KaraokeLyricsCodec.parseJson(json)
 
         assertEquals(original, parsed)
         assertTrue(json.contains("startMs"))
@@ -186,9 +185,9 @@ class LyricsStorageKaraokeCodecTest {
         )
         val metadataLines = listOf("[ar:Artist]", "[ti:Title]")
 
-        val json = LyricsStorage.karaokeLinesToJsonForTest(original, metadataLines)
-        val parsed = LyricsStorage.parseKaraokeJsonForTest(json)
-        val parsedMetadata = LyricsStorage.parseKaraokeJsonMetadataForTest(json)
+        val json = KaraokeLyricsCodec.linesToJson(original, metadataLines)
+        val parsed = KaraokeLyricsCodec.parseJson(json)
+        val parsedMetadata = KaraokeLyricsCodec.parseDocumentJson(json).metadataLines
 
         assertEquals(original, parsed)
         assertEquals(metadataLines, parsedMetadata)

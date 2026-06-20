@@ -77,12 +77,6 @@ object LyricsStorage {
         LocalLyricsLister.listRecent(context, limit)
     }
 
-
-    fun readLocalLyricsItemText(context: Context, item: LocalLyricsItem): String? {
-        val defaultTarget = if (item.hasPlainLyrics) LocalLyricsEditTarget.PLAIN else LocalLyricsEditTarget.KARAOKE
-        return readLocalLyricsItemText(context, item, defaultTarget)
-    }
-
     fun readLocalLyricsItemText(
         context: Context,
         item: LocalLyricsItem,
@@ -113,10 +107,6 @@ object LyricsStorage {
         val saved: Boolean,
         val invalidLineNumbers: List<Int> = emptyList()
     )
-
-    fun updateLocalLyricsItemText(context: Context, item: LocalLyricsItem, text: String): Boolean {
-        return updateLocalLyricsItemTextWithResult(context, item, text).saved
-    }
 
     fun updateLocalLyricsItemTextWithResult(
         context: Context,
@@ -208,11 +198,6 @@ object LyricsStorage {
     fun saveLyricsDirUri(context: Context, uri: Uri) = LyricsStoragePaths.saveLyricsDirUri(context, uri)
 
     fun validateLyricsDir(context: Context, uri: Uri): Boolean = LyricsStoragePaths.validateLyricsDir(context, uri)
-
-    fun getLyricsDirUri(context: Context): Uri? = LyricsStoragePaths.getLyricsDirUri(context)
-
-    @Deprecated("UI should compose the save-folder label with a keyed formatter instead of translating the full path.")
-    fun getLyricsDirDisplayPath(context: Context): String = LyricsStoragePaths.getLyricsDirDisplayPath(context)
 
     fun getLyricsDirRawPath(context: Context): String = LyricsStoragePaths.getLyricsDirRawPath(context)
 
@@ -402,24 +387,6 @@ object LyricsStorage {
         }
     }
 
-    fun importKaraokeLyricsFromUri(
-        context: Context,
-        uri: Uri,
-        title: String,
-        artist: String,
-        duration: Long,
-        album: String = "",
-        overwrite: Boolean = true
-    ): Boolean = importKaraokeLyricsFromUriWithResult(
-        context = context,
-        uri = uri,
-        title = title,
-        artist = artist,
-        duration = duration,
-        album = album,
-        overwrite = overwrite
-    ) == ImportLyricsResult.SAVED
-
     fun importKaraokeLyricsFromUriWithResult(
         context: Context,
         uri: Uri,
@@ -538,34 +505,5 @@ object LyricsStorage {
         }
 
         deletedAny
-    }
-
-    /** Test seams for pure karaoke codec coverage. */
-    fun parseEnhancedLrcKaraokeForTest(rawLrc: String): List<KaraokeLine> = KaraokeLrcParser.parse(rawLrc)
-
-    fun parseKaraokeJsonForTest(rawJson: String): List<KaraokeLine> = KaraokeLyricsCodec.parseJson(rawJson)
-
-    fun karaokeLinesToJsonForTest(lines: List<KaraokeLine>): String = KaraokeLyricsCodec.linesToJson(lines)
-
-    fun karaokeLinesToJsonForTest(lines: List<KaraokeLine>, metadataLines: List<String>): String {
-        return KaraokeLyricsCodec.linesToJson(lines, metadataLines)
-    }
-
-    fun parseKaraokeJsonMetadataForTest(rawJson: String): List<String> {
-        return KaraokeLyricsCodec.parseDocumentJson(rawJson).metadataLines
-    }
-
-    fun karaokeLinesToPlainLrcForTest(lines: List<KaraokeLine>): String = KaraokeLrcParser.linesToPlainLrc(lines)
-
-    fun parseKaraokeImportPlainLrcForTest(rawText: String): String = parseKaraokeImportText(rawText).plainLrc
-
-    fun parseKaraokeImportHasTranslationForTest(rawText: String): Boolean = parseKaraokeImportText(rawText).hasTranslation
-
-    fun parseKaraokeImportMetadataForTest(rawText: String): List<String> = parseKaraokeImportText(rawText).metadataLines
-
-    fun karaokeLinesToEnhancedLrcForTest(lines: List<KaraokeLine>): String = KaraokeLrcParser.linesToEnhancedLrc(lines)
-
-    fun karaokeLinesToEnhancedLrcForTest(lines: List<KaraokeLine>, metadataLines: List<String>): String {
-        return KaraokeLrcParser.linesToEnhancedLrc(lines, metadataLines)
     }
 }

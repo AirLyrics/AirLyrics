@@ -2,21 +2,22 @@ package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
 import android.net.Uri
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import java.io.File
 
 internal object LyricsStoragePaths {
     fun saveLyricsDirUri(context: Context, uri: Uri) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY_TREE_URI, uri.toString())
-            .apply()
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putString(KEY_TREE_URI, uri.toString())
+        }
     }
 
     fun getLyricsDirUri(context: Context): Uri? {
         val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getString(KEY_TREE_URI, null)
-        return value?.let { Uri.parse(it) }
+        return value?.toUri()
     }
 
 
@@ -49,16 +50,6 @@ internal object LyricsStoragePaths {
 
             true
         }.getOrDefault(false)
-    }
-
-    fun getLyricsDirDisplayPath(context: Context): String {
-        val treeUri = getLyricsDirUri(context)
-        return if (treeUri != null) {
-            val dirName = DocumentFile.fromTreeUri(context, treeUri)?.name
-            if (dirName.isNullOrBlank()) "Custom folder selected" else "Selected: $dirName"
-        } else {
-            fallbackLyricsDir(context).absolutePath
-        }
     }
 
     fun getLyricsDirRawPath(context: Context): String {
