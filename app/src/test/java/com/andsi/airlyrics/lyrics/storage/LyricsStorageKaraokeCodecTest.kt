@@ -2,6 +2,7 @@ package com.andsi.airlyrics.lyrics.storage
 
 import com.andsi.airlyrics.lyrics.KaraokeLine
 import com.andsi.airlyrics.lyrics.KaraokeToken
+import com.andsi.airlyrics.lyrics.parser.KaraokeLrcParser
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -105,7 +106,7 @@ class LyricsStorageKaraokeCodecTest {
 
     @Test
     fun validateEnhancedLrcForStorage_allowsSameTimestampTranslationLines() {
-        val result = KaraokeLyricsCodec.validateEnhancedLrcForStorage(
+        val result = KaraokeLrcParser.validateForStorage(
             """
             [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
             [00:10.00]你的背影
@@ -116,6 +117,40 @@ class LyricsStorageKaraokeCodecTest {
         assertEquals(emptyList<Int>(), result.invalidLineNumbers)
     }
 
+    @Test
+    fun parseKaraokeImport_preservesMetadataInPlainLrc() {
+        val raw = """
+            [ar:Artist]
+            [ti:Title]
+            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
+            [00:10.00]你的背影
+        """.trimIndent()
+
+        assertEquals(listOf("[ar:Artist]", "[ti:Title]"), LyricsStorage.parseKaraokeImportMetadataForTest(raw))
+        assertEquals(
+            "[ar:Artist]\n[ti:Title]\n[00:10.00]君の背中 / 你的背影",
+            LyricsStorage.parseKaraokeImportPlainLrcForTest(raw)
+        )
+    }
+
+    @Test
+    fun karaokeLinesToEnhancedLrc_preservesMetadata() {
+        val lines = listOf(
+            KaraokeLine(
+                startMs = 10_000L,
+                endMs = 10_400L,
+                text = "hi",
+                tokens = listOf(KaraokeToken("hi", 10_000L, 10_400L))
+            )
+        )
+
+        val enhancedLrc = LyricsStorage.karaokeLinesToEnhancedLrcForTest(
+            lines = lines,
+            metadataLines = listOf("[ar:Artist]", "[ti:Title]")
+        )
+
+        assertEquals("[ar:Artist]\n[ti:Title]\n[00:10.00]<00:10.00>hi", enhancedLrc)
+    }
 
     @Test
     fun karaokeJsonRoundTrip_preservesValidLines() {
@@ -137,5 +172,27 @@ class LyricsStorageKaraokeCodecTest {
         assertEquals(original, parsed)
         assertTrue(json.contains("startMs"))
         assertTrue(json.contains("tokens"))
+    }
+
+    @Test
+    fun karaokeJsonRoundTrip_preservesMetadata() {
+        val original = listOf(
+            KaraokeLine(
+                startMs = 5_000L,
+                endMs = 6_000L,
+                text = "hi",
+                tokens = listOf(KaraokeToken("hi", 5_000L, 6_000L))
+            )
+        )
+        val metadataLines = listOf("[ar:Artist]", "[ti:Title]")
+
+        val json = LyricsStorage.karaokeLinesToJsonForTest(original, metadataLines)
+        val parsed = LyricsStorage.parseKaraokeJsonForTest(json)
+        val parsedMetadata = LyricsStorage.parseKaraokeJsonMetadataForTest(json)
+
+        assertEquals(original, parsed)
+        assertEquals(metadataLines, parsedMetadata)
+        assertTrue(json.contains("metadata"))
+        assertTrue(json.contains("lines"))
     }
 }
