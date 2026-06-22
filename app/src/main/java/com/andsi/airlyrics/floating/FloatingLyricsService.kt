@@ -29,7 +29,6 @@ import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
-import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 
 class FloatingLyricsService : Service() {
@@ -487,7 +486,7 @@ class FloatingLyricsService : Service() {
     }
 
     private fun showQuickFeedback(message: String) {
-        Toast.makeText(this, displayText(message), Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     private fun broadcastWindowVisibility(visible: Boolean) {

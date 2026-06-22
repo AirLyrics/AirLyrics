@@ -41,7 +41,6 @@ import com.andsi.airlyrics.app.lifecycle.MainReceivers
 import com.andsi.airlyrics.app.render.MainHandRenderer
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
-import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.i18n.localizedAssetText
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator

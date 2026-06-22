@@ -22,7 +22,6 @@ import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -86,14 +85,14 @@ internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String =
             })
         })
         addView(TextView(activity).apply {
-            text = displayText(title)
+            text = title
             textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         if (subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
-                text = displayText(subtitle)
+                text = subtitle
                 textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorTextMuted)
                 setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -198,7 +197,7 @@ internal fun MainUiHost.localLyricsRowImpl(
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale + 0.01f)
         if (!badgeText.isNullOrBlank()) {
             addView(TextView(activity).apply {
-                text = displayText(badgeText)
+                text = badgeText ?: ""
                 textSize = AirUiTokens.TextSize.Tiny
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -454,7 +453,7 @@ private fun MainUiHost.localLyricsDialogButton(
     onClick: () -> Unit
 ): TextView {
     return TextView(this).apply {
-        this.text = displayText(text)
+        this.text = text
         textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
@@ -486,13 +485,13 @@ internal fun MainUiHost.changelogItemImpl(title: String, body: String): View {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Xxs))
         addView(TextView(activity).apply {
-            text = displayText(title)
+            text = title
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = displayText(body)
+            text = body
             textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
             setPadding(0, dp(AirUiTokens.Space.Xs), 0, 0)

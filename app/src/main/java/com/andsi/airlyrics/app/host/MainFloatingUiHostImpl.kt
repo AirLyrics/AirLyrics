@@ -22,7 +22,6 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
-import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.bigText
@@ -152,7 +151,7 @@ internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
 
 internal fun MainUiHost.applyOptionButtonStateImpl(button: TextView, title: String, selected: Boolean) {
     val activity = this
-    button.text = if (selected) "✓ ${displayText(title)}" else displayText(title)
+    button.text = if (selected) "✓ ${title}" else title
     button.setTextColor(if (selected) Color.WHITE else colorText)
     button.background = GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
@@ -176,7 +175,7 @@ internal fun MainUiHost.sliderRowImpl(
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
 
         val valueText = TextView(activity).apply {
-            text = getString(R.string.field_value_with_suffix, displayText(title), safeValue.toString(), suffix)
+            text = getString(R.string.field_value_with_suffix, title, safeValue.toString(), suffix)
             textSize = AirUiTokens.TextSize.Body
             setTextColor(colorText)
             setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
@@ -189,7 +188,7 @@ internal fun MainUiHost.sliderRowImpl(
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val newValue = min + progress
-                    valueText.text = getString(R.string.field_value_with_suffix, displayText(title), newValue.toString(), suffix)
+                    valueText.text = getString(R.string.field_value_with_suffix, title, newValue.toString(), suffix)
                     if (fromUser) onChanged(newValue)
                 }
 
@@ -289,7 +288,7 @@ internal fun MainUiHost.colorControlImpl(
 
         fun refreshPreview(dispatch: Boolean) {
             val newColor = currentColor()
-            preview.text = getString(R.string.floating_color_summary, displayText(title), displayText(FloatingLyricsStyleStore.colorSummary(newColor)))
+            preview.text = getString(R.string.floating_color_summary, title, FloatingLyricsStyleStore.colorSummary(newColor))
             preview.background = colorPreviewBackground(newColor)
             refreshSwatches()
             if (dispatch) onChanged(newColor)
@@ -305,7 +304,7 @@ internal fun MainUiHost.colorControlImpl(
                 setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
             }
             val valueText = TextView(activity).apply {
-                text = getString(R.string.floating_slider_value, displayText(sliderTitle), initialValue)
+                text = getString(R.string.floating_slider_value, sliderTitle, initialValue)
                 textSize = AirUiTokens.TextSize.Body
                 setTextColor(colorText)
                 setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
@@ -316,7 +315,7 @@ internal fun MainUiHost.colorControlImpl(
                 progress = initialValue.coerceIn(0, 255)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        valueText.text = getString(R.string.floating_slider_value, displayText(sliderTitle), progress)
+                        valueText.text = getString(R.string.floating_slider_value, sliderTitle, progress)
                         if (fromUser) {
                             onValueChanged(progress)
                             refreshPreview(dispatch = true)
@@ -339,7 +338,7 @@ internal fun MainUiHost.colorControlImpl(
 
         fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
             pair.first.progress = value.coerceIn(0, 255)
-            pair.second.text = getString(R.string.field_value, displayText(titleText), value.toString())
+            pair.second.text = getString(R.string.field_value, titleText, value.toString())
         }
 
         fun syncSliders() {
@@ -351,7 +350,7 @@ internal fun MainUiHost.colorControlImpl(
 
         fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
             return TextView(activity).apply {
-                text = displayText(label)
+                text = label
                 textSize = AirUiTokens.TextSize.Caption
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
@@ -531,7 +530,7 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
         })
 
         addView(TextView(activity).apply {
-            text = displayText(item.title)
+            text = item.title
             textSize = AirUiTokens.TextSize.Button + 1f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
@@ -540,7 +539,7 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
         if (item.subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
                 tag = "floating_tile_subtitle:${item.title}"
-                text = displayText(item.subtitle)
+                text = item.subtitle
                 textSize = AirUiTokens.TextSize.Caption
                 setTextColor(colorTextMuted)
                 maxLines = 1
@@ -584,14 +583,14 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
                 addView(TextView(activity).apply {
-                    text = displayText(title)
+                    text = title
                     textSize = AirUiTokens.TextSize.Title
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorTextStrong)
                 })
                 if (subtitle.isNotBlank()) {
                     addView(TextView(activity).apply {
-                        text = displayText(subtitle)
+                        text = subtitle
                         textSize = AirUiTokens.TextSize.BodySmall
                         setTextColor(colorTextMuted)
                         setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -641,13 +640,13 @@ internal fun MainUiHost.showFloatingSettingPanelImpl(
         }
 
         addView(TextView(activity).apply {
-            text = displayText(title)
+            text = title
             textSize = AirUiTokens.TextSize.Title
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = displayText(subtitle)
+            text = subtitle
             textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
             setPadding(0, dp(AirUiTokens.Space.Sm), 0, dp(AirUiTokens.Space.Xl))
@@ -668,4 +667,3 @@ internal fun MainUiHost.showFloatingSettingPanelImpl(
     }
     dialog.show()
 }
-

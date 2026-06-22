@@ -10,7 +10,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.common.BroadcastActions
-import com.andsi.airlyrics.i18n.displayText
 
 /**
  * Builds the foreground-service notification used by the floating lyrics service.
@@ -34,7 +33,7 @@ object FloatingServiceNotification {
     fun create(context: Context, state: QuickControlState): Notification {
         ensureChannel(context)
 
-        val contentText = state.feedback?.let { "${state.summary(context)} · ${context.displayText(it)}" } ?: state.summary(context)
+        val contentText = state.feedback?.let { "${state.summary(context)} · $it" } ?: state.summary(context)
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(context.getString(R.string.ui_airlyrics_floating_lyrics))
@@ -131,6 +130,6 @@ object FloatingServiceNotification {
         activeText: String,
         inactiveText: String
     ): String {
-        return if (active) "● ${context.displayText(activeText)}" else "○ ${context.displayText(inactiveText)}"
+        return if (active) "● $activeText" else "○ $inactiveText"
     }
 }

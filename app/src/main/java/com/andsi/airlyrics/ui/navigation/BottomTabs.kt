@@ -16,7 +16,6 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorSurface
@@ -90,7 +89,7 @@ internal fun addTab(activity: MainUiHost, parent: LinearLayout, page: Page, titl
     }
 
     val tab = TextView(this).apply {
-        text = displayText(title)
+        text = title
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD

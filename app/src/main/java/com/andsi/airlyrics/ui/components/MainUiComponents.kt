@@ -14,7 +14,6 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.i18n.displayText
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -50,13 +49,13 @@ internal fun sectionTitle(activity: MainUiHost, title: String, subtitle: String)
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl))
         addView(TextView(activity).apply {
-            text = displayText(title)
+            text = title
             textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = displayText(subtitle)
+            text = subtitle
             textSize = AirUiTokens.TextSize.Body
             setTextColor(colorTextMuted)
             setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -106,7 +105,7 @@ internal fun floatingStatusPreviewCard(activity: MainUiHost, content: LinearLayo
 
 internal fun actionButton(activity: MainUiHost, text: String, onClick: () -> Unit): TextView = with(activity) actionButton@ {
     return TextView(this).apply {
-        this.text = displayText(text)
+        this.text = text
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
@@ -135,7 +134,7 @@ internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String
         orientation = LinearLayout.HORIZONTAL
         buttons.forEachIndexed { index, pair ->
             addView(TextView(activity).apply {
-                text = displayText(pair.first)
+                text = pair.first
                 gravity = Gravity.CENTER
                 textSize = AirUiTokens.TextSize.Button
                 typeface = Typeface.DEFAULT_BOLD
@@ -170,14 +169,14 @@ internal fun settingRow(activity: MainUiHost, name: String, value: String): View
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
 
         addView(TextView(activity).apply {
-            text = displayText(name)
+            text = name
             textSize = AirUiTokens.TextSize.Button
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
         })
 
         addView(TextView(activity).apply {
-            text = displayText(value)
+            text = value
             textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
         })
@@ -186,7 +185,7 @@ internal fun settingRow(activity: MainUiHost, name: String, value: String): View
 
 internal fun statusPill(activity: MainUiHost, text: String, playing: Boolean): TextView  = with(activity) statusPill@ {
     return TextView(this).apply {
-        this.text = displayText(text)
+        this.text = text
         textSize = AirUiTokens.TextSize.BodySmall
         setTextColor(if (playing) Color.WHITE else colorTextMuted)
         setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Lg))
@@ -205,7 +204,7 @@ internal fun statusPill(activity: MainUiHost, text: String, playing: Boolean): T
 
 internal fun label(activity: MainUiHost, text: String, color: Int): TextView  = with(activity) label@ {
     return TextView(this).apply {
-        this.text = displayText(text)
+        this.text = text
         textSize = AirUiTokens.TextSize.BodySmall
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(color)
@@ -215,7 +214,7 @@ internal fun label(activity: MainUiHost, text: String, color: Int): TextView  = 
 
 internal fun bigText(activity: MainUiHost, text: String): TextView  = with(activity) bigText@ {
     return TextView(this).apply {
-        this.text = displayText(text)
+        this.text = text
         textSize = AirUiTokens.TextSize.Title
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorTextStrong)
@@ -224,7 +223,7 @@ internal fun bigText(activity: MainUiHost, text: String): TextView  = with(activ
 
 internal fun normalText(activity: MainUiHost, text: String): TextView  = with(activity) normalText@ {
     return TextView(this).apply {
-        this.text = displayText(text)
+        this.text = text
         textSize = AirUiTokens.TextSize.Body
         setTextColor(colorText)
         setPadding(0, dp(AirUiTokens.Space.Md), 0, 0)
@@ -233,7 +232,7 @@ internal fun normalText(activity: MainUiHost, text: String): TextView  = with(ac
 
 internal fun smallHint(activity: MainUiHost, text: String): TextView  = with(activity) smallHint@ {
     return TextView(this).apply {
-        this.text = displayText(text)
+        this.text = text
         textSize = AirUiTokens.TextSize.BodySmall
         setTextColor(colorTextMuted)
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
