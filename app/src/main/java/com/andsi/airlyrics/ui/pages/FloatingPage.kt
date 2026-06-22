@@ -16,7 +16,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
+import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
+import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
@@ -60,7 +63,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
     var previewExpanded = FloatingLyricsStyleStore.isPreviewExpanded(this)
 
     fun lyricsDisplaySummary(): String {
-        return "${localizedContentDisplayTitle(contentDisplayMode())} · ${localizedLineDisplayTitle(lineDisplayMode())}"
+        return "${localizedLyricsContentModeTitle(contentDisplayMode())} · ${localizedLyricsLineModeTitle(lineDisplayMode())}"
     }
 
     fun previewLyricsText(): String {
@@ -108,11 +111,11 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         updateFloatingTileSubtitle(getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()}sp")
         updateFloatingTileSubtitle(getString(R.string.ui_shadow_stroke), getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
         updateFloatingTileSubtitle(getString(R.string.ui_window_layout), getString(R.string.ui_width) + " ${latestStyle.maxWidthPercent}%")
-        updateFloatingTileSubtitle(getString(R.string.ui_content), localizedContentDisplayTitle(contentDisplayMode()))
-        updateFloatingTileSubtitle(getString(R.string.ui_line_range), localizedLineDisplayTitle(lineDisplayMode()))
+        updateFloatingTileSubtitle(getString(R.string.ui_content), localizedLyricsContentModeTitle(contentDisplayMode()))
+        updateFloatingTileSubtitle(getString(R.string.ui_line_range), localizedLyricsLineModeTitle(lineDisplayMode()))
         updateFloatingTileSubtitle(getString(R.string.ui_text_alignment), localizedGravityTitle(latestStyle.gravity))
         updateFloatingTileSubtitle(getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary())
-        updateFloatingTileSubtitle(getString(R.string.ui_switch_animation), localizedSwitchAnimationTitle(switchAnimationMode()))
+        updateFloatingTileSubtitle(getString(R.string.ui_switch_animation), localizedLyricsSwitchAnimationTitle(switchAnimationMode()))
         updateFloatingTileSubtitle(getString(R.string.ui_enhanced_lrc), wordLyricsSubtitle())
         updateFloatingTileSubtitle(getString(R.string.ui_highlight_color), FloatingLyricsStyleStore.colorSummary(latestStyle.karaokeHighlightColor))
         updateFloatingTileSubtitle(getString(R.string.ui_display_control), floatingDisplaySummary())
@@ -468,7 +471,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
             settingGrid(
                 FloatingSettingTile(
                     title = getString(R.string.ui_content),
-                    subtitle = localizedContentDisplayTitle(contentDisplayMode()),
+                    subtitle = localizedLyricsContentModeTitle(contentDisplayMode()),
                     iconRes = R.drawable.ic_air_lyrics,
                     onClick = { tile ->
                         openPanel(tile, getString(R.string.ui_content), "") {
@@ -476,7 +479,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                                 LyricsContentDisplayMode.entries.map { mode ->
                                     KeyedOptionItem(
                                         key = mode.key,
-                                        title = localizedContentDisplayTitle(mode),
+                                        title = localizedLyricsContentModeTitle(mode),
                                         selected = mode == contentDisplayMode(),
                                         action = {
                                             LyricsSettingsStore.setContentDisplayMode(activity, mode)
@@ -490,7 +493,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                 ),
                 FloatingSettingTile(
                     title = getString(R.string.ui_line_range),
-                    subtitle = localizedLineDisplayTitle(lineDisplayMode()),
+                    subtitle = localizedLyricsLineModeTitle(lineDisplayMode()),
                     iconRes = R.drawable.ic_air_line_spacing,
                     onClick = { tile ->
                         openPanel(tile, getString(R.string.ui_line_range), "") {
@@ -498,7 +501,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                                 LyricsLineDisplayMode.entries.map { mode ->
                                     KeyedOptionItem(
                                         key = mode.key,
-                                        title = localizedLineDisplayTitle(mode),
+                                        title = localizedLyricsLineModeTitle(mode),
                                         selected = mode == lineDisplayMode(),
                                         action = {
                                             LyricsSettingsStore.setLineDisplayMode(activity, mode)
@@ -567,7 +570,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
             settingGrid(
                 FloatingSettingTile(
                     title = getString(R.string.ui_switch_animation),
-                    subtitle = localizedSwitchAnimationTitle(switchAnimationMode()),
+                    subtitle = localizedLyricsSwitchAnimationTitle(switchAnimationMode()),
                     iconRes = R.drawable.ic_air_motion,
                     onClick = { tile ->
                         openPanel(tile, getString(R.string.ui_switch_animation), "") {
@@ -575,7 +578,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                                 LyricsSwitchAnimationMode.entries.map { mode ->
                                     KeyedOptionItem(
                                         key = mode.key,
-                                        title = localizedSwitchAnimationTitle(mode),
+                                        title = localizedLyricsSwitchAnimationTitle(mode),
                                         selected = mode == switchAnimationMode(),
                                         action = {
                                             LyricsSettingsStore.setSwitchAnimationMode(activity, mode)
@@ -663,10 +666,10 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                 addView(settingRow(activity, getString(R.string.ui_highlight), FloatingLyricsStyleStore.colorSummary(style().karaokeHighlightColor)))
                 addView(settingRow(activity, getString(R.string.ui_background), onOff(style().backgroundEnabled)))
                 addView(settingRow(activity, getString(R.string.ui_width), "${style().maxWidthPercent}%"))
-                addView(settingRow(activity, getString(R.string.ui_content), localizedContentDisplayTitle(contentDisplayMode())))
-                addView(settingRow(activity, getString(R.string.ui_range), localizedLineDisplayTitle(lineDisplayMode())))
+                addView(settingRow(activity, getString(R.string.ui_content), localizedLyricsContentModeTitle(contentDisplayMode())))
+                addView(settingRow(activity, getString(R.string.ui_range), localizedLyricsLineModeTitle(lineDisplayMode())))
                 addView(settingRow(activity, getString(R.string.ui_alignment), localizedGravityTitle(style().gravity)))
-                addView(settingRow(activity, getString(R.string.ui_animation), localizedSwitchAnimationTitle(switchAnimationMode())))
+                addView(settingRow(activity, getString(R.string.ui_animation), localizedLyricsSwitchAnimationTitle(switchAnimationMode())))
                 addView(settingRow(activity, getString(R.string.ui_enhanced_lrc), if (karaokeLyricsEnabled()) getString(R.string.ui_preferred) else getString(R.string.ui_off)))
                 addView(settingRow(activity, getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary()))
                 addView(settingRow(activity, getString(R.string.ui_locked), onOff(FloatingLyricsStyleStore.isLocked(activity))))

@@ -30,12 +30,12 @@ internal fun Context.localizedLyricsLineModeTitle(mode: LyricsLineDisplayMode): 
     LyricsLineDisplayMode.CURRENT_ONLY -> getString(R.string.ui_current_line)
     LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> getString(R.string.ui_previous_current)
     LyricsLineDisplayMode.CURRENT_AND_NEXT -> getString(R.string.ui_current_next)
-    LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> getString(R.string.ui_previous_current_next)
+    LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> getString(R.string.ui_prev_current_next)
 }
 
 internal fun Context.localizedLyricsSwitchAnimationTitle(mode: LyricsSwitchAnimationMode): String = when (mode) {
     LyricsSwitchAnimationMode.NONE -> getString(R.string.ui_off)
-    LyricsSwitchAnimationMode.FADE -> getString(R.string.ui_fade)
+    LyricsSwitchAnimationMode.FADE -> getString(R.string.ui_soft_fade)
     LyricsSwitchAnimationMode.SLIDE_UP -> getString(R.string.ui_slide_up)
-    LyricsSwitchAnimationMode.SCALE_FADE -> getString(R.string.ui_scale)
+    LyricsSwitchAnimationMode.SCALE_FADE -> getString(R.string.ui_scale_fade)
 }
