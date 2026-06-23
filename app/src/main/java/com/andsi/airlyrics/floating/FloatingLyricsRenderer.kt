@@ -6,9 +6,7 @@ import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
-import android.view.View
 import android.view.animation.DecelerateInterpolator
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import android.widget.TextView
 import com.andsi.airlyrics.lyrics.KaraokeLine
 import com.andsi.airlyrics.lyrics.display.LyricsDisplayFormatter
@@ -17,6 +15,7 @@ import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 /**
  * Maintains parsed lyric lines and renders the line matching the current playback position.
@@ -146,7 +145,7 @@ class FloatingLyricsRenderer(
     /**
      * Renders exactly the same content modes as [LyricsDisplayFormatter], but replaces only
      * the current original line with wrap-safe karaoke highlighting when a matching local word-by-word line exists.
-     * This keeps “original only / translation only / original + translation” independent from
+     * This keeps “original only / translation only / original + translation” independent of
      * karaoke and prevents word-by-word text from leaking translations into original-only mode.
      */
     private fun renderTextAtIndexWithKaraoke(currentIndex: Int, positionMs: Long): CharSequence {
@@ -341,7 +340,7 @@ class FloatingLyricsRenderer(
                     val currentEnd = tokenStart + kotlin.math.ceil(tokenText.length * eased).toInt()
                     return currentEnd.coerceAtLeast(completedCharEnd).coerceIn(0, displayText.length)
                 }
-                positionMs < token.startMs -> return completedCharEnd.coerceIn(0, displayText.length)
+                else -> return completedCharEnd.coerceIn(0, displayText.length)
             }
         }
 
@@ -407,12 +406,6 @@ class FloatingLyricsRenderer(
         return result
     }
 
-    private fun nearestLrcLine(timeMs: Long): LrcLine? {
-        if (currentLyrics.isEmpty()) return null
-        return currentLyrics.minByOrNull { kotlin.math.abs(it.timeMs - timeMs) }
-            ?.takeIf { kotlin.math.abs(it.timeMs - timeMs) <= 800L }
-    }
-
     private fun setTextImmediately(text: CharSequence) {
         val view = textViewProvider() ?: return
         view.animate().cancel()
@@ -429,20 +422,16 @@ class FloatingLyricsRenderer(
         val isKaraokeTick = karaokeEnabledProvider() && currentKaraokeLines.isNotEmpty()
         if (!isKaraokeTick && textKey == lastRenderedText) return
 
-        val view = textViewProvider() ?: return
         val mode = switchAnimationModeProvider()
-        if (isKaraokeTick || mode == LyricsSwitchAnimationMode.NONE || lastRenderedText == null) {
+        if (isKaraokeTick || lastRenderedText == null) {
             setTextImmediately(text)
             return
         }
 
-        view.animate().cancel()
-        view.text = text
-        lastRenderedText = textKey
-
         when (mode) {
-            LyricsSwitchAnimationMode.NONE -> Unit
+            LyricsSwitchAnimationMode.NONE -> setTextImmediately(text)
             LyricsSwitchAnimationMode.FADE -> {
+                val view = prepareTextSwitchAnimation(text, textKey) ?: return
                 view.alpha = 0f
                 view.translationY = 0f
                 view.scaleX = AirUiTokens.Motion.RestScale
@@ -455,8 +444,9 @@ class FloatingLyricsRenderer(
             }
 
             LyricsSwitchAnimationMode.SLIDE_UP -> {
+                val view = prepareTextSwitchAnimation(text, textKey) ?: return
                 view.alpha = 0f
-                view.translationY = dp(view, AirUiTokens.Layout.LyricsSlideDistanceDp).toFloat()
+                view.translationY = AirUiTokens.Layout.LyricsSlideDistanceDp * view.resources.displayMetrics.density
                 view.scaleX = AirUiTokens.Motion.RestScale
                 view.scaleY = AirUiTokens.Motion.RestScale
                 view.animate()
@@ -468,6 +458,7 @@ class FloatingLyricsRenderer(
             }
 
             LyricsSwitchAnimationMode.SCALE_FADE -> {
+                val view = prepareTextSwitchAnimation(text, textKey) ?: return
                 view.alpha = 0f
                 view.translationY = 0f
                 view.scaleX = AirUiTokens.Layout.LyricsScaleStart
@@ -483,6 +474,14 @@ class FloatingLyricsRenderer(
         }
     }
 
+    private fun prepareTextSwitchAnimation(text: CharSequence, textKey: String): TextView? {
+        val view = textViewProvider() ?: return null
+        view.animate().cancel()
+        view.text = text
+        lastRenderedText = textKey
+        return view
+    }
+
     private fun resetTextAnimationState() {
         textViewProvider()?.let { view ->
             view.animate().cancel()
@@ -494,10 +493,6 @@ class FloatingLyricsRenderer(
     }
 
     private fun CharSequence.isNotBlankText(): Boolean = toString().isNotBlank()
-
-    private fun dp(view: View, value: Int): Int {
-        return (value * view.resources.displayMetrics.density).toInt()
-    }
 
     fun getEstimatedPositionMs(): Long {
         if (!currentIsPlaying || lastPositionUpdateUptimeMs == 0L) {

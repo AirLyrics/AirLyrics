@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.common.BroadcastActions
@@ -47,7 +46,11 @@ object FloatingServiceNotification {
             .addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_menu_view,
-                    state.actionTitle(context, active = state.visible, activeText = context.getString(R.string.ui_hide), inactiveText = context.getString(R.string.ui_show)),
+                    actionTitle(
+                        active = state.visible,
+                        activeText = context.getString(R.string.ui_hide),
+                        inactiveText = context.getString(R.string.ui_show)
+                    ),
                     serviceActionIntent(context, BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE, 1001)
                 ).build()
             )
@@ -65,8 +68,6 @@ object FloatingServiceNotification {
     }
 
     private fun ensureChannel(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-
         val channel = NotificationChannel(
             CHANNEL_ID,
             CHANNEL_NAME,
@@ -124,8 +125,7 @@ object FloatingServiceNotification {
         return if (isAdjustMode) "● ${context.getString(R.string.ui_adjustment_mode)}" else "○ ${context.getString(R.string.ui_adjustment_mode)}"
     }
 
-    private fun QuickControlState.actionTitle(
-        context: Context,
+    private fun actionTitle(
         active: Boolean,
         activeText: String,
         inactiveText: String

@@ -44,7 +44,7 @@ class FloatingLyricsService : Service() {
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
         karaokeEnabledProvider = { LyricsSettingsStore.isKaraokeLyricsEnabled(this) },
         karaokeHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).karaokeHighlightColor },
-        noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric).toString() }
+        noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric) }
     )
     private val syncHandler = Handler(Looper.getMainLooper())
     private val lyricsLookupRunner = LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsRepository")
