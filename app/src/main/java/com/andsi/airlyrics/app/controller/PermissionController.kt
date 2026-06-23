@@ -3,16 +3,16 @@ package com.andsi.airlyrics.app.controller
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 
 internal object PermissionController {
     fun requestOverlayPermission(activity: AppCompatActivity) {
         val intent = Intent(
             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            Uri.parse("package:${activity.packageName}")
+            "package:${activity.packageName}".toUri()
         )
         activity.startActivity(intent)
     }
@@ -58,7 +58,7 @@ internal object PermissionController {
         } else {
             Intent(
                 Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:${activity.packageName}")
+                "package:${activity.packageName}".toUri()
             )
         }
         activity.startActivity(intent)
