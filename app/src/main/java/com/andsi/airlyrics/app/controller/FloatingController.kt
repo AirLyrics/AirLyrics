@@ -141,15 +141,6 @@ internal class FloatingController(
         }
     }
 
-    fun isQuickFloatingVisible(): Boolean {
-        return state.quickFloatingVisible
-    }
-
-    /** Compatibility entry point: callers use this for UI/actual state. */
-    fun updateQuickFloatingVisible(visible: Boolean) {
-        updateQuickFloatingActualVisible(visible)
-    }
-
     fun updateQuickFloatingActualVisible(visible: Boolean) {
         state.quickFloatingVisible = visible
     }
