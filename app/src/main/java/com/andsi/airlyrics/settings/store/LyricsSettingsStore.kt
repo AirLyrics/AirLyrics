@@ -19,10 +19,6 @@ object LyricsSettingsStore {
     private const val KEY_SWITCH_ANIMATION_MODE = "switch_animation_mode"
     private const val KEY_KARAOKE_LYRICS_ENABLED = "karaoke_lyrics_enabled"
 
-    const val SOURCE_LOCAL_ONLY = "local_only"
-    const val SOURCE_NETEASE = "netease"
-    const val SOURCE_MUSIXMATCH = "musixmatch"
-
     val sourceOptions = LyricsSearchSource.entries.map { source ->
         LyricsSourceOption(key = source.key)
     }

@@ -31,11 +31,4 @@ object QuickFloatingStore {
         }
     }
 
-    /** Backward-compatible read. New code should prefer isDesiredVisible. */
-    fun isVisible(context: Context): Boolean = isDesiredVisible(context)
-
-    /** Backward-compatible write. New code should prefer setDesiredVisible. */
-    fun setVisible(context: Context, visible: Boolean) {
-        setDesiredVisible(context, visible)
-    }
 }

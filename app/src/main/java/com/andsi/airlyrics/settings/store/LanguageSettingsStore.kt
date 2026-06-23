@@ -1,7 +1,6 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
-import android.os.Build
 import com.andsi.airlyrics.R
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
@@ -56,14 +55,6 @@ internal object LanguageSettingsStore {
         context.resources.updateConfiguration(configuration, context.resources.displayMetrics)
     }
 
-    fun isChinese(context: Context): Boolean {
-        return when (getMode(context)) {
-            MODE_ZH_CN -> true
-            MODE_EN -> false
-            else -> isSystemChinese(context)
-        }
-    }
-
     fun currentDisplayName(context: Context): String {
         return when (getMode(context)) {
             MODE_ZH_CN -> context.getString(R.string.ui_chinese_simplified)
@@ -80,12 +71,7 @@ internal object LanguageSettingsStore {
     }
 
     private fun isSystemChinese(context: Context): Boolean {
-        val locale = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            context.resources.configuration.locales.get(0)
-        } else {
-            @Suppress("DEPRECATION")
-            context.resources.configuration.locale
-        }
+        val locale = context.resources.configuration.locales.get(0)
         return locale.language.equals(Locale.CHINESE.language, ignoreCase = true)
     }
 }
