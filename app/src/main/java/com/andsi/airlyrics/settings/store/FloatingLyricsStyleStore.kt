@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
+import androidx.core.content.edit
 import com.andsi.airlyrics.settings.model.FloatingLyricsPreset
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 
@@ -96,7 +97,9 @@ object FloatingLyricsStyleStore {
     }
 
     fun setPreviewExpanded(context: Context, expanded: Boolean) {
-        prefs(context).edit().putBoolean(KEY_PREVIEW_EXPANDED, expanded).apply()
+        prefs(context).edit {
+            putBoolean(KEY_PREVIEW_EXPANDED, expanded)
+        }
     }
 
     fun getStyle(context: Context): FloatingLyricsStyle {
@@ -121,77 +124,101 @@ object FloatingLyricsStyleStore {
 
     fun applyPreset(context: Context, preset: String) {
         val values = presetValues[normalizePreset(preset)] ?: return
-        prefs(context).edit()
-            .putString(KEY_PRESET, values.key)
-            .putInt(KEY_TEXT_COLOR, values.textColor)
-            .putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, values.karaokeHighlightColor)
-            .putInt(KEY_SHADOW_COLOR, values.shadowColor)
-            .putFloat(KEY_SHADOW_RADIUS, values.shadowRadius)
-            .putBoolean(KEY_BACKGROUND_ENABLED, values.backgroundEnabled)
-            .putInt(KEY_BACKGROUND_COLOR, values.backgroundColor)
-            .putInt(KEY_BACKGROUND_ALPHA, values.backgroundAlpha)
-            .putInt(KEY_CORNER_RADIUS, values.cornerRadiusDp)
-            .putInt(KEY_PADDING_HORIZONTAL, values.paddingHorizontalDp)
-            .putInt(KEY_PADDING_VERTICAL, values.paddingVerticalDp)
-            .putInt(KEY_MAX_WIDTH_PERCENT, values.maxWidthPercent)
-            .putInt(KEY_GRAVITY, values.gravity)
-            .apply()
+        prefs(context).edit {
+            putString(KEY_PRESET, values.key)
+            putInt(KEY_TEXT_COLOR, values.textColor)
+            putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, values.karaokeHighlightColor)
+            putInt(KEY_SHADOW_COLOR, values.shadowColor)
+            putFloat(KEY_SHADOW_RADIUS, values.shadowRadius)
+            putBoolean(KEY_BACKGROUND_ENABLED, values.backgroundEnabled)
+            putInt(KEY_BACKGROUND_COLOR, values.backgroundColor)
+            putInt(KEY_BACKGROUND_ALPHA, values.backgroundAlpha)
+            putInt(KEY_CORNER_RADIUS, values.cornerRadiusDp)
+            putInt(KEY_PADDING_HORIZONTAL, values.paddingHorizontalDp)
+            putInt(KEY_PADDING_VERTICAL, values.paddingVerticalDp)
+            putInt(KEY_MAX_WIDTH_PERCENT, values.maxWidthPercent)
+            putInt(KEY_GRAVITY, values.gravity)
+        }
     }
 
     fun setTextSize(context: Context, textSizeSp: Float) {
-        prefs(context).edit().putFloat(KEY_TEXT_SIZE, textSizeSp.coerceIn(14f, 56f)).apply()
+        prefs(context).edit {
+            putFloat(KEY_TEXT_SIZE, textSizeSp.coerceIn(14f, 56f))
+        }
     }
 
     fun setTextColor(context: Context, color: Int) {
-        prefs(context).edit().putInt(KEY_TEXT_COLOR, color).apply()
+        prefs(context).edit {
+            putInt(KEY_TEXT_COLOR, color)
+        }
     }
 
     fun setKaraokeHighlightColor(context: Context, color: Int) {
-        prefs(context).edit().putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color).apply()
+        prefs(context).edit {
+            putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color)
+        }
     }
 
     fun setBackgroundColor(context: Context, color: Int) {
-        prefs(context).edit()
-            .putBoolean(KEY_BACKGROUND_ENABLED, Color.alpha(color) > 0)
-            .putInt(KEY_BACKGROUND_COLOR, Color.rgb(Color.red(color), Color.green(color), Color.blue(color)))
-            .putInt(KEY_BACKGROUND_ALPHA, Color.alpha(color))
-            .apply()
+        prefs(context).edit {
+            putBoolean(KEY_BACKGROUND_ENABLED, Color.alpha(color) > 0)
+            putInt(KEY_BACKGROUND_COLOR, Color.rgb(Color.red(color), Color.green(color), Color.blue(color)))
+            putInt(KEY_BACKGROUND_ALPHA, Color.alpha(color))
+        }
     }
 
     fun setBackgroundEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit().putBoolean(KEY_BACKGROUND_ENABLED, enabled).apply()
+        prefs(context).edit {
+            putBoolean(KEY_BACKGROUND_ENABLED, enabled)
+        }
     }
 
     fun setGravity(context: Context, gravity: Int) {
-        prefs(context).edit().putInt(KEY_GRAVITY, gravity).apply()
+        prefs(context).edit {
+            putInt(KEY_GRAVITY, gravity)
+        }
     }
 
     fun setShadowColor(context: Context, color: Int) {
-        prefs(context).edit().putInt(KEY_SHADOW_COLOR, color).apply()
+        prefs(context).edit {
+            putInt(KEY_SHADOW_COLOR, color)
+        }
     }
 
     fun setShadowRadius(context: Context, radius: Float) {
-        prefs(context).edit().putFloat(KEY_SHADOW_RADIUS, radius.coerceIn(0f, 24f)).apply()
+        prefs(context).edit {
+            putFloat(KEY_SHADOW_RADIUS, radius.coerceIn(0f, 24f))
+        }
     }
 
     fun setCornerRadius(context: Context, radiusDp: Int) {
-        prefs(context).edit().putInt(KEY_CORNER_RADIUS, radiusDp.coerceIn(0, 36)).apply()
+        prefs(context).edit {
+            putInt(KEY_CORNER_RADIUS, radiusDp.coerceIn(0, 36))
+        }
     }
 
     fun setPaddingHorizontal(context: Context, paddingDp: Int) {
-        prefs(context).edit().putInt(KEY_PADDING_HORIZONTAL, paddingDp.coerceIn(0, 36)).apply()
+        prefs(context).edit {
+            putInt(KEY_PADDING_HORIZONTAL, paddingDp.coerceIn(0, 36))
+        }
     }
 
     fun setPaddingVertical(context: Context, paddingDp: Int) {
-        prefs(context).edit().putInt(KEY_PADDING_VERTICAL, paddingDp.coerceIn(0, 28)).apply()
+        prefs(context).edit {
+            putInt(KEY_PADDING_VERTICAL, paddingDp.coerceIn(0, 28))
+        }
     }
 
     fun setMaxWidthPercent(context: Context, percent: Int) {
-        prefs(context).edit().putInt(KEY_MAX_WIDTH_PERCENT, percent.coerceIn(45, 100)).apply()
+        prefs(context).edit {
+            putInt(KEY_MAX_WIDTH_PERCENT, percent.coerceIn(45, 100))
+        }
     }
 
     fun setLocked(context: Context, locked: Boolean) {
-        prefs(context).edit().putBoolean(KEY_LOCKED, locked).apply()
+        prefs(context).edit {
+            putBoolean(KEY_LOCKED, locked)
+        }
     }
 
     fun isLocked(context: Context): Boolean {
@@ -199,7 +226,9 @@ object FloatingLyricsStyleStore {
     }
 
     fun setClickThrough(context: Context, clickThrough: Boolean) {
-        prefs(context).edit().putBoolean(KEY_CLICK_THROUGH, clickThrough).apply()
+        prefs(context).edit {
+            putBoolean(KEY_CLICK_THROUGH, clickThrough)
+        }
     }
 
     fun isClickThrough(context: Context): Boolean {
@@ -208,7 +237,10 @@ object FloatingLyricsStyleStore {
     }
 
     fun savePosition(context: Context, x: Int, y: Int) {
-        prefs(context).edit().putInt(KEY_POS_X, x).putInt(KEY_POS_Y, y).apply()
+        prefs(context).edit {
+            putInt(KEY_POS_X, x)
+            putInt(KEY_POS_Y, y)
+        }
     }
 
     fun getPosition(context: Context): Pair<Int, Int> {

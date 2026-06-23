@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
+import androidx.core.content.edit
 
 /**
  * Stores the user's persisted floating-window intent.
@@ -25,10 +26,9 @@ object QuickFloatingStore {
     }
 
     fun setDesiredVisible(context: Context, visible: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_DESIRED_VISIBLE, visible)
-            .commit()
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit(commit = true) {
+            putBoolean(KEY_DESIRED_VISIBLE, visible)
+        }
     }
 
     /** Backward-compatible read. New code should prefer isDesiredVisible. */

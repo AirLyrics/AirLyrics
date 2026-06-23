@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import com.andsi.airlyrics.R
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.content.edit
 import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
@@ -29,10 +30,9 @@ internal object LanguageSettingsStore {
             MODE_ZH_CN, MODE_EN -> mode
             else -> MODE_SYSTEM
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putString(KEY_MODE, normalized)
-            .apply()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit {
+            putString(KEY_MODE, normalized)
+        }
         applyAppLocale(context)
     }
 

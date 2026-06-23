@@ -2,6 +2,7 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import android.content.res.Configuration
+import androidx.core.content.edit
 import com.andsi.airlyrics.settings.model.ThemeSettings
 
 /** Stores app-wide theme preferences. */
@@ -28,9 +29,8 @@ object ThemeSettingsStore {
     }
 
     fun setDark(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putBoolean(KEY_DARK_MODE, enabled)
-            .apply()
+        context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit {
+            putBoolean(KEY_DARK_MODE, enabled)
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
+import androidx.core.content.edit
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import java.security.MessageDigest
 import java.util.Locale
@@ -23,23 +24,27 @@ object LyricsOffsetStore {
         if (prefs.contains(exactKey)) {
             val offset = prefs.getLong(exactKey, 0L)
             if (!prefs.contains(weakKey)) {
-                prefs.edit().putLong(weakKey, offset).apply()
+                prefs.edit {
+                    putLong(weakKey, offset)
+                }
             }
             return offset
         }
 
         nearbyDurationKeys(media).firstOrNull { prefs.contains(it) }?.let { nearbyKey ->
             val offset = prefs.getLong(nearbyKey, 0L)
-            prefs.edit()
-                .putLong(exactKey, offset)
-                .putLong(weakKey, offset)
-                .apply()
+            prefs.edit {
+                putLong(exactKey, offset)
+                putLong(weakKey, offset)
+            }
             return offset
         }
 
         if (prefs.contains(weakKey)) {
             val offset = prefs.getLong(weakKey, 0L)
-            prefs.edit().putLong(exactKey, offset).apply()
+            prefs.edit {
+                putLong(exactKey, offset)
+            }
             return offset
         }
 
@@ -51,11 +56,10 @@ object LyricsOffsetStore {
         val safeOffset = offsetMs.coerceIn(-MAX_OFFSET_MS, MAX_OFFSET_MS)
         val exactKey = offsetKey(media.title, media.artist, media.durationMs)
         val weakKey = offsetKey(media.title, media.artist, 0L)
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .putLong(exactKey, safeOffset)
-            .putLong(weakKey, safeOffset)
-            .apply()
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putLong(exactKey, safeOffset)
+            putLong(weakKey, safeOffset)
+        }
         return safeOffset
     }
 
@@ -66,11 +70,11 @@ object LyricsOffsetStore {
 
     fun resetOffset(context: Context, media: CurrentMediaInfo) {
         if (media.title.isBlank()) return
-        val editor = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
-        editor.remove(offsetKey(media.title, media.artist, media.durationMs))
-        editor.remove(offsetKey(media.title, media.artist, 0L))
-        nearbyDurationKeys(media).forEach { editor.remove(it) }
-        editor.apply()
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            remove(offsetKey(media.title, media.artist, media.durationMs))
+            remove(offsetKey(media.title, media.artist, 0L))
+            nearbyDurationKeys(media).forEach { remove(it) }
+        }
     }
 
     fun formatOffset(offsetMs: Long): String {
