@@ -20,7 +20,6 @@ import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.bigText
-import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.scroll
@@ -28,11 +27,8 @@ import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.statusPill
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
-import com.andsi.airlyrics.ui.theme.colorCard
-import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
-import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
 

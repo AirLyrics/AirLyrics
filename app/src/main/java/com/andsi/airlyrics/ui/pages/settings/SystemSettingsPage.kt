@@ -13,10 +13,8 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
-import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable

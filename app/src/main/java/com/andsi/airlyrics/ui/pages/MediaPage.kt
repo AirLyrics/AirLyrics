@@ -7,7 +7,6 @@ import android.media.session.PlaybackState
 import android.view.View
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.media.MediaSourceStore
-import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
 
