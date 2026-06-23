@@ -200,7 +200,7 @@ internal class MainActivityUiHost(
     override fun openUrl(url: String) = openUrlImpl(url)
     override fun refreshAfterLanguageChanged() = refreshAfterLanguageChangedImpl()
 
-    override fun hasNotificationPermission(): Boolean = PermissionController.hasNotificationPermission(this)
+    override fun hasNotificationPermission(): Boolean = PermissionController.hasPostNotificationsPermission(this)
     override fun hasNotificationListenerAccess(): Boolean = PermissionController.hasNotificationListenerAccess(this)
 
     override fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {

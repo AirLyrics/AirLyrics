@@ -17,7 +17,7 @@ internal object PermissionController {
         activity.startActivity(intent)
     }
 
-    fun hasNotificationPermission(context: Context): Boolean {
+    fun hasPostNotificationsPermission(context: Context): Boolean {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
                 context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     }
@@ -37,12 +37,7 @@ internal object PermissionController {
         activity: AppCompatActivity,
         requestPermission: (String) -> Unit
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            openAppNotificationSettings(activity)
-            return
-        }
-
-        if (hasNotificationPermission(activity)) {
+        if (hasPostNotificationsPermission(activity)) {
             openAppNotificationSettings(activity)
             return
         }
@@ -51,15 +46,8 @@ internal object PermissionController {
     }
 
     private fun openAppNotificationSettings(activity: AppCompatActivity) {
-        val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
-            }
-        } else {
-            Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                "package:${activity.packageName}".toUri()
-            )
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
         }
         activity.startActivity(intent)
     }
