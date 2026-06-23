@@ -6,7 +6,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
-/** View references owned by [MainGraph] for the hand-written main UI. */
+/** View references owned by [MainGraph] for the handwritten main UI. */
 internal class MainActivityViewRefs {
     var contentContainer: FrameLayout? = null
     val tabViews: MutableMap<Page, TextView> = mutableMapOf()

@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
  * Owns ActivityResult launchers for MainActivity.
  *
  * This keeps Android callback registration out of MainActivity while preserving
- * the existing hand-written UI and import/permission behavior.
+ * the existing handwritten UI and import/permission behavior.
  */
 internal class MainLaunchers(
     activity: AppCompatActivity,

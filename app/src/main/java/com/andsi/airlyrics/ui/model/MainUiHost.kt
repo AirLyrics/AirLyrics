@@ -16,7 +16,7 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
 /**
- * UI-facing host for the hand-written main screen.
+ * UI-facing host for the handwritten main screen.
  *
  * Pages receive this small boundary instead of the concrete activity, keeping
  * layout code stable while the app layer continues to own wiring and services.

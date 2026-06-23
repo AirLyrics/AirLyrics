@@ -18,7 +18,7 @@ import com.andsi.airlyrics.ui.pages.createSettingsPage
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
-/** Renderer for the existing hand-written main UI. */
+/** Renderer for the existing handwritten main UI. */
 internal class MainHandRenderer(
     private val graph: MainGraph
 ) : UiInvalidator {

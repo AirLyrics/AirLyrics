@@ -34,7 +34,7 @@ import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
-/** Bridges hand-written main UI helpers to the UI-facing host boundary. */
+/** Bridges handwritten main UI helpers to the UI-facing host boundary. */
 internal class MainActivityUiHost(
     private val graph: MainGraph
 ) : MainUiHost(graph.activity, graph.state) {
