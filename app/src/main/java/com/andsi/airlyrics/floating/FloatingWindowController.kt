@@ -10,9 +10,12 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.TextView
+import androidx.appcompat.widget.AppCompatTextView
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import kotlin.math.abs
 
 /**
  * Owns the floating lyrics window itself: creation, removal, dragging,
@@ -26,6 +29,7 @@ class FloatingWindowController(
     private val onVisibilityChanged: (Boolean) -> Unit
 ) {
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     private var lyricsView: TextView? = null
     private var params: WindowManager.LayoutParams? = null
@@ -53,7 +57,7 @@ class FloatingWindowController(
             return refreshed
         }
 
-        val view = TextView(context).apply {
+        val view = FloatingLyricsTextView(context).apply {
             text = context.getString(R.string.ui_waiting_for_media_message)
             includeFontPadding = false
         }
@@ -71,7 +75,7 @@ class FloatingWindowController(
             y = savedY
         }
 
-        view.setOnTouchListener { _, event -> handleTouch(view, event) }
+        view.setOnTouchListener(::handleTouch)
 
         return runCatching {
             applyStyle(view)
@@ -100,11 +104,6 @@ class FloatingWindowController(
             onVisibilityChanged(false)
         }
         return removed
-    }
-
-    fun setText(text: CharSequence) {
-        runCatching { lyricsView?.text = text }
-            .onFailure { hideAfterFailure() }
     }
 
     fun applyStyle(): Boolean {
@@ -138,12 +137,9 @@ class FloatingWindowController(
 
     private fun handleTouch(view: View, event: MotionEvent): Boolean {
         val p = params ?: return false
+        val isLocked = FloatingLyricsStyleStore.isLocked(context)
 
-        if (FloatingLyricsStyleStore.isLocked(context)) {
-            return true
-        }
-
-        return when (event.action) {
+        return when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 startX = p.x
                 startY = p.y
@@ -153,20 +149,36 @@ class FloatingWindowController(
             }
 
             MotionEvent.ACTION_MOVE -> {
-                p.x = startX + (event.rawX - touchStartX).toInt()
-                p.y = startY + (event.rawY - touchStartY).toInt()
-                runCatching { windowManager.updateViewLayout(view, p) }
-                    .onFailure { hideAfterFailure() }
-                    .isSuccess
+                if (isLocked) {
+                    true
+                } else {
+                    p.x = startX + (event.rawX - touchStartX).toInt()
+                    p.y = startY + (event.rawY - touchStartY).toInt()
+                    runCatching { windowManager.updateViewLayout(view, p) }
+                        .onFailure { hideAfterFailure() }
+                        .isSuccess
+                }
             }
 
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                FloatingLyricsStyleStore.savePosition(context, p.x, p.y)
+            MotionEvent.ACTION_UP -> {
+                if (isClick(event)) view.performClick()
+                if (!isLocked) FloatingLyricsStyleStore.savePosition(context, p.x, p.y)
+                true
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                if (!isLocked) FloatingLyricsStyleStore.savePosition(context, p.x, p.y)
                 true
             }
 
             else -> true
         }
+    }
+
+    private fun isClick(event: MotionEvent): Boolean {
+        val threshold = touchSlop.toFloat()
+        return abs(event.rawX - touchStartX) <= threshold &&
+            abs(event.rawY - touchStartY) <= threshold
     }
 
     private fun applyStyle(view: TextView) {
@@ -240,5 +252,12 @@ class FloatingWindowController(
 
     private fun dp(value: Int): Int {
         return (value * context.resources.displayMetrics.density).toInt()
+    }
+
+    private class FloatingLyricsTextView(context: Context) : AppCompatTextView(context) {
+        override fun performClick(): Boolean {
+            super.performClick()
+            return true
+        }
     }
 }
