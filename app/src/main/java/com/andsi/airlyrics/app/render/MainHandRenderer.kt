@@ -7,6 +7,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isNotEmpty
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.ui.components.animatePageEnter
 import com.andsi.airlyrics.ui.navigation.Page
@@ -100,7 +101,7 @@ internal class MainHandRenderer(
         val oldPage = state.renderedPage
         val oldSubPage = state.renderedSettingsSubPage
         val shouldAnimate = animateContent &&
-            container.childCount > 0 &&
+            container.isNotEmpty() &&
             (state.currentPage != oldPage || state.settingsSubPage != oldSubPage)
         val slideFromRight = when {
             state.currentPage != oldPage -> state.currentPage.ordinal > oldPage.ordinal
