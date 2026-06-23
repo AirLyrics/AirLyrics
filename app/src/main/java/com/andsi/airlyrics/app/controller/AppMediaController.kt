@@ -5,6 +5,7 @@ import com.andsi.airlyrics.R
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
@@ -46,9 +47,7 @@ internal class AppMediaController(
                 context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
             val component = ComponentName(context, MediaNotificationListener::class.java)
             mediaSessionManager.getActiveSessions(component)
-        } catch (e: SecurityException) {
-            emptyList()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             emptyList()
         }
     }
@@ -64,7 +63,7 @@ internal class AppMediaController(
         return try {
             val appInfo = context.packageManager.getApplicationInfo(packageName, 0)
             context.packageManager.getApplicationLabel(appInfo).toString()
-        } catch (e: Exception) {
+        } catch (_: PackageManager.NameNotFoundException) {
             packageName
         }
     }
