@@ -145,6 +145,7 @@ This is a lyric preview</string>
     <string name="ui_local_enhanced_lrc_title">本地逐字歌词</string>
     <string name="ui_local_file_not_found">未找到本地文件</string>
     <string name="ui_local_lyrics_folder">本地歌词目录</string>
+    <string name="ui_local_lyrics_subtitle_type">%1$s · %2$s</string>
     <string name="ui_local_only">只使用本地</string>
     <string name="ui_lock_touch">锁定穿透</string>
     <string name="ui_locked">锁定</string>

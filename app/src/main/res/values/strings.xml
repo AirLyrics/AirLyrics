@@ -144,6 +144,7 @@
     <string name="ui_local_enhanced_lrc_title">Local Enhanced LRC</string>
     <string name="ui_local_file_not_found">Local file not found</string>
     <string name="ui_local_lyrics_folder">Local lyrics folder</string>
+    <string name="ui_local_lyrics_subtitle_type">%1$s · %2$s</string>
     <string name="ui_local_only">Local only</string>
     <string name="ui_lock_touch">Lock / touch</string>
     <string name="ui_locked">Locked</string>

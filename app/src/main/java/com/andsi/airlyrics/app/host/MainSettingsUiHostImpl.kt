@@ -102,7 +102,6 @@ internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String =
 }
 
 internal fun MainUiHost.themeToggleButtonImpl(): TextView {
-    val activity = this
     return TextView(this).apply {
         text = if (isDarkTheme()) "☀" else "☾"
         textSize = AirUiTokens.TextSize.PageTitle - 4f
@@ -197,7 +196,7 @@ internal fun MainUiHost.localLyricsRowImpl(
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale + 0.01f)
         if (!badgeText.isNullOrBlank()) {
             addView(TextView(activity).apply {
-                text = badgeText ?: ""
+                text = badgeText
                 textSize = AirUiTokens.TextSize.Tiny
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -211,7 +210,11 @@ internal fun MainUiHost.localLyricsRowImpl(
             setTextColor(colorTextStrong)
         })
         addView(TextView(activity).apply {
-            text = "${localizedLocalLyricsSubtitle(item)} · ${localizedLocalLyricsType(item)}"
+            text = getString(
+                R.string.ui_local_lyrics_subtitle_type,
+                localizedLocalLyricsSubtitle(item),
+                localizedLocalLyricsType(item)
+            )
             textSize = AirUiTokens.TextSize.Caption
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccentMint)
@@ -259,7 +262,7 @@ private fun MainUiHost.openLocalLyricsTargetPicker(
                 }
             )
         }
-        item.hasKaraokeLyrics && !item.hasPlainLyrics -> {
+        item.hasKaraokeLyrics -> {
             openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
         }
         else -> {
@@ -512,7 +515,7 @@ internal fun MainUiHost.getAppVersionNameImpl(): String {
     return try {
         val packageInfo = packageManager.getPackageInfo(packageName, 0)
         packageInfo.versionName ?: "1.0"
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         "1.0"
     }
 }
