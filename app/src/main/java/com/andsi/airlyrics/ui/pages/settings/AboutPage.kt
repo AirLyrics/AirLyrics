@@ -43,7 +43,7 @@ private fun MainUiHost.aboutLogoHeader(): View {
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        params.setMargins(0, 0, 0, dp(AboutTokens.HeaderBottomMarginDp))
+        params.setMargins(0, 0, 0, dp(AboutTokens.HEADER_BOTTOM_MARGIN_DP))
         layoutParams = params
         setPadding(0, dp(AirUiTokens.Space.Xxs), 0, dp(AirUiTokens.Space.Lg))
 
@@ -54,12 +54,12 @@ private fun MainUiHost.aboutLogoHeader(): View {
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
-            minimumHeight = dp(AboutTokens.HeaderMinHeightDp)
+            minimumHeight = dp(AboutTokens.HEADER_MIN_HEIGHT_DP)
 
             addView(InteractiveLogoView(activity) {
                 easterEggOverlay.onLogoClicked()
             }.apply {
-                layoutParams = FrameLayout.LayoutParams(dp(AboutTokens.LogoSizeDp), dp(AboutTokens.LogoSizeDp), Gravity.CENTER)
+                layoutParams = FrameLayout.LayoutParams(dp(AboutTokens.LOGO_SIZE_DP), dp(AboutTokens.LOGO_SIZE_DP), Gravity.CENTER)
             })
 
             addView(easterEggOverlay.apply {
@@ -100,7 +100,7 @@ private fun MainUiHost.aboutLogoHeader(): View {
 
 private fun MainUiHost.githubIconButton(activity: MainUiHost): View {
     return FrameLayout(activity).apply {
-        layoutParams = LinearLayout.LayoutParams(dp(AboutTokens.GithubButtonWidthDp), dp(AboutTokens.GithubButtonHeightDp))
+        layoutParams = LinearLayout.LayoutParams(dp(AboutTokens.GITHUB_BUTTON_WIDTH_DP), dp(AboutTokens.GITHUB_BUTTON_HEIGHT_DP))
         background = GradientDrawable().apply {
             cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
             setColor(colorSurfaceLight)
@@ -118,7 +118,7 @@ private fun MainUiHost.githubIconButton(activity: MainUiHost): View {
             setImageResource(R.drawable.ic_air_github)
             setColorFilter(colorAccent)
             scaleType = ImageView.ScaleType.CENTER
-            layoutParams = FrameLayout.LayoutParams(dp(AboutTokens.GithubIconSizeDp), dp(AboutTokens.GithubIconSizeDp), Gravity.CENTER)
+            layoutParams = FrameLayout.LayoutParams(dp(AboutTokens.GITHUB_ICON_SIZE_DP), dp(AboutTokens.GITHUB_ICON_SIZE_DP), Gravity.CENTER)
             contentDescription = "GitHub"
         })
     }
@@ -132,7 +132,7 @@ private fun MainUiHost.changeLogButton(): View {
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorAccent)
-        setPadding(dp(AboutTokens.ChangeLogHorizontalPaddingDp), dp(AboutTokens.ChangeLogVerticalPaddingDp), dp(AboutTokens.ChangeLogHorizontalPaddingDp), dp(AboutTokens.ChangeLogVerticalPaddingDp))
+        setPadding(dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -202,7 +202,7 @@ private fun MainUiHost.changelogDialogButton(
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorAccent)
-        setPadding(dp(AboutTokens.ChangeLogHorizontalPaddingDp), dp(AboutTokens.ChangeLogVerticalPaddingDp), dp(AboutTokens.ChangeLogHorizontalPaddingDp), dp(AboutTokens.ChangeLogVerticalPaddingDp))
+        setPadding(dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -246,4 +246,3 @@ private fun MainUiHost.loadAssetText(assetName: String, fallback: String): Strin
         .trim()
         .ifBlank { fallback }
 }
-

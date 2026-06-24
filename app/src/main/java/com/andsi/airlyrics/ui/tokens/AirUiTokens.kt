@@ -1,10 +1,10 @@
+@file:Suppress("ConstPropertyName")
+
 package com.andsi.airlyrics.ui.tokens
 
 /** Shared UI constants for the classic View-based screens. */
 internal object AirUiTokens {
     object Space {
-        const val None = 0
-        const val Xxxs = 1
         const val Xxs = 2
         const val Xs = 3
         const val Sm = 4
@@ -72,7 +72,6 @@ internal object AirUiTokens {
         const val RestAlpha = 1f
         const val FloatingCardPressScale = 0.985f
         const val FloatingTilePressScale = 0.975f
-        const val FeedbackDimAlpha = 0.72f
         const val OvershootSoft = 0.52f
         const val OvershootTiny = 0.48f
     }
@@ -80,7 +79,6 @@ internal object AirUiTokens {
     object Layout {
         const val OptionColumns = 2
         const val SwatchColumns = 3
-        const val OptionGap = 6
         const val ChildEnterMaxIndex = 8
         const val PageEnterDistance = 26
         const val ChildEnterDistance = 12

@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import android.annotation.SuppressLint
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
@@ -7,8 +8,6 @@ import android.animation.ValueAnimator
 import android.graphics.Color
 import android.graphics.Typeface
 import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
@@ -19,6 +18,7 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
+@SuppressLint("ViewConstructor")
 internal class InteractiveLogoView(
     activity: MainUiHost,
     private val onExtraClick: () -> Unit
@@ -33,8 +33,8 @@ internal class InteractiveLogoView(
             scaleType = ImageView.ScaleType.FIT_CENTER
             adjustViewBounds = true
             layoutParams = LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.MATCH_PARENT
             )
         })
 
@@ -49,25 +49,25 @@ internal class InteractiveLogoView(
     private fun bounce(activity: MainUiHost) {
         animate().cancel()
         animate()
-            .scaleX(AboutTokens.LogoPressScale)
-            .scaleY(AboutTokens.LogoPressScale)
+            .scaleX(AboutTokens.LOGO_PRESS_SCALE)
+            .scaleY(AboutTokens.LOGO_PRESS_SCALE)
             .translationY(activity.dp(AirUiTokens.Space.Xs).toFloat())
-            .setDuration(AboutTokens.LogoPressMs)
+            .setDuration(AboutTokens.LOGO_PRESS_MS)
             .setInterpolator(DecelerateInterpolator())
             .withEndAction {
                 animate()
-                    .scaleX(AboutTokens.LogoOvershootScale)
-                    .scaleY(AboutTokens.LogoOvershootScale)
+                    .scaleX(AboutTokens.LOGO_OVERSHOOT_SCALE)
+                    .scaleY(AboutTokens.LOGO_OVERSHOOT_SCALE)
                     .translationY(-activity.dp(AirUiTokens.Space.Sm).toFloat())
-                    .setDuration(AboutTokens.LogoOvershootMs)
-                    .setInterpolator(OvershootInterpolator(AboutTokens.LogoOvershoot))
+                    .setDuration(AboutTokens.LOGO_OVERSHOOT_MS)
+                    .setInterpolator(OvershootInterpolator(AboutTokens.LOGO_OVERSHOOT))
                     .withEndAction {
                         animate()
                             .scaleX(AirUiTokens.Motion.RestScale)
                             .scaleY(AirUiTokens.Motion.RestScale)
                             .translationY(0f)
-                            .setDuration(AboutTokens.LogoSettleMs)
-                            .setInterpolator(OvershootInterpolator(AboutTokens.LogoSettleOvershoot))
+                            .setDuration(AboutTokens.LOGO_SETTLE_MS)
+                            .setInterpolator(OvershootInterpolator(AboutTokens.LOGO_SETTLE_OVERSHOOT))
                             .start()
                     }
                     .start()
@@ -76,6 +76,7 @@ internal class InteractiveLogoView(
     }
 }
 
+@SuppressLint("ViewConstructor")
 internal class EasterEggOverlay(activity: MainUiHost) : FrameLayout(activity) {
     private var clickCount = 0
     private val segmentViews = mutableListOf<VerticalMessageSegment>()
@@ -99,7 +100,7 @@ internal class EasterEggOverlay(activity: MainUiHost) : FrameLayout(activity) {
 
         val segment1 = VerticalMessageSegment(
             activity,
-            text = activity.getString(R.string.ui_like_it).toString(),
+            text = activity.getString(R.string.ui_like_it),
             colors = listOf(
                 Color.rgb(255, 244, 250),
                 Color.rgb(255, 210, 228)
@@ -107,7 +108,7 @@ internal class EasterEggOverlay(activity: MainUiHost) : FrameLayout(activity) {
         )
         val segment2 = VerticalMessageSegment(
             activity,
-            text = activity.getString(R.string.ui_give_it_a_star).toString(),
+            text = activity.getString(R.string.ui_give_it_a_star),
             colors = listOf(
                 Color.rgb(255, 188, 200),
                 Color.rgb(255, 152, 170)
@@ -115,7 +116,7 @@ internal class EasterEggOverlay(activity: MainUiHost) : FrameLayout(activity) {
         )
         val segment3 = VerticalMessageSegment(
             activity,
-            text = activity.getString(R.string.ui_yay).toString(),
+            text = activity.getString(R.string.ui_yay),
             colors = listOf(
                 Color.rgb(255, 238, 150),
                 Color.rgb(145, 203, 255)
@@ -126,40 +127,40 @@ internal class EasterEggOverlay(activity: MainUiHost) : FrameLayout(activity) {
 
         leftGroup.addView(segment1.apply {
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT
             )
         })
         leftGroup.addView(segment2.apply {
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT
             ).apply {
-                leftMargin = activity.dp(AboutTokens.SegmentGapDp)
+                leftMargin = activity.dp(AboutTokens.SEGMENT_GAP_DP)
             }
         })
         rightGroup.addView(segment3.apply {
             layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT
             )
         })
 
         addView(leftGroup, LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
+            LayoutParams.WRAP_CONTENT,
+            LayoutParams.WRAP_CONTENT,
             Gravity.START or Gravity.TOP
         ).apply {
-            leftMargin = activity.dp(AboutTokens.SegmentSideMarginDp)
+            leftMargin = activity.dp(AboutTokens.SEGMENT_SIDE_MARGIN_DP)
             topMargin = activity.dp(AirUiTokens.Space.Xxl)
         })
 
         addView(rightGroup, LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
+            LayoutParams.WRAP_CONTENT,
+            LayoutParams.WRAP_CONTENT,
             Gravity.END or Gravity.TOP
         ).apply {
-            rightMargin = activity.dp(AboutTokens.SegmentSideMarginDp)
+            rightMargin = activity.dp(AboutTokens.SEGMENT_SIDE_MARGIN_DP)
             topMargin = activity.dp(AirUiTokens.Space.Xxl)
         })
     }
@@ -178,6 +179,7 @@ internal class EasterEggOverlay(activity: MainUiHost) : FrameLayout(activity) {
     }
 }
 
+@SuppressLint("ViewConstructor")
 private class VerticalMessageSegment(
     activity: MainUiHost,
     text: String,
@@ -192,7 +194,7 @@ private class VerticalMessageSegment(
         text.forEachIndexed { index, ch ->
             val textView = TextView(activity).apply {
                 this.text = ch.toString()
-                textSize = AboutTokens.SegmentTextSp
+                textSize = AboutTokens.SEGMENT_TEXT_SP
                 typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD_ITALIC)
                 setTextColor(colors[index % colors.size])
                 alpha = 0f
@@ -205,15 +207,13 @@ private class VerticalMessageSegment(
                 }
                 setPadding(0, 0, 0, activity.dp(AirUiTokens.Stroke.Hairline))
                 includeFontPadding = false
-                letterSpacing = AboutTokens.SegmentLetterSpacing
-                setShadowLayer(AboutTokens.SegmentShadowRadius, 0f, 0f, Color.argb(AboutTokens.SegmentShadowAlpha, 255, 255, 255))
+                letterSpacing = AboutTokens.SEGMENT_LETTER_SPACING
+                setShadowLayer(AboutTokens.SEGMENT_SHADOW_RADIUS, 0f, 0f, Color.argb(AboutTokens.SEGMENT_SHADOW_ALPHA, 255, 255, 255))
             }
             charViews += textView
             addView(textView)
         }
     }
-
-    fun isRevealed(): Boolean = revealed
 
     fun reveal() {
         if (revealed) return
@@ -222,8 +222,8 @@ private class VerticalMessageSegment(
             textView.animate()
                                 .alpha(AirUiTokens.Motion.RestAlpha)
                 .translationY(0f)
-                .setStartDelay(index * AboutTokens.SegmentRevealDelayMs)
-                .setDuration(AboutTokens.SegmentRevealMs)
+                .setStartDelay(index * AboutTokens.SEGMENT_REVEAL_DELAY_MS)
+                .setDuration(AboutTokens.SEGMENT_REVEAL_MS)
                 .setInterpolator(DecelerateInterpolator())
                 .setListener(object : AnimatorListenerAdapter() {
                     override fun onAnimationEnd(animation: Animator) {
@@ -236,20 +236,20 @@ private class VerticalMessageSegment(
 
     private fun startFloatingJitter(view: TextView, index: Int) {
         val direction = if (index % 2 == 0) 1f else -1f
-        ObjectAnimator.ofFloat(view, View.TRANSLATION_Y, 0f, 0f - AboutTokens.SegmentJitterDistance * direction, 0f).apply {
-            duration = AboutTokens.SegmentJitterBaseMs + index * AboutTokens.SegmentJitterStepMs
+        ObjectAnimator.ofFloat(view, TRANSLATION_Y, 0f, 0f - AboutTokens.SEGMENT_JITTER_DISTANCE * direction, 0f).apply {
+            duration = AboutTokens.SEGMENT_JITTER_BASE_MS + index * AboutTokens.SEGMENT_JITTER_STEP_MS
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.RESTART
             interpolator = DecelerateInterpolator()
-            startDelay = index * AboutTokens.SegmentJitterDelayStepMs
+            startDelay = index * AboutTokens.SEGMENT_JITTER_DELAY_STEP_MS
             start()
         }
-        ObjectAnimator.ofFloat(view, View.ROTATION, view.rotation, view.rotation + AboutTokens.SegmentRotateDistance * direction, view.rotation).apply {
-            duration = AboutTokens.SegmentRotateBaseMs + index * AboutTokens.SegmentRotateStepMs
+        ObjectAnimator.ofFloat(view, ROTATION, view.rotation, view.rotation + AboutTokens.SEGMENT_ROTATE_DISTANCE * direction, view.rotation).apply {
+            duration = AboutTokens.SEGMENT_ROTATE_BASE_MS + index * AboutTokens.SEGMENT_ROTATE_STEP_MS
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.RESTART
             interpolator = DecelerateInterpolator()
-            startDelay = index * AboutTokens.SegmentRotateDelayStepMs
+            startDelay = index * AboutTokens.SEGMENT_ROTATE_DELAY_STEP_MS
             start()
         }
     }

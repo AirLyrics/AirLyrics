@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.isVisible
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
@@ -88,9 +89,10 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
                         selected = option.key == selectedSource,
                         action = {
                             uiActions.selectLyricsSource(option.key)
-                            val selected = source
-                            sourceStatus.text = getString(R.string.settings_current_value, localizedLyricsSourceTitle(selected))
-                            sourceHint.text = localizedLyricsSourceHint(selected)
+                            sourceStatus.text = getString(R.string.settings_current_value, localizedLyricsSourceTitle(
+                                source
+                            ))
+                            sourceHint.text = localizedLyricsSourceHint(source)
                             playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, getString(R.string.ui_saved))
                         }
                     )
@@ -487,14 +489,14 @@ private fun createRecentLyricsCard(activity: MainUiHost): View  = with(activity)
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextMuted)
             alpha = 0f
-            visibility = View.GONE
+            isVisible = false
             setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
         }
         closeHeaderHint = {
-            if (hintText.visibility == View.VISIBLE || hintText.alpha > 0f) {
+            if (hintText.isVisible || hintText.alpha > 0f) {
                 hintText.animate().cancel()
                 hintText.alpha = 0f
-                hintText.visibility = View.GONE
+                hintText.isVisible = false
             }
         }
 
@@ -532,12 +534,12 @@ private fun createRecentLyricsCard(activity: MainUiHost): View  = with(activity)
                         }
                         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                         setOnClickListener {
-                            if (hintText.visibility == View.VISIBLE) {
+                            if (hintText.isVisible) {
                                 hintText.animate().alpha(0f).setDuration(AirUiTokens.Motion.HintOutMs).withEndAction {
-                                    hintText.visibility = View.GONE
+                                    hintText.isVisible = false
                                 }.start()
                             } else {
-                                hintText.visibility = View.VISIBLE
+                                hintText.isVisible = true
                                 hintText.alpha = 0f
                                 hintText.animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).start()
                             }

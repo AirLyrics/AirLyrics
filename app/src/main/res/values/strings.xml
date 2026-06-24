@@ -346,7 +346,7 @@ Enhanced LRC recommended format:
     <string name="ui_vinyl_bubble">Vinyl bubble</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
     <string name="ui_waiting_for_media">Waiting for media</string>
-    <string name="ui_waiting_for_media_message">♪ Waiting for media...</string>
+    <string name="ui_waiting_for_media_message">♪ Waiting for media…</string>
     <string name="ui_waiting_for_music_signal">Waiting for music signal</string>
     <string name="ui_whats_new">New in this version</string>
     <string name="ui_white">White</string>

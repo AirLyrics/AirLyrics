@@ -12,7 +12,6 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import com.andsi.airlyrics.R
@@ -45,8 +44,6 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
 
     val pageFrame = FrameLayout(this)
     var previewHandle: FloatingPreviewCardHandle? = null
-    var baseContentView: View? = null
-    var contentScroll: ScrollView? = null
     var focusOverlay: FrameLayout? = null
     var activeBubble: LinearLayout? = null
     var selectedTileView: View? = null
@@ -61,10 +58,6 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
     fun karaokeLyricsEnabled() = LyricsSettingsStore.isKaraokeLyricsEnabled(this)
     fun wordLyricsSubtitle(): String = if (karaokeLyricsEnabled()) getString(R.string.ui_local_enhanced_lrc) else getString(R.string.ui_off)
     var previewExpanded = FloatingLyricsStyleStore.isPreviewExpanded(this)
-
-    fun lyricsDisplaySummary(): String {
-        return "${localizedLyricsContentModeTitle(contentDisplayMode())} · ${localizedLyricsLineModeTitle(lineDisplayMode())}"
-    }
 
     fun previewLyricsText(): String {
         val previous = previewLineText(contentDisplayMode(), getString(R.string.ui_previous_lyric_preview), "Previous lyric preview")
@@ -324,7 +317,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         }
     }
 
-    previewHandle = createFloatingPreviewCard(
+    val createdPreviewHandle = createFloatingPreviewCard(
         isExpanded = { previewExpanded },
         setExpanded = { expanded ->
             previewExpanded = expanded
@@ -338,7 +331,8 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         summaryText = { floatingPreviewSummary(style()) },
         onExpandedChanged = { refreshFloatingSettingTiles() }
     )
-    root.addView(previewHandle!!.cardView)
+    previewHandle = createdPreviewHandle
+    root.addView(createdPreviewHandle.cardView)
 
     val list = pageContainer(activity).apply {
         setPadding(0, dp(FloatingPageTokens.LIST_PADDING_TOP_DP), 0, 0)
@@ -679,8 +673,8 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         addView(summaryButton)
     }
 
-    contentScroll = scroll(activity, list)
-    pageFrame.addView(contentScroll!!.apply {
+    val contentScroll = scroll(activity, list)
+    pageFrame.addView(contentScroll.apply {
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
@@ -694,7 +688,6 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         )
     })
 
-    baseContentView = pageFrame
     rootFrame.addView(root.apply {
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

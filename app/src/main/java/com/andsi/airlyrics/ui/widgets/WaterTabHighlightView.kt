@@ -3,17 +3,25 @@ package com.andsi.airlyrics.ui.widgets
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
+import android.util.AttributeSet
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import kotlin.math.PI
 import kotlin.math.sin
 
-class WaterTabHighlightView(
+class WaterTabHighlightView @JvmOverloads constructor(
     context: Context,
-    private val accentColor: Int
-) : View(context) {
+    attrs: AttributeSet? = null,
+    defStyleAttr: Int = 0
+) : View(context, attrs, defStyleAttr) {
+    constructor(context: Context, accentColor: Int) : this(context, null, 0) {
+        setAccentColor(accentColor)
+    }
+
+    private var accentColor: Int = Color.TRANSPARENT
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = accentColor
     }
@@ -31,6 +39,15 @@ class WaterTabHighlightView(
     private var stretch = 0f
     var hasPosition = false
         private set
+
+    fun setAccentColor(color: Int) {
+        if (accentColor == color) return
+        accentColor = color
+        paint.color = color
+        glowPaint.color = color
+        glowPaint.alpha = 54
+        invalidate()
+    }
 
     fun moveTo(
         targetCenterX: Float,
@@ -122,4 +139,3 @@ class WaterTabHighlightView(
         return start + (end - start) * amount
     }
 }
-

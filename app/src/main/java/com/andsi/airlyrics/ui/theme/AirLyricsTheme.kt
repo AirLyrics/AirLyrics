@@ -37,19 +37,6 @@ internal object AirLyricsTheme {
         textMuted = Color.rgb(178, 148, 164)
     )
 
-    val colorSwatches = listOf(
-        Color.rgb(255, 88, 88),
-        Color.rgb(255, 159, 67),
-        Color.rgb(255, 221, 89),
-        Color.rgb(46, 213, 115),
-        Color.rgb(112, 161, 255),
-        Color.rgb(83, 82, 237),
-        Color.rgb(223, 108, 255),
-        Color.rgb(176, 226, 255),
-        Color.rgb(10, 14, 24),
-        Color.TRANSPARENT
-    )
-
     fun palette(isDark: Boolean): AirLyricsPalette {
         return if (isDark) darkPalette else lightPalette
     }

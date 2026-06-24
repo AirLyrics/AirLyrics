@@ -347,7 +347,7 @@ This is a lyric preview</string>
     <string name="ui_vinyl_bubble">黑胶气泡</string>
     <string name="ui_waiting_for_current_song">等待当前音乐</string>
     <string name="ui_waiting_for_media">等待媒体信息</string>
-    <string name="ui_waiting_for_media_message">♪ 等待媒体信息...</string>
+    <string name="ui_waiting_for_media_message">♪ 等待媒体信息…</string>
     <string name="ui_waiting_for_music_signal">等待音乐信号</string>
     <string name="ui_whats_new">当前版本更新</string>
     <string name="ui_white">白</string>
