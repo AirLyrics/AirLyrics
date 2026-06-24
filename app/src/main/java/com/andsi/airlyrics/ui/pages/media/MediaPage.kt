@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.ui.pages
+package com.andsi.airlyrics.ui.pages.media
 
 import com.andsi.airlyrics.R
 

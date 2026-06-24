@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.ui.pages
+package com.andsi.airlyrics.ui.pages.floating
 
 /**
  * Layout and motion constants for the floating lyrics settings page.

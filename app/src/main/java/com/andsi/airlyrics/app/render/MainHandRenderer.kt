@@ -13,9 +13,9 @@ import com.andsi.airlyrics.ui.components.animatePageEnter
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.createBottomTabs
 import com.andsi.airlyrics.ui.navigation.updateTabs
-import com.andsi.airlyrics.ui.pages.createFloatingPage
-import com.andsi.airlyrics.ui.pages.createMediaPage
-import com.andsi.airlyrics.ui.pages.createSettingsPage
+import com.andsi.airlyrics.ui.pages.floating.createFloatingPage
+import com.andsi.airlyrics.ui.pages.media.createMediaPage
+import com.andsi.airlyrics.ui.pages.settings.createSettingsPage
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
