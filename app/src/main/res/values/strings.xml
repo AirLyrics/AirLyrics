@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">AirLyrics</string>
-    <string name="field_value">%1$s: %2$s</string>
-    <string name="field_value_with_suffix">%1$s: %2$s%3$s</string>
+    <string name="field_value">%1$s: %2$d</string>
+    <string name="field_value_with_suffix">%1$s: %2$d%3$s</string>
     <string name="floating_color_summary">%1$s: %2$s</string>
     <string name="floating_preview_summary">Current: %1$s · %2$dsp · %3$s · Width %4$d%%</string>
     <string name="floating_slider_value">%1$s: %2$d</string>
@@ -26,6 +26,7 @@
     <string name="source_label">Source: %1$s</string>
     <string name="state_disabled">Disabled</string>
     <string name="state_enabled">Enabled</string>
+    <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">About</string>
     <string name="ui_active_players">Active players</string>
     <string name="ui_adjustment_mode">Adjustment mode</string>

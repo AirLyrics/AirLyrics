@@ -5,7 +5,6 @@ import com.andsi.airlyrics.R
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.ViewGroup
@@ -15,6 +14,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.graphics.drawable.toDrawable
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -134,7 +134,7 @@ internal fun MainUiHost.showAirDialog(
     dialog.setContentView(root)
     dialog.setOnShowListener {
         dialog.window?.apply {
-            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             setDimAmount(AirUiTokens.Layout.DialogDimAmount)
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)

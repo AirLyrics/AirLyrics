@@ -12,7 +12,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -25,16 +24,9 @@ import androidx.activity.OnBackPressedCallback
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.controller.AppMediaController
 import com.andsi.airlyrics.app.controller.FloatingController
-import com.andsi.airlyrics.app.controller.FloatingLyricsReloader
-import com.andsi.airlyrics.app.controller.FloatingNavFeedback
-import com.andsi.airlyrics.app.controller.FloatingSourceNotifier
 import com.andsi.airlyrics.app.controller.LyricsController
 import com.andsi.airlyrics.app.controller.MainDialogHost
-import com.andsi.airlyrics.app.controller.MainServiceStarter
 import com.andsi.airlyrics.app.controller.MainTaskRunner
-import com.andsi.airlyrics.app.controller.MediaPageRefreshScheduler
-import com.andsi.airlyrics.app.controller.MediaSourceSelectionRenderer
-import com.andsi.airlyrics.app.controller.OverlayPermissionRequester
 import com.andsi.airlyrics.app.lifecycle.MainLaunchers
 import com.andsi.airlyrics.app.lifecycle.MainReceivers
 import com.andsi.airlyrics.app.render.MainHandRenderer
@@ -85,19 +77,19 @@ internal class MainGraph(
             context = activity,
             state = state,
             invalidator = uiInvalidator,
-            serviceStarter = MainServiceStarter { intent -> startLyricsServiceSafely(intent) },
-            overlayPermissionRequester = OverlayPermissionRequester { requestOverlayPermission() },
-            navFeedback = FloatingNavFeedback { playFloatingNavToggleFeedback() }
+            serviceStarter = { intent -> startLyricsServiceSafely(intent) },
+            overlayPermissionRequester = { requestOverlayPermission() },
+            navFeedback = { playFloatingNavToggleFeedback() }
         )
     }
     val appMediaController: AppMediaController by lazy {
         AppMediaController(
             context = activity,
-            mediaPageRefreshScheduler = MediaPageRefreshScheduler { scheduleMediaPageRefresh() },
-            sourceSelectionRenderer = MediaSourceSelectionRenderer { packageName ->
+            mediaPageRefreshScheduler = { scheduleMediaPageRefresh() },
+            sourceSelectionRenderer = { packageName ->
                 uiHost.updateMediaSourceSelectionVisualsImpl(packageName)
             },
-            floatingSourceNotifier = FloatingSourceNotifier { packageName ->
+            floatingSourceNotifier = { packageName ->
                 floatingController.notifySourceChangedIfVisible(packageName)
             }
         )
@@ -109,7 +101,7 @@ internal class MainGraph(
             taskRunner = mainTaskRunner,
             dialogHost = mainDialogHost,
             mediaControllerProvider = appMediaController,
-            floatingLyricsReloader = FloatingLyricsReloader { floatingController.reloadLyrics() }
+            floatingLyricsReloader = { floatingController.reloadLyrics() }
         )
     }
     val uiActions: MainUiActions by lazy { createMainUiActions() }
@@ -289,11 +281,6 @@ internal class MainGraph(
         uiInvalidator.refresh()
     }
 
-    fun currentLyricsOffsetMs(): Long? {
-        val media = lyricsController.getCurrentMediaSnapshot() ?: return null
-        return LyricsOffsetStore.getOffsetMs(activity, media)
-    }
-
     fun currentLyricsOffsetSummary(): String {
         val media = lyricsController.getCurrentMediaSnapshot() ?: return activity.getString(R.string.ui_waiting_for_current_song)
         return activity.localizedOffsetDescription(LyricsOffsetStore.getOffsetMs(activity, media))
@@ -408,11 +395,7 @@ internal class MainGraph(
 
     fun startLyricsServiceSafely(intent: Intent): Boolean {
         return runCatching {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                activity.startForegroundService(intent)
-            } else {
-                activity.startService(intent)
-            }
+            activity.startForegroundService(intent)
         }.isSuccess
     }
 
@@ -451,7 +434,7 @@ internal class MainGraph(
         onClick: () -> Unit
     ): TextView {
         return TextView(activity).apply {
-            text = "$title\n$subtitle"
+            text = activity.getString(R.string.ui_title_subtitle, title, subtitle)
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(if (primary) Color.WHITE else uiHost.colorTextStrong)

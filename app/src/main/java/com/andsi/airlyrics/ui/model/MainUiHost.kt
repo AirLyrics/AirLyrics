@@ -35,12 +35,6 @@ internal abstract class MainUiHost(
     var settingsSubPage: SettingsSubPage
         get() = uiState.settingsSubPage
         set(value) { uiState.settingsSubPage = value }
-    var locked: Boolean
-        get() = uiState.locked
-        set(value) { uiState.locked = value }
-    var clickThrough: Boolean
-        get() = uiState.clickThrough
-        set(value) { uiState.clickThrough = value }
     var quickFloatingVisible: Boolean
         get() = uiState.quickFloatingVisible
         set(value) { uiState.quickFloatingVisible = value }
@@ -50,20 +44,9 @@ internal abstract class MainUiHost(
     var recentLyricsLoadGeneration: Int
         get() = uiState.recentLyricsLoadGeneration
         set(value) { uiState.recentLyricsLoadGeneration = value }
-    val pageScrollY: MutableMap<Page, Int>
-        get() = uiState.pageScrollY
-    var renderedPage: Page
-        get() = uiState.renderedPage
-        set(value) { uiState.renderedPage = value }
-    var renderedSettingsSubPage: SettingsSubPage
-        get() = uiState.renderedSettingsSubPage
-        set(value) { uiState.renderedSettingsSubPage = value }
     var mediaRefreshState: RefreshState
         get() = uiState.mediaRefreshState
         set(value) { uiState.mediaRefreshState = value }
-    var mediaPageRefreshScheduled: Boolean
-        get() = uiState.mediaPageRefreshScheduled
-        set(value) { uiState.mediaPageRefreshScheduled = value }
 
     abstract val tabViews: MutableMap<Page, TextView>
     abstract var tabRow: LinearLayout?

@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.components
 
+import android.annotation.SuppressLint
 import android.animation.LayoutTransition
 import android.graphics.Color
 import android.graphics.Typeface
@@ -281,6 +282,7 @@ internal fun softLayoutTransition(): LayoutTransition {
     }
 }
 
+@SuppressLint("ClickableViewAccessibility")
 internal fun View.enableSoftPressFeedback(pressedScale: Float = AirUiTokens.Motion.DefaultPressScale) {
     setOnTouchListener { v, event ->
         when (event.actionMasked) {

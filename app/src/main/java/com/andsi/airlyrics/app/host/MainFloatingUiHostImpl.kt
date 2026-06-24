@@ -129,7 +129,6 @@ internal fun MainUiHost.liveOptionGridImpl(items: List<KeyedOptionItem>): Linear
 }
 
 internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
-    val activity = this
     return TextView(this).apply {
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Body
@@ -145,8 +144,7 @@ internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
 }
 
 internal fun MainUiHost.applyOptionButtonStateImpl(button: TextView, title: String, selected: Boolean) {
-    val activity = this
-    button.text = if (selected) "✓ ${title}" else title
+    button.text = if (selected) "✓ $title" else title
     button.setTextColor(if (selected) Color.WHITE else colorText)
     button.background = GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
@@ -170,7 +168,7 @@ internal fun MainUiHost.sliderRowImpl(
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
 
         val valueText = TextView(activity).apply {
-            text = getString(R.string.field_value_with_suffix, title, safeValue.toString(), suffix)
+            text = getString(R.string.field_value_with_suffix, title, safeValue, suffix)
             textSize = AirUiTokens.TextSize.Body
             setTextColor(colorText)
             setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
@@ -183,7 +181,7 @@ internal fun MainUiHost.sliderRowImpl(
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val newValue = min + progress
-                    valueText.text = getString(R.string.field_value_with_suffix, title, newValue.toString(), suffix)
+                    valueText.text = getString(R.string.field_value_with_suffix, title, newValue, suffix)
                     if (fromUser) onChanged(newValue)
                 }
 
@@ -329,18 +327,18 @@ internal fun MainUiHost.colorControlImpl(
         val redSlider = colorSliderRow("R", red) { red = it }
         val greenSlider = colorSliderRow("G", green) { green = it }
         val blueSlider = colorSliderRow("B", blue) { blue = it }
-        val alphaSlider = colorSliderRow(getString(R.string.ui_opacity).toString(), alpha) { alpha = it }
+        val alphaSlider = colorSliderRow(getString(R.string.ui_opacity), alpha) { alpha = it }
 
         fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
             pair.first.progress = value.coerceIn(0, 255)
-            pair.second.text = getString(R.string.field_value, titleText, value.toString())
+            pair.second.text = getString(R.string.field_value, titleText, value)
         }
 
         fun syncSliders() {
             setSlider(redSlider, "R", red)
             setSlider(greenSlider, "G", green)
             setSlider(blueSlider, "B", blue)
-            setSlider(alphaSlider, getString(R.string.ui_opacity).toString(), alpha)
+            setSlider(alphaSlider, getString(R.string.ui_opacity), alpha)
         }
 
         fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
@@ -414,7 +412,6 @@ internal fun MainUiHost.colorControlImpl(
 }
 
 internal fun MainUiHost.colorPreviewBackgroundImpl(color: Int): GradientDrawable {
-    val activity = this
     return GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
         setColor(withAlpha(color, 42))
@@ -422,14 +419,12 @@ internal fun MainUiHost.colorPreviewBackgroundImpl(color: Int): GradientDrawable
     }
 }
 
-internal fun MainUiHost.isDarkColorImpl(color: Int): Boolean {
-    val activity = this
+internal fun isDarkColorImpl(color: Int): Boolean {
     val luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color))
     return luminance < 150
 }
 
-internal fun MainUiHost.withAlphaImpl(color: Int, alpha: Int): Int {
-    val activity = this
+internal fun withAlphaImpl(color: Int, alpha: Int): Int {
     return Color.argb(
         alpha.coerceIn(0, 255),
         Color.red(color),

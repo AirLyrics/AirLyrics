@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">AirLyrics</string>
-    <string name="field_value">%1$s：%2$s</string>
-    <string name="field_value_with_suffix">%1$s：%2$s%3$s</string>
+    <string name="field_value">%1$s：%2$d</string>
+    <string name="field_value_with_suffix">%1$s：%2$d%3$s</string>
     <string name="floating_color_summary">%1$s：%2$s</string>
     <string name="floating_preview_summary">当前：%1$s · %2$dsp · %3$s · 宽度 %4$d%%</string>
     <string name="floating_slider_value">%1$s：%2$d</string>
@@ -26,6 +26,7 @@
     <string name="source_label">当前来源：%1$s</string>
     <string name="state_disabled">已关闭</string>
     <string name="state_enabled">已开启</string>
+    <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">关于</string>
     <string name="ui_active_players">活跃播放器</string>
     <string name="ui_adjustment_mode">调整模式</string>

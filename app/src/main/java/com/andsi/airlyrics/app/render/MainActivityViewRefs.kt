@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.render
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 

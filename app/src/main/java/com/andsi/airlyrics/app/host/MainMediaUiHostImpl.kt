@@ -20,11 +20,9 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
-import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
 
@@ -118,7 +116,6 @@ internal fun MainUiHost.refreshMediaButtonImpl(): View {
 }
 
 internal fun MainUiHost.startMediaRefreshFeedbackImpl(onStateChanged: () -> Unit) {
-    val activity = this
     mediaRefreshHandler.removeCallbacksAndMessages(null)
     mediaRefreshState = RefreshState.REFRESHING
     onStateChanged()
@@ -135,7 +132,6 @@ internal fun MainUiHost.startMediaRefreshFeedbackImpl(onStateChanged: () -> Unit
 }
 
 internal fun MainUiHost.updateMediaSourceSelectionVisualsImpl(selectedPackage: String) {
-    val activity = this
     val root = contentContainer ?: return
     fun visit(view: View) {
         if (view is TextView) {
@@ -154,4 +150,3 @@ internal fun MainUiHost.updateMediaSourceSelectionVisualsImpl(selectedPackage: S
     }
     visit(root)
 }
-

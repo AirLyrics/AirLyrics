@@ -116,7 +116,7 @@ internal fun quickFloatingTabText(activity: MainUiHost, visible: Boolean): Spann
     }
 }
 
-internal fun measureTabTextWidth(activity: MainUiHost, tab: TextView): Float  = with(activity) measureTabTextWidth@ {
+internal fun measureTabTextWidth(tab: TextView): Float {
     val lines = tab.text.toString().split('\n')
     return lines.maxOfOrNull { tab.paint.measureText(it) } ?: tab.paint.measureText(tab.text.toString())
 }
@@ -167,7 +167,7 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
     selectedTab.post {
         val highlight = tabHighlight ?: return@post
         val selectedSlot = selectedTab.parent as? View ?: selectedTab
-        val textWidth = measureTabTextWidth(activity, selectedTab)
+        val textWidth = measureTabTextWidth(selectedTab)
         val horizontalPadding = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingPadding) else dp(AirUiTokens.Layout.BottomTabDefaultPadding)
         val targetWidth = (textWidth + horizontalPadding).coerceIn(
             dp(AirUiTokens.Layout.BottomTabMinWidth).toFloat(),
