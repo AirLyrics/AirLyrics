@@ -379,24 +379,28 @@ class FloatingLyricsService : Service() {
     private fun restoreFromDesiredState() {
         selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
         if (QuickFloatingStore.isDesiredVisible(this)) {
-            showLyrics(feedback = null)
+            showLyrics(feedback = null, updateDesiredVisible = false)
         } else {
             broadcastWindowVisibility(false)
             refreshQuickControls()
         }
     }
 
-    private fun showLyrics(feedback: String? = null): Boolean {
-        QuickFloatingStore.setDesiredVisible(this, true)
+    private fun showLyrics(
+        feedback: String? = null,
+        updateDesiredVisible: Boolean = true
+    ): Boolean {
+        if (updateDesiredVisible) {
+            QuickFloatingStore.setDesiredVisible(this, true)
+        }
         val shown = runCatching { windowController.show() }.getOrElse {
             windowController.hide()
             false
         }
         if (!shown) {
-            QuickFloatingStore.setDesiredVisible(this, false)
             broadcastWindowVisibility(false)
         }
-        refreshQuickControls(feedback)
+        refreshQuickControls(if (shown) feedback else null)
         return shown
     }
 
@@ -430,7 +434,6 @@ class FloatingLyricsService : Service() {
         val nextVisible = !windowController.isVisible
         if (nextVisible) {
             if (!showLyrics(feedback = getString(R.string.ui_shown))) {
-                QuickFloatingStore.setDesiredVisible(this, false)
                 refreshQuickControls(getString(R.string.ui_overlay_permission_required))
                 showQuickFeedback(getString(R.string.ui_enable_overlay_permission_first))
             }

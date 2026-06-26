@@ -81,23 +81,20 @@ internal class FloatingController(
     }
 
     fun showLyrics(): Boolean {
+        setDesiredVisible(true)
         if (!Settings.canDrawOverlays(context)) {
             if (!overlayPermissionHintShown) {
                 Toast.makeText(context, context.getString(R.string.ui_enable_overlay_permission_first), Toast.LENGTH_LONG).show()
                 overlayPermissionHintShown = true
             }
-            setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingState()
             overlayPermissionRequester.requestOverlayPermission()
             return false
         }
 
-        setDesiredVisible(true)
         val sent = sendFloatingCommand(BroadcastActions.SHOW)
         if (!sent) {
-            setDesiredVisible(false)
-            updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingState()
         }
         return sent
@@ -117,16 +114,13 @@ internal class FloatingController(
         if (!QuickFloatingStore.isDesiredVisible(context)) return
 
         if (!Settings.canDrawOverlays(context)) {
-            setDesiredVisible(false)
             updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingState()
             return
         }
 
-        val sent = sendFloatingCommand(BroadcastActions.SHOW)
+        val sent = startFloatingService()
         if (!sent) {
-            setDesiredVisible(false)
-            updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingState()
         }
     }
@@ -231,8 +225,14 @@ internal class FloatingController(
         action: String,
         configure: Intent.() -> Unit = {}
     ): Boolean {
-        val intent = Intent(context, FloatingLyricsService::class.java).apply {
+        return startFloatingService {
             this.action = action
+            configure()
+        }
+    }
+
+    private fun startFloatingService(configure: Intent.() -> Unit = {}): Boolean {
+        val intent = Intent(context, FloatingLyricsService::class.java).apply {
             configure()
         }
         return serviceStarter.startLyricsServiceSafely(intent)
