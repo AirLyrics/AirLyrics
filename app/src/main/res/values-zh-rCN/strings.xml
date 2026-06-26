@@ -216,6 +216,7 @@ This is a lyric preview</string>
     <string name="ui_overlay">悬浮窗权限</string>
     <string name="ui_overlay_and_notification_permissions">悬浮窗、通知权限、通知访问权限。</string>
     <string name="ui_overlay_permission_required">需要悬浮窗权限</string>
+    <string name="ui_permit">授权</string>
     <string name="ui_overwrite">覆盖</string>
     <string name="ui_overwrite_local_enhanced_lrc">覆盖本地逐字歌词？</string>
     <string name="ui_overwrite_plain_lyrics">覆盖普通歌词？</string>

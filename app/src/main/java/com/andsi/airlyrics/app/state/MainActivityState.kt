@@ -12,6 +12,7 @@ internal interface MainFloatingState {
     var locked: Boolean
     var clickThrough: Boolean
     var quickFloatingVisible: Boolean
+    var overlayPermissionGranted: Boolean
 }
 
 internal class MainActivityState : MainFloatingState, MainUiState {
@@ -20,6 +21,7 @@ internal class MainActivityState : MainFloatingState, MainUiState {
     override var currentPage: Page = Page.MEDIA
     override var settingsSubPage: SettingsSubPage = SettingsSubPage.HOME
     override var quickFloatingVisible: Boolean = false
+    override var overlayPermissionGranted: Boolean = false
     override val pageScrollY: MutableMap<Page, Int> = mutableMapOf()
     override var renderedPage: Page = Page.MEDIA
     override var renderedSettingsSubPage: SettingsSubPage = SettingsSubPage.HOME

@@ -32,6 +32,7 @@ internal class FloatingController(
         val previousVisible = state.quickFloatingVisible
         val previousLocked = state.locked
         val previousClickThrough = state.clickThrough
+        val previousOverlayPermissionGranted = state.overlayPermissionGranted
         val visible = intent.getBooleanExtra(
             BroadcastActions.EXTRA_WINDOW_VISIBLE,
             state.quickFloatingVisible
@@ -46,11 +47,13 @@ internal class FloatingController(
         )
         state.locked = locked
         state.clickThrough = clickThrough
+        val overlayPermissionGranted = updateOverlayPermissionGranted()
         updateQuickFloatingActualVisible(visible)
 
         val floatingStateChanged = previousVisible != visible ||
             previousLocked != locked ||
-            previousClickThrough != clickThrough
+            previousClickThrough != clickThrough ||
+            previousOverlayPermissionGranted != overlayPermissionGranted
         if (action == BroadcastActions.WINDOW_VISIBILITY_CHANGED || floatingStateChanged) {
             invalidator.refreshFloatingState()
         }
@@ -82,12 +85,11 @@ internal class FloatingController(
 
     fun showLyrics(): Boolean {
         setDesiredVisible(true)
-        if (!Settings.canDrawOverlays(context)) {
+        if (!updateOverlayPermissionGranted()) {
             if (!overlayPermissionHintShown) {
                 Toast.makeText(context, context.getString(R.string.ui_enable_overlay_permission_first), Toast.LENGTH_LONG).show()
                 overlayPermissionHintShown = true
             }
-            updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingState()
             overlayPermissionRequester.requestOverlayPermission()
             return false
@@ -113,8 +115,7 @@ internal class FloatingController(
     fun restoreVisibleWindowIfNeeded() {
         if (!QuickFloatingStore.isDesiredVisible(context)) return
 
-        if (!Settings.canDrawOverlays(context)) {
-            updateQuickFloatingActualVisible(false)
+        if (!updateOverlayPermissionGranted()) {
             invalidator.refreshFloatingState()
             return
         }
@@ -128,6 +129,11 @@ internal class FloatingController(
     fun toggleFromNav() {
         navFeedback.playFloatingNavToggleFeedback()
 
+        if (!updateOverlayPermissionGranted()) {
+            showLyrics()
+            return
+        }
+
         if (state.quickFloatingVisible) {
             hideLyrics()
         } else {
@@ -137,6 +143,12 @@ internal class FloatingController(
 
     fun updateQuickFloatingActualVisible(visible: Boolean) {
         state.quickFloatingVisible = visible
+    }
+
+    private fun updateOverlayPermissionGranted(): Boolean {
+        val granted = Settings.canDrawOverlays(context)
+        state.overlayPermissionGranted = granted
+        return granted
     }
 
     private fun setDesiredVisible(visible: Boolean) {

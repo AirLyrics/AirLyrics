@@ -38,6 +38,9 @@ internal abstract class MainUiHost(
     var quickFloatingVisible: Boolean
         get() = uiState.quickFloatingVisible
         set(value) { uiState.quickFloatingVisible = value }
+    var overlayPermissionGranted: Boolean
+        get() = uiState.overlayPermissionGranted
+        set(value) { uiState.overlayPermissionGranted = value }
     var currentLyricsLoadGeneration: Int
         get() = uiState.currentLyricsLoadGeneration
         set(value) { uiState.currentLyricsLoadGeneration = value }

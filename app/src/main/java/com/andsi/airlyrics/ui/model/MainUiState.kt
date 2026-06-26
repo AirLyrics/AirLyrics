@@ -9,6 +9,7 @@ internal interface MainUiState {
     var locked: Boolean
     var clickThrough: Boolean
     var quickFloatingVisible: Boolean
+    var overlayPermissionGranted: Boolean
     val pageScrollY: MutableMap<Page, Int>
     var renderedPage: Page
     var renderedSettingsSubPage: SettingsSubPage

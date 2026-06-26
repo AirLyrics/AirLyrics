@@ -15,6 +15,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
 import android.view.ViewGroup
 import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
@@ -165,6 +166,7 @@ internal class MainGraph(
         state.locked = FloatingLyricsStyleStore.isLocked(activity)
         state.clickThrough = FloatingLyricsStyleStore.isClickThrough(activity)
         state.quickFloatingVisible = false
+        state.overlayPermissionGranted = Settings.canDrawOverlays(activity)
         uiHost.applySystemBarsTheme()
         registerBackNavigationCallback()
         activity.setContentView(mainHandRenderer.createMainView())
@@ -183,6 +185,7 @@ internal class MainGraph(
 
         state.locked = FloatingLyricsStyleStore.isLocked(activity)
         state.clickThrough = FloatingLyricsStyleStore.isClickThrough(activity)
+        state.overlayPermissionGranted = Settings.canDrawOverlays(activity)
         floatingController.restoreVisibleWindowIfNeeded()
         uiInvalidator.refreshCurrentPage()
     }

@@ -107,9 +107,21 @@ internal fun addTab(activity: MainUiHost, parent: LinearLayout, page: Page, titl
     parent.addView(slot)
 }
 
-internal fun quickFloatingTabText(activity: MainUiHost, visible: Boolean): SpannableString  = with(activity) quickFloatingTabText@ {
-    val icon = if (visible) "×" else "♪"
-    val label = if (visible) getString(R.string.ui_hide) else getString(R.string.ui_show)
+internal fun quickFloatingTabText(
+    activity: MainUiHost,
+    visible: Boolean,
+    overlayPermissionGranted: Boolean
+): SpannableString  = with(activity) quickFloatingTabText@ {
+    val icon = when {
+        !overlayPermissionGranted -> "!"
+        visible -> "×"
+        else -> "♪"
+    }
+    val label = when {
+        !overlayPermissionGranted -> getString(R.string.ui_permit)
+        visible -> getString(R.string.ui_hide)
+        else -> getString(R.string.ui_show)
+    }
     return SpannableString("$icon\n$label").apply {
         setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabIconTextSp, true), 0, icon.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabLabelTextSp, true), icon.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -126,7 +138,7 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         val selected = page == currentPage
         val quickControlSelected = page == Page.FLOATING && selected
         val targetText: CharSequence = if (quickControlSelected) {
-            quickFloatingTabText(activity, quickFloatingVisible)
+            quickFloatingTabText(activity, quickFloatingVisible, overlayPermissionGranted)
         } else {
             when (page) {
                 Page.MEDIA -> getString(R.string.ui_media)

@@ -124,7 +124,11 @@ internal class MainActivityUiHost(
     override fun floatingDisplaySummary(): String {
         val lockedText = if (FloatingLyricsStyleStore.isLocked(this)) getString(R.string.ui_locked) else getString(R.string.ui_draggable)
         val clickThroughText = if (FloatingLyricsStyleStore.isClickThrough(this)) getString(R.string.ui_click_through) else getString(R.string.ui_clickable)
-        return "$lockedText · $clickThroughText"
+        return listOfNotNull(
+            if (overlayPermissionGranted) null else getString(R.string.ui_overlay_permission_required),
+            lockedText,
+            clickThroughText
+        ).joinToString(" · ")
     }
 
     override fun floatingLockButtonText(): String {

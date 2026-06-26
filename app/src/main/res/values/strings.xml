@@ -215,6 +215,7 @@
     <string name="ui_overlay">Overlay</string>
     <string name="ui_overlay_and_notification_permissions">Overlay and notification permissions.</string>
     <string name="ui_overlay_permission_required">Overlay permission required</string>
+    <string name="ui_permit">Permit</string>
     <string name="ui_overwrite">Overwrite</string>
     <string name="ui_overwrite_local_enhanced_lrc">Overwrite local Enhanced LRC?</string>
     <string name="ui_overwrite_plain_lyrics">Overwrite plain lyrics?</string>
