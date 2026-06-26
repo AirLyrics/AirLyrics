@@ -61,7 +61,7 @@ internal class MainActivityUiHost(
         get() = graph.mediaRefreshHandler
 
     override fun refreshCurrentPage(animateContent: Boolean, animateTabs: Boolean) {
-        graph.uiInvalidator.refresh(animateContent, animateTabs)
+        graph.uiInvalidator.refreshCurrentPage(animateContent, animateTabs)
     }
 
     override fun rebuildMainView() {

@@ -155,7 +155,7 @@ internal class FloatingController(
         if (!state.quickFloatingVisible) {
             state.locked = nextLocked
             FloatingLyricsStyleStore.setLocked(context, nextLocked)
-            invalidator.refresh()
+            invalidator.refreshCurrentPage()
             return
         }
 
@@ -170,7 +170,7 @@ internal class FloatingController(
         if (!state.quickFloatingVisible) {
             state.clickThrough = nextClickThrough
             FloatingLyricsStyleStore.setClickThrough(context, nextClickThrough)
-            invalidator.refresh()
+            invalidator.refreshCurrentPage()
             return
         }
 
@@ -194,19 +194,19 @@ internal class FloatingController(
     fun applyTextSize(textSizeSp: Float, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setTextSize(context, textSizeSp)
         notifyStyleChanged()
-        if (refreshPage) invalidator.refresh()
+        if (refreshPage) invalidator.refreshCurrentPage()
     }
 
     fun applyTextColor(color: Int, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setTextColor(context, color)
         notifyStyleChanged()
-        if (refreshPage) invalidator.refresh()
+        if (refreshPage) invalidator.refreshCurrentPage()
     }
 
     fun applyBackgroundColor(color: Int, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setBackgroundColor(context, color)
         notifyStyleChanged()
-        if (refreshPage) invalidator.refresh()
+        if (refreshPage) invalidator.refreshCurrentPage()
     }
 
     fun applyGravity(gravity: Int) {

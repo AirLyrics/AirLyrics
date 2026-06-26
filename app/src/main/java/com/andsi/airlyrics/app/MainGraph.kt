@@ -154,6 +154,7 @@ internal class MainGraph(
             Thread(runnable, "airlyrics-app-io").apply { isDaemon = true }
         }
     }
+    private var skipFirstResumeAfterCreate = false
 
     fun beforeSuperOnCreate() {
         LanguageSettingsStore.applyAppLocale(activity)
@@ -170,14 +171,20 @@ internal class MainGraph(
         receivers.register()
         appMediaController.autoSelectSourceOnceIfNeeded()
         floatingController.restoreVisibleWindowIfNeeded()
-        uiInvalidator.refresh()
+        uiInvalidator.refreshCurrentPage()
+        skipFirstResumeAfterCreate = true
     }
 
     fun onResume() {
+        if (skipFirstResumeAfterCreate) {
+            skipFirstResumeAfterCreate = false
+            return
+        }
+
         state.locked = FloatingLyricsStyleStore.isLocked(activity)
         state.clickThrough = FloatingLyricsStyleStore.isClickThrough(activity)
         floatingController.restoreVisibleWindowIfNeeded()
-        uiInvalidator.refresh()
+        uiInvalidator.refreshCurrentPage()
     }
 
     fun runOnAppIo(block: () -> Unit) {
@@ -207,7 +214,7 @@ internal class MainGraph(
 
         if (state.currentPage == Page.SETTINGS && state.settingsSubPage != SettingsSubPage.HOME) {
             state.settingsSubPage = SettingsSubPage.HOME
-            uiInvalidator.refresh()
+            uiInvalidator.refreshCurrentPage()
             return true
         }
 
@@ -267,7 +274,7 @@ internal class MainGraph(
 
         LyricsStorage.saveLyricsDirUri(activity, uri)
         Toast.makeText(activity, activity.getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()
-        uiInvalidator.refresh(animateContent = false, animateTabs = false)
+        uiInvalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
     }
 
     fun handleNotificationPermissionResult(granted: Boolean) {
@@ -278,7 +285,7 @@ internal class MainGraph(
         }
 
         Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
-        uiInvalidator.refresh()
+        uiInvalidator.refreshCurrentPage()
     }
 
     fun currentLyricsOffsetSummary(): String {
@@ -388,7 +395,7 @@ internal class MainGraph(
         mediaRefreshHandler.postDelayed({
             state.mediaPageRefreshScheduled = false
             if (state.currentPage == Page.MEDIA) {
-                uiInvalidator.refresh(animateContent = false, animateTabs = false)
+                uiInvalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
             }
         }, 120L)
     }

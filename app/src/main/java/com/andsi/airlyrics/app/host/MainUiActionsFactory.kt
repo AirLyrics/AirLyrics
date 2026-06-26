@@ -16,16 +16,16 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
                 if (page == Page.SETTINGS) {
                     state.settingsSubPage = SettingsSubPage.HOME
                 }
-                uiInvalidator.refresh()
+                uiInvalidator.refreshCurrentPage()
             }
         },
         openSettingsSubPage = { subPage ->
             state.settingsSubPage = subPage
-            uiInvalidator.refresh()
+            uiInvalidator.refreshCurrentPage()
         },
         backToSettingsHome = {
             state.settingsSubPage = SettingsSubPage.HOME
-            uiInvalidator.refresh()
+            uiInvalidator.refreshCurrentPage()
         },
         toggleThemeMode = uiHost::toggleThemeMode,
         toggleFloatingFromNav = floatingController::toggleFromNav,

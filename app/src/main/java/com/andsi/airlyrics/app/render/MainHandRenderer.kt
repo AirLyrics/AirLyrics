@@ -89,7 +89,7 @@ internal class MainHandRenderer(
         }
     }
 
-    override fun refresh(
+    override fun refreshCurrentPage(
         animateContent: Boolean,
         animateTabs: Boolean
     ) {
@@ -136,7 +136,7 @@ internal class MainHandRenderer(
     }
 
     override fun refreshFloatingState() {
-        refresh(
+        refreshCurrentPage(
             animateContent = false,
             animateTabs = true
         )
@@ -144,6 +144,6 @@ internal class MainHandRenderer(
 
     override fun recreateForThemeChange() {
         graph.activity.setContentView(createMainView())
-        refresh()
+        refreshCurrentPage()
     }
 }

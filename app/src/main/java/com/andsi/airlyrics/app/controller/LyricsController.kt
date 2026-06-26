@@ -121,7 +121,7 @@ internal class LyricsController(
                 }
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 floatingLyricsReloader.reloadFloatingLyrics()
-                invalidator.refresh(animateContent = false, animateTabs = false)
+                invalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
             }
             LyricsStorage.ImportLyricsResult.TooLarge -> {
                 Toast.makeText(context, context.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
@@ -174,7 +174,7 @@ internal class LyricsController(
                     }
                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     floatingLyricsReloader.reloadFloatingLyrics()
-                    invalidator.refresh(animateContent = false, animateTabs = false)
+                    invalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
                 } else {
                     val message = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)

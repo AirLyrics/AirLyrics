@@ -7,7 +7,7 @@ package com.andsi.airlyrics.app.render
  * or concrete renderer.
  */
 internal interface UiInvalidator {
-    fun refresh(
+    fun refreshCurrentPage(
         animateContent: Boolean = true,
         animateTabs: Boolean = true
     )
