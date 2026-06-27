@@ -1,20 +1,12 @@
 package com.andsi.airlyrics.app.state
 
-import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.ui.model.MainUiState
 import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
-/** Mutable UI and feature state owned by [MainGraph]. */
-internal interface MainFloatingState {
-    var locked: Boolean
-    var clickThrough: Boolean
-    var quickFloatingVisible: Boolean
-    var overlayPermissionGranted: Boolean
-}
-
+/** Mutable main-screen state owned by the app graph. */
 internal class MainActivityState : MainFloatingState, MainUiState {
     override var locked: Boolean = false
     override var clickThrough: Boolean = false
