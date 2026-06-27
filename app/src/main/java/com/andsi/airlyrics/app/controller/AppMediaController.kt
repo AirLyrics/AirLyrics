@@ -11,7 +11,7 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.view.View
 import com.andsi.airlyrics.common.BroadcastActions
-import com.andsi.airlyrics.media.MediaNotificationListener
+import com.andsi.airlyrics.media.MediaNotificationListenerService
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
 
@@ -45,7 +45,7 @@ internal class AppMediaController(
         return try {
             val mediaSessionManager =
                 context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-            val component = ComponentName(context, MediaNotificationListener::class.java)
+            val component = ComponentName(context, MediaNotificationListenerService::class.java)
             mediaSessionManager.getActiveSessions(component)
         } catch (_: Exception) {
             emptyList()

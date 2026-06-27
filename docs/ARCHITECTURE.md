@@ -13,7 +13,7 @@ floating window rendering, settings persistence, and UI screens.
 ```text
 Music app
   -> Android media notification / media session
-  -> MediaNotificationListener
+  -> MediaNotificationListenerService
   -> Current media state broadcast
       -> MainReceivers
           -> AppMediaController
@@ -71,7 +71,7 @@ app/render/MainHandRenderer.kt
 
 ## Media Detection
 
-`MediaNotificationListener` reads active media notifications and media sessions,
+`MediaNotificationListenerService` reads active media notifications and media sessions,
 then broadcasts the current playback state.
 
 `MediaSourceStore` stores the package name of the media app selected by the user,

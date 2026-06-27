@@ -15,7 +15,7 @@ import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.settings.store.LanguageSettingsStore
 
-class MediaNotificationListener : NotificationListenerService() {
+class MediaNotificationListenerService : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())
     private var mediaSessionManager: MediaSessionManager? = null
     private val controllers = mutableMapOf<String, MediaController>()
@@ -40,7 +40,7 @@ class MediaNotificationListener : NotificationListenerService() {
         setupMediaSessions()
 
         try {
-            val component = ComponentName(this, MediaNotificationListener::class.java)
+            val component = ComponentName(this, MediaNotificationListenerService::class.java)
             mediaSessionManager?.addOnActiveSessionsChangedListener(
                 activeSessionsChangedListener,
                 component,
@@ -73,7 +73,7 @@ class MediaNotificationListener : NotificationListenerService() {
 
     private fun setupMediaSessions(activeSessions: List<MediaController>? = null) {
         try {
-            val component = ComponentName(this, MediaNotificationListener::class.java)
+            val component = ComponentName(this, MediaNotificationListenerService::class.java)
             val sessions = activeSessions ?: mediaSessionManager?.getActiveSessions(component) ?: return
             val activePackages = sessions.map { it.packageName }.toSet()
 
@@ -163,7 +163,7 @@ class MediaNotificationListener : NotificationListenerService() {
         }
 
         val intent = Intent(BroadcastActions.MEDIA_SOURCE_LOST).apply {
-            setPackage(this@MediaNotificationListener.packageName)
+            setPackage(this@MediaNotificationListenerService.packageName)
             putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, packageName)
         }
         sendBroadcast(intent)
@@ -207,7 +207,7 @@ class MediaNotificationListener : NotificationListenerService() {
     }
 
     companion object {
-        private const val TAG = "MediaNotificationListener"
+        private const val TAG = "MediaNotificationListenerService"
         private const val MEDIA_SESSION_RESCAN_DELAY_MS = 200L
     }
 }

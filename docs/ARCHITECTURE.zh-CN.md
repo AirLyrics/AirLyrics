@@ -13,7 +13,7 @@ AirLyrics 是一个 Android 手机端悬浮歌词应用。Android 端使用 Kotl
 ```text
 音乐应用
   -> Android 媒体通知 / 媒体会话
-  -> MediaNotificationListener
+  -> MediaNotificationListenerService
   -> 当前媒体状态广播
       -> MainReceivers
           -> AppMediaController
@@ -70,7 +70,7 @@ app/render/MainHandRenderer.kt
 
 ## 媒体检测
 
-`MediaNotificationListener` 读取活跃媒体通知和媒体会话，
+`MediaNotificationListenerService` 读取活跃媒体通知和媒体会话，
 并广播当前播放状态。
 
 `MediaSourceStore` 保存用户选中的媒体应用包名，
