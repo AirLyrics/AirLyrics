@@ -16,14 +16,14 @@ Music app
   -> MediaNotificationListenerService
   -> Current media state broadcast
       -> MainReceivers
-          -> AppMediaController
+          -> MediaSourceController
           -> MainGraph
       -> FloatingLyricsService
           -> LyricsRepository
               -> LocalLyricsProvider
               -> NeteaseLyricsProvider or MusixmatchLyricsProvider
               -> LyricsStorage for optional local saving
-          -> FloatingWindowController
+          -> FloatingLyricsWindow
           -> FloatingLyricsRenderer
 ```
 
@@ -54,16 +54,18 @@ and forwards lifecycle events such as creation, resume, and destruction to it.
 
 `MainGraph` is the dependency assembly entry point and lifecycle coordinator for the main UI.
 Permission results, activity result callbacks, broadcast handling, page rendering, and feature-specific logic
-are split into `controller/`, `host/`, `lifecycle/`, `platform/`, `render/`, and `state/`.
+are split into `controller/`, `contracts/`, `host/`, `lifecycle/`, `platform/`, `render/`, and `state/`.
 
 Important files:
 
 ```text
 app/MainActivity.kt
 app/MainGraph.kt
-app/controller/AppMediaController.kt
+app/controller/MediaSourceController.kt
 app/controller/LyricsController.kt
 app/controller/FloatingController.kt
+app/contracts/MainAppContracts.kt
+app/platform/PermissionHelper.kt
 app/lifecycle/MainLaunchers.kt
 app/lifecycle/MainReceivers.kt
 app/render/MainHandRenderer.kt
@@ -102,9 +104,9 @@ always takes priority over online providers.
 and floating lyrics features.
 
 It receives media changes, looks up lyrics, creates the foreground notification,
-and coordinates the floating window controller with the lyrics renderer.
+and coordinates the floating lyrics window with the lyrics renderer.
 
-`FloatingWindowController` manages creation, updates, and removal of the floating window,
+`FloatingLyricsWindow` manages creation, updates, and removal of the floating window,
 as well as window position, appearance, locking, and touch-through behavior.
 
 `FloatingLyricsRenderer` manages the lyrics timeline, current line selection,

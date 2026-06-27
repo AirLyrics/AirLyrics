@@ -10,12 +10,16 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.view.View
+import com.andsi.airlyrics.app.contracts.FloatingSourceNotifier
+import com.andsi.airlyrics.app.contracts.MediaControllerProvider
+import com.andsi.airlyrics.app.contracts.MediaPageRefreshScheduler
+import com.andsi.airlyrics.app.contracts.MediaSourceSelectionRenderer
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.media.MediaNotificationListenerService
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
 
-internal class AppMediaController(
+internal class MediaSourceController(
     private val context: Context,
     private val mediaPageRefreshScheduler: MediaPageRefreshScheduler,
     private val sourceSelectionRenderer: MediaSourceSelectionRenderer,

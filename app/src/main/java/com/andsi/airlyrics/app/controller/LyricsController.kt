@@ -9,6 +9,10 @@ import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.net.Uri
 import android.widget.Toast
+import com.andsi.airlyrics.app.contracts.FloatingLyricsReloader
+import com.andsi.airlyrics.app.contracts.MainDialogHost
+import com.andsi.airlyrics.app.contracts.MainTaskRunner
+import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage

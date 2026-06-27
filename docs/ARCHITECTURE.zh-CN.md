@@ -16,14 +16,14 @@ AirLyrics 是一个 Android 手机端悬浮歌词应用。Android 端使用 Kotl
   -> MediaNotificationListenerService
   -> 当前媒体状态广播
       -> MainReceivers
-          -> AppMediaController
+          -> MediaSourceController
           -> MainGraph
       -> FloatingLyricsService
           -> LyricsRepository
               -> LocalLyricsProvider
               -> NeteaseLyricsProvider 或 MusixmatchLyricsProvider
               -> LyricsStorage 可选本地保存
-          -> FloatingWindowController
+          -> FloatingLyricsWindow
           -> FloatingLyricsRenderer
 ```
 
@@ -53,16 +53,18 @@ common/           共享常量
 
 `MainGraph` 是主界面的依赖组装入口和生命周期协调器。
 权限结果、界面结果回调、广播接收、页面渲染和具体功能分别拆分到
-`controller/`、`host/`、`lifecycle/`、`platform/`、`render/` 和 `state/` 中。
+`controller/`、`contracts/`、`host/`、`lifecycle/`、`platform/`、`render/` 和 `state/` 中。
 
 重要文件：
 
 ```text
 app/MainActivity.kt
 app/MainGraph.kt
-app/controller/AppMediaController.kt
+app/controller/MediaSourceController.kt
 app/controller/LyricsController.kt
 app/controller/FloatingController.kt
+app/contracts/MainAppContracts.kt
+app/platform/PermissionHelper.kt
 app/lifecycle/MainLaunchers.kt
 app/lifecycle/MainReceivers.kt
 app/render/MainHandRenderer.kt
@@ -99,9 +101,9 @@ app/render/MainHandRenderer.kt
 
 `FloatingLyricsService` 是前台服务和悬浮歌词功能的协调入口。
 它负责接收媒体变化、查询歌词、创建前台通知，
-并协调悬浮窗控制器和歌词渲染器。
+并协调悬浮窗实现和歌词渲染器。
 
-`FloatingWindowController` 负责悬浮窗的创建、更新和移除，
+`FloatingLyricsWindow` 负责悬浮窗的创建、更新和移除，
 以及窗口位置、样式、锁定和触摸穿透等行为。
 
 `FloatingLyricsRenderer` 负责歌词时间轴、当前歌词定位、

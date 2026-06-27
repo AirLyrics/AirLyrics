@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.app.controller
+package com.andsi.airlyrics.app.contracts
 
 import android.content.Intent
 import android.media.session.MediaController

@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.app.host
 
 import com.andsi.airlyrics.app.MainGraph
-import com.andsi.airlyrics.app.controller.PermissionController
+import com.andsi.airlyrics.app.platform.PermissionHelper
 import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import android.graphics.Color
 import android.graphics.Typeface
@@ -71,9 +71,9 @@ internal class MainActivityUiHost(
     override fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     override fun isDarkTheme(): Boolean = ThemeSettingsStore.isDark(this)
 
-    override fun getActiveMediaControllers(): List<MediaController> = graph.appMediaController.getActiveControllers()
-    override fun getAppName(packageName: String): String = graph.appMediaController.getAppName(packageName)
-    override fun getPlaybackStateText(state: Int?): String = graph.appMediaController.getPlaybackStateText(state)
+    override fun getActiveMediaControllers(): List<MediaController> = graph.mediaSourceController.getActiveControllers()
+    override fun getAppName(packageName: String): String = graph.mediaSourceController.getAppName(packageName)
+    override fun getPlaybackStateText(state: Int?): String = graph.mediaSourceController.getPlaybackStateText(state)
     override fun getCurrentMediaSnapshot(): CurrentMediaInfo? = graph.lyricsController.getCurrentMediaSnapshot()
     override fun runOnAppIo(block: () -> Unit) = graph.runOnAppIo(block)
     override fun runOnMainThread(block: () -> Unit) = graph.runOnMainThread(block)
@@ -203,8 +203,8 @@ internal class MainActivityUiHost(
     override fun openUrl(url: String) = openUrlImpl(url)
     override fun refreshAfterLanguageChanged() = refreshAfterLanguageChangedImpl()
 
-    override fun hasNotificationPermission(): Boolean = PermissionController.hasPostNotificationsPermission(this)
-    override fun hasNotificationListenerAccess(): Boolean = PermissionController.hasNotificationListenerAccess(this)
+    override fun hasNotificationPermission(): Boolean = PermissionHelper.hasPostNotificationsPermission(this)
+    override fun hasNotificationListenerAccess(): Boolean = PermissionHelper.hasNotificationListenerAccess(this)
 
     override fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
         graph.lyricsController.deleteLyricsForCurrentMedia(media, mode)

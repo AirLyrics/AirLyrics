@@ -7,6 +7,9 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import android.widget.Toast
+import com.andsi.airlyrics.app.contracts.FloatingNavFeedback
+import com.andsi.airlyrics.app.contracts.MainServiceStarter
+import com.andsi.airlyrics.app.contracts.OverlayPermissionRequester
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService

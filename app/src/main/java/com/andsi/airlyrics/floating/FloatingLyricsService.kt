@@ -32,7 +32,7 @@ import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 
 class FloatingLyricsService : Service() {
-    private lateinit var windowController: FloatingWindowController
+    private lateinit var windowController: FloatingLyricsWindow
 
     private val lyricsView
         get() = if (::windowController.isInitialized) windowController.textView else null
@@ -111,7 +111,7 @@ class FloatingLyricsService : Service() {
         super.onCreate()
 
         selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
-        windowController = FloatingWindowController(this) { visible ->
+        windowController = FloatingLyricsWindow(this) { visible ->
             broadcastWindowVisibility(visible)
         }
 
@@ -125,7 +125,7 @@ class FloatingLyricsService : Service() {
             handleCommand(intent, startId)
         }.onFailure {
             // Keep the overlay's current truth intact for non-window command failures.
-            // WindowManager operations already hide/broadcast from FloatingWindowController.
+            // WindowManager operations already hide/broadcast from FloatingLyricsWindow.
             refreshQuickControls(getString(R.string.ui_overlay_update_failed))
         }
 

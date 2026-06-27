@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.app.controller
+package com.andsi.airlyrics.app.platform
 
 import android.content.Context
 import android.content.Intent
@@ -8,7 +8,7 @@ import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
 
-internal object PermissionController {
+internal object PermissionHelper {
     fun requestOverlayPermission(activity: AppCompatActivity) {
         val intent = Intent(
             Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
