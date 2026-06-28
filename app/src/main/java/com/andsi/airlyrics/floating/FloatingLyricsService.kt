@@ -5,6 +5,7 @@ import com.andsi.airlyrics.R
 import android.app.NotificationManager
 import android.app.Service
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -13,6 +14,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.service.notification.NotificationListenerService
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
@@ -27,6 +29,8 @@ import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.MediaNotificationListenerService
+import com.andsi.airlyrics.media.MediaSnapshotReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
@@ -53,12 +57,17 @@ class FloatingLyricsService : Service() {
     private var lastLyricsKey: String? = null
     private var activeLyricsRequestKey: String? = null
     private var selectedSourcePackage: String? = null
+    private var mediaRestoreAttempt = 0
 
     private val syncRunnable = object : Runnable {
         override fun run() {
             renderer.tick()
             syncHandler.postDelayed(this, if (renderer.isKaraokeActive()) 80L else 300L)
         }
+    }
+
+    private val mediaRestoreRunnable = Runnable {
+        restoreCurrentMediaOrRetry()
     }
 
     private val mediaReceiver = object : BroadcastReceiver() {
@@ -80,29 +89,17 @@ class FloatingLyricsService : Service() {
             val duration = intent.getLongExtra("duration", 0L)
             val position = intent.getLongExtra("position", 0L)
 
-            if (title.isBlank()) return
-            if (!shouldAcceptMediaUpdate(sourcePackage)) return
-
-            val media = CurrentMediaInfo(
-                sourcePackage = sourcePackage,
-                title = title,
-                artist = artist,
-                album = album,
-                durationMs = duration,
-                isPlaying = isPlaying,
-                positionMs = position
+            applyMediaSnapshot(
+                CurrentMediaInfo(
+                    sourcePackage = sourcePackage,
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    durationMs = duration,
+                    isPlaying = isPlaying,
+                    positionMs = position
+                )
             )
-
-            currentMedia = media
-            renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this@FloatingLyricsService, media))
-            renderer.updatePlayback(positionMs = position, isPlaying = isPlaying)
-
-            val lyricsKey = media.lyricsKey()
-            if (lyricsKey == lastLyricsKey) return
-
-            lastLyricsKey = lyricsKey
-            activeLyricsRequestKey = lyricsKey
-            loadLyricsForSong(media = media, requestKey = lyricsKey)
         }
     }
 
@@ -184,6 +181,80 @@ class FloatingLyricsService : Service() {
         )
     }
 
+    private fun applyMediaSnapshot(media: CurrentMediaInfo): Boolean {
+        if (media.title.isBlank()) return false
+        if (!shouldAcceptMediaUpdate(media.sourcePackage)) return false
+
+        currentMedia = media
+
+        syncHandler.removeCallbacks(mediaRestoreRunnable)
+        mediaRestoreAttempt = 0
+
+        renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
+        renderer.updatePlayback(
+            positionMs = media.positionMs,
+            isPlaying = media.isPlaying
+        )
+
+        val lyricsKey = media.lyricsKey()
+        if (lyricsKey == lastLyricsKey) {
+            return true
+        }
+
+        lastLyricsKey = lyricsKey
+        activeLyricsRequestKey = lyricsKey
+        loadLyricsForSong(media = media, requestKey = lyricsKey)
+
+        return true
+    }
+
+    private fun scheduleCurrentMediaRestore() {
+        syncHandler.removeCallbacks(mediaRestoreRunnable)
+        mediaRestoreAttempt = 0
+        syncHandler.post(mediaRestoreRunnable)
+    }
+
+    private fun restoreCurrentMediaOrRetry() {
+        if (!currentMedia.isEmpty) return
+        if (!QuickFloatingStore.isDesiredVisible(this)) return
+        if (!::windowController.isInitialized || !windowController.isVisible) return
+        if (selectedSourcePackage.isNullOrBlank()) return
+
+        val restored = readSelectedMediaSnapshot()
+            ?.let(::applyMediaSnapshot)
+            ?: false
+
+        if (restored) return
+
+        if (mediaRestoreAttempt == 0) {
+            requestNotificationListenerRebind()
+        }
+
+        val delay = MEDIA_RESTORE_RETRY_DELAYS_MS
+            .getOrNull(mediaRestoreAttempt++)
+            ?: return
+
+        syncHandler.postDelayed(mediaRestoreRunnable, delay)
+    }
+
+    private fun readSelectedMediaSnapshot(): CurrentMediaInfo? {
+        return MediaSnapshotReader.readSelected(
+            context = this,
+            selectedPackage = selectedSourcePackage
+        )
+    }
+
+    private fun requestNotificationListenerRebind() {
+        val component = ComponentName(
+            this,
+            MediaNotificationListenerService::class.java
+        )
+
+        runCatching {
+            NotificationListenerService.requestRebind(component)
+        }
+    }
+
     private fun handleMediaSourceLost(sourcePackage: String) {
         if (sourcePackage.isBlank()) return
         if (sourcePackage != selectedSourcePackage) return
@@ -230,6 +301,9 @@ class FloatingLyricsService : Service() {
     private fun selectMediaSource(packageName: String?) {
         selectedSourcePackage = packageName
         MediaSourceStore.saveSelectedPackage(this, packageName)
+        syncHandler.removeCallbacks(mediaRestoreRunnable)
+        mediaRestoreAttempt = 0
+
         clearLyricsState(
             if (packageName == null) {
                 "♪ " + getString(R.string.ui_no_media_source_status)
@@ -237,6 +311,14 @@ class FloatingLyricsService : Service() {
                 "♪ " + getString(R.string.ui_media_source_waiting_status) + "..."
             }
         )
+
+        if (
+            packageName != null &&
+            ::windowController.isInitialized &&
+            windowController.isVisible
+        ) {
+            scheduleCurrentMediaRestore()
+        }
     }
 
     private fun clearLyricsState(message: String) {
@@ -399,6 +481,8 @@ class FloatingLyricsService : Service() {
         }
         if (!shown) {
             broadcastWindowVisibility(false)
+        } else if (currentMedia.isEmpty) {
+            scheduleCurrentMediaRestore()
         }
         refreshQuickControls(if (shown) feedback else null)
         return shown
@@ -413,6 +497,8 @@ class FloatingLyricsService : Service() {
         }
         val stillVisible = ::windowController.isInitialized && windowController.isVisible
         if (hidden || !stillVisible) {
+            syncHandler.removeCallbacks(mediaRestoreRunnable)
+            mediaRestoreAttempt = 0
             broadcastWindowVisibility(false)
         }
         refreshQuickControls(feedback)
@@ -515,6 +601,7 @@ class FloatingLyricsService : Service() {
 
     override fun onDestroy() {
         syncHandler.removeCallbacks(syncRunnable)
+        syncHandler.removeCallbacks(mediaRestoreRunnable)
         lyricsLookupRunner.shutdown()
         runCatching { unregisterReceiver(mediaReceiver) }
         if (::windowController.isInitialized) {
@@ -525,4 +612,13 @@ class FloatingLyricsService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    companion object {
+        private val MEDIA_RESTORE_RETRY_DELAYS_MS = longArrayOf(
+            250L,
+            750L,
+            2_000L,
+            5_000L
+        )
+    }
 }

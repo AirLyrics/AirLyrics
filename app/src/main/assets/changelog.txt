@@ -2,14 +2,12 @@ v1.0.5 - 2026-06-28
 
 Fixed
 - Prevented duplicate page rendering during cold start.
-- Kept floating-window desired visibility state handling consistent.
+- Restored floating lyrics correctly after AirLyrics is removed from recent apps and reopened.
 - Kept lyric edits attached to the original track when playback changes mid-edit.
+- Unified lyric import and format validation when editing lyrics.
 
 Changed
-- Clarified the overlay permission action when permission has not been granted.
-- Unified lyric import and format validation when editing lyrics.
-- Made native Rust and vendored C builds reproducible by deriving timestamps from the source commit and remapping machine-specific paths.
-- Disabled APK dependency metadata that F-Droid rejects as an extra signing block.
+- Made native builds reproducible and improved F-Droid compatibility.
 
 v1.0.4 - 2026-06-07
 

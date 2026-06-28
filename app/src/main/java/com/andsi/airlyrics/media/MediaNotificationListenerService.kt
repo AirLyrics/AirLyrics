@@ -54,6 +54,7 @@ class MediaNotificationListenerService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         cleanupMediaSessions()
         super.onListenerDisconnected()
+        requestNotificationListenerRebind()
     }
 
     override fun onDestroy() {
@@ -153,6 +154,17 @@ class MediaNotificationListenerService : NotificationListenerService() {
         callbacks.clear()
         controllers.clear()
         lostPackages.forEach { publishMediaSourceLost(it) }
+    }
+
+    private fun requestNotificationListenerRebind() {
+        val component = ComponentName(
+            this,
+            MediaNotificationListenerService::class.java
+        )
+
+        runCatching {
+            requestRebind(component)
+        }
     }
 
     private fun publishMediaSourceLost(packageName: String) {
