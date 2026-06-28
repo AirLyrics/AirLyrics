@@ -118,7 +118,7 @@
     <string name="ui_found_no_lyrics">found no lyrics</string>
     <string name="ui_give_it_a_star">Give it a star!</string>
     <string name="ui_good_for_chinese_songs">Good for Chinese songs</string>
-    <string name="ui_musixmatch_source_hint">Good for international songs; uses your system language for translations when available</string>
+    <string name="ui_musixmatch_source_hint">Good for international songs;AirLyrics tries to fetch a translation in the device primary system language when available from Musixmatch</string>
     <string name="ui_green">Green</string>
     <string name="ui_hidden">Hidden</string>
     <string name="ui_hide">Hide</string>

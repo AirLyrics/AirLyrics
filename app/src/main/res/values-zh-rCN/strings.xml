@@ -119,7 +119,7 @@ This is a lyric preview</string>
     <string name="ui_found_no_lyrics">未找到歌词</string>
     <string name="ui_give_it_a_star">点个star!</string>
     <string name="ui_good_for_chinese_songs">适合中国用户</string>
-    <string name="ui_musixmatch_source_hint">适合国际用户，依据您的系统语言来自动获取翻译（如果有的话）</string>
+    <string name="ui_musixmatch_source_hint">适合国际歌曲；AirLyrics会尝试获取设备主要系统语言的翻译，是否可用取决于Musixmatch</string>
     <string name="ui_green">绿</string>
     <string name="ui_hidden">已隐藏</string>
     <string name="ui_hide">隐藏</string>
