@@ -1,10 +1,10 @@
-v1.0.5 - 2026-06-28
+v1.0.6 - 2026-06-28
 
 Fixed
-- Prevented duplicate page rendering during cold start.
-- Restored floating lyrics correctly after AirLyrics is removed from recent apps and reopened.
-- Kept lyric edits attached to the original track when playback changes mid-edit.
-- Unified lyric import and format validation when editing lyrics.
+- Updated floating lyrics immediately when playback seeks to a new position.
+- Updated floating lyrics when the selected media source switches tracks.
+- Kept floating lyrics synced with the selected media session when notification listener updates are delayed.
+- Improved playback position estimation from media session snapshots.
 
 Changed
-- Made native builds reproducible and improved F-Droid compatibility.
+- Removed stale in-repository F-Droid metadata; F-Droid release metadata is maintained externally.

@@ -1,3 +1,14 @@
+v1.0.6 - 2026-06-28
+
+Fixed
+- Updated floating lyrics immediately when playback seeks to a new position.
+- Updated floating lyrics when the selected media source switches tracks.
+- Kept floating lyrics synced with the selected media session when notification listener updates are delayed.
+- Improved playback position estimation from media session snapshots.
+
+Changed
+- Removed stale in-repository F-Droid metadata; F-Droid release metadata is maintained externally.
+
 v1.0.5 - 2026-06-28
 
 Fixed
