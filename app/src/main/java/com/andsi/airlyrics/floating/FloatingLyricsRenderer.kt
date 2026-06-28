@@ -61,6 +61,7 @@ class FloatingLyricsRenderer(
     }
 
     fun setLyricsOffset(offsetMs: Long) {
+        if (lyricsOffsetMs == offsetMs) return
         lyricsOffsetMs = offsetMs
         refresh()
     }

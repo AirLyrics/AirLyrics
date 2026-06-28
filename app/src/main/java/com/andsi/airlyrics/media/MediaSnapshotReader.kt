@@ -6,6 +6,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.SystemClock
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 
 object MediaSnapshotReader {
@@ -23,9 +24,25 @@ object MediaSnapshotReader {
     fun readSelected(context: Context, selectedPackage: String?): CurrentMediaInfo? {
         if (selectedPackage.isNullOrBlank()) return null
 
-        return getActiveControllers(context)
-            .firstOrNull { it.packageName == selectedPackage }
+        return selectedController(getActiveControllers(context), selectedPackage)
             ?.toCurrentMediaInfo()
+    }
+
+    fun selectedController(
+        controllers: List<MediaController>,
+        selectedPackage: String?
+    ): MediaController? {
+        if (selectedPackage.isNullOrBlank()) return null
+
+        val selectedControllers = controllers.filter {
+            it.packageName == selectedPackage &&
+                (it.metadata != null || it.playbackState != null)
+        }
+
+        return selectedControllers.firstOrNull {
+            it.playbackState?.state == PlaybackState.STATE_PLAYING
+        } ?: selectedControllers.firstOrNull { it.metadata != null }
+            ?: selectedControllers.firstOrNull()
     }
 
     fun bestFromControllers(
@@ -33,12 +50,15 @@ object MediaSnapshotReader {
         selectedPackage: String?
     ): CurrentMediaInfo? {
         val usableControllers = controllers.filter { it.metadata != null || it.playbackState != null }
-        val controller = selectedPackage
-            ?.let { packageName -> usableControllers.firstOrNull { it.packageName == packageName } }
+        val controller = selectedController(usableControllers, selectedPackage)
             ?: usableControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
             ?: usableControllers.firstOrNull()
             ?: return null
 
+        return controller.toCurrentMediaInfo()
+    }
+
+    fun fromController(controller: MediaController): CurrentMediaInfo? {
         return controller.toCurrentMediaInfo()
     }
 
@@ -59,7 +79,27 @@ object MediaSnapshotReader {
             album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty(),
             durationMs = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION),
             isPlaying = state?.state == PlaybackState.STATE_PLAYING,
-            positionMs = state?.position ?: 0L
+            positionMs = estimatedPositionMs(state)
         )
+    }
+
+    fun estimatedPositionMs(state: PlaybackState?): Long {
+        return estimatedPositionMs(state, SystemClock.elapsedRealtime())
+    }
+
+    internal fun estimatedPositionMs(state: PlaybackState?, elapsedRealtimeMs: Long): Long {
+        if (state == null || state.position == PlaybackState.PLAYBACK_POSITION_UNKNOWN) {
+            return 0L
+        }
+
+        val basePositionMs = state.position.coerceAtLeast(0L)
+        if (state.state != PlaybackState.STATE_PLAYING || state.lastPositionUpdateTime <= 0L) {
+            return basePositionMs
+        }
+
+        val elapsedMs = (elapsedRealtimeMs - state.lastPositionUpdateTime)
+            .coerceAtLeast(0L)
+        val speed = state.playbackSpeed.takeIf { it > 0f } ?: 1f
+        return (basePositionMs + (elapsedMs * speed).toLong()).coerceAtLeast(0L)
     }
 }
