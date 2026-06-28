@@ -1,8 +1,10 @@
-v1.0.4 - 2026-06-07
+v1.0.5 - 2026-06-28
 
 Fixed
-- Respected the Android navigation bar inset so bottom tabs are no longer clipped by three-button navigation.
-- Kept the recent local lyrics refresh button visible when the inline help hint is shown.
+- Prevented duplicate page rendering during cold start.
+- Restored floating lyrics correctly after AirLyrics is removed from recent apps and reopened.
+- Kept lyric edits attached to the original track when playback changes mid-edit.
+- Unified lyric import and format validation when editing lyrics.
 
 Changed
-- The changelog dialog now shows only the current release by default, with a button to view the full changelog.
+- Made native builds reproducible and improved F-Droid compatibility.

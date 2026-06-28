@@ -5,15 +5,18 @@ import com.andsi.airlyrics.R
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.media.MediaMetadata
-import android.media.session.PlaybackState
 import android.net.Uri
 import android.widget.Toast
+import com.andsi.airlyrics.app.contracts.FloatingLyricsReloader
+import com.andsi.airlyrics.app.contracts.MainDialogHost
+import com.andsi.airlyrics.app.contracts.MainTaskRunner
+import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.media.MediaSnapshotReader
 import com.andsi.airlyrics.media.MediaSourceStore
 
 internal class LyricsController(
@@ -189,31 +192,9 @@ internal class LyricsController(
 
     fun getCurrentMediaSnapshot(): CurrentMediaInfo? {
         val selectedPackage = MediaSourceStore.getSelectedPackage(context)
-        val controllers = mediaControllerProvider.getActiveControllers().filter { it.metadata != null || it.playbackState != null }
-        val controller = controllers.firstOrNull { it.packageName == selectedPackage }
-            ?: controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-            ?: controllers.firstOrNull()
-            ?: return null
-
-        val metadata = controller.metadata ?: return null
-        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty().trim()
-        if (title.isBlank()) return null
-
-        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
-            ?: metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-            ?: ""
-        val album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
-        val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
-        val state = controller.playbackState
-
-        return CurrentMediaInfo(
-            sourcePackage = controller.packageName,
-            title = title,
-            artist = artist,
-            album = album,
-            durationMs = duration,
-            isPlaying = state?.state == PlaybackState.STATE_PLAYING,
-            positionMs = state?.position ?: 0L
+        return MediaSnapshotReader.bestFromControllers(
+            controllers = mediaControllerProvider.getActiveControllers(),
+            selectedPackage = selectedPackage
         )
     }
 

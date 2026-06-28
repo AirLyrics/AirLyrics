@@ -1,6 +1,6 @@
 package com.andsi.airlyrics.app
 
-import com.andsi.airlyrics.app.controller.PermissionController
+import com.andsi.airlyrics.app.platform.PermissionHelper
 import com.andsi.airlyrics.app.host.MainActivityUiHost
 import com.andsi.airlyrics.app.host.createMainUiActions
 import com.andsi.airlyrics.app.host.updateMediaSourceSelectionVisualsImpl
@@ -23,11 +23,11 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.app.controller.AppMediaController
+import com.andsi.airlyrics.app.controller.MediaSourceController
 import com.andsi.airlyrics.app.controller.FloatingController
 import com.andsi.airlyrics.app.controller.LyricsController
-import com.andsi.airlyrics.app.controller.MainDialogHost
-import com.andsi.airlyrics.app.controller.MainTaskRunner
+import com.andsi.airlyrics.app.contracts.MainDialogHost
+import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.lifecycle.MainLaunchers
 import com.andsi.airlyrics.app.lifecycle.MainReceivers
 import com.andsi.airlyrics.app.render.MainHandRenderer
@@ -83,8 +83,8 @@ internal class MainGraph(
             navFeedback = { playFloatingNavToggleFeedback() }
         )
     }
-    val appMediaController: AppMediaController by lazy {
-        AppMediaController(
+    val mediaSourceController: MediaSourceController by lazy {
+        MediaSourceController(
             context = activity,
             mediaPageRefreshScheduler = { scheduleMediaPageRefresh() },
             sourceSelectionRenderer = { packageName ->
@@ -101,7 +101,7 @@ internal class MainGraph(
             invalidator = uiInvalidator,
             taskRunner = mainTaskRunner,
             dialogHost = mainDialogHost,
-            mediaControllerProvider = appMediaController,
+            mediaControllerProvider = mediaSourceController,
             floatingLyricsReloader = { floatingController.reloadLyrics() }
         )
     }
@@ -145,7 +145,7 @@ internal class MainGraph(
     private val receivers: MainReceivers by lazy {
         MainReceivers(
             context = activity,
-            onMediaChanged = appMediaController::handleMediaStatusBroadcast,
+            onMediaChanged = mediaSourceController::handleMediaStatusBroadcast,
             onFloatingStateChanged = floatingController::handleWindowStateBroadcast
         )
     }
@@ -171,7 +171,7 @@ internal class MainGraph(
         registerBackNavigationCallback()
         activity.setContentView(mainHandRenderer.createMainView())
         receivers.register()
-        appMediaController.autoSelectSourceOnceIfNeeded()
+        mediaSourceController.autoSelectSourceOnceIfNeeded()
         floatingController.restoreVisibleWindowIfNeeded()
         uiInvalidator.refreshCurrentPage()
         skipFirstResumeAfterCreate = true
@@ -380,11 +380,11 @@ internal class MainGraph(
     }
 
     fun requestOverlayPermission() {
-        PermissionController.requestOverlayPermission(activity)
+        PermissionHelper.requestOverlayPermission(activity)
     }
 
     fun requestNotificationPermissionIfNeeded() {
-        PermissionController.requestNotificationPermissionIfNeeded(
+        PermissionHelper.requestNotificationPermissionIfNeeded(
             activity = activity,
             requestPermission = launchers::requestNotificationPermission
         )

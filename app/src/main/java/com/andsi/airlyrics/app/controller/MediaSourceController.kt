@@ -2,20 +2,22 @@ package com.andsi.airlyrics.app.controller
 
 import com.andsi.airlyrics.R
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.session.MediaController
-import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.view.View
+import com.andsi.airlyrics.app.contracts.FloatingSourceNotifier
+import com.andsi.airlyrics.app.contracts.MediaControllerProvider
+import com.andsi.airlyrics.app.contracts.MediaPageRefreshScheduler
+import com.andsi.airlyrics.app.contracts.MediaSourceSelectionRenderer
 import com.andsi.airlyrics.common.BroadcastActions
-import com.andsi.airlyrics.media.MediaNotificationListener
+import com.andsi.airlyrics.media.MediaSnapshotReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
 
-internal class AppMediaController(
+internal class MediaSourceController(
     private val context: Context,
     private val mediaPageRefreshScheduler: MediaPageRefreshScheduler,
     private val sourceSelectionRenderer: MediaSourceSelectionRenderer,
@@ -42,14 +44,7 @@ internal class AppMediaController(
     }
 
     override fun getActiveControllers(): List<MediaController> {
-        return try {
-            val mediaSessionManager =
-                context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
-            val component = ComponentName(context, MediaNotificationListener::class.java)
-            mediaSessionManager.getActiveSessions(component)
-        } catch (_: Exception) {
-            emptyList()
-        }
+        return MediaSnapshotReader.getActiveControllers(context)
     }
 
     fun selectSource(packageName: String, sourceCard: View) {

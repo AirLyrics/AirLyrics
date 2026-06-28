@@ -1,3 +1,14 @@
+v1.0.5 - 2026-06-28
+
+Fixed
+- Prevented duplicate page rendering during cold start.
+- Restored floating lyrics correctly after AirLyrics is removed from recent apps and reopened.
+- Kept lyric edits attached to the original track when playback changes mid-edit.
+- Unified lyric import and format validation when editing lyrics.
+
+Changed
+- Made native builds reproducible and improved F-Droid compatibility.
+
 v1.0.4 - 2026-06-07
 
 Fixed

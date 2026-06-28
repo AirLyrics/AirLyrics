@@ -24,7 +24,7 @@ import kotlin.math.abs
  * FloatingLyricsService keeps the media / lyrics state, while this class keeps
  * the Android WindowManager details in one small box.
  */
-class FloatingWindowController(
+class FloatingLyricsWindow(
     private val context: Context,
     private val onVisibilityChanged: (Boolean) -> Unit
 ) {

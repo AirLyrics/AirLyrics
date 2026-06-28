@@ -65,6 +65,6 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             floatingController.reloadLyrics()
         },
         openUrl = uiHost::openUrl,
-        selectMediaSource = appMediaController::selectSource
+        selectMediaSource = mediaSourceController::selectSource
     )
 }
