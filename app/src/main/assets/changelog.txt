@@ -1,3 +1,13 @@
+v1.0.7 - 2026-06-30
+
+Fixed
+- Prevented stale media snapshots from moving floating lyrics back to an older playback position.
+- Added Android monochrome launcher icon support for themed icons.
+
+Changed
+- Refactored current media information into the media layer for clearer ownership.
+- Centralized media session observation so listener updates and floating lyrics state stay aligned.
+
 v1.0.6 - 2026-06-28
 
 Fixed
