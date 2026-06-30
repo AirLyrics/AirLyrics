@@ -30,7 +30,7 @@ dependencies = [
 
 [[package]]
 name = "airlyrics_lyrics"
-version = "1.0.6"
+version = "1.0.7"
 dependencies = [
  "jni",
  "musixmatch-inofficial",
