@@ -76,6 +76,12 @@ app/render/MainHandRenderer.kt
 `MediaNotificationListenerService` reads active media notifications and media sessions,
 then broadcasts the current playback state.
 
+`MediaSessionObserver` listens for active media sessions, registers controller callbacks,
+and applies one shared controller selection strategy when a media app exposes multiple
+sessions. `CurrentMediaReader` owns that strategy: prefer playing controllers that
+can produce a media title, then controllers with a media title, then playing,
+metadata-bearing, or first usable sessions as fallbacks.
+
 `MediaSourceStore` stores the package name of the media app selected by the user,
 which allows the app to handle cases where multiple music apps are active at the same time.
 
@@ -105,6 +111,8 @@ and floating lyrics features.
 
 It receives media changes, looks up lyrics, creates the foreground notification,
 and coordinates the floating lyrics window with the lyrics renderer.
+It does not select or register media controllers directly; media session selection
+belongs to the `media/` layer.
 
 `FloatingLyricsWindow` manages creation, updates, and removal of the floating window,
 as well as window position, appearance, locking, and touch-through behavior.

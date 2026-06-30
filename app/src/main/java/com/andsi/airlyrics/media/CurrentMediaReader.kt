@@ -40,19 +40,45 @@ object CurrentMediaReader {
         }
 
         return selectedControllers.firstOrNull {
-            it.playbackState?.state == PlaybackState.STATE_PLAYING
-        } ?: selectedControllers.firstOrNull { it.metadata != null }
+            it.hasMediaTitle() && it.playbackState?.state == PlaybackState.STATE_PLAYING
+        } ?: selectedControllers.firstOrNull { it.hasMediaTitle() }
+            ?: selectedControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+            ?: selectedControllers.firstOrNull { it.metadata != null }
             ?: selectedControllers.firstOrNull()
+    }
+
+    fun selectedControllersByPackage(
+        controllers: List<MediaController>
+    ): Map<String, MediaController> {
+        return controllers
+            .filter { it.packageName.isNotBlank() }
+            .groupBy { it.packageName }
+            .mapNotNull { (packageName, packageControllers) ->
+                selectedController(packageControllers, packageName)?.let { packageName to it }
+            }
+            .toMap()
+    }
+
+    fun bestController(
+        controllers: List<MediaController>,
+        selectedPackage: String?
+    ): MediaController? {
+        val usableControllers = controllers.filter { it.metadata != null || it.playbackState != null }
+        return selectedController(usableControllers, selectedPackage)
+            ?: usableControllers.firstOrNull {
+                it.hasMediaTitle() && it.playbackState?.state == PlaybackState.STATE_PLAYING
+            }
+            ?: usableControllers.firstOrNull { it.hasMediaTitle() }
+            ?: usableControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+            ?: usableControllers.firstOrNull { it.metadata != null }
+            ?: usableControllers.firstOrNull()
     }
 
     fun bestCurrentMediaFromControllers(
         controllers: List<MediaController>,
         selectedPackage: String?
     ): CurrentMediaInfo? {
-        val usableControllers = controllers.filter { it.metadata != null || it.playbackState != null }
-        val controller = selectedController(usableControllers, selectedPackage)
-            ?: usableControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-            ?: usableControllers.firstOrNull()
+        val controller = bestController(controllers, selectedPackage)
             ?: return null
 
         return controller.toCurrentMediaInfo()
@@ -60,6 +86,12 @@ object CurrentMediaReader {
 
     fun currentMediaFromController(controller: MediaController): CurrentMediaInfo? {
         return controller.toCurrentMediaInfo()
+    }
+
+    private fun MediaController.hasMediaTitle(): Boolean {
+        return metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
+            ?.isNotBlank()
+            ?: false
     }
 
     fun MediaController.toCurrentMediaInfo(): CurrentMediaInfo? {

@@ -75,6 +75,11 @@ app/render/MainHandRenderer.kt
 `MediaNotificationListenerService` 读取活跃媒体通知和媒体会话，
 并广播当前播放状态。
 
+`MediaSessionObserver` 负责监听活跃媒体会话、注册 controller 回调，
+并在同一媒体应用存在多个 session 时统一选择最合适的 controller。
+当前策略由 `CurrentMediaReader` 维护：优先播放中且能产出歌曲标题，
+其次能产出歌曲标题，再回退到播放中、有 metadata 或第一个可用 session。
+
 `MediaSourceStore` 保存用户选中的媒体应用包名，
 用于处理多个音乐应用同时存在的情况。
 
@@ -102,6 +107,7 @@ app/render/MainHandRenderer.kt
 `FloatingLyricsService` 是前台服务和悬浮歌词功能的协调入口。
 它负责接收媒体变化、查询歌词、创建前台通知，
 并协调悬浮窗实现和歌词渲染器。
+它不直接选择或注册媒体 controller；媒体会话选择由 `media/` 层完成。
 
 `FloatingLyricsWindow` 负责悬浮窗的创建、更新和移除，
 以及窗口位置、样式、锁定和触摸穿透等行为。

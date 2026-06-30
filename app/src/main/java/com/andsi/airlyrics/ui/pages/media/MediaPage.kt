@@ -5,6 +5,7 @@ import com.andsi.airlyrics.R
 import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.view.View
+import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.*
@@ -12,11 +13,11 @@ import com.andsi.airlyrics.ui.theme.*
 
 internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = true): View  = with(activity) createMediaPage@ {
     val container = pageContainer(activity, animateChanges = animateContent)
-    val controllers = getActiveMediaControllers().filter { it.metadata != null || it.playbackState != null }
+    val controllers = CurrentMediaReader.selectedControllersByPackage(getActiveMediaControllers())
+        .values
+        .toList()
     val selectedPackage = MediaSourceStore.getSelectedPackage(this)
-    val selectedController = controllers.firstOrNull { it.packageName == selectedPackage }
-        ?: controllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-        ?: controllers.firstOrNull()
+    val selectedController = CurrentMediaReader.bestController(controllers, selectedPackage)
 
     container.addView(
         sectionTitle(activity, 
