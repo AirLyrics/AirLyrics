@@ -13,7 +13,7 @@ import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.contracts.MediaPageRefreshScheduler
 import com.andsi.airlyrics.app.contracts.MediaSourceSelectionRenderer
 import com.andsi.airlyrics.common.BroadcastActions
-import com.andsi.airlyrics.media.MediaSnapshotReader
+import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
 
@@ -44,7 +44,7 @@ internal class MediaSourceController(
     }
 
     override fun getActiveControllers(): List<MediaController> {
-        return MediaSnapshotReader.getActiveControllers(context)
+        return CurrentMediaReader.getActiveControllers(context)
     }
 
     fun selectSource(packageName: String, sourceCard: View) {

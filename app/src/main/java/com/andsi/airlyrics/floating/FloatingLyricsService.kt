@@ -33,10 +33,11 @@ import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.common.BroadcastActions
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaNotificationListenerService
-import com.andsi.airlyrics.media.MediaSnapshotReader
+import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 
@@ -84,11 +85,11 @@ class FloatingLyricsService : Service() {
         restoreCurrentMediaOrRetry()
     }
 
-    private val mediaSnapshotRefreshRunnable = object : Runnable {
+    private val currentMediaRefreshRunnable = object : Runnable {
         override fun run() {
-            refreshSelectedMediaSnapshot()
+            refreshSelectedCurrentMediaInfo()
             if (shouldObserveSelectedMedia()) {
-                syncHandler.postDelayed(this, MEDIA_SNAPSHOT_REFRESH_INTERVAL_MS)
+                syncHandler.postDelayed(this, CURRENT_MEDIA_REFRESH_INTERVAL_MS)
             }
         }
     }
@@ -112,7 +113,7 @@ class FloatingLyricsService : Service() {
             val duration = intent.getLongExtra("duration", 0L)
             val position = intent.getLongExtra("position", 0L)
 
-            applyMediaSnapshot(
+            applyCurrentMediaInfo(
                 CurrentMediaInfo(
                     sourcePackage = sourcePackage,
                     title = title,
@@ -219,29 +220,29 @@ class FloatingLyricsService : Service() {
 
         registerMediaSessionsListener()
         updateSelectedMediaController()
-        scheduleSelectedMediaSnapshotRefresh()
+        scheduleSelectedCurrentMediaInfoRefresh()
     }
 
     private fun stopSelectedMediaObservation() {
-        syncHandler.removeCallbacks(mediaSnapshotRefreshRunnable)
+        syncHandler.removeCallbacks(currentMediaRefreshRunnable)
         unregisterSelectedMediaController()
         unregisterMediaSessionsListener()
     }
 
-    private fun scheduleSelectedMediaSnapshotRefresh() {
-        syncHandler.removeCallbacks(mediaSnapshotRefreshRunnable)
+    private fun scheduleSelectedCurrentMediaInfoRefresh() {
+        syncHandler.removeCallbacks(currentMediaRefreshRunnable)
         if (shouldObserveSelectedMedia()) {
             syncHandler.postDelayed(
-                mediaSnapshotRefreshRunnable,
-                MEDIA_SNAPSHOT_REFRESH_INTERVAL_MS
+                currentMediaRefreshRunnable,
+                CURRENT_MEDIA_REFRESH_INTERVAL_MS
             )
         }
     }
 
-    private fun refreshSelectedMediaSnapshot() {
+    private fun refreshSelectedCurrentMediaInfo() {
         if (!shouldObserveSelectedMedia()) return
 
-        readSelectedMediaSnapshot()?.let(::applyMediaSnapshot)
+        readSelectedCurrentMediaInfo()?.let(::applyCurrentMediaInfo)
         updateSelectedMediaController()
     }
 
@@ -279,8 +280,8 @@ class FloatingLyricsService : Service() {
             return
         }
 
-        val activeControllers = controllers ?: MediaSnapshotReader.getActiveControllers(this)
-        val controller = MediaSnapshotReader.selectedController(activeControllers, selectedPackage)
+        val activeControllers = controllers ?: CurrentMediaReader.getActiveControllers(this)
+        val controller = CurrentMediaReader.selectedController(activeControllers, selectedPackage)
         if (controller == null) {
             val lostPackage = selectedMediaController?.packageName
             unregisterSelectedMediaController()
@@ -291,7 +292,7 @@ class FloatingLyricsService : Service() {
         }
 
         if (isSameMediaController(selectedMediaController, controller)) {
-            applyControllerSnapshot(controller)
+            applyCurrentMediaFromController(controller)
             return
         }
 
@@ -300,11 +301,11 @@ class FloatingLyricsService : Service() {
 
         val callback = object : MediaController.Callback() {
             override fun onMetadataChanged(metadata: MediaMetadata?) {
-                applyControllerSnapshot(controller)
+                applyCurrentMediaFromController(controller)
             }
 
             override fun onPlaybackStateChanged(state: PlaybackState?) {
-                applyControllerSnapshot(controller)
+                applyCurrentMediaFromController(controller)
             }
 
             override fun onSessionDestroyed() {
@@ -318,17 +319,17 @@ class FloatingLyricsService : Service() {
         selectedMediaControllerCallback = callback
         runCatching {
             controller.registerCallback(callback, syncHandler)
-            applyControllerSnapshot(controller)
+            applyCurrentMediaFromController(controller)
         }.onFailure { e ->
             Log.w(TAG, "Failed to observe selected media controller", e)
             unregisterSelectedMediaController()
         }
     }
 
-    private fun applyControllerSnapshot(controller: MediaController): Boolean {
+    private fun applyCurrentMediaFromController(controller: MediaController): Boolean {
         if (controller.packageName != selectedSourcePackage) return false
-        val media = MediaSnapshotReader.fromController(controller) ?: return false
-        return applyMediaSnapshot(media)
+        val media = CurrentMediaReader.currentMediaFromController(controller) ?: return false
+        return applyCurrentMediaInfo(media)
     }
 
     private fun unregisterSelectedMediaController() {
@@ -348,7 +349,7 @@ class FloatingLyricsService : Service() {
         return current?.sessionToken == next.sessionToken
     }
 
-    private fun applyMediaSnapshot(media: CurrentMediaInfo): Boolean {
+    private fun applyCurrentMediaInfo(media: CurrentMediaInfo): Boolean {
         if (media.title.isBlank()) return false
         if (!shouldAcceptMediaUpdate(media.sourcePackage)) return false
 
@@ -376,6 +377,11 @@ class FloatingLyricsService : Service() {
         return true
     }
 
+    private fun CurrentMediaInfo.lyricsKey(extra: String? = null): String {
+        val base = "$sourcePackage|$title|$artist|$album|${durationMs / 1000L}"
+        return if (extra == null) base else "$base|$extra"
+    }
+
     private fun scheduleCurrentMediaRestore() {
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         mediaRestoreAttempt = 0
@@ -388,8 +394,8 @@ class FloatingLyricsService : Service() {
         if (!::windowController.isInitialized || !windowController.isVisible) return
         if (selectedSourcePackage.isNullOrBlank()) return
 
-        val restored = readSelectedMediaSnapshot()
-            ?.let(::applyMediaSnapshot)
+        val restored = readSelectedCurrentMediaInfo()
+            ?.let(::applyCurrentMediaInfo)
             ?: false
 
         if (restored) return
@@ -405,8 +411,8 @@ class FloatingLyricsService : Service() {
         syncHandler.postDelayed(mediaRestoreRunnable, delay)
     }
 
-    private fun readSelectedMediaSnapshot(): CurrentMediaInfo? {
-        return MediaSnapshotReader.readSelected(
+    private fun readSelectedCurrentMediaInfo(): CurrentMediaInfo? {
+        return CurrentMediaReader.readSelectedCurrentMedia(
             context = this,
             selectedPackage = selectedSourcePackage
         )
@@ -793,7 +799,7 @@ class FloatingLyricsService : Service() {
 
     companion object {
         private const val TAG = "FloatingLyricsService"
-        private const val MEDIA_SNAPSHOT_REFRESH_INTERVAL_MS = 1_000L
+        private const val CURRENT_MEDIA_REFRESH_INTERVAL_MS = 1_000L
         private val MEDIA_RESTORE_RETRY_DELAYS_MS = longArrayOf(
             250L,
             750L,

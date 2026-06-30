@@ -191,7 +191,7 @@ class MediaNotificationListenerService : NotificationListenerService() {
         val album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty()
 
         val duration = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION)
-        val position = MediaSnapshotReader.estimatedPositionMs(state)
+        val position = CurrentMediaReader.estimatedPositionMs(state)
         val isPlaying = state?.state == PlaybackState.STATE_PLAYING
 
         if (title.isNullOrBlank()) return

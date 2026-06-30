@@ -1,6 +1,6 @@
 package com.andsi.airlyrics.app.state
 
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.ui.model.MainUiState
 import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.navigation.Page

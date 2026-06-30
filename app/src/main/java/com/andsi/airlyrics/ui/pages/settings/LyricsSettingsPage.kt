@@ -12,7 +12,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSourceHint
@@ -273,7 +274,7 @@ private fun createCurrentLyricsCard(activity: MainUiHost): View  = with(activity
 
     fun populate(showRefreshFeedback: Boolean = false) {
         val loadGeneration = ++currentLyricsLoadGeneration
-        val media = getCurrentMediaSnapshot()
+        val media = getCurrentMediaInfo()
         val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(activity, it) } ?: 0L
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
@@ -461,7 +462,7 @@ private fun createRecentLyricsCard(activity: MainUiHost): View  = with(activity)
 
     populateRecentLyrics = { showRefreshFeedback ->
         val loadGeneration = ++recentLyricsLoadGeneration
-        val media = getCurrentMediaSnapshot()?.takeUnless { it.isEmpty }
+        val media = getCurrentMediaInfo()?.takeUnless { it.isEmpty }
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
         } else {

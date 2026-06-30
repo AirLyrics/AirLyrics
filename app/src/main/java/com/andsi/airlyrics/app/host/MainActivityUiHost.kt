@@ -16,7 +16,7 @@ import android.widget.TextView
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -74,7 +74,7 @@ internal class MainActivityUiHost(
     override fun getActiveMediaControllers(): List<MediaController> = graph.mediaSourceController.getActiveControllers()
     override fun getAppName(packageName: String): String = graph.mediaSourceController.getAppName(packageName)
     override fun getPlaybackStateText(state: Int?): String = graph.mediaSourceController.getPlaybackStateText(state)
-    override fun getCurrentMediaSnapshot(): CurrentMediaInfo? = graph.lyricsController.getCurrentMediaSnapshot()
+    override fun getCurrentMediaInfo(): CurrentMediaInfo? = graph.lyricsController.getCurrentMediaInfo()
     override fun runOnAppIo(block: () -> Unit) = graph.runOnAppIo(block)
     override fun runOnMainThread(block: () -> Unit) = graph.runOnMainThread(block)
 

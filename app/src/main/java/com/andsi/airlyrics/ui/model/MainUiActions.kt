@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.ui.model
 
 import android.view.View
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage

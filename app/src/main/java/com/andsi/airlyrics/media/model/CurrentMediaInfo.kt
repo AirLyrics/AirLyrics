@@ -1,7 +1,7 @@
-package com.andsi.airlyrics.floating.model
+package com.andsi.airlyrics.media.model
 
 /**
- * Snapshot of the currently accepted media session.
+ * Current media state accepted by the app for lyrics operations.
  */
 data class CurrentMediaInfo(
     val sourcePackage: String,
@@ -14,18 +14,6 @@ data class CurrentMediaInfo(
 ) {
     val isEmpty: Boolean
         get() = title.isBlank()
-
-    val displayText: String
-        get() = if (artist.isNotBlank()) {
-            "♪ $title - $artist"
-        } else {
-            "♪ $title"
-        }
-
-    fun lyricsKey(extra: String? = null): String {
-        val base = "$sourcePackage|$title|$artist|$album|${durationMs / 1000L}"
-        return if (extra == null) base else "$base|$extra"
-    }
 
     companion object {
         val Empty = CurrentMediaInfo(

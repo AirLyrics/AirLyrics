@@ -7,9 +7,9 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.SystemClock
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 
-object MediaSnapshotReader {
+object CurrentMediaReader {
     fun getActiveControllers(context: Context): List<MediaController> {
         return try {
             val mediaSessionManager =
@@ -21,7 +21,7 @@ object MediaSnapshotReader {
         }
     }
 
-    fun readSelected(context: Context, selectedPackage: String?): CurrentMediaInfo? {
+    fun readSelectedCurrentMedia(context: Context, selectedPackage: String?): CurrentMediaInfo? {
         if (selectedPackage.isNullOrBlank()) return null
 
         return selectedController(getActiveControllers(context), selectedPackage)
@@ -45,7 +45,7 @@ object MediaSnapshotReader {
             ?: selectedControllers.firstOrNull()
     }
 
-    fun bestFromControllers(
+    fun bestCurrentMediaFromControllers(
         controllers: List<MediaController>,
         selectedPackage: String?
     ): CurrentMediaInfo? {
@@ -58,7 +58,7 @@ object MediaSnapshotReader {
         return controller.toCurrentMediaInfo()
     }
 
-    fun fromController(controller: MediaController): CurrentMediaInfo? {
+    fun currentMediaFromController(controller: MediaController): CurrentMediaInfo? {
         return controller.toCurrentMediaInfo()
     }
 

@@ -32,6 +32,7 @@ import com.andsi.airlyrics.app.lifecycle.MainLaunchers
 import com.andsi.airlyrics.app.lifecycle.MainReceivers
 import com.andsi.airlyrics.app.render.MainHandRenderer
 import com.andsi.airlyrics.app.render.UiInvalidator
+import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.i18n.localizedAssetText
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
@@ -225,7 +226,7 @@ internal class MainGraph(
     }
 
     fun handleLyricsFileSelected(uri: Uri) {
-        val media = state.pendingImportMedia ?: lyricsController.getCurrentMediaSnapshot()
+        val media = state.pendingImportMedia ?: lyricsController.getCurrentMediaInfo()
         if (media == null || media.title.isBlank()) {
             Toast.makeText(activity, activity.getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
             return
@@ -292,26 +293,26 @@ internal class MainGraph(
     }
 
     fun currentLyricsOffsetSummary(): String {
-        val media = lyricsController.getCurrentMediaSnapshot() ?: return activity.getString(R.string.ui_waiting_for_current_song)
+        val media = lyricsController.getCurrentMediaInfo() ?: return activity.getString(R.string.ui_waiting_for_current_song)
         return activity.localizedOffsetDescription(LyricsOffsetStore.getOffsetMs(activity, media))
     }
 
     fun adjustLyricsOffsetForCurrentMedia(deltaMs: Long): Long? {
-        val media = lyricsController.getCurrentMediaSnapshot() ?: return null
+        val media = lyricsController.getCurrentMediaInfo() ?: return null
         val offset = LyricsOffsetStore.adjustOffsetMs(activity, media, deltaMs)
         floatingController.applyLyricsOffset(offset)
         return offset
     }
 
     fun resetLyricsOffsetForCurrentMedia(): Boolean {
-        val media = lyricsController.getCurrentMediaSnapshot() ?: return false
+        val media = lyricsController.getCurrentMediaInfo() ?: return false
         LyricsOffsetStore.resetOffset(activity, media)
         floatingController.applyLyricsOffset(0L)
         return true
     }
 
     fun showImportLyricsDialog() {
-        val media = lyricsController.getCurrentMediaSnapshot()
+        val media = lyricsController.getCurrentMediaInfo()
         if (media == null || media.title.isBlank()) {
             Toast.makeText(activity, activity.getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
             return

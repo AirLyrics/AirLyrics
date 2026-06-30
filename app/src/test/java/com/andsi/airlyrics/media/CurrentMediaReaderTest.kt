@@ -7,10 +7,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class MediaSnapshotReaderTest {
+class CurrentMediaReaderTest {
     @Test
     fun estimatedPositionMs_returnsZeroWhenStateIsMissing() {
-        assertEquals(0L, MediaSnapshotReader.estimatedPositionMs(null, elapsedRealtimeMs = 10_000L))
+        assertEquals(0L, CurrentMediaReader.estimatedPositionMs(null, elapsedRealtimeMs = 10_000L))
     }
 
     @Test
@@ -22,7 +22,7 @@ class MediaSnapshotReaderTest {
             updateTimeMs = 5_000L
         )
 
-        assertEquals(62_000L, MediaSnapshotReader.estimatedPositionMs(state, elapsedRealtimeMs = 12_000L))
+        assertEquals(62_000L, CurrentMediaReader.estimatedPositionMs(state, elapsedRealtimeMs = 12_000L))
     }
 
     @Test
@@ -34,7 +34,7 @@ class MediaSnapshotReaderTest {
             updateTimeMs = 5_000L
         )
 
-        assertEquals(69_000L, MediaSnapshotReader.estimatedPositionMs(state, elapsedRealtimeMs = 12_000L))
+        assertEquals(69_000L, CurrentMediaReader.estimatedPositionMs(state, elapsedRealtimeMs = 12_000L))
     }
 
     @Test
@@ -46,7 +46,7 @@ class MediaSnapshotReaderTest {
             updateTimeMs = 2_000L
         )
 
-        assertEquals(16_000L, MediaSnapshotReader.estimatedPositionMs(state, elapsedRealtimeMs = 6_000L))
+        assertEquals(16_000L, CurrentMediaReader.estimatedPositionMs(state, elapsedRealtimeMs = 6_000L))
     }
 
     private fun playbackState(

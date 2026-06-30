@@ -8,7 +8,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.ui.navigation.Page
@@ -66,7 +66,7 @@ internal abstract class MainUiHost(
     abstract fun getActiveMediaControllers(): List<MediaController>
     abstract fun getAppName(packageName: String): String
     abstract fun getPlaybackStateText(state: Int?): String
-    abstract fun getCurrentMediaSnapshot(): CurrentMediaInfo?
+    abstract fun getCurrentMediaInfo(): CurrentMediaInfo?
     abstract fun runOnAppIo(block: () -> Unit)
     abstract fun runOnMainThread(block: () -> Unit)
 

@@ -2,7 +2,7 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import androidx.core.content.edit
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import java.security.MessageDigest
 import java.util.Locale
 

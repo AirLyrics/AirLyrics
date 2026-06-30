@@ -12,11 +12,12 @@ import com.andsi.airlyrics.app.contracts.MainDialogHost
 import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
-import com.andsi.airlyrics.floating.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.displayText
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.media.MediaSnapshotReader
+import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 
 internal class LyricsController(
@@ -190,9 +191,9 @@ internal class LyricsController(
         }
     }
 
-    fun getCurrentMediaSnapshot(): CurrentMediaInfo? {
+    fun getCurrentMediaInfo(): CurrentMediaInfo? {
         val selectedPackage = MediaSourceStore.getSelectedPackage(context)
-        return MediaSnapshotReader.bestFromControllers(
+        return CurrentMediaReader.bestCurrentMediaFromControllers(
             controllers = mediaControllerProvider.getActiveControllers(),
             selectedPackage = selectedPackage
         )
