@@ -27,7 +27,8 @@ class FloatingLyricsRenderer(
     private val switchAnimationModeProvider: () -> LyricsSwitchAnimationMode = { LyricsSwitchAnimationMode.default },
     private val karaokeEnabledProvider: () -> Boolean = { false },
     private val karaokeHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) },
-    private val noTranslationTextProvider: () -> String = { "No translation for this lyric" }
+    private val noTranslationTextProvider: () -> String = { "No translation for this lyric" },
+    private val uptimeMillisProvider: () -> Long = { SystemClock.uptimeMillis() }
 ) {
     private var currentLyrics: List<LrcLine> = emptyList()
     private var currentKaraokeLines: List<KaraokeLine> = emptyList()
@@ -38,9 +39,16 @@ class FloatingLyricsRenderer(
     private var lastRenderedText: String? = null
 
     fun updatePlayback(positionMs: Long, isPlaying: Boolean) {
-        currentPositionMs = positionMs
+        val nowUptimeMs = uptimeMillisProvider()
+        val incomingPositionMs = positionMs.coerceAtLeast(0L)
+        val estimatedBeforeUpdateMs = getEstimatedPlaybackPositionMs(nowUptimeMs)
+        currentPositionMs = if (isStalePlayingBacktrack(incomingPositionMs, isPlaying, estimatedBeforeUpdateMs)) {
+            estimatedBeforeUpdateMs
+        } else {
+            incomingPositionMs
+        }
         currentIsPlaying = isPlaying
-        lastPositionUpdateUptimeMs = SystemClock.uptimeMillis()
+        lastPositionUpdateUptimeMs = nowUptimeMs
     }
 
     fun clear() {
@@ -496,11 +504,32 @@ class FloatingLyricsRenderer(
     private fun CharSequence.isNotBlankText(): Boolean = toString().isNotBlank()
 
     fun getEstimatedPositionMs(): Long {
+        return (getEstimatedPlaybackPositionMs() + lyricsOffsetMs).coerceAtLeast(0L)
+    }
+
+    private fun getEstimatedPlaybackPositionMs(nowUptimeMs: Long = uptimeMillisProvider()): Long {
         if (!currentIsPlaying || lastPositionUpdateUptimeMs == 0L) {
-            return (currentPositionMs + lyricsOffsetMs).coerceAtLeast(0L)
+            return currentPositionMs.coerceAtLeast(0L)
         }
 
-        val elapsedMs = SystemClock.uptimeMillis() - lastPositionUpdateUptimeMs
-        return (currentPositionMs + elapsedMs.coerceAtLeast(0L) + lyricsOffsetMs).coerceAtLeast(0L)
+        val elapsedMs = nowUptimeMs - lastPositionUpdateUptimeMs
+        return (currentPositionMs + elapsedMs.coerceAtLeast(0L)).coerceAtLeast(0L)
+    }
+
+    private fun isStalePlayingBacktrack(
+        positionMs: Long,
+        incomingIsPlaying: Boolean,
+        estimatedBeforeUpdateMs: Long
+    ): Boolean {
+        if (!currentIsPlaying || !incomingIsPlaying || lastPositionUpdateUptimeMs == 0L) {
+            return false
+        }
+
+        val backtrackMs = estimatedBeforeUpdateMs - positionMs
+        return backtrackMs in 1L..STALE_PLAYING_BACKTRACK_MS
+    }
+
+    companion object {
+        private const val STALE_PLAYING_BACKTRACK_MS = 1_500L
     }
 }
