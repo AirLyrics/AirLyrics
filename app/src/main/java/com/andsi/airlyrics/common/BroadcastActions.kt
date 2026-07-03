@@ -34,4 +34,5 @@ object BroadcastActions {
     const val EXTRA_CLICK_THROUGH = "clickThrough"
     const val EXTRA_OVERWRITE_LYRICS = "overwriteLyrics"
     const val EXTRA_LYRICS_OFFSET_MS = "lyricsOffsetMs"
+    const val EXTRA_MEDIA_SNAPSHOT_SEQUENCE = "mediaSnapshotSequence"
 }

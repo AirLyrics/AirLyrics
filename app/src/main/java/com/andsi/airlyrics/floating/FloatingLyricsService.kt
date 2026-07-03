@@ -59,6 +59,7 @@ class FloatingLyricsService : Service() {
     private var activeLyricsRequestKey: String? = null
     private var selectedSourcePackage: String? = null
     private var mediaRestoreAttempt = 0
+    private val mediaSnapshotGate = MediaSnapshotGate()
 
     private val syncRunnable = object : Runnable {
         override fun run() {
@@ -98,6 +99,10 @@ class FloatingLyricsService : Service() {
             val isPlaying = intent.getBooleanExtra("isPlaying", false)
             val duration = intent.getLongExtra("duration", 0L)
             val position = intent.getLongExtra("position", 0L)
+            val snapshotSequence = intent.getLongExtra(
+                BroadcastActions.EXTRA_MEDIA_SNAPSHOT_SEQUENCE,
+                CurrentMediaInfo.UNSPECIFIED_SNAPSHOT_SEQUENCE
+            )
 
             applyCurrentMediaInfo(
                 CurrentMediaInfo(
@@ -107,7 +112,8 @@ class FloatingLyricsService : Service() {
                     album = album,
                     durationMs = duration,
                     isPlaying = isPlaying,
-                    positionMs = position
+                    positionMs = position,
+                    snapshotSequence = snapshotSequence
                 )
             )
         }
@@ -230,6 +236,7 @@ class FloatingLyricsService : Service() {
     private fun applyCurrentMediaInfo(media: CurrentMediaInfo): Boolean {
         if (media.title.isBlank()) return false
         if (!shouldAcceptMediaUpdate(media.sourcePackage)) return false
+        if (!mediaSnapshotGate.markAcceptedIfFresh(media)) return false
 
         currentMedia = media
 

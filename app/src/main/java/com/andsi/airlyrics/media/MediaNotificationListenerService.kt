@@ -118,7 +118,8 @@ class MediaNotificationListenerService : NotificationListenerService() {
             Log.d(
                 TAG,
                 "media: source=${media.sourcePackage} title=${media.title} artist=${media.artist} " +
-                        "duration=${media.durationMs} position=${media.positionMs} playing=${media.isPlaying}"
+                        "duration=${media.durationMs} position=${media.positionMs} playing=${media.isPlaying} " +
+                        "sequence=${media.snapshotSequence}"
             )
         }
 
@@ -130,6 +131,7 @@ class MediaNotificationListenerService : NotificationListenerService() {
             putExtra("duration", media.durationMs)
             putExtra("position", media.positionMs)
             putExtra("isPlaying", media.isPlaying)
+            putExtra(BroadcastActions.EXTRA_MEDIA_SNAPSHOT_SEQUENCE, media.snapshotSequence)
             putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, media.sourcePackage)
         }
 

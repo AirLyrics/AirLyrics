@@ -8,6 +8,7 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.SystemClock
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.model.MediaSnapshotSequencer
 
 object CurrentMediaReader {
     fun getActiveControllers(context: Context): List<MediaController> {
@@ -111,7 +112,8 @@ object CurrentMediaReader {
             album = metadata.getString(MediaMetadata.METADATA_KEY_ALBUM).orEmpty(),
             durationMs = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION),
             isPlaying = state?.state == PlaybackState.STATE_PLAYING,
-            positionMs = estimatedPositionMs(state)
+            positionMs = estimatedPositionMs(state),
+            snapshotSequence = MediaSnapshotSequencer.next()
         )
     }
 
