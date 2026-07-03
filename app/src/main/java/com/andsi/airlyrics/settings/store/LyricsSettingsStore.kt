@@ -25,9 +25,13 @@ object LyricsSettingsStore {
 
     fun getLyricsSearchSource(context: Context): LyricsSearchSource {
         val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_LYRICS_SOURCE, LyricsSearchSource.default.key)
+            .getString(KEY_LYRICS_SOURCE, null)
 
-        return LyricsSearchSource.fromKey(value)
+        return if (value == null) {
+            LyricsSearchSource.default
+        } else {
+            LyricsSearchSource.fromKeyOrNull(value) ?: LyricsSearchSource.LOCAL_ONLY
+        }
     }
 
     fun setLyricsSearchSource(context: Context, source: LyricsSearchSource) {
@@ -42,7 +46,7 @@ object LyricsSettingsStore {
     }
 
     fun setLyricsSource(context: Context, source: String) {
-        setLyricsSearchSource(context, LyricsSearchSource.fromKey(source))
+        setLyricsSearchSource(context, LyricsSearchSource.fromKeyOrNull(source) ?: LyricsSearchSource.LOCAL_ONLY)
     }
 
 

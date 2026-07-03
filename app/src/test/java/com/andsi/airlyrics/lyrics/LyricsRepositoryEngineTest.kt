@@ -68,6 +68,20 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
+    fun findLyrics_doesNotFallbackWhenSelectedOnlineProviderIsMissing() {
+        val netease = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
+        val engine = engine(
+            online = netease,
+            settings = settings(source = LyricsSearchSource.MUSIXMATCH)
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
+
+        assertNull(found)
+        assertEquals(0, netease.calls)
+    }
+
+    @Test
     fun findLyrics_ignoreAutoSearchSettingAllowsManualOnlineLookup() {
         val online = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(

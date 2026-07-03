@@ -72,9 +72,20 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
-    fun legacyStringSetterHandlesUnknownSourceAsDefault() {
+    fun legacyStringSetterHandlesUnknownSourceAsLocalOnly() {
         LyricsSettingsStore.setLyricsSource(context, "unknown-provider")
 
-        assertEquals(LyricsSearchSource.NETEASE, LyricsSettingsStore.getLyricsSearchSource(context))
+        assertEquals(LyricsSearchSource.LOCAL_ONLY, LyricsSettingsStore.getLyricsSearchSource(context))
+        assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
+    }
+
+    @Test
+    fun getLyricsSearchSource_handlesPersistedUnknownSourceAsLocalOnly() {
+        context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
+            .putString("lyrics_source", "unknown-provider")
+            .commit()
+
+        assertEquals(LyricsSearchSource.LOCAL_ONLY, LyricsSettingsStore.getLyricsSearchSource(context))
+        assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
     }
 }

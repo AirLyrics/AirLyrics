@@ -20,8 +20,12 @@ enum class LyricsSearchSource(val key: String) {
     companion object {
         val default: LyricsSearchSource = NETEASE
 
+        fun fromKeyOrNull(key: String?): LyricsSearchSource? {
+            return entries.firstOrNull { it.key == key }
+        }
+
         fun fromKey(key: String?): LyricsSearchSource {
-            return entries.firstOrNull { it.key == key } ?: default
+            return fromKeyOrNull(key) ?: default
         }
     }
 }

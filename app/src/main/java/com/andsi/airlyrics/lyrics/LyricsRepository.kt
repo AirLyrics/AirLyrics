@@ -114,10 +114,7 @@ internal class LyricsRepositoryEngine(
                 return@runCatching null
             }
 
-            val provider = onlineProviders[settings.source] ?: onlineProviders[LyricsSearchSource.NETEASE]
-            if (provider == null) {
-                return@runCatching null
-            }
+            val provider = onlineProviders[settings.source] ?: return@runCatching null
 
             cancellationToken?.throwIfCancellationRequested()
             val onlineResult = provider.fetch(request).getOrElse { error ->
