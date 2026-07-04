@@ -167,7 +167,7 @@ internal object LyricsFileStore {
 
     fun readLegacyLyrics(context: Context, title: String, artist: String, duration: Long): String? {
         val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
-        val fileName = SongIdentity.makeLegacyFileName(title, artist, duration)
+        val fileName = LegacyLyricsFileName.make(title, artist, duration)
 
         if (treeUri != null) {
             val dir = DocumentFile.fromTreeUri(context, treeUri) ?: return null

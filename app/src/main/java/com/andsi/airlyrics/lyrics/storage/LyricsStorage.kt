@@ -3,6 +3,7 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.net.Uri
 import com.andsi.airlyrics.lyrics.KaraokeLine
+import com.andsi.airlyrics.lyrics.model.SongIdentity
 import com.andsi.airlyrics.lyrics.parser.KaraokeLrcParser
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.parser.ParsedKaraokeImport
@@ -231,7 +232,7 @@ object LyricsStorage {
             )
         }
 
-        val legacyFileName = SongIdentity.makeLegacyFileName(title, artist, duration)
+        val legacyFileName = LegacyLyricsFileName.make(title, artist, duration)
         val legacyExists = LyricsFileStore.readLegacyLyrics(context, title, artist, duration) != null
 
         if (legacyExists) {
@@ -264,7 +265,8 @@ object LyricsStorage {
         provider: String = "local",
         overwrite: Boolean = true
     ): Boolean = withStorageLock {
-        val normalizedKey = SongIdentity.makeStorageKey(title, artist, duration)
+        val identity = SongIdentity(title = title, artist = artist, album = album, durationMs = duration)
+        val normalizedKey = identity.storageKey()
         val existing = LyricsIndexStore.find(context, title, artist, duration)
         if (existing?.file?.isNotBlank() == true && !overwrite) return@withStorageLock false
 
@@ -274,7 +276,7 @@ object LyricsStorage {
         if (!LyricsFileStore.writeManagedLyrics(context, fileName, lyrics)) return@withStorageLock false
 
         val entries = LyricsIndexStore.read(context)
-            .filterNot { SongIdentity.isSameSong(it, title, artist, duration) || it.key == normalizedKey }
+            .filterNot { it.isSameSong(identity) || it.key == normalizedKey }
             .toMutableList()
 
         entries += LyricsIndexEntry(
@@ -373,7 +375,8 @@ object LyricsStorage {
         if (karaokeLines.isEmpty()) return false
 
         return withStorageLock {
-            val normalizedKey = SongIdentity.makeStorageKey(title, artist, duration)
+            val identity = SongIdentity(title = title, artist = artist, album = album, durationMs = duration)
+            val normalizedKey = identity.storageKey()
             val existing = LyricsIndexStore.find(context, title, artist, duration)
             if (existing?.karaokeFile?.isNotBlank() == true && !overwrite) return@withStorageLock false
 
@@ -384,7 +387,7 @@ object LyricsStorage {
             if (!LyricsFileStore.writeManagedLyrics(context, fileName, json)) return@withStorageLock false
 
             val entries = LyricsIndexStore.read(context)
-                .filterNot { SongIdentity.isSameSong(it, title, artist, duration) || it.key == normalizedKey }
+                .filterNot { it.isSameSong(identity) || it.key == normalizedKey }
                 .toMutableList()
 
             entries += LyricsIndexEntry(
@@ -530,7 +533,8 @@ object LyricsStorage {
 
     fun deleteLocalLyrics(context: Context, title: String, artist: String, duration: Long, mode: DeleteMode = DeleteMode.ALL): Boolean = withStorageLock {
         val entries = LyricsIndexStore.read(context)
-        val matched = entries.filter { SongIdentity.isSameSong(it, title, artist, duration) }
+        val identity = SongIdentity(title = title, artist = artist, durationMs = duration)
+        val matched = entries.filter { it.isSameSong(identity) }
         val matchedKeys = matched.map { it.key }.toSet()
         var deletedAny = false
         val now = System.currentTimeMillis()
@@ -564,7 +568,7 @@ object LyricsStorage {
         }
 
         if (mode == DeleteMode.PLAIN || mode == DeleteMode.ALL) {
-            val legacyFileName = SongIdentity.makeLegacyFileName(title, artist, duration)
+            val legacyFileName = LegacyLyricsFileName.make(title, artist, duration)
             deletedAny = LyricsFileStore.deleteLegacyLyrics(context, legacyFileName) || deletedAny
         }
 

@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
+import com.andsi.airlyrics.lyrics.model.SongIdentity
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -73,8 +74,9 @@ internal object LyricsIndexStore {
 
     fun find(context: Context, title: String, artist: String, duration: Long): LyricsIndexEntry? {
         val entries = read(context)
-        return entries.firstOrNull { SongIdentity.isStrongSameSong(it, title, artist, duration) }
-            ?: entries.firstOrNull { SongIdentity.isWeakSameSong(it, title, artist) }
+        val identity = SongIdentity(title = title, artist = artist, durationMs = duration)
+        return entries.firstOrNull { it.isStrongSameSong(identity) }
+            ?: entries.firstOrNull { it.isWeakSameSong(identity) }
     }
 
     fun findByFileName(context: Context, fileName: String): LyricsIndexEntry? {

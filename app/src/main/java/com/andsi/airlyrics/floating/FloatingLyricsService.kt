@@ -26,6 +26,7 @@ import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
+import com.andsi.airlyrics.lyrics.model.SongIdentity
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
@@ -33,6 +34,7 @@ import com.andsi.airlyrics.media.MediaNotificationListenerService
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.displayText
+import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 
@@ -55,8 +57,8 @@ class FloatingLyricsService : Service() {
     private val lyricsLookupRunner = LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsRepository")
 
     private var currentMedia: CurrentMediaInfo = CurrentMediaInfo.Empty
-    private var lastLyricsKey: String? = null
-    private var activeLyricsRequestKey: String? = null
+    private var lastPlaybackLyricsKey: PlaybackLyricsKey? = null
+    private var activeLyricsLookupRequestKey: LyricsLookupRequestKey? = null
     private var selectedSourcePackage: String? = null
     private var mediaRestoreAttempt = 0
     private val mediaSnapshotGate = MediaSnapshotGate()
@@ -249,22 +251,31 @@ class FloatingLyricsService : Service() {
         )
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
 
-        val lyricsKey = media.lyricsKey()
-        if (lyricsKey == lastLyricsKey) {
+        val playbackLyricsKey = media.playbackLyricsKey()
+        if (playbackLyricsKey == lastPlaybackLyricsKey) {
             renderer.tick()
             return true
         }
 
-        lastLyricsKey = lyricsKey
-        activeLyricsRequestKey = lyricsKey
-        loadLyricsForSong(media = media, requestKey = lyricsKey)
+        val lookupRequestKey = media.lyricsLookupRequestKey()
+        lastPlaybackLyricsKey = playbackLyricsKey
+        activeLyricsLookupRequestKey = lookupRequestKey
+        loadLyricsForSong(media = media, lookupRequestKey = lookupRequestKey)
 
         return true
     }
 
-    private fun CurrentMediaInfo.lyricsKey(extra: String? = null): String {
-        val base = "$sourcePackage|$title|$artist|$album|${durationMs / 1000L}"
-        return if (extra == null) base else "$base|$extra"
+    private fun CurrentMediaInfo.playbackLyricsKey(): PlaybackLyricsKey {
+        val songKey = toSongIdentity().storageKey()
+        val normalizedAlbum = SongIdentity.normalizeText(album)
+        return PlaybackLyricsKey("$sourcePackage|$songKey|$normalizedAlbum")
+    }
+
+    private fun CurrentMediaInfo.lyricsLookupRequestKey(nonce: String? = null): LyricsLookupRequestKey {
+        val playbackKey = playbackLyricsKey()
+        return LyricsLookupRequestKey(
+            if (nonce == null) playbackKey.value else "${playbackKey.value}|$nonce"
+        )
     }
 
     private fun scheduleCurrentMediaRestore() {
@@ -344,14 +355,15 @@ class FloatingLyricsService : Service() {
             return
         }
 
-        val requestKey = currentMedia.lyricsKey(
-            extra = "reload|${SystemClock.uptimeMillis()}"
+        val playbackLyricsKey = currentMedia.playbackLyricsKey()
+        val lookupRequestKey = currentMedia.lyricsLookupRequestKey(
+            nonce = "reload|${SystemClock.uptimeMillis()}"
         )
-        lastLyricsKey = requestKey
-        activeLyricsRequestKey = requestKey
+        lastPlaybackLyricsKey = playbackLyricsKey
+        activeLyricsLookupRequestKey = lookupRequestKey
         loadLyricsForSong(
             media = currentMedia,
-            requestKey = requestKey,
+            lookupRequestKey = lookupRequestKey,
             bypassLocal = bypassLocal,
             forceSaveOnline = forceSaveOnline,
             ignoreAutoSearchSetting = ignoreAutoSearchSetting
@@ -386,8 +398,8 @@ class FloatingLyricsService : Service() {
     }
 
     private fun clearLyricsState(message: String) {
-        lastLyricsKey = null
-        activeLyricsRequestKey = null
+        lastPlaybackLyricsKey = null
+        activeLyricsLookupRequestKey = null
         lyricsLookupRunner.cancelActive()
         currentMedia = CurrentMediaInfo.Empty
         renderer.setLyricsOffset(0L)
@@ -404,7 +416,7 @@ class FloatingLyricsService : Service() {
 
     private fun loadLyricsForSong(
         media: CurrentMediaInfo,
-        requestKey: String,
+        lookupRequestKey: LyricsLookupRequestKey,
         bypassLocal: Boolean = false,
         forceSaveOnline: Boolean = false,
         ignoreAutoSearchSetting: Boolean = false
@@ -418,7 +430,7 @@ class FloatingLyricsService : Service() {
         )
 
         lyricsLookupRunner.submit(
-            requestKey = requestKey,
+            requestKey = lookupRequestKey.value,
             lookup = { token ->
                 LyricsRepository.findLyrics(
                     context = this,
@@ -432,8 +444,9 @@ class FloatingLyricsService : Service() {
                     cancellationToken = token
                 )
             },
-            callback = { completedRequestKey, result ->
-                if (activeLyricsRequestKey == completedRequestKey) {
+            callback = { completedLookupRequestKey, result ->
+                if (activeLyricsLookupRequestKey == LyricsLookupRequestKey(completedLookupRequestKey)) {
+                    activeLyricsLookupRequestKey = null
                     applyLyricsResult(result = result, media = media)
                 }
             }
@@ -479,7 +492,7 @@ class FloatingLyricsService : Service() {
 
     private fun importLyrics(uri: Uri, overwrite: Boolean) {
         lyricsLookupRunner.cancelActive()
-        activeLyricsRequestKey = null
+        activeLyricsLookupRequestKey = null
         val media = currentMedia
 
         if (media.title.isBlank()) {
@@ -510,8 +523,8 @@ class FloatingLyricsService : Service() {
         )
 
         if (localLyrics != null) {
-            lastLyricsKey = media.lyricsKey()
-            activeLyricsRequestKey = lastLyricsKey
+            lastPlaybackLyricsKey = media.playbackLyricsKey()
+            activeLyricsLookupRequestKey = null
             renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
             renderer.parseAndShow(
                 lyrics = localLyrics,
@@ -682,6 +695,12 @@ class FloatingLyricsService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
+
+    @JvmInline
+    private value class PlaybackLyricsKey(val value: String)
+
+    @JvmInline
+    private value class LyricsLookupRequestKey(val value: String)
 
     companion object {
         private const val CURRENT_MEDIA_REFRESH_INTERVAL_MS = 1_000L
