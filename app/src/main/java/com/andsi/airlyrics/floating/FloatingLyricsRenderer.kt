@@ -68,10 +68,14 @@ class FloatingLyricsRenderer(
         setTextImmediately(text)
     }
 
-    fun setLyricsOffset(offsetMs: Long) {
-        if (lyricsOffsetMs == offsetMs) return
+    /**
+     * Updates the timing offset. Rendering is caller-controlled so parse/clear flows do
+     * not repaint stale lyrics before replacing the renderer state.
+     */
+    fun setLyricsOffset(offsetMs: Long): Boolean {
+        if (lyricsOffsetMs == offsetMs) return false
         lyricsOffsetMs = offsetMs
-        refresh()
+        return true
     }
 
     fun parseAndShow(

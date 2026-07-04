@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.floating
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FloatingLyricsRendererTest {
@@ -44,6 +46,20 @@ class FloatingLyricsRendererTest {
 
         renderer.updatePlayback(positionMs = 5_200L, isPlaying = false)
         assertEquals(5_200L, renderer.getEstimatedPositionMs())
+    }
+
+    @Test
+    fun setLyricsOffset_reportsChangesAndShiftsEstimatedPosition() {
+        val now = 10_000L
+        val renderer = renderer { now }
+
+        renderer.updatePlayback(positionMs = 1_000L, isPlaying = false)
+
+        assertTrue(renderer.setLyricsOffset(500L))
+        assertEquals(1_500L, renderer.getEstimatedPositionMs())
+
+        assertFalse(renderer.setLyricsOffset(500L))
+        assertEquals(1_500L, renderer.getEstimatedPositionMs())
     }
 
     private fun renderer(uptimeMillisProvider: () -> Long): FloatingLyricsRenderer {

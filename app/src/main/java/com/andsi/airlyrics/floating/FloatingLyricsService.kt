@@ -329,8 +329,9 @@ class FloatingLyricsService : Service() {
     }
 
     private fun applyLyricsOffset(offsetMs: Long) {
-        renderer.setLyricsOffset(offsetMs)
-        renderer.refresh()
+        if (renderer.setLyricsOffset(offsetMs)) {
+            renderer.refresh()
+        }
     }
 
     private fun reloadCurrentLyrics(
