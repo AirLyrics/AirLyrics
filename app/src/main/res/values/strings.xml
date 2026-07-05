@@ -18,14 +18,11 @@
     <string name="lyrics_offset_advance">Lyrics advance %1$s</string>
     <string name="lyrics_offset_delay">Lyrics delay %1$s</string>
     <string name="lyrics_plain_format_invalid_lines">Line %1$s%2$s has an invalid format.\n\nPlain lyrics must use the [00:12.34]lyric format. Blank lines and LRC metadata such as [ar:artist] are allowed.</string>
-    <string name="permissions_summary">%1$d / %2$d basic permissions enabled</string>
+    <string name="permissions_summary">Basic permissions enabled: %1$d / %2$d</string>
     <string name="provider_local_lyrics">Local lyrics</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_lyrics">NetEase Lyrics</string>
     <string name="settings_current_value">Current: %1$s</string>
-    <string name="source_label">Source: %1$s</string>
-    <string name="state_disabled">Disabled</string>
-    <string name="state_enabled">Enabled</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">About</string>
     <string name="ui_active_players">Active players</string>
@@ -76,7 +73,6 @@
     <string name="ui_content">Content</string>
     <string name="ui_copy_lyrics_save_folder">Copy lyrics save folder</string>
     <string name="ui_corner_radius">Corner radius</string>
-    <string name="ui_current">Current: </string>
     <string name="ui_current_line">Current line</string>
     <string name="ui_current_media">Current media</string>
     <string name="ui_current_next">Current + next</string>
@@ -108,14 +104,12 @@
     <string name="ui_enhanced_lrc_format_hint">Enhanced LRC uses [00:12.34] for line time and &lt;00:12.34&gt; for word time.</string>
     <string name="ui_enhanced_lrc_removed_for_this_song">Enhanced LRC removed for this song.</string>
     <string name="ui_expand_preview">Expand preview</string>
-    <string name="ui_fade">Fade</string>
     <string name="ui_fast_forwarding">Fast-forwarding</string>
     <string name="ui_floating">Floating</string>
     <string name="ui_floating_preview_sample">This is a lyric preview</string>
     <string name="ui_follow_system">Follow system</string>
     <string name="ui_font_size">Font size</string>
     <string name="ui_format_looks_good">Format looks good</string>
-    <string name="ui_found_no_lyrics">found no lyrics</string>
     <string name="ui_give_it_a_star">Give it a star!</string>
     <string name="ui_good_for_chinese_songs">Good for Chinese songs</string>
     <string name="ui_musixmatch_source_hint">Good for international songs;AirLyrics tries to fetch a translation in the device primary system language when available from Musixmatch</string>
@@ -134,7 +128,6 @@
     <string name="ui_imported_off">Imported · off</string>
     <string name="ui_lyrics_folder_scope_hint">Imports, auto-save, and the lyrics index use this folder.</string>
     <string name="ui_invalid_format">Invalid format</string>
-    <string name="ui_is_rate_limited_try_again_later">is rate limited. Try again later</string>
     <string name="ui_item_displaytitle_enhanced_lrc">%1$s · Enhanced LRC</string>
     <string name="ui_language">Language</string>
     <string name="ui_left">Left</string>
@@ -151,9 +144,7 @@
     <string name="ui_locked">Locked</string>
     <string name="ui_locked_click_through">Locked + click-through</string>
     <string name="ui_locked_touchable">Locked · touchable</string>
-    <string name="ui_lookup_failed">lookup failed</string>
     <string name="ui_lyrics">Lyrics</string>
-    <string name="ui_lyrics_are_restricted">lyrics are restricted</string>
     <string name="ui_lyrics_display">Lyrics display</string>
     <string name="ui_lyrics_format_guide">Lyrics format guide</string>
     <string name="ui_lyrics_import_failed">Lyrics import failed</string>
@@ -161,7 +152,6 @@
     <string name="ui_lyrics_not_found">Lyrics not found</string>
     <string name="ui_lyrics_offset">Lyrics offset</string>
     <string name="ui_offset_per_song_hint">Lyrics offset is saved per song and does not modify the original Plain LRC or Enhanced LRC files.</string>
-    <string name="ui_lyrics_parse_failed">lyrics parse failed</string>
     <string name="ui_lyrics_save_folder">Lyrics save folder</string>
     <string name="ui_lyrics_save_folder_copied">Lyrics save folder copied</string>
     <string name="ui_lyrics_folder_permission_failed">Cannot keep long-term access to this folder. Please choose another folder.</string>
@@ -172,10 +162,7 @@
     <string name="ui_max_width">Max width</string>
     <string name="ui_media">Media</string>
     <string name="ui_media_source_waiting_status">Media source selected. Waiting for that player to update</string>
-    <string name="ui_native_module_error">native module error</string>
-    <string name="ui_needs_credentials">needs credentials</string>
     <string name="ui_netease_cloud_music">NetEase Cloud Music</string>
-    <string name="ui_network_request_failed">network request failed</string>
     <string name="ui_next_lyric_preview">Next lyric preview</string>
     <string name="ui_no_active_media_found">No active media found.</string>
     <string name="ui_no_active_media_found_short">No active media found</string>
@@ -254,7 +241,6 @@ Enhanced LRC recommended format:
     <string name="ui_preferred">Preferred</string>
     <string name="ui_prev_current_next">Prev + current + next</string>
     <string name="ui_previous_current">Previous + current</string>
-    <string name="ui_previous_current_next">Previous + current + next</string>
     <string name="ui_previous_lyric_preview">Previous lyric preview</string>
     <string name="ui_lyrics_priority_hint">Priority: manual imports &gt; local cache &gt; online search.</string>
     <string name="ui_purple">Purple</string>
@@ -285,7 +271,6 @@ Enhanced LRC recommended format:
     <string name="ui_save_failed">Save failed</string>
     <string name="ui_save_folder">Save folder: </string>
     <string name="ui_saved">Saved</string>
-    <string name="ui_scale">Scale</string>
     <string name="ui_scale_fade">Scale fade</string>
     <string name="ui_search">Search</string>
     <string name="ui_search_online_again">Search online again</string>

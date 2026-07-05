@@ -2,10 +2,15 @@
 androidxTestCore = "1.7.0"
 robolectric = "4.16.1"
 agp = "9.2.1"
-coreKtx = "1.18.0"
+coreKtx = "1.19.0"
 appcompat = "1.7.1"
 material = "1.14.0"
 activityKtx = "1.13.0"
+documentfile = "1.1.0"
+junit = "4.13.2"
+json = "20260522"
+androidxTestJunit = "1.3.0"
+androidxTestRunner = "1.7.0"
 
 [libraries]
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
@@ -14,6 +19,11 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-activity-ktx = { group = "androidx.activity", name = "activity-ktx", version.ref = "activityKtx" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+json = { group = "org.json", name = "json", version.ref = "json" }
+androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

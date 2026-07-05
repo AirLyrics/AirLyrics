@@ -82,18 +82,20 @@ gradle.taskGraph.whenReady {
 
 android {
     namespace = "com.andsi.airlyrics"
-    compileSdk = 36
+    compileSdk = 37
     ndkVersion = "26.3.11579264"
 
     defaultConfig {
         applicationId = "com.andsi.airlyrics"
         minSdk = 26
+        //noinspection OldTargetApi
         targetSdk = 36
         versionCode = 7
         versionName = "1.0.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         ndk {
+            //noinspection ChromeOsAbiSupport
             abiFilters += listOf("arm64-v8a")
         }
     }
@@ -133,6 +135,26 @@ android {
         includeInBundle = false
     }
 
+    lint {
+        disable += setOf(
+            // Keep targetSdk changes explicit: floating windows, foreground
+            // service behavior, notifications, and storage need device testing.
+            "OldTargetApi",
+            // Release builds intentionally ship arm64 only. x86_64 Rust/OpenSSL
+            // cross-compilation is opt-in via -Pairlyrics.buildX86_64=true.
+            "ChromeOsAbiSupport"
+        )
+    }
+
+    @Suppress("UnstableApiUsage")
+    bundle {
+        language {
+            // The app lets users switch language at runtime. Keep bundled
+            // locale resources together instead of relying on Play language splits.
+            enableSplit = false
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -156,15 +178,14 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
-    implementation("androidx.documentfile:documentfile:1.1.0")
+    implementation(libs.androidx.documentfile)
 
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20260522")
+    testImplementation(libs.junit)
+    testImplementation(libs.json)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.robolectric)
-    androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test:runner:1.7.0")
-    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }
 
 

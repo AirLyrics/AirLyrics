@@ -18,14 +18,11 @@
     <string name="lyrics_offset_advance">歌词提前 %1$s</string>
     <string name="lyrics_offset_delay">歌词延后 %1$s</string>
     <string name="lyrics_plain_format_invalid_lines">第 %1$s%2$s 行格式不正确。\n\n普通歌词需要使用 [00:12.34]歌词 格式；空行和 [ar:歌手] 这类 LRC 信息行可以保留。</string>
-    <string name="permissions_summary">已开启 %1$d / %2$d 项基础权限</string>
+    <string name="permissions_summary">基础权限已开启：%1$d / %2$d</string>
     <string name="provider_local_lyrics">本地歌词</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_lyrics">网易云歌词</string>
     <string name="settings_current_value">当前：%1$s</string>
-    <string name="source_label">当前来源：%1$s</string>
-    <string name="state_disabled">已关闭</string>
-    <string name="state_enabled">已开启</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">关于</string>
     <string name="ui_active_players">活跃播放器</string>
@@ -76,7 +73,6 @@
     <string name="ui_content">显示内容</string>
     <string name="ui_copy_lyrics_save_folder">复制歌词保存目录</string>
     <string name="ui_corner_radius">圆角</string>
-    <string name="ui_current">当前：</string>
     <string name="ui_current_line">当前句</string>
     <string name="ui_current_media">当前媒体</string>
     <string name="ui_current_next">当前句 + 下一句</string>
@@ -108,7 +104,6 @@
     <string name="ui_enhanced_lrc_format_hint">逐字歌词行时间使用 [00:12.34]，字词时间使用 &lt;00:12.34&gt;。</string>
     <string name="ui_enhanced_lrc_removed_for_this_song">已移除当前音乐的逐字歌词</string>
     <string name="ui_expand_preview">展开预览</string>
-    <string name="ui_fade">柔和淡入</string>
     <string name="ui_fast_forwarding">快进中</string>
     <string name="ui_floating">悬浮窗</string>
     <string name="ui_floating_preview_sample">这是一行歌词预览
@@ -116,7 +111,6 @@ This is a lyric preview</string>
     <string name="ui_follow_system">跟随系统</string>
     <string name="ui_font_size">字体大小</string>
     <string name="ui_format_looks_good">格式正确</string>
-    <string name="ui_found_no_lyrics">未找到歌词</string>
     <string name="ui_give_it_a_star">点个star!</string>
     <string name="ui_good_for_chinese_songs">适合中国用户</string>
     <string name="ui_musixmatch_source_hint">适合国际歌曲；AirLyrics会尝试获取设备主要系统语言的翻译，是否可用取决于Musixmatch</string>
@@ -135,7 +129,6 @@ This is a lyric preview</string>
     <string name="ui_imported_off">已导入 · 未开启</string>
     <string name="ui_lyrics_folder_scope_hint">手动导入歌词、自动保存歌词和歌词索引都会使用这个位置。</string>
     <string name="ui_invalid_format">格式不正确</string>
-    <string name="ui_is_rate_limited_try_again_later">请求过于频繁，请稍后再试</string>
     <string name="ui_item_displaytitle_enhanced_lrc">%1$s · 逐字歌词</string>
     <string name="ui_language">语言</string>
     <string name="ui_left">左对齐</string>
@@ -152,9 +145,7 @@ This is a lyric preview</string>
     <string name="ui_locked">锁定</string>
     <string name="ui_locked_click_through">已锁定并穿透</string>
     <string name="ui_locked_touchable">已锁定 · 可触摸</string>
-    <string name="ui_lookup_failed">查找失败</string>
     <string name="ui_lyrics">歌词获取设置</string>
-    <string name="ui_lyrics_are_restricted">歌词受限，无法获取</string>
     <string name="ui_lyrics_display">歌词显示</string>
     <string name="ui_lyrics_format_guide">歌词格式说明</string>
     <string name="ui_lyrics_import_failed">导入歌词失败</string>
@@ -162,7 +153,6 @@ This is a lyric preview</string>
     <string name="ui_lyrics_not_found">未找到歌词</string>
     <string name="ui_lyrics_offset">歌词偏移</string>
     <string name="ui_offset_per_song_hint">歌词偏移按当前音乐保存，不会修改原始普通歌词或逐字歌词文件。</string>
-    <string name="ui_lyrics_parse_failed">歌词解析失败</string>
     <string name="ui_lyrics_save_folder">歌词保存目录</string>
     <string name="ui_lyrics_save_folder_copied">歌词保存目录已复制</string>
     <string name="ui_lyrics_folder_permission_failed">无法保留这个目录的长期访问权限，请选择其他目录。</string>
@@ -173,10 +163,7 @@ This is a lyric preview</string>
     <string name="ui_max_width">最大宽度</string>
     <string name="ui_media">媒体流</string>
     <string name="ui_media_source_waiting_status">已选择媒体来源，等待该播放器更新</string>
-    <string name="ui_native_module_error">原生歌词模块异常</string>
-    <string name="ui_needs_credentials">暂时需要访问凭据</string>
     <string name="ui_netease_cloud_music">网易云音乐</string>
-    <string name="ui_network_request_failed">网络请求失败</string>
     <string name="ui_next_lyric_preview">下一行歌词预览</string>
     <string name="ui_no_active_media_found">当前没有可识别的播放媒体。</string>
     <string name="ui_no_active_media_found_short">当前没有可识别的播放媒体</string>
@@ -255,7 +242,6 @@ This is a lyric preview</string>
     <string name="ui_preferred">优先显示</string>
     <string name="ui_prev_current_next">上 + 当前 + 下</string>
     <string name="ui_previous_current">上一句 + 当前句</string>
-    <string name="ui_previous_current_next">上 + 当前 + 下</string>
     <string name="ui_previous_lyric_preview">上一行歌词预览</string>
     <string name="ui_lyrics_priority_hint">使用顺序固定为：手动导入歌词 &gt; 本地缓存歌词 &gt; 联网搜索歌词。</string>
     <string name="ui_purple">紫</string>
@@ -286,7 +272,6 @@ This is a lyric preview</string>
     <string name="ui_save_failed">保存失败</string>
     <string name="ui_save_folder">保存目录：</string>
     <string name="ui_saved">已保存</string>
-    <string name="ui_scale">轻微缩放</string>
     <string name="ui_scale_fade">轻微缩放</string>
     <string name="ui_search">搜索</string>
     <string name="ui_search_online_again">重新联网搜索歌词</string>
