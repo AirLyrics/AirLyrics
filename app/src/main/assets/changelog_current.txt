@@ -1,9 +1,10 @@
-v1.0.7 - 2026-06-30
+v1.0.8 - 2026-07-05
 
 Fixed
-- Prevented stale media snapshots from moving floating lyrics back to an older playback position.
-- Added Android monochrome launcher icon support for themed icons.
+- Rejected stale media snapshots with sequence gating so older playback state cannot overwrite newer updates.
+- Avoided falling back to NetEase lyrics when the selected lyrics provider setting is invalid.
+- Avoided duplicate lyrics offset refreshes during floating lyrics line updates.
 
 Changed
-- Refactored current media information into the media layer for clearer ownership.
-- Centralized media session observation so listener updates and floating lyrics state stay aligned.
+- Refined song identity and lyrics lookup keys so saved lyrics and offsets match tracks more reliably.
+- Cleaned up launcher icon resources and known lint warnings.

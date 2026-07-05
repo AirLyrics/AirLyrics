@@ -1,3 +1,15 @@
+v1.0.8 - 2026-07-05
+
+Fixed
+- Rejected stale media snapshots with sequence gating so older playback state cannot overwrite newer updates.
+- Avoided falling back to NetEase lyrics when the selected lyrics provider setting is invalid.
+- Avoided duplicate lyrics offset refreshes during floating lyrics line updates.
+
+Changed
+- Refined song identity and lyrics lookup keys so saved lyrics and offsets match tracks more reliably.
+- Cleaned up launcher icon resources and known lint warnings.
+
+
 v1.0.7 - 2026-06-30
 
 Fixed
