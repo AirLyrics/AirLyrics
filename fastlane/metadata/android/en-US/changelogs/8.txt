@@ -1,0 +1,5 @@
+v1.0.7
+• Prevent stale media snapshots from moving floating lyrics back to older playback positions.
+• Add monochrome launcher icon support for themed Android launchers.
+• Refactor current media information ownership into the media layer.
+• Centralize media session observation so listener and floating service state stay aligned.
