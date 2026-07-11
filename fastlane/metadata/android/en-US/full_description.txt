@@ -8,7 +8,7 @@ Features:
 • Current media playback detection
 • Online lyrics search
 • Local lyrics import with same-timestamp translation support
-• Normal LRC and enhanced word-by-word lyrics support
+• Normal LRC and word-by-word lyrics support
 • Adjustable lyrics offset
 • Original and translated lyrics display
 • Customizable floating window style

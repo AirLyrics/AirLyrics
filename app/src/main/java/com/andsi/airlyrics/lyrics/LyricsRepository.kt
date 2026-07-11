@@ -212,6 +212,10 @@ private object AndroidLocalLyricsSaver : LocalLyricsSaver {
         durationMs: Long,
         result: LyricsProviderResult
     ) {
+        if (LyricsStorage.hasKaraokeLyrics(context, title, artist, durationMs)) {
+            return
+        }
+
         LyricsStorage.saveLyrics(
             context = context,
             title = title,

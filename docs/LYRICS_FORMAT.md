@@ -62,7 +62,7 @@ The actual display depends on the lyrics content mode:
 - Original only
 - Translation only
 
-## Enhanced / word-by-word LRC
+## Word-by-word LRC
 
 Word-by-word lyrics are mainly supported through local import. They contain a line timestamp and
 inline word timestamps.
@@ -96,8 +96,13 @@ includes them:
 [00:12.34]大好きだって / I love you, I love you
 ```
 
-When the song already has normal lyrics, importing word-by-word lyrics does not overwrite them. This
-keeps existing translations and manual edits safe.
+When the song already has normal lyrics, AirLyrics does not allow importing word-by-word lyrics.
+Remove the existing normal lyrics first, then import the word-by-word lyrics. This avoids keeping two
+independently editable lyric versions for the same song.
+
+After word-by-word lyrics are imported, the normal LRC is stored as an automatically generated
+fallback. Edit the word-by-word lyrics only; saving them regenerates the normal LRC. If you remove
+word-by-word lyrics, the generated normal LRC is removed with them.
 
 ## Supported variants
 
@@ -127,5 +132,7 @@ When creating lyrics manually, watch out for:
 - Multiple unrelated songs mixed in one file.
 - A song version or duration that does not match.
 - Importing a normal LRC file as word-by-word lyrics.
-- Expecting word-by-word import to overwrite existing normal lyrics automatically. Existing normal lyrics
-  are kept unless you delete or replace them yourself.
+- Importing word-by-word lyrics while existing normal lyrics are still bound to the song. Remove the
+  normal lyrics first.
+- Editing the generated normal LRC separately after importing word-by-word lyrics. Edit the
+  word-by-word lyrics instead.

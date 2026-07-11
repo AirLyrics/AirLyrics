@@ -6,7 +6,7 @@
     <string name="floating_preview_summary">Current: %1$s · %2$dsp · %3$s · Width %4$d%%</string>
     <string name="floating_slider_value">%1$s: %2$d</string>
     <string name="local_source_cache_provider">Cache · %1$s</string>
-    <string name="lyrics_enhanced_format_invalid_lines">Line %1$s%2$s has an invalid format.\n\nEnhanced LRC lyric lines must use [00:12.34] for line time and &lt;00:12.34&gt; for word tokens. Same-timestamp translation lines may use plain [00:12.34]text.</string>
+    <string name="lyrics_enhanced_format_invalid_lines">Line %1$s%2$s has an invalid format.\n\nWord-by-word lyric lines must use [00:12.34] for line time and &lt;00:12.34&gt; for word tokens. Same-timestamp translation lines may use plain [00:12.34]text.</string>
     <string name="lyrics_lookup_failed">%1$s lookup failed</string>
     <string name="lyrics_lookup_native_error">%1$s native module error</string>
     <string name="lyrics_lookup_need_credentials">%1$s needs credentials</string>
@@ -39,7 +39,7 @@
     <string name="ui_auto_save_off">Auto-save: off</string>
     <string name="ui_auto_save_on">Auto-save: on</string>
     <string name="ui_available">Available</string>
-    <string name="ui_available_local_enhanced_lrc">Available · local Enhanced LRC</string>
+    <string name="ui_available_local_enhanced_lrc">Available · local word-by-word lyrics</string>
     <string name="ui_back_to_edit">Back to edit</string>
     <string name="ui_background">Background</string>
     <string name="ui_background_bubble">Background bubble</string>
@@ -50,7 +50,7 @@
     <string name="ui_buffering">Buffering</string>
     <string name="ui_cache">Cache</string>
     <string name="ui_cancel">Cancel</string>
-    <string name="ui_cannot_read_enhanced_lrc_file">Cannot read this Enhanced LRC file.</string>
+    <string name="ui_cannot_read_enhanced_lrc_file">Cannot read this word-by-word lyrics file.</string>
     <string name="ui_cannot_read_this_lyric_file">Cannot read this lyric file.</string>
     <string name="ui_center">Center</string>
     <string name="ui_changelog">Changelog</string>
@@ -83,9 +83,9 @@
     <string name="ui_cyan">Cyan</string>
     <string name="ui_delay_0_1s">Delay 0.1s</string>
     <string name="ui_delay_1s">Delay 1s</string>
-    <string name="ui_remove_all_lyrics_message">Deletes both Plain LRC and Enhanced LRC for this song.</string>
-    <string name="ui_remove_plain_lrc_message">Deletes only this song’s Plain LRC. Enhanced LRC stays.</string>
-    <string name="ui_remove_enhanced_lrc_message">Deletes only this song’s Enhanced LRC. Plain LRC stays.</string>
+    <string name="ui_remove_all_lyrics_message">Deletes both plain lyrics and word-by-word lyrics for this song.</string>
+    <string name="ui_remove_plain_lrc_message">Deletes this song’s plain lyrics.</string>
+    <string name="ui_remove_enhanced_lrc_message">Deletes this song’s word-by-word lyrics. If the plain lyrics were generated from them, those plain lyrics are removed too.</string>
     <string name="ui_display_control">Display control</string>
     <string name="ui_drag_lock_off">Drag lock: Off</string>
     <string name="ui_drag_lock_on">Drag lock: On</string>
@@ -95,14 +95,16 @@
     <string name="ui_english">English</string>
     <string name="ui_enhanced">Word</string>
     <string name="ui_enhanced_color">Word color</string>
-    <string name="ui_enhanced_lrc">Enhanced LRC</string>
-    <string name="ui_enhanced_lrc_import_failed">Enhanced LRC import failed</string>
-    <string name="ui_enhanced_lrc_import_success">Enhanced LRC imported. Floating lyrics will refresh.</string>
-    <string name="ui_enhanced_lrc_lyrics">Enhanced LRC</string>
-    <string name="ui_enhanced_lrc_lyrics_enhanced_lrc">Enhanced LRC (.lrc)</string>
-    <string name="ui_enhanced_lrc_local_only_message">Enhanced LRC only supports local manual import.</string>
-    <string name="ui_enhanced_lrc_format_hint">Enhanced LRC uses [00:12.34] for line time and &lt;00:12.34&gt; for word time.</string>
-    <string name="ui_enhanced_lrc_removed_for_this_song">Enhanced LRC removed for this song.</string>
+    <string name="ui_enhanced_lrc">Word-by-word lyrics</string>
+    <string name="ui_enhanced_lrc_import_failed">Word-by-word lyrics import failed</string>
+    <string name="ui_enhanced_lrc_import_success">Word-by-word lyrics imported. Floating lyrics will refresh.</string>
+    <string name="ui_enhanced_lrc_lyrics">Word-by-word lyrics</string>
+    <string name="ui_enhanced_lrc_lyrics_enhanced_lrc">Word-by-word lyrics (.lrc)</string>
+    <string name="ui_enhanced_lrc_local_only_message">Word-by-word lyrics only support local manual import.</string>
+    <string name="ui_enhanced_lrc_format_hint">Word-by-word lyrics use [00:12.34] for line time and &lt;00:12.34&gt; for word time.</string>
+    <string name="ui_enhanced_lrc_import_blocked_by_plain_lrc">Remove existing plain lyrics before importing word-by-word lyrics.</string>
+    <string name="ui_plain_lrc_import_blocked_by_enhanced_lrc">Remove word-by-word lyrics before importing plain lyrics.</string>
+    <string name="ui_enhanced_lrc_removed_for_this_song">Word-by-word lyrics removed for this song.</string>
     <string name="ui_expand_preview">Expand preview</string>
     <string name="ui_fast_forwarding">Fast-forwarding</string>
     <string name="ui_floating">Floating</string>
@@ -122,20 +124,20 @@
     <string name="ui_horizontal_padding">Horizontal padding</string>
     <string name="ui_media_empty_permission_hint">If nothing appears, make sure notification access is enabled.</string>
     <string name="ui_import">Import</string>
-    <string name="ui_generated_from_enhanced_lrc">Generated from Enhanced LRC</string>
+    <string name="ui_generated_from_enhanced_lrc">Generated from word-by-word lyrics</string>
     <string name="ui_lrc_import_format_error">Import failed. Use a .lrc file in [00:12.34]lyric format.</string>
     <string name="ui_import_lyrics_for_current_song">Import lyrics for current song</string>
     <string name="ui_imported_off">Imported · off</string>
     <string name="ui_lyrics_folder_scope_hint">Imports, auto-save, and the lyrics index use this folder.</string>
     <string name="ui_invalid_format">Invalid format</string>
-    <string name="ui_item_displaytitle_enhanced_lrc">%1$s · Enhanced LRC</string>
+    <string name="ui_item_displaytitle_enhanced_lrc">%1$s · word-by-word lyrics</string>
     <string name="ui_language">Language</string>
     <string name="ui_left">Left</string>
     <string name="ui_like_it">Like it?</string>
     <string name="ui_line_range">Line range</string>
     <string name="ui_local">Local</string>
-    <string name="ui_local_enhanced_lrc">Local Enhanced LRC</string>
-    <string name="ui_local_enhanced_lrc_title">Local Enhanced LRC</string>
+    <string name="ui_local_enhanced_lrc">Local word-by-word lyrics</string>
+    <string name="ui_local_enhanced_lrc_title">Local word-by-word lyrics</string>
     <string name="ui_local_file_not_found">Local file not found</string>
     <string name="ui_local_lyrics_folder">Local lyrics folder</string>
     <string name="ui_local_lyrics_subtitle_type">%1$s · %2$s</string>
@@ -151,7 +153,7 @@
     <string name="ui_lyrics_import_empty_error">Lyrics imported, but the content is empty</string>
     <string name="ui_lyrics_not_found">Lyrics not found</string>
     <string name="ui_lyrics_offset">Lyrics offset</string>
-    <string name="ui_offset_per_song_hint">Lyrics offset is saved per song and does not modify the original Plain LRC or Enhanced LRC files.</string>
+    <string name="ui_offset_per_song_hint">Lyrics offset is saved per song and does not modify the original plain or word-by-word lyrics files.</string>
     <string name="ui_lyrics_save_folder">Lyrics save folder</string>
     <string name="ui_lyrics_save_folder_copied">Lyrics save folder copied</string>
     <string name="ui_lyrics_folder_permission_failed">Cannot keep long-term access to this folder. Please choose another folder.</string>
@@ -168,7 +170,7 @@
     <string name="ui_no_active_media_found_short">No active media found</string>
     <string name="ui_no_auto_save">No auto-save</string>
     <string name="ui_no_changelog_yet">No changelog yet.</string>
-    <string name="ui_no_enhanced_lrc_to_remove">No Enhanced LRC to remove for this song.</string>
+    <string name="ui_no_enhanced_lrc_to_remove">No word-by-word lyrics to remove for this song.</string>
     <string name="ui_no_local_lyrics_to_remove">No local lyrics to remove for this song.</string>
     <string name="ui_no_media_detected_yet">No media detected yet</string>
     <string name="ui_no_media_source_status">No media source selected. Open the app and choose one.</string>
@@ -180,7 +182,7 @@
     <string name="ui_recent_lyrics_empty_hint">No saved lyrics yet. Play and match a song, or import lyrics for current media.</string>
     <string name="ui_no_song_for_lyrics_binding">No song is playing, so lyrics cannot be bound</string>
     <string name="ui_no_translation_for_this_lyric">No translation for this lyric</string>
-    <string name="ui_no_valid_enhanced_lrc_line_was_found">No valid Enhanced LRC line was found. Keep at least one [00:12.34]&lt;00:12.34&gt;lyric line.</string>
+    <string name="ui_no_valid_enhanced_lrc_line_was_found">No valid word-by-word lyrics line was found. Keep at least one [00:12.34]&lt;00:12.34&gt;lyric line.</string>
     <string name="ui_plain_lrc_no_valid_line_error">No valid lyric line was found. Keep at least one [00:12.34]lyric line.</string>
     <string name="ui_not_bound">Not bound</string>
     <string name="ui_not_imported">Not imported</string>
@@ -204,15 +206,14 @@
     <string name="ui_overlay_permission_required">Overlay permission required</string>
     <string name="ui_permit">Permit</string>
     <string name="ui_overwrite">Overwrite</string>
-    <string name="ui_overwrite_local_enhanced_lrc">Overwrite local Enhanced LRC?</string>
+    <string name="ui_overwrite_local_enhanced_lrc">Overwrite local word-by-word lyrics?</string>
     <string name="ui_overwrite_plain_lyrics">Overwrite plain lyrics?</string>
     <string name="ui_parsed_lyrics_are_empty">Parsed lyrics are empty</string>
     <string name="ui_paused">Paused</string>
     <string name="ui_permissions">Permissions</string>
     <string name="ui_pink">Pink</string>
     <string name="ui_plain">Plain</string>
-    <string name="ui_plain_and_enhanced_lrc">Plain + Enhanced</string>
-    <string name="ui_plain_and_enhanced_lrc_examples_short">Plain LRC: [00:12.34]text. Enhanced LRC: [00:12.34]&lt;00:12.34&gt;w.</string>
+    <string name="ui_plain_and_enhanced_lrc_examples_short">Plain lyrics: [00:12.34]text. Word-by-word lyrics: [00:12.34]&lt;00:12.34&gt;w.</string>
     <string name="ui_plain_lrc_import_success">Plain LRC imported. Floating lyrics will refresh.</string>
     <string name="ui_plain_lrc_removed_for_this_song">Plain LRC removed for this song.</string>
     <string name="ui_plain_lyrics">Plain lyrics</string>
@@ -222,7 +223,7 @@
 [00:12.34]Original lyric
 [00:12.34]Translation
 
-Enhanced LRC recommended format:
+Word-by-word lyrics recommended format:
 [00:12.34]&lt;00:12.34&gt;T&lt;00:12.50&gt;ext
 [00:12.34]Translation</string>
     <string name="ui_manage_lyrics_select_player_hint">Play music and choose a player on the Media page first, then manage lyrics here.</string>
@@ -230,7 +231,7 @@ Enhanced LRC recommended format:
     <string name="ui_playback_error">Playback error</string>
     <string name="ui_playing">Playing</string>
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">Please choose a plain .lrc lyrics file</string>
-    <string name="ui_please_choose_an_enhanced_lrc_file">Please choose an Enhanced LRC .lrc file</string>
+    <string name="ui_please_choose_an_enhanced_lrc_file">Please choose a word-by-word .lrc lyrics file</string>
     <string name="ui_enable_overlay_permission_first">Please enable overlay permission first</string>
     <string name="ui_select_song_before_importing">Please play and select a song before importing lyrics</string>
     <string name="ui_importing_lyrics">Importing lyrics…</string>
@@ -259,8 +260,8 @@ Enhanced LRC recommended format:
     <string name="ui_remove_all_lyrics">Remove all lyrics</string>
     <string name="ui_remove_all_lyrics_confirm">Remove all lyrics?</string>
     <string name="ui_remove_downloaded_lrc">Remove downloaded LRC</string>
-    <string name="ui_remove_enhanced_lrc">Remove Enhanced LRC</string>
-    <string name="ui_remove_enhanced_lrc_confirm">Remove Enhanced LRC?</string>
+    <string name="ui_remove_enhanced_lrc">Remove word-by-word lyrics</string>
+    <string name="ui_remove_enhanced_lrc_confirm">Remove word-by-word lyrics?</string>
     <string name="ui_remove_plain_lrc">Remove plain LRC</string>
     <string name="ui_remove_plain_lrc_confirm">Remove Plain LRC?</string>
     <string name="ui_reset_current_song_offset">Reset current song offset</string>
@@ -308,12 +309,11 @@ Enhanced LRC recommended format:
     <string name="ui_text">Text</string>
     <string name="ui_text_alignment">Text alignment</string>
     <string name="ui_text_color">Text color</string>
-    <string name="ui_this_enhanced_lrc_can_be_saved">This Enhanced LRC can be saved.</string>
+    <string name="ui_this_enhanced_lrc_can_be_saved">These word-by-word lyrics can be saved.</string>
     <string name="ui_this_is_a_lyric_preview">This is a lyric preview</string>
     <string name="ui_this_plain_lrc_can_be_saved">This plain LRC can be saved.</string>
-    <string name="ui_overwrite_enhanced_keep_plain_msg">This song already has local Enhanced LRC. Overwriting only replaces that cache; Plain LRC remains.</string>
-    <string name="ui_overwrite_plain_keep_enhanced_msg">This song already has Plain LRC. Overwriting only replaces the Plain LRC; Enhanced LRC remains.</string>
-    <string name="ui_choose_lyrics_version_message">This song has both Plain LRC and Enhanced LRC. Choose which version to open.</string>
+    <string name="ui_overwrite_enhanced_keep_plain_msg">This song already has local word-by-word lyrics. Overwriting replaces them and regenerates plain lyrics.</string>
+    <string name="ui_overwrite_plain_keep_enhanced_msg">This song already has plain lyrics. Overwriting replaces the plain lyrics.</string>
     <string name="ui_touchable">Touchable</string>
     <string name="ui_translation_only">Translation only</string>
     <string name="ui_unknown_artist">Unknown artist</string>
@@ -328,7 +328,7 @@ Enhanced LRC recommended format:
     <string name="ui_version_project_link_and_changelog">Version, project link, and changelog.</string>
     <string name="ui_vertical_padding">Vertical padding</string>
     <string name="ui_view_current_setup">View current setup</string>
-    <string name="ui_view_lrc_examples_hint">View examples for Plain LRC and Enhanced LRC.</string>
+    <string name="ui_view_lrc_examples_hint">View examples for plain and word-by-word lyrics.</string>
     <string name="ui_vinyl_bubble">Vinyl bubble</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
     <string name="ui_waiting_for_media">Waiting for media</string>

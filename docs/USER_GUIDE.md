@@ -39,7 +39,7 @@ need some explanation:
 
 1. **Lyrics offset**: This only applies to the current song and will be saved automatically. The
    next time you play the same song, the saved offset will continue to be applied.
-2. **Word-by-word lyrics / karaoke lyrics**: These can only be used through local import. If you
+2. **Word-by-word lyrics**: These can only be used through local import. If you
    need this feature, you can search for and download the corresponding lyrics yourself, then import
    them into AirLyrics.
 3. **Highlight color in animation effects**: This refers to the color of the already displayed part
@@ -77,15 +77,14 @@ noting:
    AirLyrics includes a quick lyrics editing window. If you want to learn about the lyrics format, please refer to the related instructions.
 
 4. **Importing word-by-word lyrics**  
-   If you import word-by-word lyrics for a song that does not have normal lyrics, AirLyrics will
-   automatically generate normal lyrics based on the word-by-word lyrics. If the word-by-word file
-   contains same-timestamp translation lines, the generated normal lyrics will include those
-   translations.
-   If the song already has normal lyrics, importing word-by-word lyrics will keep the existing normal
-   lyrics and only add or replace the word-by-word lyrics.
+   If the song already has normal lyrics, AirLyrics does not allow importing word-by-word lyrics.
+   Remove the existing normal lyrics first, then import the word-by-word lyrics. After import,
+   AirLyrics automatically generates normal lyrics from the word-by-word lyrics. If the file contains
+   same-timestamp translation lines, the generated normal lyrics include those translations.
 
-5. **Delete word-by-word lyrics option**  
-   This option will only appear when the current lyrics contain word-by-word lyrics.
+5. **Editing and deleting word-by-word lyrics**
+   When a song uses word-by-word lyrics, edit the word-by-word lyrics only. Saving them updates the
+   generated normal lyrics. Removing word-by-word lyrics also removes the generated normal lyrics.
 
 ---
 

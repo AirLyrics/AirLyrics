@@ -230,7 +230,7 @@ private fun createCurrentLyricsCard(activity: MainUiHost): View  = with(activity
             }
         }
 
-        if (localInfo != null) {
+        if (localInfo != null && !state.localWordByWord) {
             val plainLabel = if (localInfo.source == LyricsStorage.SOURCE_DOWNLOADED) getString(R.string.ui_remove_downloaded_lrc) else getString(R.string.ui_remove_plain_lrc)
             body.addView(actionButton(activity, plainLabel) {
                 confirmDeleteLyrics(
@@ -251,7 +251,7 @@ private fun createCurrentLyricsCard(activity: MainUiHost): View  = with(activity
             })
         }
 
-        if (localInfo != null && state.localWordByWord) {
+        if (localInfo != null && state.localWordByWord && localInfo.source != LyricsStorage.SOURCE_KARAOKE_FALLBACK) {
             body.addView(actionButton(activity, getString(R.string.ui_remove_all_lyrics)) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_all_lyrics_confirm),
@@ -261,15 +261,17 @@ private fun createCurrentLyricsCard(activity: MainUiHost): View  = with(activity
             })
         }
 
-        body.addView(actionButton(activity, getString(R.string.ui_search_online_again)) {
-            activity.showAirConfirmDialog(
-                title = getString(R.string.ui_search_online_again_confirm),
-                message = getString(R.string.ui_search_online_replace_cache_msg),
-                positiveText = getString(R.string.ui_search)
-            ) {
-                uiActions.reloadFloatingLyricsFromOnline()
-            }
-        })
+        if (!state.localWordByWord) {
+            body.addView(actionButton(activity, getString(R.string.ui_search_online_again)) {
+                activity.showAirConfirmDialog(
+                    title = getString(R.string.ui_search_online_again_confirm),
+                    message = getString(R.string.ui_search_online_replace_cache_msg),
+                    positiveText = getString(R.string.ui_search)
+                ) {
+                    uiActions.reloadFloatingLyricsFromOnline()
+                }
+            })
+        }
     }
 
     fun populate(showRefreshFeedback: Boolean = false) {

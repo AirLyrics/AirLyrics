@@ -58,7 +58,7 @@ System requirement: Android 8.0 or later.
 - Displays synced lyrics above other apps
 - Provides online lyrics search
 - Supports local lyrics import, including same-timestamp translation lines
-- Supports enhanced / word-by-word lyrics import with translation-aware normal lyric generation
+- Supports word-by-word lyrics import with translation-aware normal lyric generation
 - Customizable floating window style
 - Adjustable lyrics offset
 - Supports original / translated lyrics display

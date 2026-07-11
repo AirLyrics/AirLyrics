@@ -6,11 +6,11 @@ Same-timestamp translation lines are also supported when importing plain LRC:
 [00:15.60]Original lyric
 [00:15.60]Translation
 
-Enhanced LRC format:
+Word-by-word lyrics format:
 [00:12.34]<00:12.34>T<00:12.50>ext
 
-Enhanced LRC translation lines can use the same line timestamp:
+Word-by-word lyrics translation lines can use the same line timestamp:
 [00:12.34]<00:12.34>T<00:12.50>ext
 [00:12.34]Translation
 
-Enhanced LRC is used for word-by-word highlighting. If the song does not already have plain lyrics, importing Enhanced LRC also creates a plain LRC fallback for normal display.
+Word-by-word lyrics are used for word highlighting. Remove existing plain lyrics for the song before importing word-by-word lyrics. After import, AirLyrics generates a plain LRC fallback for normal display and keeps it in sync when you edit the word-by-word lyrics.

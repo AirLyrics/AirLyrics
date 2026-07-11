@@ -56,7 +56,6 @@ internal fun Context.localizedLocalLyricsSubtitle(item: LyricsStorage.LocalLyric
 
 internal fun Context.localizedLocalLyricsType(item: LyricsStorage.LocalLyricsItem): String {
     return when {
-        item.hasPlainLyrics && item.hasKaraokeLyrics -> getString(R.string.ui_plain_and_enhanced_lrc)
         item.hasKaraokeLyrics -> getString(R.string.ui_enhanced)
         item.hasPlainLyrics -> getString(R.string.ui_plain)
         else -> getString(R.string.ui_unknown_type)

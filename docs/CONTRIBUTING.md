@@ -82,7 +82,7 @@ When a new provider is truly needed, keep the Provider responsibility narrow.
 2. Register it in `LyricsRepository`.
 3. If users need to choose the source manually, expose this Provider in settings.
 4. Handle network failures, no-result cases and ambiguous matches safely.
-5. Unless the app design changes, enhanced / word-by-word lyrics should remain local-import-first.
+5. Unless the app design changes, word-by-word lyrics should remain local-import-first.
 
 Providers only fetch and return lyrics data. They should not update UI directly.
 

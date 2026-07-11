@@ -318,66 +318,95 @@ internal class MainGraph(
             return
         }
 
-        var dialog: Dialog? = null
-
-        fun launchImport(asWordByWord: Boolean) {
-            state.pendingImportAsWordByWord = asWordByWord
-            state.pendingImportMedia = media
-            dialog?.dismiss()
-            launchers.selectLyricsFile()
-        }
-
-        val content = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(
-                uiHost.dp(AirUiTokens.Space.PageH),
-                uiHost.dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
-                uiHost.dp(AirUiTokens.Space.PageH),
-                uiHost.dp(AirUiTokens.Space.Sm)
+        runOnAppIo {
+            val localInfo = LyricsStorage.getLocalLyricsInfo(
+                context = activity,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs
             )
+            val hasWordByWordLyrics = LyricsStorage.hasKaraokeLyrics(
+                context = activity,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs
+            )
+            val plainImportEnabled = !hasWordByWordLyrics
+            val wordByWordImportEnabled = localInfo == null || localInfo.source == LyricsStorage.SOURCE_KARAOKE_FALLBACK
 
-            addView(TextView(activity).apply {
-                text = media.displayText
-                textSize = AirUiTokens.TextSize.Button
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(uiHost.colorTextStrong)
-                setPadding(0, 0, 0, uiHost.dp(AirUiTokens.Space.Xl))
-            })
+            runOnMainThread {
+                var dialog: Dialog? = null
 
-            addView(TextView(activity).apply {
-                text = activity.getString(R.string.ui_plain_and_enhanced_lrc_examples_short)
-                textSize = AirUiTokens.TextSize.BodySmall
-                setTextColor(uiHost.colorTextMuted)
-                setPadding(0, 0, 0, uiHost.dp(AirUiTokens.Space.Xxl))
-            })
+                fun launchImport(asWordByWord: Boolean) {
+                    state.pendingImportAsWordByWord = asWordByWord
+                    state.pendingImportMedia = media
+                    dialog?.dismiss()
+                    launchers.selectLyricsFile()
+                }
 
-            addView(importLyricsChoiceRow(
-                title = activity.getString(R.string.ui_plain_lyrics_lrc),
-                subtitle = activity.getString(R.string.ui_plain_lrc_recommended_format_hint),
-                primary = true
-            ) { launchImport(false) })
+                val content = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(
+                        uiHost.dp(AirUiTokens.Space.PageH),
+                        uiHost.dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+                        uiHost.dp(AirUiTokens.Space.PageH),
+                        uiHost.dp(AirUiTokens.Space.Sm)
+                    )
 
-            addView(importLyricsChoiceRow(
-                title = activity.getString(R.string.ui_enhanced_lrc_lyrics_enhanced_lrc),
-                subtitle = activity.getString(R.string.ui_recommended_enhanced_lrc_format),
-                primary = false
-            ) { launchImport(true) })
+                    addView(TextView(activity).apply {
+                        text = media.displayText
+                        textSize = AirUiTokens.TextSize.Button
+                        typeface = Typeface.DEFAULT_BOLD
+                        setTextColor(uiHost.colorTextStrong)
+                        setPadding(0, 0, 0, uiHost.dp(AirUiTokens.Space.Xl))
+                    })
 
-            addView(importLyricsChoiceRow(
-                title = activity.getString(R.string.ui_lyrics_format_guide),
-                subtitle = activity.getString(R.string.ui_view_lrc_examples_hint),
-                primary = false
-            ) { showLyricsFormatGuideDialog() })
-        }
+                    addView(TextView(activity).apply {
+                        text = activity.getString(R.string.ui_plain_and_enhanced_lrc_examples_short)
+                        textSize = AirUiTokens.TextSize.BodySmall
+                        setTextColor(uiHost.colorTextMuted)
+                        setPadding(0, 0, 0, uiHost.dp(AirUiTokens.Space.Xxl))
+                    })
 
-        dialog = uiHost.showAirDialog(
-            title = activity.getString(R.string.ui_choose_import_type),
-            positiveText = null,
-            negativeText = activity.getString(R.string.ui_cancel),
-            body = {
-                addView(content)
+                    addView(importLyricsChoiceRow(
+                        title = activity.getString(R.string.ui_plain_lyrics_lrc),
+                        subtitle = if (plainImportEnabled) {
+                            activity.getString(R.string.ui_plain_lrc_recommended_format_hint)
+                        } else {
+                            activity.getString(R.string.ui_plain_lrc_import_blocked_by_enhanced_lrc)
+                        },
+                        primary = true,
+                        rowEnabled = plainImportEnabled
+                    ) { launchImport(false) })
+
+                    addView(importLyricsChoiceRow(
+                        title = activity.getString(R.string.ui_enhanced_lrc_lyrics_enhanced_lrc),
+                        subtitle = if (wordByWordImportEnabled) {
+                            activity.getString(R.string.ui_recommended_enhanced_lrc_format)
+                        } else {
+                            activity.getString(R.string.ui_enhanced_lrc_import_blocked_by_plain_lrc)
+                        },
+                        primary = false,
+                        rowEnabled = wordByWordImportEnabled
+                    ) { launchImport(true) })
+
+                    addView(importLyricsChoiceRow(
+                        title = activity.getString(R.string.ui_lyrics_format_guide),
+                        subtitle = activity.getString(R.string.ui_view_lrc_examples_hint),
+                        primary = false
+                    ) { showLyricsFormatGuideDialog() })
+                }
+
+                dialog = uiHost.showAirDialog(
+                    title = activity.getString(R.string.ui_choose_import_type),
+                    positiveText = null,
+                    negativeText = activity.getString(R.string.ui_cancel),
+                    body = {
+                        addView(content)
+                    }
+                )
             }
-        )
+        }
     }
 
     fun requestOverlayPermission() {
@@ -442,13 +471,21 @@ internal class MainGraph(
         title: String,
         subtitle: String,
         primary: Boolean,
+        rowEnabled: Boolean = true,
         onClick: () -> Unit
     ): TextView {
         return TextView(activity).apply {
             text = activity.getString(R.string.ui_title_subtitle, title, subtitle)
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(if (primary) Color.WHITE else uiHost.colorTextStrong)
+            val usePrimary = primary && rowEnabled
+            isEnabled = rowEnabled
+            alpha = if (rowEnabled) 1f else 0.68f
+            setTextColor(when {
+                !rowEnabled -> uiHost.colorTextMuted
+                usePrimary -> Color.WHITE
+                else -> uiHost.colorTextStrong
+            })
             setLineSpacing(uiHost.dp(AirUiTokens.Space.Xxs).toFloat(), 1f)
             setPadding(
                 uiHost.dp(AirUiTokens.Space.ButtonH),
@@ -464,17 +501,19 @@ internal class MainGraph(
             layoutParams = params
             background = GradientDrawable().apply {
                 cornerRadius = uiHost.dp(AirUiTokens.Radius.Sm).toFloat()
-                if (primary) {
+                if (usePrimary) {
                     setColor(uiHost.colorAccent)
                 } else {
                     setColor(uiHost.colorSurfaceLight)
                     setStroke(uiHost.dp(AirUiTokens.Stroke.Hairline), uiHost.colorStroke)
                 }
             }
-            enableSoftPressFeedback(0.97f)
-            setOnClickListener {
-                onClick()
-                playTinyPulse(this)
+            if (rowEnabled) {
+                enableSoftPressFeedback(0.97f)
+                setOnClickListener {
+                    onClick()
+                    playTinyPulse(this)
+                }
             }
         }
     }

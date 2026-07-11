@@ -35,6 +35,14 @@ internal class LyricsController(
         importAsWordByWord: Boolean = false
     ) {
         taskRunner.runOnAppIo {
+            val blockedImportResult = blockedImportResult(media, importAsWordByWord)
+            if (blockedImportResult != null) {
+                taskRunner.runOnMainThread {
+                    handleImportResult(blockedImportResult, importAsWordByWord)
+                }
+                return@runOnAppIo
+            }
+
             if (!overwrite && hasLyricsForMedia(media, importAsWordByWord)) {
                 taskRunner.runOnMainThread {
                     val overwriteMessage = media.displayText + "\n\n" + if (importAsWordByWord) {
@@ -94,6 +102,35 @@ internal class LyricsController(
         }
     }
 
+    private fun blockedImportResult(
+        media: CurrentMediaInfo,
+        importAsWordByWord: Boolean
+    ): LyricsStorage.ImportLyricsResult? {
+        return if (importAsWordByWord) {
+            val localInfo = LyricsStorage.getLocalLyricsInfo(
+                context = context,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs
+            )
+            if (localInfo != null && localInfo.source != LyricsStorage.SOURCE_KARAOKE_FALLBACK) {
+                LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists
+            } else {
+                null
+            }
+        } else if (LyricsStorage.hasKaraokeLyrics(
+                context = context,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs
+            )
+        ) {
+            LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
+        } else {
+            null
+        }
+    }
+
     private fun hasLyricsForMedia(media: CurrentMediaInfo, importAsWordByWord: Boolean): Boolean {
         return if (importAsWordByWord) {
             LyricsStorage.hasKaraokeLyrics(
@@ -132,6 +169,12 @@ internal class LyricsController(
             }
             is LyricsStorage.ImportLyricsResult.InvalidFormat -> {
                 showImportFormatError(result.invalidLineNumbers, importAsWordByWord)
+            }
+            LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists -> {
+                Toast.makeText(context, context.getString(R.string.ui_enhanced_lrc_import_blocked_by_plain_lrc), Toast.LENGTH_LONG).show()
+            }
+            LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists -> {
+                Toast.makeText(context, context.getString(R.string.ui_plain_lrc_import_blocked_by_enhanced_lrc), Toast.LENGTH_LONG).show()
             }
             LyricsStorage.ImportLyricsResult.SaveFailed -> {
                 val message = if (importAsWordByWord) {

@@ -227,41 +227,17 @@ internal fun MainUiHost.localLyricsRowImpl(
             setPadding(0, dp(AirUiTokens.Space.Xxs), 0, 0)
         })
         setOnClickListener {
-            activity.openLocalLyricsTargetPicker(item, onLyricsSaved)
+            activity.openLocalLyricsEditorForItem(item, onLyricsSaved)
         }
     }
 }
 
 
-private fun MainUiHost.openLocalLyricsTargetPicker(
+private fun MainUiHost.openLocalLyricsEditorForItem(
     item: LyricsStorage.LocalLyricsItem,
     onLyricsSaved: (() -> Unit)?
 ) {
     when {
-        item.hasPlainLyrics && item.hasKaraokeLyrics -> {
-            var pickerDialog: android.app.Dialog? = null
-            pickerDialog = showAirDialog(
-                title = item.displayTitle,
-                message = getString(R.string.ui_choose_lyrics_version_message),
-                positiveText = null,
-                negativeText = null,
-                body = {
-                    addView(LinearLayout(this@openLocalLyricsTargetPicker).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                        setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
-                        addView(localLyricsDialogButton(getString(R.string.ui_plain_lyrics), primary = false) {
-                            pickerDialog?.dismiss()
-                            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
-                        })
-                        addView(localLyricsDialogButton(getString(R.string.ui_enhanced_lrc_lyrics), primary = true) {
-                            pickerDialog?.dismiss()
-                            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
-                        })
-                    })
-                }
-            )
-        }
         item.hasKaraokeLyrics -> {
             openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
         }

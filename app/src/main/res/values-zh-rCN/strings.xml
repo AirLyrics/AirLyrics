@@ -6,7 +6,7 @@
     <string name="floating_preview_summary">当前：%1$s · %2$dsp · %3$s · 宽度 %4$d%%</string>
     <string name="floating_slider_value">%1$s：%2$d</string>
     <string name="local_source_cache_provider">本地缓存 · %1$s</string>
-    <string name="lyrics_enhanced_format_invalid_lines">第 %1$s%2$s 行格式不正确。\n\n逐字歌词原文行需要使用 Enhanced LRC 格式：行时间为 [00:12.34]，每个字词时间为 &lt;00:12.34&gt;歌词。同时间戳翻译行可以使用普通 [00:12.34]翻译 格式。</string>
+    <string name="lyrics_enhanced_format_invalid_lines">第 %1$s%2$s 行格式不正确。\n\n逐字歌词原文行需要使用逐字格式：行时间为 [00:12.34]，每个字词时间为 &lt;00:12.34&gt;歌词。同时间戳翻译行可以使用普通 [00:12.34]翻译 格式。</string>
     <string name="lyrics_lookup_failed">%1$s 查找失败</string>
     <string name="lyrics_lookup_native_error">%1$s 原生歌词模块异常</string>
     <string name="lyrics_lookup_need_credentials">%1$s 暂时需要访问凭据</string>
@@ -84,8 +84,8 @@
     <string name="ui_delay_0_1s">延后 0.1s</string>
     <string name="ui_delay_1s">延后 1s</string>
     <string name="ui_remove_all_lyrics_message">会删除这首歌关联的普通歌词和逐字歌词。</string>
-    <string name="ui_remove_plain_lrc_message">只会删除这首歌关联的普通歌词；逐字歌词会继续保留。</string>
-    <string name="ui_remove_enhanced_lrc_message">只会删除这首歌关联的逐字歌词；普通歌词会继续保留。</string>
+    <string name="ui_remove_plain_lrc_message">会删除这首歌关联的普通歌词。</string>
+    <string name="ui_remove_enhanced_lrc_message">会删除这首歌关联的逐字歌词；如果普通歌词是由逐字歌词自动生成的，也会一起删除。</string>
     <string name="ui_display_control">显示控制</string>
     <string name="ui_drag_lock_off">拖动锁定：已关闭</string>
     <string name="ui_drag_lock_on">拖动锁定：已开启</string>
@@ -102,6 +102,8 @@
     <string name="ui_enhanced_lrc_lyrics_enhanced_lrc">逐字歌词（.lrc）</string>
     <string name="ui_enhanced_lrc_local_only_message">逐字歌词只支持手动导入本地 .lrc 文件。</string>
     <string name="ui_enhanced_lrc_format_hint">逐字歌词行时间使用 [00:12.34]，字词时间使用 &lt;00:12.34&gt;。</string>
+    <string name="ui_enhanced_lrc_import_blocked_by_plain_lrc">请先移除已有普通歌词，再导入逐字歌词。</string>
+    <string name="ui_plain_lrc_import_blocked_by_enhanced_lrc">当前音乐已使用逐字歌词，请先移除逐字歌词，再导入普通歌词。</string>
     <string name="ui_enhanced_lrc_removed_for_this_song">已移除当前音乐的逐字歌词</string>
     <string name="ui_expand_preview">展开预览</string>
     <string name="ui_fast_forwarding">快进中</string>
@@ -212,7 +214,6 @@ This is a lyric preview</string>
     <string name="ui_permissions">权限状态</string>
     <string name="ui_pink">粉</string>
     <string name="ui_plain">普通</string>
-    <string name="ui_plain_and_enhanced_lrc">普通 + 逐字</string>
     <string name="ui_plain_and_enhanced_lrc_examples_short">普通歌词：[00:12.34]歌词；逐字歌词：[00:12.34]&lt;00:12.34&gt;字。</string>
     <string name="ui_plain_lrc_import_success">已导入普通歌词，悬浮窗显示中会立即刷新</string>
     <string name="ui_plain_lrc_removed_for_this_song">已移除当前音乐的普通歌词</string>
@@ -312,9 +313,8 @@ This is a lyric preview</string>
     <string name="ui_this_enhanced_lrc_can_be_saved">这份逐字歌词可以保存。</string>
     <string name="ui_this_is_a_lyric_preview">这是一行歌词预览</string>
     <string name="ui_this_plain_lrc_can_be_saved">这份普通 LRC 可以保存。</string>
-    <string name="ui_overwrite_enhanced_keep_plain_msg">这首歌已经有本地逐字歌词。覆盖只会替换逐字歌词缓存，普通歌词会继续保留。</string>
-    <string name="ui_overwrite_plain_keep_enhanced_msg">这首歌已经有普通歌词。覆盖只会替换普通歌词，逐字歌词会继续保留。</string>
-    <string name="ui_choose_lyrics_version_message">这首歌同时有普通歌词和逐字歌词，请选择要打开的版本。</string>
+    <string name="ui_overwrite_enhanced_keep_plain_msg">这首歌已经有本地逐字歌词。覆盖会替换逐字歌词，并重新生成普通歌词。</string>
+    <string name="ui_overwrite_plain_keep_enhanced_msg">这首歌已经有普通歌词。覆盖会替换普通歌词。</string>
     <string name="ui_touchable">可触摸</string>
     <string name="ui_translation_only">仅翻译</string>
     <string name="ui_unknown_artist">未知艺术家</string>

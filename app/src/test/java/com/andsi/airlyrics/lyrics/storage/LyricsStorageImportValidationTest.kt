@@ -183,7 +183,7 @@ class LyricsStorageImportValidationTest {
     }
 
     @Test
-    fun updateKaraokeLyrics_doesNotOverwriteManualPlainLyrics() {
+    fun importKaraokeLyrics_blocksWhenManualPlainLyricsExist() {
         val manualPlain = "[00:10.00]manual plain"
         assertTrue(
             LyricsStorage.saveLyrics(
@@ -195,7 +195,7 @@ class LyricsStorageImportValidationTest {
                 source = LyricsStorage.SOURCE_MANUAL_IMPORT
             )
         )
-        val importResult = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+        val result = LyricsStorage.importKaraokeLyricsFromUriWithResult(
             context = context,
             uri = writeImportFile(
                 name = "karaoke-manual-plain.lrc",
@@ -204,6 +204,136 @@ class LyricsStorageImportValidationTest {
             title = "Karaoke Manual Plain",
             artist = "AndSi",
             duration = 10_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists)
+        assertFalse(LyricsStorage.hasKaraokeLyrics(context, "Karaoke Manual Plain", "AndSi", 10_000L))
+        assertEquals(manualPlain, LyricsStorage.readLocalLyrics(context, "Karaoke Manual Plain", "AndSi", 10_000L))
+    }
+
+    @Test
+    fun importPlainLyrics_blocksWhenKaraokeLyricsExist() {
+        val karaokeResult = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "karaoke-before-plain.lrc",
+                text = "[00:10.00]<00:10.00>karaoke"
+            ),
+            title = "Plain Blocked By Karaoke",
+            artist = "AndSi",
+            duration = 10_000L
+        )
+        val plainResult = LyricsStorage.importLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "plain-after-karaoke.lrc",
+                text = "[00:10.00]manual plain"
+            ),
+            title = "Plain Blocked By Karaoke",
+            artist = "AndSi",
+            duration = 10_000L
+        )
+
+        assertTrue(karaokeResult is LyricsStorage.ImportLyricsResult.Saved)
+        assertTrue(plainResult is LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists)
+        assertEquals(
+            "[00:10.00]karaoke",
+            LyricsStorage.readLocalLyrics(context, "Plain Blocked By Karaoke", "AndSi", 10_000L)
+        )
+    }
+
+    @Test
+    fun importKaraokeLyrics_replacesGeneratedPlainFallback() {
+        val firstResult = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "karaoke-first-fallback.lrc",
+                text = "[00:10.00]<00:10.00>old"
+            ),
+            title = "Karaoke Replace Fallback",
+            artist = "AndSi",
+            duration = 10_000L
+        )
+        val secondResult = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "karaoke-second-fallback.lrc",
+                text = "[00:10.00]<00:10.00>new"
+            ),
+            title = "Karaoke Replace Fallback",
+            artist = "AndSi",
+            duration = 10_000L,
+            overwrite = true
+        )
+
+        assertTrue(firstResult is LyricsStorage.ImportLyricsResult.Saved)
+        assertTrue(secondResult is LyricsStorage.ImportLyricsResult.Saved)
+        assertEquals(
+            LyricsStorage.SOURCE_KARAOKE_FALLBACK,
+            LyricsStorage.getLocalLyricsInfo(context, "Karaoke Replace Fallback", "AndSi", 10_000L)?.source
+        )
+        assertEquals(
+            "[00:10.00]new",
+            LyricsStorage.readLocalLyrics(context, "Karaoke Replace Fallback", "AndSi", 10_000L)
+        )
+    }
+
+    @Test
+    fun deleteKaraokeLyrics_removesGeneratedPlainFallback() {
+        val importResult = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "karaoke-delete-fallback.lrc",
+                text = "[00:10.00]<00:10.00>karaoke"
+            ),
+            title = "Karaoke Delete Fallback",
+            artist = "AndSi",
+            duration = 10_000L
+        )
+        val deleted = LyricsStorage.deleteLocalLyrics(
+            context = context,
+            title = "Karaoke Delete Fallback",
+            artist = "AndSi",
+            duration = 10_000L,
+            mode = LyricsStorage.DeleteMode.KARAOKE
+        )
+
+        assertTrue(importResult is LyricsStorage.ImportLyricsResult.Saved)
+        assertTrue(deleted)
+        assertFalse(LyricsStorage.hasKaraokeLyrics(context, "Karaoke Delete Fallback", "AndSi", 10_000L))
+        assertFalse(LyricsStorage.hasLocalLyrics(context, "Karaoke Delete Fallback", "AndSi", 10_000L))
+    }
+
+    @Test
+    fun updateKaraokeLyrics_replacesPlainLyricsWithGeneratedFallback() {
+        val karaokeLines = listOf(
+            com.andsi.airlyrics.lyrics.KaraokeLine(
+                startMs = 10_000L,
+                endMs = 11_000L,
+                text = "karaoke",
+                tokens = listOf(
+                    com.andsi.airlyrics.lyrics.KaraokeToken("karaoke", 10_000L, 11_000L)
+                )
+            )
+        )
+        assertTrue(
+            LyricsStorage.saveLyrics(
+                context = context,
+                title = "Karaoke Manual Plain",
+                artist = "AndSi",
+                duration = 10_000L,
+                lyrics = "[00:10.00]manual plain / 手动翻译",
+                source = LyricsStorage.SOURCE_MANUAL_IMPORT
+            )
+        )
+        assertTrue(
+            LyricsStorage.saveKaraokeLyrics(
+                context = context,
+                title = "Karaoke Manual Plain",
+                artist = "AndSi",
+                duration = 10_000L,
+                karaokeLines = karaokeLines
+            )
         )
         val item = LyricsStorage.listRecentLyrics(context, limit = 8)
             .single { it.title == "Karaoke Manual Plain" }
@@ -214,10 +344,15 @@ class LyricsStorageImportValidationTest {
             text = "[00:10.00]<00:10.00>changed"
         )
 
-        assertTrue(importResult is LyricsStorage.ImportLyricsResult.Saved)
         assertTrue(update.saved)
-        assertFalse(LyricsStorage.getLocalLyricsInfo(context, "Karaoke Manual Plain", "AndSi", 10_000L)?.source == LyricsStorage.SOURCE_KARAOKE_FALLBACK)
-        assertEquals(manualPlain, LyricsStorage.readLocalLyrics(context, "Karaoke Manual Plain", "AndSi", 10_000L))
+        assertEquals(
+            LyricsStorage.SOURCE_KARAOKE_FALLBACK,
+            LyricsStorage.getLocalLyricsInfo(context, "Karaoke Manual Plain", "AndSi", 10_000L)?.source
+        )
+        assertEquals(
+            "[00:10.00]changed / 手动翻译",
+            LyricsStorage.readLocalLyrics(context, "Karaoke Manual Plain", "AndSi", 10_000L)
+        )
     }
 
     private fun writeImportFile(name: String, text: String): Uri {
