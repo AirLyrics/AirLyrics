@@ -18,6 +18,7 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
         .toList()
     val selectedPackage = MediaSourceStore.getSelectedPackage(this)
     val selectedController = CurrentMediaReader.bestController(controllers, selectedPackage)
+    val notificationAccessGranted = hasNotificationListenerAccess()
 
     container.addView(
         sectionTitle(activity, 
@@ -44,7 +45,12 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
                 addView(statusPill(activity, state, selectedController.playbackState?.state == PlaybackState.STATE_PLAYING))
             } else {
                 addView(bigText(activity, getString(R.string.ui_no_media_detected_yet)))
-                addView(normalText(activity, getString(R.string.ui_enable_notif_access_hint)))
+                val hintText = if (notificationAccessGranted) {
+                    getString(R.string.ui_media_streams_empty_hint)
+                } else {
+                    getString(R.string.ui_enable_notif_access_hint)
+                }
+                addView(normalText(activity, hintText))
             }
         }
     )
@@ -57,7 +63,9 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
             card(activity) {
                 addView(bigText(activity, getString(R.string.ui_waiting_for_music_signal)))
                 addView(normalText(activity, getString(R.string.ui_media_streams_empty_hint)))
-                addView(smallHint(activity, getString(R.string.ui_media_empty_permission_hint)))
+                if (!notificationAccessGranted) {
+                    addView(smallHint(activity, getString(R.string.ui_media_empty_permission_hint)))
+                }
             }
         )
     } else {
