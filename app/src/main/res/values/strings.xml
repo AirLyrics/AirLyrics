@@ -213,7 +213,6 @@
     <string name="ui_permissions">Permissions</string>
     <string name="ui_pink">Pink</string>
     <string name="ui_plain">Plain</string>
-    <string name="ui_plain_and_enhanced_lrc_examples_short">Plain lyrics: [00:12.34]text. Word-by-word lyrics: [00:12.34]&lt;00:12.34&gt;w.</string>
     <string name="ui_plain_lrc_import_success">Plain LRC imported. Floating lyrics will refresh.</string>
     <string name="ui_plain_lrc_removed_for_this_song">Plain LRC removed for this song.</string>
     <string name="ui_plain_lyrics">Plain lyrics</string>
@@ -250,8 +249,6 @@ Word-by-word lyrics recommended format:
     <string name="ui_read_failed">Read failed</string>
     <string name="ui_read_local_lyrics_only">Read local lyrics only</string>
     <string name="ui_recent_local_lyrics">Recent local lyrics</string>
-    <string name="ui_plain_lrc_recommended_format_hint">Recommended: [00:12.34]This is a lyric line. It will be saved in normalized format.</string>
-    <string name="ui_recommended_enhanced_lrc_format">Recommended: [00:12.34]&lt;00:12.34&gt;T&lt;00:12.50&gt;ext for word highlighting.</string>
     <string name="ui_red">Red</string>
     <string name="ui_refresh_media_status">Refresh media status</string>
     <string name="ui_refreshed">Refreshed</string>

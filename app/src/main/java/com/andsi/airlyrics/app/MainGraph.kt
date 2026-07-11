@@ -361,17 +361,10 @@ internal class MainGraph(
                         setPadding(0, 0, 0, uiHost.dp(AirUiTokens.Space.Xl))
                     })
 
-                    addView(TextView(activity).apply {
-                        text = activity.getString(R.string.ui_plain_and_enhanced_lrc_examples_short)
-                        textSize = AirUiTokens.TextSize.BodySmall
-                        setTextColor(uiHost.colorTextMuted)
-                        setPadding(0, 0, 0, uiHost.dp(AirUiTokens.Space.Xxl))
-                    })
-
                     addView(importLyricsChoiceRow(
                         title = activity.getString(R.string.ui_plain_lyrics_lrc),
                         subtitle = if (plainImportEnabled) {
-                            activity.getString(R.string.ui_plain_lrc_recommended_format_hint)
+                            activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
                         } else {
                             activity.getString(R.string.ui_plain_lrc_import_blocked_by_enhanced_lrc)
                         },
@@ -382,7 +375,7 @@ internal class MainGraph(
                     addView(importLyricsChoiceRow(
                         title = activity.getString(R.string.ui_enhanced_lrc_lyrics_enhanced_lrc),
                         subtitle = if (wordByWordImportEnabled) {
-                            activity.getString(R.string.ui_recommended_enhanced_lrc_format)
+                            activity.getString(R.string.ui_please_choose_an_enhanced_lrc_file)
                         } else {
                             activity.getString(R.string.ui_enhanced_lrc_import_blocked_by_plain_lrc)
                         },
