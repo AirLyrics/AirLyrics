@@ -193,10 +193,11 @@ internal class LyricsController(
 
     fun getCurrentMediaInfo(): CurrentMediaInfo? {
         val selectedPackage = MediaSourceStore.getSelectedPackage(context)
-        return CurrentMediaReader.bestCurrentMediaFromControllers(
+        val selectedController = CurrentMediaReader.selectedController(
             controllers = mediaControllerProvider.getActiveControllers(),
             selectedPackage = selectedPackage
         )
+        return selectedController?.let { CurrentMediaReader.currentMediaFromController(it) }
     }
 
     fun showLyricsDir() {
