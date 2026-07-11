@@ -46,10 +46,10 @@ object FloatingServiceNotification {
             .addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_menu_view,
-                    actionTitle(
+                    checkedTitle(
                         active = state.visible,
-                        activeText = context.getString(R.string.ui_hide),
-                        inactiveText = context.getString(R.string.ui_show)
+                        activeText = context.getString(R.string.ui_shown),
+                        inactiveText = context.getString(R.string.ui_hidden)
                     ),
                     serviceActionIntent(context, BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE, 1001)
                 ).build()
@@ -122,10 +122,14 @@ object FloatingServiceNotification {
     }
 
     private fun QuickControlState.adjustModeActionTitle(context: Context): String {
-        return if (isAdjustMode) "● ${context.getString(R.string.ui_adjustment_mode)}" else "○ ${context.getString(R.string.ui_adjustment_mode)}"
+        return checkedTitle(
+            active = isAdjustMode,
+            activeText = context.getString(R.string.ui_adjustment_mode),
+            inactiveText = context.getString(R.string.ui_adjustment_mode)
+        )
     }
 
-    private fun actionTitle(
+    private fun checkedTitle(
         active: Boolean,
         activeText: String,
         inactiveText: String

@@ -150,15 +150,15 @@ class FloatingLyricsService : Service() {
     private fun handleCommand(intent: Intent?, startId: Int) {
         when (intent?.action) {
             null -> restoreFromDesiredState()
-            BroadcastActions.SHOW -> showLyrics(feedback = null)
+            BroadcastActions.SHOW -> showLyrics()
             BroadcastActions.HIDE -> {
-                hideLyrics(feedback = null)
+                hideLyrics()
                 stopSelf(startId)
             }
-            BroadcastActions.LOCK -> setLocked(locked = true, feedback = null)
-            BroadcastActions.UNLOCK -> setLocked(locked = false, feedback = null)
-            BroadcastActions.CLICK_THROUGH_ON -> setClickThrough(clickThrough = true, feedback = null)
-            BroadcastActions.CLICK_THROUGH_OFF -> setClickThrough(clickThrough = false, feedback = null)
+            BroadcastActions.LOCK -> setLocked(locked = true)
+            BroadcastActions.UNLOCK -> setLocked(locked = false)
+            BroadcastActions.CLICK_THROUGH_ON -> setClickThrough(clickThrough = true)
+            BroadcastActions.CLICK_THROUGH_OFF -> setClickThrough(clickThrough = false)
             BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE -> toggleVisibleFromNotification()
             BroadcastActions.NOTIFICATION_TOGGLE_LOCK -> toggleLockFromNotification()
             BroadcastActions.NOTIFICATION_TOGGLE_CLICK_THROUGH -> toggleClickThroughFromNotification()
@@ -538,7 +538,7 @@ class FloatingLyricsService : Service() {
     private fun restoreFromDesiredState() {
         selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
         if (QuickFloatingStore.isDesiredVisible(this)) {
-            showLyrics(feedback = null, updateDesiredVisible = false)
+            showLyrics(updateDesiredVisible = false)
         } else {
             stopSelectedMediaObservation()
             broadcastWindowVisibility(false)
@@ -546,10 +546,7 @@ class FloatingLyricsService : Service() {
         }
     }
 
-    private fun showLyrics(
-        feedback: String? = null,
-        updateDesiredVisible: Boolean = true
-    ): Boolean {
+    private fun showLyrics(updateDesiredVisible: Boolean = true): Boolean {
         if (updateDesiredVisible) {
             QuickFloatingStore.setDesiredVisible(this, true)
         }
@@ -565,11 +562,11 @@ class FloatingLyricsService : Service() {
                 scheduleCurrentMediaRestore()
             }
         }
-        refreshQuickControls(if (shown) feedback else null)
+        refreshQuickControls()
         return shown
     }
 
-    private fun hideLyrics(feedback: String? = null) {
+    private fun hideLyrics() {
         QuickFloatingStore.setDesiredVisible(this, false)
         val hidden = if (::windowController.isInitialized) {
             runCatching { windowController.hide() }.getOrDefault(false)
@@ -583,44 +580,41 @@ class FloatingLyricsService : Service() {
             stopSelectedMediaObservation()
             broadcastWindowVisibility(false)
         }
-        refreshQuickControls(feedback)
+        refreshQuickControls()
     }
 
-    private fun setLocked(locked: Boolean, feedback: String? = null): Boolean {
+    private fun setLocked(locked: Boolean): Boolean {
         val updated = windowController.setLocked(locked)
-        refreshQuickControls(if (updated) feedback else getString(R.string.ui_overlay_update_failed))
+        refreshQuickControls(if (updated) null else getString(R.string.ui_overlay_update_failed))
         return updated
     }
 
-    private fun setClickThrough(clickThrough: Boolean, feedback: String? = null): Boolean {
+    private fun setClickThrough(clickThrough: Boolean): Boolean {
         val updated = windowController.setClickThrough(clickThrough)
-        refreshQuickControls(if (updated) feedback else getString(R.string.ui_overlay_update_failed))
+        refreshQuickControls(if (updated) null else getString(R.string.ui_overlay_update_failed))
         return updated
     }
 
     private fun toggleVisibleFromNotification() {
         val nextVisible = !windowController.isVisible
         if (nextVisible) {
-            if (!showLyrics(feedback = getString(R.string.ui_shown))) {
+            if (!showLyrics()) {
                 refreshQuickControls(getString(R.string.ui_overlay_permission_required))
                 showQuickFeedback(getString(R.string.ui_enable_overlay_permission_first))
             }
         } else {
-            hideLyrics(feedback = getString(R.string.ui_hidden))
+            hideLyrics()
         }
     }
 
     private fun toggleLockFromNotification() {
         val nextLocked = !FloatingLyricsStyleStore.isLocked(this)
-        setLocked(locked = nextLocked, feedback = if (nextLocked) getString(R.string.ui_locked) else getString(R.string.ui_unlocked))
+        setLocked(locked = nextLocked)
     }
 
     private fun toggleClickThroughFromNotification() {
         val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(this)
-        setClickThrough(
-            clickThrough = nextClickThrough,
-            feedback = if (nextClickThrough) getString(R.string.ui_click_through_enabled_feedback) else getString(R.string.ui_touchable)
-        )
+        setClickThrough(clickThrough = nextClickThrough)
     }
 
     private fun toggleAdjustModeFromNotification() {
@@ -634,9 +628,9 @@ class FloatingLyricsService : Service() {
         if (!lockedUpdated || !clickThroughUpdated) {
             refreshQuickControls(getString(R.string.ui_overlay_update_failed))
         } else if (nextEditing) {
-            refreshQuickControls(getString(R.string.ui_draggable))
+            refreshQuickControls()
         } else {
-            refreshQuickControls(getString(R.string.ui_locked_click_through))
+            refreshQuickControls()
         }
     }
 
