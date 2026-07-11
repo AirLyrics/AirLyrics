@@ -65,8 +65,12 @@ class FloatingLyricsService : Service() {
 
     private val syncRunnable = object : Runnable {
         override fun run() {
+            if (!shouldSyncLyrics()) return
+
             renderer.tick()
-            syncHandler.postDelayed(this, if (renderer.isKaraokeActive()) 80L else 300L)
+            if (shouldSyncLyrics()) {
+                syncHandler.postDelayed(this, lyricsSyncIntervalMs())
+            }
         }
     }
 
@@ -127,12 +131,17 @@ class FloatingLyricsService : Service() {
 
         selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
         windowController = FloatingLyricsWindow(this) { visible ->
+            if (!visible) {
+                syncHandler.removeCallbacks(mediaRestoreRunnable)
+                mediaRestoreAttempt = 0
+                stopSelectedMediaObservation()
+                stopLyricsSync()
+            }
             broadcastWindowVisibility(visible)
         }
 
         startForeground(FloatingServiceNotification.NOTIFICATION_ID, FloatingServiceNotification.create(this, currentQuickControlState()))
         registerMediaReceiver()
-        syncHandler.post(syncRunnable)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -203,6 +212,26 @@ class FloatingLyricsService : Service() {
         return ::windowController.isInitialized &&
             windowController.isVisible &&
             !selectedSourcePackage.isNullOrBlank()
+    }
+
+    private fun shouldSyncLyrics(): Boolean {
+        return ::windowController.isInitialized && windowController.isVisible
+    }
+
+    private fun startLyricsSync() {
+        syncHandler.removeCallbacks(syncRunnable)
+        if (!shouldSyncLyrics()) return
+
+        renderer.refresh()
+        syncHandler.postDelayed(syncRunnable, lyricsSyncIntervalMs())
+    }
+
+    private fun stopLyricsSync() {
+        syncHandler.removeCallbacks(syncRunnable)
+    }
+
+    private fun lyricsSyncIntervalMs(): Long {
+        return if (renderer.isKaraokeActive()) 80L else 300L
     }
 
     private fun startSelectedMediaObservation() {
@@ -540,6 +569,7 @@ class FloatingLyricsService : Service() {
         if (QuickFloatingStore.isDesiredVisible(this)) {
             showLyrics(updateDesiredVisible = false)
         } else {
+            stopLyricsSync()
             stopSelectedMediaObservation()
             broadcastWindowVisibility(false)
             refreshQuickControls()
@@ -558,6 +588,7 @@ class FloatingLyricsService : Service() {
             broadcastWindowVisibility(false)
         } else {
             startSelectedMediaObservation()
+            startLyricsSync()
             if (currentMedia.isEmpty) {
                 scheduleCurrentMediaRestore()
             }
@@ -577,6 +608,7 @@ class FloatingLyricsService : Service() {
         if (hidden || !stillVisible) {
             syncHandler.removeCallbacks(mediaRestoreRunnable)
             mediaRestoreAttempt = 0
+            stopLyricsSync()
             stopSelectedMediaObservation()
             broadcastWindowVisibility(false)
         }
@@ -676,7 +708,7 @@ class FloatingLyricsService : Service() {
     }
 
     override fun onDestroy() {
-        syncHandler.removeCallbacks(syncRunnable)
+        stopLyricsSync()
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         stopSelectedMediaObservation()
         lyricsLookupRunner.shutdown()
