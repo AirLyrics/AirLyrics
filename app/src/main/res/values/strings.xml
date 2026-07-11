@@ -125,6 +125,7 @@
     <string name="ui_media_empty_permission_hint">If nothing appears, make sure notification access is enabled.</string>
     <string name="ui_import">Import</string>
     <string name="ui_generated_from_enhanced_lrc">Generated from word-by-word lyrics</string>
+    <string name="ui_lrc_import_save_failed">Could not save lyrics. Check the lyrics save folder permission and available storage.</string>
     <string name="ui_lrc_import_format_error">Import failed. Use a .lrc file in [00:12.34]lyric format.</string>
     <string name="ui_import_lyrics_for_current_song">Import lyrics for current song</string>
     <string name="ui_imported_off">Imported · off</string>

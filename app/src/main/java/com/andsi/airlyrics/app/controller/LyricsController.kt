@@ -176,13 +176,16 @@ internal class LyricsController(
             LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists -> {
                 Toast.makeText(context, context.getString(R.string.ui_plain_lrc_blocked_by_enhanced_lrc), Toast.LENGTH_LONG).show()
             }
-            LyricsStorage.ImportLyricsResult.SaveFailed -> {
+            LyricsStorage.ImportLyricsResult.ReadFailed -> {
                 val message = if (importAsWordByWord) {
-                    context.getString(R.string.ui_enhanced_lrc_import_failed)
+                    context.getString(R.string.ui_cannot_read_enhanced_lrc_file)
                 } else {
-                    context.getString(R.string.ui_lrc_import_format_error)
+                    context.getString(R.string.ui_cannot_read_this_lyric_file)
                 }
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            }
+            LyricsStorage.ImportLyricsResult.SaveFailed -> {
+                Toast.makeText(context, context.getString(R.string.ui_lrc_import_save_failed), Toast.LENGTH_LONG).show()
             }
         }
     }

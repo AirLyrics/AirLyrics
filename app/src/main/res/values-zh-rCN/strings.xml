@@ -126,6 +126,7 @@ This is a lyric preview</string>
     <string name="ui_media_empty_permission_hint">如果一直没有显示，请确认通知访问权限已开启。</string>
     <string name="ui_import">手动导入</string>
     <string name="ui_generated_from_enhanced_lrc">由逐字歌词生成</string>
+    <string name="ui_lrc_import_save_failed">保存歌词失败，请检查歌词保存目录权限和可用存储空间。</string>
     <string name="ui_lrc_import_format_error">导入失败，请使用 [00:12.34]歌词 格式的 .lrc 文件</string>
     <string name="ui_import_lyrics_for_current_song">为当前音乐导入歌词</string>
     <string name="ui_imported_off">已导入 · 未开启</string>

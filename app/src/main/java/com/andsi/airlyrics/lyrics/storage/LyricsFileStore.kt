@@ -80,41 +80,43 @@ internal object LyricsFileStore {
     }
 
     fun writeLyricsFileByName(context: Context, fileName: String, lyrics: String): Boolean {
-        val safeName = fileName.substringAfterLast('/')
-        val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
+        return runCatching {
+            val safeName = fileName.substringAfterLast('/')
+            val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
 
-        if (treeUri != null) {
-            val root = DocumentFile.fromTreeUri(context, treeUri) ?: return false
-            val rootFile = root.findFile(safeName)
-            if (rootFile != null) {
-                context.contentResolver.openOutputStream(rootFile.uri, "wt")
+            if (treeUri != null) {
+                val root = DocumentFile.fromTreeUri(context, treeUri) ?: return false
+                val rootFile = root.findFile(safeName)
+                if (rootFile != null) {
+                    context.contentResolver.openOutputStream(rootFile.uri, "wt")
+                        ?.bufferedWriter()
+                        ?.use { it.write(lyrics) }
+                        ?: return false
+                    return true
+                }
+
+                val managedFile = LyricsStoragePaths.managedDocumentDir(context)?.findFile(safeName) ?: return false
+                context.contentResolver.openOutputStream(managedFile.uri, "wt")
                     ?.bufferedWriter()
                     ?.use { it.write(lyrics) }
                     ?: return false
                 return true
             }
 
-            val managedFile = LyricsStoragePaths.managedDocumentDir(context)?.findFile(safeName) ?: return false
-            context.contentResolver.openOutputStream(managedFile.uri, "wt")
-                ?.bufferedWriter()
-                ?.use { it.write(lyrics) }
-                ?: return false
-            return true
-        }
+            val managedFile = File(LyricsStoragePaths.fallbackManagedLyricsDir(context), safeName)
+            if (managedFile.exists()) {
+                managedFile.writeText(lyrics)
+                return true
+            }
 
-        val managedFile = File(LyricsStoragePaths.fallbackManagedLyricsDir(context), safeName)
-        if (managedFile.exists()) {
-            managedFile.writeText(lyrics)
-            return true
-        }
+            val legacyFile = File(LyricsStoragePaths.fallbackLyricsDir(context), safeName)
+            if (legacyFile.exists()) {
+                legacyFile.writeText(lyrics)
+                return true
+            }
 
-        val legacyFile = File(LyricsStoragePaths.fallbackLyricsDir(context), safeName)
-        if (legacyFile.exists()) {
-            legacyFile.writeText(lyrics)
-            return true
-        }
-
-        return false
+            false
+        }.getOrDefault(false)
     }
 
     fun readManagedLyrics(context: Context, relativeFile: String): String? {
@@ -134,23 +136,25 @@ internal object LyricsFileStore {
     }
 
     fun writeManagedLyrics(context: Context, fileName: String, lyrics: String): Boolean {
-        val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
+        return runCatching {
+            val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
 
-        if (treeUri != null) {
-            val dir = LyricsStoragePaths.managedDocumentDir(context) ?: return false
-            val file = dir.findFile(fileName)
-                ?: dir.createFile("application/octet-stream", fileName)
-                ?: return false
+            if (treeUri != null) {
+                val dir = LyricsStoragePaths.managedDocumentDir(context) ?: return false
+                val file = dir.findFile(fileName)
+                    ?: dir.createFile("application/octet-stream", fileName)
+                    ?: return false
 
-            context.contentResolver.openOutputStream(file.uri, "wt")
-                ?.bufferedWriter()
-                ?.use { it.write(lyrics) }
-                ?: return false
-            return true
-        }
+                context.contentResolver.openOutputStream(file.uri, "wt")
+                    ?.bufferedWriter()
+                    ?.use { it.write(lyrics) }
+                    ?: return false
+                return true
+            }
 
-        File(LyricsStoragePaths.fallbackManagedLyricsDir(context), fileName).writeText(lyrics)
-        return true
+            File(LyricsStoragePaths.fallbackManagedLyricsDir(context), fileName).writeText(lyrics)
+            true
+        }.getOrDefault(false)
     }
 
     fun deleteManagedLyrics(context: Context, relativeFile: String): Boolean {

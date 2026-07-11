@@ -29,6 +29,38 @@ class LyricsStorageImportValidationTest {
     }
 
     @Test
+    fun importPlainLyrics_reportsReadFailedWhenUriCannotBeOpened() {
+        val result = LyricsStorage.importLyricsFromUriWithResult(
+            context = context,
+            uri = Uri.fromFile(File(context.cacheDir, "missing-plain.lrc")),
+            title = "Plain Missing",
+            artist = "AndSi",
+            duration = 1_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.ReadFailed)
+    }
+
+    @Test
+    fun importPlainLyrics_reportsSaveFailedWhenStorageCannotWrite() {
+        File(context.getExternalFilesDir(null) ?: context.filesDir, FALLBACK_LYRICS_DIR)
+            .writeText("not a directory")
+
+        val result = LyricsStorage.importLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "plain-save-failed.lrc",
+                text = "[00:01.00]valid"
+            ),
+            title = "Plain Save Failed",
+            artist = "AndSi",
+            duration = 1_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.SaveFailed)
+    }
+
+    @Test
     fun importPlainLyrics_reportsInvalidLineNumbers() {
         val result = LyricsStorage.importLyricsFromUriWithResult(
             context = context,

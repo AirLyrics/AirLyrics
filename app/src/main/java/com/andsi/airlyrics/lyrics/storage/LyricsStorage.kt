@@ -36,6 +36,7 @@ object LyricsStorage {
         data class InvalidFormat(
             val invalidLineNumbers: List<Int> = emptyList()
         ) : ImportLyricsResult()
+        object ReadFailed : ImportLyricsResult()
         object SaveFailed : ImportLyricsResult()
     }
 
@@ -154,7 +155,9 @@ object LyricsStorage {
                 val updated = LyricsIndexStore.read(context).map { indexed ->
                     if (indexed.key == entry.key) indexed.copy(updatedAt = now) else indexed
                 }
-                LyricsIndexStore.write(context, updated)
+                if (!LyricsIndexStore.write(context, updated)) {
+                    return@withStorageLock LocalLyricsUpdateResult(saved = false)
+                }
             }
             LocalLyricsUpdateResult(saved = true)
         }
@@ -232,8 +235,11 @@ object LyricsStorage {
                     indexed
                 }
             }
-            LyricsIndexStore.write(context, updated)
-            LocalLyricsUpdateResult(saved = true)
+            if (LyricsIndexStore.write(context, updated)) {
+                LocalLyricsUpdateResult(saved = true)
+            } else {
+                LocalLyricsUpdateResult(saved = false)
+            }
         }
     }
 
@@ -320,7 +326,6 @@ object LyricsStorage {
         )
 
         LyricsIndexStore.write(context, entries)
-        true
     }
 
     fun importLyricsFromUri(
@@ -357,7 +362,7 @@ object LyricsStorage {
         val text = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
             is LyricsFileStore.ReadTextResult.Success -> result.text
             LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TooLarge
-            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SaveFailed
+            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.ReadFailed
         }
 
         val validation = LrcParser.validateForStorage(text)
@@ -435,7 +440,6 @@ object LyricsStorage {
             )
 
             LyricsIndexStore.write(context, entries)
-            true
         }
     }
 
@@ -455,7 +459,7 @@ object LyricsStorage {
         val text = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
             is LyricsFileStore.ReadTextResult.Success -> result.text
             LyricsFileStore.ReadTextResult.TooLarge -> return ImportLyricsResult.TooLarge
-            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.SaveFailed
+            LyricsFileStore.ReadTextResult.Failed -> return ImportLyricsResult.ReadFailed
         }
         val document = KaraokeLyricsCodec.parseDocumentJson(text)
         val parsedImport = if (document.lines.isNotEmpty()) {

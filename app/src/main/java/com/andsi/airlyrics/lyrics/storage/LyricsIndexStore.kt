@@ -41,7 +41,7 @@ internal object LyricsIndexStore {
         }.getOrDefault(emptyList())
     }
 
-    fun write(context: Context, entries: List<LyricsIndexEntry>) {
+    fun write(context: Context, entries: List<LyricsIndexEntry>): Boolean {
         val array = JSONArray()
         entries.sortedByDescending { it.updatedAt }.forEach { entry ->
             array.put(JSONObject().apply {
@@ -61,15 +61,19 @@ internal object LyricsIndexStore {
         }
 
         val text = array.toString(2)
-        if (LyricsStoragePaths.getLyricsDirUri(context) != null) {
-            val file = LyricsStoragePaths.indexDocumentFile(context, create = true) ?: return
-            context.contentResolver.openOutputStream(file.uri, "wt")
-                ?.bufferedWriter()
-                ?.use { it.write(text) }
-            return
-        }
+        return runCatching {
+            if (LyricsStoragePaths.getLyricsDirUri(context) != null) {
+                val file = LyricsStoragePaths.indexDocumentFile(context, create = true) ?: return false
+                context.contentResolver.openOutputStream(file.uri, "wt")
+                    ?.bufferedWriter()
+                    ?.use { it.write(text) }
+                    ?: return false
+                return true
+            }
 
-        File(LyricsStoragePaths.fallbackLyricsDir(context), INDEX_FILE_NAME).writeText(text)
+            File(LyricsStoragePaths.fallbackLyricsDir(context), INDEX_FILE_NAME).writeText(text)
+            true
+        }.getOrDefault(false)
     }
 
     fun find(context: Context, title: String, artist: String, duration: Long): LyricsIndexEntry? {
