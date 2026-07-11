@@ -102,8 +102,8 @@
     <string name="ui_enhanced_lrc_lyrics_enhanced_lrc">逐字歌词（.lrc）</string>
     <string name="ui_enhanced_lrc_local_only_message">逐字歌词只支持手动导入本地 .lrc 文件。</string>
     <string name="ui_enhanced_lrc_format_hint">逐字歌词行时间使用 [00:12.34]，字词时间使用 &lt;00:12.34&gt;。</string>
-    <string name="ui_enhanced_lrc_import_blocked_by_plain_lrc">请先移除已有普通歌词，再导入逐字歌词。</string>
-    <string name="ui_plain_lrc_import_blocked_by_enhanced_lrc">当前音乐已使用逐字歌词，请先移除逐字歌词，再导入普通歌词。</string>
+    <string name="ui_enhanced_lrc_blocked_by_plain_lrc">请先移除已有普通歌词，再导入逐字歌词。</string>
+    <string name="ui_plain_lrc_blocked_by_enhanced_lrc">当前音乐已使用逐字歌词，请先移除逐字歌词，再导入普通歌词。</string>
     <string name="ui_enhanced_lrc_removed_for_this_song">已移除当前音乐的逐字歌词</string>
     <string name="ui_expand_preview">展开预览</string>
     <string name="ui_fast_forwarding">快进中</string>

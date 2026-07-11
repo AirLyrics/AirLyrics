@@ -171,10 +171,10 @@ internal class LyricsController(
                 showImportFormatError(result.invalidLineNumbers, importAsWordByWord)
             }
             LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists -> {
-                Toast.makeText(context, context.getString(R.string.ui_enhanced_lrc_import_blocked_by_plain_lrc), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.ui_enhanced_lrc_blocked_by_plain_lrc), Toast.LENGTH_LONG).show()
             }
             LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists -> {
-                Toast.makeText(context, context.getString(R.string.ui_plain_lrc_import_blocked_by_enhanced_lrc), Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.ui_plain_lrc_blocked_by_enhanced_lrc), Toast.LENGTH_LONG).show()
             }
             LyricsStorage.ImportLyricsResult.SaveFailed -> {
                 val message = if (importAsWordByWord) {

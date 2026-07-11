@@ -366,7 +366,7 @@ internal class MainGraph(
                         subtitle = if (plainImportEnabled) {
                             activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
                         } else {
-                            activity.getString(R.string.ui_plain_lrc_import_blocked_by_enhanced_lrc)
+                            activity.getString(R.string.ui_plain_lrc_blocked_by_enhanced_lrc)
                         },
                         primary = true,
                         rowEnabled = plainImportEnabled
@@ -377,7 +377,7 @@ internal class MainGraph(
                         subtitle = if (wordByWordImportEnabled) {
                             activity.getString(R.string.ui_please_choose_an_enhanced_lrc_file)
                         } else {
-                            activity.getString(R.string.ui_enhanced_lrc_import_blocked_by_plain_lrc)
+                            activity.getString(R.string.ui_enhanced_lrc_blocked_by_plain_lrc)
                         },
                         primary = false,
                         rowEnabled = wordByWordImportEnabled

@@ -102,8 +102,8 @@
     <string name="ui_enhanced_lrc_lyrics_enhanced_lrc">Word-by-word lyrics (.lrc)</string>
     <string name="ui_enhanced_lrc_local_only_message">Word-by-word lyrics only support local manual import.</string>
     <string name="ui_enhanced_lrc_format_hint">Word-by-word lyrics use [00:12.34] for line time and &lt;00:12.34&gt; for word time.</string>
-    <string name="ui_enhanced_lrc_import_blocked_by_plain_lrc">Remove existing plain lyrics before importing word-by-word lyrics.</string>
-    <string name="ui_plain_lrc_import_blocked_by_enhanced_lrc">Remove word-by-word lyrics before importing plain lyrics.</string>
+    <string name="ui_enhanced_lrc_blocked_by_plain_lrc">Remove existing plain lyrics before importing word-by-word lyrics.</string>
+    <string name="ui_plain_lrc_blocked_by_enhanced_lrc">Remove word-by-word lyrics before importing plain lyrics.</string>
     <string name="ui_enhanced_lrc_removed_for_this_song">Word-by-word lyrics removed for this song.</string>
     <string name="ui_expand_preview">Expand preview</string>
     <string name="ui_fast_forwarding">Fast-forwarding</string>
