@@ -63,8 +63,8 @@
     <string name="ui_clean_letters">纯净字母</string>
     <string name="ui_click_through">穿透</string>
     <string name="ui_click_through_enabled_feedback">已开启触摸穿透</string>
-    <string name="ui_click_through_off">点击穿透：关闭</string>
-    <string name="ui_click_through_on">点击穿透：开启</string>
+    <string name="ui_click_through_off">点击穿透：已关闭</string>
+    <string name="ui_click_through_on">点击穿透：已开启</string>
     <string name="ui_clickable">可点击</string>
     <string name="ui_close">关闭</string>
     <string name="ui_collapse">收起</string>
@@ -87,8 +87,8 @@
     <string name="ui_remove_plain_lrc_message">只会删除这首歌关联的普通歌词；逐字歌词会继续保留。</string>
     <string name="ui_remove_enhanced_lrc_message">只会删除这首歌关联的逐字歌词；普通歌词会继续保留。</string>
     <string name="ui_display_control">显示控制</string>
-    <string name="ui_drag_lock_off">拖动锁定：关闭</string>
-    <string name="ui_drag_lock_on">拖动锁定：开启</string>
+    <string name="ui_drag_lock_off">拖动锁定：已关闭</string>
+    <string name="ui_drag_lock_on">拖动锁定：已开启</string>
     <string name="ui_draggable">可拖动</string>
     <string name="ui_draggable_click_through">可拖动 · 已穿透</string>
     <string name="ui_enable_notif_access_hint">先开启通知访问权限，然后播放一首歌。</string>
@@ -290,8 +290,8 @@ This is a lyric preview</string>
     <string name="ui_show_overlay_then_search_hint">请先显示悬浮窗，再重新联网搜索歌词</string>
     <string name="ui_shown">已显示</string>
     <string name="ui_size">大小</string>
-    <string name="ui_skin">皮肤</string>
-    <string name="ui_skin_preset">皮肤预设</string>
+    <string name="ui_skin">预设</string>
+    <string name="ui_skin_preset">预设</string>
     <string name="ui_skipping_next">切到下一首</string>
     <string name="ui_skipping_previous">切到上一首</string>
     <string name="ui_skipping_queue">切换队列</string>

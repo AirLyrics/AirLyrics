@@ -63,8 +63,8 @@
     <string name="ui_clean_letters">Clean letters</string>
     <string name="ui_click_through">Click-through</string>
     <string name="ui_click_through_enabled_feedback">Click-through enabled</string>
-    <string name="ui_click_through_off">Click-through: off</string>
-    <string name="ui_click_through_on">Click-through: on</string>
+    <string name="ui_click_through_off">Click-through: Off</string>
+    <string name="ui_click_through_on">Click-through: On</string>
     <string name="ui_clickable">Clickable</string>
     <string name="ui_close">Close</string>
     <string name="ui_collapse">Collapse</string>
@@ -87,8 +87,8 @@
     <string name="ui_remove_plain_lrc_message">Deletes only this song’s Plain LRC. Enhanced LRC stays.</string>
     <string name="ui_remove_enhanced_lrc_message">Deletes only this song’s Enhanced LRC. Plain LRC stays.</string>
     <string name="ui_display_control">Display control</string>
-    <string name="ui_drag_lock_off">Drag lock: off</string>
-    <string name="ui_drag_lock_on">Drag lock: on</string>
+    <string name="ui_drag_lock_off">Drag lock: Off</string>
+    <string name="ui_drag_lock_on">Drag lock: On</string>
     <string name="ui_draggable">Draggable</string>
     <string name="ui_draggable_click_through">Draggable · click-through</string>
     <string name="ui_enable_notif_access_hint">Enable notification access, then play a song.</string>
@@ -289,8 +289,8 @@ Enhanced LRC recommended format:
     <string name="ui_show_overlay_then_search_hint">Show floating lyrics first, then search online.</string>
     <string name="ui_shown">Shown</string>
     <string name="ui_size">Size</string>
-    <string name="ui_skin">Skin</string>
-    <string name="ui_skin_preset">Skin preset</string>
+    <string name="ui_skin">Preset</string>
+    <string name="ui_skin_preset">Preset</string>
     <string name="ui_skipping_next">Skipping next</string>
     <string name="ui_skipping_previous">Skipping previous</string>
     <string name="ui_skipping_queue">Skipping queue</string>
