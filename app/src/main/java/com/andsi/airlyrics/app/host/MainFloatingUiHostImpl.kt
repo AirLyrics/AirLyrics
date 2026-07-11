@@ -29,6 +29,7 @@ import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.components.spacer
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
+import com.andsi.airlyrics.ui.model.FloatingUiTags
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -493,7 +494,7 @@ internal fun MainUiHost.settingGridImpl(vararg items: FloatingSettingTile): Line
 internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
-        tag = "floating_tile:${item.title}"
+        tag = FloatingUiTags.tile(item.title)
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
@@ -528,7 +529,7 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
 
         if (item.subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
-                tag = "floating_tile_subtitle:${item.title}"
+                tag = FloatingUiTags.tileSubtitle(item.title)
                 text = item.subtitle
                 textSize = AirUiTokens.TextSize.Caption
                 setTextColor(colorTextMuted)

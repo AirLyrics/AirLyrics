@@ -5,11 +5,14 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isNotEmpty
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.ui.components.animatePageEnter
+import com.andsi.airlyrics.ui.model.FloatingUiTags
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.createBottomTabs
 import com.andsi.airlyrics.ui.navigation.updateTabs
@@ -140,6 +143,17 @@ internal class MainHandRenderer(
             animateContent = false,
             animateTabs = true
         )
+    }
+
+    override fun refreshFloatingControls() {
+        if (state.currentPage != Page.FLOATING) return
+        val container = host.contentContainer ?: return
+
+        container.findViewWithTag<TextView>(
+            FloatingUiTags.tileSubtitle(host.getString(R.string.ui_display_control))
+        )?.text = host.floatingDisplaySummary()
+        container.findViewWithTag<TextView>(FloatingUiTags.LOCK_BUTTON)?.text = host.floatingLockButtonText()
+        container.findViewWithTag<TextView>(FloatingUiTags.CLICK_THROUGH_BUTTON)?.text = host.floatingClickThroughButtonText()
     }
 
     override fun recreateForThemeChange() {

@@ -14,5 +14,7 @@ internal interface UiInvalidator {
 
     fun refreshFloatingState()
 
+    fun refreshFloatingControls()
+
     fun recreateForThemeChange()
 }

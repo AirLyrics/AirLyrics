@@ -53,12 +53,14 @@ internal class FloatingController(
         val overlayPermissionGranted = updateOverlayPermissionGranted()
         updateQuickFloatingActualVisible(visible)
 
-        val floatingStateChanged = previousVisible != visible ||
-            previousLocked != locked ||
-            previousClickThrough != clickThrough ||
+        val windowStateChanged = previousVisible != visible ||
             previousOverlayPermissionGranted != overlayPermissionGranted
-        if (action == BroadcastActions.WINDOW_VISIBILITY_CHANGED || floatingStateChanged) {
+        val controlStateChanged = previousLocked != locked ||
+            previousClickThrough != clickThrough
+        if (action == BroadcastActions.WINDOW_VISIBILITY_CHANGED || windowStateChanged) {
             invalidator.refreshFloatingState()
+        } else if (controlStateChanged) {
+            invalidator.refreshFloatingControls()
         }
     }
 
@@ -159,27 +161,28 @@ internal class FloatingController(
     }
 
     fun toggleLock() {
-        val nextLocked = !FloatingLyricsStyleStore.isLocked(context)
+        val nextLocked = !state.locked
 
         if (!state.quickFloatingVisible) {
-            state.locked = nextLocked
-            FloatingLyricsStyleStore.setLocked(context, nextLocked)
-            invalidator.refreshCurrentPage()
+            updateLocalLocked(nextLocked, persist = true)
+            invalidator.refreshFloatingControls()
             return
         }
 
-        if (!sendFloatingCommand(if (nextLocked) BroadcastActions.LOCK else BroadcastActions.UNLOCK)) {
+        if (sendFloatingCommand(if (nextLocked) BroadcastActions.LOCK else BroadcastActions.UNLOCK)) {
+            updateLocalLocked(nextLocked, persist = false)
+            invalidator.refreshFloatingControls()
+        } else {
             Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
         }
     }
 
     fun toggleClickThrough() {
-        val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(context)
+        val nextClickThrough = !state.clickThrough
 
         if (!state.quickFloatingVisible) {
-            state.clickThrough = nextClickThrough
-            FloatingLyricsStyleStore.setClickThrough(context, nextClickThrough)
-            invalidator.refreshCurrentPage()
+            updateLocalClickThrough(nextClickThrough, persist = true)
+            invalidator.refreshFloatingControls()
             return
         }
 
@@ -190,8 +193,28 @@ internal class FloatingController(
                 BroadcastActions.CLICK_THROUGH_OFF
             }
         )
-        if (!sent) {
+        if (sent) {
+            updateLocalClickThrough(nextClickThrough, persist = false)
+            invalidator.refreshFloatingControls()
+        } else {
             Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun updateLocalLocked(locked: Boolean, persist: Boolean) {
+        state.locked = locked
+        if (persist) {
+            FloatingLyricsStyleStore.setLocked(context, locked)
+            state.clickThrough = FloatingLyricsStyleStore.isClickThrough(context)
+        } else if (FloatingLyricsStyleStore.isClickThroughFollowingLocked(context)) {
+            state.clickThrough = locked
+        }
+    }
+
+    private fun updateLocalClickThrough(clickThrough: Boolean, persist: Boolean) {
+        state.clickThrough = clickThrough
+        if (persist) {
+            FloatingLyricsStyleStore.setClickThrough(context, clickThrough)
         }
     }
 

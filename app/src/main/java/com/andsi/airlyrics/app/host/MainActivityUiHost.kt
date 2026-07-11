@@ -1,8 +1,5 @@
 package com.andsi.airlyrics.app.host
 
-import com.andsi.airlyrics.app.MainGraph
-import com.andsi.airlyrics.app.platform.PermissionHelper
-import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -16,12 +13,14 @@ import android.widget.TextView
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.app.platform.PermissionHelper
+import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
@@ -122,8 +121,8 @@ internal class MainActivityUiHost(
     }
 
     override fun floatingDisplaySummary(): String {
-        val lockedText = if (FloatingLyricsStyleStore.isLocked(this)) getString(R.string.ui_locked) else getString(R.string.ui_draggable)
-        val clickThroughText = if (FloatingLyricsStyleStore.isClickThrough(this)) getString(R.string.ui_click_through) else getString(R.string.ui_clickable)
+        val lockedText = if (uiState.locked) getString(R.string.ui_locked) else getString(R.string.ui_draggable)
+        val clickThroughText = if (uiState.clickThrough) getString(R.string.ui_click_through) else getString(R.string.ui_clickable)
         return listOfNotNull(
             if (overlayPermissionGranted) null else getString(R.string.ui_overlay_permission_required),
             lockedText,
@@ -132,11 +131,11 @@ internal class MainActivityUiHost(
     }
 
     override fun floatingLockButtonText(): String {
-        return if (FloatingLyricsStyleStore.isLocked(this)) getString(R.string.ui_drag_lock_on) else getString(R.string.ui_drag_lock_off)
+        return if (uiState.locked) getString(R.string.ui_drag_lock_on) else getString(R.string.ui_drag_lock_off)
     }
 
     override fun floatingClickThroughButtonText(): String {
-        return if (FloatingLyricsStyleStore.isClickThrough(this)) getString(R.string.ui_click_through_on) else getString(R.string.ui_click_through_off)
+        return if (uiState.clickThrough) getString(R.string.ui_click_through_on) else getString(R.string.ui_click_through_off)
     }
 
     override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {

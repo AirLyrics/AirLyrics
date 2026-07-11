@@ -236,6 +236,10 @@ object FloatingLyricsStyleStore {
         return prefs.getBoolean(KEY_CLICK_THROUGH, prefs.getBoolean(KEY_LOCKED, false))
     }
 
+    fun isClickThroughFollowingLocked(context: Context): Boolean {
+        return !prefs(context).contains(KEY_CLICK_THROUGH)
+    }
+
     fun savePosition(context: Context, x: Int, y: Int) {
         prefs(context).edit {
             putInt(KEY_POS_X, x)

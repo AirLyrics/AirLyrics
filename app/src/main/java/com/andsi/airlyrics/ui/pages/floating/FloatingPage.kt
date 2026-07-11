@@ -26,6 +26,7 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
+import com.andsi.airlyrics.ui.model.FloatingUiTags
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
@@ -93,7 +94,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
     }
 
     fun updateFloatingTileSubtitle(title: String, subtitle: String) {
-        rootFrame.findViewWithTag<TextView>("floating_tile_subtitle:$title")?.text = subtitle
+        rootFrame.findViewWithTag<TextView>(FloatingUiTags.tileSubtitle(title))?.text = subtitle
     }
 
     fun refreshFloatingSettingTiles() {
@@ -632,6 +633,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                             ))
 
                             val lockButton = actionButton(activity, floatingLockButtonText()) { }
+                            lockButton.tag = FloatingUiTags.LOCK_BUTTON
                             lockButton.setOnClickListener {
                                 uiActions.toggleLock()
                                 lockButton.text = floatingLockButtonText()
@@ -640,6 +642,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                             addView(lockButton)
 
                             val clickThroughButton = actionButton(activity, floatingClickThroughButtonText()) { }
+                            clickThroughButton.tag = FloatingUiTags.CLICK_THROUGH_BUTTON
                             clickThroughButton.setOnClickListener {
                                 uiActions.toggleClickThrough()
                                 clickThroughButton.text = floatingClickThroughButtonText()
@@ -666,8 +669,8 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                 addView(settingRow(activity, getString(R.string.ui_animation), localizedLyricsSwitchAnimationTitle(switchAnimationMode())))
                 addView(settingRow(activity, getString(R.string.ui_enhanced_lrc), if (karaokeLyricsEnabled()) getString(R.string.ui_preferred) else getString(R.string.ui_off)))
                 addView(settingRow(activity, getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary()))
-                addView(settingRow(activity, getString(R.string.ui_locked), onOff(FloatingLyricsStyleStore.isLocked(activity))))
-                addView(settingRow(activity, getString(R.string.ui_click_through), onOff(FloatingLyricsStyleStore.isClickThrough(activity))))
+                addView(settingRow(activity, getString(R.string.ui_locked), onOff(uiState.locked)))
+                addView(settingRow(activity, getString(R.string.ui_click_through), onOff(uiState.clickThrough)))
             }
         }
         addView(summaryButton)

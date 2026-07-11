@@ -21,3 +21,11 @@ internal data class FloatingSettingTile(
     val iconRes: Int,
     val onClick: (View) -> Unit
 )
+
+internal object FloatingUiTags {
+    const val LOCK_BUTTON = "floating_control_lock_button"
+    const val CLICK_THROUGH_BUTTON = "floating_control_click_through_button"
+
+    fun tile(title: String): String = "floating_tile:$title"
+    fun tileSubtitle(title: String): String = "floating_tile_subtitle:$title"
+}
