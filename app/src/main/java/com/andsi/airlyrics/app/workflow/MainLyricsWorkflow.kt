@@ -1,0 +1,275 @@
+package com.andsi.airlyrics.app.workflow
+
+import android.app.Dialog
+import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
+import android.net.Uri
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+import com.andsi.airlyrics.R
+import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.i18n.localizedAssetText
+import com.andsi.airlyrics.i18n.localizedOffsetDescription
+import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
+import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.media.displayText
+import com.andsi.airlyrics.settings.store.LyricsOffsetStore
+import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
+import com.andsi.airlyrics.ui.components.playTinyPulse
+import com.andsi.airlyrics.ui.components.showAirDialog
+import com.andsi.airlyrics.ui.components.showAirInfoDialog
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
+import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorStroke
+import com.andsi.airlyrics.ui.theme.colorSurfaceLight
+import com.andsi.airlyrics.ui.theme.colorTextMuted
+import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.tokens.AirUiTokens
+
+internal class MainLyricsWorkflow(
+    private val graph: MainGraph
+) {
+    private val activity
+        get() = graph.activity
+    private val state
+        get() = graph.state
+    private val uiHost
+        get() = graph.uiHost
+
+    fun handleLyricsFileSelected(uri: Uri) {
+        val media = state.pendingImportMedia ?: graph.lyricsController.getCurrentMediaInfo()
+        if (media == null || media.title.isBlank()) {
+            Toast.makeText(activity, activity.getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val importAsWordByWord = state.pendingImportAsWordByWord
+        state.pendingImportMedia = null
+
+        if (!LyricsImportValidator.isLikelyLyricsDocument(activity, uri)) {
+            val message = if (importAsWordByWord) {
+                activity.getString(R.string.ui_please_choose_an_enhanced_lrc_file)
+            } else {
+                activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
+            }
+            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (LyricsImportValidator.isLyricsDocumentTooLarge(activity, uri)) {
+            Toast.makeText(activity, activity.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        graph.lyricsController.importLyricsForCurrentMedia(
+            uri = uri,
+            media = media,
+            overwrite = false,
+            importAsWordByWord = importAsWordByWord
+        )
+    }
+
+    fun handleLyricsDirectorySelected(uri: Uri) {
+        val permissionGranted = runCatching {
+            activity.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        }.isSuccess
+
+        if (!permissionGranted) {
+            Toast.makeText(activity, activity.getString(R.string.ui_lyrics_folder_permission_failed), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        if (!LyricsStorage.validateLyricsDir(activity, uri)) {
+            Toast.makeText(activity, activity.getString(R.string.ui_lyrics_folder_write_failed), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        LyricsStorage.saveLyricsDirUri(activity, uri)
+        Toast.makeText(activity, activity.getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()
+        graph.uiInvalidator.rebuildCurrentPage(
+            reason = PageRebuildReason.LYRICS_DIRECTORY_CHANGED,
+            animateContent = false,
+            animateTabs = false
+        )
+    }
+
+    fun currentLyricsOffsetSummary(): String {
+        val media = graph.lyricsController.getCurrentMediaInfo()
+            ?: return activity.getString(R.string.ui_waiting_for_current_song)
+        return activity.localizedOffsetDescription(LyricsOffsetStore.getOffsetMs(activity, media))
+    }
+
+    fun adjustLyricsOffsetForCurrentMedia(deltaMs: Long): Long? {
+        val media = graph.lyricsController.getCurrentMediaInfo() ?: return null
+        val offset = LyricsOffsetStore.adjustOffsetMs(activity, media, deltaMs)
+        graph.floatingController.applyLyricsOffset(offset)
+        return offset
+    }
+
+    fun resetLyricsOffsetForCurrentMedia(): Boolean {
+        val media = graph.lyricsController.getCurrentMediaInfo() ?: return false
+        LyricsOffsetStore.resetOffset(activity, media)
+        graph.floatingController.applyLyricsOffset(0L)
+        return true
+    }
+
+    fun showImportLyricsDialog() {
+        val media = graph.lyricsController.getCurrentMediaInfo()
+        if (media == null || media.title.isBlank()) {
+            Toast.makeText(activity, activity.getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
+            return
+        }
+
+        graph.runOnAppIo {
+            val localInfo = LyricsStorage.getLocalLyricsInfo(
+                context = activity,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs
+            )
+            val hasWordByWordLyrics = LyricsStorage.hasKaraokeLyrics(
+                context = activity,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs
+            )
+            val plainImportEnabled = !hasWordByWordLyrics
+            val wordByWordImportEnabled = localInfo == null ||
+                localInfo.source == LyricsStorage.SOURCE_KARAOKE_FALLBACK
+
+            graph.runOnMainThread {
+                var dialog: Dialog? = null
+
+                fun launchImport(asWordByWord: Boolean) {
+                    state.pendingImportAsWordByWord = asWordByWord
+                    state.pendingImportMedia = media
+                    dialog?.dismiss()
+                    graph.launchers.selectLyricsFile()
+                }
+
+                val content = LinearLayout(activity).apply {
+                    orientation = LinearLayout.VERTICAL
+                    setPadding(
+                        uiHost.dp(AirUiTokens.Space.PageH),
+                        uiHost.dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+                        uiHost.dp(AirUiTokens.Space.PageH),
+                        uiHost.dp(AirUiTokens.Space.Sm)
+                    )
+
+                    addView(TextView(activity).apply {
+                        text = media.displayText
+                        textSize = AirUiTokens.TextSize.Button
+                        typeface = Typeface.DEFAULT_BOLD
+                        setTextColor(uiHost.colorTextStrong)
+                        setPadding(0, 0, 0, uiHost.dp(AirUiTokens.Space.Xl))
+                    })
+
+                    addView(importLyricsChoiceRow(
+                        title = activity.getString(R.string.ui_plain_lyrics_lrc),
+                        subtitle = if (plainImportEnabled) {
+                            activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
+                        } else {
+                            activity.getString(R.string.ui_plain_lrc_blocked_by_enhanced_lrc)
+                        },
+                        primary = true,
+                        rowEnabled = plainImportEnabled
+                    ) { launchImport(false) })
+
+                    addView(importLyricsChoiceRow(
+                        title = activity.getString(R.string.ui_enhanced_lrc_lyrics_enhanced_lrc),
+                        subtitle = if (wordByWordImportEnabled) {
+                            activity.getString(R.string.ui_please_choose_an_enhanced_lrc_file)
+                        } else {
+                            activity.getString(R.string.ui_enhanced_lrc_blocked_by_plain_lrc)
+                        },
+                        primary = false,
+                        rowEnabled = wordByWordImportEnabled
+                    ) { launchImport(true) })
+
+                    addView(importLyricsChoiceRow(
+                        title = activity.getString(R.string.ui_lyrics_format_guide),
+                        subtitle = activity.getString(R.string.ui_view_lrc_examples_hint),
+                        primary = false
+                    ) { showLyricsFormatGuideDialog() })
+                }
+
+                dialog = uiHost.showAirDialog(
+                    title = activity.getString(R.string.ui_choose_import_type),
+                    positiveText = null,
+                    negativeText = activity.getString(R.string.ui_cancel),
+                    body = {
+                        addView(content)
+                    }
+                )
+            }
+        }
+    }
+
+    private fun importLyricsChoiceRow(
+        title: String,
+        subtitle: String,
+        primary: Boolean,
+        rowEnabled: Boolean = true,
+        onClick: () -> Unit
+    ): TextView {
+        return TextView(activity).apply {
+            text = activity.getString(R.string.ui_title_subtitle, title, subtitle)
+            textSize = AirUiTokens.TextSize.Button
+            typeface = Typeface.DEFAULT_BOLD
+            val usePrimary = primary && rowEnabled
+            isEnabled = rowEnabled
+            alpha = if (rowEnabled) 1f else 0.68f
+            setTextColor(when {
+                !rowEnabled -> uiHost.colorTextMuted
+                usePrimary -> Color.WHITE
+                else -> uiHost.colorTextStrong
+            })
+            setLineSpacing(uiHost.dp(AirUiTokens.Space.Xxs).toFloat(), 1f)
+            setPadding(
+                uiHost.dp(AirUiTokens.Space.ButtonH),
+                uiHost.dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+                uiHost.dp(AirUiTokens.Space.ButtonH),
+                uiHost.dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs)
+            )
+            val params = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            params.setMargins(0, uiHost.dp(AirUiTokens.Space.Xl), 0, 0)
+            layoutParams = params
+            background = GradientDrawable().apply {
+                cornerRadius = uiHost.dp(AirUiTokens.Radius.Sm).toFloat()
+                if (usePrimary) {
+                    setColor(uiHost.colorAccent)
+                } else {
+                    setColor(uiHost.colorSurfaceLight)
+                    setStroke(uiHost.dp(AirUiTokens.Stroke.Hairline), uiHost.colorStroke)
+                }
+            }
+            if (rowEnabled) {
+                enableSoftPressFeedback(0.97f)
+                setOnClickListener {
+                    onClick()
+                    playTinyPulse(this)
+                }
+            }
+        }
+    }
+
+    private fun showLyricsFormatGuideDialog() {
+        uiHost.showAirInfoDialog(
+            title = activity.getString(R.string.ui_lyrics_format_guide),
+            message = activity.localizedAssetText(
+                baseName = "help/lyrics_format",
+                fallback = activity.getString(R.string.ui_lyrics_format_guide_body)
+            )
+        )
+    }
+}

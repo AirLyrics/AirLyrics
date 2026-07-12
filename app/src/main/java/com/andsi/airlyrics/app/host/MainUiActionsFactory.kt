@@ -36,9 +36,9 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
         toggleClickThrough = floatingController::toggleClickThrough,
         reloadFloatingLyrics = floatingController::reloadLyrics,
         reloadFloatingLyricsFromOnline = floatingController::reloadLyricsFromOnline,
-        currentLyricsOffsetSummary = ::currentLyricsOffsetSummary,
-        adjustLyricsOffsetForCurrentMedia = ::adjustLyricsOffsetForCurrentMedia,
-        resetLyricsOffsetForCurrentMedia = ::resetLyricsOffsetForCurrentMedia,
+        currentLyricsOffsetSummary = lyricsWorkflow::currentLyricsOffsetSummary,
+        adjustLyricsOffsetForCurrentMedia = lyricsWorkflow::adjustLyricsOffsetForCurrentMedia,
+        resetLyricsOffsetForCurrentMedia = lyricsWorkflow::resetLyricsOffsetForCurrentMedia,
         requestOverlayPermission = ::requestOverlayPermission,
         requestNotificationPermission = ::requestNotificationPermissionIfNeeded,
         openNotificationListenerSettings = {
@@ -48,7 +48,7 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             launchers.selectLyricsDirectory()
         },
         copyLyricsDirectory = lyricsController::showLyricsDir,
-        importLyricsForCurrentMedia = ::showImportLyricsDialog,
+        importLyricsForCurrentMedia = lyricsWorkflow::showImportLyricsDialog,
         deleteLyricsForCurrentMedia = lyricsController::deleteLyricsForCurrentMedia,
         toggleLyricsAutoSearch = {
             val enabled = !LyricsSettingsStore.isAutoSearchOnlineEnabled(activity)
