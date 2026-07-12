@@ -135,7 +135,9 @@ and word-by-word highlighting when word-level lyrics are available.
 ## Settings
 
 Settings are read and written through dedicated storage classes under `settings/store/`.
-UI screens do not access raw `SharedPreferences` keys directly.
+UI screens do not access raw `SharedPreferences` keys directly, and they do not read
+`settings/store/`, `lyrics/storage/`, or `media/` package data sources directly.
+Screen code receives page data through UI host methods and triggers work through `MainUiActions`.
 
 Settings for different features are managed separately instead of being concentrated in a single file.
 Shared setting value models live under `core/model/`, which keeps `settings/`, `lyrics/`, `media/`,

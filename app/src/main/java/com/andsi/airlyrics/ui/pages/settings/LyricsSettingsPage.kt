@@ -7,9 +7,6 @@ import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsSourceHint
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
-import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.core.model.LyricsSearchSource
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -18,9 +15,7 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activity) createLyricsSettingsPage@ {
     val container = pageContainer(activity, animateChanges = false)
-    val selectedSource = LyricsSettingsStore.getLyricsSource(this)
-    val autoSearch = LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
-    val autoSave = LyricsSettingsStore.isAutoSaveLocalEnabled(this)
+    val settings = lyricsSettingsState()
 
     container.addView(settingsBackHeader(getString(R.string.ui_lyrics)))
 
@@ -31,7 +26,7 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
             addView(bigText(activity, getString(R.string.ui_search_strategy)))
             addView(normalText(activity, getString(R.string.ui_lyrics_priority_hint)))
 
-            val autoSearchButton = actionButton(activity, if (autoSearch) getString(R.string.ui_online_fallback_on) else getString(R.string.ui_online_fallback_off)) { }
+            val autoSearchButton = actionButton(activity, if (settings.autoSearchOnline) getString(R.string.ui_online_fallback_on) else getString(R.string.ui_online_fallback_off)) { }
             autoSearchButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSearch()
                 autoSearchButton.text = if (enabled) getString(R.string.ui_online_fallback_on) else getString(R.string.ui_online_fallback_off)
@@ -39,7 +34,7 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
             }
             addView(autoSearchButton)
 
-            val autoSaveButton = actionButton(activity, if (autoSave) getString(R.string.ui_auto_save_on) else getString(R.string.ui_auto_save_off)) { }
+            val autoSaveButton = actionButton(activity, if (settings.autoSaveLocal) getString(R.string.ui_auto_save_on) else getString(R.string.ui_auto_save_off)) { }
             autoSaveButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSave()
                 autoSaveButton.text = if (enabled) getString(R.string.ui_auto_save_on) else getString(R.string.ui_auto_save_off)
@@ -52,8 +47,8 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
     container.addView(
         card(activity) {
             addView(bigText(activity, getString(R.string.ui_lyrics_source)))
-            val sourceStatus = normalText(activity, getString(R.string.settings_current_value, localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(activity))))
-            val sourceHint = smallHint(activity, localizedLyricsSourceHint(LyricsSearchSource.fromKey(selectedSource)))
+            val sourceStatus = normalText(activity, getString(R.string.settings_current_value, localizedLyricsSourceTitle(settings.selectedSource)))
+            val sourceHint = smallHint(activity, localizedLyricsSourceHint(settings.selectedSource))
             val sourceFeedback = TextView(activity).apply {
                 text = ""
                 textSize = AirUiTokens.TextSize.Caption
@@ -66,14 +61,13 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
             addView(sourceFeedback)
             lateinit var sourceGrid: LinearLayout
             sourceGrid = liveOptionGrid(
-                LyricsSettingsStore.sourceOptions.map { option ->
-                    val source = LyricsSearchSource.fromKey(option.key)
+                settings.sourceOptions.map { source ->
                     KeyedOptionItem(
-                        key = option.key,
+                        key = source.key,
                         title = localizedLyricsSourceTitle(source),
-                        selected = option.key == selectedSource,
+                        selected = source == settings.selectedSource,
                         action = {
-                            uiActions.selectLyricsSource(option.key)
+                            uiActions.selectLyricsSource(source)
                             sourceStatus.text = getString(R.string.settings_current_value, localizedLyricsSourceTitle(
                                 source
                             ))
@@ -91,7 +85,7 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
     container.addView(
         card(activity) {
             addView(bigText(activity, getString(R.string.ui_local_lyrics_folder)))
-            addView(normalText(activity, getString(R.string.ui_save_folder) + LyricsStorage.getLyricsDirRawPath(activity)))
+            addView(normalText(activity, getString(R.string.ui_save_folder) + settings.lyricsDirectoryPath))
             addView(smallHint(activity, getString(R.string.ui_lyrics_folder_scope_hint)))
             addView(actionButton(activity, getString(R.string.ui_choose_lyrics_save_folder)) {
                 uiActions.selectLyricsDirectory()

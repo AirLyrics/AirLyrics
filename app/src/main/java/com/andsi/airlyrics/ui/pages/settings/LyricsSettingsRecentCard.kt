@@ -10,13 +10,12 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.media.displayText
-import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
+import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
+import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
@@ -39,39 +38,12 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
     }
     var closeHeaderHint: () -> Unit = {}
 
-    fun currentLocalLyricsItem(media: CurrentMediaInfo?): LyricsStorage.LocalLyricsItem? {
-        media ?: return null
-        val info = LyricsStorage.getLocalLyricsInfo(
-            context = this,
-            title = media.title,
-            artist = media.artist,
-            duration = media.durationMs
-        ) ?: return null
-        val hasWordByWord = LyricsStorage.hasKaraokeLyrics(
-            context = this,
-            title = media.title,
-            artist = media.artist,
-            duration = media.durationMs
-        )
-        return LyricsStorage.LocalLyricsItem(
-            name = info.fileName,
-            modifiedTimeMillis = info.updatedAt,
-            sizeBytes = 0L,
-            title = info.title,
-            artist = info.artist,
-            source = info.source,
-            provider = info.provider,
-            hasPlainLyrics = true,
-            hasKaraokeLyrics = hasWordByWord
-        )
-    }
-
     lateinit var populateRecentLyrics: (Boolean) -> Unit
 
     fun renderLyricsList(
-        currentItem: LyricsStorage.LocalLyricsItem?,
-        recentLyrics: List<LyricsStorage.LocalLyricsItem>,
-        media: CurrentMediaInfo?,
+        currentItem: LocalLyricsUiItem?,
+        recentLyrics: List<LocalLyricsUiItem>,
+        media: CurrentMediaUiInfo?,
         showRefreshFeedback: Boolean
     ) {
         listBody.removeAllViews()
@@ -146,7 +118,6 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
 
     populateRecentLyrics = { showRefreshFeedback ->
         val loadGeneration = ++recentLyricsLoadGeneration
-        val media = getCurrentMediaInfo()?.takeUnless { it.isEmpty }
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
         } else {
@@ -155,12 +126,11 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
         }
 
         runOnAppIo {
-            val currentItem = currentLocalLyricsItem(media)
-            val recentLyrics = LyricsStorage.listRecentLyrics(this, limit = 8)
+            val state = recentLyricsState(limit = 8)
 
             runOnMainThread {
                 if (loadGeneration != recentLyricsLoadGeneration) return@runOnMainThread
-                renderLyricsList(currentItem, recentLyrics, media, showRefreshFeedback)
+                renderLyricsList(state.currentItem, state.recentLyrics, state.media, showRefreshFeedback)
             }
         }
     }

@@ -4,7 +4,6 @@ import android.view.View
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentPink
@@ -12,6 +11,7 @@ import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 
 internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity) createSettingsHomePage@ {
     val container = pageContainer(activity)
+    val lyricsSettings = lyricsSettingsState()
 
     container.addView(settingsHomeHeader())
 
@@ -20,7 +20,7 @@ internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity
         settingsCategoryCard(
             title = getString(R.string.ui_lyrics),
             subtitle = getString(R.string.ui_lyrics_settings_summary),
-            status = "${localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(this))} · ${if (LyricsSettingsStore.isAutoSaveLocalEnabled(this)) getString(R.string.ui_auto_save) else getString(R.string.ui_no_auto_save)}",
+            status = "${localizedLyricsSourceTitle(lyricsSettings.selectedSource)} · ${if (lyricsSettings.autoSaveLocal) getString(R.string.ui_auto_save) else getString(R.string.ui_no_auto_save)}",
             accent = colorAccentPink,
             iconRes = R.drawable.ic_air_music_note
         ) {

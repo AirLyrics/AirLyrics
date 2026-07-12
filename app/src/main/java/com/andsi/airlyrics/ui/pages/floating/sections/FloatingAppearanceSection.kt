@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.pages.floating.sections
 
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
@@ -20,7 +19,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_skin_preset), "") {
                         addView(liveOptionGrid(
-                            FloatingLyricsStyleStore.presets.map { preset ->
+                            floatingPresets().map { preset ->
                                 KeyedOptionItem(
                                     key = preset.key,
                                     title = localizedPresetTitle(preset.key),
@@ -37,7 +36,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
             ),
             trackedFloatingTile(
                 title = getString(R.string.ui_text_color),
-                subtitle = FloatingLyricsStyleStore.colorSummary(style().textColor),
+                subtitle = colorSummary(style().textColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_text_color), "") {
@@ -56,14 +55,13 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                     openPanel(tile, getString(R.string.ui_background_bubble), "") {
                         val backgroundButton = actionButton(host, if (style().backgroundEnabled) getString(R.string.ui_background_on) else getString(R.string.ui_background_off)) { }
                         backgroundButton.setOnClickListener {
-                            val enabled = !FloatingLyricsStyleStore.getStyle(host).backgroundEnabled
-                            FloatingLyricsStyleStore.setBackgroundEnabled(host, enabled)
-                            notifyFloatingStyleChanged()
+                            val enabled = !floatingStyle().backgroundEnabled
+                            applyFloatingBackgroundEnabled(enabled)
                             backgroundButton.text = if (enabled) getString(R.string.ui_background_on) else getString(R.string.ui_background_off)
                             refreshFloatingPreview()
                         }
                         addView(backgroundButton)
-                        addView(colorControl(getString(R.string.ui_background), FloatingLyricsStyleStore.backgroundColorWithAlpha(style())) { color ->
+                        addView(colorControl(getString(R.string.ui_background), backgroundColorWithAlpha(style())) { color ->
                             applyFloatingBackgroundColor(color, refreshPage = false)
                             refreshFloatingPreview()
                         })
@@ -90,13 +88,11 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_shadow_stroke), "") {
                         addView(sliderRow(getString(R.string.ui_shadow_radius), style().shadowRadius.toInt(), 0, 24, "") { value ->
-                            FloatingLyricsStyleStore.setShadowRadius(host, value.toFloat())
-                            notifyFloatingStyleChanged()
+                            applyFloatingShadowRadius(value.toFloat())
                             refreshFloatingPreview()
                         })
                         addView(colorControl(getString(R.string.ui_shadow), style().shadowColor) { color ->
-                            FloatingLyricsStyleStore.setShadowColor(host, color)
-                            notifyFloatingStyleChanged()
+                            applyFloatingShadowColor(color)
                             refreshFloatingPreview()
                         })
                     }
@@ -109,23 +105,19 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_window_layout), "") {
                         addView(sliderRow(getString(R.string.ui_max_width), style().maxWidthPercent, 45, 100, "%") { value ->
-                            FloatingLyricsStyleStore.setMaxWidthPercent(host, value)
-                            notifyFloatingStyleChanged()
+                            applyFloatingMaxWidthPercent(value)
                             refreshFloatingPreview()
                         })
                         addView(sliderRow(getString(R.string.ui_horizontal_padding), style().paddingHorizontalDp, 0, 36, "dp") { value ->
-                            FloatingLyricsStyleStore.setPaddingHorizontal(host, value)
-                            notifyFloatingStyleChanged()
+                            applyFloatingPaddingHorizontal(value)
                             refreshFloatingPreview()
                         })
                         addView(sliderRow(getString(R.string.ui_vertical_padding), style().paddingVerticalDp, 0, 28, "dp") { value ->
-                            FloatingLyricsStyleStore.setPaddingVertical(host, value)
-                            notifyFloatingStyleChanged()
+                            applyFloatingPaddingVertical(value)
                             refreshFloatingPreview()
                         })
                         addView(sliderRow(getString(R.string.ui_corner_radius), style().cornerRadiusDp, 0, 36, "dp") { value ->
-                            FloatingLyricsStyleStore.setCornerRadius(host, value)
-                            notifyFloatingStyleChanged()
+                            applyFloatingCornerRadius(value)
                             refreshFloatingPreview()
                         })
                     }

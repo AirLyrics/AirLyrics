@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -70,7 +69,7 @@ private fun languageChoiceCard(activity: MainUiHost): View = with(activity) lang
         })
 
         addView(TextView(activity).apply {
-            text = LanguageSettingsStore.currentDisplayName(activity)
+            text = languageSettingsState().displayName
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccent)
@@ -86,7 +85,7 @@ private fun languageChoiceCard(activity: MainUiHost): View = with(activity) lang
 }
 
 private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLanguageDialog@ {
-    val currentMode = LanguageSettingsStore.getMode(activity)
+    val languageState = languageSettingsState()
     lateinit var dialog: android.app.Dialog
     dialog = showAirDialog(
         title = getString(R.string.ui_language),
@@ -94,13 +93,13 @@ private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLangua
         positiveText = null,
         body = {
             val selectMode: (String) -> Unit = { mode ->
-                LanguageSettingsStore.setMode(activity, mode)
+                setLanguageMode(mode)
                 dialog.dismiss()
                 activity.refreshAfterLanguageChanged()
             }
-            addLanguageOption(activity, getString(R.string.ui_follow_system), getString(R.string.ui_follow_system), LanguageSettingsStore.MODE_SYSTEM, currentMode, selectMode)
-            addLanguageOption(activity, getString(R.string.ui_chinese_simplified), getString(R.string.ui_chinese_simplified), LanguageSettingsStore.MODE_ZH_CN, currentMode, selectMode)
-            addLanguageOption(activity, getString(R.string.ui_english), getString(R.string.ui_english), LanguageSettingsStore.MODE_EN, currentMode, selectMode)
+            languageState.options.forEach { option ->
+                addLanguageOption(activity, option.title, option.subtitle, option.mode, languageState.currentMode, selectMode)
+            }
         }
     )
 }

@@ -4,8 +4,6 @@ import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
@@ -28,7 +26,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
                                     title = localizedLyricsSwitchAnimationTitle(mode),
                                     selected = mode == switchAnimationMode(),
                                     action = {
-                                        LyricsSettingsStore.setSwitchAnimationMode(host, mode)
+                                        setLyricsSwitchAnimationMode(mode)
                                         applyLyricsAnimationSettingsChanged()
                                     }
                                 )
@@ -56,13 +54,12 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
             ),
             trackedFloatingTile(
                 title = getString(R.string.ui_highlight_color),
-                subtitle = FloatingLyricsStyleStore.colorSummary(style().karaokeHighlightColor),
+                subtitle = colorSummary(style().karaokeHighlightColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_enhanced_color), "") {
                         addView(colorControl(getString(R.string.ui_highlight), style().karaokeHighlightColor) { color ->
-                            FloatingLyricsStyleStore.setKaraokeHighlightColor(host, color)
-                            notifyFloatingStyleChanged()
+                            applyFloatingKaraokeHighlightColor(color)
                             refreshFloatingPreview()
                         })
                     }

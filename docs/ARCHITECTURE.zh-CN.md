@@ -127,7 +127,9 @@ app/render/MainHandRenderer.kt
 ## 设置
 
 设置通过 `settings/store/` 下的专用存储类读写。
-界面页面不直接操作裸露的 `SharedPreferences` 键。
+界面页面不直接操作裸露的 `SharedPreferences` 键，也不直接读取
+`settings/store/`、`lyrics/storage/` 或 `media/` 包内的数据来源。
+页面代码通过 UI host 方法接收页面数据，并通过 `MainUiActions` 触发操作。
 
 不同功能的设置分别管理，避免将所有设置读写集中在单个文件中。
 共享的设置值模型放在 `core/model/` 下，避免 `settings/`、`lyrics/`、`media/`、

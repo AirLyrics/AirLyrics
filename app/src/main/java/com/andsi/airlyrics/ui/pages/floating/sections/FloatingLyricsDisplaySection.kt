@@ -8,7 +8,6 @@ import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.horizontalButtons
 import com.andsi.airlyrics.ui.components.normalText
@@ -36,7 +35,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                                     title = localizedLyricsContentModeTitle(mode),
                                     selected = mode == contentDisplayMode(),
                                     action = {
-                                        LyricsSettingsStore.setContentDisplayMode(host, mode)
+                                        setLyricsContentDisplayMode(mode)
                                         applyLyricsDisplaySettingsChanged()
                                     }
                                 )
@@ -58,7 +57,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                                     title = localizedLyricsLineModeTitle(mode),
                                     selected = mode == lineDisplayMode(),
                                     action = {
-                                        LyricsSettingsStore.setLineDisplayMode(host, mode)
+                                        setLyricsLineDisplayMode(mode)
                                         applyLyricsDisplaySettingsChanged()
                                     }
                                 )

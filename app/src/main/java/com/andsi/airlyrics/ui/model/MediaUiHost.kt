@@ -5,6 +5,7 @@ import android.view.View
 
 internal interface MediaUiHost {
     fun getActiveMediaControllers(): List<MediaController>
+    fun mediaPageState(): MediaPageState
     fun getAppName(packageName: String): String
     fun getPlaybackStateText(state: Int?): String
 

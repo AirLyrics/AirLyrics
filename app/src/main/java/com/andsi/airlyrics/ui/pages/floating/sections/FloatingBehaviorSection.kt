@@ -5,7 +5,6 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.horizontalButtons
 import com.andsi.airlyrics.ui.components.settingRow
@@ -65,8 +64,8 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
         openPanel(summaryButton, getString(R.string.ui_current_setup), "") {
             addView(settingRow(host, getString(R.string.ui_skin), localizedPresetTitle(style().presetName)))
             addView(settingRow(host, getString(R.string.ui_font_size), "${style().textSizeSp.toInt()}sp"))
-            addView(settingRow(host, getString(R.string.ui_text), FloatingLyricsStyleStore.colorSummary(style().textColor)))
-            addView(settingRow(host, getString(R.string.ui_highlight), FloatingLyricsStyleStore.colorSummary(style().karaokeHighlightColor)))
+            addView(settingRow(host, getString(R.string.ui_text), colorSummary(style().textColor)))
+            addView(settingRow(host, getString(R.string.ui_highlight), colorSummary(style().karaokeHighlightColor)))
             addView(settingRow(host, getString(R.string.ui_background), onOff(style().backgroundEnabled)))
             addView(settingRow(host, getString(R.string.ui_width), "${style().maxWidthPercent}%"))
             addView(settingRow(host, getString(R.string.ui_content), localizedLyricsContentModeTitle(contentDisplayMode())))

@@ -9,7 +9,6 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
 internal fun MainUiHost.floatingSectionTitle(title: CharSequence): TextView {
@@ -31,7 +30,7 @@ internal fun Context.localizedFloatingPresetTitle(key: String): String {
     return when (key) {
         "subtitle" -> getString(R.string.ui_clean_letters)
         "bubble" -> getString(R.string.ui_vinyl_bubble)
-        else -> localizedFloatingPresetTitle(FloatingLyricsStyleStore.DEFAULT_PRESET)
+        else -> getString(R.string.ui_vinyl_bubble)
     }
 }
 

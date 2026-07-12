@@ -250,8 +250,48 @@ internal class FloatingController(
         if (refreshPage) invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
     }
 
+    fun applyBackgroundEnabled(enabled: Boolean) {
+        FloatingLyricsStyleStore.setBackgroundEnabled(context, enabled)
+        notifyStyleChanged()
+    }
+
     fun applyGravity(gravity: Int) {
         FloatingLyricsStyleStore.setGravity(context, gravity)
+        notifyStyleChanged()
+    }
+
+    fun applyShadowRadius(radius: Float) {
+        FloatingLyricsStyleStore.setShadowRadius(context, radius)
+        notifyStyleChanged()
+    }
+
+    fun applyShadowColor(color: Int) {
+        FloatingLyricsStyleStore.setShadowColor(context, color)
+        notifyStyleChanged()
+    }
+
+    fun applyMaxWidthPercent(percent: Int) {
+        FloatingLyricsStyleStore.setMaxWidthPercent(context, percent)
+        notifyStyleChanged()
+    }
+
+    fun applyPaddingHorizontal(paddingDp: Int) {
+        FloatingLyricsStyleStore.setPaddingHorizontal(context, paddingDp)
+        notifyStyleChanged()
+    }
+
+    fun applyPaddingVertical(paddingDp: Int) {
+        FloatingLyricsStyleStore.setPaddingVertical(context, paddingDp)
+        notifyStyleChanged()
+    }
+
+    fun applyCornerRadius(radiusDp: Int) {
+        FloatingLyricsStyleStore.setCornerRadius(context, radiusDp)
+        notifyStyleChanged()
+    }
+
+    fun applyKaraokeHighlightColor(color: Int) {
+        FloatingLyricsStyleStore.setKaraokeHighlightColor(context, color)
         notifyStyleChanged()
     }
 

@@ -2,8 +2,6 @@ package com.andsi.airlyrics.ui.model
 
 import android.view.View
 import android.widget.TextView
-import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.media.model.CurrentMediaInfo
 
 internal interface SettingsUiHost {
     fun settingsHomeHeader(): View
@@ -19,7 +17,7 @@ internal interface SettingsUiHost {
     ): View
 
     fun localLyricsRow(
-        item: LyricsStorage.LocalLyricsItem,
+        item: LocalLyricsUiItem,
         onLyricsSaved: (() -> Unit)? = null,
         badgeText: CharSequence? = null
     ): View
@@ -33,5 +31,9 @@ internal interface SettingsUiHost {
     fun hasNotificationPermission(): Boolean
     fun hasNotificationListenerAccess(): Boolean
 
-    fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode)
+    fun currentLyricsState(): CurrentLyricsUiState
+    fun recentLyricsState(limit: Int): RecentLyricsUiState
+    fun lyricsSettingsState(): LyricsSettingsUiState
+    fun languageSettingsState(): LanguageSettingsUiState
+    fun setLanguageMode(mode: String)
 }

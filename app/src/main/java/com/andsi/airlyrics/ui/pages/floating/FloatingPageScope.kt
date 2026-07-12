@@ -17,8 +17,6 @@ import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.pageContainer
 import com.andsi.airlyrics.ui.components.scroll
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
@@ -49,7 +47,7 @@ internal class FloatingPageScope(
     internal var activeBubble: LinearLayout? = null
     internal var selectedTileView: View? = null
     internal val pageRefs = FloatingPageRefs()
-    internal var previewExpanded = FloatingLyricsStyleStore.isPreviewExpanded(host)
+    internal var previewExpanded = host.isFloatingPreviewExpanded()
 
     init {
         host.floatingPageRefs = pageRefs
@@ -62,7 +60,7 @@ internal class FloatingPageScope(
             isExpanded = { previewExpanded },
             setExpanded = { expanded ->
                 previewExpanded = expanded
-                FloatingLyricsStyleStore.setPreviewExpanded(host, expanded)
+                setFloatingPreviewExpanded(expanded)
             },
             style = ::style,
             lineDisplayMode = ::lineDisplayMode,
@@ -130,15 +128,15 @@ internal class FloatingPageScope(
         return host.localizedFloatingGravityTitle(gravity)
     }
 
-    internal fun style() = FloatingLyricsStyleStore.getStyle(host)
+    internal fun style() = host.floatingStyle()
 
-    internal fun contentDisplayMode() = LyricsSettingsStore.getContentDisplayMode(host)
+    internal fun contentDisplayMode() = host.lyricsContentDisplayMode()
 
-    internal fun lineDisplayMode() = LyricsSettingsStore.getLineDisplayMode(host)
+    internal fun lineDisplayMode() = host.lyricsLineDisplayMode()
 
-    internal fun switchAnimationMode() = LyricsSettingsStore.getSwitchAnimationMode(host)
+    internal fun switchAnimationMode() = host.lyricsSwitchAnimationMode()
 
-    internal fun karaokeLyricsEnabled() = LyricsSettingsStore.isKaraokeLyricsEnabled(host)
+    internal fun karaokeLyricsEnabled() = host.karaokeLyricsEnabled()
 
     internal fun wordLyricsSubtitle(): String {
         return if (karaokeLyricsEnabled()) {
@@ -215,7 +213,7 @@ internal class FloatingPageScope(
     internal fun refreshFloatingSettingTiles() {
         val latestStyle = style()
         updateFloatingTileSubtitle(host.getString(R.string.ui_skin_preset), localizedPresetTitle(latestStyle.presetName))
-        updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), FloatingLyricsStyleStore.colorSummary(latestStyle.textColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), host.colorSummary(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_background_bubble), if (latestStyle.backgroundEnabled) host.getString(R.string.ui_on) else host.getString(R.string.ui_off))
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()}sp")
         updateFloatingTileSubtitle(host.getString(R.string.ui_shadow_stroke), host.getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
@@ -226,7 +224,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_lyrics_offset), host.uiActions.currentLyricsOffsetSummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_switch_animation), host.localizedLyricsSwitchAnimationTitle(switchAnimationMode()))
         updateFloatingTileSubtitle(host.getString(R.string.ui_enhanced_lrc), wordLyricsSubtitle())
-        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), FloatingLyricsStyleStore.colorSummary(latestStyle.karaokeHighlightColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), host.colorSummary(latestStyle.karaokeHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
     }
 
@@ -249,7 +247,7 @@ internal class FloatingPageScope(
     }
 
     internal fun applyKaraokeLyricsChanged(enabled: Boolean) {
-        LyricsSettingsStore.setKaraokeLyricsEnabled(host, enabled)
+        host.setKaraokeLyricsEnabled(enabled)
         previewHandle?.lyricTextView?.text = if (enabled) karaokePreviewText() else previewLyricsText()
         refreshFloatingSettingTiles()
         host.notifyFloatingStyleChanged()

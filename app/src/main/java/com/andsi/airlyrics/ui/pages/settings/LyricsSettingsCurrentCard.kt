@@ -8,14 +8,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
-import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.media.displayText
-import com.andsi.airlyrics.media.model.CurrentMediaInfo
-import com.andsi.airlyrics.media.toSongIdentity
-import com.andsi.airlyrics.settings.store.LyricsOffsetStore
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
@@ -25,6 +18,8 @@ import com.andsi.airlyrics.ui.components.settingRow
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.components.smallHint
+import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
+import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
@@ -35,13 +30,6 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity) {
-    data class CurrentLyricsUiState(
-        val media: CurrentMediaInfo?,
-        val localInfo: LyricsStorage.LocalLyricsInfo?,
-        val localWordByWord: Boolean,
-        val offsetMs: Long
-    )
-
     val body = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
     }
@@ -56,7 +44,6 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
     fun render(state: CurrentLyricsUiState) {
         body.removeAllViews()
         val media = state.media
-        val localInfo = state.localInfo
 
         if (media == null) {
             body.addView(normalText(activity, getString(R.string.ui_no_active_media_found)))
@@ -64,16 +51,15 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             return
         }
 
-        val karaokeEnabled = LyricsSettingsStore.isKaraokeLyricsEnabled(activity)
         val karaokeSummary = when {
-            state.localWordByWord && karaokeEnabled -> getString(R.string.ui_available_local_enhanced_lrc)
+            state.localWordByWord && state.karaokeEnabled -> getString(R.string.ui_available_local_enhanced_lrc)
             state.localWordByWord -> getString(R.string.ui_imported_off)
             else -> getString(R.string.ui_not_imported)
         }
 
         body.addView(normalText(activity, media.displayText))
-        body.addView(settingRow(activity, getString(R.string.ui_lyrics_source), localInfo?.let { localizedLocalLyricsSource(it) } ?: getString(R.string.ui_no_plain_lrc)))
-        body.addView(settingRow(activity, getString(R.string.ui_plain_lyrics), localInfo?.friendlyTitle ?: getString(R.string.ui_not_bound)))
+        body.addView(settingRow(activity, getString(R.string.ui_lyrics_source), state.localSourceText ?: getString(R.string.ui_no_plain_lrc)))
+        body.addView(settingRow(activity, getString(R.string.ui_plain_lyrics), state.plainLyricsTitle ?: getString(R.string.ui_not_bound)))
         body.addView(karaokeStatusRow(activity, karaokeSummary))
         body.addView(settingRow(activity, getString(R.string.ui_current_offset), localizedOffsetDescription(state.offsetMs)))
         if (state.offsetMs != 0L) {
@@ -84,22 +70,22 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             uiActions.importLyricsForCurrentMedia()
         })
 
-        fun confirmDeleteLyrics(label: String, mode: LyricsStorage.DeleteMode, message: String) {
+        fun confirmDeleteLyrics(label: String, mode: LyricsDeleteMode, message: String) {
             activity.showAirConfirmDialog(
                 title = label,
                 message = media.displayText + "\n\n" + message,
                 positiveText = getString(R.string.ui_remove)
             ) {
-                uiActions.deleteLyricsForCurrentMedia(media, mode)
+                uiActions.deleteLyricsForCurrentMedia(mode)
             }
         }
 
-        if (localInfo != null && !state.localWordByWord) {
-            val plainLabel = if (localInfo.source == LyricsStorage.SOURCE_DOWNLOADED) getString(R.string.ui_remove_downloaded_lrc) else getString(R.string.ui_remove_plain_lrc)
+        if (state.hasPlainLyrics && !state.localWordByWord) {
+            val plainLabel = if (state.plainLyricsDownloaded) getString(R.string.ui_remove_downloaded_lrc) else getString(R.string.ui_remove_plain_lrc)
             body.addView(actionButton(activity, plainLabel) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_plain_lrc_confirm),
-                    mode = LyricsStorage.DeleteMode.PLAIN,
+                    mode = LyricsDeleteMode.PLAIN,
                     message = getString(R.string.ui_remove_plain_lrc_message)
                 )
             })
@@ -109,17 +95,17 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             body.addView(actionButton(activity, getString(R.string.ui_remove_enhanced_lrc)) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_enhanced_lrc_confirm),
-                    mode = LyricsStorage.DeleteMode.KARAOKE,
+                    mode = LyricsDeleteMode.KARAOKE,
                     message = getString(R.string.ui_remove_enhanced_lrc_message)
                 )
             })
         }
 
-        if (localInfo != null && state.localWordByWord && localInfo.source != LyricsStorage.SOURCE_KARAOKE_FALLBACK) {
+        if (state.canRemoveAllLyrics && state.localWordByWord) {
             body.addView(actionButton(activity, getString(R.string.ui_remove_all_lyrics)) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_all_lyrics_confirm),
-                    mode = LyricsStorage.DeleteMode.ALL,
+                    mode = LyricsDeleteMode.ALL,
                     message = getString(R.string.ui_remove_all_lyrics_message)
                 )
             })
@@ -140,8 +126,6 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
 
     fun populate(showRefreshFeedback: Boolean = false) {
         val loadGeneration = ++currentLyricsLoadGeneration
-        val media = getCurrentMediaInfo()
-        val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(activity, it.toSongIdentity()) } ?: 0L
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
         } else {
@@ -150,23 +134,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
         }
 
         runOnAppIo {
-            val localInfo = media?.let {
-                LyricsStorage.getLocalLyricsInfo(
-                    context = this,
-                    title = it.title,
-                    artist = it.artist,
-                    duration = it.durationMs
-                )
-            }
-            val localWordByWord = media?.let {
-                LyricsStorage.hasKaraokeLyrics(
-                    context = activity,
-                    title = it.title,
-                    artist = it.artist,
-                    duration = it.durationMs
-                )
-            } == true
-            val state = CurrentLyricsUiState(media, localInfo, localWordByWord, offsetMs)
+            val state = currentLyricsState()
 
             runOnMainThread {
                 if (loadGeneration != currentLyricsLoadGeneration) return@runOnMainThread

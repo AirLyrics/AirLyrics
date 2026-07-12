@@ -49,7 +49,11 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
         },
         copyLyricsDirectory = lyricsController::showLyricsDir,
         importLyricsForCurrentMedia = lyricsWorkflow::showImportLyricsDialog,
-        deleteLyricsForCurrentMedia = lyricsController::deleteLyricsForCurrentMedia,
+        deleteLyricsForCurrentMedia = { mode ->
+            lyricsController.getCurrentMediaInfo()?.let { media ->
+                lyricsController.deleteLyricsForCurrentMedia(media, mode.toStorageDeleteMode())
+            }
+        },
         toggleLyricsAutoSearch = {
             val enabled = !LyricsSettingsStore.isAutoSearchOnlineEnabled(activity)
             LyricsSettingsStore.setAutoSearchOnlineEnabled(activity, enabled)
@@ -61,8 +65,8 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             LyricsSettingsStore.setAutoSaveLocalEnabled(activity, enabled)
             enabled
         },
-        selectLyricsSource = { sourceKey ->
-            LyricsSettingsStore.setLyricsSource(activity, sourceKey)
+        selectLyricsSource = { source ->
+            LyricsSettingsStore.setLyricsSearchSource(activity, source)
             floatingController.reloadLyrics()
         },
         openUrl = uiHost::openUrl,

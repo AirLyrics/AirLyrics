@@ -1,10 +1,9 @@
 package com.andsi.airlyrics.ui.theme
 
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 
 internal val MainUiHost.airLyricsPalette: AirLyricsPalette
-    get() = AirLyricsTheme.palette(ThemeSettingsStore.isDark(this))
+    get() = AirLyricsTheme.palette(isDarkTheme())
 
 internal val MainUiHost.colorBackground: Int
     get() = airLyricsPalette.background

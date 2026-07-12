@@ -12,15 +12,13 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
-import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
-import com.andsi.airlyrics.i18n.localizedLocalLyricsType
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.showAirDialog
+import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
@@ -34,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger
 private val localLyricsEditorLoadGeneration = AtomicInteger(0)
 
 internal fun MainUiHost.localLyricsRowImpl(
-    item: LyricsStorage.LocalLyricsItem,
+    item: LocalLyricsUiItem,
     onLyricsSaved: (() -> Unit)? = null,
     badgeText: CharSequence? = null
 ): View {
@@ -72,8 +70,8 @@ internal fun MainUiHost.localLyricsRowImpl(
         addView(TextView(activity).apply {
             text = getString(
                 R.string.ui_local_lyrics_subtitle_type,
-                localizedLocalLyricsSubtitle(item),
-                localizedLocalLyricsType(item)
+                item.subtitle,
+                item.typeText
             )
             textSize = AirUiTokens.TextSize.Caption
             typeface = Typeface.DEFAULT_BOLD
@@ -81,7 +79,7 @@ internal fun MainUiHost.localLyricsRowImpl(
             setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
         })
         addView(TextView(activity).apply {
-            text = localizedLocalLyricsMeta(item)
+            text = item.metaText
             textSize = AirUiTokens.TextSize.Caption
             setTextColor(colorTextMuted)
             setPadding(0, dp(AirUiTokens.Space.Xxs), 0, 0)
@@ -93,15 +91,15 @@ internal fun MainUiHost.localLyricsRowImpl(
 }
 
 private fun MainUiHost.openLocalLyricsEditorForItem(
-    item: LyricsStorage.LocalLyricsItem,
+    item: LocalLyricsUiItem,
     onLyricsSaved: (() -> Unit)?
 ) {
     when {
         item.hasKaraokeLyrics -> {
-            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
+            openLocalLyricsEditor(item.toStorageItem(), LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
         }
         else -> {
-            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
+            openLocalLyricsEditor(item.toStorageItem(), LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
         }
     }
 }
