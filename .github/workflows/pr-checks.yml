@@ -39,6 +39,7 @@ jobs:
         run: |
           chmod +x ./gradlew
           chmod +x ./scripts/check_localization.sh
+          chmod +x ./scripts/check_architecture_boundaries.sh
 
       - name: Run Android lint
         run: ./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true --stacktrace
@@ -48,6 +49,9 @@ jobs:
 
       - name: Check localization
         run: ./scripts/check_localization.sh
+
+      - name: Check architecture boundaries
+        run: ./scripts/check_architecture_boundaries.sh
 
       - name: Upload Android lint reports
         if: always()

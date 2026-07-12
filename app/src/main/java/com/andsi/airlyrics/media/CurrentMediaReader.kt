@@ -11,6 +11,15 @@ import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.model.MediaSnapshotSequencer
 
 object CurrentMediaReader {
+    internal data class ControllerCandidate<T>(
+        val value: T,
+        val packageName: String,
+        val hasMetadata: Boolean,
+        val hasPlaybackState: Boolean,
+        val hasMediaTitle: Boolean,
+        val isPlaying: Boolean
+    )
+
     fun getActiveControllers(context: Context): List<MediaController> {
         return try {
             val mediaSessionManager =
@@ -33,19 +42,7 @@ object CurrentMediaReader {
         controllers: List<MediaController>,
         selectedPackage: String?
     ): MediaController? {
-        if (selectedPackage.isNullOrBlank()) return null
-
-        val selectedControllers = controllers.filter {
-            it.packageName == selectedPackage &&
-                (it.metadata != null || it.playbackState != null)
-        }
-
-        return selectedControllers.firstOrNull {
-            it.hasMediaTitle() && it.playbackState?.state == PlaybackState.STATE_PLAYING
-        } ?: selectedControllers.firstOrNull { it.hasMediaTitle() }
-            ?: selectedControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-            ?: selectedControllers.firstOrNull { it.metadata != null }
-            ?: selectedControllers.firstOrNull()
+        return selectedCandidate(controllers.map { it.toCandidate() }, selectedPackage)?.value
     }
 
     fun selectedControllersByPackage(
@@ -64,25 +61,7 @@ object CurrentMediaReader {
         controllers: List<MediaController>,
         selectedPackage: String?
     ): MediaController? {
-        val usableControllers = controllers.filter { it.metadata != null || it.playbackState != null }
-        return selectedController(usableControllers, selectedPackage)
-            ?: usableControllers.firstOrNull {
-                it.hasMediaTitle() && it.playbackState?.state == PlaybackState.STATE_PLAYING
-            }
-            ?: usableControllers.firstOrNull { it.hasMediaTitle() }
-            ?: usableControllers.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
-            ?: usableControllers.firstOrNull { it.metadata != null }
-            ?: usableControllers.firstOrNull()
-    }
-
-    fun bestCurrentMediaFromControllers(
-        controllers: List<MediaController>,
-        selectedPackage: String?
-    ): CurrentMediaInfo? {
-        val controller = bestController(controllers, selectedPackage)
-            ?: return null
-
-        return controller.toCurrentMediaInfo()
+        return bestCandidate(controllers.map { it.toCandidate() }, selectedPackage)?.value
     }
 
     fun currentMediaFromController(controller: MediaController): CurrentMediaInfo? {
@@ -93,6 +72,48 @@ object CurrentMediaReader {
         return metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
             ?.isNotBlank()
             ?: false
+    }
+
+    private fun MediaController.toCandidate(): ControllerCandidate<MediaController> {
+        return ControllerCandidate(
+            value = this,
+            packageName = packageName,
+            hasMetadata = metadata != null,
+            hasPlaybackState = playbackState != null,
+            hasMediaTitle = hasMediaTitle(),
+            isPlaying = playbackState?.state == PlaybackState.STATE_PLAYING
+        )
+    }
+
+    internal fun <T> selectedCandidate(
+        candidates: List<ControllerCandidate<T>>,
+        selectedPackage: String?
+    ): ControllerCandidate<T>? {
+        if (selectedPackage.isNullOrBlank()) return null
+
+        val selectedCandidates = candidates.filter {
+            it.packageName == selectedPackage &&
+                (it.hasMetadata || it.hasPlaybackState)
+        }
+
+        return selectedCandidates.firstOrNull { it.hasMediaTitle && it.isPlaying }
+            ?: selectedCandidates.firstOrNull { it.hasMediaTitle }
+            ?: selectedCandidates.firstOrNull { it.isPlaying }
+            ?: selectedCandidates.firstOrNull { it.hasMetadata }
+            ?: selectedCandidates.firstOrNull()
+    }
+
+    internal fun <T> bestCandidate(
+        candidates: List<ControllerCandidate<T>>,
+        selectedPackage: String?
+    ): ControllerCandidate<T>? {
+        val usableCandidates = candidates.filter { it.hasMetadata || it.hasPlaybackState }
+        return selectedCandidate(usableCandidates, selectedPackage)
+            ?: usableCandidates.firstOrNull { it.hasMediaTitle && it.isPlaying }
+            ?: usableCandidates.firstOrNull { it.hasMediaTitle }
+            ?: usableCandidates.firstOrNull { it.isPlaying }
+            ?: usableCandidates.firstOrNull { it.hasMetadata }
+            ?: usableCandidates.firstOrNull()
     }
 
     fun MediaController.toCurrentMediaInfo(): CurrentMediaInfo? {

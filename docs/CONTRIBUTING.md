@@ -25,6 +25,7 @@ Please run the basic checks before submitting a PR:
 ./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
+./scripts/check_architecture_boundaries.sh
 ```
 
 If you changed Android UI or app integration code, you can also build a debug APK without rebuilding
@@ -95,6 +96,12 @@ When changing UI text, please note:
 - Keep UI text short.
 - Do not translate song titles, artist names, file names, package names or paths.
 - Run `./scripts/check_localization.sh` before submitting.
+
+### Architecture boundaries
+
+The project currently uses one Gradle `:app` module, so package boundaries are enforced by checks.
+Run `./scripts/check_architecture_boundaries.sh` before submitting refactors. In particular, UI
+code must not import `settings`, `lyrics`, `media`, `floating`, or `app` packages directly.
 
 If you add new string resources, please also provide text for the corresponding languages to avoid
 missing translations in the UI.

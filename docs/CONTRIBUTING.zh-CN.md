@@ -22,6 +22,7 @@ AirLyrics 目前处于稳定且积极维护状态，后续更新以维护为主�
 ./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
+./scripts/check_architecture_boundaries.sh
 ```
 
 如果修改了 Android UI 或应用集成逻辑，也可以在不重新构建 Rust 的情况下构建 debug APK：
@@ -87,6 +88,12 @@ Provider 只负责获取和返回歌词数据，不应该直接更新 UI。
 - UI 文案尽量简短。
 - 不要翻译歌曲名、歌手名、文件名、包名和路径。
 - 提交前运行 `./scripts/check_localization.sh`。
+
+### 架构边界
+
+项目目前仍使用单个 Gradle `:app` 模块，因此包边界通过检查脚本维护。
+重构前请运行 `./scripts/check_architecture_boundaries.sh`。尤其是 UI 代码不能直接 import
+`settings`、`lyrics`、`media`、`floating` 或 `app` 包。
 
 如果新增了 string 资源，请同时补充对应语言的文本，避免界面出现缺失翻译。
 
