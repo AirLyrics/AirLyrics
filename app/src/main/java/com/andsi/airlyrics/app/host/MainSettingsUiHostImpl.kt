@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.host
 import com.andsi.airlyrics.app.platform.AppNavigator
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 import android.graphics.Color
 import android.graphics.Typeface
@@ -503,6 +504,6 @@ internal fun MainUiHost.openUrlImpl(url: String) {
 
 internal fun MainUiHost.refreshAfterLanguageChangedImpl() {
     rebuildMainView()
-    refreshCurrentPage()
+    rebuildCurrentPage(PageRebuildReason.LANGUAGE_CHANGED)
     uiActions.reloadFloatingLyrics()
 }

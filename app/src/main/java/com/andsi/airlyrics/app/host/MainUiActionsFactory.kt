@@ -5,6 +5,7 @@ import android.content.Intent
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.model.MainUiActions
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
@@ -16,16 +17,16 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
                 if (page == Page.SETTINGS) {
                     state.settingsSubPage = SettingsSubPage.HOME
                 }
-                uiInvalidator.refreshCurrentPage()
+                uiInvalidator.rebuildCurrentPage(PageRebuildReason.PAGE_NAVIGATION)
             }
         },
         openSettingsSubPage = { subPage ->
             state.settingsSubPage = subPage
-            uiInvalidator.refreshCurrentPage()
+            uiInvalidator.rebuildCurrentPage(PageRebuildReason.SETTINGS_NAVIGATION)
         },
         backToSettingsHome = {
             state.settingsSubPage = SettingsSubPage.HOME
-            uiInvalidator.refreshCurrentPage()
+            uiInvalidator.rebuildCurrentPage(PageRebuildReason.SETTINGS_NAVIGATION)
         },
         toggleThemeMode = uiHost::toggleThemeMode,
         toggleFloatingFromNav = floatingController::toggleFromNav,

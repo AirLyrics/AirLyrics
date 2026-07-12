@@ -25,8 +25,8 @@ import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.refs.FloatingPageRefs
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
-import com.andsi.airlyrics.ui.model.FloatingUiTags
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
@@ -48,6 +48,8 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
     var focusOverlay: FrameLayout? = null
     var activeBubble: LinearLayout? = null
     var selectedTileView: View? = null
+    val pageRefs = FloatingPageRefs()
+    floatingPageRefs = pageRefs
 
     fun onOff(value: Boolean): String = if (value) getString(R.string.ui_on) else getString(R.string.ui_off)
     fun localizedPresetTitle(key: String): String = localizedFloatingPresetTitle(key)
@@ -94,7 +96,27 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
     }
 
     fun updateFloatingTileSubtitle(title: String, subtitle: String) {
-        rootFrame.findViewWithTag<TextView>(FloatingUiTags.tileSubtitle(title))?.text = subtitle
+        pageRefs.tileSubtitles[title]?.text = subtitle
+    }
+
+    fun trackedFloatingTile(
+        title: String,
+        subtitle: String,
+        iconRes: Int,
+        onClick: (View) -> Unit
+    ): FloatingSettingTile {
+        return FloatingSettingTile(
+            title = title,
+            subtitle = subtitle,
+            iconRes = iconRes,
+            onClick = onClick,
+            onSubtitleViewCreated = { subtitleView ->
+                pageRefs.registerTileSubtitle(title, subtitleView)
+                if (title == getString(R.string.ui_display_control)) {
+                    pageRefs.displayControlSubtitle = subtitleView
+                }
+            }
+        )
     }
 
     fun refreshFloatingSettingTiles() {
@@ -340,7 +362,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         addView(floatingSectionTitle(getString(R.string.ui_appearance)))
         addView(
             settingGrid(
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_skin_preset),
                     subtitle = localizedPresetTitle(style().presetName),
                     iconRes = R.drawable.ic_air_style,
@@ -362,7 +384,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_text_color),
                     subtitle = FloatingLyricsStyleStore.colorSummary(style().textColor),
                     iconRes = R.drawable.ic_air_text_color,
@@ -375,7 +397,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_background_bubble),
                     subtitle = if (style().backgroundEnabled) getString(R.string.ui_on) else getString(R.string.ui_off),
                     iconRes = R.drawable.ic_air_chat_bubble,
@@ -397,7 +419,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_font_size),
                     subtitle = "${style().textSizeSp.toInt()}sp",
                     iconRes = R.drawable.ic_air_format_size,
@@ -410,7 +432,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_shadow_stroke),
                     subtitle = getString(R.string.ui_radius) + " ${style().shadowRadius.toInt()}",
                     iconRes = R.drawable.ic_air_shadow,
@@ -429,7 +451,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_window_layout),
                     subtitle = getString(R.string.ui_width) + " ${style().maxWidthPercent}%",
                     iconRes = R.drawable.ic_air_pip,
@@ -464,7 +486,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         addView(floatingSectionTitle(getString(R.string.ui_lyrics_display)))
         addView(
             settingGrid(
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_content),
                     subtitle = localizedLyricsContentModeTitle(contentDisplayMode()),
                     iconRes = R.drawable.ic_air_lyrics,
@@ -486,7 +508,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_line_range),
                     subtitle = localizedLyricsLineModeTitle(lineDisplayMode()),
                     iconRes = R.drawable.ic_air_line_spacing,
@@ -508,7 +530,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_text_alignment),
                     subtitle = localizedGravityTitle(style().gravity),
                     iconRes = R.drawable.ic_air_align_center,
@@ -531,7 +553,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_lyrics_offset),
                     subtitle = uiActions.currentLyricsOffsetSummary(),
                     iconRes = R.drawable.ic_air_motion,
@@ -563,7 +585,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         addView(floatingSectionTitle(getString(R.string.ui_animation)))
         addView(
             settingGrid(
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_switch_animation),
                     subtitle = localizedLyricsSwitchAnimationTitle(switchAnimationMode()),
                     iconRes = R.drawable.ic_air_motion,
@@ -585,7 +607,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_enhanced_lrc),
                     subtitle = wordLyricsSubtitle(),
                     iconRes = R.drawable.ic_air_motion,
@@ -602,7 +624,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                         }
                     }
                 ),
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_highlight_color),
                     subtitle = FloatingLyricsStyleStore.colorSummary(style().karaokeHighlightColor),
                     iconRes = R.drawable.ic_air_text_color,
@@ -621,19 +643,25 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
         addView(floatingSectionTitle(getString(R.string.ui_behavior)))
         addView(
             settingGrid(
-                FloatingSettingTile(
+                trackedFloatingTile(
                     title = getString(R.string.ui_display_control),
                     subtitle = floatingDisplaySummary(),
                     iconRes = R.drawable.ic_air_visibility,
                     onClick = { tile ->
                         openPanel(tile, getString(R.string.ui_display_control), "") {
                             addView(horizontalButtons(activity, 
-                                getString(R.string.ui_show) to { uiActions.showFloatingLyrics() },
-                                getString(R.string.ui_hide) to { uiActions.hideFloatingLyrics() }
+                                getString(R.string.ui_show) to {
+                                    uiActions.showFloatingLyrics()
+                                    refreshFloatingPreview()
+                                },
+                                getString(R.string.ui_hide) to {
+                                    uiActions.hideFloatingLyrics()
+                                    refreshFloatingPreview()
+                                }
                             ))
 
                             val lockButton = actionButton(activity, floatingLockButtonText()) { }
-                            lockButton.tag = FloatingUiTags.LOCK_BUTTON
+                            pageRefs.lockButton = lockButton
                             lockButton.setOnClickListener {
                                 uiActions.toggleLock()
                                 lockButton.text = floatingLockButtonText()
@@ -642,7 +670,7 @@ internal fun createFloatingPage(activity: MainUiHost): View  = with(activity) cr
                             addView(lockButton)
 
                             val clickThroughButton = actionButton(activity, floatingClickThroughButtonText()) { }
-                            clickThroughButton.tag = FloatingUiTags.CLICK_THROUGH_BUTTON
+                            pageRefs.clickThroughButton = clickThroughButton
                             clickThroughButton.setOnClickListener {
                                 uiActions.toggleClickThrough()
                                 clickThroughButton.text = floatingClickThroughButtonText()

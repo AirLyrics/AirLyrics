@@ -46,6 +46,7 @@ import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.model.MainUiActions
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -174,7 +175,7 @@ internal class MainGraph(
         receivers.register()
         mediaSourceController.autoSelectSourceOnceIfNeeded()
         floatingController.restoreVisibleWindowIfNeeded()
-        uiInvalidator.refreshCurrentPage()
+        uiInvalidator.rebuildCurrentPage(PageRebuildReason.INITIAL_RENDER)
         skipFirstResumeAfterCreate = true
     }
 
@@ -188,7 +189,7 @@ internal class MainGraph(
         state.clickThrough = FloatingLyricsStyleStore.isClickThrough(activity)
         state.overlayPermissionGranted = Settings.canDrawOverlays(activity)
         floatingController.restoreVisibleWindowIfNeeded()
-        uiInvalidator.refreshCurrentPage()
+        uiInvalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
     }
 
     fun runOnAppIo(block: () -> Unit) {
@@ -218,7 +219,7 @@ internal class MainGraph(
 
         if (state.currentPage == Page.SETTINGS && state.settingsSubPage != SettingsSubPage.HOME) {
             state.settingsSubPage = SettingsSubPage.HOME
-            uiInvalidator.refreshCurrentPage()
+            uiInvalidator.rebuildCurrentPage(PageRebuildReason.BACK_NAVIGATION)
             return true
         }
 
@@ -278,7 +279,11 @@ internal class MainGraph(
 
         LyricsStorage.saveLyricsDirUri(activity, uri)
         Toast.makeText(activity, activity.getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()
-        uiInvalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
+        uiInvalidator.rebuildCurrentPage(
+            reason = PageRebuildReason.LYRICS_DIRECTORY_CHANGED,
+            animateContent = false,
+            animateTabs = false
+        )
     }
 
     fun handleNotificationPermissionResult(granted: Boolean) {
@@ -289,7 +294,7 @@ internal class MainGraph(
         }
 
         Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
-        uiInvalidator.refreshCurrentPage()
+        uiInvalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
     }
 
     fun currentLyricsOffsetSummary(): String {
@@ -421,7 +426,11 @@ internal class MainGraph(
         mediaRefreshHandler.postDelayed({
             state.mediaPageRefreshScheduled = false
             if (state.currentPage == Page.MEDIA) {
-                uiInvalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
+                uiInvalidator.rebuildCurrentPage(
+                    reason = PageRebuildReason.MEDIA_CONTENT_CHANGED,
+                    animateContent = false,
+                    animateTabs = false
+                )
             }
         }, 120L)
     }

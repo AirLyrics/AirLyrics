@@ -23,10 +23,12 @@ import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
+import com.andsi.airlyrics.ui.refs.FloatingPageRefs
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.OptionItem
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.tokens.AirUiTokens
@@ -56,11 +58,18 @@ internal class MainActivityUiHost(
     override var contentContainer: FrameLayout?
         get() = viewRefs.contentContainer
         set(value) { viewRefs.contentContainer = value }
+    override var floatingPageRefs: FloatingPageRefs?
+        get() = viewRefs.floatingPageRefs
+        set(value) { viewRefs.floatingPageRefs = value }
     override val mediaRefreshHandler
         get() = graph.mediaRefreshHandler
 
-    override fun refreshCurrentPage(animateContent: Boolean, animateTabs: Boolean) {
-        graph.uiInvalidator.refreshCurrentPage(animateContent, animateTabs)
+    override fun rebuildCurrentPage(
+        reason: PageRebuildReason,
+        animateContent: Boolean,
+        animateTabs: Boolean
+    ) {
+        graph.uiInvalidator.rebuildCurrentPage(reason, animateContent, animateTabs)
     }
 
     override fun rebuildMainView() {

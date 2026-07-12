@@ -15,6 +15,7 @@ import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 internal class FloatingController(
     private val context: Context,
@@ -53,12 +54,14 @@ internal class FloatingController(
         val overlayPermissionGranted = updateOverlayPermissionGranted()
         updateQuickFloatingActualVisible(visible)
 
-        val windowStateChanged = previousVisible != visible ||
-            previousOverlayPermissionGranted != overlayPermissionGranted
+        val visibleStateChanged = previousVisible != visible
+        val permissionStateChanged = previousOverlayPermissionGranted != overlayPermissionGranted
         val controlStateChanged = previousLocked != locked ||
             previousClickThrough != clickThrough
-        if (action == BroadcastActions.WINDOW_VISIBILITY_CHANGED || windowStateChanged) {
-            invalidator.refreshFloatingState()
+        if (permissionStateChanged) {
+            invalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
+        } else if (visibleStateChanged) {
+            invalidator.refreshFloatingChrome()
         } else if (controlStateChanged) {
             invalidator.refreshFloatingControls()
         }
@@ -95,14 +98,17 @@ internal class FloatingController(
                 Toast.makeText(context, context.getString(R.string.ui_enable_overlay_permission_first), Toast.LENGTH_LONG).show()
                 overlayPermissionHintShown = true
             }
-            invalidator.refreshFloatingState()
+            invalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
             overlayPermissionRequester.requestOverlayPermission()
             return false
         }
 
         val sent = sendFloatingCommand(BroadcastActions.SHOW)
-        if (!sent) {
-            invalidator.refreshFloatingState()
+        if (sent) {
+            updateQuickFloatingActualVisible(true)
+            invalidator.refreshFloatingChrome()
+        } else {
+            invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
         }
         return sent
     }
@@ -110,9 +116,12 @@ internal class FloatingController(
     fun hideLyrics(): Boolean {
         setDesiredVisible(false)
         val sent = sendFloatingCommand(BroadcastActions.HIDE)
-        if (!sent) {
+        if (sent) {
+            updateQuickFloatingActualVisible(false)
+            invalidator.refreshFloatingChrome()
+        } else {
             Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
-            invalidator.refreshFloatingState()
+            invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
         }
         return sent
     }
@@ -121,13 +130,13 @@ internal class FloatingController(
         if (!QuickFloatingStore.isDesiredVisible(context)) return
 
         if (!updateOverlayPermissionGranted()) {
-            invalidator.refreshFloatingState()
+            invalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
             return
         }
 
         val sent = startFloatingService()
         if (!sent) {
-            invalidator.refreshFloatingState()
+            invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
         }
     }
 
@@ -226,19 +235,19 @@ internal class FloatingController(
     fun applyTextSize(textSizeSp: Float, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setTextSize(context, textSizeSp)
         notifyStyleChanged()
-        if (refreshPage) invalidator.refreshCurrentPage()
+        if (refreshPage) invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
     }
 
     fun applyTextColor(color: Int, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setTextColor(context, color)
         notifyStyleChanged()
-        if (refreshPage) invalidator.refreshCurrentPage()
+        if (refreshPage) invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
     }
 
     fun applyBackgroundColor(color: Int, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setBackgroundColor(context, color)
         notifyStyleChanged()
-        if (refreshPage) invalidator.refreshCurrentPage()
+        if (refreshPage) invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
     }
 
     fun applyGravity(gravity: Int) {

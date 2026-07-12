@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.host
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 import android.view.View
 import android.graphics.Color
@@ -125,7 +126,11 @@ internal fun MainUiHost.startMediaRefreshFeedbackImpl(onStateChanged: () -> Unit
         onStateChanged()
         mediaRefreshHandler.postDelayed({
             if (currentPage == Page.MEDIA) {
-                refreshCurrentPage(animateContent = false, animateTabs = false)
+                rebuildCurrentPage(
+                    reason = PageRebuildReason.MEDIA_CONTENT_CHANGED,
+                    animateContent = false,
+                    animateTabs = false
+                )
             }
         }, AirUiTokens.Layout.MediaDoneRefreshMs)
     }, AirUiTokens.Layout.MediaRefreshingMs)

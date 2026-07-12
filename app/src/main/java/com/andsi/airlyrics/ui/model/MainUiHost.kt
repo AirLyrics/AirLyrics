@@ -13,6 +13,8 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
+import com.andsi.airlyrics.ui.refs.FloatingPageRefs
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
 /**
@@ -56,9 +58,14 @@ internal abstract class MainUiHost(
     abstract var tabHighlight: WaterTabHighlightView?
     abstract var floatingPanelBackHandler: (() -> Boolean)?
     abstract var contentContainer: FrameLayout?
+    abstract var floatingPageRefs: FloatingPageRefs?
     abstract val mediaRefreshHandler: Handler
 
-    abstract fun refreshCurrentPage(animateContent: Boolean = true, animateTabs: Boolean = true)
+    abstract fun rebuildCurrentPage(
+        reason: PageRebuildReason,
+        animateContent: Boolean = true,
+        animateTabs: Boolean = true
+    )
     abstract fun rebuildMainView()
     abstract fun dp(value: Int): Int
     abstract fun isDarkTheme(): Boolean

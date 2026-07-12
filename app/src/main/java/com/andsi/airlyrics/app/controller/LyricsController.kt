@@ -19,6 +19,7 @@ import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 internal class LyricsController(
     private val context: Context,
@@ -162,7 +163,11 @@ internal class LyricsController(
                 }
                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                 floatingLyricsReloader.reloadFloatingLyrics()
-                invalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
+                invalidator.rebuildCurrentPage(
+                    reason = PageRebuildReason.LYRICS_CHANGED,
+                    animateContent = false,
+                    animateTabs = false
+                )
             }
             LyricsStorage.ImportLyricsResult.TooLarge -> {
                 Toast.makeText(context, context.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
@@ -224,7 +229,11 @@ internal class LyricsController(
                     }
                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     floatingLyricsReloader.reloadFloatingLyrics()
-                    invalidator.refreshCurrentPage(animateContent = false, animateTabs = false)
+                    invalidator.rebuildCurrentPage(
+                        reason = PageRebuildReason.LYRICS_CHANGED,
+                        animateContent = false,
+                        animateTabs = false
+                    )
                 } else {
                     val message = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)

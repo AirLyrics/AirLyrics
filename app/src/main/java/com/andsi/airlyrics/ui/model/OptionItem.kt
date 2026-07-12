@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.ui.model
 
 import android.view.View
+import android.widget.TextView
 
 internal data class OptionItem(
     val title: String,
@@ -19,13 +20,6 @@ internal data class FloatingSettingTile(
     val title: String,
     val subtitle: String,
     val iconRes: Int,
-    val onClick: (View) -> Unit
+    val onClick: (View) -> Unit,
+    val onSubtitleViewCreated: ((TextView) -> Unit)? = null
 )
-
-internal object FloatingUiTags {
-    const val LOCK_BUTTON = "floating_control_lock_button"
-    const val CLICK_THROUGH_BUTTON = "floating_control_click_through_button"
-
-    fun tile(title: String): String = "floating_tile:$title"
-    fun tileSubtitle(title: String): String = "floating_tile_subtitle:$title"
-}

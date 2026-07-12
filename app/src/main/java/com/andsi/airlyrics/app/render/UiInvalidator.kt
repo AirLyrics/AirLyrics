@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app.render
 
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
+
 /**
  * Small boundary for UI refresh requests from controllers.
  *
@@ -7,13 +9,20 @@ package com.andsi.airlyrics.app.render
  * or concrete renderer.
  */
 internal interface UiInvalidator {
-    fun refreshCurrentPage(
+    /** Recreates the current page tree. Use only when the visible structure changes. */
+    fun rebuildCurrentPage(
+        reason: PageRebuildReason,
         animateContent: Boolean = true,
         animateTabs: Boolean = true
     )
 
-    fun refreshFloatingState()
+    /** Updates bottom navigation text, selection, and highlight without touching page content. */
+    fun refreshTabs(animate: Boolean = true)
 
+    /** Updates floating-window visibility chrome: tabs plus current Floating page controls. */
+    fun refreshFloatingChrome()
+
+    /** Updates lock/click-through labels inside the current Floating page, if it is mounted. */
     fun refreshFloatingControls()
 
     fun recreateForThemeChange()
