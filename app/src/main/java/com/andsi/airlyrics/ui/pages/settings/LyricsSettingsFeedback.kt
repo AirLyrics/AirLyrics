@@ -3,7 +3,7 @@ package com.andsi.airlyrics.ui.pages.settings
 import android.view.View
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun showInlineRefreshFeedback(feedback: TextView?, message: String) {
     feedback?.apply {

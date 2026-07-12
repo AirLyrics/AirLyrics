@@ -3,7 +3,7 @@ package com.andsi.airlyrics.floating
 import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.lyrics.model.SongIdentity
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaNotificationListenerService
 import com.andsi.airlyrics.media.MediaSourceStore
@@ -62,7 +62,7 @@ internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo
         positionMs = media.positionMs,
         isPlaying = media.isPlaying
     )
-    renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
+    renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
 
     val playbackLyricsKey = media.playbackLyricsKey()
     if (playbackLyricsKey == lastPlaybackLyricsKey) {

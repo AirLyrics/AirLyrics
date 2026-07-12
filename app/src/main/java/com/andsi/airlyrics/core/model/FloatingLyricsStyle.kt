@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.settings.model
+package com.andsi.airlyrics.core.model
 
 /**
  * Visual configuration for the floating lyrics window.

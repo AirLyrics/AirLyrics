@@ -3,7 +3,7 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.net.Uri
 import com.andsi.airlyrics.lyrics.KaraokeLine
-import com.andsi.airlyrics.lyrics.model.SongIdentity
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.parser.KaraokeLrcParser
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.parser.ParsedKaraokeImport

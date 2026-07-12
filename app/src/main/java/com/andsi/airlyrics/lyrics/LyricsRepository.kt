@@ -8,9 +8,8 @@ import com.andsi.airlyrics.lyrics.providers.LocalLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.MusixmatchLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.NeteaseLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.settings.model.LyricsSearchSource
-import com.andsi.airlyrics.settings.model.LyricsSettings
-import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.LyricsSettings
 
 /**
  * Central lyrics lookup entry point.
@@ -21,20 +20,14 @@ import com.andsi.airlyrics.settings.store.LyricsSettingsStore
  * 3. Optional local cache save for successful online results.
  */
 object LyricsRepository {
-    private val engine = LyricsRepositoryEngine(
-        localProvider = LocalLyricsProvider,
-        onlineProviders = mapOf(
-            LyricsSearchSource.NETEASE to NeteaseLyricsProvider,
-            LyricsSearchSource.MUSIXMATCH to MusixmatchLyricsProvider
-        ),
-        settingsReader = LyricsSettingsStore::getSettings,
-        localLyricsSaver = AndroidLocalLyricsSaver,
-        karaokeLyricsReader = AndroidKaraokeLyricsReader,
-        lookupLogger = AndroidLyricsLookupLogger
+    private val onlineProviders = mapOf(
+        LyricsSearchSource.NETEASE to NeteaseLyricsProvider,
+        LyricsSearchSource.MUSIXMATCH to MusixmatchLyricsProvider
     )
 
     fun findLyrics(
         context: Context,
+        settings: LyricsSettings,
         title: String,
         artist: String,
         album: String = "",
@@ -44,7 +37,14 @@ object LyricsRepository {
         ignoreAutoSearchSetting: Boolean = false,
         cancellationToken: LyricsLookupCancellationToken? = null
     ): Result<LyricsProviderResult?> {
-        return engine.findLyrics(
+        return LyricsRepositoryEngine(
+            localProvider = LocalLyricsProvider,
+            onlineProviders = onlineProviders,
+            settingsReader = { settings },
+            localLyricsSaver = AndroidLocalLyricsSaver,
+            karaokeLyricsReader = AndroidKaraokeLyricsReader,
+            lookupLogger = AndroidLyricsLookupLogger
+        ).findLyrics(
             context = context,
             title = title,
             artist = artist,

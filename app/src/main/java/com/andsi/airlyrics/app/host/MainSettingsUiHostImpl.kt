@@ -26,7 +26,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.settingsHomeHeaderImpl(): View {
     val activity = this

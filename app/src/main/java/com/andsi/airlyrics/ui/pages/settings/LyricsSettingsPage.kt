@@ -8,13 +8,13 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsSourceHint
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.settings.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.LyricsSearchSource
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccentMint
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activity) createLyricsSettingsPage@ {
     val container = pageContainer(activity, animateChanges = false)

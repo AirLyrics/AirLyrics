@@ -16,7 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 @SuppressLint("ViewConstructor")
 internal class InteractiveLogoView(

@@ -5,8 +5,8 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
 import androidx.core.content.edit
-import com.andsi.airlyrics.settings.model.FloatingLyricsPreset
-import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.FloatingLyricsPreset
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 
 object FloatingLyricsStyleStore {
     private const val PREFS_NAME = "floating_lyrics_style"

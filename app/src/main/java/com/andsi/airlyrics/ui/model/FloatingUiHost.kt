@@ -2,7 +2,7 @@ package com.andsi.airlyrics.ui.model
 
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 
 internal interface FloatingUiHost {
     fun settingGrid(vararg items: FloatingSettingTile): LinearLayout

@@ -2,10 +2,10 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsSearchSource
-import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

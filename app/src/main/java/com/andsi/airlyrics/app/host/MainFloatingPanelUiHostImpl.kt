@@ -25,7 +25,7 @@ import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.settingGridImpl(vararg items: FloatingSettingTile): LinearLayout {
     val activity = this

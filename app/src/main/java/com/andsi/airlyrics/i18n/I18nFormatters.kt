@@ -5,13 +5,12 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 internal fun Context.localizedOffsetDescription(offsetMs: Long): String {
-    val value = LyricsOffsetStore.formatOffset(offsetMs).removePrefix("+").removePrefix("-")
+    val value = "%.2fs".format(Locale.getDefault(), kotlin.math.abs(offsetMs) / 1000f)
     return when {
         offsetMs > 0L -> getString(R.string.lyrics_offset_advance, value)
         offsetMs < 0L -> getString(R.string.lyrics_offset_delay, value)

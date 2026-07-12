@@ -12,10 +12,10 @@ import com.andsi.airlyrics.lyrics.KaraokeLine
 import com.andsi.airlyrics.lyrics.display.LyricsDisplayFormatter
 import com.andsi.airlyrics.lyrics.parser.LrcLine
 import com.andsi.airlyrics.lyrics.parser.LrcParser
-import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 /**
  * Maintains parsed lyric lines and renders the line matching the current playback position.

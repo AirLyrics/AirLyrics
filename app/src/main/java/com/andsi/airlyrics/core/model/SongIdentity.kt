@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.lyrics.model
+package com.andsi.airlyrics.core.model
 
 import java.security.MessageDigest
 import java.util.Locale

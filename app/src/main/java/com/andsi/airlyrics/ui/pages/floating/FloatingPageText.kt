@@ -7,8 +7,8 @@ import android.graphics.Typeface
 import android.view.Gravity
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 

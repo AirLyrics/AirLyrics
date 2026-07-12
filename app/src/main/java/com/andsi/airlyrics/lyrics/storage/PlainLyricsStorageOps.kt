@@ -2,7 +2,7 @@ package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
 import android.net.Uri
-import com.andsi.airlyrics.lyrics.model.SongIdentity
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 internal object PlainLyricsStorageOps {

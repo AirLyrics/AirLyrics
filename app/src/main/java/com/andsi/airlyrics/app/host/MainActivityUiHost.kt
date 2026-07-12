@@ -20,7 +20,7 @@ import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
-import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
@@ -31,7 +31,7 @@ import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.theme.colorSurface
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
 /** Bridges handwritten main UI helpers to the UI-facing host boundary. */

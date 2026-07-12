@@ -26,14 +26,14 @@ import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.app.state.MainActivityState
 import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.settings.store.LanguageSettingsStore
+import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import java.util.concurrent.Executors
 
 /** Main-screen composition root and lifecycle orchestrator. */

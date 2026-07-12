@@ -4,12 +4,11 @@ import com.andsi.airlyrics.R
 
 import android.content.Context
 import android.view.Gravity
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 
 internal fun Context.localizedFloatingPresetTitle(key: String): String = when (key) {
     "subtitle" -> getString(R.string.ui_clean_letters)
     "bubble" -> getString(R.string.ui_vinyl_bubble)
-    else -> localizedFloatingPresetTitle(FloatingLyricsStyleStore.DEFAULT_PRESET)
+    else -> getString(R.string.ui_vinyl_bubble)
 }
 
 internal fun Context.localizedFloatingGravityTitle(gravity: Int): String = when (gravity) {

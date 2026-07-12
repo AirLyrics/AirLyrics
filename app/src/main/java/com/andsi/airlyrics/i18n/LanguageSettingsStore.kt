@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.settings.store
+package com.andsi.airlyrics.i18n
 
 import android.content.Context
 import com.andsi.airlyrics.R
@@ -7,7 +7,7 @@ import androidx.core.content.edit
 import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
-internal object LanguageSettingsStore {
+object LanguageSettingsStore {
     const val MODE_SYSTEM = "system"
     const val MODE_ZH_CN = "zh-CN"
     const val MODE_EN = "en"

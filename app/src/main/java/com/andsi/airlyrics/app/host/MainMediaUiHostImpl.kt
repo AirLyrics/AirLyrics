@@ -25,7 +25,7 @@ import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.refreshMediaButtonImpl(): View {
     val activity = this

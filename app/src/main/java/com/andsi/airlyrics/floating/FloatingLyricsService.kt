@@ -15,7 +15,7 @@ import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.settings.store.LanguageSettingsStore
+import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 
 class FloatingLyricsService : Service() {

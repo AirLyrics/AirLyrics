@@ -6,8 +6,8 @@ import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
-import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.horizontalButtons

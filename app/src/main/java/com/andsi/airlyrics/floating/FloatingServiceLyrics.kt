@@ -11,6 +11,7 @@ import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 
@@ -95,6 +96,7 @@ internal fun FloatingLyricsService.loadLyricsForSong(
         lookup = { token ->
             LyricsRepository.findLyrics(
                 context = this,
+                settings = LyricsSettingsStore.getSettings(this),
                 title = media.title,
                 artist = media.artist,
                 album = media.album,
@@ -122,7 +124,7 @@ internal fun FloatingLyricsService.applyLyricsResult(
     val lyricText = lyricsResult?.lyrics
 
     if (lyricText != null) {
-        renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
+        renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
         renderer.parseAndShow(
             lyrics = lyricText,
             translatedLyrics = lyricsResult.translatedLyrics,
@@ -189,7 +191,7 @@ internal fun FloatingLyricsService.importLyrics(uri: Uri, overwrite: Boolean) {
     if (localLyrics != null) {
         lastPlaybackLyricsKey = media.playbackLyricsKey()
         activeLyricsLookupRequestKey = null
-        renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media))
+        renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
         renderer.parseAndShow(
             lyrics = localLyrics,
             emptyText = "♪ " + getString(R.string.ui_lyrics_import_empty_error)

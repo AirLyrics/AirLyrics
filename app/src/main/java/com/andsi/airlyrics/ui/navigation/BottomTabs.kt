@@ -21,7 +21,7 @@ import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) createBottomTabs@ {
     val shell = FrameLayout(this).apply {

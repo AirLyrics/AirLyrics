@@ -1,8 +1,8 @@
 package com.andsi.airlyrics.lyrics.display
 
 import com.andsi.airlyrics.lyrics.parser.LrcLine
-import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 
 /**
  * Converts parsed lyric lines into the exact text shown by the floating window.

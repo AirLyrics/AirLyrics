@@ -13,6 +13,7 @@ import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.actionButton
@@ -31,7 +32,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity) {
     data class CurrentLyricsUiState(
@@ -140,7 +141,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
     fun populate(showRefreshFeedback: Boolean = false) {
         val loadGeneration = ++currentLyricsLoadGeneration
         val media = getCurrentMediaInfo()
-        val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(activity, it) } ?: 0L
+        val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(activity, it.toSongIdentity()) } ?: 0L
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
         } else {

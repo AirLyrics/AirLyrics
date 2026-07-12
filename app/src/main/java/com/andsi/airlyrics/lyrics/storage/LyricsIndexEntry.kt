@@ -1,6 +1,6 @@
 package com.andsi.airlyrics.lyrics.storage
 
-import com.andsi.airlyrics.lyrics.model.SongIdentity
+import com.andsi.airlyrics.core.model.SongIdentity
 
 internal data class LyricsIndexEntry(
     val key: String,

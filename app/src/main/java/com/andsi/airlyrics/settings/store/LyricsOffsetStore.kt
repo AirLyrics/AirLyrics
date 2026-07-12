@@ -2,10 +2,7 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import androidx.core.content.edit
-import com.andsi.airlyrics.lyrics.model.SongIdentity
-import com.andsi.airlyrics.media.model.CurrentMediaInfo
-import com.andsi.airlyrics.media.toSongIdentity
-import java.util.Locale
+import com.andsi.airlyrics.core.model.SongIdentity
 
 /**
  * Per-song lyric timing offset. The raw lyric files stay untouched; this store only
@@ -16,10 +13,9 @@ object LyricsOffsetStore {
     private const val KEY_PREFIX = "song_offset_ms_"
     private const val MAX_OFFSET_MS = 30_000L
 
-    fun getOffsetMs(context: Context, media: CurrentMediaInfo): Long {
-        if (media.title.isBlank()) return 0L
+    fun getOffsetMs(context: Context, identity: SongIdentity): Long {
+        if (identity.title.isBlank()) return 0L
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val identity = media.toSongIdentity()
         val exactKey = offsetKey(identity)
         val weakKey = weakOffsetKey(identity)
 
@@ -53,10 +49,9 @@ object LyricsOffsetStore {
         return 0L
     }
 
-    fun setOffsetMs(context: Context, media: CurrentMediaInfo, offsetMs: Long): Long {
-        if (media.title.isBlank()) return 0L
+    fun setOffsetMs(context: Context, identity: SongIdentity, offsetMs: Long): Long {
+        if (identity.title.isBlank()) return 0L
         val safeOffset = offsetMs.coerceIn(-MAX_OFFSET_MS, MAX_OFFSET_MS)
-        val identity = media.toSongIdentity()
         val exactKey = offsetKey(identity)
         val weakKey = weakOffsetKey(identity)
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
@@ -66,25 +61,18 @@ object LyricsOffsetStore {
         return safeOffset
     }
 
-    fun adjustOffsetMs(context: Context, media: CurrentMediaInfo, deltaMs: Long): Long {
-        val current = getOffsetMs(context, media)
-        return setOffsetMs(context, media, current + deltaMs)
+    fun adjustOffsetMs(context: Context, identity: SongIdentity, deltaMs: Long): Long {
+        val current = getOffsetMs(context, identity)
+        return setOffsetMs(context, identity, current + deltaMs)
     }
 
-    fun resetOffset(context: Context, media: CurrentMediaInfo) {
-        if (media.title.isBlank()) return
-        val identity = media.toSongIdentity()
+    fun resetOffset(context: Context, identity: SongIdentity) {
+        if (identity.title.isBlank()) return
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             remove(offsetKey(identity))
             remove(weakOffsetKey(identity))
             nearbyDurationKeys(identity).forEach { remove(it) }
         }
-    }
-
-    fun formatOffset(offsetMs: Long): String {
-        if (offsetMs == 0L) return "0.00s"
-        val sign = if (offsetMs > 0L) "+" else "-"
-        return "$sign${"%.2f".format(Locale.getDefault(), kotlin.math.abs(offsetMs) / 1000f)}s"
     }
 
     private fun nearbyDurationKeys(identity: SongIdentity): List<String> {

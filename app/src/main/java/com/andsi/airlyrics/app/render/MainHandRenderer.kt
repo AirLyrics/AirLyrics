@@ -18,7 +18,7 @@ import com.andsi.airlyrics.ui.pages.floating.createFloatingPage
 import com.andsi.airlyrics.ui.pages.media.createMediaPage
 import com.andsi.airlyrics.ui.pages.settings.createSettingsPage
 import com.andsi.airlyrics.ui.theme.colorBackground
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 /** Renderer for the existing handwritten main UI. */
 internal class MainHandRenderer(

@@ -3,10 +3,10 @@ package com.andsi.airlyrics.i18n
 import com.andsi.airlyrics.R
 
 import android.content.Context
-import com.andsi.airlyrics.settings.model.LyricsContentDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.settings.model.LyricsSearchSource
-import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 
 internal fun Context.localizedLyricsSourceTitle(source: LyricsSearchSource): String = when (source) {
     LyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_local_only)

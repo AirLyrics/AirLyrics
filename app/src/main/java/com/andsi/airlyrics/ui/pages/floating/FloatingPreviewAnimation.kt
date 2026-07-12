@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.ui.pages.floating
 
 import android.view.animation.DecelerateInterpolator
-import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 
 internal fun FloatingPageScope.playPreviewSwitchAnimation() {
     val view = previewHandle?.lyricTextView ?: return

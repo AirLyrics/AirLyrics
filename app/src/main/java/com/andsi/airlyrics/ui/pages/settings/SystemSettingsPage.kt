@@ -10,7 +10,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.settings.store.LanguageSettingsStore
+import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -18,7 +18,7 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activity) createSystemSettingsPage@ {
     val container = pageContainer(activity)

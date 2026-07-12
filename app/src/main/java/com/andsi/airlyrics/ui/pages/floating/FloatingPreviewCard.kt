@@ -10,8 +10,8 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.settings.model.FloatingLyricsStyle
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.floatingStatusPreviewCard
 import com.andsi.airlyrics.ui.components.normalText

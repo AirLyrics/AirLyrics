@@ -1,9 +1,9 @@
 @file:Suppress("ConstPropertyName")
 
-package com.andsi.airlyrics.ui.tokens
+package com.andsi.airlyrics.design.tokens
 
-/** Shared UI constants for the classic View-based screens. */
-internal object AirUiTokens {
+/** Shared UI constants for the classic View-based screens and floating surface. */
+object AirUiTokens {
     object Space {
         const val Xxs = 2
         const val Xs = 3

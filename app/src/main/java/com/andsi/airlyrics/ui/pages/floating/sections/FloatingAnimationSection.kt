@@ -3,7 +3,7 @@ package com.andsi.airlyrics.ui.pages.floating.sections
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
-import com.andsi.airlyrics.settings.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.model.KeyedOptionItem

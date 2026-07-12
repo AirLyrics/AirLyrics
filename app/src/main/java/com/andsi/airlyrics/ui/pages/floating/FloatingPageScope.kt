@@ -16,7 +16,7 @@ import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
-import com.andsi.airlyrics.settings.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.pageContainer

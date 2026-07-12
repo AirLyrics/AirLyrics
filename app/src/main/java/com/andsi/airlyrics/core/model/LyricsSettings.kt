@@ -1,4 +1,4 @@
-package com.andsi.airlyrics.settings.model
+package com.andsi.airlyrics.core.model
 
 /** User-facing lyrics lookup and display configuration. */
 data class LyricsSettings(

@@ -23,7 +23,7 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun pageContainer(activity: MainUiHost, animateChanges: Boolean = true): LinearLayout  = with(activity) pageContainer@ {
     return LinearLayout(this).apply {

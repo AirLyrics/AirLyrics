@@ -17,6 +17,7 @@ import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.displayText
+import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
@@ -28,7 +29,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal class MainLyricsWorkflow(
     private val graph: MainGraph
@@ -103,19 +104,19 @@ internal class MainLyricsWorkflow(
     fun currentLyricsOffsetSummary(): String {
         val media = graph.lyricsController.getCurrentMediaInfo()
             ?: return activity.getString(R.string.ui_waiting_for_current_song)
-        return activity.localizedOffsetDescription(LyricsOffsetStore.getOffsetMs(activity, media))
+        return activity.localizedOffsetDescription(LyricsOffsetStore.getOffsetMs(activity, media.toSongIdentity()))
     }
 
     fun adjustLyricsOffsetForCurrentMedia(deltaMs: Long): Long? {
         val media = graph.lyricsController.getCurrentMediaInfo() ?: return null
-        val offset = LyricsOffsetStore.adjustOffsetMs(activity, media, deltaMs)
+        val offset = LyricsOffsetStore.adjustOffsetMs(activity, media.toSongIdentity(), deltaMs)
         graph.floatingController.applyLyricsOffset(offset)
         return offset
     }
 
     fun resetLyricsOffsetForCurrentMedia(): Boolean {
         val media = graph.lyricsController.getCurrentMediaInfo() ?: return false
-        LyricsOffsetStore.resetOffset(activity, media)
+        LyricsOffsetStore.resetOffset(activity, media.toSongIdentity())
         graph.floatingController.applyLyricsOffset(0L)
         return true
     }

@@ -5,8 +5,8 @@
 AirLyrics is an Android floating lyrics application. The Android side is written in Kotlin,
 while online lyrics sources are integrated through the native lyrics core written in Rust.
 
-The codebase is divided by responsibility into media detection, lyrics lookup, local lyrics storage,
-floating window rendering, settings persistence, and UI screens.
+The codebase is divided by responsibility into shared models, media detection, lyrics lookup,
+local lyrics storage, floating window rendering, settings persistence, design tokens, and UI screens.
 
 ## Runtime Flow
 
@@ -38,10 +38,12 @@ Online lyrics lookup only runs when allowed by the user settings.
 
 ```text
 app/              Main UI entry point, dependency assembly, lifecycle coordination, and feature control
+core/             Shared stable models used across packages
+design/           Shared UI tokens that are not owned by a specific screen package
 media/            Media notification and media session reading, plus selected player persistence
 lyrics/           Lyrics lookup, providers, parsing, importing, display formatting, and storage
 floating/         Foreground service, floating window control, and lyrics rendering
-settings/         Settings models and settings persistence
+settings/         Settings persistence
 ui/               Screens, shared components, navigation, themes, and widgets
 i18n/             Localization utilities and text handling
 common/           Shared constants
@@ -93,6 +95,8 @@ Refresh operations only update the relevant media state and do not rebuild the e
 `LyricsRepository` is the unified entry point for lyrics lookup.
 Lyrics operations in the UI are usually started by `LyricsController`,
 while the floating lyrics service also performs lyrics lookup directly when the current media changes.
+The repository receives the current `LyricsSettings` model from its caller, so the lyrics package
+does not depend on the settings storage implementation.
 
 The default flow is:
 
@@ -134,6 +138,8 @@ Settings are read and written through dedicated storage classes under `settings/
 UI screens do not access raw `SharedPreferences` keys directly.
 
 Settings for different features are managed separately instead of being concentrated in a single file.
+Shared setting value models live under `core/model/`, which keeps `settings/`, `lyrics/`, `media/`,
+`floating/`, and `ui/` from depending on each other's package-local models.
 
 ## Localization
 

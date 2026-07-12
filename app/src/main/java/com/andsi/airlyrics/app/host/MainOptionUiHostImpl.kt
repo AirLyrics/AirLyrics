@@ -18,7 +18,7 @@ import com.andsi.airlyrics.ui.theme.colorAccentLight
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
-import com.andsi.airlyrics.ui.tokens.AirUiTokens
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.optionGridImpl(items: List<OptionItem>): LinearLayout {
     val activity = this

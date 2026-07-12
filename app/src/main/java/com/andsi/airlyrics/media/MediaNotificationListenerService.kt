@@ -10,7 +10,7 @@ import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
-import com.andsi.airlyrics.settings.store.LanguageSettingsStore
+import com.andsi.airlyrics.i18n.LanguageSettingsStore
 
 class MediaNotificationListenerService : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())

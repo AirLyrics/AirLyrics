@@ -5,8 +5,8 @@
 AirLyrics 是一个 Android 手机端悬浮歌词应用。Android 端使用 Kotlin，
 联网歌词来源通过 Rust 编写的原生歌词核心接入。
 
-代码按照职责拆分为媒体检测、歌词查询、本地歌词存储、悬浮窗渲染、
-设置持久化和界面页面。
+代码按照职责拆分为共享模型、媒体检测、歌词查询、本地歌词存储、悬浮窗渲染、
+设置持久化、设计 token 和界面页面。
 
 ## 运行流程
 
@@ -37,10 +37,12 @@ AirLyrics 是一个 Android 手机端悬浮歌词应用。Android 端使用 Kotl
 
 ```text
 app/              主界面入口、依赖组装、生命周期协调和功能控制
+core/             跨包共享的稳定模型
+design/           不归属于具体页面包的共享 UI token
 media/            媒体通知与媒体会话读取，以及所选播放器持久化
 lyrics/           歌词查询、歌词来源、解析、导入、显示格式化和存储
 floating/         前台服务、悬浮窗控制和歌词渲染
-settings/         设置数据模型和设置持久化
+settings/         设置持久化
 ui/               页面、通用组件、导航、主题和小组件
 i18n/             本地化工具和文案处理
 common/           共享常量
@@ -91,6 +93,7 @@ app/render/MainHandRenderer.kt
 `LyricsRepository` 是统一的歌词查询入口。
 界面中的歌词操作通常由 `LyricsController` 发起，
 悬浮歌词服务也会在媒体发生变化时直接查询歌词。
+仓库由调用方传入当前 `LyricsSettings` 模型，因此 `lyrics/` 不依赖设置存储实现。
 
 默认流程如下：
 
@@ -127,6 +130,8 @@ app/render/MainHandRenderer.kt
 界面页面不直接操作裸露的 `SharedPreferences` 键。
 
 不同功能的设置分别管理，避免将所有设置读写集中在单个文件中。
+共享的设置值模型放在 `core/model/` 下，避免 `settings/`、`lyrics/`、`media/`、
+`floating/` 和 `ui/` 互相依赖各自包内模型。
 
 ## 本地化
 
