@@ -185,6 +185,10 @@ internal class MainActivityUiHost(
         return if (uiState.clickThrough) getString(R.string.ui_click_through_on) else getString(R.string.ui_click_through_off)
     }
 
+    override fun autoHideWhenPausedEnabled(): Boolean {
+        return FloatingLyricsStyleStore.isAutoHideWhenPaused(this)
+    }
+
     override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {
         return TextView(this).apply {
             this.text = text

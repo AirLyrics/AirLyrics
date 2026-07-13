@@ -51,6 +51,7 @@ class SettingsStoresTest {
         assertEquals(Gravity.CENTER, style.gravity)
         assertEquals(100 to 300, FloatingLyricsStyleStore.getPosition(context))
         assertTrue(FloatingLyricsStyleStore.isPreviewExpanded(context))
+        assertFalse(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
     }
 
     @Test
@@ -95,6 +96,17 @@ class SettingsStoresTest {
 
         assertFalse(FloatingLyricsStyleStore.isClickThrough(context))
         assertFalse(FloatingLyricsStyleStore.isClickThroughFollowingLocked(context))
+    }
+
+    @Test
+    fun floatingStyleStore_autoHideWhenPausedDefaultsOffAndRoundTrips() {
+        assertFalse(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+
+        FloatingLyricsStyleStore.setAutoHideWhenPaused(context, true)
+        assertTrue(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+
+        FloatingLyricsStyleStore.setAutoHideWhenPaused(context, false)
+        assertFalse(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
     }
 
     @Test

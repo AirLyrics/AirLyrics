@@ -23,6 +23,7 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
         BroadcastActions.NOTIFICATION_TOGGLE_LOCK -> toggleLockFromNotification()
         BroadcastActions.NOTIFICATION_TOGGLE_CLICK_THROUGH -> toggleClickThroughFromNotification()
         BroadcastActions.NOTIFICATION_TOGGLE_ADJUST_MODE -> toggleAdjustModeFromNotification()
+        BroadcastActions.APPLY_AUTO_HIDE_WHEN_PAUSED -> applyAutoHideWhenPausedSetting()
         BroadcastActions.APPLY_STYLE -> {
             val applied = windowController.applyStyle()
             if (applied) renderer.refresh()
@@ -61,6 +62,7 @@ internal fun FloatingLyricsService.restoreFromDesiredState() {
 internal fun FloatingLyricsService.showLyrics(updateDesiredVisible: Boolean = true): Boolean {
     if (updateDesiredVisible) {
         QuickFloatingStore.setDesiredVisible(this, true)
+        suppressAutoHideForCurrentPauseIfNeeded()
     }
     val shown = runCatching { windowController.show() }.getOrElse {
         windowController.hide()
@@ -69,17 +71,22 @@ internal fun FloatingLyricsService.showLyrics(updateDesiredVisible: Boolean = tr
     if (!shown) {
         broadcastWindowVisibility(false)
     } else {
+        autoHiddenForPause = false
         startSelectedMediaObservation()
         startLyricsSync()
         if (currentMedia.isEmpty) {
             scheduleCurrentMediaRestore()
         }
+        applyAutoHideWhenPaused()
     }
     refreshQuickControls()
     return shown
 }
 
 internal fun FloatingLyricsService.hideLyrics() {
+    cancelPendingPauseAutoHide()
+    autoHiddenForPause = false
+    pauseAutoHideSuppressedByUser = false
     QuickFloatingStore.setDesiredVisible(this, false)
     val hidden = if (isWindowControllerReady()) {
         runCatching { windowController.hide() }.getOrDefault(false)

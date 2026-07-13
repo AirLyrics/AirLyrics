@@ -52,6 +52,26 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                         addView(clickThroughButton)
                     }
                 }
+            ),
+            trackedFloatingTile(
+                title = getString(R.string.ui_auto_hide_when_paused),
+                subtitle = autoHideWhenPausedSubtitle(),
+                iconRes = R.drawable.ic_air_motion,
+                onClick = { tile ->
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_auto_hide_when_paused),
+                        ""
+                    ) {
+                        val autoHideButton = actionButton(host, autoHideWhenPausedButtonText()) { }
+                        autoHideButton.setOnClickListener {
+                            uiActions.toggleAutoHideWhenPaused()
+                            autoHideButton.text = autoHideWhenPausedButtonText()
+                            refreshFloatingSettingTiles()
+                        }
+                        addView(autoHideButton)
+                    }
+                }
             )
         )
     )
@@ -76,7 +96,20 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
             addView(settingRow(host, getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary()))
             addView(settingRow(host, getString(R.string.ui_locked), onOff(uiState.locked)))
             addView(settingRow(host, getString(R.string.ui_click_through), onOff(uiState.clickThrough)))
+            addView(settingRow(host, getString(R.string.ui_auto_hide_when_paused), autoHideWhenPausedSubtitle()))
         }
     }
     list.addView(summaryButton)
+}
+
+private fun FloatingPageScope.autoHideWhenPausedSubtitle(): String {
+    return onOff(host.autoHideWhenPausedEnabled())
+}
+
+private fun FloatingPageScope.autoHideWhenPausedButtonText(): String {
+    return if (host.autoHideWhenPausedEnabled()) {
+        host.getString(R.string.ui_auto_hide_when_paused_on)
+    } else {
+        host.getString(R.string.ui_auto_hide_when_paused_off)
+    }
 }

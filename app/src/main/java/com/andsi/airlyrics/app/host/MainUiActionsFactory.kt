@@ -34,6 +34,7 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
         hideFloatingLyrics = { floatingController.hideLyrics() },
         toggleLock = floatingController::toggleLock,
         toggleClickThrough = floatingController::toggleClickThrough,
+        toggleAutoHideWhenPaused = floatingController::toggleAutoHideWhenPaused,
         reloadFloatingLyrics = floatingController::reloadLyrics,
         reloadFloatingLyricsFromOnline = floatingController::reloadLyricsFromOnline,
         currentLyricsOffsetSummary = lyricsWorkflow::currentLyricsOffsetSummary,

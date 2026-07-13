@@ -226,6 +226,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_enhanced_lrc), wordLyricsSubtitle())
         updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), host.colorSummary(latestStyle.karaokeHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
+        updateFloatingTileSubtitle(host.getString(R.string.ui_auto_hide_when_paused), onOff(host.autoHideWhenPausedEnabled()))
     }
 
     private fun updateFloatingTileSubtitle(title: String, subtitle: String) {

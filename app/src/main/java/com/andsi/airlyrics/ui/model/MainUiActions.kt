@@ -15,6 +15,7 @@ internal data class MainUiActions(
     val hideFloatingLyrics: () -> Unit,
     val toggleLock: () -> Unit,
     val toggleClickThrough: () -> Unit,
+    val toggleAutoHideWhenPaused: () -> Boolean,
     val reloadFloatingLyrics: () -> Unit,
     val reloadFloatingLyricsFromOnline: () -> Unit,
     val currentLyricsOffsetSummary: () -> String,

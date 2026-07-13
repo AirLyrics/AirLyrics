@@ -42,6 +42,8 @@ class FloatingLyricsService : Service() {
     internal var lastPlaybackLyricsKey: PlaybackLyricsKey? = null
     internal var activeLyricsLookupRequestKey: LyricsLookupRequestKey? = null
     internal var selectedSourcePackage: String? = null
+    internal var autoHiddenForPause = false
+    internal var pauseAutoHideSuppressedByUser = false
     internal var mediaRestoreAttempt = 0
     internal val mediaSnapshotGate = MediaSnapshotGate()
 
@@ -58,6 +60,10 @@ class FloatingLyricsService : Service() {
 
     internal val mediaRestoreRunnable = Runnable {
         restoreCurrentMediaOrRetry()
+    }
+
+    internal val pauseAutoHideRunnable = Runnable {
+        applyScheduledAutoHideWhenPaused()
     }
 
     internal val currentMediaRefreshRunnable = object : Runnable {
@@ -153,6 +159,7 @@ class FloatingLyricsService : Service() {
 
     override fun onDestroy() {
         stopLyricsSync()
+        syncHandler.removeCallbacks(pauseAutoHideRunnable)
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         stopSelectedMediaObservation()
         lyricsLookupRunner.shutdown()

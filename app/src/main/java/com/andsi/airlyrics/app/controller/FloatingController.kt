@@ -210,6 +210,18 @@ internal class FloatingController(
         }
     }
 
+    fun toggleAutoHideWhenPaused(): Boolean {
+        val enabled = !FloatingLyricsStyleStore.isAutoHideWhenPaused(context)
+        FloatingLyricsStyleStore.setAutoHideWhenPaused(context, enabled)
+
+        if (QuickFloatingStore.isDesiredVisible(context)) {
+            sendFloatingCommand(BroadcastActions.APPLY_AUTO_HIDE_WHEN_PAUSED)
+        }
+
+        invalidator.refreshFloatingControls()
+        return enabled
+    }
+
     private fun updateLocalLocked(locked: Boolean, persist: Boolean) {
         state.locked = locked
         if (persist) {

@@ -30,6 +30,7 @@ object FloatingLyricsStyleStore {
     private const val KEY_POS_X = "pos_x"
     private const val KEY_POS_Y = "pos_y"
     private const val KEY_PREVIEW_EXPANDED = "preview_expanded"
+    private const val KEY_AUTO_HIDE_WHEN_PAUSED = "auto_hide_when_paused"
 
     private const val DEFAULT_X = 100
     private const val DEFAULT_Y = 300
@@ -238,6 +239,16 @@ object FloatingLyricsStyleStore {
 
     fun isClickThroughFollowingLocked(context: Context): Boolean {
         return !prefs(context).contains(KEY_CLICK_THROUGH)
+    }
+
+    fun setAutoHideWhenPaused(context: Context, enabled: Boolean) {
+        prefs(context).edit {
+            putBoolean(KEY_AUTO_HIDE_WHEN_PAUSED, enabled)
+        }
+    }
+
+    fun isAutoHideWhenPaused(context: Context): Boolean {
+        return prefs(context).getBoolean(KEY_AUTO_HIDE_WHEN_PAUSED, false)
     }
 
     fun savePosition(context: Context, x: Int, y: Int) {

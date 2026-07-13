@@ -23,6 +23,7 @@ object BroadcastActions {
     const val IMPORT_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
     const val SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
     const val APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
+    const val APPLY_AUTO_HIDE_WHEN_PAUSED = "com.andsi.airlyrics.APPLY_AUTO_HIDE_WHEN_PAUSED"
     const val RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
     const val RELOAD_ONLINE_LYRICS = "com.andsi.airlyrics.RELOAD_ONLINE_LYRICS"
     const val APPLY_LYRICS_OFFSET = "com.andsi.airlyrics.APPLY_LYRICS_OFFSET"

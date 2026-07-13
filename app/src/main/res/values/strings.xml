@@ -36,6 +36,10 @@
     <string name="ui_appearance">Appearance</string>
     <string name="ui_applied">Applied</string>
     <string name="ui_auto_save">Auto-save</string>
+    <string name="ui_auto_hide_when_paused">Auto hide/show</string>
+    <string name="ui_auto_hide_when_paused_hint">Hide floating lyrics while playback is paused, then restore them when playback resumes.</string>
+    <string name="ui_auto_hide_when_paused_off">Auto hide/show: off</string>
+    <string name="ui_auto_hide_when_paused_on">Auto hide/show: on</string>
     <string name="ui_auto_save_off">Auto-save: off</string>
     <string name="ui_auto_save_on">Auto-save: on</string>
     <string name="ui_available">Available</string>
