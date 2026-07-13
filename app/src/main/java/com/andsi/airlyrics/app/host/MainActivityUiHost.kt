@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.host
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.session.MediaController
@@ -54,6 +53,7 @@ import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.model.RecentLyricsUiState
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
@@ -377,9 +377,9 @@ internal class MainActivityUiHost(
         val lightTheme = !isDarkTheme()
         activity.enableEdgeToEdge(
             statusBarStyle = if (lightTheme) {
-                SystemBarStyle.light(Color.BLACK, Color.BLACK)
+                SystemBarStyle.light(colorBackground, colorBackground)
             } else {
-                SystemBarStyle.dark(Color.BLACK)
+                SystemBarStyle.dark(colorBackground)
             },
             navigationBarStyle = if (lightTheme) {
                 SystemBarStyle.light(colorSurface, colorSurface)

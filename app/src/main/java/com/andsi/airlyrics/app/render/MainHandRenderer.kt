@@ -36,13 +36,15 @@ internal class MainHandRenderer(
         }
 
         val topSafeArea = View(host).apply {
+            setBackgroundColor(host.colorBackground)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                host.dp(AirUiTokens.Layout.TopSafeAreaHeight)
+                0
             )
         }
 
         host.contentContainer = FrameLayout(host).apply {
+            setBackgroundColor(host.colorBackground)
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 0,
@@ -56,30 +58,47 @@ internal class MainHandRenderer(
         root.addView(host.contentContainer)
         root.addView(bottomTabs)
 
-        applyBottomNavigationInsets(root, bottomTabs)
+        applySystemBarInsets(root, topSafeArea, bottomTabs)
 
         return root
     }
 
-    private fun applyBottomNavigationInsets(
+    private fun applySystemBarInsets(
         root: View,
+        topSafeArea: View,
         bottomTabs: View
     ) {
         val baseBottomTabsHeight = host.dp(AirUiTokens.Layout.BottomBarHeight)
+        val baseBottomTabsPaddingLeft = bottomTabs.paddingLeft
+        val baseBottomTabsPaddingTop = bottomTabs.paddingTop
+        val baseBottomTabsPaddingRight = bottomTabs.paddingRight
         val baseBottomTabsPaddingBottom = bottomTabs.paddingBottom
 
         ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
-            val navigationBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            val safeInsets = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+
+            topSafeArea.layoutParams = (topSafeArea.layoutParams as LinearLayout.LayoutParams).apply {
+                height = safeInsets.top
+            }
+
+            host.contentContainer?.setPadding(
+                safeInsets.left,
+                0,
+                safeInsets.right,
+                0
+            )
 
             bottomTabs.layoutParams = (bottomTabs.layoutParams as LinearLayout.LayoutParams).apply {
-                height = baseBottomTabsHeight + navigationBars.bottom
+                height = baseBottomTabsHeight + safeInsets.bottom
             }
 
             bottomTabs.setPadding(
-                bottomTabs.paddingLeft,
-                bottomTabs.paddingTop,
-                bottomTabs.paddingRight,
-                baseBottomTabsPaddingBottom + navigationBars.bottom
+                baseBottomTabsPaddingLeft + safeInsets.left,
+                baseBottomTabsPaddingTop,
+                baseBottomTabsPaddingRight + safeInsets.right,
+                baseBottomTabsPaddingBottom + safeInsets.bottom
             )
 
             insets

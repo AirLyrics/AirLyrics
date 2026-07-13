@@ -91,7 +91,6 @@ object AirUiTokens {
         const val FloatingTileHeight = 112
         const val FloatingPanelWidthInset = 72
         const val FloatingPanelMaxWidth = 360
-        const val TopSafeAreaHeight = 44
         const val BottomBarHeight = 86
         const val BottomTabIconTextSp = 24
         const val BottomTabLabelTextSp = 10
