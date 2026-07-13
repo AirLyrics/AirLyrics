@@ -10,12 +10,12 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
@@ -111,7 +111,7 @@ private fun MainUiHost.openLocalLyricsEditor(
 ) {
     val isKaraoke = target == LyricsStorage.LocalLyricsEditTarget.KARAOKE
     val loadGeneration = localLyricsEditorLoadGeneration.incrementAndGet()
-    Toast.makeText(this, getString(R.string.ui_loading), Toast.LENGTH_SHORT).show()
+    AirToast.showShort(this, R.string.ui_loading)
 
     runOnAppIo {
         val rawLyrics = LyricsStorage.readLocalLyricsItemText(this, item, target)
@@ -227,7 +227,7 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                     if (isSaving) return@localLyricsDialogButton
                     val newText = editor.text.toString()
                     setSavingState(true)
-                    Toast.makeText(this@showLocalLyricsEditorDialog, getString(R.string.ui_saving), Toast.LENGTH_SHORT).show()
+                    AirToast.showShort(this@showLocalLyricsEditorDialog, R.string.ui_saving)
                     runOnAppIo {
                         val result = if (isKaraoke) {
                             LyricsStorage.updateKaraokeLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)

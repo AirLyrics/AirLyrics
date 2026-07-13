@@ -10,7 +10,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
@@ -257,7 +256,7 @@ internal class FloatingPageScope(
     internal fun applyLyricsOffsetDelta(deltaMs: Long, statusView: TextView?) {
         val offset = host.uiActions.adjustLyricsOffsetForCurrentMedia(deltaMs)
         if (offset == null) {
-            Toast.makeText(host, host.getString(R.string.ui_please_play_and_select_a_song_first), Toast.LENGTH_SHORT).show()
+            host.showShortToast(host.getString(R.string.ui_please_play_and_select_a_song_first))
             statusView?.text = host.getString(R.string.ui_waiting_for_current_song)
             return
         }
@@ -267,7 +266,7 @@ internal class FloatingPageScope(
 
     internal fun resetLyricsOffset(statusView: TextView?) {
         if (!host.uiActions.resetLyricsOffsetForCurrentMedia()) {
-            Toast.makeText(host, host.getString(R.string.ui_please_play_and_select_a_song_first), Toast.LENGTH_SHORT).show()
+            host.showShortToast(host.getString(R.string.ui_please_play_and_select_a_song_first))
             statusView?.text = host.getString(R.string.ui_waiting_for_current_song)
             return
         }

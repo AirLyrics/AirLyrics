@@ -6,7 +6,6 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
-import android.widget.Toast
 import com.andsi.airlyrics.app.contracts.FloatingLyricsReloader
 import com.andsi.airlyrics.app.contracts.MainDialogHost
 import com.andsi.airlyrics.app.contracts.MainTaskRunner
@@ -19,6 +18,7 @@ import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 internal class LyricsController(
@@ -72,7 +72,7 @@ internal class LyricsController(
             }
 
             taskRunner.runOnMainThread {
-                Toast.makeText(context, context.getString(R.string.ui_importing_lyrics), Toast.LENGTH_SHORT).show()
+                AirToast.showShort(context, R.string.ui_importing_lyrics)
             }
 
             val result = if (importAsWordByWord) {
@@ -161,7 +161,7 @@ internal class LyricsController(
                 } else {
                     context.getString(R.string.ui_plain_lrc_import_success)
                 }
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                AirToast.showLong(context, message)
                 floatingLyricsReloader.reloadFloatingLyrics()
                 invalidator.rebuildCurrentPage(
                     reason = PageRebuildReason.LYRICS_CHANGED,
@@ -170,16 +170,16 @@ internal class LyricsController(
                 )
             }
             LyricsStorage.ImportLyricsResult.TooLarge -> {
-                Toast.makeText(context, context.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
+                AirToast.showLong(context, R.string.ui_lrc_file_too_large)
             }
             is LyricsStorage.ImportLyricsResult.InvalidFormat -> {
                 showImportFormatError(result.invalidLineNumbers, importAsWordByWord)
             }
             LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists -> {
-                Toast.makeText(context, context.getString(R.string.ui_enhanced_lrc_blocked_by_plain_lrc), Toast.LENGTH_LONG).show()
+                AirToast.showLong(context, R.string.ui_enhanced_lrc_blocked_by_plain_lrc)
             }
             LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists -> {
-                Toast.makeText(context, context.getString(R.string.ui_plain_lrc_blocked_by_enhanced_lrc), Toast.LENGTH_LONG).show()
+                AirToast.showLong(context, R.string.ui_plain_lrc_blocked_by_enhanced_lrc)
             }
             LyricsStorage.ImportLyricsResult.ReadFailed -> {
                 val message = if (importAsWordByWord) {
@@ -187,10 +187,10 @@ internal class LyricsController(
                 } else {
                     context.getString(R.string.ui_cannot_read_this_lyric_file)
                 }
-                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                AirToast.showLong(context, message)
             }
             LyricsStorage.ImportLyricsResult.SaveFailed -> {
-                Toast.makeText(context, context.getString(R.string.ui_lrc_import_save_failed), Toast.LENGTH_LONG).show()
+                AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
             }
         }
     }
@@ -227,7 +227,7 @@ internal class LyricsController(
                         LyricsStorage.DeleteMode.KARAOKE -> context.getString(R.string.ui_enhanced_lrc_removed_for_this_song)
                         LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_all_local_lyrics_removed)
                     }
-                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                    AirToast.showLong(context, message)
                     floatingLyricsReloader.reloadFloatingLyrics()
                     invalidator.rebuildCurrentPage(
                         reason = PageRebuildReason.LYRICS_CHANGED,
@@ -240,7 +240,7 @@ internal class LyricsController(
                         LyricsStorage.DeleteMode.KARAOKE -> context.getString(R.string.ui_no_enhanced_lrc_to_remove)
                         LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_no_local_lyrics_to_remove)
                     }
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    AirToast.showShort(context, message)
                 }
             }
         }
@@ -261,6 +261,6 @@ internal class LyricsController(
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.ui_lyrics_save_folder), path))
 
-        Toast.makeText(context, context.getString(R.string.ui_lyrics_save_folder_copied), Toast.LENGTH_LONG).show()
+        AirToast.showLong(context, R.string.ui_lyrics_save_folder_copied)
     }
 }

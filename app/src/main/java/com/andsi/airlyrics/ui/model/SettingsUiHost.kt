@@ -36,4 +36,6 @@ internal interface SettingsUiHost {
     fun lyricsSettingsState(): LyricsSettingsUiState
     fun languageSettingsState(): LanguageSettingsUiState
     fun setLanguageMode(mode: String)
+    fun isToasterMuted(): Boolean
+    fun setToasterMuted(muted: Boolean)
 }

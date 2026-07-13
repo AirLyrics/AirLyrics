@@ -158,6 +158,17 @@ class SettingsStoresTest {
     }
 
     @Test
+    fun appSettingsStore_toasterMuteDefaultsOffAndRoundTrips() {
+        assertFalse(AppSettingsStore.isToasterMuted(context))
+
+        AppSettingsStore.setToasterMuted(context, true)
+        assertTrue(AppSettingsStore.isToasterMuted(context))
+
+        AppSettingsStore.setToasterMuted(context, false)
+        assertFalse(AppSettingsStore.isToasterMuted(context))
+    }
+
+    @Test
     fun languageSettingsStore_normalizesUnknownModesAndSavesKnownModes() {
         context.getSharedPreferences("airlyrics_language_settings", Context.MODE_PRIVATE)
             .edit()
@@ -179,6 +190,7 @@ class SettingsStoresTest {
             "lyrics_offset_store",
             "floating_quick_control",
             "app_theme",
+            "app_settings",
             "airlyrics_language_settings"
         ).forEach { name ->
             context.getSharedPreferences(name, Context.MODE_PRIVATE)

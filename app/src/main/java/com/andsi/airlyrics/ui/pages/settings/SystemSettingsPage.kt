@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -24,6 +25,7 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
     container.addView(settingsBackHeader(getString(R.string.ui_system)))
 
     container.addView(languageChoiceCard(activity))
+    container.addView(toasterMuteCard(activity))
 
     container.addView(
         card(activity) {
@@ -48,6 +50,57 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
     )
 
     return scroll(activity, container)
+}
+
+private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toasterMuteCard@ {
+    val statusText = smallHint(
+        activity,
+        if (isToasterMuted()) getString(R.string.ui_toaster_mute_on) else getString(R.string.ui_toaster_mute_off)
+    )
+    val toasterSwitch = SwitchCompat(activity).apply {
+        isChecked = isToasterMuted()
+        contentDescription = getString(R.string.ui_toaster_mute)
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+    }
+
+    fun applyMutedState(muted: Boolean) {
+        setToasterMuted(muted)
+        statusText.text = if (muted) {
+            getString(R.string.ui_toaster_mute_on)
+        } else {
+            getString(R.string.ui_toaster_mute_off)
+        }
+    }
+
+    return card(activity) {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        isClickable = true
+        isFocusable = true
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
+
+        addView(LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                setMargins(0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), 0)
+            }
+            addView(bigText(activity, getString(R.string.ui_toaster_mute)))
+            addView(normalText(activity, getString(R.string.ui_toaster_mute_hint)))
+            addView(statusText)
+        })
+
+        addView(toasterSwitch)
+
+        toasterSwitch.setOnCheckedChangeListener { _, checked ->
+            applyMutedState(checked)
+        }
+        setOnClickListener {
+            toasterSwitch.isChecked = !toasterSwitch.isChecked
+        }
+    }
 }
 
 private fun languageChoiceCard(activity: MainUiHost): View = with(activity) languageChoiceCard@ {

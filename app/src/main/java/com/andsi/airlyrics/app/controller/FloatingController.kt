@@ -6,13 +6,13 @@ import com.andsi.airlyrics.R
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import android.widget.Toast
 import com.andsi.airlyrics.app.contracts.FloatingNavFeedback
 import com.andsi.airlyrics.app.contracts.MainServiceStarter
 import com.andsi.airlyrics.app.contracts.OverlayPermissionRequester
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingLyricsService
+import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
@@ -82,12 +82,12 @@ internal class FloatingController(
 
     fun reloadLyricsFromOnline() {
         if (!state.quickFloatingVisible) {
-            Toast.makeText(context, context.getString(R.string.ui_show_overlay_then_search_hint), Toast.LENGTH_LONG).show()
+            AirToast.showLong(context, R.string.ui_show_overlay_then_search_hint)
             return
         }
 
         if (sendFloatingCommand(BroadcastActions.RELOAD_ONLINE_LYRICS)) {
-            Toast.makeText(context, context.getString(R.string.ui_searching_online_again), Toast.LENGTH_SHORT).show()
+            AirToast.showShort(context, R.string.ui_searching_online_again)
         }
     }
 
@@ -95,7 +95,7 @@ internal class FloatingController(
         setDesiredVisible(true)
         if (!updateOverlayPermissionGranted()) {
             if (!overlayPermissionHintShown) {
-                Toast.makeText(context, context.getString(R.string.ui_enable_overlay_permission_first), Toast.LENGTH_LONG).show()
+                AirToast.showLong(context, R.string.ui_enable_overlay_permission_first)
                 overlayPermissionHintShown = true
             }
             invalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
@@ -120,7 +120,7 @@ internal class FloatingController(
             updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingChrome()
         } else {
-            Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
+            AirToast.showShort(context, R.string.ui_overlay_update_failed)
             invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
         }
         return sent
@@ -182,7 +182,7 @@ internal class FloatingController(
             updateLocalLocked(nextLocked, persist = false)
             invalidator.refreshFloatingControls()
         } else {
-            Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
+            AirToast.showShort(context, R.string.ui_overlay_update_failed)
         }
     }
 
@@ -206,7 +206,7 @@ internal class FloatingController(
             updateLocalClickThrough(nextClickThrough, persist = false)
             invalidator.refreshFloatingControls()
         } else {
-            Toast.makeText(context, context.getString(R.string.ui_overlay_update_failed), Toast.LENGTH_SHORT).show()
+            AirToast.showShort(context, R.string.ui_overlay_update_failed)
         }
     }
 

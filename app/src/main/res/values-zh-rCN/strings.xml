@@ -318,6 +318,10 @@ This is a lyric preview</string>
     <string name="ui_overwrite_enhanced_keep_plain_msg">这首歌已经有本地逐字歌词。覆盖会替换逐字歌词，并重新生成普通歌词。</string>
     <string name="ui_overwrite_plain_keep_enhanced_msg">这首歌已经有普通歌词。覆盖会替换普通歌词。</string>
     <string name="ui_touchable">可触摸</string>
+    <string name="ui_toaster_mute">面包机静音</string>
+    <string name="ui_toaster_mute_hint">关闭所有小 Toast 提示；对话框和系统通知照常显示。</string>
+    <string name="ui_toaster_mute_off">面包机还会弹</string>
+    <string name="ui_toaster_mute_on">面包机已安静</string>
     <string name="ui_translation_only">仅翻译</string>
     <string name="ui_unknown_artist">未知艺术家</string>
     <string name="ui_unknown_size">未知大小</string>

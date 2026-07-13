@@ -6,7 +6,6 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.view.animation.OvershootInterpolator
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.controller.FloatingController
@@ -34,6 +33,7 @@ import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.settings.AirToast
 import java.util.concurrent.Executors
 
 /** Main-screen composition root and lifecycle orchestrator. */
@@ -236,7 +236,7 @@ internal class MainGraph(
             activity.getString(R.string.ui_notif_permission_off_warning)
         }
 
-        Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
+        AirToast.showLong(activity, message)
         uiInvalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
     }
 

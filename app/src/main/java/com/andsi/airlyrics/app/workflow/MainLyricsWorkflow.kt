@@ -9,7 +9,6 @@ import android.net.Uri
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.i18n.localizedAssetText
@@ -18,6 +17,7 @@ import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
+import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
@@ -44,7 +44,7 @@ internal class MainLyricsWorkflow(
     fun handleLyricsFileSelected(uri: Uri) {
         val media = state.pendingImportMedia ?: graph.lyricsController.getCurrentMediaInfo()
         if (media == null || media.title.isBlank()) {
-            Toast.makeText(activity, activity.getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
+            AirToast.showLong(activity, R.string.ui_select_song_before_importing)
             return
         }
 
@@ -57,12 +57,12 @@ internal class MainLyricsWorkflow(
             } else {
                 activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
             }
-            Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
+            AirToast.showLong(activity, message)
             return
         }
 
         if (LyricsImportValidator.isLyricsDocumentTooLarge(activity, uri)) {
-            Toast.makeText(activity, activity.getString(R.string.ui_lrc_file_too_large), Toast.LENGTH_LONG).show()
+            AirToast.showLong(activity, R.string.ui_lrc_file_too_large)
             return
         }
 
@@ -83,17 +83,17 @@ internal class MainLyricsWorkflow(
         }.isSuccess
 
         if (!permissionGranted) {
-            Toast.makeText(activity, activity.getString(R.string.ui_lyrics_folder_permission_failed), Toast.LENGTH_LONG).show()
+            AirToast.showLong(activity, R.string.ui_lyrics_folder_permission_failed)
             return
         }
 
         if (!LyricsStorage.validateLyricsDir(activity, uri)) {
-            Toast.makeText(activity, activity.getString(R.string.ui_lyrics_folder_write_failed), Toast.LENGTH_LONG).show()
+            AirToast.showLong(activity, R.string.ui_lyrics_folder_write_failed)
             return
         }
 
         LyricsStorage.saveLyricsDirUri(activity, uri)
-        Toast.makeText(activity, activity.getString(R.string.ui_lyrics_save_folder_set), Toast.LENGTH_LONG).show()
+        AirToast.showLong(activity, R.string.ui_lyrics_save_folder_set)
         graph.uiInvalidator.rebuildCurrentPage(
             reason = PageRebuildReason.LYRICS_DIRECTORY_CHANGED,
             animateContent = false,
@@ -124,7 +124,7 @@ internal class MainLyricsWorkflow(
     fun showImportLyricsDialog() {
         val media = graph.lyricsController.getCurrentMediaInfo()
         if (media == null || media.title.isBlank()) {
-            Toast.makeText(activity, activity.getString(R.string.ui_select_song_before_importing), Toast.LENGTH_LONG).show()
+            AirToast.showLong(activity, R.string.ui_select_song_before_importing)
             return
         }
 

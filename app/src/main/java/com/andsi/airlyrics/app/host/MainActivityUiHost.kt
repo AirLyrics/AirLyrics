@@ -36,6 +36,8 @@ import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
+import com.andsi.airlyrics.settings.AirToast
+import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
@@ -122,6 +124,7 @@ internal class MainActivityUiHost(
     override fun getPlaybackStateText(state: Int?): String = graph.mediaSourceController.getPlaybackStateText(state)
     override fun runOnAppIo(block: () -> Unit) = graph.runOnAppIo(block)
     override fun runOnMainThread(block: () -> Unit) = graph.runOnMainThread(block)
+    override fun showShortToast(message: CharSequence) = AirToast.showShort(this, message)
 
     override fun refreshMediaButton(): View = refreshMediaButtonImpl()
     override fun mediaSourceCard(controller: MediaController, selected: Boolean): View = mediaSourceCardImpl(controller, selected)
@@ -346,6 +349,12 @@ internal class MainActivityUiHost(
 
     override fun setLanguageMode(mode: String) {
         LanguageSettingsStore.setMode(this, mode)
+    }
+
+    override fun isToasterMuted(): Boolean = AppSettingsStore.isToasterMuted(this)
+
+    override fun setToasterMuted(muted: Boolean) {
+        AppSettingsStore.setToasterMuted(this, muted)
     }
 
     fun toggleThemeMode() {

@@ -61,6 +61,11 @@ a game.
 
 You can enable or disable it depending on your own usage.
 
+### Toast Popups
+
+The System page includes **Toaster mute**, which hides all small toast popups from AirLyrics.
+Dialogs and foreground-service notifications still show.
+
 ### Lyrics Fetching Settings
 
 Basic features will not be explained too much here. This section only covers a few things worth
