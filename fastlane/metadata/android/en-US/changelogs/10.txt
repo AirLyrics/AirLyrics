@@ -1,0 +1,7 @@
+v1.1.0
+• Add auto hide/show for paused floating lyrics.
+• Add Toaster mute to hide small AirLyrics toast popups.
+• Improve word-by-word LRC import rules and reload behavior.
+• Fix selected media source scoping, cutout/inset handling, repeated tab taps, and locale switching.
+• Split floating, lyrics storage, and UI architecture into clearer modules.
+• Optimize release builds with R8 and resource shrinking.

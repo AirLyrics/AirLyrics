@@ -1,10 +1,19 @@
-v1.0.8 - 2026-07-05
+v1.1.0 - 2026-07-13
+
+Added
+- Added an auto hide/show option for floating lyrics so the window can hide while playback is paused and return when playback resumes.
+- Added a global Toaster mute preference to hide small AirLyrics toast popups while keeping dialogs and notifications available.
+- Added enter and exit animations to Air dialogs.
 
 Fixed
-- Rejected stale media snapshots with sequence gating so older playback state cannot overwrite newer updates.
-- Avoided falling back to NetEase lyrics when the selected lyrics provider setting is invalid.
-- Avoided duplicate lyrics offset refreshes during floating lyrics line updates.
+- Scoped lyrics actions to the selected media source.
+- Reloaded current lyrics when toggling word-by-word LRC.
+- Distinguished lyrics import read failures from save failures.
+- Refreshed floating controls locally without rebuilding unrelated UI.
+- Improved display cutout, edge-to-edge inset, repeated tab tap, and locale change handling.
 
 Changed
-- Refined song identity and lyrics lookup keys so saved lyrics and offsets match tracks more reliably.
-- Cleaned up launcher icon resources and known lint warnings.
+- Split the floating runtime, lyrics storage, handwritten UI pages, host boundaries, and shared models into clearer modules.
+- Constrained word-by-word lyrics imports to generated plain fallbacks to avoid conflicting local lyrics.
+- Optimized release builds with R8, resource shrinking, and updated ProGuard rules.
+- Added core tests and architecture boundary checks.
