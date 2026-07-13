@@ -317,8 +317,8 @@ Word-by-word lyrics recommended format:
     <string name="ui_overwrite_enhanced_keep_plain_msg">This song already has local word-by-word lyrics. Overwriting replaces them and regenerates plain lyrics.</string>
     <string name="ui_overwrite_plain_keep_enhanced_msg">This song already has plain lyrics. Overwriting replaces the plain lyrics.</string>
     <string name="ui_touchable">Touchable</string>
-    <string name="ui_toaster_mute">Toaster mute</string>
-    <string name="ui_toaster_mute_hint">Hide all small toast popups. Dialogs and notifications still show.</string>
+    <string name="ui_toaster_mute">Hide toast popups</string>
+    <string name="ui_toaster_mute_hint">This hides all AirLyrics toast popups, the small messages that appear over the lower-middle part of the screen.</string>
     <string name="ui_translation_only">Translation only</string>
     <string name="ui_unknown_artist">Unknown artist</string>
     <string name="ui_unknown_size">Unknown size</string>

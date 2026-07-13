@@ -63,8 +63,8 @@ You can enable or disable it depending on your own usage.
 
 ### Toast Popups
 
-The System page includes **Toaster mute**, which hides all small toast popups from AirLyrics.
-Dialogs and foreground-service notifications still show.
+The System page includes **Hide toast popups**, which hides AirLyrics toast popups, the small
+messages that appear over the lower-middle part of the screen.
 
 ### Lyrics Fetching Settings
 

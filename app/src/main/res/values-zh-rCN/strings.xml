@@ -319,7 +319,7 @@ This is a lyric preview</string>
     <string name="ui_overwrite_plain_keep_enhanced_msg">这首歌已经有普通歌词。覆盖会替换普通歌词。</string>
     <string name="ui_touchable">可触摸</string>
     <string name="ui_toaster_mute">关闭 Toast 提示</string>
-    <string name="ui_toaster_mute_hint">关闭 AirLyrics 的 Toast 提示；对话框和系统通知照常显示。</string>
+    <string name="ui_toaster_mute_hint">这会关闭所有 AirLyrics 的 Toast 提示，也就是覆盖在屏幕中下方显示的小提示。</string>
     <string name="ui_translation_only">仅翻译</string>
     <string name="ui_unknown_artist">未知艺术家</string>
     <string name="ui_unknown_size">未知大小</string>
