@@ -319,8 +319,6 @@ Word-by-word lyrics recommended format:
     <string name="ui_touchable">Touchable</string>
     <string name="ui_toaster_mute">Toaster mute</string>
     <string name="ui_toaster_mute_hint">Hide all small toast popups. Dialogs and notifications still show.</string>
-    <string name="ui_toaster_mute_off">Toaster still pops</string>
-    <string name="ui_toaster_mute_on">Toaster is quiet</string>
     <string name="ui_translation_only">Translation only</string>
     <string name="ui_unknown_artist">Unknown artist</string>
     <string name="ui_unknown_size">Unknown size</string>

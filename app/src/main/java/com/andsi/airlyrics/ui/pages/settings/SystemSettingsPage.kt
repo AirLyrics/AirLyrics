@@ -53,10 +53,6 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
 }
 
 private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toasterMuteCard@ {
-    val statusText = smallHint(
-        activity,
-        if (isToasterMuted()) getString(R.string.ui_toaster_mute_on) else getString(R.string.ui_toaster_mute_off)
-    )
     val toasterSwitch = SwitchCompat(activity).apply {
         isChecked = isToasterMuted()
         contentDescription = getString(R.string.ui_toaster_mute)
@@ -64,15 +60,6 @@ private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toaster
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-    }
-
-    fun applyMutedState(muted: Boolean) {
-        setToasterMuted(muted)
-        statusText.text = if (muted) {
-            getString(R.string.ui_toaster_mute_on)
-        } else {
-            getString(R.string.ui_toaster_mute_off)
-        }
     }
 
     return card(activity) {
@@ -89,13 +76,12 @@ private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toaster
             }
             addView(bigText(activity, getString(R.string.ui_toaster_mute)))
             addView(normalText(activity, getString(R.string.ui_toaster_mute_hint)))
-            addView(statusText)
         })
 
         addView(toasterSwitch)
 
         toasterSwitch.setOnCheckedChangeListener { _, checked ->
-            applyMutedState(checked)
+            setToasterMuted(checked)
         }
         setOnClickListener {
             toasterSwitch.isChecked = !toasterSwitch.isChecked
