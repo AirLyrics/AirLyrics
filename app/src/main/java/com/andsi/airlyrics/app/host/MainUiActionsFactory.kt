@@ -12,7 +12,7 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 internal fun MainGraph.createMainUiActions(): MainUiActions {
     return MainUiActions(
         selectPage = { page ->
-            if (state.currentPage != page || page == Page.SETTINGS) {
+            if (state.currentPage != page) {
                 state.currentPage = page
                 if (page == Page.SETTINGS) {
                     state.settingsSubPage = SettingsSubPage.HOME
