@@ -25,6 +25,12 @@ NUMERIC_KEY_ALLOWLIST = {
     'ui_delay_1s',
 }
 
+# Language names may intentionally be shown in their own writing system even
+# when the app is currently using the default English resource bundle.
+DEFAULT_RESOURCE_CJK_ALLOWLIST = {
+    'ui_chinese_simplified',
+}
+
 def fail(message: str) -> None:
     errors.append(message)
 
@@ -100,8 +106,16 @@ if len(resources) == len(resource_paths):
     default_strings = resources[default_path]
     default_names = set(default_strings)
 
-    if any(CJK_RE.search(value) for value in default_strings.values()):
-        bad = sorted(name for name, value in default_strings.items() if CJK_RE.search(value))
+    if any(
+        CJK_RE.search(value)
+        for name, value in default_strings.items()
+        if name not in DEFAULT_RESOURCE_CJK_ALLOWLIST
+    ):
+        bad = sorted(
+            name
+            for name, value in default_strings.items()
+            if name not in DEFAULT_RESOURCE_CJK_ALLOWLIST and CJK_RE.search(value)
+        )
         fail(f'{resource_paths[0]}: default English resources contain CJK text: {bad}')
 
     for path in resource_paths[1:]:
