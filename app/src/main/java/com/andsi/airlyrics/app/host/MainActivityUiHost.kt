@@ -150,12 +150,6 @@ internal class MainActivityUiHost(
         onClose: () -> Unit,
         content: LinearLayout.() -> Unit
     ): LinearLayout = floatingFocusBubbleImpl(title, subtitle, onClose, content)
-    override fun showFloatingSettingPanel(
-        title: String,
-        subtitle: String,
-        content: LinearLayout.() -> Unit
-    ) = showFloatingSettingPanelImpl(title, subtitle, content)
-
     override fun floatingStyle(): FloatingLyricsStyle = FloatingLyricsStyleStore.getStyle(this)
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)

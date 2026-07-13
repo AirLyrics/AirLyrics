@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.host
 
-import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -10,7 +9,6 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.spacer
@@ -21,7 +19,6 @@ import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorBubble
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
-import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
@@ -175,53 +172,4 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
         addView(spacer(activity, 8))
         content()
     }
-}
-
-internal fun MainUiHost.showFloatingSettingPanelImpl(
-    title: String,
-    subtitle: String,
-    content: LinearLayout.() -> Unit
-) {
-    val activity = this
-    val panel = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.PageH))
-        background = GradientDrawable().apply {
-            cornerRadii = floatArrayOf(
-                dp(AirUiTokens.Radius.Dialog).toFloat(), dp(AirUiTokens.Radius.Dialog).toFloat(),
-                dp(AirUiTokens.Radius.Dialog).toFloat(), dp(AirUiTokens.Radius.Dialog).toFloat(),
-                0f, 0f,
-                0f, 0f
-            )
-            setColor(colorSurface)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-        }
-
-        addView(TextView(activity).apply {
-            text = title
-            textSize = AirUiTokens.TextSize.Title
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
-        })
-        addView(TextView(activity).apply {
-            text = subtitle
-            textSize = AirUiTokens.TextSize.BodySmall
-            setTextColor(colorTextMuted)
-            setPadding(0, dp(AirUiTokens.Space.Sm), 0, dp(AirUiTokens.Space.Xl))
-        })
-        content()
-    }
-
-    val dialog = Dialog(this)
-    dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
-    dialog.setContentView(ScrollView(this).apply { addView(panel) })
-    dialog.setOnShowListener {
-        dialog.window?.let { window ->
-            window.setBackgroundDrawableResource(android.R.color.transparent)
-            window.setDimAmount(AirUiTokens.Layout.SheetDimAmount)
-            window.setGravity(Gravity.BOTTOM)
-            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-    }
-    dialog.show()
 }

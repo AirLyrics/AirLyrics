@@ -3,14 +3,18 @@ package com.andsi.airlyrics.ui.components
 import com.andsi.airlyrics.R
 
 import android.app.Dialog
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.view.WindowManager
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -30,6 +34,44 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 private const val DEFAULT_POSITIVE_TEXT = "__airlyrics_default_positive__"
+private const val DIALOG_ENTER_MS = 180L
+private const val DIALOG_ENTER_START_SCALE = 0.98f
+private const val DIALOG_ENTER_TRANSLATION_Y_DP = 10
+private const val DIALOG_EXIT_MS = 120L
+private const val DIALOG_EXIT_END_SCALE = 0.98f
+private const val DIALOG_EXIT_TRANSLATION_Y_DP = 8
+
+private class AirAnimatedDialog(
+    context: Context,
+    themeResId: Int
+) : Dialog(context, themeResId) {
+    var animatedContent: View? = null
+
+    private val exitTranslationYPx = DIALOG_EXIT_TRANSLATION_Y_DP * context.resources.displayMetrics.density
+    private var dismissing = false
+
+    override fun dismiss() {
+        val content = animatedContent
+        if (dismissing) return
+        if (content == null || !isShowing) {
+            super.dismiss()
+            return
+        }
+
+        dismissing = true
+        content.animate().cancel()
+        content.animate()
+            .alpha(0f)
+            .scaleX(DIALOG_EXIT_END_SCALE)
+            .scaleY(DIALOG_EXIT_END_SCALE)
+            .translationY(exitTranslationYPx)
+            .setDuration(DIALOG_EXIT_MS)
+            .setInterpolator(AccelerateInterpolator())
+            .withLayer()
+            .withEndAction { super.dismiss() }
+            .start()
+    }
+}
 
 internal fun MainUiHost.showAirInfoDialog(
     title: String,
@@ -69,7 +111,7 @@ internal fun MainUiHost.showAirDialog(
     onPositive: () -> Unit = {}
 ): Dialog {
     val host = this
-    val dialog = Dialog(this, android.R.style.Theme_Translucent_NoTitleBar)
+    val dialog = AirAnimatedDialog(this, android.R.style.Theme_Translucent_NoTitleBar)
     dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
 
     val panel = LinearLayout(this).apply {
@@ -125,6 +167,10 @@ internal fun MainUiHost.showAirDialog(
 
     val outer = ScrollView(this).apply {
         isFillViewport = false
+        alpha = 0f
+        scaleX = DIALOG_ENTER_START_SCALE
+        scaleY = DIALOG_ENTER_START_SCALE
+        translationY = dp(DIALOG_ENTER_TRANSLATION_Y_DP).toFloat()
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -153,6 +199,7 @@ internal fun MainUiHost.showAirDialog(
     }
 
     dialog.window?.applyAirDialogSystemBars(host)
+    dialog.animatedContent = outer
     dialog.setContentView(root)
     dialog.setOnShowListener {
         dialog.window?.apply {
@@ -163,6 +210,15 @@ internal fun MainUiHost.showAirDialog(
         }
         root.post {
             ViewCompat.requestApplyInsets(root)
+            outer.animate()
+                .alpha(1f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .translationY(0f)
+                .setDuration(DIALOG_ENTER_MS)
+                .setInterpolator(DecelerateInterpolator())
+                .withLayer()
+                .start()
         }
     }
     dialog.show()

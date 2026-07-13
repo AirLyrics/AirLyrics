@@ -18,12 +18,6 @@ internal interface FloatingUiHost {
         content: LinearLayout.() -> Unit
     ): LinearLayout
 
-    fun showFloatingSettingPanel(
-        title: String,
-        subtitle: String,
-        content: LinearLayout.() -> Unit
-    )
-
     fun floatingPreviewSummary(style: FloatingLyricsStyle): String
     fun floatingStyle(): FloatingLyricsStyle
     fun floatingPresets(): List<FloatingLyricsPreset>
