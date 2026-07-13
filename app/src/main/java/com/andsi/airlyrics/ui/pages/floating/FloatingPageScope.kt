@@ -250,7 +250,7 @@ internal class FloatingPageScope(
         host.setKaraokeLyricsEnabled(enabled)
         previewHandle?.lyricTextView?.text = if (enabled) karaokePreviewText() else previewLyricsText()
         refreshFloatingSettingTiles()
-        host.notifyFloatingStyleChanged()
+        host.uiActions.reloadFloatingLyrics()
     }
 
     internal fun applyLyricsOffsetDelta(deltaMs: Long, statusView: TextView?) {
