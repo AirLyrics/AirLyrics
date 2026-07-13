@@ -6,6 +6,7 @@ import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.view.Gravity
 import android.view.ViewGroup
 import android.view.Window
@@ -15,6 +16,10 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -54,6 +59,7 @@ internal fun MainUiHost.showAirConfirmDialog(
     )
 }
 
+@Suppress("DEPRECATION")
 internal fun MainUiHost.showAirDialog(
     title: String,
     message: String? = null,
@@ -62,6 +68,7 @@ internal fun MainUiHost.showAirDialog(
     body: (LinearLayout.() -> Unit)? = null,
     onPositive: () -> Unit = {}
 ): Dialog {
+    val host = this
     val dialog = Dialog(this, android.R.style.Theme_Translucent_NoTitleBar)
     dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
 
@@ -126,22 +133,57 @@ internal fun MainUiHost.showAirDialog(
         addView(panel)
     }
 
+    val rootPadding = dp(AirUiTokens.Space.CardH)
     val root = FrameLayout(this).apply {
-        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH))
+        setPadding(rootPadding, rootPadding, rootPadding, rootPadding)
+        ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+            val safeInsets = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            val topInset = view.remainingTopSystemInset(safeInsets.top)
+            view.setPadding(
+                rootPadding + safeInsets.left,
+                rootPadding + topInset,
+                rootPadding + safeInsets.right,
+                rootPadding + safeInsets.bottom
+            )
+            insets
+        }
         addView(outer)
     }
 
+    dialog.window?.applyAirDialogSystemBars(host)
     dialog.setContentView(root)
     dialog.setOnShowListener {
         dialog.window?.apply {
-            setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+            applyAirDialogSystemBars(host)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             setDimAmount(AirUiTokens.Layout.DialogDimAmount)
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
+        root.post {
+            ViewCompat.requestApplyInsets(root)
+        }
     }
     dialog.show()
     return dialog
+}
+
+@Suppress("DEPRECATION")
+private fun Window.applyAirDialogSystemBars(host: MainUiHost) {
+    setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
+    WindowCompat.setDecorFitsSystemWindows(this, false)
+    statusBarColor = Color.TRANSPARENT
+    navigationBarColor = Color.TRANSPARENT
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        isStatusBarContrastEnforced = false
+        isNavigationBarContrastEnforced = false
+    }
+    WindowCompat.getInsetsController(this, decorView).apply {
+        val useDarkIcons = !host.isDarkTheme()
+        isAppearanceLightStatusBars = useDarkIcons
+        isAppearanceLightNavigationBars = useDarkIcons
+    }
 }
 
 private fun MainUiHost.dialogButton(

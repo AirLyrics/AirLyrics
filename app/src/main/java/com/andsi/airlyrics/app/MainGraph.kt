@@ -40,6 +40,11 @@ import java.util.concurrent.Executors
 internal class MainGraph(
     internal val activity: MainActivity
 ) {
+    private companion object {
+        const val KEY_CURRENT_PAGE = "airlyrics.current_page"
+        const val KEY_SETTINGS_SUB_PAGE = "airlyrics.settings_sub_page"
+    }
+
     val state: MainActivityState = MainActivityState()
     val viewRefs = MainActivityViewRefs()
 
@@ -149,14 +154,21 @@ internal class MainGraph(
         state.clickThrough = FloatingLyricsStyleStore.isClickThrough(activity)
         state.quickFloatingVisible = false
         state.overlayPermissionGranted = Settings.canDrawOverlays(activity)
+        restoreNavigationState(savedInstanceState)
         uiHost.applySystemBarsTheme()
         registerBackNavigationCallback()
         activity.setContentView(mainHandRenderer.createMainView())
+        uiHost.applySystemBarsTheme()
         receivers.register()
         mediaSourceController.autoSelectSourceOnceIfNeeded()
         floatingController.restoreVisibleWindowIfNeeded()
         uiInvalidator.rebuildCurrentPage(PageRebuildReason.INITIAL_RENDER)
         skipFirstResumeAfterCreate = true
+    }
+
+    fun onSaveInstanceState(outState: Bundle) {
+        outState.putString(KEY_CURRENT_PAGE, state.currentPage.name)
+        outState.putString(KEY_SETTINGS_SUB_PAGE, state.settingsSubPage.name)
     }
 
     fun onResume() {
@@ -168,6 +180,7 @@ internal class MainGraph(
         state.locked = FloatingLyricsStyleStore.isLocked(activity)
         state.clickThrough = FloatingLyricsStyleStore.isClickThrough(activity)
         state.overlayPermissionGranted = Settings.canDrawOverlays(activity)
+        uiHost.applySystemBarsTheme()
         floatingController.restoreVisibleWindowIfNeeded()
         uiInvalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
     }
@@ -190,6 +203,16 @@ internal class MainGraph(
         mediaRefreshHandler.removeCallbacksAndMessages(null)
         appIoExecutor.shutdownNow()
         receivers.unregister()
+    }
+
+    private fun restoreNavigationState(savedInstanceState: Bundle?) {
+        savedInstanceState ?: return
+        state.currentPage = savedInstanceState.getString(KEY_CURRENT_PAGE)
+            ?.let { runCatching { Page.valueOf(it) }.getOrNull() }
+            ?: state.currentPage
+        state.settingsSubPage = savedInstanceState.getString(KEY_SETTINGS_SUB_PAGE)
+            ?.let { runCatching { SettingsSubPage.valueOf(it) }.getOrNull() }
+            ?: state.settingsSubPage
     }
 
     fun handleBackNavigation(): Boolean {

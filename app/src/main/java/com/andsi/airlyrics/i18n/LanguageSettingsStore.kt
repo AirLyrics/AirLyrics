@@ -1,10 +1,11 @@
 package com.andsi.airlyrics.i18n
 
 import android.content.Context
+import android.content.res.Configuration
+import android.content.res.Resources
+import android.os.LocaleList
 import com.andsi.airlyrics.R
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.edit
-import androidx.core.os.LocaleListCompat
 import java.util.Locale
 
 object LanguageSettingsStore {
@@ -41,18 +42,19 @@ object LanguageSettingsStore {
             MODE_EN -> MODE_EN
             else -> ""
         }
-        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(tags))
-
         val locale = if (tags.isBlank()) {
-            context.resources.configuration.locales.get(0)
+            Resources.getSystem().configuration.locales.get(0)
         } else {
             Locale.forLanguageTag(tags)
         }
         Locale.setDefault(locale)
-        val configuration = context.resources.configuration
-        configuration.setLocale(locale)
+        val configuration = Configuration(context.resources.configuration)
+        configuration.setLocales(LocaleList(locale))
+        configuration.setLayoutDirection(locale)
         @Suppress("DEPRECATION")
         context.resources.updateConfiguration(configuration, context.resources.displayMetrics)
+        @Suppress("DEPRECATION")
+        context.applicationContext.resources.updateConfiguration(configuration, context.resources.displayMetrics)
     }
 
     fun currentDisplayName(context: Context): String {
@@ -60,7 +62,7 @@ object LanguageSettingsStore {
             MODE_ZH_CN -> context.getString(R.string.ui_chinese_simplified)
             MODE_EN -> "English"
             else -> {
-                val languageName = if (isSystemChinese(context)) {
+                val languageName = if (isSystemChinese()) {
                     context.getString(R.string.ui_chinese_simplified)
                 } else {
                     "English"
@@ -70,8 +72,8 @@ object LanguageSettingsStore {
         }
     }
 
-    private fun isSystemChinese(context: Context): Boolean {
-        val locale = context.resources.configuration.locales.get(0)
+    private fun isSystemChinese(): Boolean {
+        val locale = Resources.getSystem().configuration.locales.get(0)
         return locale.language.equals(Locale.CHINESE.language, ignoreCase = true)
     }
 }

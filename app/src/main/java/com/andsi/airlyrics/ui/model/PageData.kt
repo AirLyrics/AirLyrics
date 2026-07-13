@@ -60,8 +60,7 @@ internal data class LyricsSettingsUiState(
 
 internal data class LanguageOptionUiItem(
     val mode: String,
-    val title: String,
-    val subtitle: String
+    val title: String
 )
 
 internal data class LanguageSettingsUiState(

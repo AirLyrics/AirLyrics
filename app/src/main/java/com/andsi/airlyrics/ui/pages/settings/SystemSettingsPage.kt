@@ -93,12 +93,14 @@ private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLangua
         positiveText = null,
         body = {
             val selectMode: (String) -> Unit = { mode ->
-                setLanguageMode(mode)
                 dialog.dismiss()
-                activity.refreshAfterLanguageChanged()
+                if (mode != languageState.currentMode) {
+                    setLanguageMode(mode)
+                    activity.refreshAfterLanguageChanged()
+                }
             }
             languageState.options.forEach { option ->
-                addLanguageOption(activity, option.title, option.subtitle, option.mode, languageState.currentMode, selectMode)
+                addLanguageOption(activity, option.title, option.mode, languageState.currentMode, selectMode)
             }
         }
     )
@@ -107,14 +109,13 @@ private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLangua
 private fun LinearLayout.addLanguageOption(
     activity: MainUiHost,
     title: String,
-    subtitle: String,
     mode: String,
     currentMode: String,
     onSelect: (String) -> Unit
 ) {
     val selected = mode == currentMode
     addView(TextView(activity).apply {
-        text = if (selected) "✓ $title\n$subtitle" else "$title\n$subtitle"
+        text = if (selected) "✓ $title" else title
         textSize = AirUiTokens.TextSize.Button
         typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         setTextColor(if (selected) Color.WHITE else activity.colorTextStrong)

@@ -3,7 +3,6 @@ package com.andsi.airlyrics.app.host
 import com.andsi.airlyrics.app.platform.AppNavigator
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 import android.graphics.Color
 import android.graphics.Typeface
@@ -12,6 +11,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -26,6 +26,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.settingsHomeHeaderImpl(): View {
@@ -203,7 +204,22 @@ internal fun MainUiHost.openUrlImpl(url: String) {
 
 
 internal fun MainUiHost.refreshAfterLanguageChangedImpl() {
-    rebuildMainView()
-    rebuildCurrentPage(PageRebuildReason.LANGUAGE_CHANGED)
+    val oldContainer = contentContainer
+    oldContainer?.animate()
+        ?.alpha(0f)
+        ?.setDuration(AirUiTokens.Layout.FastFadeMs)
+        ?.withEndAction {
+            rebuildMainView(PageRebuildReason.LANGUAGE_CHANGED)
+            contentContainer?.alpha = 0f
+            contentContainer?.animate()
+                ?.alpha(1f)
+                ?.setDuration(AirUiTokens.Layout.RestoreFadeMs)
+                ?.setInterpolator(DecelerateInterpolator())
+                ?.start()
+        }
+        ?.start()
+        ?: run {
+            rebuildMainView(PageRebuildReason.LANGUAGE_CHANGED)
+        }
     uiActions.reloadFloatingLyrics()
 }

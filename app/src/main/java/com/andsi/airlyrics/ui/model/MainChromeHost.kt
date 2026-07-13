@@ -24,7 +24,7 @@ internal interface MainChromeHost {
         animateTabs: Boolean = true
     )
 
-    fun rebuildMainView()
+    fun rebuildMainView(reason: PageRebuildReason = PageRebuildReason.THEME_CHANGED)
     fun dp(value: Int): Int
     fun isDarkTheme(): Boolean
 }

@@ -10,6 +10,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isNotEmpty
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.ui.components.animatePageEnter
+import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.createBottomTabs
@@ -74,13 +75,14 @@ internal class MainHandRenderer(
         val baseBottomTabsPaddingRight = bottomTabs.paddingRight
         val baseBottomTabsPaddingBottom = bottomTabs.paddingBottom
 
-        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
             val safeInsets = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
             )
+            val topInset = view.remainingTopSystemInset(safeInsets.top)
 
             topSafeArea.layoutParams = (topSafeArea.layoutParams as LinearLayout.LayoutParams).apply {
-                height = safeInsets.top
+                height = topInset
             }
 
             host.contentContainer?.setPadding(
@@ -173,8 +175,10 @@ internal class MainHandRenderer(
         refs.clickThroughButton?.text = host.floatingClickThroughButtonText()
     }
 
-    override fun recreateForThemeChange() {
+    override fun recreateMainView(reason: PageRebuildReason) {
+        graph.uiHost.applySystemBarsTheme()
         graph.activity.setContentView(createMainView())
-        rebuildCurrentPage(PageRebuildReason.THEME_CHANGED)
+        graph.uiHost.applySystemBarsTheme()
+        rebuildCurrentPage(reason)
     }
 }

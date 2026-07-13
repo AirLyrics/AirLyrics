@@ -7,7 +7,6 @@
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
-
-    <style name="Theme.AirLyrics" parent="Base.Theme.AirLyrics" />
 </resources>

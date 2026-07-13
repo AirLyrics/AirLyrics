@@ -1,8 +1,10 @@
 package com.andsi.airlyrics.app.host
 
+import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.session.MediaController
+import android.os.Build
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
@@ -11,6 +13,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.core.graphics.drawable.toDrawable
+import androidx.core.view.WindowCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.platform.PermissionHelper
@@ -53,9 +57,8 @@ import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.model.RecentLyricsUiState
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
-import com.andsi.airlyrics.ui.theme.colorBackground
-import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
 /** Bridges handwritten main UI helpers to the UI-facing host boundary. */
@@ -96,8 +99,8 @@ internal class MainActivityUiHost(
         graph.uiInvalidator.rebuildCurrentPage(reason, animateContent, animateTabs)
     }
 
-    override fun rebuildMainView() {
-        graph.uiInvalidator.recreateForThemeChange()
+    override fun rebuildMainView(reason: PageRebuildReason) {
+        graph.uiInvalidator.recreateMainView(reason)
     }
 
     override fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -329,18 +332,15 @@ internal class MainActivityUiHost(
             options = listOf(
                 LanguageOptionUiItem(
                     mode = LanguageSettingsStore.MODE_SYSTEM,
-                    title = getString(R.string.ui_follow_system),
-                    subtitle = getString(R.string.ui_follow_system)
+                    title = getString(R.string.ui_follow_system)
                 ),
                 LanguageOptionUiItem(
                     mode = LanguageSettingsStore.MODE_ZH_CN,
-                    title = getString(R.string.ui_chinese_simplified),
-                    subtitle = getString(R.string.ui_chinese_simplified)
+                    title = getString(R.string.ui_chinese_simplified)
                 ),
                 LanguageOptionUiItem(
                     mode = LanguageSettingsStore.MODE_EN,
-                    title = getString(R.string.ui_english),
-                    subtitle = getString(R.string.ui_english)
+                    title = getString(R.string.ui_english)
                 )
             )
         )
@@ -373,20 +373,31 @@ internal class MainActivityUiHost(
             }
     }
 
+    @Suppress("DEPRECATION")
     fun applySystemBarsTheme() {
         val lightTheme = !isDarkTheme()
+        val backgroundColor = colorBackground
+        activity.window.setBackgroundDrawable(backgroundColor.toDrawable())
+        activity.window.decorView.setBackgroundColor(backgroundColor)
+        activity.findViewById<View>(android.R.id.content)?.setBackgroundColor(backgroundColor)
+
+        WindowCompat.setDecorFitsSystemWindows(activity.window, false)
         activity.enableEdgeToEdge(
             statusBarStyle = if (lightTheme) {
-                SystemBarStyle.light(colorBackground, colorBackground)
+                SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
             } else {
-                SystemBarStyle.dark(colorBackground)
+                SystemBarStyle.dark(Color.TRANSPARENT)
             },
             navigationBarStyle = if (lightTheme) {
-                SystemBarStyle.light(colorSurface, colorSurface)
+                SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
             } else {
-                SystemBarStyle.dark(colorSurface)
+                SystemBarStyle.dark(Color.TRANSPARENT)
             }
         )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            activity.window.isStatusBarContrastEnforced = false
+            activity.window.isNavigationBarContrastEnforced = false
+        }
     }
 }
 
