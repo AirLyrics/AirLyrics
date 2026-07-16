@@ -4,14 +4,13 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
+import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
@@ -77,39 +76,12 @@ class FloatingLyricsService : Service() {
 
     private val mediaReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val action = intent?.action ?: return
-            val sourcePackage = intent.getStringExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE).orEmpty()
-
-            if (action == BroadcastActions.MEDIA_SOURCE_LOST) {
+            CurrentMediaBroadcast.readMediaSourceLost(intent)?.let { sourcePackage ->
                 handleMediaSourceLost(sourcePackage)
                 return
             }
 
-            if (action != BroadcastActions.MEDIA_UPDATE) return
-
-            val title = intent.getStringExtra("title").orEmpty()
-            val artist = intent.getStringExtra("artist").orEmpty()
-            val album = intent.getStringExtra("album").orEmpty()
-            val isPlaying = intent.getBooleanExtra("isPlaying", false)
-            val duration = intent.getLongExtra("duration", 0L)
-            val position = intent.getLongExtra("position", 0L)
-            val snapshotSequence = intent.getLongExtra(
-                BroadcastActions.EXTRA_MEDIA_SNAPSHOT_SEQUENCE,
-                CurrentMediaInfo.UNSPECIFIED_SNAPSHOT_SEQUENCE
-            )
-
-            applyCurrentMediaInfo(
-                CurrentMediaInfo(
-                    sourcePackage = sourcePackage,
-                    title = title,
-                    artist = artist,
-                    album = album,
-                    durationMs = duration,
-                    isPlaying = isPlaying,
-                    positionMs = position,
-                    snapshotSequence = snapshotSequence
-                )
-            )
+            CurrentMediaBroadcast.readMediaUpdate(intent)?.let(::applyCurrentMediaInfo)
         }
     }
 
@@ -145,14 +117,10 @@ class FloatingLyricsService : Service() {
     }
 
     private fun registerMediaReceiver() {
-        val filter = IntentFilter().apply {
-            addAction(BroadcastActions.MEDIA_UPDATE)
-            addAction(BroadcastActions.MEDIA_SOURCE_LOST)
-        }
         ContextCompat.registerReceiver(
             this,
             mediaReceiver,
-            filter,
+            CurrentMediaBroadcast.mediaStatusFilter(),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
     }

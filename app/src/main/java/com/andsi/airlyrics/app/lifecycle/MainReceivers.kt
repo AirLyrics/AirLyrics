@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.common.BroadcastActions
+import com.andsi.airlyrics.media.CurrentMediaBroadcast
 
 /**
  * Owns main-screen broadcast receiver instances and their registration.
@@ -48,10 +49,7 @@ internal class MainReceivers(
         ContextCompat.registerReceiver(
             context,
             mediaReceiver,
-            IntentFilter().apply {
-                addAction(BroadcastActions.MEDIA_UPDATE)
-                addAction(BroadcastActions.MEDIA_SOURCE_LOST)
-            },
+            CurrentMediaBroadcast.mediaStatusFilter(),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
 

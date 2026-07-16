@@ -1,14 +1,12 @@
 package com.andsi.airlyrics.media
 
 import android.content.ComponentName
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
-import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 
@@ -104,11 +102,7 @@ class MediaNotificationListenerService : NotificationListenerService() {
             Log.d(TAG, "media source lost: source=$packageName")
         }
 
-        val intent = Intent(BroadcastActions.MEDIA_SOURCE_LOST).apply {
-            setPackage(this@MediaNotificationListenerService.packageName)
-            putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, packageName)
-        }
-        sendBroadcast(intent)
+        CurrentMediaBroadcast.mediaSourceLostIntent(this, packageName)?.let(::sendBroadcast)
     }
 
     private fun publishMediaInfo(media: CurrentMediaInfo) {
@@ -123,19 +117,7 @@ class MediaNotificationListenerService : NotificationListenerService() {
             )
         }
 
-        val intent = Intent(BroadcastActions.MEDIA_UPDATE).apply {
-            setPackage(packageName)
-            putExtra("title", media.title)
-            putExtra("artist", media.artist)
-            putExtra("album", media.album)
-            putExtra("duration", media.durationMs)
-            putExtra("position", media.positionMs)
-            putExtra("isPlaying", media.isPlaying)
-            putExtra(BroadcastActions.EXTRA_MEDIA_SNAPSHOT_SEQUENCE, media.snapshotSequence)
-            putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, media.sourcePackage)
-        }
-
-        sendBroadcast(intent)
+        sendBroadcast(CurrentMediaBroadcast.mediaUpdateIntent(this, media))
     }
 
     companion object {

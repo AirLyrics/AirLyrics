@@ -12,7 +12,7 @@ import com.andsi.airlyrics.app.contracts.FloatingSourceNotifier
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.contracts.MediaPageRefreshScheduler
 import com.andsi.airlyrics.app.contracts.MediaSourceSelectionRenderer
-import com.andsi.airlyrics.common.BroadcastActions
+import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
@@ -24,9 +24,8 @@ internal class MediaSourceController(
     private val floatingSourceNotifier: FloatingSourceNotifier
 ) : MediaControllerProvider {
     fun handleMediaStatusBroadcast(intent: Intent) {
-        when (intent.action) {
-            BroadcastActions.MEDIA_UPDATE,
-            BroadcastActions.MEDIA_SOURCE_LOST -> mediaPageRefreshScheduler.scheduleMediaPageRefresh()
+        if (CurrentMediaBroadcast.isMediaStatusIntent(intent)) {
+            mediaPageRefreshScheduler.scheduleMediaPageRefresh()
         }
     }
 
