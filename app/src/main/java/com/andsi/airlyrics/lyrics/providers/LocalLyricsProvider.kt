@@ -12,12 +12,14 @@ object LocalLyricsProvider : LyricsProvider {
 
     override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
         return runCatching {
+            request.cancellationToken?.throwIfCancellationRequested()
             val lyrics = LyricsStorage.readLocalLyrics(
                 context = request.context,
                 title = request.title,
                 artist = request.artist,
                 duration = request.durationMs
             ) ?: return@runCatching null
+            request.cancellationToken?.throwIfCancellationRequested()
 
             LyricsProviderResult(
                 providerId = id,

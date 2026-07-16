@@ -3,6 +3,7 @@ package com.andsi.airlyrics.lyrics.providers
 import android.content.res.Resources
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
@@ -33,7 +34,8 @@ object MusixmatchLyricsProvider : LyricsProvider {
             artist = request.artist,
             album = request.album,
             durationMs = request.durationMs,
-            translationLanguageCode = systemTranslationLanguageCode()
+            translationLanguageCode = systemTranslationLanguageCode(),
+            cancellationToken = request.cancellationToken
         ).map { result ->
             result?.let {
                 LyricsProviderResult(
@@ -64,17 +66,25 @@ object MusixmatchLyricsProvider : LyricsProvider {
         artist: String,
         album: String = "",
         durationMs: Long,
-        translationLanguageCode: String = ""
+        translationLanguageCode: String = "",
+        cancellationToken: LyricsLookupCancellationToken? = null
     ): Result<MusixmatchLyricsResult?> {
         return runCatching {
-            val jsonText = MusixmatchLyricsNative.fetchBestLyricsJson(
-                title = title,
-                artist = artist,
-                album = album,
-                durationMs = durationMs,
-                translationLanguageCode = translationLanguageCode,
-                reserved = false
-            )
+            cancellationToken?.throwIfCancellationRequested()
+            val jsonText = withNativeLyricsCancellation(
+                token = cancellationToken
+            ) { lookupId ->
+                MusixmatchLyricsNative.fetchBestLyricsJson(
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    durationMs = durationMs,
+                    translationLanguageCode = translationLanguageCode,
+                    lookupId = lookupId,
+                    reserved = false
+                )
+            }
+            cancellationToken?.throwIfCancellationRequested()
 
             val json = JSONObject(jsonText)
             if (!json.optBoolean("ok", false)) {

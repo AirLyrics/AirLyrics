@@ -11,6 +11,7 @@ object MusixmatchLyricsNative {
         album: String,
         durationMs: Long,
         translationLanguageCode: String,
+        lookupId: Long,
         reserved: Boolean
     ): String
 }

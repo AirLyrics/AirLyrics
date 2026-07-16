@@ -1,5 +1,7 @@
 use crate::lrc;
-use crate::{normalize_optional_lrc, NativeResult};
+use crate::{
+    begin_lookup_cancellation, check_lookup_cancelled, normalize_optional_lrc, NativeResult,
+};
 use musixmatch_inofficial::models::{
     SortOrder, Subtitle, SubtitleFormat, Track, TrackId, TranslationList,
 };
@@ -23,8 +25,12 @@ pub(crate) fn fetch_best_lyrics(
     album: &str,
     duration_ms: Option<u64>,
     translation_language: &str,
+    lookup_id: jni::sys::jlong,
     _reserved: bool,
 ) -> Result<NativeResult, String> {
+    let _cancellation_guard = begin_lookup_cancellation(lookup_id)?;
+    check_lookup_cancelled(lookup_id)?;
+
     if title.trim().is_empty() {
         return Err("empty title".into());
     }
@@ -46,12 +52,14 @@ pub(crate) fn fetch_best_lyrics(
             let translation_language = normalize_translation_language(translation_language);
 
             let (track, candidate_debug) =
-                find_best_track(&client, &title, &artist, &album, duration_ms).await?;
+                find_best_track(&client, &title, &artist, &album, duration_ms, lookup_id).await?;
 
+            check_lookup_cancelled(lookup_id)?;
             let (subtitle, subtitle_debug) =
-                match fetch_subtitle_for_track(&client, &track, duration_seconds).await {
+                match fetch_subtitle_for_track(&client, &track, duration_seconds, lookup_id).await {
                     Ok(value) => value,
                     Err(candidate_error) => {
+                        check_lookup_cancelled(lookup_id)?;
                         // Keep the old matcher as a final fallback. Some Musixmatch tracks can be
                         // found by matcher.subtitle even when track.search gives an ID whose subtitle
                         // endpoint refuses the request.
@@ -60,6 +68,7 @@ pub(crate) fn fetch_best_lyrics(
                             &title,
                             &artist,
                             duration_seconds,
+                            lookup_id,
                         )
                         .await
                         {
@@ -90,7 +99,8 @@ pub(crate) fn fetch_best_lyrics(
             let translated_lrc = if translation_language.is_empty() {
                 None
             } else {
-                match fetch_translation_for_track(&client, &track, &translation_language).await {
+                check_lookup_cancelled(lookup_id)?;
+                match fetch_translation_for_track(&client, &track, &translation_language, lookup_id).await {
                     Ok(translation_list) => translation_list_to_lrc(&lrc, &translation_list),
                     Err(error) => {
                         eprintln!(
@@ -136,14 +146,17 @@ async fn find_best_track(
     artist: &str,
     album: &str,
     duration_ms: Option<u64>,
+    lookup_id: jni::sys::jlong,
 ) -> Result<(Track, String), String> {
     let mut candidates = Vec::<Track>::new();
     let mut seen_track_ids = HashSet::<u64>::new();
     let mut search_errors = Vec::<String>::new();
 
     for attempt in build_track_search_attempts(title, artist) {
+        check_lookup_cancelled(lookup_id)?;
         match attempt.search(client).await {
             Ok(tracks) => {
+                check_lookup_cancelled(lookup_id)?;
                 for track in tracks {
                     if seen_track_ids.insert(track.track_id) {
                         candidates.push(track);
@@ -157,11 +170,13 @@ async fn find_best_track(
     // matcher.track is often stricter, but it can return a clean single match when
     // track.search is too broad or unordered.
     if !title.is_empty() || !artist.is_empty() {
+        check_lookup_cancelled(lookup_id)?;
         match client
             .matcher_track(title, artist, album, false, false, false)
             .await
         {
             Ok(track) => {
+                check_lookup_cancelled(lookup_id)?;
                 if seen_track_ids.insert(track.track_id) {
                     candidates.push(track);
                 }
@@ -315,6 +330,7 @@ async fn fetch_subtitle_for_track(
     client: &Musixmatch,
     track: &Track,
     duration_seconds: Option<f32>,
+    lookup_id: jni::sys::jlong,
 ) -> Result<(Subtitle, String), String> {
     let track_id = TrackId::TrackId(track.track_id);
     let mut errors = Vec::<String>::new();
@@ -325,22 +341,30 @@ async fn fetch_subtitle_for_track(
     ];
 
     for (duration, deviation, label) in duration_attempts {
+        check_lookup_cancelled(lookup_id)?;
         match client
             .track_subtitle(track_id.clone(), SubtitleFormat::Lrc, duration, deviation)
             .await
         {
-            Ok(subtitle) => return Ok((subtitle, label.to_string())),
+            Ok(subtitle) => {
+                check_lookup_cancelled(lookup_id)?;
+                return Ok((subtitle, label.to_string()));
+            }
             Err(error) => errors.push(format!("{label}: {error}")),
         }
     }
 
     if track.commontrack_id != 0 {
         let commontrack_id = TrackId::Commontrack(track.commontrack_id);
+        check_lookup_cancelled(lookup_id)?;
         match client
             .track_subtitle(commontrack_id, SubtitleFormat::Lrc, None, None)
             .await
         {
-            Ok(subtitle) => return Ok((subtitle, "commontrackId+lrc".to_string())),
+            Ok(subtitle) => {
+                check_lookup_cancelled(lookup_id)?;
+                return Ok((subtitle, "commontrackId+lrc".to_string()));
+            }
             Err(error) => errors.push(format!("commontrackId+lrc: {error}")),
         }
     }
@@ -353,27 +377,46 @@ async fn fetch_lrc_with_matcher_fallback(
     title: &str,
     artist: &str,
     duration_seconds: Option<f32>,
+    lookup_id: jni::sys::jlong,
 ) -> Result<Subtitle, String> {
     if let Some(duration) = duration_seconds {
+        check_lookup_cancelled(lookup_id)?;
         match client
-            .matcher_subtitle(title, artist, SubtitleFormat::Lrc, Some(duration), Some(12.0))
+            .matcher_subtitle(
+                title,
+                artist,
+                SubtitleFormat::Lrc,
+                Some(duration),
+                Some(12.0),
+            )
             .await
         {
-            Ok(subtitle) => Ok(subtitle),
-            Err(first_error) => client
-                .matcher_subtitle(title, artist, SubtitleFormat::Lrc, None, None)
-                .await
-                .map_err(|second_error| {
+            Ok(subtitle) => {
+                check_lookup_cancelled(lookup_id)?;
+                Ok(subtitle)
+            }
+            Err(first_error) => {
+                check_lookup_cancelled(lookup_id)?;
+                let subtitle = client
+                    .matcher_subtitle(title, artist, SubtitleFormat::Lrc, None, None)
+                    .await
+                    .map_err(|second_error| {
                     format!(
                         "matcher.subtitle duration failed: {first_error}; matcher.subtitle no-duration failed: {second_error}"
                     )
-                }),
+                    })?;
+                check_lookup_cancelled(lookup_id)?;
+                Ok(subtitle)
+            }
         }
     } else {
-        client
+        check_lookup_cancelled(lookup_id)?;
+        let subtitle = client
             .matcher_subtitle(title, artist, SubtitleFormat::Lrc, None, None)
             .await
-            .map_err(|error| format!("matcher.subtitle failed: {error}"))
+            .map_err(|error| format!("matcher.subtitle failed: {error}"))?;
+        check_lookup_cancelled(lookup_id)?;
+        Ok(subtitle)
     }
 }
 
@@ -381,24 +424,33 @@ async fn fetch_translation_for_track(
     client: &Musixmatch,
     track: &Track,
     language: &str,
+    lookup_id: jni::sys::jlong,
 ) -> Result<TranslationList, String> {
     let mut errors = Vec::<String>::new();
 
+    check_lookup_cancelled(lookup_id)?;
     match client
         .track_lyrics_translation(TrackId::TrackId(track.track_id), language)
         .await
     {
-        Ok(list) if !list.is_empty() => return Ok(list),
+        Ok(list) if !list.is_empty() => {
+            check_lookup_cancelled(lookup_id)?;
+            return Ok(list);
+        }
         Ok(_) => errors.push(format!("trackId+translation({language}): empty")),
         Err(error) => errors.push(format!("trackId+translation({language}): {error}")),
     }
 
     if track.commontrack_id != 0 {
+        check_lookup_cancelled(lookup_id)?;
         match client
             .track_lyrics_translation(TrackId::Commontrack(track.commontrack_id), language)
             .await
         {
-            Ok(list) if !list.is_empty() => return Ok(list),
+            Ok(list) if !list.is_empty() => {
+                check_lookup_cancelled(lookup_id)?;
+                return Ok(list);
+            }
             Ok(_) => errors.push(format!("commontrackId+translation({language}): empty")),
             Err(error) => errors.push(format!("commontrackId+translation({language}): {error}")),
         }

@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.lyrics.providers
 
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsSearchRequest
@@ -27,7 +28,8 @@ object NeteaseLyricsProvider : LyricsProvider {
             title = request.title,
             artist = request.artist,
             album = request.album,
-            durationMs = request.durationMs
+            durationMs = request.durationMs,
+            cancellationToken = request.cancellationToken
         ).map { result ->
             result?.let {
                 LyricsProviderResult(
@@ -48,16 +50,24 @@ object NeteaseLyricsProvider : LyricsProvider {
         title: String,
         artist: String,
         album: String = "",
-        durationMs: Long
+        durationMs: Long,
+        cancellationToken: LyricsLookupCancellationToken? = null
     ): Result<NeteaseLyricsResult?> {
         return runCatching {
-            val jsonText = NeteaseLyricsNative.fetchBestLyricsJson(
-                title = title,
-                artist = artist,
-                album = album,
-                durationMs = durationMs,
-                requestKlyric = false
-            )
+            cancellationToken?.throwIfCancellationRequested()
+            val jsonText = withNativeLyricsCancellation(
+                token = cancellationToken
+            ) { lookupId ->
+                NeteaseLyricsNative.fetchBestLyricsJson(
+                    title = title,
+                    artist = artist,
+                    album = album,
+                    durationMs = durationMs,
+                    lookupId = lookupId,
+                    requestKlyric = false
+                )
+            }
+            cancellationToken?.throwIfCancellationRequested()
 
             val json = JSONObject(jsonText)
             if (!json.optBoolean("ok", false)) {

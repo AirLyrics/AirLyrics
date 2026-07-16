@@ -11,30 +11,80 @@ import java.util.concurrent.ThreadFactory
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Cooperative cancellation token for lyrics lookups.
  *
  * Canceling a lookup marks the token and interrupts the worker. Kotlin/file based lookup stages
- * check the token between steps, while Rust/JNI provider calls may only stop after the native call
- * returns or times out. Results from canceled tokens are never delivered back to the UI.
+ * check the token between steps, while Rust/JNI provider calls receive a native lookup id and can
+ * stop between network stages. Results from canceled tokens are never delivered back to the UI.
  */
 class LyricsLookupCancellationToken internal constructor(
     val requestKey: String,
-    val generation: Long
+    val generation: Long,
+    val nativeLookupId: Long = nextNativeLookupId()
 ) {
+    private val lock = Any()
+    private val cancellationCallbacks = mutableListOf<() -> Unit>()
+
     @Volatile
     var isCancellationRequested: Boolean = false
         private set
 
     internal fun cancel() {
-        isCancellationRequested = true
+        val callbacks = synchronized(lock) {
+            if (isCancellationRequested) {
+                emptyList()
+            } else {
+                isCancellationRequested = true
+                cancellationCallbacks.toList()
+            }
+        }
+        callbacks.forEach { callback ->
+            runCatching { callback() }
+        }
     }
 
     fun throwIfCancellationRequested() {
         if (isCancellationRequested || Thread.currentThread().isInterrupted) {
             throw CancellationException("Lyrics lookup was canceled: $requestKey#$generation")
         }
+    }
+
+    internal fun invokeOnCancellation(callback: () -> Unit): LyricsLookupCancellationRegistration {
+        var runImmediately = false
+        synchronized(lock) {
+            if (isCancellationRequested) {
+                runImmediately = true
+            } else {
+                cancellationCallbacks += callback
+            }
+        }
+
+        if (runImmediately) {
+            runCatching { callback() }
+        }
+
+        return LyricsLookupCancellationRegistration {
+            synchronized(lock) {
+                cancellationCallbacks.remove(callback)
+            }
+        }
+    }
+
+    companion object {
+        private val nativeLookupIdCounter = AtomicLong(1L)
+
+        private fun nextNativeLookupId(): Long = nativeLookupIdCounter.getAndIncrement()
+    }
+}
+
+internal class LyricsLookupCancellationRegistration(
+    private val disposeAction: () -> Unit
+) {
+    fun dispose() {
+        disposeAction()
     }
 }
 

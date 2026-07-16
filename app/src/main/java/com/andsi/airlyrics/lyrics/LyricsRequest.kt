@@ -8,5 +8,6 @@ data class LyricsSearchRequest(
     val title: String,
     val artist: String,
     val album: String = "",
-    val durationMs: Long
+    val durationMs: Long,
+    val cancellationToken: LyricsLookupCancellationToken? = null
 )

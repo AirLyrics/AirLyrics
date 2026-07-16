@@ -4,11 +4,15 @@ use jni::JNIEnv;
 use ncmapi::types::{Album, Artist, LyricResp, SearchSongResp, Song};
 use ncmapi::NcmApi;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
 
 mod lrc;
 mod musixmatch;
 
 const NETEASE_LOOKUP_TIMEOUT_SECS: u64 = 6;
+
+static LOOKUP_CANCELLATIONS: OnceLock<Mutex<HashMap<i64, bool>>> = OnceLock::new();
 
 #[derive(Debug, Clone)]
 struct Candidate {
@@ -45,9 +49,10 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_NeteaseLyricsNa
     artist: JString,
     album: JString,
     duration_ms: jni::sys::jlong,
+    lookup_id: jni::sys::jlong,
     _reserved: jni::sys::jboolean,
 ) -> jstring {
-    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms)
+    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms, lookup_id)
 }
 
 // Keep the old root-package symbol as a compatibility alias for older APKs/builds.
@@ -61,7 +66,7 @@ pub extern "system" fn Java_com_andsi_airlyrics_NeteaseLyricsNative_fetchBestLyr
     duration_ms: jni::sys::jlong,
     _reserved: jni::sys::jboolean,
 ) -> jstring {
-    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms)
+    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms, 0)
 }
 
 #[no_mangle]
@@ -73,6 +78,7 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
     album: JString,
     duration_ms: jni::sys::jlong,
     translation_language: JString,
+    lookup_id: jni::sys::jlong,
     _reserved: jni::sys::jboolean,
 ) -> jstring {
     let title = jstring_to_string(&mut env, title);
@@ -92,6 +98,7 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
             &album,
             duration_ms,
             &translation_language,
+            lookup_id,
             false,
         )
     })
@@ -113,6 +120,24 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
         .unwrap_or(std::ptr::null_mut())
 }
 
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LyricsNativeCancellation_cancelLookup(
+    _env: JNIEnv,
+    _this: JObject,
+    lookup_id: jni::sys::jlong,
+) {
+    cancel_lookup(lookup_id);
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LyricsNativeCancellation_clearLookup(
+    _env: JNIEnv,
+    _this: JObject,
+    lookup_id: jni::sys::jlong,
+) {
+    clear_lookup(lookup_id);
+}
+
 fn fetch_netease_lyrics_json(
     mut env: JNIEnv,
     _this: JObject,
@@ -120,6 +145,7 @@ fn fetch_netease_lyrics_json(
     artist: JString,
     album: JString,
     duration_ms: jni::sys::jlong,
+    lookup_id: jni::sys::jlong,
 ) -> jstring {
     let title = jstring_to_string(&mut env, title);
     let artist = jstring_to_string(&mut env, artist);
@@ -130,9 +156,10 @@ fn fetch_netease_lyrics_json(
         None
     };
 
-    let result =
-        std::panic::catch_unwind(|| fetch_best_lyrics(&title, &artist, &album, duration_ms))
-            .unwrap_or_else(|_| Err("native panic while fetching lyrics".to_string()));
+    let result = std::panic::catch_unwind(|| {
+        fetch_best_lyrics(&title, &artist, &album, duration_ms, lookup_id)
+    })
+    .unwrap_or_else(|_| Err("native panic while fetching lyrics".to_string()));
 
     let json = match result {
         Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| {
@@ -207,12 +234,84 @@ fn classify_error(message: &str) -> &'static str {
     }
 }
 
+pub(crate) struct LookupCancellationGuard {
+    lookup_id: i64,
+}
+
+impl Drop for LookupCancellationGuard {
+    fn drop(&mut self) {
+        clear_lookup(self.lookup_id);
+    }
+}
+
+pub(crate) fn begin_lookup_cancellation(
+    lookup_id: jni::sys::jlong,
+) -> Result<LookupCancellationGuard, String> {
+    if lookup_id <= 0 {
+        return Ok(LookupCancellationGuard { lookup_id: 0 });
+    }
+
+    let mut cancellations = lookup_cancellations()
+        .lock()
+        .map_err(|_| "native cancellation registry poisoned".to_string())?;
+    let canceled = *cancellations.entry(lookup_id).or_insert(false);
+    if canceled {
+        cancellations.remove(&lookup_id);
+        return Err("lookup canceled".to_string());
+    }
+
+    Ok(LookupCancellationGuard { lookup_id })
+}
+
+pub(crate) fn check_lookup_cancelled(lookup_id: jni::sys::jlong) -> Result<(), String> {
+    if lookup_id <= 0 {
+        return Ok(());
+    }
+
+    let cancellations = lookup_cancellations()
+        .lock()
+        .map_err(|_| "native cancellation registry poisoned".to_string())?;
+    if cancellations.get(&lookup_id).copied().unwrap_or(false) {
+        Err("lookup canceled".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+fn cancel_lookup(lookup_id: jni::sys::jlong) {
+    if lookup_id <= 0 {
+        return;
+    }
+
+    if let Ok(mut cancellations) = lookup_cancellations().lock() {
+        cancellations.insert(lookup_id, true);
+    }
+}
+
+fn clear_lookup(lookup_id: jni::sys::jlong) {
+    if lookup_id <= 0 {
+        return;
+    }
+
+    if let Ok(mut cancellations) = lookup_cancellations().lock() {
+        cancellations.remove(&lookup_id);
+    }
+}
+
+fn lookup_cancellations() -> &'static Mutex<HashMap<i64, bool>> {
+    LOOKUP_CANCELLATIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 fn fetch_best_lyrics(
     title: &str,
     artist: &str,
     album: &str,
     duration_ms: Option<u64>,
+    lookup_id: jni::sys::jlong,
 ) -> Result<NativeResult, String> {
+    let _cancellation_guard = begin_lookup_cancellation(lookup_id)?;
+    check_lookup_cancelled(lookup_id)?;
+
     if title.trim().is_empty() {
         return Err("empty title".into());
     }
@@ -231,10 +330,12 @@ fn fetch_best_lyrics(
                 let mut best_candidates = Vec::new();
 
                 for keyword in keywords {
+                    check_lookup_cancelled(lookup_id)?;
                     let response = api
                         .search(&keyword, None)
                         .await
                         .map_err(|e| format!("netease search failed: {e}"))?;
+                    check_lookup_cancelled(lookup_id)?;
                     let search_resp: SearchSongResp = response
                         .deserialize()
                         .map_err(|e| format!("failed to decode search response: {e}"))?;
@@ -267,10 +368,12 @@ fn fetch_best_lyrics(
                     .id
                     .parse::<usize>()
                     .map_err(|e| format!("invalid netease song id {}: {e}", best.id))?;
+                check_lookup_cancelled(lookup_id)?;
                 let lyric_response = api
                     .lyric(song_id)
                     .await
                     .map_err(|e| format!("netease lyric query failed: {e}"))?;
+                check_lookup_cancelled(lookup_id)?;
                 let lyric_resp: LyricResp = lyric_response
                     .deserialize()
                     .map_err(|e| format!("failed to decode lyric response: {e}"))?;

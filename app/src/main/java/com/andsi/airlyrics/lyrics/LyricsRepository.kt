@@ -10,6 +10,7 @@ import com.andsi.airlyrics.lyrics.providers.NeteaseLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.core.model.LyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
+import java.util.concurrent.CancellationException
 
 /**
  * Central lyrics lookup entry point.
@@ -83,7 +84,8 @@ internal class LyricsRepositoryEngine(
             title = title,
             artist = artist,
             album = album,
-            durationMs = durationMs
+            durationMs = durationMs,
+            cancellationToken = cancellationToken
         )
 
         return runCatching {
@@ -118,6 +120,9 @@ internal class LyricsRepositoryEngine(
 
             cancellationToken?.throwIfCancellationRequested()
             val onlineResult = provider.fetch(request).getOrElse { error ->
+                if (error is CancellationException) {
+                    throw error
+                }
                 lookupLogger.logProviderFailure(
                     provider = provider,
                     title = title,
