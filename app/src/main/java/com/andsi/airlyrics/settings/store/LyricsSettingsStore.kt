@@ -1,13 +1,12 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
-import androidx.core.content.edit
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.LyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
-import com.andsi.airlyrics.core.model.LyricsSourceOption
+import com.andsi.airlyrics.core.prefs.prefs
 
 object LyricsSettingsStore {
     private const val PREFS_NAME = "lyrics_settings"
@@ -19,13 +18,10 @@ object LyricsSettingsStore {
     private const val KEY_SWITCH_ANIMATION_MODE = "switch_animation_mode"
     private const val KEY_KARAOKE_LYRICS_ENABLED = "karaoke_lyrics_enabled"
 
-    val sourceOptions = LyricsSearchSource.entries.map { source ->
-        LyricsSourceOption(key = source.key)
-    }
+    private fun store(context: Context) = prefs(context, PREFS_NAME)
 
     fun getLyricsSearchSource(context: Context): LyricsSearchSource {
-        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_LYRICS_SOURCE, null)
+        val value = store(context).getString(KEY_LYRICS_SOURCE)
 
         return if (value == null) {
             LyricsSearchSource.default
@@ -35,14 +31,10 @@ object LyricsSettingsStore {
     }
 
     fun setLyricsSearchSource(context: Context, source: LyricsSearchSource) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+        store(context).edit {
             putString(KEY_LYRICS_SOURCE, source.key)
             putBoolean(KEY_AUTO_SEARCH_ONLINE, source != LyricsSearchSource.LOCAL_ONLY)
         }
-    }
-
-    fun getLyricsSource(context: Context): String {
-        return getLyricsSearchSource(context).key
     }
 
     fun setLyricsSource(context: Context, source: String) {
@@ -52,82 +44,67 @@ object LyricsSettingsStore {
 
     fun isAutoSearchOnlineEnabled(context: Context): Boolean {
         if (getLyricsSearchSource(context) == LyricsSearchSource.LOCAL_ONLY) return false
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_AUTO_SEARCH_ONLINE, true)
+        return store(context).getBoolean(KEY_AUTO_SEARCH_ONLINE, true)
     }
 
     fun setAutoSearchOnlineEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+        val currentSource = getLyricsSearchSource(context)
+        store(context).edit {
             putBoolean(KEY_AUTO_SEARCH_ONLINE, enabled)
 
             if (!enabled) {
                 putString(KEY_LYRICS_SOURCE, LyricsSearchSource.LOCAL_ONLY.key)
-            } else if (getLyricsSearchSource(context) == LyricsSearchSource.LOCAL_ONLY) {
+            } else if (currentSource == LyricsSearchSource.LOCAL_ONLY) {
                 putString(KEY_LYRICS_SOURCE, LyricsSearchSource.default.key)
             }
         }
     }
 
     fun isAutoSaveLocalEnabled(context: Context): Boolean {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_AUTO_SAVE_LOCAL, true)
+        return store(context).getBoolean(KEY_AUTO_SAVE_LOCAL, true)
     }
 
     fun setAutoSaveLocalEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-            putBoolean(KEY_AUTO_SAVE_LOCAL, enabled)
-        }
+        store(context).setBoolean(KEY_AUTO_SAVE_LOCAL, enabled)
     }
 
 
     fun getContentDisplayMode(context: Context): LyricsContentDisplayMode {
-        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_CONTENT_DISPLAY_MODE, LyricsContentDisplayMode.default.key)
+        val value = store(context).getString(KEY_CONTENT_DISPLAY_MODE, LyricsContentDisplayMode.default.key)
 
         return LyricsContentDisplayMode.fromKey(value)
     }
 
     fun setContentDisplayMode(context: Context, mode: LyricsContentDisplayMode) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-            putString(KEY_CONTENT_DISPLAY_MODE, mode.key)
-        }
+        store(context).setString(KEY_CONTENT_DISPLAY_MODE, mode.key)
     }
 
     fun getLineDisplayMode(context: Context): LyricsLineDisplayMode {
-        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_LINE_DISPLAY_MODE, LyricsLineDisplayMode.default.key)
+        val value = store(context).getString(KEY_LINE_DISPLAY_MODE, LyricsLineDisplayMode.default.key)
 
         return LyricsLineDisplayMode.fromKey(value)
     }
 
     fun setLineDisplayMode(context: Context, mode: LyricsLineDisplayMode) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-            putString(KEY_LINE_DISPLAY_MODE, mode.key)
-        }
+        store(context).setString(KEY_LINE_DISPLAY_MODE, mode.key)
     }
 
     fun getSwitchAnimationMode(context: Context): LyricsSwitchAnimationMode {
-        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_SWITCH_ANIMATION_MODE, LyricsSwitchAnimationMode.default.key)
+        val value = store(context).getString(KEY_SWITCH_ANIMATION_MODE, LyricsSwitchAnimationMode.default.key)
 
         return LyricsSwitchAnimationMode.fromKey(value)
     }
 
     fun setSwitchAnimationMode(context: Context, mode: LyricsSwitchAnimationMode) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-            putString(KEY_SWITCH_ANIMATION_MODE, mode.key)
-        }
+        store(context).setString(KEY_SWITCH_ANIMATION_MODE, mode.key)
     }
 
     fun isKaraokeLyricsEnabled(context: Context): Boolean {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getBoolean(KEY_KARAOKE_LYRICS_ENABLED, false)
+        return store(context).getBoolean(KEY_KARAOKE_LYRICS_ENABLED, false)
     }
 
     fun setKaraokeLyricsEnabled(context: Context, enabled: Boolean) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-            putBoolean(KEY_KARAOKE_LYRICS_ENABLED, enabled)
-        }
+        store(context).setBoolean(KEY_KARAOKE_LYRICS_ENABLED, enabled)
     }
 
     fun getSettings(context: Context): LyricsSettings {

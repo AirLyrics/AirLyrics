@@ -1,12 +1,12 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.graphics.Color
 import android.view.Gravity
-import androidx.core.content.edit
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.prefs.PreferenceStore
+import com.andsi.airlyrics.core.prefs.prefs as preferenceStore
 
 object FloatingLyricsStyleStore {
     private const val PREFS_NAME = "floating_lyrics_style"
@@ -85,8 +85,8 @@ object FloatingLyricsStyleStore {
         FloatingLyricsPreset(PRESET_BUBBLE, "Vinyl bubble")
     )
 
-    private fun prefs(context: Context): SharedPreferences {
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private fun prefs(context: Context): PreferenceStore {
+        return preferenceStore(context, PREFS_NAME)
     }
 
     private fun normalizePreset(key: String?): String {
@@ -98,9 +98,7 @@ object FloatingLyricsStyleStore {
     }
 
     fun setPreviewExpanded(context: Context, expanded: Boolean) {
-        prefs(context).edit {
-            putBoolean(KEY_PREVIEW_EXPANDED, expanded)
-        }
+        prefs(context).setBoolean(KEY_PREVIEW_EXPANDED, expanded)
     }
 
     fun getStyle(context: Context): FloatingLyricsStyle {
@@ -143,21 +141,15 @@ object FloatingLyricsStyleStore {
     }
 
     fun setTextSize(context: Context, textSizeSp: Float) {
-        prefs(context).edit {
-            putFloat(KEY_TEXT_SIZE, textSizeSp.coerceIn(14f, 56f))
-        }
+        prefs(context).setFloat(KEY_TEXT_SIZE, textSizeSp.coerceIn(14f, 56f))
     }
 
     fun setTextColor(context: Context, color: Int) {
-        prefs(context).edit {
-            putInt(KEY_TEXT_COLOR, color)
-        }
+        prefs(context).setInt(KEY_TEXT_COLOR, color)
     }
 
     fun setKaraokeHighlightColor(context: Context, color: Int) {
-        prefs(context).edit {
-            putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color)
-        }
+        prefs(context).setInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color)
     }
 
     fun setBackgroundColor(context: Context, color: Int) {
@@ -169,57 +161,39 @@ object FloatingLyricsStyleStore {
     }
 
     fun setBackgroundEnabled(context: Context, enabled: Boolean) {
-        prefs(context).edit {
-            putBoolean(KEY_BACKGROUND_ENABLED, enabled)
-        }
+        prefs(context).setBoolean(KEY_BACKGROUND_ENABLED, enabled)
     }
 
     fun setGravity(context: Context, gravity: Int) {
-        prefs(context).edit {
-            putInt(KEY_GRAVITY, gravity)
-        }
+        prefs(context).setInt(KEY_GRAVITY, gravity)
     }
 
     fun setShadowColor(context: Context, color: Int) {
-        prefs(context).edit {
-            putInt(KEY_SHADOW_COLOR, color)
-        }
+        prefs(context).setInt(KEY_SHADOW_COLOR, color)
     }
 
     fun setShadowRadius(context: Context, radius: Float) {
-        prefs(context).edit {
-            putFloat(KEY_SHADOW_RADIUS, radius.coerceIn(0f, 24f))
-        }
+        prefs(context).setFloat(KEY_SHADOW_RADIUS, radius.coerceIn(0f, 24f))
     }
 
     fun setCornerRadius(context: Context, radiusDp: Int) {
-        prefs(context).edit {
-            putInt(KEY_CORNER_RADIUS, radiusDp.coerceIn(0, 36))
-        }
+        prefs(context).setInt(KEY_CORNER_RADIUS, radiusDp.coerceIn(0, 36))
     }
 
     fun setPaddingHorizontal(context: Context, paddingDp: Int) {
-        prefs(context).edit {
-            putInt(KEY_PADDING_HORIZONTAL, paddingDp.coerceIn(0, 36))
-        }
+        prefs(context).setInt(KEY_PADDING_HORIZONTAL, paddingDp.coerceIn(0, 36))
     }
 
     fun setPaddingVertical(context: Context, paddingDp: Int) {
-        prefs(context).edit {
-            putInt(KEY_PADDING_VERTICAL, paddingDp.coerceIn(0, 28))
-        }
+        prefs(context).setInt(KEY_PADDING_VERTICAL, paddingDp.coerceIn(0, 28))
     }
 
     fun setMaxWidthPercent(context: Context, percent: Int) {
-        prefs(context).edit {
-            putInt(KEY_MAX_WIDTH_PERCENT, percent.coerceIn(45, 100))
-        }
+        prefs(context).setInt(KEY_MAX_WIDTH_PERCENT, percent.coerceIn(45, 100))
     }
 
     fun setLocked(context: Context, locked: Boolean) {
-        prefs(context).edit {
-            putBoolean(KEY_LOCKED, locked)
-        }
+        prefs(context).setBoolean(KEY_LOCKED, locked)
     }
 
     fun isLocked(context: Context): Boolean {
@@ -227,9 +201,7 @@ object FloatingLyricsStyleStore {
     }
 
     fun setClickThrough(context: Context, clickThrough: Boolean) {
-        prefs(context).edit {
-            putBoolean(KEY_CLICK_THROUGH, clickThrough)
-        }
+        prefs(context).setBoolean(KEY_CLICK_THROUGH, clickThrough)
     }
 
     fun isClickThrough(context: Context): Boolean {
@@ -242,9 +214,7 @@ object FloatingLyricsStyleStore {
     }
 
     fun setAutoHideWhenPaused(context: Context, enabled: Boolean) {
-        prefs(context).edit {
-            putBoolean(KEY_AUTO_HIDE_WHEN_PAUSED, enabled)
-        }
+        prefs(context).setBoolean(KEY_AUTO_HIDE_WHEN_PAUSED, enabled)
     }
 
     fun isAutoHideWhenPaused(context: Context): Boolean {

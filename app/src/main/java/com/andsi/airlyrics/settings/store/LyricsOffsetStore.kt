@@ -1,8 +1,8 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
-import androidx.core.content.edit
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.core.prefs.prefs
 
 /**
  * Per-song lyric timing offset. The raw lyric files stay untouched; this store only
@@ -13,36 +13,34 @@ object LyricsOffsetStore {
     private const val KEY_PREFIX = "song_offset_ms_"
     private const val MAX_OFFSET_MS = 30_000L
 
+    private fun store(context: Context) = prefs(context, PREFS_NAME)
+
     fun getOffsetMs(context: Context, identity: SongIdentity): Long {
         if (identity.title.isBlank()) return 0L
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val preferences = store(context)
         val exactKey = offsetKey(identity)
         val weakKey = weakOffsetKey(identity)
 
-        if (prefs.contains(exactKey)) {
-            val offset = prefs.getLong(exactKey, 0L)
-            if (!prefs.contains(weakKey)) {
-                prefs.edit {
-                    putLong(weakKey, offset)
-                }
+        if (preferences.contains(exactKey)) {
+            val offset = preferences.getLong(exactKey, 0L)
+            if (!preferences.contains(weakKey)) {
+                preferences.setLong(weakKey, offset)
             }
             return offset
         }
 
-        nearbyDurationKeys(identity).firstOrNull { prefs.contains(it) }?.let { nearbyKey ->
-            val offset = prefs.getLong(nearbyKey, 0L)
-            prefs.edit {
+        nearbyDurationKeys(identity).firstOrNull { preferences.contains(it) }?.let { nearbyKey ->
+            val offset = preferences.getLong(nearbyKey, 0L)
+            preferences.edit {
                 putLong(exactKey, offset)
                 putLong(weakKey, offset)
             }
             return offset
         }
 
-        if (prefs.contains(weakKey)) {
-            val offset = prefs.getLong(weakKey, 0L)
-            prefs.edit {
-                putLong(exactKey, offset)
-            }
+        if (preferences.contains(weakKey)) {
+            val offset = preferences.getLong(weakKey, 0L)
+            preferences.setLong(exactKey, offset)
             return offset
         }
 
@@ -54,7 +52,7 @@ object LyricsOffsetStore {
         val safeOffset = offsetMs.coerceIn(-MAX_OFFSET_MS, MAX_OFFSET_MS)
         val exactKey = offsetKey(identity)
         val weakKey = weakOffsetKey(identity)
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+        store(context).edit {
             putLong(exactKey, safeOffset)
             putLong(weakKey, safeOffset)
         }
@@ -68,7 +66,7 @@ object LyricsOffsetStore {
 
     fun resetOffset(context: Context, identity: SongIdentity) {
         if (identity.title.isBlank()) return
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+        store(context).edit {
             remove(offsetKey(identity))
             remove(weakOffsetKey(identity))
             nearbyDurationKeys(identity).forEach { remove(it) }

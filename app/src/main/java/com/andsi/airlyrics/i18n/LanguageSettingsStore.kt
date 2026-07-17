@@ -5,7 +5,7 @@ import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.LocaleList
 import com.andsi.airlyrics.R
-import androidx.core.content.edit
+import com.andsi.airlyrics.core.prefs.prefs
 import java.util.Locale
 
 object LanguageSettingsStore {
@@ -16,10 +16,10 @@ object LanguageSettingsStore {
     private const val PREFS = "airlyrics_language_settings"
     private const val KEY_MODE = "language_mode"
 
+    private fun store(context: Context) = prefs(context, PREFS)
+
     fun getMode(context: Context): String {
-        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY_MODE, MODE_SYSTEM)
-        return when (stored) {
+        return when (val stored = store(context).getString(KEY_MODE, MODE_SYSTEM)) {
             MODE_ZH_CN, MODE_EN -> stored
             else -> MODE_SYSTEM
         }
@@ -30,9 +30,7 @@ object LanguageSettingsStore {
             MODE_ZH_CN, MODE_EN -> mode
             else -> MODE_SYSTEM
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit {
-            putString(KEY_MODE, normalized)
-        }
+        store(context).setString(KEY_MODE, normalized)
         applyAppLocale(context)
     }
 

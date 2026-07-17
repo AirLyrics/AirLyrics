@@ -2,21 +2,20 @@ package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
 import android.net.Uri
-import androidx.core.content.edit
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.andsi.airlyrics.core.prefs.prefs
 import java.io.File
 
 internal object LyricsStoragePaths {
+    private fun store(context: Context) = prefs(context, PREFS_NAME)
+
     fun saveLyricsDirUri(context: Context, uri: Uri) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
-            putString(KEY_TREE_URI, uri.toString())
-        }
+        store(context).setString(KEY_TREE_URI, uri.toString())
     }
 
     fun getLyricsDirUri(context: Context): Uri? {
-        val value = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_TREE_URI, null)
+        val value = store(context).getString(KEY_TREE_URI)
         return value?.toUri()
     }
 
