@@ -15,6 +15,4 @@ internal interface MainUiState {
     var renderedSettingsSubPage: SettingsSubPage
     var mediaRefreshState: RefreshState
     var mediaPageRefreshScheduled: Boolean
-    var currentLyricsLoadGeneration: Int
-    var recentLyricsLoadGeneration: Int
 }

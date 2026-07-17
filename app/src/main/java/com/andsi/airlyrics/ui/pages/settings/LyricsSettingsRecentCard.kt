@@ -14,6 +14,7 @@ import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
+import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -24,6 +25,8 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+
+private val recentLyricsLoadRunner = LatestUiTaskRunner()
 
 internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity) {
     val listBody = LinearLayout(this).apply {
@@ -117,7 +120,6 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
     }
 
     populateRecentLyrics = { showRefreshFeedback ->
-        val loadGeneration = ++recentLyricsLoadGeneration
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
         } else {
@@ -125,13 +127,11 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
             listBody.addView(normalText(activity, getString(R.string.ui_loading)))
         }
 
-        runOnAppIo {
-            val state = recentLyricsState(limit = 8)
-
-            runOnMainThread {
-                if (loadGeneration != recentLyricsLoadGeneration) return@runOnMainThread
-                renderLyricsList(state.currentItem, state.recentLyrics, state.media, showRefreshFeedback)
-            }
+        recentLyricsLoadRunner.submit(
+            runtime = activity,
+            load = { recentLyricsState(limit = 8) }
+        ) { state ->
+            renderLyricsList(state.currentItem, state.recentLyrics, state.media, showRefreshFeedback)
         }
     }
 

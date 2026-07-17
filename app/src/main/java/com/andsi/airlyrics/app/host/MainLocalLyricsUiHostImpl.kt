@@ -18,6 +18,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.showAirDialog
+import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -27,9 +28,8 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import java.util.concurrent.atomic.AtomicInteger
 
-private val localLyricsEditorLoadGeneration = AtomicInteger(0)
+private val localLyricsEditorLoadRunner = LatestUiTaskRunner()
 
 internal fun MainUiHost.localLyricsRowImpl(
     item: LocalLyricsUiItem,
@@ -110,27 +110,23 @@ private fun MainUiHost.openLocalLyricsEditor(
     onLyricsSaved: (() -> Unit)?
 ) {
     val isKaraoke = target == LyricsStorage.LocalLyricsEditTarget.KARAOKE
-    val loadGeneration = localLyricsEditorLoadGeneration.incrementAndGet()
     AirToast.showShort(this, R.string.ui_loading)
 
-    runOnAppIo {
-        val rawLyrics = LyricsStorage.readLocalLyricsItemText(this, item, target)
-        runOnMainThread {
-            if (loadGeneration != localLyricsEditorLoadGeneration.get()) return@runOnMainThread
-
-            if (rawLyrics == null) {
-                showAirDialog(
-                    title = getString(R.string.ui_read_failed),
-                    message = if (isKaraoke) {
-                        getString(R.string.ui_cannot_read_enhanced_lrc_file)
-                    } else {
-                        getString(R.string.ui_cannot_read_this_lyric_file)
-                    },
-                    positiveText = getString(R.string.ui_ok)
-                )
-                return@runOnMainThread
-            }
-
+    localLyricsEditorLoadRunner.submit(
+        runtime = this,
+        load = { LyricsStorage.readLocalLyricsItemText(this, item, target) }
+    ) { rawLyrics ->
+        if (rawLyrics == null) {
+            showAirDialog(
+                title = getString(R.string.ui_read_failed),
+                message = if (isKaraoke) {
+                    getString(R.string.ui_cannot_read_enhanced_lrc_file)
+                } else {
+                    getString(R.string.ui_cannot_read_this_lyric_file)
+                },
+                positiveText = getString(R.string.ui_ok)
+            )
+        } else {
             showLocalLyricsEditorDialog(item, target, rawLyrics, onLyricsSaved)
         }
     }

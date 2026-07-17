@@ -19,8 +19,6 @@ internal class MainActivityState : MainFloatingState, MainUiState {
     override var renderedSettingsSubPage: SettingsSubPage = SettingsSubPage.HOME
     override var mediaRefreshState: RefreshState = RefreshState.IDLE
     override var mediaPageRefreshScheduled: Boolean = false
-    override var currentLyricsLoadGeneration: Int = 0
-    override var recentLyricsLoadGeneration: Int = 0
     var pendingImportAsWordByWord: Boolean = false
     var pendingImportMedia: CurrentMediaInfo? = null
 }

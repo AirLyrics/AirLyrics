@@ -18,6 +18,7 @@ import com.andsi.airlyrics.ui.components.settingRow
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.components.smallHint
+import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
 import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -28,6 +29,8 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+
+private val currentLyricsLoadRunner = LatestUiTaskRunner()
 
 internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity) {
     val body = LinearLayout(this).apply {
@@ -125,7 +128,6 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
     }
 
     fun populate(showRefreshFeedback: Boolean = false) {
-        val loadGeneration = ++currentLyricsLoadGeneration
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
         } else {
@@ -133,15 +135,13 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             body.addView(normalText(activity, getString(R.string.ui_loading)))
         }
 
-        runOnAppIo {
-            val state = currentLyricsState()
-
-            runOnMainThread {
-                if (loadGeneration != currentLyricsLoadGeneration) return@runOnMainThread
-                render(state)
-                if (showRefreshFeedback) {
-                    playLocalRefreshFeedback(activity, target = body, feedback = feedback, message = getString(R.string.ui_refreshed))
-                }
+        currentLyricsLoadRunner.submit(
+            runtime = activity,
+            load = { currentLyricsState() }
+        ) { state ->
+            render(state)
+            if (showRefreshFeedback) {
+                playLocalRefreshFeedback(activity, target = body, feedback = feedback, message = getString(R.string.ui_refreshed))
             }
         }
     }

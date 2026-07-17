@@ -37,12 +37,6 @@ internal abstract class MainUiHost(
     var overlayPermissionGranted: Boolean
         get() = uiState.overlayPermissionGranted
         set(value) { uiState.overlayPermissionGranted = value }
-    var currentLyricsLoadGeneration: Int
-        get() = uiState.currentLyricsLoadGeneration
-        set(value) { uiState.currentLyricsLoadGeneration = value }
-    var recentLyricsLoadGeneration: Int
-        get() = uiState.recentLyricsLoadGeneration
-        set(value) { uiState.recentLyricsLoadGeneration = value }
     var mediaRefreshState: RefreshState
         get() = uiState.mediaRefreshState
         set(value) { uiState.mediaRefreshState = value }
