@@ -21,6 +21,4 @@ internal interface OptionControlsHost {
 
     fun colorControl(title: String, color: Int, onChanged: (Int) -> Unit): LinearLayout
     fun colorPreviewBackground(color: Int): GradientDrawable
-    fun isDarkColor(color: Int): Boolean
-    fun withAlpha(color: Int, alpha: Int): Int
 }

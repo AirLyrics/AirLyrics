@@ -23,8 +23,6 @@ internal interface FloatingUiHost {
     fun floatingPresets(): List<FloatingLyricsPreset>
     fun isFloatingPreviewExpanded(): Boolean
     fun setFloatingPreviewExpanded(expanded: Boolean)
-    fun colorSummary(color: Int): String
-    fun backgroundColorWithAlpha(style: FloatingLyricsStyle): Int
     fun floatingDisplaySummary(): String
     fun floatingLockButtonText(): String
     fun floatingClickThroughButtonText(): String

@@ -9,11 +9,11 @@ import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorText
@@ -141,13 +141,13 @@ internal fun MainUiHost.colorControlImpl(
                 }
                 val displayColor = presetColor ?: current
                 view.background = swatchBackground(displayColor, selected)
-                view.setTextColor(if (isDarkColor(displayColor)) Color.WHITE else Color.rgb(28, 34, 46))
+                view.setTextColor(if (AirColorUtils.isDarkColor(displayColor)) Color.WHITE else Color.rgb(28, 34, 46))
             }
         }
 
         fun refreshPreview(dispatch: Boolean) {
             val newColor = currentColor()
-            preview.text = getString(R.string.floating_color_summary, title, FloatingLyricsStyleStore.colorSummary(newColor))
+            preview.text = getString(R.string.floating_color_summary, title, AirColorUtils.colorSummary(newColor))
             preview.background = colorPreviewBackground(newColor)
             refreshSwatches()
             if (dispatch) onChanged(newColor)
@@ -280,21 +280,7 @@ internal fun MainUiHost.colorControlImpl(
 internal fun MainUiHost.colorPreviewBackgroundImpl(color: Int): GradientDrawable {
     return GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-        setColor(withAlpha(color, 42))
-        setStroke(dp(AirUiTokens.Stroke.Hairline), withAlpha(color, 190))
+        setColor(AirColorUtils.withAlpha(color, 42))
+        setStroke(dp(AirUiTokens.Stroke.Hairline), AirColorUtils.withAlpha(color, 190))
     }
-}
-
-internal fun isDarkColorImpl(color: Int): Boolean {
-    val luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color))
-    return luminance < 150
-}
-
-internal fun withAlphaImpl(color: Int, alpha: Int): Int {
-    return Color.argb(
-        alpha.coerceIn(0, 255),
-        Color.red(color),
-        Color.green(color),
-        Color.blue(color)
-    )
 }

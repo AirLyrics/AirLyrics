@@ -25,6 +25,7 @@ import com.andsi.airlyrics.ui.pages.floating.sections.addAppearanceSection
 import com.andsi.airlyrics.ui.pages.floating.sections.addBehaviorSection
 import com.andsi.airlyrics.ui.pages.floating.sections.addLyricsDisplaySection
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 
 internal class FloatingPageScope(
     internal val host: MainUiHost
@@ -212,7 +213,7 @@ internal class FloatingPageScope(
     internal fun refreshFloatingSettingTiles() {
         val latestStyle = style()
         updateFloatingTileSubtitle(host.getString(R.string.ui_skin_preset), localizedPresetTitle(latestStyle.presetName))
-        updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), host.colorSummary(latestStyle.textColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), AirColorUtils.colorSummary(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_background_bubble), if (latestStyle.backgroundEnabled) host.getString(R.string.ui_on) else host.getString(R.string.ui_off))
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()}sp")
         updateFloatingTileSubtitle(host.getString(R.string.ui_shadow_stroke), host.getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
@@ -223,7 +224,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_lyrics_offset), host.uiActions.currentLyricsOffsetSummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_switch_animation), host.localizedLyricsSwitchAnimationTitle(switchAnimationMode()))
         updateFloatingTileSubtitle(host.getString(R.string.ui_enhanced_lrc), wordLyricsSubtitle())
-        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), host.colorSummary(latestStyle.karaokeHighlightColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), AirColorUtils.colorSummary(latestStyle.karaokeHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_auto_hide_when_paused), onOff(host.autoHideWhenPausedEnabled()))
     }

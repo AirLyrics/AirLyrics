@@ -7,6 +7,7 @@ import com.andsi.airlyrics.core.model.FloatingLyricsPreset
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.prefs.PreferenceStore
 import com.andsi.airlyrics.core.prefs.prefs as preferenceStore
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 
 object FloatingLyricsStyleStore {
     private const val PREFS_NAME = "floating_lyrics_style"
@@ -155,7 +156,7 @@ object FloatingLyricsStyleStore {
     fun setBackgroundColor(context: Context, color: Int) {
         prefs(context).edit {
             putBoolean(KEY_BACKGROUND_ENABLED, Color.alpha(color) > 0)
-            putInt(KEY_BACKGROUND_COLOR, Color.rgb(Color.red(color), Color.green(color), Color.blue(color)))
+            putInt(KEY_BACKGROUND_COLOR, AirColorUtils.opaqueRgb(color))
             putInt(KEY_BACKGROUND_ALPHA, Color.alpha(color))
         }
     }
@@ -231,20 +232,6 @@ object FloatingLyricsStyleStore {
     fun getPosition(context: Context): Pair<Int, Int> {
         val prefs = prefs(context)
         return prefs.getInt(KEY_POS_X, DEFAULT_X) to prefs.getInt(KEY_POS_Y, DEFAULT_Y)
-    }
-
-
-    fun colorSummary(color: Int): String {
-        return "R${Color.red(color)} G${Color.green(color)} B${Color.blue(color)} A${Color.alpha(color)}"
-    }
-
-    fun backgroundColorWithAlpha(style: FloatingLyricsStyle): Int {
-        return Color.argb(
-            style.backgroundAlpha.coerceIn(0, 255),
-            Color.red(style.backgroundColor),
-            Color.green(style.backgroundColor),
-            Color.blue(style.backgroundColor)
-        )
     }
 
 }

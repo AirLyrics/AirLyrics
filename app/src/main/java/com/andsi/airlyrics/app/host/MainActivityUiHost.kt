@@ -60,6 +60,7 @@ import com.andsi.airlyrics.ui.model.RecentLyricsUiState
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
@@ -143,8 +144,6 @@ internal class MainActivityUiHost(
     ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, onChanged)
     override fun colorControl(title: String, color: Int, onChanged: (Int) -> Unit): LinearLayout = colorControlImpl(title, color, onChanged)
     override fun colorPreviewBackground(color: Int): GradientDrawable = colorPreviewBackgroundImpl(color)
-    override fun isDarkColor(color: Int): Boolean = isDarkColorImpl(color)
-    override fun withAlpha(color: Int, alpha: Int): Int = withAlphaImpl(color, alpha)
     override fun settingGrid(vararg items: FloatingSettingTile): LinearLayout = settingGridImpl(*items)
     override fun floatingTile(item: FloatingSettingTile): LinearLayout = floatingTileImpl(item)
     override fun floatingFocusBubble(
@@ -157,8 +156,6 @@ internal class MainActivityUiHost(
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)
     override fun setFloatingPreviewExpanded(expanded: Boolean) = FloatingLyricsStyleStore.setPreviewExpanded(this, expanded)
-    override fun colorSummary(color: Int): String = FloatingLyricsStyleStore.colorSummary(color)
-    override fun backgroundColorWithAlpha(style: FloatingLyricsStyle): Int = FloatingLyricsStyleStore.backgroundColorWithAlpha(style)
 
     override fun floatingPreviewSummary(style: FloatingLyricsStyle): String {
         return getString(
@@ -220,7 +217,7 @@ internal class MainActivityUiHost(
         background = if (style.backgroundEnabled) {
             GradientDrawable().apply {
                 cornerRadius = dp(style.cornerRadiusDp.coerceAtMost(24)).toFloat()
-                setColor(withAlpha(style.backgroundColor, style.backgroundAlpha))
+                setColor(AirColorUtils.withAlpha(style.backgroundColor, style.backgroundAlpha))
             }
         } else {
             null

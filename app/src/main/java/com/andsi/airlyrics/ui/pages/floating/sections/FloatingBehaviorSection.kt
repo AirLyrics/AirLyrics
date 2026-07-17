@@ -11,6 +11,7 @@ import com.andsi.airlyrics.ui.components.settingRow
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 
 internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_behavior)))
@@ -84,8 +85,8 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
         openPanel(summaryButton, getString(R.string.ui_current_setup), "") {
             addView(settingRow(host, getString(R.string.ui_skin), localizedPresetTitle(style().presetName)))
             addView(settingRow(host, getString(R.string.ui_font_size), "${style().textSizeSp.toInt()}sp"))
-            addView(settingRow(host, getString(R.string.ui_text), colorSummary(style().textColor)))
-            addView(settingRow(host, getString(R.string.ui_highlight), colorSummary(style().karaokeHighlightColor)))
+            addView(settingRow(host, getString(R.string.ui_text), AirColorUtils.colorSummary(style().textColor)))
+            addView(settingRow(host, getString(R.string.ui_highlight), AirColorUtils.colorSummary(style().karaokeHighlightColor)))
             addView(settingRow(host, getString(R.string.ui_background), onOff(style().backgroundEnabled)))
             addView(settingRow(host, getString(R.string.ui_width), "${style().maxWidthPercent}%"))
             addView(settingRow(host, getString(R.string.ui_content), localizedLyricsContentModeTitle(contentDisplayMode())))

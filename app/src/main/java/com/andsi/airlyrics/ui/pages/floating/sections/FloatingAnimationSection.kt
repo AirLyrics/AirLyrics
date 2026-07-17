@@ -8,6 +8,7 @@ import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 
 internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_animation)))
@@ -54,7 +55,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
             ),
             trackedFloatingTile(
                 title = getString(R.string.ui_highlight_color),
-                subtitle = colorSummary(style().karaokeHighlightColor),
+                subtitle = AirColorUtils.colorSummary(style().karaokeHighlightColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_enhanced_color), "") {

@@ -15,6 +15,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatTextView
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 import kotlin.math.abs
 
 /**
@@ -208,7 +209,7 @@ class FloatingLyricsWindow(
         view.background = if (style.backgroundEnabled) {
             GradientDrawable().apply {
                 cornerRadius = dp(style.cornerRadiusDp).toFloat()
-                setColor(withAlpha(style.backgroundColor, style.backgroundAlpha))
+                setColor(AirColorUtils.withAlpha(style.backgroundColor, style.backgroundAlpha))
             }
         } else {
             null
@@ -239,15 +240,6 @@ class FloatingLyricsWindow(
         } else {
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
         }
-    }
-
-    private fun withAlpha(color: Int, alpha: Int): Int {
-        return Color.argb(
-            alpha.coerceIn(0, 255),
-            Color.red(color),
-            Color.green(color),
-            Color.blue(color)
-        )
     }
 
     private fun dp(value: Int): Int {

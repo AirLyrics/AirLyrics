@@ -7,6 +7,7 @@ import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
+import com.andsi.airlyrics.ui.theme.AirColorUtils
 
 internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_appearance)))
@@ -36,7 +37,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
             ),
             trackedFloatingTile(
                 title = getString(R.string.ui_text_color),
-                subtitle = colorSummary(style().textColor),
+                subtitle = AirColorUtils.colorSummary(style().textColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_text_color), "") {
@@ -61,7 +62,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                             refreshFloatingPreview()
                         }
                         addView(backgroundButton)
-                        addView(colorControl(getString(R.string.ui_background), backgroundColorWithAlpha(style())) { color ->
+                        addView(colorControl(getString(R.string.ui_background), AirColorUtils.backgroundColorWithAlpha(style())) { color ->
                             applyFloatingBackgroundColor(color, refreshPage = false)
                             refreshFloatingPreview()
                         })
