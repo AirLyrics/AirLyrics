@@ -2,7 +2,7 @@ package com.andsi.airlyrics.lyrics.providers
 
 object MusixmatchLyricsNative {
     init {
-        System.loadLibrary("airlyrics_lyrics")
+        LyricsNativeLibrary.ensureLoaded()
     }
 
     external fun fetchBestLyricsJson(

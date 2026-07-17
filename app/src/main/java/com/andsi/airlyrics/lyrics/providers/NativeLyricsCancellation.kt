@@ -4,7 +4,7 @@ import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 
 internal object LyricsNativeCancellation {
     init {
-        System.loadLibrary("airlyrics_lyrics")
+        LyricsNativeLibrary.ensureLoaded()
     }
 
     external fun cancelLookup(lookupId: Long)
