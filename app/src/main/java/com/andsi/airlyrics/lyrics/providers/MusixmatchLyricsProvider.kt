@@ -9,7 +9,6 @@ import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsSearchRequest
 import java.util.Locale
-import org.json.JSONObject
 
 data class MusixmatchLyricsResult(
     val source: String,
@@ -86,39 +85,44 @@ object MusixmatchLyricsProvider : LyricsProvider {
             }
             cancellationToken?.throwIfCancellationRequested()
 
-            val json = JSONObject(jsonText)
-            if (!json.optBoolean("ok", false)) {
-                val errorType = LyricsLookupErrorType.fromNativeName(json.optString("error_type", ""))
-                if (errorType == LyricsLookupErrorType.NotFound) {
+            val nativeResult = NativeLyricsResultParser.parse(
+                jsonText = jsonText,
+                defaultSource = "musixmatch-rust",
+                fallbackTitle = title,
+                fallbackArtist = artist,
+                fallbackAlbum = album,
+                fallbackDurationMs = durationMs
+            )
+            if (!nativeResult.ok) {
+                if (nativeResult.errorType == LyricsLookupErrorType.NotFound) {
                     if (BuildConfig.DEBUG) {
                         Log.w(
                             "AirLyricsLyrics",
-                            "Musixmatch not found: title=$title artist=$artist durationMs=$durationMs translation=$translationLanguageCode detail=${json.optString("error", "") }"
+                            "Musixmatch not found: title=$title artist=$artist durationMs=$durationMs translation=$translationLanguageCode detail=${nativeResult.errorMessage.orEmpty()}"
                         )
                     }
                     return@runCatching null
                 }
-                throw json.toNativeLyricsLookupException(
+                throw nativeResult.toNativeLyricsLookupException(
                     providerId = id,
                     providerName = name,
                     defaultMessage = "Musixmatch lookup failed"
                 )
             }
 
-            val lrc = json.optString("lrc", "")
-                .ifBlank { json.optString("merged_lrc", "") }
+            val lrc = nativeResult.primaryLyrics()
 
             if (lrc.isBlank()) {
                 return@runCatching null
             }
 
-            val translatedLrc = json.optString("translated_lrc", "").ifBlank { null }
+            val translatedLrc = nativeResult.translatedLrc
             if (translationLanguageCode.isNotBlank()) {
                 if (translatedLrc.isNullOrBlank()) {
                     if (BuildConfig.DEBUG) {
                         Log.i(
                             "AirLyricsLyrics",
-                            "Musixmatch translation empty: title=$title artist=$artist lang=$translationLanguageCode matched=${json.optString("title", title)} - ${json.optString("artist", artist)}"
+                            "Musixmatch translation empty: title=$title artist=$artist lang=$translationLanguageCode matched=${nativeResult.title} - ${nativeResult.artist}"
                         )
                     }
                 } else {
@@ -130,19 +134,18 @@ object MusixmatchLyricsProvider : LyricsProvider {
                     }
                 }
             }
-            val mergedLyrics = json.optString("merged_lrc", "").ifBlank { lrc }
 
             MusixmatchLyricsResult(
-                source = json.optString("source", "musixmatch-rust"),
-                subtitleId = json.optString("id", ""),
-                title = json.optString("title", title),
-                artist = json.optString("artist", artist),
-                album = json.optString("album", album),
-                durationMs = json.optLong("duration_ms", durationMs),
-                lrc = lrc.ifBlank { mergedLyrics },
+                source = nativeResult.source,
+                subtitleId = nativeResult.id,
+                title = nativeResult.title,
+                artist = nativeResult.artist,
+                album = nativeResult.album,
+                durationMs = nativeResult.durationMs,
+                lrc = lrc,
                 translatedLrc = translatedLrc,
-                errorType = json.optString("error_type", "").ifBlank { null },
-                errorMessage = json.optString("error", "").ifBlank { null }
+                errorType = nativeResult.errorTypeName,
+                errorMessage = nativeResult.errorMessage
             )
         }.recoverNativeLoadFailure(
             providerId = id,

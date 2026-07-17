@@ -1,12 +1,10 @@
 package com.andsi.airlyrics.lyrics.providers
 
-import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
+import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsSearchRequest
-
-import org.json.JSONObject
 
 data class NeteaseLyricsResult(
     val source: String,
@@ -69,40 +67,41 @@ object NeteaseLyricsProvider : LyricsProvider {
             }
             cancellationToken?.throwIfCancellationRequested()
 
-            val json = JSONObject(jsonText)
-            if (!json.optBoolean("ok", false)) {
-                val errorType = LyricsLookupErrorType.fromNativeName(json.optString("error_type", ""))
-                if (errorType == LyricsLookupErrorType.NotFound) {
+            val nativeResult = NativeLyricsResultParser.parse(
+                jsonText = jsonText,
+                defaultSource = "netease-rust",
+                fallbackTitle = title,
+                fallbackArtist = artist,
+                fallbackAlbum = "",
+                fallbackDurationMs = durationMs
+            )
+            if (!nativeResult.ok) {
+                if (nativeResult.errorType == LyricsLookupErrorType.NotFound) {
                     return@runCatching null
                 }
 
-                throw json.toNativeLyricsLookupException(
+                throw nativeResult.toNativeLyricsLookupException(
                     providerId = id,
                     providerName = name,
                     defaultMessage = "NetEase lookup failed"
                 )
             }
 
-            val originalLrc = json.optString("lrc", "")
-            val translatedLrc = json.optString("translated_lrc", "").ifBlank { null }
-            val fallbackMergedLrc = json.optString("merged_lrc", "")
-            val primaryLrc = originalLrc
-                .ifBlank { fallbackMergedLrc }
-                .ifBlank { translatedLrc.orEmpty() }
+            val primaryLrc = nativeResult.primaryLyrics(allowTranslatedFallback = true)
 
             if (primaryLrc.isBlank()) {
                 return@runCatching null
             }
 
             NeteaseLyricsResult(
-                source = json.optString("source", "netease-rust"),
-                songId = json.optString("id", ""),
-                title = json.optString("title", title),
-                artist = json.optString("artist", artist),
-                album = json.optString("album", ""),
-                durationMs = json.optLong("duration_ms", durationMs),
+                source = nativeResult.source,
+                songId = nativeResult.id,
+                title = nativeResult.title,
+                artist = nativeResult.artist,
+                album = nativeResult.album,
+                durationMs = nativeResult.durationMs,
                 lrc = primaryLrc,
-                translatedLrc = translatedLrc
+                translatedLrc = nativeResult.translatedLrc
             )
         }.recoverNativeLoadFailure(
             providerId = id,

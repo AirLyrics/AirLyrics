@@ -2,11 +2,10 @@ package com.andsi.airlyrics.lyrics.providers
 
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
-import org.json.JSONObject
 
 private const val NATIVE_LOAD_FAILURE_MESSAGE = "Native lyrics core is missing or failed to load"
 
-internal fun JSONObject.toNativeLyricsLookupException(
+internal fun NativeLyricsJsonResult.toNativeLyricsLookupException(
     providerId: String,
     providerName: String,
     defaultMessage: String
@@ -14,8 +13,8 @@ internal fun JSONObject.toNativeLyricsLookupException(
     return LyricsLookupException(
         providerId = providerId,
         providerName = providerName,
-        errorType = LyricsLookupErrorType.fromNativeName(optString("error_type", "")),
-        detailMessage = optString("error", "").ifBlank { defaultMessage }
+        errorType = errorType,
+        detailMessage = errorMessage ?: defaultMessage
     )
 }
 
