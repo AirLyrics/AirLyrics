@@ -7,7 +7,7 @@ import com.andsi.airlyrics.core.model.FloatingLyricsPreset
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.prefs.PreferenceStore
 import com.andsi.airlyrics.core.prefs.prefs as preferenceStore
-import com.andsi.airlyrics.ui.theme.AirColorUtils
+import com.andsi.airlyrics.core.color.AirColorUtils
 
 object FloatingLyricsStyleStore {
     private const val PREFS_NAME = "floating_lyrics_style"

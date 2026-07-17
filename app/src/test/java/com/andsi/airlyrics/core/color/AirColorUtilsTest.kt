@@ -1,8 +1,6 @@
-package com.andsi.airlyrics.ui.theme
+package com.andsi.airlyrics.core.color
 
 import android.graphics.Color
-import android.view.Gravity
-import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -39,27 +37,5 @@ class AirColorUtilsTest {
         val color = Color.argb(40, 10, 20, 30)
 
         assertEquals("R10 G20 B30 A40", AirColorUtils.colorSummary(color))
-    }
-
-    @Test
-    fun backgroundColorWithAlpha_usesStyleBackgroundAlpha() {
-        val style = FloatingLyricsStyle(
-            presetName = "test",
-            textSizeSp = 20f,
-            textColor = Color.WHITE,
-            karaokeHighlightColor = Color.CYAN,
-            shadowColor = Color.BLACK,
-            shadowRadius = 2f,
-            backgroundEnabled = true,
-            backgroundColor = Color.rgb(10, 20, 30),
-            backgroundAlpha = 80,
-            cornerRadiusDp = 12,
-            paddingHorizontalDp = 8,
-            paddingVerticalDp = 4,
-            maxWidthPercent = 80,
-            gravity = Gravity.CENTER
-        )
-
-        assertEquals(Color.argb(80, 10, 20, 30), AirColorUtils.backgroundColorWithAlpha(style))
     }
 }

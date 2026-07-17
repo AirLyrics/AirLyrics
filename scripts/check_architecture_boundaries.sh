@@ -12,13 +12,9 @@ import sys
 SOURCE_ROOT = Path("app/src/main/java/com/andsi/airlyrics")
 
 RULES = {
-    "common": {
-        "path": SOURCE_ROOT / "common",
-        "forbidden": ["app", "core", "design", "floating", "i18n", "lyrics", "media", "settings", "ui"],
-    },
     "core": {
         "path": SOURCE_ROOT / "core",
-        "forbidden": ["app", "common", "design", "floating", "i18n", "lyrics", "media", "settings", "ui"],
+        "forbidden": ["app", "design", "floating", "i18n", "lyrics", "media", "settings", "ui"],
     },
     "design": {
         "path": SOURCE_ROOT / "design",

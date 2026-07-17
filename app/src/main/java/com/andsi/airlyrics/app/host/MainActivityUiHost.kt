@@ -60,7 +60,7 @@ import com.andsi.airlyrics.ui.model.RecentLyricsUiState
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.ui.theme.AirColorUtils
+import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 

@@ -25,7 +25,7 @@ import com.andsi.airlyrics.ui.pages.floating.sections.addAppearanceSection
 import com.andsi.airlyrics.ui.pages.floating.sections.addBehaviorSection
 import com.andsi.airlyrics.ui.pages.floating.sections.addLyricsDisplaySection
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
-import com.andsi.airlyrics.ui.theme.AirColorUtils
+import com.andsi.airlyrics.core.color.AirColorUtils
 
 internal class FloatingPageScope(
     internal val host: MainUiHost

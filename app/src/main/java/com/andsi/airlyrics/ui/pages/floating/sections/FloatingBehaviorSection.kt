@@ -11,7 +11,7 @@ import com.andsi.airlyrics.ui.components.settingRow
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
-import com.andsi.airlyrics.ui.theme.AirColorUtils
+import com.andsi.airlyrics.core.color.AirColorUtils
 
 internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_behavior)))

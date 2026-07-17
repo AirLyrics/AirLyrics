@@ -1,7 +1,6 @@
-package com.andsi.airlyrics.ui.theme
+package com.andsi.airlyrics.core.color
 
 import android.graphics.Color
-import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 
 internal object AirColorUtils {
     fun withAlpha(color: Int, alpha: Int): Int {
@@ -24,9 +23,5 @@ internal object AirColorUtils {
 
     fun colorSummary(color: Int): String {
         return "R${Color.red(color)} G${Color.green(color)} B${Color.blue(color)} A${Color.alpha(color)}"
-    }
-
-    fun backgroundColorWithAlpha(style: FloatingLyricsStyle): Int {
-        return withAlpha(style.backgroundColor, style.backgroundAlpha)
     }
 }

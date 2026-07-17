@@ -15,7 +15,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatTextView
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.ui.theme.AirColorUtils
+import com.andsi.airlyrics.core.color.AirColorUtils
 import kotlin.math.abs
 
 /**
