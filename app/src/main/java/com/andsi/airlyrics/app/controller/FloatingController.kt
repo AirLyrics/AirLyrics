@@ -10,8 +10,8 @@ import com.andsi.airlyrics.app.contracts.FloatingNavFeedback
 import com.andsi.airlyrics.app.contracts.MainServiceStarter
 import com.andsi.airlyrics.app.contracts.OverlayPermissionRequester
 import com.andsi.airlyrics.app.render.UiInvalidator
-import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.floating.FloatingServiceCommand
+import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
@@ -28,27 +28,15 @@ internal class FloatingController(
     private var overlayPermissionHintShown = false
 
     fun handleWindowStateBroadcast(intent: Intent) {
-        val action = intent.action ?: return
-        if (action != BroadcastActions.WINDOW_VISIBILITY_CHANGED &&
-            action != BroadcastActions.QUICK_CONTROL_CHANGED
-        ) return
+        val windowState = FloatingWindowStateBroadcast.readState(intent) ?: return
 
         val previousVisible = state.quickFloatingVisible
         val previousLocked = state.locked
         val previousClickThrough = state.clickThrough
         val previousOverlayPermissionGranted = state.overlayPermissionGranted
-        val visible = intent.getBooleanExtra(
-            BroadcastActions.EXTRA_WINDOW_VISIBLE,
-            state.quickFloatingVisible
-        )
-        val locked = intent.getBooleanExtra(
-            BroadcastActions.EXTRA_LOCKED,
-            FloatingLyricsStyleStore.isLocked(context)
-        )
-        val clickThrough = intent.getBooleanExtra(
-            BroadcastActions.EXTRA_CLICK_THROUGH,
-            FloatingLyricsStyleStore.isClickThrough(context)
-        )
+        val visible = windowState.visible
+        val locked = windowState.locked
+        val clickThrough = windowState.clickThrough
         state.locked = locked
         state.clickThrough = clickThrough
         val overlayPermissionGranted = updateOverlayPermissionGranted()

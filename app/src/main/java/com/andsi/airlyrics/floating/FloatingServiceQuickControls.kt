@@ -1,8 +1,6 @@
 package com.andsi.airlyrics.floating
 
 import android.app.NotificationManager
-import android.content.Intent
-import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 
@@ -29,22 +27,21 @@ internal fun FloatingLyricsService.showQuickFeedback(message: String) {
 }
 
 internal fun FloatingLyricsService.broadcastWindowVisibility(visible: Boolean) {
-    val intent = Intent(BroadcastActions.WINDOW_VISIBILITY_CHANGED).apply {
-        setPackage(packageName)
-        putExtra(BroadcastActions.EXTRA_WINDOW_VISIBLE, visible)
-        putExtra(BroadcastActions.EXTRA_LOCKED, FloatingLyricsStyleStore.isLocked(this@broadcastWindowVisibility))
-        putExtra(BroadcastActions.EXTRA_CLICK_THROUGH, FloatingLyricsStyleStore.isClickThrough(this@broadcastWindowVisibility))
-    }
+    val state = FloatingWindowStateBroadcast.State(
+        visible = visible,
+        locked = FloatingLyricsStyleStore.isLocked(this),
+        clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
+    )
+    val intent = FloatingWindowStateBroadcast.windowVisibilityChangedIntent(this, state)
     sendBroadcast(intent)
 }
 
 internal fun FloatingLyricsService.broadcastQuickControlState() {
-    val actualVisible = isWindowControllerReady() && windowController.isVisible
-    val intent = Intent(BroadcastActions.QUICK_CONTROL_CHANGED).apply {
-        setPackage(packageName)
-        putExtra(BroadcastActions.EXTRA_WINDOW_VISIBLE, actualVisible)
-        putExtra(BroadcastActions.EXTRA_LOCKED, FloatingLyricsStyleStore.isLocked(this@broadcastQuickControlState))
-        putExtra(BroadcastActions.EXTRA_CLICK_THROUGH, FloatingLyricsStyleStore.isClickThrough(this@broadcastQuickControlState))
-    }
+    val state = FloatingWindowStateBroadcast.State(
+        visible = isWindowControllerReady() && windowController.isVisible,
+        locked = FloatingLyricsStyleStore.isLocked(this),
+        clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
+    )
+    val intent = FloatingWindowStateBroadcast.quickControlChangedIntent(this, state)
     sendBroadcast(intent)
 }

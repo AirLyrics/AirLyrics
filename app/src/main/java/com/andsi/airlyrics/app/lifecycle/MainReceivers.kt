@@ -3,9 +3,8 @@ package com.andsi.airlyrics.app.lifecycle
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import androidx.core.content.ContextCompat
-import com.andsi.airlyrics.common.BroadcastActions
+import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 
 /**
@@ -40,10 +39,7 @@ internal class MainReceivers(
         ContextCompat.registerReceiver(
             context,
             floatingReceiver,
-            IntentFilter().apply {
-                addAction(BroadcastActions.WINDOW_VISIBILITY_CHANGED)
-                addAction(BroadcastActions.QUICK_CONTROL_CHANGED)
-            },
+            FloatingWindowStateBroadcast.windowStateFilter(),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
         ContextCompat.registerReceiver(

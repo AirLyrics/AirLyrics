@@ -2,7 +2,6 @@ package com.andsi.airlyrics.media
 
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
-import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -46,7 +45,7 @@ class CurrentMediaBroadcastTest {
 
     @Test
     fun readMediaUpdate_ignoresWrongActionAndBlankTitle() {
-        val wrongAction = Intent(BroadcastActions.MEDIA_SOURCE_LOST)
+        val wrongAction = Intent("com.example.UNRELATED")
         val blankTitle = CurrentMediaBroadcast.mediaUpdateIntent(
             ApplicationProvider.getApplicationContext(),
             CurrentMediaInfo(

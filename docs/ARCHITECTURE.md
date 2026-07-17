@@ -14,7 +14,7 @@ local lyrics storage, floating window rendering, settings persistence, design to
 Music app
   -> Android media notification / media session
   -> MediaNotificationListenerService
-  -> Current media state broadcast
+  -> CurrentMediaBroadcast
       -> MainReceivers
           -> MediaSourceController
           -> MainGraph
@@ -46,7 +46,46 @@ floating/         Foreground service, floating window control, and lyrics render
 settings/         Settings persistence
 ui/               Screens, shared components, navigation, themes, and widgets
 i18n/             Localization utilities and text handling
-common/           Shared constants
+```
+
+## App-Local Communication Protocols
+
+Cross-component communication is owned by dedicated protocol objects instead of a shared
+constants package that exposes raw action and extra names.
+
+```text
+CurrentMediaBroadcast
+Owns media state broadcasts. MediaNotificationListenerService sends current media changes,
+while MainReceivers / MediaSourceController and FloatingLyricsService receive them separately.
+
+FloatingServiceCommand
+Owns startService commands sent to FloatingLyricsService. Main UI controllers and the
+foreground notification create typed command objects, this object converts them to Intents,
+and the service uses the same object to parse incoming Intents.
+
+FloatingWindowStateBroadcast
+Owns floating window visibility, lock, and touch-through state broadcasts. FloatingLyricsService
+sends state updates, while MainReceivers / FloatingController receive them and update main UI state.
+```
+
+Notification relationships:
+
+```text
+Android media notification / media session
+  -> MediaNotificationListenerService
+  -> CurrentMediaBroadcast
+  -> Main UI and FloatingLyricsService
+
+FloatingLyricsService foreground notification
+  -> FloatingServiceNotification
+  -> PendingIntent
+  -> FloatingServiceCommand
+  -> FloatingLyricsService.handleCommand
+
+FloatingLyricsService floating window state changes
+  -> FloatingWindowStateBroadcast
+  -> MainReceivers
+  -> FloatingController
 ```
 
 ## App Shell
@@ -76,7 +115,7 @@ app/render/MainHandRenderer.kt
 ## Media Detection
 
 `MediaNotificationListenerService` reads active media notifications and media sessions,
-then broadcasts the current playback state.
+then broadcasts the current playback state through `CurrentMediaBroadcast`.
 
 `MediaSessionObserver` listens for active media sessions, registers controller callbacks,
 and applies one shared controller selection strategy when a media app exposes multiple
@@ -121,6 +160,13 @@ It receives media changes, looks up lyrics, creates the foreground notification,
 and coordinates the floating lyrics window with the lyrics renderer.
 It does not select or register media controllers directly; media session selection
 belongs to the `media/` layer.
+
+The foreground notification is created by `FloatingServiceNotification`. Notification
+buttons do not expose raw action strings; they create `PendingIntent`s through
+`FloatingServiceCommand`, which are parsed by `FloatingLyricsService.handleCommand`.
+
+Floating window state changes are broadcast through `FloatingWindowStateBroadcast`,
+which keeps visible, locked, and touch-through state synchronized with the main UI.
 
 `FloatingLyricsWindow` manages creation, updates, and removal of the floating window,
 as well as window position, appearance, locking, and touch-through behavior.

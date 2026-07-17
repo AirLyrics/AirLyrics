@@ -14,7 +14,7 @@ AirLyrics 是一个 Android 手机端悬浮歌词应用。Android 端使用 Kotl
 音乐应用
   -> Android 媒体通知 / 媒体会话
   -> MediaNotificationListenerService
-  -> 当前媒体状态广播
+  -> CurrentMediaBroadcast
       -> MainReceivers
           -> MediaSourceController
           -> MainGraph
@@ -45,7 +45,44 @@ floating/         前台服务、悬浮窗控制和歌词渲染
 settings/         设置持久化
 ui/               页面、通用组件、导航、主题和小组件
 i18n/             本地化工具和文案处理
-common/           共享常量
+```
+
+## 应用内通信协议
+
+跨组件通信按协议归属到专用对象，不再使用共享常量包集中暴露 action 和 extra。
+
+```text
+CurrentMediaBroadcast
+负责媒体状态广播。MediaNotificationListenerService 发送当前媒体变化，
+MainReceivers / MediaSourceController 和 FloatingLyricsService 分别接收。
+
+FloatingServiceCommand
+负责发送给 FloatingLyricsService 的 startService 命令。主界面控制器和前台通知
+只构造命令对象，由它统一转换为 Intent；服务端也通过它解析 Intent。
+
+FloatingWindowStateBroadcast
+负责悬浮窗可见性、锁定和触摸穿透状态广播。FloatingLyricsService 发送状态，
+MainReceivers / FloatingController 接收并更新主界面状态。
+```
+
+通知关系：
+
+```text
+Android 媒体通知 / 媒体会话
+  -> MediaNotificationListenerService
+  -> CurrentMediaBroadcast
+  -> 主界面和 FloatingLyricsService
+
+FloatingLyricsService 前台通知
+  -> FloatingServiceNotification
+  -> PendingIntent
+  -> FloatingServiceCommand
+  -> FloatingLyricsService.handleCommand
+
+FloatingLyricsService 悬浮窗状态变化
+  -> FloatingWindowStateBroadcast
+  -> MainReceivers
+  -> FloatingController
 ```
 
 ## App 外壳
@@ -75,7 +112,7 @@ app/render/MainHandRenderer.kt
 ## 媒体检测
 
 `MediaNotificationListenerService` 读取活跃媒体通知和媒体会话，
-并广播当前播放状态。
+并通过 `CurrentMediaBroadcast` 广播当前播放状态。
 
 `MediaSessionObserver` 负责监听活跃媒体会话、注册 controller 回调，
 并在同一媒体应用存在多个 session 时统一选择最合适的 controller。
@@ -114,6 +151,13 @@ app/render/MainHandRenderer.kt
 它负责接收媒体变化、查询歌词、创建前台通知，
 并协调悬浮窗实现和歌词渲染器。
 它不直接选择或注册媒体 controller；媒体会话选择由 `media/` 层完成。
+
+前台通知由 `FloatingServiceNotification` 创建。通知按钮不会直接暴露 action 字符串，
+而是通过 `FloatingServiceCommand` 构造 `PendingIntent`，再回到
+`FloatingLyricsService.handleCommand` 执行对应命令。
+
+悬浮窗状态变化通过 `FloatingWindowStateBroadcast` 发送到主界面，
+用于同步显示状态、锁定状态和触摸穿透状态。
 
 `FloatingLyricsWindow` 负责悬浮窗的创建、更新和移除，
 以及窗口位置、样式、锁定和触摸穿透等行为。
