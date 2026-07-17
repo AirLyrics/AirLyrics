@@ -43,8 +43,8 @@ internal object KaraokeLyricsStorageOps {
         if (existing?.karaokeFile?.isNotBlank() == true && !overwrite) return false
 
         val now = System.currentTimeMillis()
-        val fileName = "${normalizedKey.take(16)}.karaoke.json"
-        val relativeFile = "$MANAGED_LYRICS_DIR/$fileName"
+        val fileName = LyricsFileNaming.managedKaraokeFileName(identity)
+        val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
         val json = KaraokeLyricsCodec.linesToJson(karaokeLines, metadataLines)
         if (!LyricsFileStore.writeManagedLyrics(context, fileName, json)) return false
 

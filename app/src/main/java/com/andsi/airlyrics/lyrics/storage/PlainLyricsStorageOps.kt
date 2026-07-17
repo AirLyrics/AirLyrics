@@ -25,7 +25,7 @@ internal object PlainLyricsStorageOps {
             )
         }
 
-        val legacyFileName = LegacyLyricsFileName.make(title, artist, duration)
+        val legacyFileName = LyricsFileNaming.legacyPlainFileName(title, artist, duration)
         val legacyExists = LyricsFileStore.readLegacyLyrics(context, title, artist, duration) != null
 
         return if (legacyExists) {
@@ -68,8 +68,8 @@ internal object PlainLyricsStorageOps {
         if (existing?.file?.isNotBlank() == true && !overwrite) return false
 
         val now = System.currentTimeMillis()
-        val fileName = "${normalizedKey.take(16)}.lrc"
-        val relativeFile = "$MANAGED_LYRICS_DIR/$fileName"
+        val fileName = LyricsFileNaming.managedPlainFileName(identity)
+        val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
         if (!LyricsFileStore.writeManagedLyrics(context, fileName, lyrics)) return false
 
         val entries = LyricsIndexStore.read(context)

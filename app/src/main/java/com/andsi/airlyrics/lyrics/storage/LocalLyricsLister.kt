@@ -14,9 +14,9 @@ internal object LocalLyricsLister {
             val root = DocumentFile.fromTreeUri(context, treeUri)
             val managedDir = root?.findFile(MANAGED_LYRICS_DIR)?.takeIf { it.isDirectory }
             val rootItems = root?.listFiles().orEmpty()
-                .filter { it.isFile && it.name?.endsWith(".lrc", ignoreCase = true) == true }
+                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
             val managedItems = managedDir?.listFiles().orEmpty()
-                .filter { it.isFile && it.name?.endsWith(".lrc", ignoreCase = true) == true }
+                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
             (rootItems + managedItems).map { file ->
                 val entry = indexedByFileName[file.name.orEmpty()]
                 LyricsStorage.LocalLyricsItem(
@@ -35,9 +35,9 @@ internal object LocalLyricsLister {
             val root = LyricsStoragePaths.fallbackLyricsDir(context)
             val managedDir = File(root, MANAGED_LYRICS_DIR)
             val rootItems = root.listFiles().orEmpty()
-                .filter { it.isFile && it.name.endsWith(".lrc", ignoreCase = true) }
+                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
             val managedItems = managedDir.listFiles().orEmpty()
-                .filter { it.isFile && it.name.endsWith(".lrc", ignoreCase = true) }
+                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
             (rootItems + managedItems).map { file ->
                 val entry = indexedByFileName[file.name]
                 LyricsStorage.LocalLyricsItem(

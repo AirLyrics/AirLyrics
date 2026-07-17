@@ -75,7 +75,7 @@ internal object LocalLyricsDeleteOps {
         }
 
         if (mode == LyricsStorage.DeleteMode.PLAIN || mode == LyricsStorage.DeleteMode.ALL) {
-            val legacyFileName = LegacyLyricsFileName.make(title, artist, duration)
+            val legacyFileName = LyricsFileNaming.legacyPlainFileName(title, artist, duration)
             deletedAny = LyricsFileStore.deleteLegacyLyrics(context, legacyFileName) || deletedAny
         }
 

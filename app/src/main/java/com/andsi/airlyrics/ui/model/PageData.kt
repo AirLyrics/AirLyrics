@@ -38,7 +38,7 @@ internal data class LocalLyricsUiItem(
     val provider: String = "local",
     val hasPlainLyrics: Boolean = true,
     val hasKaraokeLyrics: Boolean = false,
-    val displayTitle: String = title.ifBlank { friendlyNameFromFileName(name) },
+    val displayTitle: String,
     val subtitle: String = "",
     val typeText: String = "",
     val metaText: String = ""
@@ -68,14 +68,3 @@ internal data class LanguageSettingsUiState(
     val currentMode: String,
     val options: List<LanguageOptionUiItem>
 )
-
-private fun friendlyNameFromFileName(fileName: String): String {
-    return fileName
-        .substringAfterLast('/')
-        .removeSuffix(".karaoke.json")
-        .removeSuffix(".lrc")
-        .replace(Regex("\\s*\\[[0-9a-fA-F]{8}]$"), "")
-        .replace('_', ' ')
-        .trim()
-        .ifBlank { fileName }
-}

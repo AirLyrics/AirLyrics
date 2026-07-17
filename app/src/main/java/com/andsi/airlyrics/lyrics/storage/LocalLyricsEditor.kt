@@ -36,7 +36,7 @@ internal object LocalLyricsEditor {
         item: LyricsStorage.LocalLyricsItem,
         text: String
     ): LyricsStorage.LocalLyricsUpdateResult {
-        if (!item.hasPlainLyrics || item.name.endsWith(".karaoke.json", ignoreCase = true)) {
+        if (!item.hasPlainLyrics || LyricsFileNaming.isKaraokeLyricsFile(item.name)) {
             return LyricsStorage.LocalLyricsUpdateResult(saved = false)
         }
 

@@ -48,18 +48,7 @@ object LyricsStorage {
         val hasKaraokeLyrics: Boolean = false
     ) {
         val displayTitle: String
-            get() = title.ifBlank { friendlyNameFromFileName(name) }
-
-        private fun friendlyNameFromFileName(fileName: String): String {
-            return fileName
-                .substringAfterLast('/')
-                .removeSuffix(".karaoke.json")
-                .removeSuffix(".lrc")
-                .replace(Regex("\\s*\\[[0-9a-fA-F]{8}]$"), "")
-                .replace('_', ' ')
-                .trim()
-                .ifBlank { fileName }
-        }
+            get() = title.ifBlank { LyricsFileNaming.friendlyDisplayName(name) }
     }
 
     data class LocalLyricsInfo(
