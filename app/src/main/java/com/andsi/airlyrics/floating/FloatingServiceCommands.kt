@@ -2,48 +2,42 @@ package com.andsi.airlyrics.floating
 
 import android.content.Intent
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.common.BroadcastActions
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
 internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) {
-    when (intent?.action) {
-        null -> restoreFromDesiredState()
-        BroadcastActions.SHOW -> showLyrics()
-        BroadcastActions.HIDE -> {
+    when (val command = FloatingServiceCommand.fromIntent(intent)) {
+        null -> Unit
+        FloatingServiceCommand.Restore -> restoreFromDesiredState()
+        FloatingServiceCommand.Show -> showLyrics()
+        FloatingServiceCommand.Hide -> {
             hideLyrics()
             stopSelf(startId)
         }
-        BroadcastActions.LOCK -> setLocked(locked = true)
-        BroadcastActions.UNLOCK -> setLocked(locked = false)
-        BroadcastActions.CLICK_THROUGH_ON -> setClickThrough(clickThrough = true)
-        BroadcastActions.CLICK_THROUGH_OFF -> setClickThrough(clickThrough = false)
-        BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE -> toggleVisibleFromNotification()
-        BroadcastActions.NOTIFICATION_TOGGLE_LOCK -> toggleLockFromNotification()
-        BroadcastActions.NOTIFICATION_TOGGLE_CLICK_THROUGH -> toggleClickThroughFromNotification()
-        BroadcastActions.NOTIFICATION_TOGGLE_ADJUST_MODE -> toggleAdjustModeFromNotification()
-        BroadcastActions.APPLY_AUTO_HIDE_WHEN_PAUSED -> applyAutoHideWhenPausedSetting()
-        BroadcastActions.APPLY_STYLE -> {
+        FloatingServiceCommand.Lock -> setLocked(locked = true)
+        FloatingServiceCommand.Unlock -> setLocked(locked = false)
+        FloatingServiceCommand.ClickThroughOn -> setClickThrough(clickThrough = true)
+        FloatingServiceCommand.ClickThroughOff -> setClickThrough(clickThrough = false)
+        FloatingServiceCommand.ToggleVisibleFromNotification -> toggleVisibleFromNotification()
+        FloatingServiceCommand.ToggleLockFromNotification -> toggleLockFromNotification()
+        FloatingServiceCommand.ToggleClickThroughFromNotification -> toggleClickThroughFromNotification()
+        FloatingServiceCommand.ToggleAdjustModeFromNotification -> toggleAdjustModeFromNotification()
+        FloatingServiceCommand.ApplyAutoHideWhenPaused -> applyAutoHideWhenPausedSetting()
+        FloatingServiceCommand.ApplyStyle -> {
             val applied = windowController.applyStyle()
             if (applied) renderer.refresh()
             refreshQuickControls(if (applied) null else getString(R.string.ui_overlay_update_failed))
         }
-        BroadcastActions.RELOAD_LYRICS -> reloadCurrentLyrics()
-        BroadcastActions.APPLY_LYRICS_OFFSET -> applyLyricsOffset(
-            intent.getLongExtra(BroadcastActions.EXTRA_LYRICS_OFFSET_MS, 0L)
-        )
-        BroadcastActions.RELOAD_ONLINE_LYRICS -> reloadCurrentLyrics(
+        FloatingServiceCommand.ReloadLyrics -> reloadCurrentLyrics()
+        FloatingServiceCommand.ReloadOnlineLyrics -> reloadCurrentLyrics(
             bypassLocal = true,
             forceSaveOnline = true,
             ignoreAutoSearchSetting = true
         )
-        BroadcastActions.SELECT_MEDIA_SOURCE -> selectMediaSource(
-            intent.getStringExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE)
-        )
-        BroadcastActions.IMPORT_LYRICS -> intent.data?.let { uri ->
-            importLyrics(uri = uri, overwrite = intent.getBooleanExtra(BroadcastActions.EXTRA_OVERWRITE_LYRICS, true))
-        }
+        is FloatingServiceCommand.ApplyLyricsOffset -> applyLyricsOffset(command.offsetMs)
+        is FloatingServiceCommand.SelectMediaSource -> selectMediaSource(command.packageName)
+        is FloatingServiceCommand.ImportLyrics -> importLyrics(uri = command.uri, overwrite = command.overwrite)
     }
 }
 

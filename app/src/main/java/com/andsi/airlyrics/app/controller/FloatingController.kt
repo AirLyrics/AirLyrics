@@ -11,7 +11,7 @@ import com.andsi.airlyrics.app.contracts.MainServiceStarter
 import com.andsi.airlyrics.app.contracts.OverlayPermissionRequester
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.common.BroadcastActions
-import com.andsi.airlyrics.floating.FloatingLyricsService
+import com.andsi.airlyrics.floating.FloatingServiceCommand
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
@@ -69,15 +69,13 @@ internal class FloatingController(
 
     fun reloadLyrics() {
         if (!state.quickFloatingVisible) return
-        sendFloatingCommand(BroadcastActions.RELOAD_LYRICS)
+        sendFloatingCommand(FloatingServiceCommand.ReloadLyrics)
     }
 
     fun applyLyricsOffset(offsetMs: Long) {
         if (!state.quickFloatingVisible) return
 
-        sendFloatingCommand(BroadcastActions.APPLY_LYRICS_OFFSET) {
-            putExtra(BroadcastActions.EXTRA_LYRICS_OFFSET_MS, offsetMs)
-        }
+        sendFloatingCommand(FloatingServiceCommand.ApplyLyricsOffset(offsetMs))
     }
 
     fun reloadLyricsFromOnline() {
@@ -86,7 +84,7 @@ internal class FloatingController(
             return
         }
 
-        if (sendFloatingCommand(BroadcastActions.RELOAD_ONLINE_LYRICS)) {
+        if (sendFloatingCommand(FloatingServiceCommand.ReloadOnlineLyrics)) {
             AirToast.showShort(context, R.string.ui_searching_online_again)
         }
     }
@@ -103,7 +101,7 @@ internal class FloatingController(
             return false
         }
 
-        val sent = sendFloatingCommand(BroadcastActions.SHOW)
+        val sent = sendFloatingCommand(FloatingServiceCommand.Show)
         if (sent) {
             updateQuickFloatingActualVisible(true)
             invalidator.refreshFloatingChrome()
@@ -115,7 +113,7 @@ internal class FloatingController(
 
     fun hideLyrics(): Boolean {
         setDesiredVisible(false)
-        val sent = sendFloatingCommand(BroadcastActions.HIDE)
+        val sent = sendFloatingCommand(FloatingServiceCommand.Hide)
         if (sent) {
             updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingChrome()
@@ -178,7 +176,12 @@ internal class FloatingController(
             return
         }
 
-        if (sendFloatingCommand(if (nextLocked) BroadcastActions.LOCK else BroadcastActions.UNLOCK)) {
+        val command = if (nextLocked) {
+            FloatingServiceCommand.Lock
+        } else {
+            FloatingServiceCommand.Unlock
+        }
+        if (sendFloatingCommand(command)) {
             updateLocalLocked(nextLocked, persist = false)
             invalidator.refreshFloatingControls()
         } else {
@@ -197,9 +200,9 @@ internal class FloatingController(
 
         val sent = sendFloatingCommand(
             if (nextClickThrough) {
-                BroadcastActions.CLICK_THROUGH_ON
+                FloatingServiceCommand.ClickThroughOn
             } else {
-                BroadcastActions.CLICK_THROUGH_OFF
+                FloatingServiceCommand.ClickThroughOff
             }
         )
         if (sent) {
@@ -215,7 +218,7 @@ internal class FloatingController(
         FloatingLyricsStyleStore.setAutoHideWhenPaused(context, enabled)
 
         if (QuickFloatingStore.isDesiredVisible(context)) {
-            sendFloatingCommand(BroadcastActions.APPLY_AUTO_HIDE_WHEN_PAUSED)
+            sendFloatingCommand(FloatingServiceCommand.ApplyAutoHideWhenPaused)
         }
 
         invalidator.refreshFloatingControls()
@@ -309,31 +312,22 @@ internal class FloatingController(
 
     fun notifyStyleChanged() {
         if (!state.quickFloatingVisible) return
-        sendFloatingCommand(BroadcastActions.APPLY_STYLE)
+        sendFloatingCommand(FloatingServiceCommand.ApplyStyle)
     }
 
     fun notifySourceChangedIfVisible(packageName: String?) {
         if (!state.quickFloatingVisible) return
 
-        sendFloatingCommand(BroadcastActions.SELECT_MEDIA_SOURCE) {
-            putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, packageName)
-        }
+        sendFloatingCommand(FloatingServiceCommand.SelectMediaSource(packageName))
     }
 
-    private fun sendFloatingCommand(
-        action: String,
-        configure: Intent.() -> Unit = {}
+    private fun sendFloatingCommand(command: FloatingServiceCommand): Boolean {
+        return startFloatingService(command.toIntent(context))
+    }
+
+    private fun startFloatingService(
+        intent: Intent = FloatingServiceCommand.Restore.toIntent(context)
     ): Boolean {
-        return startFloatingService {
-            this.action = action
-            configure()
-        }
-    }
-
-    private fun startFloatingService(configure: Intent.() -> Unit = {}): Boolean {
-        val intent = Intent(context, FloatingLyricsService::class.java).apply {
-            configure()
-        }
         return serviceStarter.startLyricsServiceSafely(intent)
     }
 }

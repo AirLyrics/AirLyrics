@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.common.BroadcastActions
 
 /**
  * Builds the foreground-service notification used by the floating lyrics service.
@@ -51,14 +50,14 @@ object FloatingServiceNotification {
                         activeText = context.getString(R.string.ui_shown),
                         inactiveText = context.getString(R.string.ui_hidden)
                     ),
-                    serviceActionIntent(context, BroadcastActions.NOTIFICATION_TOGGLE_VISIBLE, 1001)
+                    serviceActionIntent(context, FloatingServiceCommand.ToggleVisibleFromNotification, 1001)
                 ).build()
             )
             .addAction(
                 NotificationCompat.Action.Builder(
                     android.R.drawable.ic_menu_manage,
                     state.adjustModeActionTitle(context),
-                    serviceActionIntent(context, BroadcastActions.NOTIFICATION_TOGGLE_ADJUST_MODE, 1002)
+                    serviceActionIntent(context, FloatingServiceCommand.ToggleAdjustModeFromNotification, 1002)
                 ).build()
             )
 
@@ -78,15 +77,15 @@ object FloatingServiceNotification {
         manager.createNotificationChannel(channel)
     }
 
-    private fun serviceActionIntent(context: Context, action: String, requestCode: Int): PendingIntent {
-        val intent = Intent(context, FloatingLyricsService::class.java).apply {
-            this.action = action
-        }
-
+    private fun serviceActionIntent(
+        context: Context,
+        command: FloatingServiceCommand,
+        requestCode: Int
+    ): PendingIntent {
         return PendingIntent.getService(
             context,
             requestCode,
-            intent,
+            command.toIntent(context),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }

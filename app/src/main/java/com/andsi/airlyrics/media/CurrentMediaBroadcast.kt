@@ -20,6 +20,7 @@ object CurrentMediaBroadcast {
     private const val EXTRA_POSITION_MS = "position"
     private const val EXTRA_IS_PLAYING = "isPlaying"
     private const val EXTRA_SNAPSHOT_SEQUENCE = "mediaSnapshotSequence"
+    private const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
 
     fun mediaStatusFilter(): IntentFilter {
         return IntentFilter().apply {
@@ -43,7 +44,7 @@ object CurrentMediaBroadcast {
             putExtra(EXTRA_POSITION_MS, media.positionMs)
             putExtra(EXTRA_IS_PLAYING, media.isPlaying)
             putExtra(EXTRA_SNAPSHOT_SEQUENCE, media.snapshotSequence)
-            putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, media.sourcePackage)
+            putExtra(EXTRA_SOURCE_PACKAGE, media.sourcePackage)
         }
     }
 
@@ -52,7 +53,7 @@ object CurrentMediaBroadcast {
 
         return Intent(BroadcastActions.MEDIA_SOURCE_LOST).apply {
             setPackage(context.packageName)
-            putExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE, sourcePackage)
+            putExtra(EXTRA_SOURCE_PACKAGE, sourcePackage)
         }
     }
 
@@ -62,7 +63,7 @@ object CurrentMediaBroadcast {
         val title = intent.getStringExtra(EXTRA_TITLE).orEmpty()
         if (title.isBlank()) return null
 
-        val sourcePackage = intent.getStringExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE).orEmpty()
+        val sourcePackage = intent.getStringExtra(EXTRA_SOURCE_PACKAGE).orEmpty()
         if (sourcePackage.isBlank()) return null
 
         return CurrentMediaInfo(
@@ -82,7 +83,7 @@ object CurrentMediaBroadcast {
 
     fun readMediaSourceLost(intent: Intent?): String? {
         if (intent?.action != BroadcastActions.MEDIA_SOURCE_LOST) return null
-        return intent.getStringExtra(BroadcastActions.EXTRA_SOURCE_PACKAGE)
+        return intent.getStringExtra(EXTRA_SOURCE_PACKAGE)
             ?.takeIf { it.isNotBlank() }
     }
 }
