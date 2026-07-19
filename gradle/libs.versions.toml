@@ -1,7 +1,7 @@
 [versions]
 androidxTestCore = "1.7.0"
 robolectric = "4.16.1"
-agp = "9.2.1"
+agp = "9.3.0"
 coreKtx = "1.19.0"
 appcompat = "1.7.1"
 material = "1.14.0"
