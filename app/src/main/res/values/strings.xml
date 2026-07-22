@@ -132,6 +132,7 @@
     <string name="ui_lrc_import_save_failed">Could not save lyrics. Check the lyrics save folder permission and available storage.</string>
     <string name="ui_lrc_import_format_error">Import failed. Use a .lrc file in [00:12.34]lyric format.</string>
     <string name="ui_import_lyrics_for_current_song">Import lyrics for current song</string>
+    <string name="ui_import_request_expired">The import request expired. Please try again.</string>
     <string name="ui_imported_off">Imported · off</string>
     <string name="ui_lyrics_folder_scope_hint">Imports, auto-save, and the lyrics index use this folder.</string>
     <string name="ui_invalid_format">Invalid format</string>

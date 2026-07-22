@@ -133,6 +133,7 @@ This is a lyric preview</string>
     <string name="ui_lrc_import_save_failed">保存歌词失败，请检查歌词保存目录权限和可用存储空间。</string>
     <string name="ui_lrc_import_format_error">导入失败，请使用 [00:12.34]歌词 格式的 .lrc 文件</string>
     <string name="ui_import_lyrics_for_current_song">为当前音乐导入歌词</string>
+    <string name="ui_import_request_expired">导入请求已失效，请重试。</string>
     <string name="ui_imported_off">已导入 · 未开启</string>
     <string name="ui_lyrics_folder_scope_hint">手动导入歌词、自动保存歌词和歌词索引都会使用这个位置。</string>
     <string name="ui_invalid_format">格式不正确</string>

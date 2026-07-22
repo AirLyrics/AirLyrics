@@ -4,7 +4,8 @@ import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var graph: MainGraph
+    internal lateinit var graph: MainGraph
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         graph = MainGraph(this)

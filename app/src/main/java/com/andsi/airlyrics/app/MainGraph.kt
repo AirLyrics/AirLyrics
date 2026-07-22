@@ -23,6 +23,8 @@ import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import com.andsi.airlyrics.app.render.MainHandRenderer
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.app.state.MainActivityState
+import com.andsi.airlyrics.app.state.toBundle
+import com.andsi.airlyrics.app.state.toPendingLyricsImport
 import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
@@ -43,6 +45,7 @@ internal class MainGraph(
     private companion object {
         const val KEY_CURRENT_PAGE = "airlyrics.current_page"
         const val KEY_SETTINGS_SUB_PAGE = "airlyrics.settings_sub_page"
+        const val KEY_PENDING_LYRICS_IMPORT = "airlyrics.pending_lyrics_import"
     }
 
     val state: MainActivityState = MainActivityState()
@@ -50,7 +53,7 @@ internal class MainGraph(
 
     val launchers: MainLaunchers = MainLaunchers(
         activity = activity,
-        onLyricsFileSelected = { uri -> lyricsWorkflow.handleLyricsFileSelected(uri) },
+        onLyricsFileResult = { uri -> lyricsWorkflow.handleLyricsFileResult(uri) },
         onLyricsDirectorySelected = { uri -> lyricsWorkflow.handleLyricsDirectorySelected(uri) },
         onNotificationPermissionResult = ::handleNotificationPermissionResult
     )
@@ -155,6 +158,7 @@ internal class MainGraph(
         state.quickFloatingVisible = false
         state.overlayPermissionGranted = Settings.canDrawOverlays(activity)
         restoreNavigationState(savedInstanceState)
+        restorePendingLyricsImport(savedInstanceState)
         uiHost.applySystemBarsTheme()
         registerBackNavigationCallback()
         activity.setContentView(mainHandRenderer.createMainView())
@@ -169,6 +173,10 @@ internal class MainGraph(
     fun onSaveInstanceState(outState: Bundle) {
         outState.putString(KEY_CURRENT_PAGE, state.currentPage.name)
         outState.putString(KEY_SETTINGS_SUB_PAGE, state.settingsSubPage.name)
+        outState.remove(KEY_PENDING_LYRICS_IMPORT)
+        state.pendingLyricsImport?.let { request ->
+            outState.putBundle(KEY_PENDING_LYRICS_IMPORT, request.toBundle())
+        }
     }
 
     fun onResume() {
@@ -201,7 +209,7 @@ internal class MainGraph(
 
     fun onDestroy() {
         mediaRefreshHandler.removeCallbacksAndMessages(null)
-        appIoExecutor.shutdownNow()
+        appIoExecutor.shutdown()
         receivers.unregister()
     }
 
@@ -213,6 +221,12 @@ internal class MainGraph(
         state.settingsSubPage = savedInstanceState.getString(KEY_SETTINGS_SUB_PAGE)
             ?.let { runCatching { SettingsSubPage.valueOf(it) }.getOrNull() }
             ?: state.settingsSubPage
+    }
+
+    private fun restorePendingLyricsImport(savedInstanceState: Bundle?) {
+        state.pendingLyricsImport = savedInstanceState
+            ?.getBundle(KEY_PENDING_LYRICS_IMPORT)
+            ?.toPendingLyricsImport()
     }
 
     fun handleBackNavigation(): Boolean {

@@ -11,6 +11,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.app.state.LyricsImportType
+import com.andsi.airlyrics.app.state.PendingLyricsImport
 import com.andsi.airlyrics.i18n.localizedAssetText
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
@@ -41,15 +43,15 @@ internal class MainLyricsWorkflow(
     private val uiHost
         get() = graph.uiHost
 
-    fun handleLyricsFileSelected(uri: Uri) {
-        val media = state.pendingImportMedia ?: graph.lyricsController.getCurrentMediaInfo()
-        if (media == null || media.title.isBlank()) {
-            AirToast.showLong(activity, R.string.ui_select_song_before_importing)
+    fun handleLyricsFileResult(uri: Uri?) {
+        val request = state.consumePendingLyricsImport()
+        if (uri == null) return
+        if (request == null) {
+            AirToast.showLong(activity, R.string.ui_import_request_expired)
             return
         }
 
-        val importAsWordByWord = state.pendingImportAsWordByWord
-        state.pendingImportMedia = null
+        val importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
 
         if (!LyricsImportValidator.isLikelyLyricsDocument(activity, uri)) {
             val message = if (importAsWordByWord) {
@@ -66,9 +68,9 @@ internal class MainLyricsWorkflow(
             return
         }
 
-        graph.lyricsController.importLyricsForCurrentMedia(
+        graph.lyricsController.importLyricsForTarget(
             uri = uri,
-            media = media,
+            target = request.target,
             overwrite = false,
             importAsWordByWord = importAsWordByWord
         )
@@ -149,8 +151,14 @@ internal class MainLyricsWorkflow(
                 var dialog: Dialog? = null
 
                 fun launchImport(asWordByWord: Boolean) {
-                    state.pendingImportAsWordByWord = asWordByWord
-                    state.pendingImportMedia = media
+                    state.pendingLyricsImport = PendingLyricsImport(
+                        target = media.toSongIdentity(),
+                        type = if (asWordByWord) {
+                            LyricsImportType.WORD_BY_WORD
+                        } else {
+                            LyricsImportType.PLAIN
+                        }
+                    )
                     dialog?.dismiss()
                     graph.launchers.selectLyricsFile()
                 }

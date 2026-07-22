@@ -6,12 +6,12 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.app.contracts.FloatingLyricsReloader
 import com.andsi.airlyrics.app.contracts.MainDialogHost
 import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
-import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
@@ -29,14 +29,14 @@ internal class LyricsController(
     private val mediaControllerProvider: MediaControllerProvider,
     private val floatingLyricsReloader: FloatingLyricsReloader
 ) {
-    fun importLyricsForCurrentMedia(
+    fun importLyricsForTarget(
         uri: Uri,
-        media: CurrentMediaInfo,
+        target: SongIdentity,
         overwrite: Boolean,
         importAsWordByWord: Boolean = false
     ) {
         taskRunner.runOnAppIo {
-            val blockedImportResult = blockedImportResult(media, importAsWordByWord)
+            val blockedImportResult = blockedImportResult(target, importAsWordByWord)
             if (blockedImportResult != null) {
                 taskRunner.runOnMainThread {
                     handleImportResult(blockedImportResult, importAsWordByWord)
@@ -44,9 +44,9 @@ internal class LyricsController(
                 return@runOnAppIo
             }
 
-            if (!overwrite && hasLyricsForMedia(media, importAsWordByWord)) {
+            if (!overwrite && hasLyricsForTarget(target, importAsWordByWord)) {
                 taskRunner.runOnMainThread {
-                    val overwriteMessage = media.displayText + "\n\n" + if (importAsWordByWord) {
+                    val overwriteMessage = target.displayText + "\n\n" + if (importAsWordByWord) {
                         context.getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
                     } else {
                         context.getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
@@ -60,9 +60,9 @@ internal class LyricsController(
                         message = overwriteMessage,
                         positiveText = context.getString(R.string.ui_overwrite)
                     ) {
-                        importLyricsForCurrentMedia(
+                        importLyricsForTarget(
                             uri = uri,
-                            media = media,
+                            target = target,
                             overwrite = true,
                             importAsWordByWord = importAsWordByWord
                         )
@@ -79,20 +79,20 @@ internal class LyricsController(
                 LyricsStorage.importKaraokeLyricsFromUriWithResult(
                     context = context,
                     uri = uri,
-                    title = media.title,
-                    artist = media.artist,
-                    duration = media.durationMs,
-                    album = media.album,
+                    title = target.title,
+                    artist = target.artist,
+                    duration = target.durationMs,
+                    album = target.album,
                     overwrite = overwrite
                 )
             } else {
                 LyricsStorage.importLyricsFromUriWithResult(
                     context = context,
                     uri = uri,
-                    title = media.title,
-                    artist = media.artist,
-                    duration = media.durationMs,
-                    album = media.album,
+                    title = target.title,
+                    artist = target.artist,
+                    duration = target.durationMs,
+                    album = target.album,
                     overwrite = overwrite
                 )
             }
@@ -104,15 +104,15 @@ internal class LyricsController(
     }
 
     private fun blockedImportResult(
-        media: CurrentMediaInfo,
+        target: SongIdentity,
         importAsWordByWord: Boolean
     ): LyricsStorage.ImportLyricsResult? {
         return if (importAsWordByWord) {
             val localInfo = LyricsStorage.getLocalLyricsInfo(
                 context = context,
-                title = media.title,
-                artist = media.artist,
-                duration = media.durationMs
+                title = target.title,
+                artist = target.artist,
+                duration = target.durationMs
             )
             if (localInfo != null && localInfo.source != LyricsStorage.SOURCE_KARAOKE_FALLBACK) {
                 LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists
@@ -121,9 +121,9 @@ internal class LyricsController(
             }
         } else if (LyricsStorage.hasKaraokeLyrics(
                 context = context,
-                title = media.title,
-                artist = media.artist,
-                duration = media.durationMs
+                title = target.title,
+                artist = target.artist,
+                duration = target.durationMs
             )
         ) {
             LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
@@ -132,23 +132,30 @@ internal class LyricsController(
         }
     }
 
-    private fun hasLyricsForMedia(media: CurrentMediaInfo, importAsWordByWord: Boolean): Boolean {
+    private fun hasLyricsForTarget(target: SongIdentity, importAsWordByWord: Boolean): Boolean {
         return if (importAsWordByWord) {
             LyricsStorage.hasKaraokeLyrics(
                 context = context,
-                title = media.title,
-                artist = media.artist,
-                duration = media.durationMs
+                title = target.title,
+                artist = target.artist,
+                duration = target.durationMs
             )
         } else {
             LyricsStorage.hasLocalLyrics(
                 context = context,
-                title = media.title,
-                artist = media.artist,
-                duration = media.durationMs
+                title = target.title,
+                artist = target.artist,
+                duration = target.durationMs
             )
         }
     }
+
+    private val SongIdentity.displayText: String
+        get() = if (artist.isNotBlank()) {
+            "♪ $title - $artist"
+        } else {
+            "♪ $title"
+        }
 
     private fun handleImportResult(
         result: LyricsStorage.ImportLyricsResult,

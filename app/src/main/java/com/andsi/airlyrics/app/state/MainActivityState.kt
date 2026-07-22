@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.state
 
-import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.ui.model.MainUiState
 import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.navigation.Page
@@ -19,6 +18,9 @@ internal class MainActivityState : MainFloatingState, MainUiState {
     override var renderedSettingsSubPage: SettingsSubPage = SettingsSubPage.HOME
     override var mediaRefreshState: RefreshState = RefreshState.IDLE
     override var mediaPageRefreshScheduled: Boolean = false
-    var pendingImportAsWordByWord: Boolean = false
-    var pendingImportMedia: CurrentMediaInfo? = null
+    var pendingLyricsImport: PendingLyricsImport? = null
+
+    fun consumePendingLyricsImport(): PendingLyricsImport? {
+        return pendingLyricsImport.also { pendingLyricsImport = null }
+    }
 }

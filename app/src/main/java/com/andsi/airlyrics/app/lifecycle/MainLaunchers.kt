@@ -12,7 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
  */
 internal class MainLaunchers(
     activity: AppCompatActivity,
-    private val onLyricsFileSelected: (Uri) -> Unit,
+    private val onLyricsFileResult: (Uri?) -> Unit,
     private val onLyricsDirectorySelected: (Uri) -> Unit,
     private val onNotificationPermissionResult: (Boolean) -> Unit
 ) {
@@ -28,7 +28,7 @@ internal class MainLaunchers(
 
     private val lyricsFileLauncher =
         activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri != null) onLyricsFileSelected(uri)
+            onLyricsFileResult(uri)
         }
 
     private val lyricsDirectoryLauncher =
