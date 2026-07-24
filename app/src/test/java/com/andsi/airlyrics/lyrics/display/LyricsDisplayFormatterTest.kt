@@ -80,15 +80,29 @@ class LyricsDisplayFormatterTest {
     }
 
     @Test
-    fun format_previousCurrentNextSkipsOutOfBoundsIndexes() {
-        val rendered = LyricsDisplayFormatter.format(
+    fun format_previousCurrentNextPreservesOrderAndSkipsOutOfBoundsIndexes() {
+        val middleRendered = LyricsDisplayFormatter.format(
+            lines = lines,
+            currentIndex = 1,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
+            lineMode = LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT
+        )
+        val firstRendered = LyricsDisplayFormatter.format(
             lines = lines,
             currentIndex = 0,
             contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
             lineMode = LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT
         )
+        val lastRendered = LyricsDisplayFormatter.format(
+            lines = lines,
+            currentIndex = 2,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
+            lineMode = LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT
+        )
 
-        assertEquals("first\nsecond", rendered)
+        assertEquals("first\nsecond\nthird", middleRendered)
+        assertEquals("first\nsecond", firstRendered)
+        assertEquals("second\nthird", lastRendered)
     }
 
     @Test

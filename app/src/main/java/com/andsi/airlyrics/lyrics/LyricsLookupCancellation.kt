@@ -105,10 +105,8 @@ fun interface LyricsLookupCallbackDispatcher {
 private const val DEFAULT_MAX_PARALLEL_LOOKUPS = 3
 private const val DEFAULT_LOOKUP_QUEUE_CAPACITY = 1
 
-class LyricsLookupRunner(
-    threadNamePrefix: String,
-    private val callbackDispatcher: LyricsLookupCallbackDispatcher = mainThreadDispatcher(),
-    private val executor: ExecutorService = ThreadPoolExecutor(
+internal fun createLyricsLookupExecutor(threadNamePrefix: String): ThreadPoolExecutor {
+    return ThreadPoolExecutor(
         DEFAULT_MAX_PARALLEL_LOOKUPS,
         DEFAULT_MAX_PARALLEL_LOOKUPS,
         30L,
@@ -117,6 +115,21 @@ class LyricsLookupRunner(
         namedThreadFactory(threadNamePrefix),
         ThreadPoolExecutor.DiscardOldestPolicy()
     )
+}
+
+private fun namedThreadFactory(prefix: String): ThreadFactory {
+    val index = AtomicInteger(1)
+    return ThreadFactory { runnable ->
+        Thread(runnable, "$prefix-${index.getAndIncrement()}").apply {
+            isDaemon = true
+        }
+    }
+}
+
+class LyricsLookupRunner(
+    threadNamePrefix: String,
+    private val callbackDispatcher: LyricsLookupCallbackDispatcher = mainThreadDispatcher(),
+    private val executor: ExecutorService = createLyricsLookupExecutor(threadNamePrefix)
 ) {
     private val lock = Any()
     private var nextGeneration = 0L
@@ -217,15 +230,6 @@ class LyricsLookupRunner(
         private fun mainThreadDispatcher(): LyricsLookupCallbackDispatcher {
             val mainHandler = Handler(Looper.getMainLooper())
             return LyricsLookupCallbackDispatcher { block -> mainHandler.post(block) }
-        }
-
-        private fun namedThreadFactory(prefix: String): ThreadFactory {
-            val index = AtomicInteger(1)
-            return ThreadFactory { runnable ->
-                Thread(runnable, "$prefix-${index.getAndIncrement()}").apply {
-                    isDaemon = true
-                }
-            }
         }
     }
 }
