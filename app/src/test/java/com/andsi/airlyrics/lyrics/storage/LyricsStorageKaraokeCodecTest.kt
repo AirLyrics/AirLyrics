@@ -3,6 +3,8 @@ package com.andsi.airlyrics.lyrics.storage
 import com.andsi.airlyrics.lyrics.KaraokeLine
 import com.andsi.airlyrics.lyrics.KaraokeToken
 import com.andsi.airlyrics.lyrics.parser.KaraokeLrcParser
+import org.json.JSONArray
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -179,8 +181,29 @@ class LyricsStorageKaraokeCodecTest {
     }
 
     @Test
-    fun karaokeJsonRoundTrip_preservesValidLines() {
-        val original = listOf(
+    fun karaokeJsonParser_readsFixedLegacyArrayFixture() {
+        val document = KaraokeLyricsCodec.parseDocumentJson(LEGACY_KARAOKE_JSON_FIXTURE)
+
+        assertEquals(emptyList<String>(), document.metadataLines)
+        assertEquals(
+            listOf(
+                KaraokeLine(
+                    startMs = 5_000L,
+                    endMs = 6_000L,
+                    text = "hi",
+                    tokens = listOf(
+                        KaraokeToken("h", 5_000L, 5_300L),
+                        KaraokeToken("i", 5_300L, 6_000L)
+                    )
+                )
+            ),
+            document.lines
+        )
+    }
+
+    @Test
+    fun karaokeJsonSerializer_writesRequiredPersistentSchemasAndValues() {
+        val lines = listOf(
             KaraokeLine(
                 startMs = 5_000L,
                 endMs = 6_000L,
@@ -191,34 +214,85 @@ class LyricsStorageKaraokeCodecTest {
                 )
             )
         )
+        val metadataLines = listOf("[ar:Artist]", "[ti:Title]")
 
-        val json = KaraokeLyricsCodec.linesToJson(original)
-        val parsed = KaraokeLyricsCodec.parseJson(json)
+        val legacyRoot = JSONArray(KaraokeLyricsCodec.linesToJson(lines))
+        assertEquals(1, legacyRoot.length())
+        assertSerializedLine(legacyRoot.getJSONObject(0))
 
-        assertEquals(original, parsed)
-        assertTrue(json.contains("startMs"))
-        assertTrue(json.contains("tokens"))
+        val documentRoot = JSONObject(KaraokeLyricsCodec.linesToJson(lines, metadataLines))
+        assertEquals(2, documentRoot.length())
+        val metadata = documentRoot.getJSONArray("metadata")
+        assertEquals(2, metadata.length())
+        assertEquals("[ar:Artist]", metadata.getString(0))
+        assertEquals("[ti:Title]", metadata.getString(1))
+        val serializedLines = documentRoot.getJSONArray("lines")
+        assertEquals(1, serializedLines.length())
+        assertSerializedLine(serializedLines.getJSONObject(0))
     }
 
     @Test
-    fun karaokeJsonRoundTrip_preservesMetadata() {
+    fun karaokeJsonRoundTrip_preservesSpecialTextSemantics() {
+        val specialText = "He said \"歌\" at C:\\Lyrics\n日本語與繁體中文"
         val original = listOf(
             KaraokeLine(
-                startMs = 5_000L,
-                endMs = 6_000L,
-                text = "hi",
-                tokens = listOf(KaraokeToken("hi", 5_000L, 6_000L))
+                startMs = 7_000L,
+                endMs = 8_000L,
+                text = specialText,
+                tokens = listOf(
+                    KaraokeToken(
+                        text = specialText,
+                        startMs = 7_000L,
+                        endMs = 8_000L
+                    )
+                )
             )
         )
-        val metadataLines = listOf("[ar:Artist]", "[ti:Title]")
 
-        val json = KaraokeLyricsCodec.linesToJson(original, metadataLines)
-        val parsed = KaraokeLyricsCodec.parseJson(json)
-        val parsedMetadata = KaraokeLyricsCodec.parseDocumentJson(json).metadataLines
+        val parsed = KaraokeLyricsCodec.parseJson(
+            KaraokeLyricsCodec.linesToJson(original)
+        )
 
         assertEquals(original, parsed)
-        assertEquals(metadataLines, parsedMetadata)
-        assertTrue(json.contains("metadata"))
-        assertTrue(json.contains("lines"))
+    }
+
+    private fun assertSerializedLine(line: JSONObject) {
+        assertEquals(4, line.length())
+        assertEquals(5_000L, line.getLong("startMs"))
+        assertEquals(6_000L, line.getLong("endMs"))
+        assertEquals("hi", line.getString("text"))
+
+        val tokens = line.getJSONArray("tokens")
+        assertEquals(2, tokens.length())
+        assertSerializedToken(tokens.getJSONObject(0), "h", 5_000L, 5_300L)
+        assertSerializedToken(tokens.getJSONObject(1), "i", 5_300L, 6_000L)
+    }
+
+    private fun assertSerializedToken(
+        token: JSONObject,
+        expectedText: String,
+        expectedStartMs: Long,
+        expectedEndMs: Long
+    ) {
+        assertEquals(3, token.length())
+        assertEquals(expectedText, token.getString("text"))
+        assertEquals(expectedStartMs, token.getLong("startMs"))
+        assertEquals(expectedEndMs, token.getLong("endMs"))
+    }
+
+    private companion object {
+        val LEGACY_KARAOKE_JSON_FIXTURE = """
+            [
+              {
+                "startMs": 5000,
+                "endMs": 6000,
+                "text": "hi",
+                "tokens": [
+                  {"text": "h", "startMs": 5000, "endMs": 5300},
+                  {"text": "i", "startMs": 5300, "endMs": 6000}
+                ]
+              }
+            ]
+        """.trimIndent()
     }
 }

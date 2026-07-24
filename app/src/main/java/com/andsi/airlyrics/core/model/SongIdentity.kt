@@ -25,6 +25,32 @@ data class SongIdentity(
         )
     }
 
+    internal fun legacyStorageKeysAtDurationSeconds(
+        durationSeconds: Iterable<Long>,
+        currentLocale: Locale
+    ): List<String> {
+        val locales = listOf(
+            currentLocale,
+            Locale.forLanguageTag("tr"),
+            Locale.forLanguageTag("az"),
+            Locale.forLanguageTag("lt")
+        )
+        return buildList {
+            locales.forEach { locale ->
+                durationSeconds.forEach { seconds ->
+                    add(
+                        storageKeyForDurationSeconds(
+                            title = title,
+                            artist = artist,
+                            durationSeconds = seconds,
+                            locale = locale
+                        )
+                    )
+                }
+            }
+        }.distinct()
+    }
+
     fun isSameSong(other: SongIdentity): Boolean {
         return isStrongSameSong(other) || isWeakSameSong(other)
     }
@@ -44,13 +70,31 @@ data class SongIdentity(
         private const val DURATION_TOLERANCE_MS = 5_000L
 
         fun storageKeyForDurationSeconds(title: String, artist: String, durationSeconds: Long): String {
+            return storageKeyForDurationSeconds(
+                title = title,
+                artist = artist,
+                durationSeconds = durationSeconds,
+                locale = Locale.ROOT
+            )
+        }
+
+        private fun storageKeyForDurationSeconds(
+            title: String,
+            artist: String,
+            durationSeconds: Long,
+            locale: Locale
+        ): String {
             val normalizedDuration = durationSeconds.coerceAtLeast(0L)
-            val raw = "${normalizeText(title)}|${normalizeText(artist)}|$normalizedDuration"
+            val raw = "${normalizeText(title, locale)}|${normalizeText(artist, locale)}|$normalizedDuration"
             return sha1(raw)
         }
 
         fun normalizeText(text: String): String {
-            return text.trim().lowercase(Locale.getDefault()).replace(Regex("\\s+"), " ")
+            return normalizeText(text, Locale.getDefault())
+        }
+
+        private fun normalizeText(text: String, locale: Locale): String {
+            return text.trim().lowercase(locale).replace(Regex("\\s+"), " ")
         }
 
         private fun sha1(text: String): String {

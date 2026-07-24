@@ -3,6 +3,7 @@ package com.andsi.airlyrics.settings.store
 import android.content.Context
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.core.prefs.prefs
+import java.util.Locale
 
 /**
  * Per-song lyric timing offset. The raw lyric files stay untouched; this store only
@@ -42,6 +43,10 @@ object LyricsOffsetStore {
             val offset = preferences.getLong(weakKey, 0L)
             preferences.setLong(exactKey, offset)
             return offset
+        }
+
+        findLegacyOffset(preferences, identity, Locale.getDefault())?.let { legacyOffset ->
+            return setOffsetMs(context, identity, legacyOffset)
         }
 
         return 0L
@@ -95,5 +100,32 @@ object LyricsOffsetStore {
 
     private fun weakOffsetKey(identity: SongIdentity): String {
         return KEY_PREFIX + identity.storageKeyAtDurationSeconds(0L)
+    }
+
+    private fun findLegacyOffset(
+        preferences: com.andsi.airlyrics.core.prefs.PreferenceStore,
+        identity: SongIdentity,
+        currentLocale: Locale
+    ): Long? {
+        val durationCandidates = buildList {
+            add(identity.durationSeconds)
+            if (identity.durationMs > 0L) {
+                addAll(
+                    (-5L..5L)
+                        .asSequence()
+                        .filter { it != 0L }
+                        .map { identity.durationSeconds + it }
+                        .filter { it > 0L }
+                        .toList()
+                )
+            }
+            add(0L)
+        }.distinct()
+        val legacyKeys = identity
+            .legacyStorageKeysAtDurationSeconds(durationCandidates, currentLocale)
+            .map { KEY_PREFIX + it }
+
+        val matchedKey = legacyKeys.firstOrNull { preferences.contains(it) } ?: return null
+        return preferences.getLong(matchedKey, 0L)
     }
 }

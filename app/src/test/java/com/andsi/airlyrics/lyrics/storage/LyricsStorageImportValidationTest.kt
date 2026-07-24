@@ -3,6 +3,7 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.core.model.SongIdentity
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -105,6 +106,55 @@ class LyricsStorageImportValidationTest {
         assertEquals(
             "[ar:Artist]\n[ti:Title]\n[00:01.00]valid",
             LyricsStorage.readLocalLyrics(context, "Plain Valid", "AndSi", 2_000L)
+        )
+    }
+
+    @Test
+    fun readLocalLyrics_usesLegacyIndexPathAfterStorageKeyBecomesRootStable() {
+        val lyrics = "[00:01.00]legacy locale path"
+        val identity = SongIdentity(
+            title = "INDIGO",
+            artist = "ARTIST",
+            durationMs = 180_900L
+        )
+        val legacyKey = "2c38d002d54afdbf7ca9281fe90d7ae261cff2be"
+        val legacyFileName = "2c38d002d54afdbf.lrc"
+        val legacyRelativePath = "lyrics/$legacyFileName"
+
+        assertEquals(
+            "a11e82c8fbfbe4a976ab8e497d003f8728ab3e98",
+            identity.storageKey()
+        )
+        assertFalse(identity.storageKey() == legacyKey)
+        assertTrue(LyricsFileStore.writeManagedLyrics(context, legacyFileName, lyrics))
+        assertTrue(
+            LyricsIndexStore.write(
+                context,
+                listOf(
+                    LyricsIndexEntry(
+                        key = legacyKey,
+                        title = identity.title,
+                        artist = identity.artist,
+                        album = "",
+                        durationMs = identity.durationMs,
+                        file = legacyRelativePath,
+                        source = LyricsStorage.SOURCE_DOWNLOADED,
+                        provider = "legacy-locale-test",
+                        createdAt = 1L,
+                        updatedAt = 2L
+                    )
+                )
+            )
+        )
+
+        assertEquals(
+            lyrics,
+            LyricsStorage.readLocalLyrics(
+                context,
+                identity.title,
+                identity.artist,
+                identity.durationMs
+            )
         )
     }
 

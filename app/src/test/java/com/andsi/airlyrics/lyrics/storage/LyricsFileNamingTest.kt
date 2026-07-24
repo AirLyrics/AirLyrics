@@ -15,11 +15,19 @@ class LyricsFileNamingTest {
             album = "Album",
             durationMs = 180_000L
         )
-        val keyPrefix = identity.storageKey().take(16)
 
-        assertEquals("$keyPrefix.lrc", LyricsFileNaming.managedPlainFileName(identity))
-        assertEquals("$keyPrefix.karaoke.json", LyricsFileNaming.managedKaraokeFileName(identity))
-        assertEquals("lyrics/$keyPrefix.lrc", LyricsFileNaming.managedRelativePath("$keyPrefix.lrc"))
+        assertEquals(
+            "2e421c87b90fd468.lrc",
+            LyricsFileNaming.managedPlainFileName(identity)
+        )
+        assertEquals(
+            "2e421c87b90fd468.karaoke.json",
+            LyricsFileNaming.managedKaraokeFileName(identity)
+        )
+        assertEquals(
+            "lyrics/2e421c87b90fd468.lrc",
+            LyricsFileNaming.managedRelativePath("2e421c87b90fd468.lrc")
+        )
     }
 
     @Test
