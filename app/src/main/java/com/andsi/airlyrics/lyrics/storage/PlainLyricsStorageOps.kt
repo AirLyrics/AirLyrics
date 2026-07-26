@@ -121,8 +121,12 @@ internal object PlainLyricsStorageOps {
         val normalizedLyrics = LrcParser.normalizeForStorage(text)
         if (normalizedLyrics.isBlank()) return LyricsStorage.ImportLyricsResult.InvalidFormat()
 
-        return if (
-            LyricsStorage.saveLyrics(
+        return LyricsStorage.withStorageLock {
+            if (KaraokeLyricsStorageOps.hasKaraokeLyrics(context, title, artist, duration)) {
+                return@withStorageLock LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
+            }
+
+            if (saveLyrics(
                 context = context,
                 title = title,
                 artist = artist,
@@ -132,11 +136,11 @@ internal object PlainLyricsStorageOps {
                 source = LyricsStorage.SOURCE_MANUAL_IMPORT,
                 provider = "local",
                 overwrite = overwrite
-            )
-        ) {
-            LyricsStorage.ImportLyricsResult.Saved
-        } else {
-            LyricsStorage.ImportLyricsResult.SaveFailed
+            )) {
+                LyricsStorage.ImportLyricsResult.Saved
+            } else {
+                LyricsStorage.ImportLyricsResult.SaveFailed
+            }
         }
     }
 }

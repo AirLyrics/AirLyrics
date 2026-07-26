@@ -6,6 +6,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.app.contracts.FloatingLyricsReloader
 import com.andsi.airlyrics.app.contracts.MainDialogHost
@@ -197,6 +198,18 @@ internal class LyricsController(
                 AirToast.showLong(context, message)
             }
             LyricsStorage.ImportLyricsResult.SaveFailed -> {
+                AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
+            }
+            LyricsStorage.ImportLyricsResult.SnapshotFailed -> {
+                AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
+            }
+            is LyricsStorage.ImportLyricsResult.RollbackFailed -> {
+                Log.e(
+                    "LyricsController",
+                    "Karaoke import rollback failed after ${result.originalFailureStep} " +
+                        "(${result.originalFailureCause}); " +
+                        "failed steps=${result.failedRollbackSteps}"
+                )
                 AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
             }
         }

@@ -7,6 +7,12 @@ import org.json.JSONObject
 import java.io.File
 
 internal object LyricsIndexStore {
+    sealed class RawSnapshot {
+        object Missing : RawSnapshot()
+        object Unreadable : RawSnapshot()
+        data class Present(val bytes: ByteArray) : RawSnapshot()
+    }
+
     fun read(context: Context): List<LyricsIndexEntry> {
         val text = if (LyricsStoragePaths.getLyricsDirUri(context) != null) {
             val file = LyricsStoragePaths.indexDocumentFile(context, create = false) ?: return emptyList()
@@ -76,6 +82,57 @@ internal object LyricsIndexStore {
         }.getOrDefault(false)
     }
 
+    fun captureRaw(context: Context): RawSnapshot {
+        return if (LyricsStoragePaths.getLyricsDirUri(context) != null) {
+            val file = LyricsStoragePaths.indexDocumentFile(context, create = false)
+                ?: return RawSnapshot.Missing
+            val bytes = runCatching {
+                context.contentResolver.openInputStream(file.uri)
+                    ?.use { it.readBytes() }
+            }.getOrNull() ?: return RawSnapshot.Unreadable
+            RawSnapshot.Present(bytes)
+        } else {
+            val file = File(LyricsStoragePaths.fallbackLyricsDir(context), INDEX_FILE_NAME)
+            if (!file.exists()) return RawSnapshot.Missing
+            runCatching<RawSnapshot> { RawSnapshot.Present(file.readBytes()) }
+                .getOrDefault(RawSnapshot.Unreadable)
+        }
+    }
+
+    fun restoreRaw(context: Context, snapshot: RawSnapshot): Boolean {
+        return when (snapshot) {
+            RawSnapshot.Unreadable -> false
+            RawSnapshot.Missing -> deleteRaw(context)
+            is RawSnapshot.Present -> writeRaw(context, snapshot.bytes)
+        }
+    }
+
+    private fun writeRaw(context: Context, bytes: ByteArray): Boolean {
+        return runCatching {
+            if (LyricsStoragePaths.getLyricsDirUri(context) != null) {
+                val file = LyricsStoragePaths.indexDocumentFile(context, create = true) ?: return false
+                context.contentResolver.openOutputStream(file.uri, "wt")
+                    ?.use { it.write(bytes) }
+                    ?: return false
+                return true
+            }
+
+            File(LyricsStoragePaths.fallbackLyricsDir(context), INDEX_FILE_NAME).writeBytes(bytes)
+            true
+        }.getOrDefault(false)
+    }
+
+    private fun deleteRaw(context: Context): Boolean {
+        return if (LyricsStoragePaths.getLyricsDirUri(context) != null) {
+            val file = LyricsStoragePaths.indexDocumentFile(context, create = false)
+                ?: return true
+            file.delete()
+        } else {
+            val file = File(LyricsStoragePaths.fallbackLyricsDir(context), INDEX_FILE_NAME)
+            !file.exists() || file.delete()
+        }
+    }
+
     fun find(context: Context, title: String, artist: String, duration: Long): LyricsIndexEntry? {
         val entries = read(context)
         val identity = SongIdentity(title = title, artist = artist, durationMs = duration)
@@ -88,5 +145,48 @@ internal object LyricsIndexStore {
         return read(context).firstOrNull {
             it.file.substringAfterLast('/') == safeName || it.karaokeFile.substringAfterLast('/') == safeName
         }
+    }
+}
+
+internal interface LyricsIndexIo {
+    fun read(context: Context): List<LyricsIndexEntry>
+    fun find(
+        context: Context,
+        title: String,
+        artist: String,
+        duration: Long
+    ): LyricsIndexEntry?
+    fun write(context: Context, entries: List<LyricsIndexEntry>): Boolean
+    fun captureRaw(context: Context): LyricsIndexStore.RawSnapshot
+    fun restoreRaw(context: Context, snapshot: LyricsIndexStore.RawSnapshot): Boolean
+}
+
+internal object AndroidLyricsIndexIo : LyricsIndexIo {
+    override fun read(context: Context): List<LyricsIndexEntry> {
+        return LyricsIndexStore.read(context)
+    }
+
+    override fun find(
+        context: Context,
+        title: String,
+        artist: String,
+        duration: Long
+    ): LyricsIndexEntry? {
+        return LyricsIndexStore.find(context, title, artist, duration)
+    }
+
+    override fun write(context: Context, entries: List<LyricsIndexEntry>): Boolean {
+        return LyricsIndexStore.write(context, entries)
+    }
+
+    override fun captureRaw(context: Context): LyricsIndexStore.RawSnapshot {
+        return LyricsIndexStore.captureRaw(context)
+    }
+
+    override fun restoreRaw(
+        context: Context,
+        snapshot: LyricsIndexStore.RawSnapshot
+    ): Boolean {
+        return LyricsIndexStore.restoreRaw(context, snapshot)
     }
 }

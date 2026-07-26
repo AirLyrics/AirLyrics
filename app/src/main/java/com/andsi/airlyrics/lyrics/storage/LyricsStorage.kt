@@ -34,6 +34,28 @@ object LyricsStorage {
         ) : ImportLyricsResult()
         object ReadFailed : ImportLyricsResult()
         object SaveFailed : ImportLyricsResult()
+        object SnapshotFailed : ImportLyricsResult()
+        data class RollbackFailed(
+            val originalFailureStep: KaraokeImportFailureStep,
+            val originalFailureCause: KaraokeImportFailureCause,
+            val failedRollbackSteps: List<KaraokeRollbackFailureStep>
+        ) : ImportLyricsResult()
+    }
+
+    enum class KaraokeImportFailureStep {
+        KARAOKE_FILE_WRITE,
+        PLAIN_FALLBACK_FILE_WRITE,
+        INDEX_WRITE
+    }
+
+    enum class KaraokeImportFailureCause {
+        IO_OPERATION_RETURNED_FALSE
+    }
+
+    enum class KaraokeRollbackFailureStep {
+        RESTORE_INDEX,
+        RESTORE_PLAIN_FILE,
+        RESTORE_KARAOKE_FILE
     }
 
     data class LocalLyricsItem(
@@ -101,7 +123,9 @@ object LyricsStorage {
         text: String
     ): LocalLyricsUpdateResult = LocalLyricsEditor.updateKaraokeItemTextWithResult(context, item, text)
 
-    fun saveLyricsDirUri(context: Context, uri: Uri) = LyricsStoragePaths.saveLyricsDirUri(context, uri)
+    fun saveLyricsDirUri(context: Context, uri: Uri) = withStorageLock {
+        LyricsStoragePaths.saveLyricsDirUri(context, uri)
+    }
 
     fun validateLyricsDir(context: Context, uri: Uri): Boolean = LyricsStoragePaths.validateLyricsDir(context, uri)
 
@@ -236,7 +260,33 @@ object LyricsStorage {
             artist = artist,
             duration = duration,
             album = album,
-            overwrite = overwrite
+            overwrite = overwrite,
+            managedLyricsIo = AndroidManagedLyricsIo,
+            indexIo = AndroidLyricsIndexIo
+        )
+    }
+
+    internal fun importKaraokeLyricsFromUriWithResult(
+        context: Context,
+        uri: Uri,
+        title: String,
+        artist: String,
+        duration: Long,
+        album: String = "",
+        overwrite: Boolean = true,
+        managedLyricsIo: ManagedLyricsIo,
+        indexIo: LyricsIndexIo = AndroidLyricsIndexIo
+    ): ImportLyricsResult {
+        return KaraokeLyricsStorageOps.importKaraokeLyricsFromUriWithResult(
+            context = context,
+            uri = uri,
+            title = title,
+            artist = artist,
+            duration = duration,
+            album = album,
+            overwrite = overwrite,
+            managedLyricsIo = managedLyricsIo,
+            indexIo = indexIo
         )
     }
 

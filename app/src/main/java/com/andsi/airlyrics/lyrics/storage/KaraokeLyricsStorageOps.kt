@@ -77,7 +77,9 @@ internal object KaraokeLyricsStorageOps {
         artist: String,
         duration: Long,
         album: String = "",
-        overwrite: Boolean = true
+        overwrite: Boolean = true,
+        managedLyricsIo: ManagedLyricsIo,
+        indexIo: LyricsIndexIo
     ): LyricsStorage.ImportLyricsResult {
         if (hasBlockingPlainLyricsForKaraokeImport(context, title, artist, duration)) {
             return LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists
@@ -106,37 +108,77 @@ internal object KaraokeLyricsStorageOps {
                 return@withStorageLock LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists
             }
 
-            val savedKaraoke = saveKaraokeLyrics(
-                context = context,
+            val identity = SongIdentity(
                 title = title,
                 artist = artist,
-                duration = duration,
-                karaokeLines = lines,
                 album = album,
-                source = LyricsStorage.SOURCE_MANUAL_IMPORT,
-                provider = "local",
-                overwrite = overwrite,
-                metadataLines = parsedImport.metadataLines
+                durationMs = duration
             )
-            if (!savedKaraoke) return@withStorageLock LyricsStorage.ImportLyricsResult.SaveFailed
-
-            val savedPlain = PlainLyricsStorageOps.saveLyrics(
+            val existing = indexIo.find(context, title, artist, duration)
+            if (existing?.karaokeFile?.isNotBlank() == true && !overwrite) {
+                return@withStorageLock LyricsStorage.ImportLyricsResult.SaveFailed
+            }
+            val importSnapshot = KaraokeImportSnapshot.capture(
                 context = context,
-                title = title,
-                artist = artist,
-                duration = duration,
-                lyrics = parsedImport.plainLrc,
-                album = album,
+                identity = identity,
+                managedLyricsIo = managedLyricsIo,
+                indexIo = indexIo
+            ) ?: return@withStorageLock LyricsStorage.ImportLyricsResult.SnapshotFailed
+
+            val karaokeFileName = LyricsFileNaming.managedKaraokeFileName(identity)
+            val plainFileName = LyricsFileNaming.managedPlainFileName(identity)
+            val karaokeJson = KaraokeLyricsCodec.linesToJson(lines, parsedImport.metadataLines)
+            if (!managedLyricsIo.write(context, karaokeFileName, karaokeJson)) {
+                return@withStorageLock importSnapshot.rollback(
+                    context = context,
+                    managedLyricsIo = managedLyricsIo,
+                    indexIo = indexIo,
+                    originalFailureStep = LyricsStorage.KaraokeImportFailureStep.KARAOKE_FILE_WRITE,
+                    restoreIndex = false
+                )
+            }
+            if (!managedLyricsIo.write(context, plainFileName, parsedImport.plainLrc)) {
+                return@withStorageLock importSnapshot.rollback(
+                    context = context,
+                    managedLyricsIo = managedLyricsIo,
+                    indexIo = indexIo,
+                    originalFailureStep = LyricsStorage.KaraokeImportFailureStep.PLAIN_FALLBACK_FILE_WRITE,
+                    restoreIndex = false
+                )
+            }
+
+            val now = System.currentTimeMillis()
+            val normalizedKey = identity.storageKey()
+            val entries = importSnapshot.indexEntries
+                .filterNot { it.isSameSong(identity) || it.key == normalizedKey }
+                .toMutableList()
+            val committedEntry = LyricsIndexEntry(
+                key = normalizedKey,
+                title = title.trim(),
+                artist = artist.trim(),
+                album = album.trim(),
+                durationMs = duration,
+                file = LyricsFileNaming.managedRelativePath(plainFileName),
+                karaokeFile = LyricsFileNaming.managedRelativePath(karaokeFileName),
                 source = LyricsStorage.SOURCE_KARAOKE_FALLBACK,
                 provider = "local",
-                overwrite = true
+                karaokeProvider = "local",
+                createdAt = existing?.createdAt ?: now,
+                updatedAt = now
             )
+            entries += committedEntry
 
-            if (savedPlain) {
-                LyricsStorage.ImportLyricsResult.Saved
-            } else {
-                LyricsStorage.ImportLyricsResult.SaveFailed
+            if (!indexIo.write(context, entries)) {
+                return@withStorageLock importSnapshot.rollback(
+                    context = context,
+                    managedLyricsIo = managedLyricsIo,
+                    indexIo = indexIo,
+                    originalFailureStep = LyricsStorage.KaraokeImportFailureStep.INDEX_WRITE,
+                    restoreIndex = true,
+                    committedEntry = committedEntry
+                )
             }
+            LyricsStorage.ImportLyricsResult.Saved
         }
     }
 
@@ -204,5 +246,119 @@ internal object KaraokeLyricsStorageOps {
                     .filter { it.isNotBlank() }
             }
             .filterValues { it.isNotEmpty() }
+    }
+
+    private data class KaraokeImportSnapshot(
+        val indexEntries: List<LyricsIndexEntry>,
+        val rawIndex: LyricsIndexStore.RawSnapshot,
+        val plainFile: ManagedFileSnapshot,
+        val karaokeFile: ManagedFileSnapshot
+    ) {
+        fun rollback(
+            context: Context,
+            managedLyricsIo: ManagedLyricsIo,
+            indexIo: LyricsIndexIo,
+            originalFailureStep: LyricsStorage.KaraokeImportFailureStep,
+            restoreIndex: Boolean,
+            committedEntry: LyricsIndexEntry? = null
+        ): LyricsStorage.ImportLyricsResult {
+            val failedSteps = mutableListOf<LyricsStorage.KaraokeRollbackFailureStep>()
+            val indexRestoreFailed = restoreIndex && !indexIo.restoreRaw(context, rawIndex)
+            if (indexRestoreFailed) {
+                failedSteps += LyricsStorage.KaraokeRollbackFailureStep.RESTORE_INDEX
+            }
+            val newEntryRemainsAuthoritative =
+                indexRestoreFailed &&
+                    committedEntry != null &&
+                    indexIo.read(context).any { entry -> entry == committedEntry }
+            if (!newEntryRemainsAuthoritative) {
+                if (!plainFile.restore(context, managedLyricsIo)) {
+                    failedSteps += LyricsStorage.KaraokeRollbackFailureStep.RESTORE_PLAIN_FILE
+                }
+                if (!karaokeFile.restore(context, managedLyricsIo)) {
+                    failedSteps += LyricsStorage.KaraokeRollbackFailureStep.RESTORE_KARAOKE_FILE
+                }
+            }
+            return if (failedSteps.isEmpty()) {
+                LyricsStorage.ImportLyricsResult.SaveFailed
+            } else {
+                LyricsStorage.ImportLyricsResult.RollbackFailed(
+                    originalFailureStep = originalFailureStep,
+                    originalFailureCause =
+                        LyricsStorage.KaraokeImportFailureCause.IO_OPERATION_RETURNED_FALSE,
+                    failedRollbackSteps = failedSteps
+                )
+            }
+        }
+
+        companion object {
+            fun capture(
+                context: Context,
+                identity: SongIdentity,
+                managedLyricsIo: ManagedLyricsIo,
+                indexIo: LyricsIndexIo
+            ): KaraokeImportSnapshot? {
+                val rawIndex = indexIo.captureRaw(context)
+                if (rawIndex is LyricsIndexStore.RawSnapshot.Unreadable) return null
+                val plainFileName = LyricsFileNaming.managedPlainFileName(identity)
+                val karaokeFileName = LyricsFileNaming.managedKaraokeFileName(identity)
+                return KaraokeImportSnapshot(
+                    indexEntries = indexIo.read(context),
+                    rawIndex = rawIndex,
+                    plainFile = ManagedFileSnapshot.capture(
+                        context,
+                        plainFileName,
+                        managedLyricsIo
+                    ) ?: return null,
+                    karaokeFile = ManagedFileSnapshot.capture(
+                        context,
+                        karaokeFileName,
+                        managedLyricsIo
+                    ) ?: return null
+                )
+            }
+        }
+    }
+
+    private sealed class ManagedFileSnapshot {
+        abstract val relativeFile: String
+
+        data class Missing(
+            override val relativeFile: String
+        ) : ManagedFileSnapshot()
+
+        data class Present(
+            override val relativeFile: String,
+            val content: String
+        ) : ManagedFileSnapshot()
+
+        fun restore(context: Context, managedLyricsIo: ManagedLyricsIo): Boolean {
+            return when (this) {
+                is Missing -> {
+                    !managedLyricsIo.exists(context, relativeFile) ||
+                        managedLyricsIo.delete(context, relativeFile)
+                }
+                is Present -> managedLyricsIo.write(
+                    context = context,
+                    fileName = relativeFile.substringAfterLast('/'),
+                    lyrics = content
+                )
+            }
+        }
+
+        companion object {
+            fun capture(
+                context: Context,
+                fileName: String,
+                managedLyricsIo: ManagedLyricsIo
+            ): ManagedFileSnapshot? {
+                val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
+                if (!managedLyricsIo.exists(context, relativeFile)) {
+                    return Missing(relativeFile)
+                }
+                val content = managedLyricsIo.read(context, relativeFile) ?: return null
+                return Present(relativeFile, content)
+            }
+        }
     }
 }

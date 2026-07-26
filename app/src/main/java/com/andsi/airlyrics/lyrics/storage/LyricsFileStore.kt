@@ -135,6 +135,16 @@ internal object LyricsFileStore {
         return file.readText()
     }
 
+    fun managedLyricsExists(context: Context, relativeFile: String): Boolean {
+        val fileName = relativeFile.substringAfterLast('/')
+        val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
+        return if (treeUri != null) {
+            LyricsStoragePaths.managedDocumentDir(context)?.findFile(fileName)?.isFile == true
+        } else {
+            File(LyricsStoragePaths.fallbackManagedLyricsDir(context), fileName).isFile
+        }
+    }
+
     fun writeManagedLyrics(context: Context, fileName: String, lyrics: String): Boolean {
         return runCatching {
             val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
@@ -196,5 +206,30 @@ internal object LyricsFileStore {
 
         val file = File(LyricsStoragePaths.fallbackLyricsDir(context), fileName)
         return file.exists() && file.delete()
+    }
+}
+
+internal interface ManagedLyricsIo {
+    fun exists(context: Context, relativeFile: String): Boolean
+    fun read(context: Context, relativeFile: String): String?
+    fun write(context: Context, fileName: String, lyrics: String): Boolean
+    fun delete(context: Context, relativeFile: String): Boolean
+}
+
+internal object AndroidManagedLyricsIo : ManagedLyricsIo {
+    override fun exists(context: Context, relativeFile: String): Boolean {
+        return LyricsFileStore.managedLyricsExists(context, relativeFile)
+    }
+
+    override fun read(context: Context, relativeFile: String): String? {
+        return LyricsFileStore.readManagedLyrics(context, relativeFile)
+    }
+
+    override fun write(context: Context, fileName: String, lyrics: String): Boolean {
+        return LyricsFileStore.writeManagedLyrics(context, fileName, lyrics)
+    }
+
+    override fun delete(context: Context, relativeFile: String): Boolean {
+        return LyricsFileStore.deleteManagedLyrics(context, relativeFile)
     }
 }
