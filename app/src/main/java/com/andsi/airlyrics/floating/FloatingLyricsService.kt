@@ -17,7 +17,7 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 
-class FloatingLyricsService : Service() {
+open class FloatingLyricsService : Service() {
     internal lateinit var windowController: FloatingLyricsWindow
 
     internal val lyricsView
@@ -35,7 +35,13 @@ class FloatingLyricsService : Service() {
         noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric) }
     )
     internal val syncHandler = Handler(Looper.getMainLooper())
-    internal val lyricsLookupRunner = LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsRepository")
+    internal val lyricsLookupRunner: LyricsLookupRunner by lazy(LazyThreadSafetyMode.NONE) {
+        createLyricsLookupRunner()
+    }
+
+    protected open fun createLyricsLookupRunner(): LyricsLookupRunner {
+        return LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsRepository")
+    }
 
     internal var currentMedia: CurrentMediaInfo = CurrentMediaInfo.Empty
     internal var lastPlaybackLyricsKey: PlaybackLyricsKey? = null
