@@ -166,6 +166,12 @@ android {
             isIncludeAndroidResources = true
         }
     }
+
+    sourceSets {
+        getByName("test") {
+            resources.directories.add(rootProject.file("lyrics-core/testdata").path)
+        }
+    }
 }
 
 kotlin {

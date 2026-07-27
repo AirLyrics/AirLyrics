@@ -36,18 +36,7 @@ object MusixmatchLyricsProvider : LyricsProvider {
             translationLanguageCode = systemTranslationLanguageCode(),
             cancellationToken = request.cancellationToken
         ).map { result ->
-            result?.let {
-                LyricsProviderResult(
-                    providerId = id,
-                    providerName = name,
-                    lyrics = it.lrc,
-                    translatedLyrics = it.translatedLrc,
-                    matchedTitle = it.title,
-                    matchedArtist = it.artist,
-                    matchedAlbum = it.album,
-                    matchedDurationMs = it.durationMs
-                )
-            }
+            toProviderResult(result)
         }
     }
 
@@ -85,71 +74,107 @@ object MusixmatchLyricsProvider : LyricsProvider {
             }
             cancellationToken?.throwIfCancellationRequested()
 
-            val nativeResult = NativeLyricsResultParser.parse(
+            mapNativeResultJson(
                 jsonText = jsonText,
-                defaultSource = "musixmatch-rust",
                 fallbackTitle = title,
                 fallbackArtist = artist,
                 fallbackAlbum = album,
-                fallbackDurationMs = durationMs
-            )
-            if (!nativeResult.ok) {
-                if (nativeResult.errorType == LyricsLookupErrorType.NotFound) {
-                    if (BuildConfig.DEBUG) {
-                        Log.w(
-                            "AirLyricsLyrics",
-                            "Musixmatch not found: title=$title artist=$artist durationMs=$durationMs translation=$translationLanguageCode detail=${nativeResult.errorMessage.orEmpty()}"
-                        )
-                    }
-                    return@runCatching null
-                }
-                throw nativeResult.toNativeLyricsLookupException(
-                    providerId = id,
-                    providerName = name,
-                    defaultMessage = "Musixmatch lookup failed"
-                )
-            }
-
-            val lrc = nativeResult.primaryLyrics()
-
-            if (lrc.isBlank()) {
-                return@runCatching null
-            }
-
-            val translatedLrc = nativeResult.translatedLrc
-            if (translationLanguageCode.isNotBlank()) {
-                if (translatedLrc.isNullOrBlank()) {
-                    if (BuildConfig.DEBUG) {
-                        Log.i(
-                            "AirLyricsLyrics",
-                            "Musixmatch translation empty: title=$title artist=$artist lang=$translationLanguageCode matched=${nativeResult.title} - ${nativeResult.artist}"
-                        )
-                    }
-                } else {
-                    if (BuildConfig.DEBUG) {
-                        Log.i(
-                            "AirLyricsLyrics",
-                            "Musixmatch translation found: title=$title artist=$artist lang=$translationLanguageCode translatedChars=${translatedLrc.length}"
-                        )
-                    }
-                }
-            }
-
-            MusixmatchLyricsResult(
-                source = nativeResult.source,
-                subtitleId = nativeResult.id,
-                title = nativeResult.title,
-                artist = nativeResult.artist,
-                album = nativeResult.album,
-                durationMs = nativeResult.durationMs,
-                lrc = lrc,
-                translatedLrc = translatedLrc,
-                errorType = nativeResult.errorTypeName,
-                errorMessage = nativeResult.errorMessage
+                fallbackDurationMs = durationMs,
+                translationLanguageCode = translationLanguageCode,
             )
         }.recoverNativeLoadFailure(
             providerId = id,
             providerName = name
         )
+    }
+
+    internal fun mapNativeResultJson(
+        jsonText: String,
+        fallbackTitle: String,
+        fallbackArtist: String,
+        fallbackAlbum: String,
+        fallbackDurationMs: Long,
+        translationLanguageCode: String,
+    ): MusixmatchLyricsResult? {
+        val nativeResult = NativeLyricsResultParser.parse(
+            jsonText = jsonText,
+            defaultSource = "musixmatch-rust",
+            fallbackTitle = fallbackTitle,
+            fallbackArtist = fallbackArtist,
+            fallbackAlbum = fallbackAlbum,
+            fallbackDurationMs = fallbackDurationMs,
+        )
+        if (!nativeResult.ok) {
+            if (nativeResult.errorType == LyricsLookupErrorType.NotFound) {
+                if (BuildConfig.DEBUG) {
+                    Log.w(
+                        "AirLyricsLyrics",
+                        "Musixmatch not found: title=$fallbackTitle artist=$fallbackArtist " +
+                            "durationMs=$fallbackDurationMs translation=$translationLanguageCode " +
+                            "detail=${nativeResult.errorMessage.orEmpty()}",
+                    )
+                }
+                return null
+            }
+            throw nativeResult.toNativeLyricsLookupException(
+                providerId = id,
+                providerName = name,
+                defaultMessage = "Musixmatch lookup failed",
+            )
+        }
+
+        val lrc = nativeResult.primaryLyrics()
+        if (lrc.isBlank()) return null
+
+        val translatedLrc = nativeResult.translatedLrc
+        if (translationLanguageCode.isNotBlank()) {
+            if (translatedLrc.isNullOrBlank()) {
+                if (BuildConfig.DEBUG) {
+                    Log.i(
+                        "AirLyricsLyrics",
+                        "Musixmatch translation empty: title=$fallbackTitle " +
+                            "artist=$fallbackArtist lang=$translationLanguageCode " +
+                            "matched=${nativeResult.title} - ${nativeResult.artist}",
+                    )
+                }
+            } else {
+                if (BuildConfig.DEBUG) {
+                    Log.i(
+                        "AirLyricsLyrics",
+                        "Musixmatch translation found: title=$fallbackTitle " +
+                            "artist=$fallbackArtist lang=$translationLanguageCode " +
+                            "translatedChars=${translatedLrc.length}",
+                    )
+                }
+            }
+        }
+
+        return MusixmatchLyricsResult(
+            source = nativeResult.source,
+            subtitleId = nativeResult.id,
+            title = nativeResult.title,
+            artist = nativeResult.artist,
+            album = nativeResult.album,
+            durationMs = nativeResult.durationMs,
+            lrc = lrc,
+            translatedLrc = translatedLrc,
+            errorType = nativeResult.errorTypeName,
+            errorMessage = nativeResult.errorMessage,
+        )
+    }
+
+    internal fun toProviderResult(result: MusixmatchLyricsResult?): LyricsProviderResult? {
+        return result?.let {
+            LyricsProviderResult(
+                providerId = id,
+                providerName = name,
+                lyrics = it.lrc,
+                translatedLyrics = it.translatedLrc,
+                matchedTitle = it.title,
+                matchedArtist = it.artist,
+                matchedAlbum = it.album,
+                matchedDurationMs = it.durationMs,
+            )
+        }
     }
 }

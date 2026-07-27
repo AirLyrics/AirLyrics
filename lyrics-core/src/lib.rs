@@ -9,6 +9,8 @@ use std::sync::{Mutex, OnceLock};
 
 mod lrc;
 mod musixmatch;
+#[cfg(test)]
+mod native_result_contract_tests;
 
 const NETEASE_LOOKUP_TIMEOUT_SECS: u64 = 6;
 

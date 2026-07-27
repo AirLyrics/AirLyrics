@@ -29,18 +29,7 @@ object NeteaseLyricsProvider : LyricsProvider {
             durationMs = request.durationMs,
             cancellationToken = request.cancellationToken
         ).map { result ->
-            result?.let {
-                LyricsProviderResult(
-                    providerId = id,
-                    providerName = name,
-                    lyrics = it.lrc,
-                    translatedLyrics = it.translatedLrc,
-                    matchedTitle = it.title,
-                    matchedArtist = it.artist,
-                    matchedAlbum = it.album,
-                    matchedDurationMs = it.durationMs
-                )
-            }
+            toProviderResult(result)
         }
     }
 
@@ -67,45 +56,71 @@ object NeteaseLyricsProvider : LyricsProvider {
             }
             cancellationToken?.throwIfCancellationRequested()
 
-            val nativeResult = NativeLyricsResultParser.parse(
+            mapNativeResultJson(
                 jsonText = jsonText,
-                defaultSource = "netease-rust",
                 fallbackTitle = title,
                 fallbackArtist = artist,
-                fallbackAlbum = "",
-                fallbackDurationMs = durationMs
-            )
-            if (!nativeResult.ok) {
-                if (nativeResult.errorType == LyricsLookupErrorType.NotFound) {
-                    return@runCatching null
-                }
-
-                throw nativeResult.toNativeLyricsLookupException(
-                    providerId = id,
-                    providerName = name,
-                    defaultMessage = "NetEase lookup failed"
-                )
-            }
-
-            val primaryLrc = nativeResult.primaryLyrics(allowTranslatedFallback = true)
-
-            if (primaryLrc.isBlank()) {
-                return@runCatching null
-            }
-
-            NeteaseLyricsResult(
-                source = nativeResult.source,
-                songId = nativeResult.id,
-                title = nativeResult.title,
-                artist = nativeResult.artist,
-                album = nativeResult.album,
-                durationMs = nativeResult.durationMs,
-                lrc = primaryLrc,
-                translatedLrc = nativeResult.translatedLrc
+                fallbackDurationMs = durationMs,
             )
         }.recoverNativeLoadFailure(
             providerId = id,
             providerName = name
         )
+    }
+
+    internal fun mapNativeResultJson(
+        jsonText: String,
+        fallbackTitle: String,
+        fallbackArtist: String,
+        fallbackDurationMs: Long,
+    ): NeteaseLyricsResult? {
+        val nativeResult = NativeLyricsResultParser.parse(
+            jsonText = jsonText,
+            defaultSource = "netease-rust",
+            fallbackTitle = fallbackTitle,
+            fallbackArtist = fallbackArtist,
+            fallbackAlbum = "",
+            fallbackDurationMs = fallbackDurationMs,
+        )
+        if (!nativeResult.ok) {
+            if (nativeResult.errorType == LyricsLookupErrorType.NotFound) {
+                return null
+            }
+
+            throw nativeResult.toNativeLyricsLookupException(
+                providerId = id,
+                providerName = name,
+                defaultMessage = "NetEase lookup failed",
+            )
+        }
+
+        val primaryLrc = nativeResult.primaryLyrics(allowTranslatedFallback = true)
+        if (primaryLrc.isBlank()) return null
+
+        return NeteaseLyricsResult(
+            source = nativeResult.source,
+            songId = nativeResult.id,
+            title = nativeResult.title,
+            artist = nativeResult.artist,
+            album = nativeResult.album,
+            durationMs = nativeResult.durationMs,
+            lrc = primaryLrc,
+            translatedLrc = nativeResult.translatedLrc,
+        )
+    }
+
+    internal fun toProviderResult(result: NeteaseLyricsResult?): LyricsProviderResult? {
+        return result?.let {
+            LyricsProviderResult(
+                providerId = id,
+                providerName = name,
+                lyrics = it.lrc,
+                translatedLyrics = it.translatedLrc,
+                matchedTitle = it.title,
+                matchedArtist = it.artist,
+                matchedAlbum = it.album,
+                matchedDurationMs = it.durationMs,
+            )
+        }
     }
 }

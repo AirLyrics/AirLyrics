@@ -35,21 +35,26 @@ internal object NativeLyricsResultParser {
         fallbackDurationMs: Long
     ): NativeLyricsJsonResult {
         val json = JSONObject(jsonText)
-        val nativeErrorTypeName = json.optString("error_type", "").ifBlank { null }
+        val nativeErrorTypeName = json.optStringOrDefault("error_type", "").ifBlank { null }
         return NativeLyricsJsonResult(
             ok = json.optBoolean("ok", false),
             errorType = LyricsLookupErrorType.fromNativeName(nativeErrorTypeName),
             errorTypeName = nativeErrorTypeName,
-            errorMessage = json.optString("error", "").ifBlank { null },
-            source = json.optString("source", defaultSource),
-            id = json.optString("id", ""),
-            title = json.optString("title", fallbackTitle),
-            artist = json.optString("artist", fallbackArtist),
-            album = json.optString("album", fallbackAlbum),
+            errorMessage = json.optStringOrDefault("error", "").ifBlank { null },
+            source = json.optStringOrDefault("source", defaultSource),
+            id = json.optStringOrDefault("id", ""),
+            title = json.optStringOrDefault("title", fallbackTitle),
+            artist = json.optStringOrDefault("artist", fallbackArtist),
+            album = json.optStringOrDefault("album", fallbackAlbum),
             durationMs = json.optLong("duration_ms", fallbackDurationMs),
-            lrc = json.optString("lrc", ""),
-            mergedLrc = json.optString("merged_lrc", ""),
-            translatedLrc = json.optString("translated_lrc", "").ifBlank { null }
+            lrc = json.optStringOrDefault("lrc", ""),
+            mergedLrc = json.optStringOrDefault("merged_lrc", ""),
+            translatedLrc = json.optStringOrDefault("translated_lrc", "").ifBlank { null }
         )
     }
+
+    private fun JSONObject.optStringOrDefault(
+        name: String,
+        defaultValue: String,
+    ): String = if (isNull(name)) defaultValue else optString(name, defaultValue)
 }

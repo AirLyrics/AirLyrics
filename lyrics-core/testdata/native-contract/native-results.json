@@ -1,0 +1,62 @@
+{
+  "success": {
+    "ok": true,
+    "source": "netease-rust",
+    "id": "contract-track-42",
+    "title": "Contract Song",
+    "artist": "Contract Artist",
+    "album": "Contract Album",
+    "duration_ms": 123000,
+    "lrc": "[00:01.00]Original line",
+    "translated_lrc": "[00:01.00]Translated line",
+    "merged_lrc": "[00:01.00]Original line / Translated line",
+    "karaoke_json": null,
+    "error_type": null,
+    "error": null
+  },
+  "translated_success": {
+    "ok": true,
+    "source": "musixmatch-rust",
+    "id": "contract-subtitle-translated",
+    "title": "Translated Contract Song",
+    "artist": "Translated Contract Artist",
+    "album": "Translated Contract Album",
+    "duration_ms": 181000,
+    "lrc": "[00:03.00]Original subtitle",
+    "translated_lrc": "[00:03.00]Translated subtitle",
+    "merged_lrc": "[00:03.00]Original subtitle / Translated subtitle",
+    "karaoke_json": null,
+    "error_type": null,
+    "error": null
+  },
+  "provider_error": {
+    "ok": false,
+    "source": "musixmatch-rust",
+    "id": null,
+    "title": null,
+    "artist": null,
+    "album": null,
+    "duration_ms": null,
+    "lrc": null,
+    "translated_lrc": null,
+    "merged_lrc": null,
+    "karaoke_json": null,
+    "error_type": "RateLimited",
+    "error": "musixmatch rate limit exceeded"
+  },
+  "nullable_success": {
+    "ok": true,
+    "source": "musixmatch-rust",
+    "id": "contract-subtitle-7",
+    "title": "Nullable Contract Song",
+    "artist": "Nullable Contract Artist",
+    "album": null,
+    "duration_ms": null,
+    "lrc": "[00:02.00]Original only",
+    "translated_lrc": null,
+    "merged_lrc": "[00:02.00]Original only",
+    "karaoke_json": null,
+    "error_type": null,
+    "error": null
+  }
+}
