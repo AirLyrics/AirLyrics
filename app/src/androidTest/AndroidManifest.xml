@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application>
+        <provider
+            android:name="com.andsi.airlyrics.lyrics.storage.TestDocumentsProvider"
+            android:authorities="com.andsi.airlyrics.test.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+
+        </provider>
+
+        <provider
+            android:name="com.andsi.airlyrics.lyrics.storage.TestDocumentsControlProvider"
+            android:authorities="com.andsi.airlyrics.test.documents.control"
+            android:exported="true" />
+    </application>
+
+</manifest>

@@ -159,6 +159,67 @@ class LyricsStorageImportValidationTest {
     }
 
     @Test
+    fun listRecentLyrics_doesNotExposeUnindexedManagedFileAsLegacy() {
+        val identity =
+            SongIdentity(
+                title = "Interrupted Managed Save",
+                artist = "AndSi",
+                durationMs = 180_000L,
+            )
+        val managedFileName = LyricsFileNaming.managedPlainFileName(identity)
+
+        assertTrue(
+            LyricsFileStore.writeManagedLyrics(
+                context,
+                managedFileName,
+                "[00:01.00]unindexed",
+            ),
+        )
+        assertTrue(
+            File(LyricsStoragePaths.fallbackManagedLyricsDir(context), managedFileName).isFile,
+        )
+
+        assertFalse(
+            LyricsStorage.listRecentLyrics(context).any {
+                it.name == managedFileName
+            },
+        )
+    }
+
+    @Test
+    fun listRecentLyrics_keepsUnindexedLegacyFileVisible() {
+        val identity =
+            SongIdentity(
+                title = "Legacy Visible",
+                artist = "AndSi",
+                durationMs = 181_000L,
+            )
+        val legacyFileName =
+            LyricsFileNaming.legacyPlainFileName(
+                identity.title,
+                identity.artist,
+                identity.durationMs,
+            )
+        val managedFileName = LyricsFileNaming.managedPlainFileName(identity)
+        File(LyricsStoragePaths.fallbackLyricsDir(context), legacyFileName)
+            .writeText("[00:01.00]legacy")
+        assertTrue(
+            LyricsFileStore.writeManagedLyrics(
+                context,
+                managedFileName,
+                "[00:01.00]unindexed managed orphan",
+            ),
+        )
+
+        val listed = LyricsStorage.listRecentLyrics(context)
+
+        val legacyItem = listed.single { it.name == legacyFileName }
+        assertEquals(LyricsStorage.SOURCE_LEGACY, legacyItem.source)
+        assertTrue(legacyItem.hasPlainLyrics)
+        assertFalse(listed.any { it.name == managedFileName })
+    }
+
+    @Test
     fun importKaraokeLyrics_reportsInvalidLineNumbers() {
         val result = LyricsStorage.importKaraokeLyricsFromUriWithResult(
             context = context,

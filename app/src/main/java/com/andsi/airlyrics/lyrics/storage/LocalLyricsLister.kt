@@ -17,6 +17,7 @@ internal object LocalLyricsLister {
                 .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
             val managedItems = managedDir?.listFiles().orEmpty()
                 .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
+                .filter { indexedByFileName.containsKey(it.name.orEmpty()) }
             (rootItems + managedItems).map { file ->
                 val entry = indexedByFileName[file.name.orEmpty()]
                 LyricsStorage.LocalLyricsItem(
@@ -38,6 +39,7 @@ internal object LocalLyricsLister {
                 .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
             val managedItems = managedDir.listFiles().orEmpty()
                 .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
+                .filter { indexedByFileName.containsKey(it.name) }
             (rootItems + managedItems).map { file ->
                 val entry = indexedByFileName[file.name]
                 LyricsStorage.LocalLyricsItem(

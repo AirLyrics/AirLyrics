@@ -2,6 +2,7 @@ package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.documentfile.provider.DocumentFile
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -151,15 +152,30 @@ internal object LyricsFileStore {
 
             if (treeUri != null) {
                 val dir = LyricsStoragePaths.managedDocumentDir(context) ?: return false
-                val file = dir.findFile(fileName)
+                val existingFile = dir.findFile(fileName)
+                val file = existingFile
                     ?: dir.createFile("application/octet-stream", fileName)
                     ?: return false
+                val createdForThisWrite = existingFile == null
+                val written =
+                    runCatching {
+                        context.contentResolver.openOutputStream(file.uri, "wt")
+                            ?.bufferedWriter()
+                            ?.use { it.write(lyrics) }
+                            ?: return@runCatching false
+                        true
+                    }.getOrDefault(false)
 
-                context.contentResolver.openOutputStream(file.uri, "wt")
-                    ?.bufferedWriter()
-                    ?.use { it.write(lyrics) }
-                    ?: return false
-                return true
+                if (!written && createdForThisWrite) {
+                    val deleted = runCatching { file.delete() }.getOrDefault(false)
+                    if (!deleted) {
+                        Log.e(
+                            "LyricsFileStore",
+                            "Unable to remove newly created SAF file after write failure: $fileName",
+                        )
+                    }
+                }
+                return written
             }
 
             File(LyricsStoragePaths.fallbackManagedLyricsDir(context), fileName).writeText(lyrics)
