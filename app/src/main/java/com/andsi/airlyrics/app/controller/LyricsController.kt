@@ -28,7 +28,8 @@ internal class LyricsController(
     private val taskRunner: MainTaskRunner,
     private val dialogHost: MainDialogHost,
     private val mediaControllerProvider: MediaControllerProvider,
-    private val floatingLyricsReloader: FloatingLyricsReloader
+    private val floatingLyricsReloader: FloatingLyricsReloader,
+    private val lyricsImportGateway: LyricsImportGateway = StorageLyricsImportGateway()
 ) {
     fun importLyricsForTarget(
         uri: Uri,
@@ -77,23 +78,17 @@ internal class LyricsController(
             }
 
             val result = if (importAsWordByWord) {
-                LyricsStorage.importKaraokeLyricsFromUriWithResult(
+                lyricsImportGateway.importWordByWordLyrics(
                     context = context,
                     uri = uri,
-                    title = target.title,
-                    artist = target.artist,
-                    duration = target.durationMs,
-                    album = target.album,
+                    target = target,
                     overwrite = overwrite
                 )
             } else {
-                LyricsStorage.importLyricsFromUriWithResult(
+                lyricsImportGateway.importPlainLyrics(
                     context = context,
                     uri = uri,
-                    title = target.title,
-                    artist = target.artist,
-                    duration = target.durationMs,
-                    album = target.album,
+                    target = target,
                     overwrite = overwrite
                 )
             }
