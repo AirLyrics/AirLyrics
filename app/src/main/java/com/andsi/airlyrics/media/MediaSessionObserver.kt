@@ -136,8 +136,13 @@ internal class MediaSessionObserver(
         val bestControllers = CurrentMediaReader.selectedControllersByPackage(
             observedControllers.values.map { it.controller }
         )
-        val nextControllerTokens = bestControllers.mapValues { (_, controller) ->
-            controller.sessionToken
+        val nextControllerTokens = mutableMapOf<String, MediaSession.Token>()
+        val mediaToPublish = mutableListOf<CurrentMediaInfo>()
+        bestControllers.forEach { (packageName, controller) ->
+            CurrentMediaReader.currentMediaFromController(controller)?.let { media ->
+                nextControllerTokens[packageName] = controller.sessionToken
+                mediaToPublish += media
+            }
         }
 
         publishedControllerTokens.keys
@@ -148,10 +153,7 @@ internal class MediaSessionObserver(
         publishedControllerTokens.clear()
         publishedControllerTokens.putAll(nextControllerTokens)
 
-        bestControllers.values.forEach { controller ->
-            CurrentMediaReader.currentMediaFromController(controller)
-                ?.let(listener::onCurrentMediaChanged)
-        }
+        mediaToPublish.forEach(listener::onCurrentMediaChanged)
     }
 
     private data class ObservedController(
