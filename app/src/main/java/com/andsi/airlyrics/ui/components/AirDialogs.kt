@@ -90,6 +90,7 @@ internal fun MainUiHost.showAirConfirmDialog(
     message: String,
     positiveText: String,
     negativeText: String? = null,
+    onNegative: () -> Unit = {},
     onPositive: () -> Unit
 ): Dialog {
     return showAirDialog(
@@ -97,7 +98,8 @@ internal fun MainUiHost.showAirConfirmDialog(
         message = message,
         positiveText = positiveText,
         negativeText = negativeText ?: getString(R.string.ui_cancel),
-        onPositive = onPositive
+        onPositive = onPositive,
+        onNegative = onNegative
     )
 }
 
@@ -108,6 +110,7 @@ internal fun MainUiHost.showAirDialog(
     positiveText: String? = DEFAULT_POSITIVE_TEXT,
     negativeText: String? = null,
     body: (LinearLayout.() -> Unit)? = null,
+    onNegative: () -> Unit = {},
     onPositive: () -> Unit = {}
 ): Dialog {
     val host = this
@@ -151,6 +154,7 @@ internal fun MainUiHost.showAirDialog(
 
                 if (!negativeText.isNullOrBlank()) {
                     addView(dialogButton(negativeText, primary = false) {
+                        onNegative()
                         dialog.dismiss()
                     })
                 }
@@ -201,6 +205,7 @@ internal fun MainUiHost.showAirDialog(
     dialog.window?.applyAirDialogSystemBars(host)
     dialog.animatedContent = outer
     dialog.setContentView(root)
+    dialog.setOnCancelListener { onNegative() }
     dialog.setOnShowListener {
         dialog.window?.apply {
             applyAirDialogSystemBars(host)

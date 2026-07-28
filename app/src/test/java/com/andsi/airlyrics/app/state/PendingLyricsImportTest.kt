@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app.state
 
+import android.net.Uri
 import android.os.Bundle
 import com.andsi.airlyrics.core.model.SongIdentity
 import org.junit.Assert.assertEquals
@@ -51,5 +52,21 @@ class PendingLyricsImportTest {
         assertEquals(request, state.consumePendingLyricsImport())
         assertNull(state.consumePendingLyricsImport())
         assertNull(state.pendingLyricsImport)
+    }
+
+    @Test
+    fun pendingOverwriteBundleRoundTrip_preservesUriTargetAndType() {
+        val request = PendingLyricsOverwrite(
+            uri = Uri.parse("content://lyrics/original-request.lrc"),
+            target = SongIdentity(
+                title = "Original overwrite song",
+                artist = "Original overwrite artist",
+                album = "Original overwrite album",
+                durationMs = 245_000L
+            ),
+            type = LyricsImportType.WORD_BY_WORD
+        )
+
+        assertEquals(request, request.toBundle().toPendingLyricsOverwrite())
     }
 }

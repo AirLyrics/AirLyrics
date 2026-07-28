@@ -19,8 +19,26 @@ internal class MainActivityState : MainFloatingState, MainUiState {
     override var mediaRefreshState: RefreshState = RefreshState.IDLE
     override var mediaPageRefreshScheduled: Boolean = false
     var pendingLyricsImport: PendingLyricsImport? = null
+    var pendingLyricsOverwrite: PendingLyricsOverwrite? = null
 
     fun consumePendingLyricsImport(): PendingLyricsImport? {
         return pendingLyricsImport.also { pendingLyricsImport = null }
+    }
+
+    @Synchronized
+    fun consumePendingLyricsOverwrite(
+        expected: PendingLyricsOverwrite
+    ): PendingLyricsOverwrite? {
+        val current = pendingLyricsOverwrite
+        if (current != expected) return null
+        pendingLyricsOverwrite = null
+        return current
+    }
+
+    @Synchronized
+    fun clearPendingLyricsOverwrite(expected: PendingLyricsOverwrite): Boolean {
+        if (pendingLyricsOverwrite != expected) return false
+        pendingLyricsOverwrite = null
+        return true
     }
 }

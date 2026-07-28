@@ -43,7 +43,8 @@ internal interface MainDialogHost {
         title: String,
         message: String,
         positiveText: String,
-        onPositive: () -> Unit
+        onPositive: () -> Unit,
+        onNegative: () -> Unit
     )
 
     fun showInfoDialog(

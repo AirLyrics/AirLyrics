@@ -13,6 +13,8 @@ import com.andsi.airlyrics.app.contracts.MainDialogHost
 import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
+import com.andsi.airlyrics.app.state.LyricsImportType
+import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
@@ -22,6 +24,10 @@ import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
+internal fun interface LyricsOverwriteConfirmationRequester {
+    fun requestConfirmation(request: PendingLyricsOverwrite)
+}
+
 internal class LyricsController(
     private val context: Context,
     private val invalidator: UiInvalidator,
@@ -29,6 +35,7 @@ internal class LyricsController(
     private val dialogHost: MainDialogHost,
     private val mediaControllerProvider: MediaControllerProvider,
     private val floatingLyricsReloader: FloatingLyricsReloader,
+    private val overwriteConfirmationRequester: LyricsOverwriteConfirmationRequester,
     private val lyricsImportGateway: LyricsImportGateway = StorageLyricsImportGateway()
 ) {
     fun importLyricsForTarget(
@@ -48,27 +55,17 @@ internal class LyricsController(
 
             if (!overwrite && hasLyricsForTarget(target, importAsWordByWord)) {
                 taskRunner.runOnMainThread {
-                    val overwriteMessage = target.displayText + "\n\n" + if (importAsWordByWord) {
-                        context.getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
-                    } else {
-                        context.getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
-                    }
-                    dialogHost.showConfirmDialog(
-                        title = if (importAsWordByWord) {
-                            context.getString(R.string.ui_overwrite_local_enhanced_lrc)
-                        } else {
-                            context.getString(R.string.ui_overwrite_plain_lyrics)
-                        },
-                        message = overwriteMessage,
-                        positiveText = context.getString(R.string.ui_overwrite)
-                    ) {
-                        importLyricsForTarget(
+                    overwriteConfirmationRequester.requestConfirmation(
+                        PendingLyricsOverwrite(
                             uri = uri,
                             target = target,
-                            overwrite = true,
-                            importAsWordByWord = importAsWordByWord
+                            type = if (importAsWordByWord) {
+                                LyricsImportType.WORD_BY_WORD
+                            } else {
+                                LyricsImportType.PLAIN
+                            }
                         )
-                    }
+                    )
                 }
                 return@runOnAppIo
             }
@@ -97,6 +94,30 @@ internal class LyricsController(
                 handleImportResult(result, importAsWordByWord)
             }
         }
+    }
+
+    fun showOverwriteConfirmation(
+        request: PendingLyricsOverwrite,
+        onPositive: () -> Unit,
+        onNegative: () -> Unit
+    ) {
+        val importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
+        val overwriteMessage = request.target.displayText + "\n\n" + if (importAsWordByWord) {
+            context.getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
+        } else {
+            context.getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
+        }
+        dialogHost.showConfirmDialog(
+            title = if (importAsWordByWord) {
+                context.getString(R.string.ui_overwrite_local_enhanced_lrc)
+            } else {
+                context.getString(R.string.ui_overwrite_plain_lyrics)
+            },
+            message = overwriteMessage,
+            positiveText = context.getString(R.string.ui_overwrite),
+            onPositive = onPositive,
+            onNegative = onNegative
+        )
     }
 
     private fun blockedImportResult(

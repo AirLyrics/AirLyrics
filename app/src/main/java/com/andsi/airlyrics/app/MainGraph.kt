@@ -8,11 +8,11 @@ import android.provider.Settings
 import android.view.animation.OvershootInterpolator
 import androidx.activity.OnBackPressedCallback
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.app.contracts.MainDialogHost
+import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.controller.FloatingController
 import com.andsi.airlyrics.app.controller.LyricsController
 import com.andsi.airlyrics.app.controller.MediaSourceController
-import com.andsi.airlyrics.app.contracts.MainDialogHost
-import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.host.MainActivityUiHost
 import com.andsi.airlyrics.app.host.createMainUiActions
 import com.andsi.airlyrics.app.host.updateMediaSourceSelectionVisualsImpl
@@ -25,17 +25,18 @@ import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.app.state.MainActivityState
 import com.andsi.airlyrics.app.state.toBundle
 import com.andsi.airlyrics.app.state.toPendingLyricsImport
+import com.andsi.airlyrics.app.state.toPendingLyricsOverwrite
 import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
+import com.andsi.airlyrics.settings.AirToast
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
-import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.settings.AirToast
 import java.util.concurrent.Executors
 
 /** Main-screen composition root and lifecycle orchestrator. */
@@ -46,6 +47,7 @@ internal class MainGraph(
         const val KEY_CURRENT_PAGE = "airlyrics.current_page"
         const val KEY_SETTINGS_SUB_PAGE = "airlyrics.settings_sub_page"
         const val KEY_PENDING_LYRICS_IMPORT = "airlyrics.pending_lyrics_import"
+        const val KEY_PENDING_LYRICS_OVERWRITE = "airlyrics.pending_lyrics_overwrite"
     }
 
     val state: MainActivityState = MainActivityState()
@@ -91,7 +93,10 @@ internal class MainGraph(
             taskRunner = mainTaskRunner,
             dialogHost = mainDialogHost,
             mediaControllerProvider = mediaSourceController,
-            floatingLyricsReloader = { floatingController.reloadLyrics() }
+            floatingLyricsReloader = { floatingController.reloadLyrics() },
+            overwriteConfirmationRequester = { request ->
+                lyricsWorkflow.requestOverwriteConfirmation(request)
+            }
         )
     }
     val uiActions: MainUiActions by lazy { createMainUiActions() }
@@ -114,13 +119,15 @@ internal class MainGraph(
             title: String,
             message: String,
             positiveText: String,
-            onPositive: () -> Unit
+            onPositive: () -> Unit,
+            onNegative: () -> Unit
         ) {
             uiHost.showAirConfirmDialog(
                 title = title,
                 message = message,
                 positiveText = positiveText,
-                onPositive = onPositive
+                onPositive = onPositive,
+                onNegative = onNegative
             )
         }
 
@@ -158,7 +165,7 @@ internal class MainGraph(
         state.quickFloatingVisible = false
         state.overlayPermissionGranted = Settings.canDrawOverlays(activity)
         restoreNavigationState(savedInstanceState)
-        restorePendingLyricsImport(savedInstanceState)
+        restorePendingLyricsState(savedInstanceState)
         uiHost.applySystemBarsTheme()
         registerBackNavigationCallback()
         activity.setContentView(mainHandRenderer.createMainView())
@@ -167,6 +174,7 @@ internal class MainGraph(
         mediaSourceController.autoSelectSourceOnceIfNeeded()
         floatingController.restoreVisibleWindowIfNeeded()
         uiInvalidator.rebuildCurrentPage(PageRebuildReason.INITIAL_RENDER)
+        lyricsWorkflow.restorePendingOverwriteConfirmation()
         skipFirstResumeAfterCreate = true
     }
 
@@ -176,6 +184,10 @@ internal class MainGraph(
         outState.remove(KEY_PENDING_LYRICS_IMPORT)
         state.pendingLyricsImport?.let { request ->
             outState.putBundle(KEY_PENDING_LYRICS_IMPORT, request.toBundle())
+        }
+        outState.remove(KEY_PENDING_LYRICS_OVERWRITE)
+        state.pendingLyricsOverwrite?.let { request ->
+            outState.putBundle(KEY_PENDING_LYRICS_OVERWRITE, request.toBundle())
         }
     }
 
@@ -208,6 +220,7 @@ internal class MainGraph(
     }
 
     fun onDestroy() {
+        state.pendingLyricsOverwrite = null
         mediaRefreshHandler.removeCallbacksAndMessages(null)
         appIoExecutor.shutdown()
         receivers.unregister()
@@ -223,10 +236,13 @@ internal class MainGraph(
             ?: state.settingsSubPage
     }
 
-    private fun restorePendingLyricsImport(savedInstanceState: Bundle?) {
+    private fun restorePendingLyricsState(savedInstanceState: Bundle?) {
         state.pendingLyricsImport = savedInstanceState
             ?.getBundle(KEY_PENDING_LYRICS_IMPORT)
             ?.toPendingLyricsImport()
+        state.pendingLyricsOverwrite = savedInstanceState
+            ?.getBundle(KEY_PENDING_LYRICS_OVERWRITE)
+            ?.toPendingLyricsOverwrite()
     }
 
     fun handleBackNavigation(): Boolean {

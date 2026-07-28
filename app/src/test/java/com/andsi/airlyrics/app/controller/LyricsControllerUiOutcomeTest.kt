@@ -282,7 +282,8 @@ class LyricsControllerUiOutcomeTest {
                 taskRunner = common.runner,
                 dialogHost = dialogHost,
                 mediaControllerProvider = EmptyMediaControllerProvider(),
-                floatingLyricsReloader = common.reloader
+                floatingLyricsReloader = common.reloader,
+                overwriteConfirmationRequester = unexpectedOverwriteRequester()
             )
         } else {
             LyricsController(
@@ -292,6 +293,7 @@ class LyricsControllerUiOutcomeTest {
                 dialogHost = dialogHost,
                 mediaControllerProvider = EmptyMediaControllerProvider(),
                 floatingLyricsReloader = common.reloader,
+                overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsImportGateway = gateway
             )
         }
@@ -366,6 +368,12 @@ class LyricsControllerUiOutcomeTest {
                 LyricsStorage.KaraokeRollbackFailureStep.RESTORE_KARAOKE_FILE
             )
         )
+    }
+
+    private fun unexpectedOverwriteRequester(): LyricsOverwriteConfirmationRequester {
+        return LyricsOverwriteConfirmationRequester { request ->
+            error("Unexpected overwrite confirmation: $request")
+        }
     }
 
     private fun target(name: String): SongIdentity {
@@ -464,7 +472,8 @@ class LyricsControllerUiOutcomeTest {
             title: String,
             message: String,
             positiveText: String,
-            onPositive: () -> Unit
+            onPositive: () -> Unit,
+            onNegative: () -> Unit
         ) {
             error("Unexpected overwrite confirmation: $title")
         }

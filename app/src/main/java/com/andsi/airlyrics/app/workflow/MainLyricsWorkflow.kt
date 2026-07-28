@@ -13,6 +13,7 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsImport
+import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
 import com.andsi.airlyrics.i18n.localizedAssetText
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
@@ -42,6 +43,34 @@ internal class MainLyricsWorkflow(
         get() = graph.state
     private val uiHost
         get() = graph.uiHost
+
+    fun requestOverwriteConfirmation(request: PendingLyricsOverwrite) {
+        state.pendingLyricsOverwrite = request
+        showOverwriteConfirmation(request)
+    }
+
+    fun restorePendingOverwriteConfirmation() {
+        state.pendingLyricsOverwrite?.let(::showOverwriteConfirmation)
+    }
+
+    private fun showOverwriteConfirmation(request: PendingLyricsOverwrite) {
+        graph.lyricsController.showOverwriteConfirmation(
+            request = request,
+            onPositive = { confirmOverwrite(request) },
+            onNegative = { state.clearPendingLyricsOverwrite(request) }
+        )
+    }
+
+    private fun confirmOverwrite(expected: PendingLyricsOverwrite) {
+        if (activity.isDestroyed) return
+        val request = state.consumePendingLyricsOverwrite(expected) ?: return
+        graph.lyricsController.importLyricsForTarget(
+            uri = request.uri,
+            target = request.target,
+            overwrite = true,
+            importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
+        )
+    }
 
     fun handleLyricsFileResult(uri: Uri?) {
         val request = state.consumePendingLyricsImport()
