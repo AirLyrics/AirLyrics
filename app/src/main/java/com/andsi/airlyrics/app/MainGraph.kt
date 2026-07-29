@@ -29,6 +29,7 @@ import com.andsi.airlyrics.app.state.toPendingLyricsOverwrite
 import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
+import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
@@ -96,7 +97,8 @@ internal class MainGraph(
             floatingLyricsReloader = { floatingController.reloadLyrics() },
             overwriteConfirmationRequester = { request ->
                 lyricsWorkflow.requestOverwriteConfirmation(request)
-            }
+            },
+            lyricsChangedPublisher = BroadcastLyricsChangedPublisher(activity)
         )
     }
     val uiActions: MainUiActions by lazy { createMainUiActions() }
@@ -143,7 +145,8 @@ internal class MainGraph(
         MainReceivers(
             context = activity,
             onMediaChanged = mediaSourceController::handleMediaStatusBroadcast,
-            onFloatingStateChanged = floatingController::handleWindowStateBroadcast
+            onFloatingStateChanged = floatingController::handleWindowStateBroadcast,
+            onLyricsChanged = { handleLyricsChanged() }
         )
     }
 
@@ -153,6 +156,7 @@ internal class MainGraph(
         }
     }
     private var skipFirstResumeAfterCreate = false
+    private var destroyed = false
 
     fun beforeSuperOnCreate() {
         LanguageSettingsStore.applyAppLocale(activity)
@@ -220,10 +224,20 @@ internal class MainGraph(
     }
 
     fun onDestroy() {
+        destroyed = true
         state.pendingLyricsOverwrite = null
         mediaRefreshHandler.removeCallbacksAndMessages(null)
         appIoExecutor.shutdown()
         receivers.unregister()
+    }
+
+    private fun handleLyricsChanged() {
+        if (destroyed || activity.isDestroyed) return
+        uiInvalidator.rebuildCurrentPage(
+            reason = PageRebuildReason.LYRICS_CHANGED,
+            animateContent = false,
+            animateTabs = false
+        )
     }
 
     private fun restoreNavigationState(savedInstanceState: Bundle?) {

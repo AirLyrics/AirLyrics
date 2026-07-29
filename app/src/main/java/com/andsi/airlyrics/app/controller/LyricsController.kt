@@ -18,6 +18,7 @@ import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
@@ -36,6 +37,7 @@ internal class LyricsController(
     private val mediaControllerProvider: MediaControllerProvider,
     private val floatingLyricsReloader: FloatingLyricsReloader,
     private val overwriteConfirmationRequester: LyricsOverwriteConfirmationRequester,
+    private val lyricsChangedPublisher: LyricsChangedPublisher,
     private val lyricsImportGateway: LyricsImportGateway = StorageLyricsImportGateway()
 ) {
     fun importLyricsForTarget(
@@ -88,6 +90,10 @@ internal class LyricsController(
                     target = target,
                     overwrite = overwrite
                 )
+            }
+
+            if (result == LyricsStorage.ImportLyricsResult.Saved) {
+                lyricsChangedPublisher.publish(target)
             }
 
             taskRunner.runOnMainThread {
@@ -186,12 +192,6 @@ internal class LyricsController(
                     context.getString(R.string.ui_plain_lrc_import_success)
                 }
                 AirToast.showLong(context, message)
-                floatingLyricsReloader.reloadFloatingLyrics()
-                invalidator.rebuildCurrentPage(
-                    reason = PageRebuildReason.LYRICS_CHANGED,
-                    animateContent = false,
-                    animateTabs = false
-                )
             }
             LyricsStorage.ImportLyricsResult.TooLarge -> {
                 AirToast.showLong(context, R.string.ui_lrc_file_too_large)

@@ -3,6 +3,7 @@ package com.andsi.airlyrics.floating
 import android.net.Uri
 import android.os.SystemClock
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
 import com.andsi.airlyrics.lyrics.LyricsLookupException
@@ -64,6 +65,12 @@ internal fun FloatingLyricsService.reloadCurrentLyrics(
         forceSaveOnline = forceSaveOnline,
         ignoreAutoSearchSetting = ignoreAutoSearchSetting
     )
+}
+
+internal fun FloatingLyricsService.handleLyricsChanged(target: SongIdentity) {
+    if (currentMedia.isEmpty) return
+    if (!currentMedia.toSongIdentity().isSameSong(target)) return
+    reloadCurrentLyrics()
 }
 
 internal fun FloatingLyricsService.clearLyricsState(message: String) {

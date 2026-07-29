@@ -64,6 +64,7 @@ class AppLocalProtocolGuardTest {
         private val PROTOCOL_OWNER_FILES = setOf(
             "app/src/main/java/com/andsi/airlyrics/floating/FloatingServiceCommand.kt",
             "app/src/main/java/com/andsi/airlyrics/floating/FloatingWindowStateBroadcast.kt",
+            "app/src/main/java/com/andsi/airlyrics/lyrics/LyricsChangedBroadcast.kt",
             "app/src/main/java/com/andsi/airlyrics/media/CurrentMediaBroadcast.kt"
         )
     }

@@ -10,6 +10,7 @@ import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
+import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
@@ -91,6 +92,12 @@ open class FloatingLyricsService : Service() {
         }
     }
 
+    private val lyricsChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            LyricsChangedBroadcast.readTarget(intent)?.let(::handleLyricsChanged)
+        }
+    }
+
     override fun onCreate() {
         LanguageSettingsStore.applyAppLocale(this)
         super.onCreate()
@@ -108,6 +115,7 @@ open class FloatingLyricsService : Service() {
 
         startForeground(FloatingServiceNotification.NOTIFICATION_ID, FloatingServiceNotification.create(this, currentQuickControlState()))
         registerMediaReceiver()
+        registerLyricsChangedReceiver()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -131,6 +139,15 @@ open class FloatingLyricsService : Service() {
         )
     }
 
+    private fun registerLyricsChangedReceiver() {
+        ContextCompat.registerReceiver(
+            this,
+            lyricsChangedReceiver,
+            LyricsChangedBroadcast.lyricsChangedFilter(),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
     override fun onDestroy() {
         stopLyricsSync()
         syncHandler.removeCallbacks(pauseAutoHideRunnable)
@@ -138,6 +155,7 @@ open class FloatingLyricsService : Service() {
         stopSelectedMediaObservation()
         lyricsLookupRunner.shutdown()
         runCatching { unregisterReceiver(mediaReceiver) }
+        runCatching { unregisterReceiver(lyricsChangedReceiver) }
         if (::windowController.isInitialized) {
             windowController.hide(notifyVisibilityChanged = false)
         }

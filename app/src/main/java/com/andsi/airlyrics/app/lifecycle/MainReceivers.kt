@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
+import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 
 /**
@@ -17,7 +19,8 @@ import com.andsi.airlyrics.media.CurrentMediaBroadcast
 internal class MainReceivers(
     private val context: Context,
     private val onMediaChanged: (Intent) -> Unit,
-    private val onFloatingStateChanged: (Intent) -> Unit
+    private val onFloatingStateChanged: (Intent) -> Unit,
+    private val onLyricsChanged: (SongIdentity) -> Unit
 ) {
     private val mediaReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -28,6 +31,12 @@ internal class MainReceivers(
     private val floatingReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             intent?.let(onFloatingStateChanged)
+        }
+    }
+
+    private val lyricsChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            LyricsChangedBroadcast.readTarget(intent)?.let(onLyricsChanged)
         }
     }
 
@@ -48,6 +57,12 @@ internal class MainReceivers(
             CurrentMediaBroadcast.mediaStatusFilter(),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+        ContextCompat.registerReceiver(
+            context,
+            lyricsChangedReceiver,
+            LyricsChangedBroadcast.lyricsChangedFilter(),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
 
         registered = true
     }
@@ -57,6 +72,7 @@ internal class MainReceivers(
 
         runCatching { context.unregisterReceiver(floatingReceiver) }
         runCatching { context.unregisterReceiver(mediaReceiver) }
+        runCatching { context.unregisterReceiver(lyricsChangedReceiver) }
         registered = false
     }
 }

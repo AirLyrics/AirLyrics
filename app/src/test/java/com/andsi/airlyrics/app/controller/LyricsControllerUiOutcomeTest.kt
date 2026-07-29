@@ -16,6 +16,7 @@ import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
@@ -64,7 +65,7 @@ class LyricsControllerUiOutcomeTest {
     }
 
     @Test
-    fun savedImport_showsSuccessReloadsFloatingAndInvalidatesLyricsPage() {
+    fun savedImport_showsSuccessAndPublishesWithoutDirectUiRefresh() {
         val cases = listOf(
             SuccessCase(
                 wordByWord = false,
@@ -85,7 +86,8 @@ class LyricsControllerUiOutcomeTest {
             val runner = ControlledTaskRunner()
             val invalidator = RecordingInvalidator()
             val reloader = RecordingReloader()
-            val controller = controller(runner, invalidator, reloader)
+            val publisher = RecordingLyricsChangedPublisher()
+            val controller = controller(runner, invalidator, reloader, publisher = publisher)
 
             controller.importLyricsForTarget(
                 uri = writeImportFile("success-$index.lrc", case.source),
@@ -99,17 +101,9 @@ class LyricsControllerUiOutcomeTest {
             assertEquals(case.expectedToast, toastTexts.last())
             assertFalse(successErrorToastTexts().any(ShadowToast::showedToast))
             assertTrue(dialogHost.shownDialogs.isEmpty())
-            assertEquals(listOf("reloadFloatingLyrics"), reloader.commands)
-            assertEquals(
-                listOf(
-                    RebuildCall(
-                        reason = PageRebuildReason.LYRICS_CHANGED,
-                        animateContent = false,
-                        animateTabs = false
-                    )
-                ),
-                invalidator.rebuildCalls
-            )
+            assertEquals(listOf(case.target), publisher.targets)
+            assertTrue(reloader.commands.isEmpty())
+            assertTrue(invalidator.rebuildCalls.isEmpty())
             if (case.wordByWord) {
                 assertTrue(
                     LyricsStorage.hasKaraokeLyrics(
@@ -184,11 +178,13 @@ class LyricsControllerUiOutcomeTest {
             val runner = ControlledTaskRunner()
             val invalidator = RecordingInvalidator()
             val reloader = RecordingReloader()
+            val publisher = RecordingLyricsChangedPublisher()
             val controller = controller(
                 runner = runner,
                 invalidator = invalidator,
                 reloader = reloader,
-                gateway = FixedResultLyricsImportGateway(case.result)
+                gateway = FixedResultLyricsImportGateway(case.result),
+                publisher = publisher
             )
 
             controller.importLyricsForTarget(
@@ -200,6 +196,7 @@ class LyricsControllerUiOutcomeTest {
             runner.drain()
 
             assertFailureHasNoSuccessSideEffects(invalidator, reloader)
+            assertTrue(publisher.targets.isEmpty())
             if (case.expectedDialog) {
                 assertInvalidFormatDialog(listOf(2, 7))
                 assertFalse(successErrorToastTexts().any(ShadowToast::showedToast))
@@ -236,11 +233,13 @@ class LyricsControllerUiOutcomeTest {
             val runner = ControlledTaskRunner()
             val invalidator = RecordingInvalidator()
             val reloader = RecordingReloader()
+            val publisher = RecordingLyricsChangedPublisher()
             val controller = controller(
                 runner = runner,
                 invalidator = invalidator,
                 reloader = reloader,
-                gateway = FixedResultLyricsImportGateway(case.result)
+                gateway = FixedResultLyricsImportGateway(case.result),
+                publisher = publisher
             )
 
             controller.importLyricsForTarget(
@@ -253,6 +252,7 @@ class LyricsControllerUiOutcomeTest {
 
             assertTrue(shownToastTexts().isEmpty())
             assertFailureHasNoSuccessSideEffects(invalidator, reloader)
+            assertTrue(publisher.targets.isEmpty())
             if (case.expectedDialog) {
                 assertInvalidFormatDialog(listOf(3, 11))
             } else {
@@ -268,7 +268,8 @@ class LyricsControllerUiOutcomeTest {
         runner: ControlledTaskRunner,
         invalidator: RecordingInvalidator,
         reloader: RecordingReloader,
-        gateway: LyricsImportGateway? = null
+        gateway: LyricsImportGateway? = null,
+        publisher: LyricsChangedPublisher = RecordingLyricsChangedPublisher()
     ): LyricsController {
         val common = LyricsControllerDependencies(
             runner = runner,
@@ -283,7 +284,8 @@ class LyricsControllerUiOutcomeTest {
                 dialogHost = dialogHost,
                 mediaControllerProvider = EmptyMediaControllerProvider(),
                 floatingLyricsReloader = common.reloader,
-                overwriteConfirmationRequester = unexpectedOverwriteRequester()
+                overwriteConfirmationRequester = unexpectedOverwriteRequester(),
+                lyricsChangedPublisher = publisher
             )
         } else {
             LyricsController(
@@ -294,7 +296,8 @@ class LyricsControllerUiOutcomeTest {
                 mediaControllerProvider = EmptyMediaControllerProvider(),
                 floatingLyricsReloader = common.reloader,
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
-                lyricsImportGateway = gateway
+                lyricsImportGateway = gateway,
+                lyricsChangedPublisher = publisher
             )
         }
     }
@@ -495,6 +498,14 @@ class LyricsControllerUiOutcomeTest {
 
         override fun reloadFloatingLyrics() {
             commands += "reloadFloatingLyrics"
+        }
+    }
+
+    private class RecordingLyricsChangedPublisher : LyricsChangedPublisher {
+        val targets = mutableListOf<SongIdentity>()
+
+        override fun publish(target: SongIdentity) {
+            targets += target
         }
     }
 
