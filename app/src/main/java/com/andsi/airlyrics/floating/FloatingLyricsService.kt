@@ -153,6 +153,7 @@ open class FloatingLyricsService : Service() {
         syncHandler.removeCallbacks(pauseAutoHideRunnable)
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         stopSelectedMediaObservation()
+        activeLyricsLookupRequestKey = null
         lyricsLookupRunner.shutdown()
         runCatching { unregisterReceiver(mediaReceiver) }
         runCatching { unregisterReceiver(lyricsChangedReceiver) }
