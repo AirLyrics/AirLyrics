@@ -47,6 +47,9 @@ jobs:
       - name: Run JVM unit tests
         run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true --stacktrace
 
+      - name: Compile Android instrumentation tests
+        run: ./gradlew :app:assembleDebugAndroidTest -Pairlyrics.skipRustBuild=true --stacktrace
+
       - name: Check localization
         run: ./scripts/check_localization.sh
 

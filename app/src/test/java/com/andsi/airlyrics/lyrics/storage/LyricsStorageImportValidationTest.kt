@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.SongIdentity
 import java.io.File
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -156,6 +157,37 @@ class LyricsStorageImportValidationTest {
                 identity.durationMs
             )
         )
+    }
+
+    @Test
+    fun readLocalLyrics_matchesStoredIdentityCaseUnderTurkishLocale() {
+        val originalLocale = Locale.getDefault()
+        val lyrics = "[00:01.00]locale-independent match"
+
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+            assertTrue(
+                LyricsStorage.saveLyrics(
+                    context = context,
+                    title = "INDIGO",
+                    artist = "ARTIST",
+                    duration = 180_000L,
+                    lyrics = lyrics
+                )
+            )
+
+            assertEquals(
+                lyrics,
+                LyricsStorage.readLocalLyrics(
+                    context = context,
+                    title = "indigo",
+                    artist = "artist",
+                    duration = 180_000L
+                )
+            )
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     @Test

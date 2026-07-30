@@ -4,8 +4,17 @@ on:
   pull_request:
     paths:
       - 'lyrics-core/**'
+      - 'app/src/androidTest/**'
+      - 'app/src/main/java/com/andsi/airlyrics/core/model/SongIdentity.kt'
+      - 'app/src/main/java/com/andsi/airlyrics/lyrics/storage/**'
       - 'app/build.gradle.kts'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
       - 'gradle/libs.versions.toml'
+      - 'gradle/wrapper/**'
+      - 'gradlew'
+      - 'app/src/main/jniLibs/**'
       - 'app/src/main/java/com/andsi/airlyrics/lyrics/providers/**Native*.kt'
       - '.github/workflows/full-android-rust-build.yml'
   push:
@@ -13,8 +22,17 @@ on:
       - main
     paths:
       - 'lyrics-core/**'
+      - 'app/src/androidTest/**'
+      - 'app/src/main/java/com/andsi/airlyrics/core/model/SongIdentity.kt'
+      - 'app/src/main/java/com/andsi/airlyrics/lyrics/storage/**'
       - 'app/build.gradle.kts'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
       - 'gradle/libs.versions.toml'
+      - 'gradle/wrapper/**'
+      - 'gradlew'
+      - 'app/src/main/jniLibs/**'
       - 'app/src/main/java/com/andsi/airlyrics/lyrics/providers/**Native*.kt'
       - '.github/workflows/full-android-rust-build.yml'
   workflow_dispatch:
@@ -75,3 +93,118 @@ jobs:
           name: airlyrics-debug-apk-with-rust
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  instrumentation-x86_64:
+    name: Run Android instrumentation on x86_64 emulator
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android NDK for emulator JNI
+        run: |
+          sdkmanager "ndk;26.3.11579264" "ndk;29.0.14206865"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: x86_64-linux-android
+
+      - name: Install cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Prepare Gradle wrapper
+        run: chmod +x ./gradlew
+
+      - name: Build x86_64 Rust JNI
+        working-directory: lyrics-core
+        run: |
+          ANDROID_NDK_HOME="$ANDROID_HOME/ndk/29.0.14206865" \
+          ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/29.0.14206865" \
+            cargo ndk \
+              -t x86_64 \
+              -o ../app/src/main/jniLibs \
+              build --release --locked
+
+      - name: Build emulator debug APK
+        run: >-
+          ./gradlew :app:assembleDebug
+          -Pairlyrics.skipRustBuild=true
+          -Pairlyrics.buildX86_64=true
+          --stacktrace
+
+      - name: Verify emulator JNI is packaged
+        run: |
+          test -f app/src/main/jniLibs/x86_64/libairlyrics_lyrics.so
+          file app/src/main/jniLibs/x86_64/libairlyrics_lyrics.so | grep 'x86-64'
+          unzip -Z1 app/build/outputs/apk/debug/app-debug.apk |
+            grep -Fx 'lib/x86_64/libairlyrics_lyrics.so'
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run all Android instrumentation tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          script: >-
+            ./gradlew :app:connectedDebugAndroidTest
+            -Pairlyrics.skipRustBuild=true
+            -Pairlyrics.buildX86_64=true
+            --stacktrace
+
+      - name: Verify instrumentation test count
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import sys
+          import xml.etree.ElementTree as ET
+
+          report_root = Path("app/build/outputs/androidTest-results/connected")
+          reports = sorted(report_root.rglob("TEST-*.xml"))
+          if not reports:
+              sys.exit(f"No instrumentation XML reports found under {report_root}")
+
+          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
+          for report in reports:
+              suite = ET.parse(report).getroot()
+              for key in totals:
+                  totals[key] += int(suite.attrib.get(key, "0"))
+
+          print("Instrumentation results:", totals)
+          expected = {"tests": 7, "failures": 0, "errors": 0, "skipped": 0}
+          if totals != expected:
+              sys.exit(f"Expected {expected}, got {totals}")
+          PY
+
+      - name: Upload instrumentation test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: airlyrics-instrumentation-reports
+          path: |
+            app/build/reports/androidTests/connected/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: ignore

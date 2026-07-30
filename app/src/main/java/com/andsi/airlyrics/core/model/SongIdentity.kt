@@ -90,7 +90,7 @@ data class SongIdentity(
         }
 
         fun normalizeText(text: String): String {
-            return normalizeText(text, Locale.getDefault())
+            return normalizeText(text, Locale.ROOT)
         }
 
         private fun normalizeText(text: String, locale: Locale): String {
