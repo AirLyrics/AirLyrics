@@ -1,5 +1,7 @@
+<!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
 
+<!--suppress CheckImageSize -->
 <img src="docs/assets/airlyrics-logo.png" width="120" alt="AirLyrics Logo" />
 
 # AirLyrics
@@ -24,8 +26,10 @@
 
 ---
 
+<!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
 
+<!--suppress CheckImageSize -->
 <img src="docs/assets/screenshot-floating-lyrics.jpg" width="720" alt="AirLyrics 悬浮歌词" />
 
 </div>
@@ -76,21 +80,28 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
 
 ## 截图
 
+<!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
 
 <table>
   <tr>
+    <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
+      <!--suppress CheckImageSize -->
       <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="媒体流检测" />
       <br />
       <sub>媒体流检测</sub>
     </td>
+    <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
+      <!--suppress CheckImageSize -->
       <img src="docs/assets/screenshot-lyrics-source.jpg" width="240" alt="歌词获取与本地歌词设置" />
       <br />
       <sub>歌词获取</sub>
     </td>
+    <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
+      <!--suppress CheckImageSize -->
       <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="悬浮窗自定义" />
       <br />
       <sub>悬浮窗自定义</sub>
@@ -106,11 +117,11 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
 
 AirLyrics 会用到以下 Android 权限：
 
-| 权限 | 用途 |
-| --- | --- |
-| 显示在其他应用上层 | 显示悬浮歌词窗口 |
-| 通知访问权限 | 检测当前播放媒体信息 |
-| 文件选择器 | 导入本地歌词文件 |
+| 权限        | 用途         |
+|-----------|------------|
+| 显示在其他应用上层 | 显示悬浮歌词窗口   |
+| 通知访问权限    | 检测当前播放媒体信息 |
+| 文件选择器     | 导入本地歌词文件   |
 
 权限、本地数据与联网歌词搜索的说明见 [隐私政策](PRIVACY.zh-CN.md)。
 
@@ -120,14 +131,14 @@ AirLyrics 会用到以下 Android 权限：
 
 项目文档见 docs 目录。
 
-| 文档 | 说明 |
-| --- | --- |
-| [文档首页](docs/README.zh-CN.md) | 中文文档索引 |
-| [隐私政策](PRIVACY.zh-CN.md) | 权限、本地数据与联网歌词搜索说明 |
-| [使用说明书](docs/USER_GUIDE.zh-CN.md) | 项目使用说明 |
+| 文档                                  | 说明                  |
+|-------------------------------------|---------------------|
+| [文档首页](docs/README.zh-CN.md)        | 中文文档索引              |
+| [隐私政策](PRIVACY.zh-CN.md)            | 权限、本地数据与联网歌词搜索说明    |
+| [使用说明书](docs/USER_GUIDE.zh-CN.md)   | 项目使用说明              |
 | [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
-| [贡献指南](docs/CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与代码位置 |
-| [项目架构](docs/ARCHITECTURE.zh-CN.md) | 模块划分与运行流程 |
+| [贡献指南](docs/CONTRIBUTING.zh-CN.md)  | 开发环境、提交流程与代码位置      |
+| [项目架构](docs/ARCHITECTURE.zh-CN.md)  | 模块划分与运行流程           |
 
 ---
 

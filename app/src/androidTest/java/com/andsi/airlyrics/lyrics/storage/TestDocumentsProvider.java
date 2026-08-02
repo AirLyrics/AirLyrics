@@ -49,8 +49,8 @@ public final class TestDocumentsProvider extends DocumentsProvider {
 
     @Override
     public boolean onCreate() {
-        providerRoot().mkdirs();
-        return true;
+        File root = providerRoot();
+        return root.isDirectory() || root.mkdirs() || root.isDirectory();
     }
 
     @Override

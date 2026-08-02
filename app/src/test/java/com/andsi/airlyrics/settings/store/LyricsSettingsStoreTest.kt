@@ -20,7 +20,7 @@ class LyricsSettingsStoreTest {
 
     @Before
     fun setUp() {
-        context = ApplicationProvider.getApplicationContext<Context>()
+        context = ApplicationProvider.getApplicationContext()
         context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit().clear().commit()
     }
 

@@ -10,6 +10,8 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -51,25 +53,24 @@ public final class TestDocumentsControlProvider extends ContentProvider {
     }
 
     @Override
-    public Bundle call(String method, String arg, Bundle extras) {
+    public Bundle call(@NonNull String method, String arg, Bundle extras) {
         requireShellCaller();
         requireInstalledInstrumentationTarget();
-        if (METHOD_CREATE_SESSION.equals(method)) {
-            return createSession(requireArgument(arg));
-        }
-        if (METHOD_REVOKE_SESSION.equals(method)) {
-            return revokeSession(requireArgument(arg));
-        }
-        if (METHOD_DELETE_SESSION.equals(method)) {
-            return deleteSession(requireArgument(arg));
-        }
-        throw new IllegalArgumentException("Unsupported test control method: " + method);
+        return switch (method) {
+            case METHOD_CREATE_SESSION -> createSession(requireArgument(arg));
+            case METHOD_REVOKE_SESSION -> revokeSession(requireArgument(arg));
+            case METHOD_DELETE_SESSION -> deleteSession(requireArgument(arg));
+            default ->
+                    throw new IllegalArgumentException("Unsupported test control method: " + method);
+        };
     }
 
     private Bundle createSession(String sessionName) {
         requireValidSessionName(sessionName);
         File root = providerRoot();
-        root.mkdirs();
+        if (!root.isDirectory() && !root.mkdirs() && !root.isDirectory()) {
+            throw new IllegalStateException("Unable to create test provider root");
+        }
         File sessionDir = new File(root, sessionName);
         if (!sessionDir.mkdir()) {
             throw new IllegalStateException(
@@ -194,7 +195,7 @@ public final class TestDocumentsControlProvider extends ContentProvider {
 
     @Override
     public Cursor query(
-            Uri uri,
+            @NonNull Uri uri,
             String[] projection,
             String selection,
             String[] selectionArgs,
@@ -204,23 +205,23 @@ public final class TestDocumentsControlProvider extends ContentProvider {
     }
 
     @Override
-    public String getType(Uri uri) {
+    public String getType(@NonNull Uri uri) {
         return null;
     }
 
     @Override
-    public Uri insert(Uri uri, ContentValues values) {
+    public Uri insert(@NonNull Uri uri, ContentValues values) {
         return null;
     }
 
     @Override
-    public int delete(Uri uri, String selection, String[] selectionArgs) {
+    public int delete(@NonNull Uri uri, String selection, String[] selectionArgs) {
         return 0;
     }
 
     @Override
     public int update(
-            Uri uri,
+            @NonNull Uri uri,
             ContentValues values,
             String selection,
             String[] selectionArgs

@@ -266,11 +266,12 @@ class LyricsRepositoryEngineTest {
         private val response: Result<LyricsProviderResult?>
     ) : LyricsProvider {
         override val name: String = id
-        var calls: Int = 0
-            private set
+        private val requests = mutableListOf<LyricsSearchRequest>()
+        val calls: Int
+            get() = requests.size
 
         override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
-            calls++
+            requests += request
             return response
         }
     }

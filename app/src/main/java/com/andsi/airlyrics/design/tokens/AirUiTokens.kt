@@ -103,7 +103,6 @@ object AirUiTokens {
         const val BottomTabFloatingHeight = 56
         const val BottomTabDefaultHeight = 48
         const val DialogDimAmount = 0.28f
-        const val SheetDimAmount = 0.08f
         const val TabTextSwapAlpha = 0.55f
         const val TabTextSwapScale = 0.92f
         const val TabSelectedScale = 1.02f

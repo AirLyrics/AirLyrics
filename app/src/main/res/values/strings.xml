@@ -37,7 +37,6 @@
     <string name="ui_applied">Applied</string>
     <string name="ui_auto_save">Auto-save</string>
     <string name="ui_auto_hide_when_paused">Auto hide/show</string>
-    <string name="ui_auto_hide_when_paused_hint">Hide floating lyrics while playback is paused, then restore them when playback resumes.</string>
     <string name="ui_auto_hide_when_paused_off">Auto hide/show: off</string>
     <string name="ui_auto_hide_when_paused_on">Auto hide/show: on</string>
     <string name="ui_auto_save_off">Auto-save: off</string>
@@ -66,7 +65,6 @@
     <string name="ui_choose_the_player_airlyrics_follows">Choose the player AirLyrics follows.</string>
     <string name="ui_clean_letters">Clean letters</string>
     <string name="ui_click_through">Click-through</string>
-    <string name="ui_click_through_enabled_feedback">Click-through enabled</string>
     <string name="ui_click_through_off">Click-through: Off</string>
     <string name="ui_click_through_on">Click-through: On</string>
     <string name="ui_clickable">Clickable</string>
@@ -100,9 +98,7 @@
     <string name="ui_enhanced">Word</string>
     <string name="ui_enhanced_color">Word color</string>
     <string name="ui_enhanced_lrc">Word-by-word lyrics</string>
-    <string name="ui_enhanced_lrc_import_failed">Word-by-word lyrics import failed</string>
     <string name="ui_enhanced_lrc_import_success">Word-by-word lyrics imported. Floating lyrics will refresh.</string>
-    <string name="ui_enhanced_lrc_lyrics">Word-by-word lyrics</string>
     <string name="ui_enhanced_lrc_lyrics_enhanced_lrc">Word-by-word lyrics (.lrc)</string>
     <string name="ui_enhanced_lrc_local_only_message">Word-by-word lyrics only support local manual import.</string>
     <string name="ui_enhanced_lrc_format_hint">Word-by-word lyrics use [00:12.34] for line time and &lt;00:12.34&gt; for word time.</string>
@@ -130,7 +126,6 @@
     <string name="ui_import">Import</string>
     <string name="ui_generated_from_enhanced_lrc">Generated from word-by-word lyrics</string>
     <string name="ui_lrc_import_save_failed">Could not save lyrics. Check the lyrics save folder permission and available storage.</string>
-    <string name="ui_lrc_import_format_error">Import failed. Use a .lrc file in [00:12.34]lyric format.</string>
     <string name="ui_import_lyrics_for_current_song">Import lyrics for current song</string>
     <string name="ui_import_request_expired">The import request expired. Please try again.</string>
     <string name="ui_imported_off">Imported · off</string>
@@ -150,7 +145,6 @@
     <string name="ui_local_only">Local only</string>
     <string name="ui_lock_touch">Locked + click-through</string>
     <string name="ui_locked">Locked</string>
-    <string name="ui_locked_click_through">Locked + click-through</string>
     <string name="ui_locked_touchable">Locked · touchable</string>
     <string name="ui_lyrics">Lyrics</string>
     <string name="ui_lyrics_display">Lyrics display</string>
@@ -317,7 +311,6 @@ Word-by-word lyrics recommended format:
     <string name="ui_this_plain_lrc_can_be_saved">This plain LRC can be saved.</string>
     <string name="ui_overwrite_enhanced_keep_plain_msg">This song already has local word-by-word lyrics. Overwriting replaces them and regenerates plain lyrics.</string>
     <string name="ui_overwrite_plain_keep_enhanced_msg">This song already has plain lyrics. Overwriting replaces the plain lyrics.</string>
-    <string name="ui_touchable">Touchable</string>
     <string name="ui_toaster_mute">Hide toast popups</string>
     <string name="ui_toaster_mute_hint">This hides all AirLyrics toast popups, the small messages that appear over the lower-middle part of the screen.</string>
     <string name="ui_translation_only">Translation only</string>
@@ -327,7 +320,6 @@ Word-by-word lyrics recommended format:
     <string name="ui_unknown_status">Unknown status</string>
     <string name="ui_unknown_time">Unknown time</string>
     <string name="ui_unknown_type">Unknown type</string>
-    <string name="ui_unlocked">Unlocked</string>
     <string name="ui_updated">Updated</string>
     <string name="ui_using_local_lyrics_only">Using local lyrics only</string>
     <string name="ui_version_project_link_and_changelog">Version, project link, and changelog.</string>

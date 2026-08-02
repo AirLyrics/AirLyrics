@@ -10,7 +10,7 @@ internal object LyricsIndexStore {
     sealed class RawSnapshot {
         object Missing : RawSnapshot()
         object Unreadable : RawSnapshot()
-        data class Present(val bytes: ByteArray) : RawSnapshot()
+        class Present(val bytes: ByteArray) : RawSnapshot()
     }
 
     fun read(context: Context): List<LyricsIndexEntry> {

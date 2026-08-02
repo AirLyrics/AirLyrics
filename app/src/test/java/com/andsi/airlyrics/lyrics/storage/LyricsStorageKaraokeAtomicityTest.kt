@@ -297,7 +297,6 @@ class LyricsStorageKaraokeAtomicityTest {
         assertTrue(restoreFailureTriggered.get())
         assertRollbackFailed(
             result = result,
-            originalStep = LyricsStorage.KaraokeImportFailureStep.INDEX_WRITE,
             expectedFailedSteps = listOf(
                 LyricsStorage.KaraokeRollbackFailureStep.RESTORE_PLAIN_FILE
             )
@@ -343,7 +342,6 @@ class LyricsStorageKaraokeAtomicityTest {
         assertTrue(indexRestoreFailureTriggered.get())
         assertRollbackFailed(
             result = result,
-            originalStep = LyricsStorage.KaraokeImportFailureStep.INDEX_WRITE,
             expectedFailedSteps = listOf(
                 LyricsStorage.KaraokeRollbackFailureStep.RESTORE_INDEX
             )
@@ -390,7 +388,6 @@ class LyricsStorageKaraokeAtomicityTest {
 
         assertRollbackFailed(
             result = result,
-            originalStep = LyricsStorage.KaraokeImportFailureStep.INDEX_WRITE,
             expectedFailedSteps = listOf(
                 LyricsStorage.KaraokeRollbackFailureStep.RESTORE_PLAIN_FILE,
                 LyricsStorage.KaraokeRollbackFailureStep.RESTORE_KARAOKE_FILE
@@ -560,12 +557,9 @@ class LyricsStorageKaraokeAtomicityTest {
         )
         assertTrue(LyricsIndexStore.write(context, listOf(entry)))
         val plainFileName = LyricsFileNaming.managedPlainFileName(identity)
-        val karaokeFileName = LyricsFileNaming.managedKaraokeFileName(identity)
         return SeededState(
             plainFileName = plainFileName,
             plainRelativeFile = LyricsFileNaming.managedRelativePath(plainFileName),
-            karaokeFileName = karaokeFileName,
-            karaokeRelativeFile = LyricsFileNaming.managedRelativePath(karaokeFileName),
             plainLyrics = plainLyrics,
             karaokeLines = karaokeLines,
             indexEntry = entry,
@@ -575,11 +569,13 @@ class LyricsStorageKaraokeAtomicityTest {
 
     private fun assertRollbackFailed(
         result: LyricsStorage.ImportLyricsResult,
-        originalStep: LyricsStorage.KaraokeImportFailureStep,
         expectedFailedSteps: List<LyricsStorage.KaraokeRollbackFailureStep>
     ) {
         val rollbackFailed = result as LyricsStorage.ImportLyricsResult.RollbackFailed
-        assertEquals(originalStep, rollbackFailed.originalFailureStep)
+        assertEquals(
+            LyricsStorage.KaraokeImportFailureStep.INDEX_WRITE,
+            rollbackFailed.originalFailureStep
+        )
         assertEquals(
             LyricsStorage.KaraokeImportFailureCause.IO_OPERATION_RETURNED_FALSE,
             rollbackFailed.originalFailureCause
@@ -651,11 +647,9 @@ class LyricsStorageKaraokeAtomicityTest {
         val karaokeLines: List<KaraokeLine>
     )
 
-    private data class SeededState(
+    private class SeededState(
         val plainFileName: String,
         val plainRelativeFile: String,
-        val karaokeFileName: String,
-        val karaokeRelativeFile: String,
         val plainLyrics: String,
         val karaokeLines: List<KaraokeLine>,
         val indexEntry: LyricsIndexEntry,

@@ -8,7 +8,7 @@ material = "1.14.0"
 activityKtx = "1.13.0"
 documentfile = "1.1.0"
 junit = "4.13.2"
-json = "20260522"
+json = "20260719"
 androidxTestJunit = "1.3.0"
 androidxTestRunner = "1.7.0"
 

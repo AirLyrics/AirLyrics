@@ -7,6 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SongIdentityTest {
+    @Suppress("SpellCheckingInspection")
     @Test
     fun normalizeText_trimsLowercasesAndCollapsesWhitespace() {
         assertEquals(
@@ -15,6 +16,7 @@ class SongIdentityTest {
         )
     }
 
+    @Suppress("SpellCheckingInspection")
     @Test
     fun storageKey_matchesPersistedGoldenValuesAfterNormalization() {
         val first = SongIdentity(

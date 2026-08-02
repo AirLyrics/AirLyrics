@@ -124,7 +124,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
             layoutParams.hasFlag(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
         )
         val lockedX = layoutParams.x
-        drag(view, fromX = 10f, toX = 110f)
+        drag(view)
         assertEquals("A locked overlay must not move", lockedX, layoutParams.x)
         assertEquals(
             FloatingWindowStateBroadcast.State(
@@ -136,7 +136,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
         )
 
         send(service, FloatingServiceCommand.Unlock)
-        drag(view, fromX = 10f, toX = 110f)
+        drag(view)
         assertEquals("An unlocked overlay remains draggable", lockedX + 100, layoutParams.x)
 
         send(service, FloatingServiceCommand.ClickThroughOn)
@@ -314,10 +314,10 @@ class FloatingLyricsServiceCommandLifecycleTest {
         }
     }
 
-    private fun drag(view: View, fromX: Float, toX: Float) {
-        val down = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, fromX, 20f, 0)
-        val move = MotionEvent.obtain(0L, 10L, MotionEvent.ACTION_MOVE, toX, 20f, 0)
-        val up = MotionEvent.obtain(0L, 20L, MotionEvent.ACTION_UP, toX, 20f, 0)
+    private fun drag(view: View) {
+        val down = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_DOWN, 10f, 20f, 0)
+        val move = MotionEvent.obtain(0L, 10L, MotionEvent.ACTION_MOVE, 110f, 20f, 0)
+        val up = MotionEvent.obtain(0L, 20L, MotionEvent.ACTION_UP, 110f, 20f, 0)
         try {
             assertTrue(view.dispatchTouchEvent(down))
             assertTrue(view.dispatchTouchEvent(move))

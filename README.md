@@ -1,5 +1,7 @@
+<!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
 
+<!--suppress CheckImageSize -->
 <img src="docs/assets/airlyrics-logo.png" width="120" alt="AirLyrics Logo" />
 
 # AirLyrics
@@ -25,8 +27,10 @@ lyrics in a customizable floating window.
 
 ---
 
+<!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
 
+<!--suppress CheckImageSize -->
 <img src="docs/assets/screenshot-floating-lyrics.jpg" width="720" alt="AirLyrics floating lyrics" />
 
 </div>
@@ -77,21 +81,28 @@ System requirement: Android 8.0 or later.
 
 ## Screenshots
 
+<!--suppress HtmlDeprecatedAttribute -->
 <div align="center">
 
 <table>
   <tr>
+    <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
+      <!--suppress CheckImageSize -->
       <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="Media source detection" />
       <br />
       <sub>Media Source</sub>
     </td>
+    <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
+      <!--suppress CheckImageSize -->
       <img src="docs/assets/screenshot-lyrics-source.jpg" width="240" alt="Lyrics search and local lyrics settings" />
       <br />
       <sub>Lyrics Search</sub>
     </td>
+    <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
+      <!--suppress CheckImageSize -->
       <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="Floating window customization" />
       <br />
       <sub>Floating Customization</sub>
@@ -107,11 +118,11 @@ System requirement: Android 8.0 or later.
 
 AirLyrics uses these Android permissions:
 
-| Permission | Purpose |
-| --- | --- |
+| Permission              | Purpose                         |
+|-------------------------|---------------------------------|
 | Display over other apps | Show the floating lyrics window |
-| Notification access | Detect current media playback |
-| File picker | Import local lyrics files |
+| Notification access     | Detect current media playback   |
+| File picker             | Import local lyrics files       |
 
 See [Privacy Policy](PRIVACY.md) for details about permissions, local data and online lyrics search.
 
@@ -121,14 +132,14 @@ See [Privacy Policy](PRIVACY.md) for details about permissions, local data and o
 
 Project documentation is in the docs directory.
 
-| Document | Description |
-| --- | --- |
-| [Documentation Home](docs/README.md) | English documentation index |
-| [Privacy Policy](PRIVACY.md) | Permissions, local data and online lyrics search privacy notes |
-| [User Guide](docs/USER_GUIDE.md) | Project usage guide |
-| [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format |
-| [Contributing](docs/CONTRIBUTING.md) | Development environment, PR workflow and code locations |
-| [Architecture](docs/ARCHITECTURE.md) | Module layout and runtime flow |
+| Document                               | Description                                                    |
+|----------------------------------------|----------------------------------------------------------------|
+| [Documentation Home](docs/README.md)   | English documentation index                                    |
+| [Privacy Policy](PRIVACY.md)           | Permissions, local data and online lyrics search privacy notes |
+| [User Guide](docs/USER_GUIDE.md)       | Project usage guide                                            |
+| [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format        |
+| [Contributing](docs/CONTRIBUTING.md)   | Development environment, PR workflow and code locations        |
+| [Architecture](docs/ARCHITECTURE.md)   | Module layout and runtime flow                                 |
 
 ---
 

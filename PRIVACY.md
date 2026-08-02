@@ -14,13 +14,13 @@ AirLyrics does not use analytics, advertising SDKs, tracking SDKs, account syste
 
 AirLyrics asks for the following Android permissions only when they are needed for app features:
 
-| Permission / access | Purpose |
-| --- | --- |
-| Display over other apps | Shows the floating lyrics window above other apps |
-| Notification access | Detects current media playback information from local notifications / media sessions |
-| Notifications | Keeps the foreground floating lyrics service visible to Android |
-| Internet access | Searches lyrics online when the user uses online lyrics search |
-| File picker | Lets the user import local lyrics files |
+| Permission / access     | Purpose                                                                              |
+|-------------------------|--------------------------------------------------------------------------------------|
+| Display over other apps | Shows the floating lyrics window above other apps                                    |
+| Notification access     | Detects current media playback information from local notifications / media sessions |
+| Notifications           | Keeps the foreground floating lyrics service visible to Android                      |
+| Internet access         | Searches lyrics online when the user uses online lyrics search                       |
+| File picker             | Lets the user import local lyrics files                                              |
 
 Notification access is used locally on the device to detect media playback metadata such as the playing app, title, artist, album, playback state, and available media controls. AirLyrics does not upload notification content.
 

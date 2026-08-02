@@ -162,7 +162,6 @@ internal class MainGraph(
         LanguageSettingsStore.applyAppLocale(activity)
     }
 
-    @Suppress("UNUSED_PARAMETER")
     fun onCreate(savedInstanceState: Bundle?) {
         state.locked = FloatingLyricsStyleStore.isLocked(activity)
         state.clickThrough = FloatingLyricsStyleStore.isClickThrough(activity)

@@ -24,9 +24,6 @@ enum class LyricsSearchSource(val key: String) {
             return entries.firstOrNull { it.key == key }
         }
 
-        fun fromKey(key: String?): LyricsSearchSource {
-            return fromKeyOrNull(key) ?: default
-        }
     }
 }
 
@@ -76,5 +73,3 @@ enum class LyricsSwitchAnimationMode(val key: String) {
         }
     }
 }
-
-data class LyricsSourceOption(val key: String)

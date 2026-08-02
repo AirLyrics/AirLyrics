@@ -58,10 +58,7 @@ class LyricsStorageConcurrencyInvariantTest {
 
             val karaokeResult = LyricsStorage.importKaraokeLyricsFromUriWithResult(
                 context = context,
-                uri = writeImportFile(
-                    name = "karaoke-race.lrc",
-                    text = "[00:10.00]<00:10.00>karaoke"
-                ),
+                uri = writeImportFile(),
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS
@@ -106,10 +103,10 @@ class LyricsStorageConcurrencyInvariantTest {
         }
     }
 
-    private fun writeImportFile(name: String, text: String): Uri {
+    private fun writeImportFile(): Uri {
         return Uri.fromFile(
-            File(context.cacheDir, name).apply {
-                writeText(text)
+            File(context.cacheDir, "karaoke-race.lrc").apply {
+                writeText("[00:10.00]<00:10.00>karaoke")
             }
         )
     }

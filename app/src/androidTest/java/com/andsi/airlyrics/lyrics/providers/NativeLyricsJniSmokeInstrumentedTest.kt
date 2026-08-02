@@ -51,7 +51,7 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 expectedMessage = "empty title",
             )
 
-            val musixmatchValidation = fetchMusixmatchValidation(MUSIXMATCH_VALIDATION_LOOKUP_ID)
+            val musixmatchValidation = fetchMusixmatchValidation()
             assertNativeError(
                 result = musixmatchValidation,
                 expectedSource = "musixmatch-rust",
@@ -83,7 +83,7 @@ class NativeLyricsJniSmokeInstrumentedTest {
         )
     }
 
-    private fun fetchMusixmatchValidation(lookupId: Long): NativeLyricsJsonResult {
+    private fun fetchMusixmatchValidation(): NativeLyricsJsonResult {
         return parseNativeResult(
             MusixmatchLyricsNative.fetchBestLyricsJson(
                 title = "",
@@ -91,7 +91,7 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 album = "",
                 durationMs = 0L,
                 translationLanguageCode = "zh",
-                lookupId = lookupId,
+                lookupId = MUSIXMATCH_VALIDATION_LOOKUP_ID,
                 reserved = false,
             ),
             defaultSource = "musixmatch-rust",

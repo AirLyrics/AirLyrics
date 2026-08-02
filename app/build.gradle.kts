@@ -52,7 +52,7 @@ val releaseSigningValues = listOf(
 )
 val hasReleaseSigning = releaseSigningValues.all { !it.isNullOrBlank() }
 val hasPartialReleaseSigning = releaseSigningValues.any { !it.isNullOrBlank() } && !hasReleaseSigning
-val buildX86_64 = providers.gradleProperty("airlyrics.buildX86_64").orNull == "true"
+val buildX8664 = providers.gradleProperty("airlyrics.buildX86_64").orNull == "true"
 
 fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } ?: rootProject.file(path)
 
@@ -98,7 +98,7 @@ android {
         ndk {
             //noinspection ChromeOsAbiSupport
             abiFilters += listOf("arm64-v8a")
-            if (buildX86_64) {
+            if (buildX8664) {
                 abiFilters += "x86_64"
             }
         }
@@ -322,7 +322,7 @@ tasks.register<Exec>("buildRustLyrics") {
     // much more fragile when cross-compiling on Arch. The release APK only needs
     // arm64-v8a for modern phones, so keep x86_64 opt-in instead of blocking
     // normal device builds. Use -Pairlyrics.buildX86_64=true only when you need it.
-    if (buildX86_64) {
+    if (buildX8664) {
         rustAbiArgs += listOf("-t", "x86_64")
     }
 

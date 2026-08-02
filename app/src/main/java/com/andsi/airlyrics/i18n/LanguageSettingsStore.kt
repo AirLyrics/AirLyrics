@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.i18n
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.Configuration
 import android.content.res.Resources
@@ -34,6 +35,7 @@ object LanguageSettingsStore {
         applyAppLocale(context)
     }
 
+    @SuppressLint("AppBundleLocaleChanges")
     fun applyAppLocale(context: Context) {
         val tags = when (getMode(context)) {
             MODE_ZH_CN -> MODE_ZH_CN

@@ -70,7 +70,7 @@ class MainActivityLyricsOverwriteRecreationTest {
 
     @Test
     fun overwriteConfirmation_activityRecreated_preservesOriginalRequestAndImportsExactlyOnce() {
-        saveExistingWordByWordLyrics(SONG_A, "old")
+        saveExistingWordByWordLyrics(SONG_A)
         val inputOpenCount = AtomicInteger()
         registerLyricsInput(ORIGINAL_URI, inputOpenCount, "new")
         val controller = launchActivity()
@@ -79,8 +79,7 @@ class MainActivityLyricsOverwriteRecreationTest {
         deliverPickerResult(
             activity = oldActivity,
             uri = ORIGINAL_URI,
-            target = SONG_A,
-            type = LyricsImportType.WORD_BY_WORD
+            target = SONG_A
         )
         awaitAppIo(oldActivity)
 
@@ -142,7 +141,7 @@ class MainActivityLyricsOverwriteRecreationTest {
 
     @Test
     fun overwriteConfirmation_cancelThenRecreate_doesNotRestoreOrImport() {
-        saveExistingWordByWordLyrics(SONG_A, "old")
+        saveExistingWordByWordLyrics(SONG_A)
         val inputOpenCount = AtomicInteger()
         registerLyricsInput(ORIGINAL_URI, inputOpenCount, "cancelled")
         val controller = launchActivity()
@@ -151,8 +150,7 @@ class MainActivityLyricsOverwriteRecreationTest {
         deliverPickerResult(
             activity = activity,
             uri = ORIGINAL_URI,
-            target = SONG_A,
-            type = LyricsImportType.WORD_BY_WORD
+            target = SONG_A
         )
         awaitAppIo(activity)
 
@@ -184,7 +182,7 @@ class MainActivityLyricsOverwriteRecreationTest {
 
     @Test
     fun overwriteConfirmation_restoredUnreadableUri_consumesRequestAndShowsReadFailedOnce() {
-        saveExistingWordByWordLyrics(SONG_A, "old")
+        saveExistingWordByWordLyrics(SONG_A)
         val inputOpenCount = AtomicInteger()
         shadowOf(context.contentResolver).registerInputStreamSupplier(ORIGINAL_URI) {
             inputOpenCount.incrementAndGet()
@@ -196,8 +194,7 @@ class MainActivityLyricsOverwriteRecreationTest {
         deliverPickerResult(
             activity = activity,
             uri = ORIGINAL_URI,
-            target = SONG_A,
-            type = LyricsImportType.WORD_BY_WORD
+            target = SONG_A
         )
         awaitAppIo(activity)
         requireOverwriteDialog(activity)
@@ -247,10 +244,12 @@ class MainActivityLyricsOverwriteRecreationTest {
     private fun deliverPickerResult(
         activity: MainActivity,
         uri: Uri,
-        target: SongIdentity,
-        type: LyricsImportType
+        target: SongIdentity
     ) {
-        activity.graph.state.pendingLyricsImport = PendingLyricsImport(target, type)
+        activity.graph.state.pendingLyricsImport = PendingLyricsImport(
+            target,
+            LyricsImportType.WORD_BY_WORD
+        )
         activity.graph.launchers.selectLyricsFile()
         val pickerRequest = shadowOf(activity).nextStartedActivityForResult
         shadowOf(activity).receiveResult(
@@ -296,10 +295,10 @@ class MainActivityLyricsOverwriteRecreationTest {
         }
     }
 
-    private fun saveExistingWordByWordLyrics(song: SongIdentity, word: String) {
+    private fun saveExistingWordByWordLyrics(song: SongIdentity) {
         val uri = Uri.fromFile(
             File(context.cacheDir, "existing-${song.title}.lrc").apply {
-                writeText("[00:10.00]<00:10.00>$word")
+                writeText("[00:10.00]<00:10.00>old")
             }
         )
         assertTrue(

@@ -572,7 +572,7 @@ class LyricsStorageSafInstrumentedTest {
         var persistablePermissionTaken: Boolean = false,
     )
 
-    private data class FileSnapshot(
+    private class FileSnapshot(
         val existed: Boolean,
         val bytes: ByteArray?,
     )
