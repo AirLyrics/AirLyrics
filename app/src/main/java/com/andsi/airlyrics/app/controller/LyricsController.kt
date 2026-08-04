@@ -109,7 +109,7 @@ internal class LyricsController(
     ) {
         val importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
         val overwriteMessage = request.target.displayText + "\n\n" + if (importAsWordByWord) {
-            context.getString(R.string.ui_overwrite_word_by_word_regenerate_plain_fallback_msg)
+            context.getString(R.string.ui_word_by_word_overwrite_message)
         } else {
             context.getString(R.string.ui_overwrite_plain_lyrics_msg)
         }
@@ -200,10 +200,10 @@ internal class LyricsController(
                 showImportFormatError(result.invalidLineNumbers, importAsWordByWord)
             }
             LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists -> {
-                AirToast.showLong(context, R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc)
+                AirToast.showLong(context, R.string.ui_word_by_word_blocked_by_plain_lrc)
             }
             LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists -> {
-                AirToast.showLong(context, R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics)
+                AirToast.showLong(context, R.string.ui_plain_lrc_blocked_by_word_by_word)
             }
             LyricsStorage.ImportLyricsResult.ReadFailed -> {
                 val message = if (importAsWordByWord) {
@@ -260,7 +260,7 @@ internal class LyricsController(
                 if (deleted) {
                     val message = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_plain_lrc_removed_for_this_song)
-                        LyricsStorage.DeleteMode.WORD_BY_WORD -> context.getString(R.string.ui_word_by_word_lyrics_removed_for_this_song)
+                        LyricsStorage.DeleteMode.WORD_BY_WORD -> context.getString(R.string.ui_word_by_word_lyrics_removed)
                         LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_all_local_lyrics_removed)
                     }
                     AirToast.showLong(context, message)

@@ -144,12 +144,12 @@ class LyricsControllerUiOutcomeTest {
                 name = "PlainLyricsAlreadyExists",
                 result = LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists,
                 wordByWordLyrics = true,
-                expectedToastRes = R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc
+                expectedToastRes = R.string.ui_word_by_word_blocked_by_plain_lrc
             ),
             FailureCase(
                 name = "WordByWordLyricsAlreadyExists",
                 result = LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists,
-                expectedToastRes = R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics
+                expectedToastRes = R.string.ui_plain_lrc_blocked_by_word_by_word
             ),
             FailureCase(
                 name = "ReadFailed",
@@ -354,8 +354,8 @@ class LyricsControllerUiOutcomeTest {
     private fun successErrorToastTexts(): Set<String> {
         return setOf(
             activity.getString(R.string.ui_lrc_file_too_large),
-            activity.getString(R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc),
-            activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics),
+            activity.getString(R.string.ui_word_by_word_blocked_by_plain_lrc),
+            activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word),
             activity.getString(R.string.ui_cannot_read_word_by_word_lyrics_file),
             activity.getString(R.string.ui_cannot_read_this_lyric_file),
             activity.getString(R.string.ui_lrc_import_save_failed)

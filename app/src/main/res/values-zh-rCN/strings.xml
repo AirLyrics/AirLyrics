@@ -100,11 +100,11 @@
     <string name="ui_word_by_word_lyrics">逐字歌词</string>
     <string name="ui_word_by_word_lyrics_import_success">已导入逐字歌词，悬浮窗显示中会立即刷新</string>
     <string name="ui_word_by_word_lyrics_lrc_file">逐字歌词（.lrc）</string>
-    <string name="ui_word_by_word_lyrics_local_only_message">逐字歌词只支持手动导入本地 .lrc 文件。</string>
+    <string name="ui_word_by_word_lyrics_local_only">逐字歌词只支持手动导入本地 .lrc 文件。</string>
     <string name="ui_word_by_word_lyrics_format_hint">逐字歌词行时间使用 [00:12.34]，字词时间使用 &lt;00:12.34&gt;。</string>
-    <string name="ui_word_by_word_lyrics_blocked_by_plain_lrc">请先移除已有普通歌词，再导入逐字歌词。</string>
-    <string name="ui_plain_lrc_blocked_by_word_by_word_lyrics">当前音乐已使用逐字歌词，请先移除逐字歌词，再导入普通歌词。</string>
-    <string name="ui_word_by_word_lyrics_removed_for_this_song">已移除当前音乐的逐字歌词</string>
+    <string name="ui_word_by_word_blocked_by_plain_lrc">请先移除已有普通歌词，再导入逐字歌词。</string>
+    <string name="ui_plain_lrc_blocked_by_word_by_word">当前音乐已使用逐字歌词，请先移除逐字歌词，再导入普通歌词。</string>
+    <string name="ui_word_by_word_lyrics_removed">已移除当前音乐的逐字歌词</string>
     <string name="ui_expand_preview">展开预览</string>
     <string name="ui_fast_forwarding">快进中</string>
     <string name="ui_floating">悬浮窗</string>
@@ -132,7 +132,7 @@ This is a lyric preview</string>
     <string name="ui_imported_off">已导入 · 未开启</string>
     <string name="ui_lyrics_folder_scope_hint">手动导入歌词、自动保存歌词和歌词索引都会使用这个位置。</string>
     <string name="ui_invalid_format">格式不正确</string>
-    <string name="ui_item_display_title_word_by_word_lyrics">%1$s · 逐字歌词</string>
+    <string name="ui_item_title_word_by_word_lyrics">%1$s · 逐字歌词</string>
     <string name="ui_language">语言</string>
     <string name="ui_left">左对齐</string>
     <string name="ui_like_it">如果你喜欢这个项目</string>
@@ -183,7 +183,7 @@ This is a lyric preview</string>
     <string name="ui_recent_lyrics_empty_hint">还没有保存过歌词。播放歌曲并成功匹配，或为当前音乐导入歌词后，这里会出现 .lrc 文件。</string>
     <string name="ui_no_song_for_lyrics_binding">当前没有正在播放的歌曲，无法绑定歌词</string>
     <string name="ui_no_translation_for_this_lyric">当前歌词没有翻译</string>
-    <string name="ui_no_valid_word_by_word_lyrics_line_was_found">没有找到可保存的逐字歌词。请至少保留一行 [00:12.34]&lt;00:12.34&gt;歌词。</string>
+    <string name="ui_no_valid_word_by_word_lyrics_line">没有找到可保存的逐字歌词。请至少保留一行 [00:12.34]&lt;00:12.34&gt;歌词。</string>
     <string name="ui_plain_lrc_no_valid_line_error">没有找到可保存的有效歌词。请至少保留一行 [00:12.34]歌词。</string>
     <string name="ui_not_bound">未绑定</string>
     <string name="ui_not_imported">未导入</string>
@@ -310,7 +310,7 @@ This is a lyric preview</string>
     <string name="ui_this_word_by_word_lyrics_can_be_saved">这份逐字歌词可以保存。</string>
     <string name="ui_this_is_a_lyric_preview">这是一行歌词预览</string>
     <string name="ui_this_plain_lrc_can_be_saved">这份普通 LRC 可以保存。</string>
-    <string name="ui_overwrite_word_by_word_regenerate_plain_fallback_msg">这首歌已经有本地逐字歌词。覆盖会替换逐字歌词，并重新生成普通歌词。</string>
+    <string name="ui_word_by_word_overwrite_message">这首歌已经有本地逐字歌词。覆盖会替换逐字歌词，并重新生成普通歌词。</string>
     <string name="ui_overwrite_plain_lyrics_msg">这首歌已经有普通歌词。覆盖会替换普通歌词。</string>
     <string name="ui_toaster_mute">关闭 Toast 提示</string>
     <string name="ui_toaster_mute_hint">这会关闭所有 AirLyrics 的 Toast 提示，也就是覆盖在屏幕中下方显示的小提示。</string>

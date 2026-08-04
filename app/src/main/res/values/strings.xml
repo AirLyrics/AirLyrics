@@ -100,11 +100,11 @@
     <string name="ui_word_by_word_lyrics">Word-by-word lyrics</string>
     <string name="ui_word_by_word_lyrics_import_success">Word-by-word lyrics imported. Floating lyrics will refresh.</string>
     <string name="ui_word_by_word_lyrics_lrc_file">Word-by-word lyrics (.lrc)</string>
-    <string name="ui_word_by_word_lyrics_local_only_message">Word-by-word lyrics only support local manual import.</string>
+    <string name="ui_word_by_word_lyrics_local_only">Word-by-word lyrics only support local manual import.</string>
     <string name="ui_word_by_word_lyrics_format_hint">Word-by-word lyrics use [00:12.34] for line time and &lt;00:12.34&gt; for word time.</string>
-    <string name="ui_word_by_word_lyrics_blocked_by_plain_lrc">Remove existing plain lyrics before importing word-by-word lyrics.</string>
-    <string name="ui_plain_lrc_blocked_by_word_by_word_lyrics">Remove word-by-word lyrics before importing plain lyrics.</string>
-    <string name="ui_word_by_word_lyrics_removed_for_this_song">Word-by-word lyrics removed for this song.</string>
+    <string name="ui_word_by_word_blocked_by_plain_lrc">Remove existing plain lyrics before importing word-by-word lyrics.</string>
+    <string name="ui_plain_lrc_blocked_by_word_by_word">Remove word-by-word lyrics before importing plain lyrics.</string>
+    <string name="ui_word_by_word_lyrics_removed">Word-by-word lyrics removed for this song.</string>
     <string name="ui_expand_preview">Expand preview</string>
     <string name="ui_fast_forwarding">Fast-forwarding</string>
     <string name="ui_floating">Floating</string>
@@ -131,7 +131,7 @@
     <string name="ui_imported_off">Imported · off</string>
     <string name="ui_lyrics_folder_scope_hint">Imports, auto-save, and the lyrics index use this folder.</string>
     <string name="ui_invalid_format">Invalid format</string>
-    <string name="ui_item_display_title_word_by_word_lyrics">%1$s · word-by-word lyrics</string>
+    <string name="ui_item_title_word_by_word_lyrics">%1$s · word-by-word lyrics</string>
     <string name="ui_language">Language</string>
     <string name="ui_left">Left</string>
     <string name="ui_like_it">Like it?</string>
@@ -182,7 +182,7 @@
     <string name="ui_recent_lyrics_empty_hint">No saved lyrics yet. Play and match a song, or import lyrics for current media.</string>
     <string name="ui_no_song_for_lyrics_binding">No song is playing, so lyrics cannot be bound</string>
     <string name="ui_no_translation_for_this_lyric">No translation for this lyric</string>
-    <string name="ui_no_valid_word_by_word_lyrics_line_was_found">No valid word-by-word lyrics line was found. Keep at least one [00:12.34]&lt;00:12.34&gt;lyric line.</string>
+    <string name="ui_no_valid_word_by_word_lyrics_line">No valid word-by-word lyrics line was found. Keep at least one [00:12.34]&lt;00:12.34&gt;lyric line.</string>
     <string name="ui_plain_lrc_no_valid_line_error">No valid lyric line was found. Keep at least one [00:12.34]lyric line.</string>
     <string name="ui_not_bound">Not bound</string>
     <string name="ui_not_imported">Not imported</string>
@@ -309,7 +309,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_this_word_by_word_lyrics_can_be_saved">These word-by-word lyrics can be saved.</string>
     <string name="ui_this_is_a_lyric_preview">This is a lyric preview</string>
     <string name="ui_this_plain_lrc_can_be_saved">This plain LRC can be saved.</string>
-    <string name="ui_overwrite_word_by_word_regenerate_plain_fallback_msg">This song already has local word-by-word lyrics. Overwriting replaces them and regenerates plain lyrics.</string>
+    <string name="ui_word_by_word_overwrite_message">This song already has local word-by-word lyrics. Overwriting replaces them and regenerates plain lyrics.</string>
     <string name="ui_overwrite_plain_lyrics_msg">This song already has plain lyrics. Overwriting replaces the plain lyrics.</string>
     <string name="ui_toaster_mute">Hide toast popups</string>
     <string name="ui_toaster_mute_hint">This hides all AirLyrics toast popups, the small messages that appear over the lower-middle part of the screen.</string>

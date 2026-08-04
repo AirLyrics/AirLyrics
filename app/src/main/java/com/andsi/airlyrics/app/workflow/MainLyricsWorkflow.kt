@@ -214,7 +214,7 @@ internal class MainLyricsWorkflow(
                         subtitle = if (plainImportEnabled) {
                             activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
                         } else {
-                            activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics)
+                            activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word)
                         },
                         primary = true,
                         rowEnabled = plainImportEnabled
@@ -225,7 +225,7 @@ internal class MainLyricsWorkflow(
                         subtitle = if (wordByWordImportEnabled) {
                             activity.getString(R.string.ui_please_choose_a_word_by_word_lrc_file)
                         } else {
-                            activity.getString(R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc)
+                            activity.getString(R.string.ui_word_by_word_blocked_by_plain_lrc)
                         },
                         primary = false,
                         rowEnabled = wordByWordImportEnabled

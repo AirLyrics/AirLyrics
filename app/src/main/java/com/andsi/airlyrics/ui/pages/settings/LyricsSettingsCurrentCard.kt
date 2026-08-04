@@ -221,7 +221,7 @@ private fun wordByWordStatusRow(activity: MainUiHost, value: String): View = wit
             setOnClickListener {
                 activity.showAirInfoDialog(
                     title = getString(R.string.ui_local_word_by_word_lyrics_title),
-                    message = getString(R.string.ui_word_by_word_lyrics_local_only_message)
+                    message = getString(R.string.ui_word_by_word_lyrics_local_only)
                 )
             }
         })

@@ -19,6 +19,6 @@ internal fun Context.wordByWordLyricsFormatErrorMessage(invalidLineNumbers: List
         val suffix = if (invalidLineNumbers.size > 8) "..." else ""
         getString(R.string.lyrics_word_by_word_format_invalid_lines, lines, suffix)
     } else {
-        getString(R.string.ui_no_valid_word_by_word_lyrics_line_was_found)
+        getString(R.string.ui_no_valid_word_by_word_lyrics_line)
     }
 }

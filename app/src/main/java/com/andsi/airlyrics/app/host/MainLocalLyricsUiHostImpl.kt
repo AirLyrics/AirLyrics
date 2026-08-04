@@ -171,7 +171,7 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
 
     editDialog = showAirDialog(
         title = if (isWordByWord) {
-            getString(R.string.ui_item_display_title_word_by_word_lyrics, item.displayTitle)
+            getString(R.string.ui_item_title_word_by_word_lyrics, item.displayTitle)
         } else {
             item.displayTitle
         },
