@@ -188,7 +188,7 @@ class MainActivityLyricsImportLifecycleTest {
         assertEquals(1, inputOpenCount.get())
         assertEquals(
             "[00:01.00]late durable lyrics",
-            LyricsStorage.readLocalLyrics(
+            LyricsStorage.readPlainLyrics(
                 context = newActivity,
                 title = SONG_A.title,
                 artist = SONG_A.artist,
@@ -208,14 +208,14 @@ class MainActivityLyricsImportLifecycleTest {
     fun lyricsChangedBeforeActivityCreation_initialRenderReadsDurableLyrics() {
         installCurrentMedia(context, SONG_A)
         assertTrue(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = context,
                 title = SONG_A.title,
                 artist = SONG_A.artist,
                 duration = SONG_A.durationMs,
                 album = SONG_A.album,
-                lyrics = "[00:01.00]early durable lyrics",
-                provider = "early-event-test"
+                plainLrc = "[00:01.00]early durable lyrics",
+                plainProvider = "early-event-test"
             )
         )
         BroadcastLyricsChangedPublisher(context).publish(SONG_A)
@@ -238,7 +238,7 @@ class MainActivityLyricsImportLifecycleTest {
         assertTrue(activity.visibleTexts().contains("${SONG_A.title} - ${SONG_A.artist}"))
         assertEquals(
             "[00:01.00]early durable lyrics",
-            LyricsStorage.readLocalLyrics(
+            LyricsStorage.readPlainLyrics(
                 context = activity,
                 title = SONG_A.title,
                 artist = SONG_A.artist,
@@ -347,7 +347,7 @@ class MainActivityLyricsImportLifecycleTest {
     }
 
     private fun hasPlainLyrics(song: SongIdentity): Boolean {
-        return LyricsStorage.hasLocalLyrics(
+        return LyricsStorage.hasPlainLyrics(
             context = context,
             title = song.title,
             artist = song.artist,

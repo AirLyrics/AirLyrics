@@ -20,21 +20,22 @@ internal object LocalLyricsDeleteOps {
 
         matched.forEach { entry ->
             val deleteGeneratedPlainFallback =
-                mode == LyricsStorage.DeleteMode.KARAOKE && entry.source == LyricsStorage.SOURCE_KARAOKE_FALLBACK
+                mode == LyricsStorage.DeleteMode.WORD_BY_WORD &&
+                    entry.plainSource == LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
             if (
                 (mode == LyricsStorage.DeleteMode.PLAIN ||
                     mode == LyricsStorage.DeleteMode.ALL ||
                     deleteGeneratedPlainFallback) &&
-                entry.file.isNotBlank()
+                entry.plainFile.isNotBlank()
             ) {
-                LyricsFileStore.deleteManagedLyrics(context, entry.file)
+                LyricsFileStore.deleteManagedLyrics(context, entry.plainFile)
                 deletedAny = true
             }
             if (
-                (mode == LyricsStorage.DeleteMode.KARAOKE || mode == LyricsStorage.DeleteMode.ALL) &&
-                entry.karaokeFile.isNotBlank()
+                (mode == LyricsStorage.DeleteMode.WORD_BY_WORD || mode == LyricsStorage.DeleteMode.ALL) &&
+                entry.wordByWordFile.isNotBlank()
             ) {
-                LyricsFileStore.deleteManagedLyrics(context, entry.karaokeFile)
+                LyricsFileStore.deleteManagedLyrics(context, entry.wordByWordFile)
                 deletedAny = true
             }
         }
@@ -43,7 +44,8 @@ internal object LocalLyricsDeleteOps {
             if (entry.key !in matchedKeys) return@mapNotNull entry
 
             val deleteGeneratedPlainFallback =
-                mode == LyricsStorage.DeleteMode.KARAOKE && entry.source == LyricsStorage.SOURCE_KARAOKE_FALLBACK
+                mode == LyricsStorage.DeleteMode.WORD_BY_WORD &&
+                    entry.plainSource == LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
             val plainFile = if (
                 mode == LyricsStorage.DeleteMode.PLAIN ||
                 mode == LyricsStorage.DeleteMode.ALL ||
@@ -51,20 +53,20 @@ internal object LocalLyricsDeleteOps {
             ) {
                 ""
             } else {
-                entry.file
+                entry.plainFile
             }
-            val karaokeFile = if (mode == LyricsStorage.DeleteMode.KARAOKE || mode == LyricsStorage.DeleteMode.ALL) {
+            val wordByWordFile = if (mode == LyricsStorage.DeleteMode.WORD_BY_WORD || mode == LyricsStorage.DeleteMode.ALL) {
                 ""
             } else {
-                entry.karaokeFile
+                entry.wordByWordFile
             }
 
-            if (plainFile.isBlank() && karaokeFile.isBlank()) {
+            if (plainFile.isBlank() && wordByWordFile.isBlank()) {
                 null
             } else {
                 entry.copy(
-                    file = plainFile,
-                    karaokeFile = karaokeFile,
+                    plainFile = plainFile,
+                    wordByWordFile = wordByWordFile,
                     updatedAt = now
                 )
             }
@@ -76,7 +78,7 @@ internal object LocalLyricsDeleteOps {
 
         if (mode == LyricsStorage.DeleteMode.PLAIN || mode == LyricsStorage.DeleteMode.ALL) {
             val legacyFileName = LyricsFileNaming.legacyPlainFileName(title, artist, duration)
-            deletedAny = LyricsFileStore.deleteLegacyLyrics(context, legacyFileName) || deletedAny
+            deletedAny = LyricsFileStore.deleteLegacyPlainLyrics(context, legacyFileName) || deletedAny
         }
 
         return deletedAny

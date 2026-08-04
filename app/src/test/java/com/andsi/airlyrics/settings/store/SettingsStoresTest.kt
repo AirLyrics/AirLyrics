@@ -39,7 +39,7 @@ class SettingsStoresTest {
         assertEquals(FloatingLyricsStyleStore.DEFAULT_PRESET, style.presetName)
         assertEquals(28f, style.textSizeSp)
         assertEquals(Color.WHITE, style.textColor)
-        assertEquals(Color.rgb(120, 220, 255), style.karaokeHighlightColor)
+        assertEquals(Color.rgb(120, 220, 255), style.wordByWordHighlightColor)
         assertEquals(Color.BLACK, style.shadowColor)
         assertEquals(8f, style.shadowRadius)
         assertTrue(style.backgroundEnabled)
@@ -80,6 +80,25 @@ class SettingsStoresTest {
         assertEquals(12, style.backgroundAlpha)
         assertEquals(321 to 654, FloatingLyricsStyleStore.getPosition(context))
         assertFalse(FloatingLyricsStyleStore.isPreviewExpanded(context))
+    }
+
+    @Test
+    fun floatingStyleStore_wordByWordHighlightColor_usesCompatibilityPreferenceKey() {
+        val preferences = context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
+        val writtenColor = Color.rgb(12, 34, 56)
+
+        FloatingLyricsStyleStore.setWordByWordHighlightColor(context, writtenColor)
+
+        assertTrue(preferences.contains("karaoke_highlight_color"))
+        assertEquals(writtenColor, preferences.getInt("karaoke_highlight_color", Color.TRANSPARENT))
+
+        val persistedColor = Color.rgb(65, 43, 21)
+        preferences.edit()
+            .clear()
+            .putInt("karaoke_highlight_color", persistedColor)
+            .commit()
+
+        assertEquals(persistedColor, FloatingLyricsStyleStore.getStyle(context).wordByWordHighlightColor)
     }
 
     @Test

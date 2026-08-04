@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,29 +28,32 @@ class LyricsSettingsStoreTest {
     fun getSettings_returnsDefaultsWhenNothingWasSaved() {
         val settings = LyricsSettingsStore.getSettings(context)
 
-        assertEquals(LyricsSearchSource.NETEASE, settings.source)
+        assertEquals(PlainLyricsSearchSource.NETEASE, settings.plainLyricsSearchSource)
         assertTrue(settings.autoSearchOnline)
         assertTrue(settings.autoSaveLocal)
         assertEquals(LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION, settings.contentDisplayMode)
         assertEquals(LyricsLineDisplayMode.CURRENT_ONLY, settings.lineDisplayMode)
         assertEquals(LyricsSwitchAnimationMode.SLIDE_UP, settings.switchAnimationMode)
-        assertFalse(settings.karaokeLyricsEnabled)
+        assertFalse(settings.wordByWordLyricsEnabled)
     }
 
     @Test
-    fun setLyricsSearchSource_localOnlyDisablesOnlineSearch() {
-        LyricsSettingsStore.setLyricsSearchSource(context, LyricsSearchSource.LOCAL_ONLY)
+    fun setPlainLyricsSearchSource_localOnlyDisablesOnlineSearch() {
+        LyricsSettingsStore.setPlainLyricsSearchSource(context, PlainLyricsSearchSource.LOCAL_ONLY)
 
-        assertEquals(LyricsSearchSource.LOCAL_ONLY, LyricsSettingsStore.getLyricsSearchSource(context))
+        assertEquals(
+            PlainLyricsSearchSource.LOCAL_ONLY,
+            LyricsSettingsStore.getPlainLyricsSearchSource(context)
+        )
         assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
     }
 
     @Test
     fun setAutoSearchOnlineEnabled_reselectsDefaultProviderWhenReEnabledFromLocalOnly() {
-        LyricsSettingsStore.setLyricsSearchSource(context, LyricsSearchSource.LOCAL_ONLY)
+        LyricsSettingsStore.setPlainLyricsSearchSource(context, PlainLyricsSearchSource.LOCAL_ONLY)
         LyricsSettingsStore.setAutoSearchOnlineEnabled(context, true)
 
-        assertEquals(LyricsSearchSource.NETEASE, LyricsSettingsStore.getLyricsSearchSource(context))
+        assertEquals(PlainLyricsSearchSource.NETEASE, LyricsSettingsStore.getPlainLyricsSearchSource(context))
         assertTrue(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
     }
 
@@ -59,7 +62,7 @@ class LyricsSettingsStoreTest {
         LyricsSettingsStore.setContentDisplayMode(context, LyricsContentDisplayMode.TRANSLATION_ONLY)
         LyricsSettingsStore.setLineDisplayMode(context, LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT)
         LyricsSettingsStore.setSwitchAnimationMode(context, LyricsSwitchAnimationMode.FADE)
-        LyricsSettingsStore.setKaraokeLyricsEnabled(context, true)
+        LyricsSettingsStore.setWordByWordLyricsEnabled(context, true)
         LyricsSettingsStore.setAutoSaveLocalEnabled(context, false)
 
         val settings = LyricsSettingsStore.getSettings(context)
@@ -67,25 +70,48 @@ class LyricsSettingsStoreTest {
         assertEquals(LyricsContentDisplayMode.TRANSLATION_ONLY, settings.contentDisplayMode)
         assertEquals(LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT, settings.lineDisplayMode)
         assertEquals(LyricsSwitchAnimationMode.FADE, settings.switchAnimationMode)
-        assertTrue(settings.karaokeLyricsEnabled)
+        assertTrue(settings.wordByWordLyricsEnabled)
         assertFalse(settings.autoSaveLocal)
     }
 
     @Test
-    fun legacyStringSetterHandlesUnknownSourceAsLocalOnly() {
-        LyricsSettingsStore.setLyricsSource(context, "unknown-provider")
+    fun wordByWordLyricsEnabled_usesCompatibilityPreferenceKey() {
+        val preferences = context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE)
 
-        assertEquals(LyricsSearchSource.LOCAL_ONLY, LyricsSettingsStore.getLyricsSearchSource(context))
+        LyricsSettingsStore.setWordByWordLyricsEnabled(context, true)
+
+        assertTrue(preferences.contains("karaoke_lyrics_enabled"))
+        assertTrue(preferences.getBoolean("karaoke_lyrics_enabled", false))
+
+        preferences.edit()
+            .clear()
+            .putBoolean("karaoke_lyrics_enabled", true)
+            .commit()
+
+        assertTrue(LyricsSettingsStore.isWordByWordLyricsEnabled(context))
+    }
+
+    @Test
+    fun legacyStringSetterHandlesUnknownSourceAsLocalOnly() {
+        LyricsSettingsStore.setPlainLyricsSource(context, "unknown-provider")
+
+        assertEquals(
+            PlainLyricsSearchSource.LOCAL_ONLY,
+            LyricsSettingsStore.getPlainLyricsSearchSource(context)
+        )
         assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
     }
 
     @Test
-    fun getLyricsSearchSource_handlesPersistedUnknownSourceAsLocalOnly() {
+    fun getPlainLyricsSearchSource_handlesPersistedUnknownSourceAsLocalOnly() {
         context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
             .putString("lyrics_source", "unknown-provider")
             .commit()
 
-        assertEquals(LyricsSearchSource.LOCAL_ONLY, LyricsSettingsStore.getLyricsSearchSource(context))
+        assertEquals(
+            PlainLyricsSearchSource.LOCAL_ONLY,
+            LyricsSettingsStore.getPlainLyricsSearchSource(context)
+        )
         assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
     }
 }

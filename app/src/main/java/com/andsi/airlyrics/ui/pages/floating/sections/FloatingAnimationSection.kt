@@ -37,17 +37,17 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
                 }
             ),
             trackedFloatingTile(
-                title = getString(R.string.ui_enhanced_lrc),
-                subtitle = wordLyricsSubtitle(),
+                title = getString(R.string.ui_word_by_word_lyrics),
+                subtitle = wordByWordLyricsSubtitle(),
                 iconRes = R.drawable.ic_air_motion,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_enhanced_lrc), "") {
+                    openPanel(tile, getString(R.string.ui_word_by_word_lyrics), "") {
                         addView(liveOptionGrid(listOf(
-                            KeyedOptionItem("karaoke_on", getString(R.string.ui_on), karaokeLyricsEnabled()) {
-                                applyKaraokeLyricsChanged(true)
+                            KeyedOptionItem("word_by_word_on", getString(R.string.ui_on), wordByWordLyricsEnabled()) {
+                                applyWordByWordLyricsChanged(true)
                             },
-                            KeyedOptionItem("karaoke_off", getString(R.string.ui_off), !karaokeLyricsEnabled()) {
-                                applyKaraokeLyricsChanged(false)
+                            KeyedOptionItem("word_by_word_off", getString(R.string.ui_off), !wordByWordLyricsEnabled()) {
+                                applyWordByWordLyricsChanged(false)
                             }
                         )))
                     }
@@ -55,12 +55,12 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
             ),
             trackedFloatingTile(
                 title = getString(R.string.ui_highlight_color),
-                subtitle = AirColorUtils.colorSummary(style().karaokeHighlightColor),
+                subtitle = AirColorUtils.colorSummary(style().wordByWordHighlightColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_enhanced_color), "") {
-                        addView(colorControl(getString(R.string.ui_highlight), style().karaokeHighlightColor) { color ->
-                            applyFloatingKaraokeHighlightColor(color)
+                    openPanel(tile, getString(R.string.ui_word_by_word_color), "") {
+                        addView(colorControl(getString(R.string.ui_highlight), style().wordByWordHighlightColor) { color ->
+                            applyFloatingWordByWordHighlightColor(color)
                             refreshFloatingPreview()
                         })
                     }

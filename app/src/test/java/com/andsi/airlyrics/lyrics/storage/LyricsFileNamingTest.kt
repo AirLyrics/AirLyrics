@@ -22,7 +22,7 @@ class LyricsFileNamingTest {
         )
         assertEquals(
             "2e421c87b90fd468.karaoke.json",
-            LyricsFileNaming.managedKaraokeFileName(identity)
+            LyricsFileNaming.managedWordByWordFileName(identity)
         )
         assertEquals(
             "lyrics/2e421c87b90fd468.lrc",
@@ -45,9 +45,9 @@ class LyricsFileNamingTest {
     @Test
     fun knownFileTypeChecks_areCaseInsensitive() {
         assertTrue(LyricsFileNaming.isPlainLyricsFile("song.LRC"))
-        assertTrue(LyricsFileNaming.isKaraokeLyricsFile("song.KARAOKE.JSON"))
+        assertTrue(LyricsFileNaming.isWordByWordLyricsFile("song.KARAOKE.JSON"))
         assertFalse(LyricsFileNaming.isPlainLyricsFile("song.txt"))
-        assertFalse(LyricsFileNaming.isKaraokeLyricsFile("song.lrc"))
+        assertFalse(LyricsFileNaming.isWordByWordLyricsFile("song.lrc"))
     }
 
     @Test

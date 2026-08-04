@@ -12,12 +12,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.shadows.ShadowLog
 
 @RunWith(RobolectricTestRunner::class)
-class NativeLyricsResultContractTest {
+class NativePlainLyricsResultContractTest {
     @Test
-    fun successFixture_mapsThroughNeteaseProductionProvider() {
+    fun successFixture_mapsThroughNeteasePlainLyricsProductionProvider() {
         val nativeResult =
             requireNotNull(
-                NeteaseLyricsProvider.mapNativeResultJson(
+                NeteasePlainLyricsProvider.mapNativePlainLyricsResultJson(
                     jsonText = fixtureCase("success"),
                     fallbackTitle = "Fallback Title",
                     fallbackArtist = "Fallback Artist",
@@ -25,14 +25,14 @@ class NativeLyricsResultContractTest {
                 ),
             )
         val domainResult =
-            requireNotNull(NeteaseLyricsProvider.toProviderResult(nativeResult))
+            requireNotNull(NeteasePlainLyricsProvider.toProviderResult(nativeResult))
 
-        assertEquals("netease-rust", nativeResult.source)
+        assertEquals("netease-rust", nativeResult.plainSource)
         assertEquals("contract-track-42", nativeResult.songId)
-        assertEquals("netease", domainResult.providerId)
-        assertEquals("NetEase Lyrics", domainResult.providerName)
-        assertEquals("[00:01.00]Original line", domainResult.lyrics)
-        assertEquals("[00:01.00]Translated line", domainResult.translatedLyrics)
+        assertEquals("netease", domainResult.plainProviderId)
+        assertEquals("NetEase Lyrics", domainResult.plainProviderName)
+        assertEquals("[00:01.00]Original line", domainResult.plainLrc)
+        assertEquals("[00:01.00]Translated line", domainResult.translatedLrc)
         assertEquals("Contract Song", domainResult.matchedTitle)
         assertEquals("Contract Artist", domainResult.matchedArtist)
         assertEquals("Contract Album", domainResult.matchedAlbum)
@@ -40,11 +40,11 @@ class NativeLyricsResultContractTest {
     }
 
     @Test
-    fun translatedFixture_mapsThroughMusixmatchProductionProviderWithRequestedLanguage() {
+    fun translatedFixture_mapsThroughMusixmatchPlainLyricsProductionProviderWithRequestedLanguage() {
         ShadowLog.clear()
         val nativeResult =
             requireNotNull(
-                MusixmatchLyricsProvider.mapNativeResultJson(
+                MusixmatchPlainLyricsProvider.mapNativePlainLyricsResultJson(
                     jsonText = fixtureCase("translated_success"),
                     fallbackTitle = "Fallback Title",
                     fallbackArtist = "Fallback Artist",
@@ -54,13 +54,13 @@ class NativeLyricsResultContractTest {
                 ),
             )
         val domainResult =
-            requireNotNull(MusixmatchLyricsProvider.toProviderResult(nativeResult))
+            requireNotNull(MusixmatchPlainLyricsProvider.toProviderResult(nativeResult))
 
-        assertEquals("musixmatch-rust", nativeResult.source)
-        assertEquals("musixmatch", domainResult.providerId)
-        assertEquals("Musixmatch", domainResult.providerName)
-        assertEquals("[00:03.00]Original subtitle", domainResult.lyrics)
-        assertEquals("[00:03.00]Translated subtitle", domainResult.translatedLyrics)
+        assertEquals("musixmatch-rust", nativeResult.plainSource)
+        assertEquals("musixmatch", domainResult.plainProviderId)
+        assertEquals("Musixmatch", domainResult.plainProviderName)
+        assertEquals("[00:03.00]Original subtitle", domainResult.plainLrc)
+        assertEquals("[00:03.00]Translated subtitle", domainResult.translatedLrc)
         assertTrue(
             ShadowLog.getLogsForTag("AirLyricsLyrics")
                 .any { it.msg.contains("Musixmatch translation found") },
@@ -68,10 +68,10 @@ class NativeLyricsResultContractTest {
     }
 
     @Test
-    fun providerErrorFixture_mapsThroughMusixmatchProductionProvider() {
+    fun providerErrorFixture_mapsThroughMusixmatchPlainLyricsProductionProvider() {
         val exception =
             runCatching {
-                MusixmatchLyricsProvider.mapNativeResultJson(
+                MusixmatchPlainLyricsProvider.mapNativePlainLyricsResultJson(
                     jsonText = fixtureCase("provider_error"),
                     fallbackTitle = "Fallback Title",
                     fallbackArtist = "Fallback Artist",
@@ -90,11 +90,11 @@ class NativeLyricsResultContractTest {
     }
 
     @Test
-    fun nullableFixture_mapsFallbacksThroughMusixmatchProductionProvider() {
+    fun nullableFixture_mapsFallbacksThroughMusixmatchPlainLyricsProductionProvider() {
         ShadowLog.clear()
         val nativeResult =
             requireNotNull(
-                MusixmatchLyricsProvider.mapNativeResultJson(
+                MusixmatchPlainLyricsProvider.mapNativePlainLyricsResultJson(
                     jsonText = fixtureCase("nullable_success"),
                     fallbackTitle = "Fallback Title",
                     fallbackArtist = "Fallback Artist",
@@ -104,18 +104,18 @@ class NativeLyricsResultContractTest {
                 ),
             )
         val domainResult =
-            requireNotNull(MusixmatchLyricsProvider.toProviderResult(nativeResult))
+            requireNotNull(MusixmatchPlainLyricsProvider.toProviderResult(nativeResult))
 
-        assertEquals("musixmatch-rust", nativeResult.source)
+        assertEquals("musixmatch-rust", nativeResult.plainSource)
         assertEquals("Fallback Album", nativeResult.album)
         assertEquals(60_000L, nativeResult.durationMs)
         assertNull(nativeResult.translatedLrc)
         assertNull(nativeResult.errorType)
         assertNull(nativeResult.errorMessage)
-        assertEquals("musixmatch", domainResult.providerId)
-        assertEquals("Musixmatch", domainResult.providerName)
-        assertEquals("[00:02.00]Original only", domainResult.lyrics)
-        assertNull(domainResult.translatedLyrics)
+        assertEquals("musixmatch", domainResult.plainProviderId)
+        assertEquals("Musixmatch", domainResult.plainProviderName)
+        assertEquals("[00:02.00]Original only", domainResult.plainLrc)
+        assertNull(domainResult.translatedLrc)
         assertTrue(
             ShadowLog.getLogsForTag("AirLyricsLyrics")
                 .any { it.msg.contains("Musixmatch translation empty") },

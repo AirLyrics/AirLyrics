@@ -68,16 +68,16 @@ class LyricsControllerUiOutcomeTest {
     fun savedImport_showsSuccessAndPublishesWithoutDirectUiRefresh() {
         val cases = listOf(
             SuccessCase(
-                wordByWord = false,
+                wordByWordLyrics = false,
                 target = target("Plain success"),
                 source = "[00:10.00]plain success",
                 expectedToast = activity.getString(R.string.ui_plain_lrc_import_success)
             ),
             SuccessCase(
-                wordByWord = true,
+                wordByWordLyrics = true,
                 target = target("Word-by-word success"),
                 source = "[00:10.00]<00:10.00>word-by-word success",
-                expectedToast = activity.getString(R.string.ui_enhanced_lrc_import_success)
+                expectedToast = activity.getString(R.string.ui_word_by_word_lyrics_import_success)
             )
         )
 
@@ -93,7 +93,7 @@ class LyricsControllerUiOutcomeTest {
                 uri = writeImportFile("success-$index.lrc", case.source),
                 target = case.target,
                 overwrite = false,
-                importAsWordByWord = case.wordByWord
+                importAsWordByWord = case.wordByWordLyrics
             )
             runner.drain()
 
@@ -104,9 +104,9 @@ class LyricsControllerUiOutcomeTest {
             assertEquals(listOf(case.target), publisher.targets)
             assertTrue(reloader.commands.isEmpty())
             assertTrue(invalidator.rebuildCalls.isEmpty())
-            if (case.wordByWord) {
+            if (case.wordByWordLyrics) {
                 assertTrue(
-                    LyricsStorage.hasKaraokeLyrics(
+                    LyricsStorage.hasWordByWordLyrics(
                         activity,
                         case.target.title,
                         case.target.artist,
@@ -115,7 +115,7 @@ class LyricsControllerUiOutcomeTest {
                 )
             } else {
                 assertTrue(
-                    LyricsStorage.hasLocalLyrics(
+                    LyricsStorage.hasPlainLyrics(
                         activity,
                         case.target.title,
                         case.target.artist,
@@ -143,13 +143,13 @@ class LyricsControllerUiOutcomeTest {
             FailureCase(
                 name = "PlainLyricsAlreadyExists",
                 result = LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists,
-                wordByWord = true,
-                expectedToastRes = R.string.ui_enhanced_lrc_blocked_by_plain_lrc
+                wordByWordLyrics = true,
+                expectedToastRes = R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc
             ),
             FailureCase(
                 name = "WordByWordLyricsAlreadyExists",
                 result = LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists,
-                expectedToastRes = R.string.ui_plain_lrc_blocked_by_enhanced_lrc
+                expectedToastRes = R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics
             ),
             FailureCase(
                 name = "ReadFailed",
@@ -191,7 +191,7 @@ class LyricsControllerUiOutcomeTest {
                 uri = Uri.parse("content://lyrics-outcome/${case.name}"),
                 target = target("Failure $index"),
                 overwrite = true,
-                importAsWordByWord = case.wordByWord
+                importAsWordByWord = case.wordByWordLyrics
             )
             runner.drain()
 
@@ -307,7 +307,7 @@ class LyricsControllerUiOutcomeTest {
         reloader: RecordingReloader
     ) {
         assertFalse(ShadowToast.showedToast(activity.getString(R.string.ui_plain_lrc_import_success)))
-        assertFalse(ShadowToast.showedToast(activity.getString(R.string.ui_enhanced_lrc_import_success)))
+        assertFalse(ShadowToast.showedToast(activity.getString(R.string.ui_word_by_word_lyrics_import_success)))
         assertTrue(reloader.commands.isEmpty())
         assertTrue(invalidator.rebuildCalls.isEmpty())
     }
@@ -334,7 +334,7 @@ class LyricsControllerUiOutcomeTest {
         assertTrue(errorMessages.any { it.contains("INDEX_WRITE") })
         assertTrue(errorMessages.any { it.contains("IO_OPERATION_RETURNED_FALSE") })
         assertTrue(errorMessages.any { it.contains("RESTORE_INDEX") })
-        assertTrue(errorMessages.any { it.contains("RESTORE_KARAOKE_FILE") })
+        assertTrue(errorMessages.any { it.contains("RESTORE_WORD_BY_WORD_FILE") })
     }
 
     private fun resetUiState(keepToastMuted: Boolean = false) {
@@ -354,9 +354,9 @@ class LyricsControllerUiOutcomeTest {
     private fun successErrorToastTexts(): Set<String> {
         return setOf(
             activity.getString(R.string.ui_lrc_file_too_large),
-            activity.getString(R.string.ui_enhanced_lrc_blocked_by_plain_lrc),
-            activity.getString(R.string.ui_plain_lrc_blocked_by_enhanced_lrc),
-            activity.getString(R.string.ui_cannot_read_enhanced_lrc_file),
+            activity.getString(R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc),
+            activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics),
+            activity.getString(R.string.ui_cannot_read_word_by_word_lyrics_file),
             activity.getString(R.string.ui_cannot_read_this_lyric_file),
             activity.getString(R.string.ui_lrc_import_save_failed)
         )
@@ -364,11 +364,11 @@ class LyricsControllerUiOutcomeTest {
 
     private fun rollbackFailedResult(): LyricsStorage.ImportLyricsResult.RollbackFailed {
         return LyricsStorage.ImportLyricsResult.RollbackFailed(
-            originalFailureStep = LyricsStorage.KaraokeImportFailureStep.INDEX_WRITE,
-            originalFailureCause = LyricsStorage.KaraokeImportFailureCause.IO_OPERATION_RETURNED_FALSE,
+            originalFailureStep = LyricsStorage.WordByWordImportFailureStep.INDEX_WRITE,
+            originalFailureCause = LyricsStorage.WordByWordImportFailureCause.IO_OPERATION_RETURNED_FALSE,
             failedRollbackSteps = listOf(
-                LyricsStorage.KaraokeRollbackFailureStep.RESTORE_INDEX,
-                LyricsStorage.KaraokeRollbackFailureStep.RESTORE_KARAOKE_FILE
+                LyricsStorage.WordByWordRollbackFailureStep.RESTORE_INDEX,
+                LyricsStorage.WordByWordRollbackFailureStep.RESTORE_WORD_BY_WORD_FILE
             )
         )
     }
@@ -408,7 +408,7 @@ class LyricsControllerUiOutcomeTest {
     }
 
     private data class SuccessCase(
-        val wordByWord: Boolean,
+        val wordByWordLyrics: Boolean,
         val target: SongIdentity,
         val source: String,
         val expectedToast: String
@@ -417,7 +417,7 @@ class LyricsControllerUiOutcomeTest {
     private data class FailureCase(
         val name: String,
         val result: LyricsStorage.ImportLyricsResult,
-        val wordByWord: Boolean = false,
+        val wordByWordLyrics: Boolean = false,
         val expectedToastRes: Int? = null,
         val expectedDialog: Boolean = false
     )

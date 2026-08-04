@@ -3,12 +3,12 @@ package com.andsi.airlyrics.lyrics.providers
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import org.json.JSONObject
 
-internal data class NativeLyricsJsonResult(
+internal data class NativePlainLyricsJsonResult(
     val ok: Boolean,
     val errorType: LyricsLookupErrorType,
     val errorTypeName: String?,
     val errorMessage: String?,
-    val source: String,
+    val plainSource: String,
     val id: String,
     val title: String,
     val artist: String,
@@ -18,14 +18,14 @@ internal data class NativeLyricsJsonResult(
     val mergedLrc: String,
     val translatedLrc: String?
 ) {
-    fun primaryLyrics(allowTranslatedFallback: Boolean = false): String {
+    fun primaryPlainLrc(allowTranslatedFallback: Boolean = false): String {
         return lrc
             .ifBlank { mergedLrc }
             .ifBlank { if (allowTranslatedFallback) translatedLrc.orEmpty() else "" }
     }
 }
 
-internal object NativeLyricsResultParser {
+internal object NativePlainLyricsResultParser {
     fun parse(
         jsonText: String,
         defaultSource: String,
@@ -33,15 +33,15 @@ internal object NativeLyricsResultParser {
         fallbackArtist: String,
         fallbackAlbum: String,
         fallbackDurationMs: Long
-    ): NativeLyricsJsonResult {
+    ): NativePlainLyricsJsonResult {
         val json = JSONObject(jsonText)
         val nativeErrorTypeName = json.optStringOrDefault("error_type", "").ifBlank { null }
-        return NativeLyricsJsonResult(
+        return NativePlainLyricsJsonResult(
             ok = json.optBoolean("ok", false),
             errorType = LyricsLookupErrorType.fromNativeName(nativeErrorTypeName),
             errorTypeName = nativeErrorTypeName,
             errorMessage = json.optStringOrDefault("error", "").ifBlank { null },
-            source = json.optStringOrDefault("source", defaultSource),
+            plainSource = json.optStringOrDefault("source", defaultSource),
             id = json.optStringOrDefault("id", ""),
             title = json.optStringOrDefault("title", fallbackTitle),
             artist = json.optStringOrDefault("artist", fallbackArtist),

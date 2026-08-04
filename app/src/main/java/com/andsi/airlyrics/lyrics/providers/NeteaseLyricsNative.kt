@@ -11,6 +11,6 @@ object NeteaseLyricsNative {
         album: String,
         durationMs: Long,
         lookupId: Long,
-        requestKlyric: Boolean
+        reserved: Boolean
     ): String
 }

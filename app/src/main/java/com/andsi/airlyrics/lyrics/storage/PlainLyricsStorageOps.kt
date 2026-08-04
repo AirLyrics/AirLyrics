@@ -6,36 +6,36 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 internal object PlainLyricsStorageOps {
-    fun getLocalLyricsInfo(
+    fun getLocalPlainLyricsInfo(
         context: Context,
         title: String,
         artist: String,
         duration: Long
-    ): LyricsStorage.LocalLyricsInfo? {
+    ): LyricsStorage.LocalPlainLyricsInfo? {
         val indexed = LyricsIndexStore.find(context, title, artist, duration)
-        if (indexed != null && indexed.file.isNotBlank()) {
-            return LyricsStorage.LocalLyricsInfo(
+        if (indexed != null && indexed.plainFile.isNotBlank()) {
+            return LyricsStorage.LocalPlainLyricsInfo(
                 title = indexed.title,
                 artist = indexed.artist,
                 durationMs = indexed.durationMs,
-                fileName = indexed.file.substringAfterLast('/'),
-                source = indexed.source,
-                provider = indexed.provider,
+                plainFileName = indexed.plainFile.substringAfterLast('/'),
+                plainSource = indexed.plainSource,
+                plainProvider = indexed.plainProvider,
                 updatedAt = indexed.updatedAt
             )
         }
 
         val legacyFileName = LyricsFileNaming.legacyPlainFileName(title, artist, duration)
-        val legacyExists = LyricsFileStore.readLegacyLyrics(context, title, artist, duration) != null
+        val legacyExists = LyricsFileStore.readLegacyPlainLyrics(context, title, artist, duration) != null
 
         return if (legacyExists) {
-            LyricsStorage.LocalLyricsInfo(
+            LyricsStorage.LocalPlainLyricsInfo(
                 title = title,
                 artist = artist,
                 durationMs = duration,
-                fileName = legacyFileName,
-                source = LyricsStorage.SOURCE_LEGACY,
-                provider = "local",
+                plainFileName = legacyFileName,
+                plainSource = LyricsStorage.SOURCE_LEGACY,
+                plainProvider = "local",
                 updatedAt = 0L
             )
         } else {
@@ -43,34 +43,34 @@ internal object PlainLyricsStorageOps {
         }
     }
 
-    fun readLocalLyrics(context: Context, title: String, artist: String, duration: Long): String? {
+    fun readPlainLyrics(context: Context, title: String, artist: String, duration: Long): String? {
         val entry = LyricsIndexStore.find(context, title, artist, duration)
-        if (entry?.file?.isNotBlank() == true) {
-            LyricsFileStore.readManagedLyrics(context, entry.file)?.let { return it }
+        if (entry?.plainFile?.isNotBlank() == true) {
+            LyricsFileStore.readManagedLyrics(context, entry.plainFile)?.let { return it }
         }
-        return LyricsFileStore.readLegacyLyrics(context, title, artist, duration)
+        return LyricsFileStore.readLegacyPlainLyrics(context, title, artist, duration)
     }
 
-    fun saveLyrics(
+    fun savePlainLyrics(
         context: Context,
         title: String,
         artist: String,
         duration: Long,
-        lyrics: String,
+        plainLrc: String,
         album: String = "",
-        source: String = LyricsStorage.SOURCE_DOWNLOADED,
-        provider: String = "local",
+        plainSource: String = LyricsStorage.SOURCE_DOWNLOADED,
+        plainProvider: String = "local",
         overwrite: Boolean = true
     ): Boolean {
         val identity = SongIdentity(title = title, artist = artist, album = album, durationMs = duration)
         val normalizedKey = identity.storageKey()
         val existing = LyricsIndexStore.find(context, title, artist, duration)
-        if (existing?.file?.isNotBlank() == true && !overwrite) return false
+        if (existing?.plainFile?.isNotBlank() == true && !overwrite) return false
 
         val now = System.currentTimeMillis()
         val fileName = LyricsFileNaming.managedPlainFileName(identity)
         val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
-        if (!LyricsFileStore.writeManagedLyrics(context, fileName, lyrics)) return false
+        if (!LyricsFileStore.writeManagedLyrics(context, fileName, plainLrc)) return false
 
         val entries = LyricsIndexStore.read(context)
             .filterNot { it.isSameSong(identity) || it.key == normalizedKey }
@@ -82,11 +82,11 @@ internal object PlainLyricsStorageOps {
             artist = artist.trim(),
             album = album.trim(),
             durationMs = duration,
-            file = relativeFile,
-            karaokeFile = existing?.karaokeFile.orEmpty(),
-            source = source,
-            provider = provider,
-            karaokeProvider = existing?.karaokeProvider.orEmpty(),
+            plainFile = relativeFile,
+            wordByWordFile = existing?.wordByWordFile.orEmpty(),
+            plainSource = plainSource,
+            plainProvider = plainProvider,
+            wordByWordProvider = existing?.wordByWordProvider.orEmpty(),
             createdAt = existing?.createdAt ?: now,
             updatedAt = now
         )
@@ -94,7 +94,7 @@ internal object PlainLyricsStorageOps {
         return LyricsIndexStore.write(context, entries)
     }
 
-    fun importLyricsFromUriWithResult(
+    fun importPlainLyricsFromUriWithResult(
         context: Context,
         uri: Uri,
         title: String,
@@ -103,38 +103,38 @@ internal object PlainLyricsStorageOps {
         album: String = "",
         overwrite: Boolean = true
     ): LyricsStorage.ImportLyricsResult {
-        if (LyricsStorage.hasKaraokeLyrics(context, title, artist, duration)) {
+        if (LyricsStorage.hasWordByWordLyrics(context, title, artist, duration)) {
             return LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
         }
 
-        val text = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
+        val plainImportLrc = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
             is LyricsFileStore.ReadTextResult.Success -> result.text
             LyricsFileStore.ReadTextResult.TooLarge -> return LyricsStorage.ImportLyricsResult.TooLarge
             LyricsFileStore.ReadTextResult.Failed -> return LyricsStorage.ImportLyricsResult.ReadFailed
         }
 
-        val validation = LrcParser.validateForStorage(text)
+        val validation = LrcParser.validateForStorage(plainImportLrc)
         if (!validation.isValid) {
             return LyricsStorage.ImportLyricsResult.InvalidFormat(validation.invalidLineNumbers)
         }
 
-        val normalizedLyrics = LrcParser.normalizeForStorage(text)
-        if (normalizedLyrics.isBlank()) return LyricsStorage.ImportLyricsResult.InvalidFormat()
+        val normalizedPlainLrc = LrcParser.normalizeForStorage(plainImportLrc)
+        if (normalizedPlainLrc.isBlank()) return LyricsStorage.ImportLyricsResult.InvalidFormat()
 
         return LyricsStorage.withStorageLock {
-            if (KaraokeLyricsStorageOps.hasKaraokeLyrics(context, title, artist, duration)) {
+            if (WordByWordLyricsStorageOps.hasWordByWordLyrics(context, title, artist, duration)) {
                 return@withStorageLock LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
             }
 
-            if (saveLyrics(
+            if (savePlainLyrics(
                 context = context,
                 title = title,
                 artist = artist,
                 duration = duration,
-                lyrics = normalizedLyrics,
+                plainLrc = normalizedPlainLrc,
                 album = album,
-                source = LyricsStorage.SOURCE_MANUAL_IMPORT,
-                provider = "local",
+                plainSource = LyricsStorage.SOURCE_MANUAL_IMPORT,
+                plainProvider = "local",
                 overwrite = overwrite
             )) {
                 LyricsStorage.ImportLyricsResult.Saved

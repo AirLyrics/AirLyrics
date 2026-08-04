@@ -22,7 +22,7 @@ internal sealed class FloatingServiceCommand {
     object ReloadOnlineLyrics : FloatingServiceCommand()
     data class ApplyLyricsOffset(val offsetMs: Long) : FloatingServiceCommand()
     data class SelectMediaSource(val packageName: String?) : FloatingServiceCommand()
-    data class ImportLyrics(val uri: Uri, val overwrite: Boolean = true) : FloatingServiceCommand()
+    data class ImportPlainLyrics(val uri: Uri, val overwrite: Boolean = true) : FloatingServiceCommand()
 
     fun toIntent(context: Context): Intent {
         return Intent(context, FloatingLyricsService::class.java).apply {
@@ -30,9 +30,9 @@ internal sealed class FloatingServiceCommand {
             when (val command = this@FloatingServiceCommand) {
                 is ApplyLyricsOffset -> putExtra(EXTRA_LYRICS_OFFSET_MS, command.offsetMs)
                 is SelectMediaSource -> putExtra(EXTRA_SOURCE_PACKAGE, command.packageName)
-                is ImportLyrics -> {
+                is ImportPlainLyrics -> {
                     data = command.uri
-                    putExtra(EXTRA_OVERWRITE_LYRICS, command.overwrite)
+                    putExtra(EXTRA_OVERWRITE_PLAIN_LYRICS, command.overwrite)
                 }
                 else -> Unit
             }
@@ -58,7 +58,7 @@ internal sealed class FloatingServiceCommand {
             ReloadOnlineLyrics -> ACTION_RELOAD_ONLINE_LYRICS
             is ApplyLyricsOffset -> ACTION_APPLY_LYRICS_OFFSET
             is SelectMediaSource -> ACTION_SELECT_MEDIA_SOURCE
-            is ImportLyrics -> ACTION_IMPORT_LYRICS
+            is ImportPlainLyrics -> ACTION_IMPORT_PLAIN_LYRICS
         }
     }
 
@@ -82,10 +82,10 @@ internal sealed class FloatingServiceCommand {
         private const val ACTION_RELOAD_ONLINE_LYRICS = "com.andsi.airlyrics.RELOAD_ONLINE_LYRICS"
         private const val ACTION_APPLY_LYRICS_OFFSET = "com.andsi.airlyrics.APPLY_LYRICS_OFFSET"
         private const val ACTION_SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
-        private const val ACTION_IMPORT_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
+        private const val ACTION_IMPORT_PLAIN_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
 
         private const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
-        private const val EXTRA_OVERWRITE_LYRICS = "overwriteLyrics"
+        private const val EXTRA_OVERWRITE_PLAIN_LYRICS = "overwriteLyrics"
         private const val EXTRA_LYRICS_OFFSET_MS = "lyricsOffsetMs"
 
         fun fromIntent(intent: Intent?): FloatingServiceCommand? {
@@ -110,10 +110,10 @@ internal sealed class FloatingServiceCommand {
                 ACTION_SELECT_MEDIA_SOURCE -> SelectMediaSource(
                     intent.getStringExtra(EXTRA_SOURCE_PACKAGE)
                 )
-                ACTION_IMPORT_LYRICS -> intent.data?.let { uri ->
-                    ImportLyrics(
+                ACTION_IMPORT_PLAIN_LYRICS -> intent.data?.let { uri ->
+                    ImportPlainLyrics(
                         uri = uri,
-                        overwrite = intent.getBooleanExtra(EXTRA_OVERWRITE_LYRICS, true)
+                        overwrite = intent.getBooleanExtra(EXTRA_OVERWRITE_PLAIN_LYRICS, true)
                     )
                 }
                 else -> null

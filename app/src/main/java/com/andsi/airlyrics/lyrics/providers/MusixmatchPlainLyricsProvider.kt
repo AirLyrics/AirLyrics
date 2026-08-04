@@ -5,13 +5,13 @@ import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
-import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
-import com.andsi.airlyrics.lyrics.LyricsSearchRequest
+import com.andsi.airlyrics.lyrics.PlainLyricsProvider
+import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 import java.util.Locale
 
-data class MusixmatchLyricsResult(
-    val source: String,
+data class MusixmatchPlainLyricsResult(
+    val plainSource: String,
     val subtitleId: String,
     val title: String,
     val artist: String,
@@ -23,12 +23,12 @@ data class MusixmatchLyricsResult(
     val errorMessage: String? = null
 )
 
-object MusixmatchLyricsProvider : LyricsProvider {
+object MusixmatchPlainLyricsProvider : PlainLyricsProvider {
     override val id: String = "musixmatch"
     override val name: String = "Musixmatch"
 
-    override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
-        return fetchBestLyrics(
+    override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
+        return fetchBestPlainLyrics(
             title = request.title,
             artist = request.artist,
             album = request.album,
@@ -49,14 +49,14 @@ object MusixmatchLyricsProvider : LyricsProvider {
             .orEmpty()
     }
 
-    fun fetchBestLyrics(
+    fun fetchBestPlainLyrics(
         title: String,
         artist: String,
         album: String = "",
         durationMs: Long,
         translationLanguageCode: String = "",
         cancellationToken: LyricsLookupCancellationToken? = null
-    ): Result<MusixmatchLyricsResult?> {
+    ): Result<MusixmatchPlainLyricsResult?> {
         return runCatching {
             cancellationToken?.throwIfCancellationRequested()
             val jsonText = withNativeLyricsCancellation(
@@ -74,7 +74,7 @@ object MusixmatchLyricsProvider : LyricsProvider {
             }
             cancellationToken?.throwIfCancellationRequested()
 
-            mapNativeResultJson(
+            mapNativePlainLyricsResultJson(
                 jsonText = jsonText,
                 fallbackTitle = title,
                 fallbackArtist = artist,
@@ -88,15 +88,15 @@ object MusixmatchLyricsProvider : LyricsProvider {
         )
     }
 
-    internal fun mapNativeResultJson(
+    internal fun mapNativePlainLyricsResultJson(
         jsonText: String,
         fallbackTitle: String,
         fallbackArtist: String,
         fallbackAlbum: String,
         fallbackDurationMs: Long,
         translationLanguageCode: String,
-    ): MusixmatchLyricsResult? {
-        val nativeResult = NativeLyricsResultParser.parse(
+    ): MusixmatchPlainLyricsResult? {
+        val nativeResult = NativePlainLyricsResultParser.parse(
             jsonText = jsonText,
             defaultSource = "musixmatch-rust",
             fallbackTitle = fallbackTitle,
@@ -116,14 +116,14 @@ object MusixmatchLyricsProvider : LyricsProvider {
                 }
                 return null
             }
-            throw nativeResult.toNativeLyricsLookupException(
+            throw nativeResult.toNativePlainLyricsLookupException(
                 providerId = id,
                 providerName = name,
                 defaultMessage = "Musixmatch lookup failed",
             )
         }
 
-        val lrc = nativeResult.primaryLyrics()
+        val lrc = nativeResult.primaryPlainLrc()
         if (lrc.isBlank()) return null
 
         val translatedLrc = nativeResult.translatedLrc
@@ -149,8 +149,8 @@ object MusixmatchLyricsProvider : LyricsProvider {
             }
         }
 
-        return MusixmatchLyricsResult(
-            source = nativeResult.source,
+        return MusixmatchPlainLyricsResult(
+            plainSource = nativeResult.plainSource,
             subtitleId = nativeResult.id,
             title = nativeResult.title,
             artist = nativeResult.artist,
@@ -163,13 +163,13 @@ object MusixmatchLyricsProvider : LyricsProvider {
         )
     }
 
-    internal fun toProviderResult(result: MusixmatchLyricsResult?): LyricsProviderResult? {
+    internal fun toProviderResult(result: MusixmatchPlainLyricsResult?): LyricsProviderResult? {
         return result?.let {
             LyricsProviderResult(
-                providerId = id,
-                providerName = name,
-                lyrics = it.lrc,
-                translatedLyrics = it.translatedLrc,
+                plainProviderId = id,
+                plainProviderName = name,
+                plainLrc = it.lrc,
+                translatedLrc = it.translatedLrc,
                 matchedTitle = it.title,
                 matchedArtist = it.artist,
                 matchedAlbum = it.album,

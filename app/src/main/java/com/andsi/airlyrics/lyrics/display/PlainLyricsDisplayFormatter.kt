@@ -5,30 +5,30 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 
 /**
- * Converts parsed lyric lines into the exact text shown by the floating window.
+ * Converts parsed plain lyric lines into the exact text shown by the floating window.
  *
- * Providers decide what lyrics are available; this formatter decides how the
- * user wants those lyrics rendered.
+ * Providers decide what plain lyrics are available; this formatter decides how the
+ * user wants those plain lyrics rendered.
  */
-object LyricsDisplayFormatter {
+object PlainLyricsDisplayFormatter {
     private const val NO_TRANSLATION_TEXT = "No translation for this lyric"
 
     fun format(
-        lines: List<LrcLine>,
+        plainLines: List<LrcLine>,
         currentIndex: Int,
         contentMode: LyricsContentDisplayMode,
         lineMode: LyricsLineDisplayMode,
         noTranslationText: String = NO_TRANSLATION_TEXT
     ): String {
-        if (lines.isEmpty() || currentIndex !in lines.indices) return ""
+        if (plainLines.isEmpty() || currentIndex !in plainLines.indices) return ""
 
         val indexes = lineMode.indexesAround(currentIndex)
-            .filter { it in lines.indices }
+            .filter { it in plainLines.indices }
 
         if (indexes.isEmpty()) return ""
 
         val renderedLines = indexes.mapNotNull { index ->
-            renderLine(lines[index], contentMode).takeIf { it.isNotBlank() }
+            renderPlainLine(plainLines[index], contentMode).takeIf { it.isNotBlank() }
         }
 
         if (renderedLines.isNotEmpty()) {
@@ -51,23 +51,23 @@ object LyricsDisplayFormatter {
         }
     }
 
-    private fun renderLine(line: LrcLine, contentMode: LyricsContentDisplayMode): String {
-        val original = line.text.trim()
-        val translation = line.translation.orEmpty().trim()
-        if (line.isMetadata) return original
+    private fun renderPlainLine(plainLine: LrcLine, contentMode: LyricsContentDisplayMode): String {
+        val original = plainLine.text.trim()
+        val translation = plainLine.translation.orEmpty().trim()
+        if (plainLine.isMetadata) return original
 
         return when (contentMode) {
             LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
                 buildList {
                     if (original.isNotBlank()) add(original)
-                    if (line.hasTranslation()) add(translation)
+                    if (plainLine.hasTranslation()) add(translation)
                 }.joinToString("\n")
             }
 
             LyricsContentDisplayMode.ORIGINAL_ONLY -> original
 
             LyricsContentDisplayMode.TRANSLATION_ONLY -> {
-                if (line.hasTranslation()) translation else ""
+                if (plainLine.hasTranslation()) translation else ""
             }
         }
     }

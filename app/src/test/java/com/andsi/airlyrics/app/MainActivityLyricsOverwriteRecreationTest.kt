@@ -113,7 +113,7 @@ class MainActivityLyricsOverwriteRecreationTest {
         assertNull(newActivity.graph.state.pendingLyricsOverwrite)
         assertEquals(
             "[00:10.00]new",
-            LyricsStorage.readLocalLyrics(
+            LyricsStorage.readPlainLyrics(
                 context = newActivity,
                 title = SONG_A.title,
                 artist = SONG_A.artist,
@@ -121,7 +121,7 @@ class MainActivityLyricsOverwriteRecreationTest {
             )
         )
         assertFalse(
-            LyricsStorage.hasKaraokeLyrics(
+            LyricsStorage.hasWordByWordLyrics(
                 context = newActivity,
                 title = SONG_B.title,
                 artist = SONG_B.artist,
@@ -171,7 +171,7 @@ class MainActivityLyricsOverwriteRecreationTest {
         assertEquals(0, inputOpenCount.get())
         assertEquals(
             "[00:10.00]old",
-            LyricsStorage.readLocalLyrics(
+            LyricsStorage.readPlainLyrics(
                 context = controller.get(),
                 title = SONG_A.title,
                 artist = SONG_A.artist,
@@ -213,12 +213,12 @@ class MainActivityLyricsOverwriteRecreationTest {
         assertEquals(1, inputOpenCount.get())
         assertNull(restoredActivity.graph.state.pendingLyricsOverwrite)
         assertEquals(
-            restoredActivity.getString(R.string.ui_cannot_read_enhanced_lrc_file),
+            restoredActivity.getString(R.string.ui_cannot_read_word_by_word_lyrics_file),
             ShadowToast.getTextOfLatestToast()
         )
         assertEquals(
             "[00:10.00]old",
-            LyricsStorage.readLocalLyrics(
+            LyricsStorage.readPlainLyrics(
                 context = restoredActivity,
                 title = SONG_A.title,
                 artist = SONG_A.artist,
@@ -278,7 +278,7 @@ class MainActivityLyricsOverwriteRecreationTest {
         assertTrue(dialog!!.isShowing)
         val texts = dialog.window?.decorView?.descendantTexts().orEmpty()
         assertTrue(texts.any { it.contains(SONG_A.title) && it.contains(SONG_A.artist) })
-        assertTrue(texts.contains(activity.getString(R.string.ui_overwrite_local_enhanced_lrc)))
+        assertTrue(texts.contains(activity.getString(R.string.ui_overwrite_local_word_by_word_lyrics)))
         return dialog
     }
 
@@ -302,7 +302,7 @@ class MainActivityLyricsOverwriteRecreationTest {
             }
         )
         assertTrue(
-            LyricsStorage.importKaraokeLyricsFromUriWithResult(
+            LyricsStorage.importWordByWordLyricsFromUriWithResult(
                 context = context,
                 uri = uri,
                 title = song.title,

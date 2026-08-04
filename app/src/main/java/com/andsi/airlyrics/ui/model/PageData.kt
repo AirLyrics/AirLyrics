@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.ui.model
 
 import android.media.session.MediaController
-import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 
 internal data class MediaPageState(
     val controllers: List<MediaController>,
@@ -14,7 +14,7 @@ internal data class CurrentMediaUiInfo(
     val isEmpty: Boolean = false
 )
 
-internal enum class LyricsDeleteMode { PLAIN, KARAOKE, ALL }
+internal enum class LyricsDeleteMode { PLAIN, WORD_BY_WORD, ALL }
 
 internal data class CurrentLyricsUiState(
     val media: CurrentMediaUiInfo?,
@@ -23,8 +23,8 @@ internal data class CurrentLyricsUiState(
     val plainLyricsDownloaded: Boolean,
     val hasPlainLyrics: Boolean,
     val canRemoveAllLyrics: Boolean,
-    val localWordByWord: Boolean,
-    val karaokeEnabled: Boolean,
+    val hasLocalWordByWordLyrics: Boolean,
+    val wordByWordLyricsEnabled: Boolean,
     val offsetMs: Long
 )
 
@@ -37,7 +37,7 @@ internal data class LocalLyricsUiItem(
     val source: String = "",
     val provider: String = "local",
     val hasPlainLyrics: Boolean = true,
-    val hasKaraokeLyrics: Boolean = false,
+    val hasWordByWordLyrics: Boolean = false,
     val displayTitle: String,
     val subtitle: String = "",
     val typeText: String = "",
@@ -51,8 +51,8 @@ internal data class RecentLyricsUiState(
 )
 
 internal data class LyricsSettingsUiState(
-    val selectedSource: LyricsSearchSource,
-    val sourceOptions: List<LyricsSearchSource>,
+    val selectedPlainLyricsSource: PlainLyricsSearchSource,
+    val plainLyricsSourceOptions: List<PlainLyricsSearchSource>,
     val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean,
     val lyricsDirectoryPath: String

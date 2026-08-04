@@ -5,19 +5,23 @@ import com.andsi.airlyrics.R
 import android.content.Context
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 
-internal fun Context.localizedLyricsSourceTitle(source: LyricsSearchSource): String = when (source) {
-    LyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_local_only)
-    LyricsSearchSource.NETEASE -> getString(R.string.ui_netease_cloud_music)
-    LyricsSearchSource.MUSIXMATCH -> getString(R.string.provider_musixmatch)
+internal fun Context.localizedPlainLyricsSourceTitle(
+    plainLyricsSearchSource: PlainLyricsSearchSource
+): String = when (plainLyricsSearchSource) {
+    PlainLyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_local_only)
+    PlainLyricsSearchSource.NETEASE -> getString(R.string.ui_netease_cloud_music)
+    PlainLyricsSearchSource.MUSIXMATCH -> getString(R.string.provider_musixmatch)
 }
 
-internal fun Context.localizedLyricsSourceHint(source: LyricsSearchSource): String = when (source) {
-    LyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_read_local_lyrics_only)
-    LyricsSearchSource.NETEASE -> getString(R.string.ui_good_for_chinese_songs)
-    LyricsSearchSource.MUSIXMATCH -> getString(R.string.ui_musixmatch_source_hint)
+internal fun Context.localizedPlainLyricsSourceHint(
+    plainLyricsSearchSource: PlainLyricsSearchSource
+): String = when (plainLyricsSearchSource) {
+    PlainLyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_read_local_lyrics_only)
+    PlainLyricsSearchSource.NETEASE -> getString(R.string.ui_good_for_chinese_songs)
+    PlainLyricsSearchSource.MUSIXMATCH -> getString(R.string.ui_musixmatch_source_hint)
 }
 
 internal fun Context.localizedLyricsContentModeTitle(mode: LyricsContentDisplayMode): String = when (mode) {

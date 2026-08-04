@@ -4,11 +4,11 @@ import android.content.Context
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.parser.LrcParser
-import com.andsi.airlyrics.lyrics.providers.LocalLyricsProvider
-import com.andsi.airlyrics.lyrics.providers.MusixmatchLyricsProvider
-import com.andsi.airlyrics.lyrics.providers.NeteaseLyricsProvider
+import com.andsi.airlyrics.lyrics.providers.LocalPlainLyricsProvider
+import com.andsi.airlyrics.lyrics.providers.MusixmatchPlainLyricsProvider
+import com.andsi.airlyrics.lyrics.providers.NeteasePlainLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
 import java.util.concurrent.CancellationException
 
@@ -16,14 +16,14 @@ import java.util.concurrent.CancellationException
  * Central lyrics lookup entry point.
  *
  * Lookup order:
- * 1. Local lyrics, so imported/saved files always win.
- * 2. Online provider, only when the user allows online search.
- * 3. Optional local cache save for successful online results.
+ * 1. Local plain lyrics, so imported/saved files always win.
+ * 2. Online plain-lyrics provider, only when the user allows online search.
+ * 3. Optional local plain cache save for successful online results.
  */
 object LyricsRepository {
-    private val onlineProviders = mapOf(
-        LyricsSearchSource.NETEASE to NeteaseLyricsProvider,
-        LyricsSearchSource.MUSIXMATCH to MusixmatchLyricsProvider
+    private val onlinePlainLyricsProviders = mapOf(
+        PlainLyricsSearchSource.NETEASE to NeteasePlainLyricsProvider,
+        PlainLyricsSearchSource.MUSIXMATCH to MusixmatchPlainLyricsProvider
     )
 
     fun findLyrics(
@@ -39,11 +39,11 @@ object LyricsRepository {
         cancellationToken: LyricsLookupCancellationToken? = null
     ): Result<LyricsProviderResult?> {
         return LyricsRepositoryEngine(
-            localProvider = LocalLyricsProvider,
-            onlineProviders = onlineProviders,
+            localPlainLyricsProvider = LocalPlainLyricsProvider,
+            onlinePlainLyricsProviders = onlinePlainLyricsProviders,
             settingsReader = { settings },
-            localLyricsSaver = AndroidLocalLyricsSaver,
-            karaokeLyricsReader = AndroidKaraokeLyricsReader,
+            localPlainLyricsSaver = AndroidLocalPlainLyricsSaver,
+            wordByWordLyricsReader = AndroidWordByWordLyricsReader,
             lookupLogger = AndroidLyricsLookupLogger
         ).findLyrics(
             context = context,
@@ -60,11 +60,11 @@ object LyricsRepository {
 }
 
 internal class LyricsRepositoryEngine(
-    private val localProvider: LyricsProvider,
-    private val onlineProviders: Map<LyricsSearchSource, LyricsProvider>,
+    private val localPlainLyricsProvider: PlainLyricsProvider,
+    private val onlinePlainLyricsProviders: Map<PlainLyricsSearchSource, PlainLyricsProvider>,
     private val settingsReader: (Context) -> LyricsSettings,
-    private val localLyricsSaver: LocalLyricsSaver,
-    private val karaokeLyricsReader: KaraokeLyricsReader,
+    private val localPlainLyricsSaver: LocalPlainLyricsSaver,
+    private val wordByWordLyricsReader: WordByWordLyricsReader,
     private val lookupLogger: LyricsLookupLogger = LyricsLookupLogger { _, _, _, _, _, _ -> }
 ) {
     fun findLyrics(
@@ -79,7 +79,7 @@ internal class LyricsRepositoryEngine(
         cancellationToken: LyricsLookupCancellationToken? = null
     ): Result<LyricsProviderResult?> {
         val appContext = context.applicationContext
-        val request = LyricsSearchRequest(
+        val request = PlainLyricsSearchRequest(
             context = appContext,
             title = title,
             artist = artist,
@@ -91,35 +91,35 @@ internal class LyricsRepositoryEngine(
         return runCatching {
             cancellationToken?.throwIfCancellationRequested()
             val settings = settingsReader(context)
-            val wordByWordEnabled = settings.karaokeLyricsEnabled
+            val wordByWordLyricsEnabled = settings.wordByWordLyricsEnabled
 
             cancellationToken?.throwIfCancellationRequested()
             if (!bypassLocal) {
-                localProvider.fetch(request).getOrThrow()?.let { localResult ->
+                localPlainLyricsProvider.fetch(request).getOrThrow()?.let { localPlainLyricsResult ->
                     cancellationToken?.throwIfCancellationRequested()
-                    return@runCatching attachLocalKaraokeIfAvailable(
+                    return@runCatching attachLocalWordByWordLyricsIfAvailable(
                         context = appContext,
-                        result = localResult,
+                        result = localPlainLyricsResult,
                         title = title,
                         artist = artist,
                         durationMs = durationMs,
-                        enabled = wordByWordEnabled
+                        enabled = wordByWordLyricsEnabled
                     )
                 }
             }
 
             cancellationToken?.throwIfCancellationRequested()
-            if (settings.source == LyricsSearchSource.LOCAL_ONLY) {
+            if (settings.plainLyricsSearchSource == PlainLyricsSearchSource.LOCAL_ONLY) {
                 return@runCatching null
             }
             if (!ignoreAutoSearchSetting && !settings.autoSearchOnline) {
                 return@runCatching null
             }
 
-            val provider = onlineProviders[settings.source] ?: return@runCatching null
+            val provider = onlinePlainLyricsProviders[settings.plainLyricsSearchSource] ?: return@runCatching null
 
             cancellationToken?.throwIfCancellationRequested()
-            val onlineResult = provider.fetch(request).getOrElse { error ->
+            val onlinePlainLyricsResult = provider.fetch(request).getOrElse { error ->
                 if (error is CancellationException) {
                     throw error
                 }
@@ -135,32 +135,32 @@ internal class LyricsRepositoryEngine(
             }
 
             cancellationToken?.throwIfCancellationRequested()
-            if (onlineResult != null && (settings.autoSaveLocal || forceSaveOnline)) {
-                localLyricsSaver.save(
+            if (onlinePlainLyricsResult != null && (settings.autoSaveLocal || forceSaveOnline)) {
+                localPlainLyricsSaver.save(
                     context = appContext,
                     title = title,
                     artist = artist,
                     album = album,
                     durationMs = durationMs,
-                    result = onlineResult
+                    plainLyricsResult = onlinePlainLyricsResult
                 )
             }
 
             cancellationToken?.throwIfCancellationRequested()
-            onlineResult?.let { result ->
-                attachLocalKaraokeIfAvailable(
+            onlinePlainLyricsResult?.let { result ->
+                attachLocalWordByWordLyricsIfAvailable(
                     context = appContext,
                     result = result,
                     title = title,
                     artist = artist,
                     durationMs = durationMs,
-                    enabled = wordByWordEnabled
+                    enabled = wordByWordLyricsEnabled
                 )
             }
         }
     }
 
-    private fun attachLocalKaraokeIfAvailable(
+    private fun attachLocalWordByWordLyricsIfAvailable(
         context: Context,
         result: LyricsProviderResult,
         title: String,
@@ -170,36 +170,36 @@ internal class LyricsRepositoryEngine(
     ): LyricsProviderResult {
         if (!enabled) return result
 
-        val cachedKaraokeLines = karaokeLyricsReader.read(
+        val cachedWordByWordLines = wordByWordLyricsReader.read(
             context = context,
             title = title,
             artist = artist,
             durationMs = durationMs
         )
-        if (cachedKaraokeLines.isEmpty()) return result
+        if (cachedWordByWordLines.isEmpty()) return result
 
-        return result.copy(karaokeLines = cachedKaraokeLines)
+        return result.copy(wordByWordLines = cachedWordByWordLines)
     }
 }
 
-internal fun interface LocalLyricsSaver {
+internal fun interface LocalPlainLyricsSaver {
     fun save(
         context: Context,
         title: String,
         artist: String,
         album: String,
         durationMs: Long,
-        result: LyricsProviderResult
+        plainLyricsResult: LyricsProviderResult
     )
 }
 
-internal fun interface KaraokeLyricsReader {
-    fun read(context: Context, title: String, artist: String, durationMs: Long): List<KaraokeLine>
+internal fun interface WordByWordLyricsReader {
+    fun read(context: Context, title: String, artist: String, durationMs: Long): List<WordByWordLine>
 }
 
 internal fun interface LyricsLookupLogger {
     fun logProviderFailure(
-        provider: LyricsProvider,
+        provider: PlainLyricsProvider,
         title: String,
         artist: String,
         durationMs: Long,
@@ -208,39 +208,39 @@ internal fun interface LyricsLookupLogger {
     )
 }
 
-private object AndroidLocalLyricsSaver : LocalLyricsSaver {
+private object AndroidLocalPlainLyricsSaver : LocalPlainLyricsSaver {
     override fun save(
         context: Context,
         title: String,
         artist: String,
         album: String,
         durationMs: Long,
-        result: LyricsProviderResult
+        plainLyricsResult: LyricsProviderResult
     ) {
-        if (LyricsStorage.hasKaraokeLyrics(context, title, artist, durationMs)) {
+        if (LyricsStorage.hasWordByWordLyrics(context, title, artist, durationMs)) {
             return
         }
 
-        LyricsStorage.saveLyrics(
+        LyricsStorage.savePlainLyrics(
             context = context,
             title = title,
             artist = artist,
             duration = durationMs,
-            lyrics = LrcParser.mergeOriginalAndTranslationForStorage(
-                lyrics = result.lyrics,
-                translatedLyrics = result.translatedLyrics
+            plainLrc = LrcParser.mergeOriginalAndTranslationForStorage(
+                plainLrc = plainLyricsResult.plainLrc,
+                translatedLrc = plainLyricsResult.translatedLrc
             ),
             album = album,
-            source = LyricsStorage.SOURCE_DOWNLOADED,
-            provider = result.providerId,
+            plainSource = LyricsStorage.SOURCE_DOWNLOADED,
+            plainProvider = plainLyricsResult.plainProviderId,
             overwrite = true
         )
     }
 }
 
-private object AndroidKaraokeLyricsReader : KaraokeLyricsReader {
-    override fun read(context: Context, title: String, artist: String, durationMs: Long): List<KaraokeLine> {
-        return LyricsStorage.readKaraokeLyrics(
+private object AndroidWordByWordLyricsReader : WordByWordLyricsReader {
+    override fun read(context: Context, title: String, artist: String, durationMs: Long): List<WordByWordLine> {
+        return LyricsStorage.readWordByWordLyrics(
             context = context,
             title = title,
             artist = artist,
@@ -251,7 +251,7 @@ private object AndroidKaraokeLyricsReader : KaraokeLyricsReader {
 
 private object AndroidLyricsLookupLogger : LyricsLookupLogger {
     override fun logProviderFailure(
-        provider: LyricsProvider,
+        provider: PlainLyricsProvider,
         title: String,
         artist: String,
         durationMs: Long,

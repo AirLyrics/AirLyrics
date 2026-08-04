@@ -7,10 +7,10 @@ import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class NativeLyricsLookupErrorsTest {
+class NativePlainLyricsLookupErrorsTest {
     @Test
-    fun toNativeLyricsLookupException_preservesStructuredErrorTypeAndMessage() {
-        val nativeResult = parseNativeResult(
+    fun toNativePlainLyricsLookupException_preservesStructuredErrorTypeAndMessage() {
+        val nativeResult = parseNativePlainLyricsResult(
             jsonText = """
             {
               "ok": false,
@@ -20,7 +20,7 @@ class NativeLyricsLookupErrorsTest {
             """.trimIndent()
         )
 
-        val exception = nativeResult.toNativeLyricsLookupException(
+        val exception = nativeResult.toNativePlainLyricsLookupException(
             providerId = "netease",
             providerName = "NetEase Lyrics",
             defaultMessage = "NetEase lookup failed"
@@ -33,8 +33,8 @@ class NativeLyricsLookupErrorsTest {
     }
 
     @Test
-    fun toNativeLyricsLookupException_usesDefaultMessageWhenNativeMessageIsBlank() {
-        val nativeResult = parseNativeResult(
+    fun toNativePlainLyricsLookupException_usesDefaultMessageWhenNativeMessageIsBlank() {
+        val nativeResult = parseNativePlainLyricsResult(
             jsonText = """
             {
               "ok": false,
@@ -44,7 +44,7 @@ class NativeLyricsLookupErrorsTest {
             """.trimIndent()
         )
 
-        val exception = nativeResult.toNativeLyricsLookupException(
+        val exception = nativeResult.toNativePlainLyricsLookupException(
             providerId = "netease",
             providerName = "NetEase Lyrics",
             defaultMessage = "NetEase lookup failed"
@@ -55,8 +55,8 @@ class NativeLyricsLookupErrorsTest {
     }
 
     @Test
-    fun nativeLyricsResultParser_extractsCommonSuccessFields() {
-        val result = parseNativeResult(
+    fun nativePlainLyricsResultParser_extractsCommonSuccessFields() {
+        val result = parseNativePlainLyricsResult(
             jsonText = """
             {
               "ok": true,
@@ -74,19 +74,19 @@ class NativeLyricsLookupErrorsTest {
         )
 
         assertTrue(result.ok)
-        assertEquals("provider-rust", result.source)
+        assertEquals("provider-rust", result.plainSource)
         assertEquals("42", result.id)
         assertEquals("Matched title", result.title)
         assertEquals("Matched artist", result.artist)
         assertEquals("Matched album", result.album)
         assertEquals(123000L, result.durationMs)
-        assertEquals("[00:01]line", result.primaryLyrics())
+        assertEquals("[00:01]line", result.primaryPlainLrc())
         assertEquals("[00:01]translated", result.translatedLrc)
     }
 
     @Test
-    fun primaryLyrics_usesMergedAndOptionalTranslationFallbacks() {
-        val mergedOnly = parseNativeResult(
+    fun primaryPlainLrc_usesMergedAndOptionalTranslationFallbacks() {
+        val mergedOnly = parseNativePlainLyricsResult(
             jsonText = """
             {
               "ok": true,
@@ -94,7 +94,7 @@ class NativeLyricsLookupErrorsTest {
             }
             """.trimIndent()
         )
-        val translatedOnly = parseNativeResult(
+        val translatedOnly = parseNativePlainLyricsResult(
             jsonText = """
             {
               "ok": true,
@@ -103,9 +103,9 @@ class NativeLyricsLookupErrorsTest {
             """.trimIndent()
         )
 
-        assertEquals("[00:01]merged", mergedOnly.primaryLyrics())
-        assertEquals("", translatedOnly.primaryLyrics())
-        assertEquals("[00:01]translated", translatedOnly.primaryLyrics(allowTranslatedFallback = true))
+        assertEquals("[00:01]merged", mergedOnly.primaryPlainLrc())
+        assertEquals("", translatedOnly.primaryPlainLrc())
+        assertEquals("[00:01]translated", translatedOnly.primaryPlainLrc(allowTranslatedFallback = true))
     }
 
     @Test
@@ -127,8 +127,8 @@ class NativeLyricsLookupErrorsTest {
         assertSame(cause, exception.cause?.cause)
     }
 
-    private fun parseNativeResult(jsonText: String): NativeLyricsJsonResult {
-        return NativeLyricsResultParser.parse(
+    private fun parseNativePlainLyricsResult(jsonText: String): NativePlainLyricsJsonResult {
+        return NativePlainLyricsResultParser.parse(
             jsonText = jsonText,
             defaultSource = "fallback-source",
             fallbackTitle = "Fallback title",

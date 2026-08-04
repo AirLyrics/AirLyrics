@@ -12,13 +12,13 @@ data class LrcLine(
 }
 
 object LrcParser {
-    fun parse(lyrics: String): List<LrcLine> {
-        return parsePlainLines(lyrics)
+    fun parse(plainLrc: String): List<LrcLine> {
+        return parsePlainLines(plainLrc)
     }
 
-    fun parseWithTranslation(lyrics: String, translatedLyrics: String?): List<LrcLine> {
-        val originalLines = parsePlainLines(lyrics)
-        val translationLines = parsePlainLines(translatedLyrics.orEmpty())
+    fun parseWithTranslation(plainLrc: String, translatedLrc: String?): List<LrcLine> {
+        val originalLines = parsePlainLines(plainLrc)
+        val translationLines = parsePlainLines(translatedLrc.orEmpty())
 
         if (translationLines.isEmpty()) return originalLines
         if (originalLines.isEmpty()) return translationLines.asTranslatedOnlyLines()
@@ -31,12 +31,12 @@ object LrcParser {
      * The runtime display path should prefer [parseWithTranslation], but saved .lrc files still
      * need to be useful when read as plain LRC later.
      */
-    fun mergeOriginalAndTranslationForStorage(lyrics: String, translatedLyrics: String?): String {
-        if (translatedLyrics.isNullOrBlank()) return lyrics
-        if (lyrics.isBlank()) return translatedLyrics
+    fun mergeOriginalAndTranslationForStorage(plainLrc: String, translatedLrc: String?): String {
+        if (translatedLrc.isNullOrBlank()) return plainLrc
+        if (plainLrc.isBlank()) return translatedLrc
 
-        val mergedLines = parseWithTranslation(lyrics, translatedLyrics)
-        if (mergedLines.isEmpty()) return lyrics
+        val mergedLines = parseWithTranslation(plainLrc, translatedLrc)
+        if (mergedLines.isEmpty()) return plainLrc
 
         return formatLinesForStorage(mergedLines)
     }
@@ -47,9 +47,9 @@ object LrcParser {
      * one-line exports, but the managed local cache is saved as one lyric line per
      * row using [mm:ss.xx] text.
      */
-    fun normalizeForStorage(lyrics: String): String {
+    fun normalizeForStorage(plainLrc: String): String {
         return formatLinesForStorage(
-            parsePlainLines(lyrics, mergeSameTimestampTranslations = true)
+            parsePlainLines(plainLrc, mergeSameTimestampTranslations = true)
         )
     }
 
@@ -58,8 +58,8 @@ object LrcParser {
         val invalidLineNumbers: List<Int> = emptyList()
     )
 
-    fun validateForStorage(lyrics: String): StorageValidationResult {
-        val invalidLineNumbers = lyrics
+    fun validateForStorage(plainLrc: String): StorageValidationResult {
+        val invalidLineNumbers = plainLrc
             .lineSequence()
             .mapIndexedNotNull { index, rawLine ->
                 if (isIgnorableStorageLine(rawLine)) return@mapIndexedNotNull null
@@ -72,7 +72,7 @@ object LrcParser {
         }
 
         val hasLyricLine = parsePlainLines(
-            lyrics,
+            plainLrc,
             mergeSameTimestampTranslations = true
         ).any { line ->
             !line.isMetadata && (line.text.isNotBlank() || line.hasTranslation())
@@ -81,18 +81,18 @@ object LrcParser {
         return StorageValidationResult(isValid = hasLyricLine)
     }
 
-    fun findCurrentIndex(lines: List<LrcLine>, positionMs: Long): Int? {
-        if (lines.isEmpty()) return null
+    fun findCurrentIndex(plainLines: List<LrcLine>, positionMs: Long): Int? {
+        if (plainLines.isEmpty()) return null
 
         var left = 0
-        var right = lines.lastIndex
+        var right = plainLines.lastIndex
         var result: Int? = null
 
         while (left <= right) {
             val mid = (left + right) / 2
-            val line = lines[mid]
+            val plainLine = plainLines[mid]
 
-            if (line.timeMs <= positionMs) {
+            if (plainLine.timeMs <= positionMs) {
                 result = mid
                 left = mid + 1
             } else {
@@ -112,13 +112,13 @@ private const val TRANSLATION_MATCH_TOLERANCE_MS = 500L
 private const val METADATA_DISPLAY_TIME_MS = 0L
 
 private fun parsePlainLines(
-    lyrics: String,
+    plainLrc: String,
     mergeSameTimestampTranslations: Boolean = false
 ): List<LrcLine> {
     val timedLines = mutableListOf<LrcLine>()
     val metadataLines = mutableListOf<String>()
 
-    lyrics.lineSequence().forEach { rawLine ->
+    plainLrc.lineSequence().forEach { rawLine ->
         val timedSegments = parseTimedSegments(rawLine)
         if (timedSegments.isNotEmpty()) {
             timedLines += timedSegments

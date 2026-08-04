@@ -37,7 +37,7 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
         )
         is FloatingServiceCommand.ApplyLyricsOffset -> applyLyricsOffset(command.offsetMs)
         is FloatingServiceCommand.SelectMediaSource -> selectMediaSource(command.packageName)
-        is FloatingServiceCommand.ImportLyrics -> importLyrics(uri = command.uri, overwrite = command.overwrite)
+        is FloatingServiceCommand.ImportPlainLyrics -> importPlainLyrics(uri = command.uri, overwrite = command.overwrite)
     }
 }
 

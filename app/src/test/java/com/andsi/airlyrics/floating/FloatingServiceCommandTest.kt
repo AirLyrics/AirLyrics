@@ -56,7 +56,7 @@ class FloatingServiceCommandTest {
             FloatingServiceCommand.ApplyLyricsOffset(1_250L),
             FloatingServiceCommand.SelectMediaSource("com.example.player"),
             FloatingServiceCommand.SelectMediaSource(null),
-            FloatingServiceCommand.ImportLyrics(uri = uri, overwrite = false)
+            FloatingServiceCommand.ImportPlainLyrics(uri = uri, overwrite = false)
         )
 
         commands.forEach { command ->
@@ -66,7 +66,7 @@ class FloatingServiceCommandTest {
 
     @Test
     fun fromIntent_ignoresUnknownOrMalformedCommand() {
-        val missingUri = FloatingServiceCommand.ImportLyrics(
+        val missingUri = FloatingServiceCommand.ImportPlainLyrics(
             uri = Uri.parse("content://com.example.lyrics/song.lrc")
         ).toIntent(context).apply {
             data = null

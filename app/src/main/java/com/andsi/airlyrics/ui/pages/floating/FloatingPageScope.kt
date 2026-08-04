@@ -64,9 +64,9 @@ internal class FloatingPageScope(
             },
             style = ::style,
             lineDisplayMode = ::lineDisplayMode,
-            isKaraokeEnabled = ::karaokeLyricsEnabled,
+            isWordByWordLyricsEnabled = ::wordByWordLyricsEnabled,
             plainPreviewText = ::previewLyricsText,
-            karaokePreviewText = ::karaokePreviewText,
+            wordByWordPreviewText = ::wordByWordPreviewText,
             summaryText = { floatingPreviewSummary(style()) },
             onExpandedChanged = { refreshFloatingSettingTiles() }
         )
@@ -136,11 +136,11 @@ internal class FloatingPageScope(
 
     internal fun switchAnimationMode() = host.lyricsSwitchAnimationMode()
 
-    internal fun karaokeLyricsEnabled() = host.karaokeLyricsEnabled()
+    internal fun wordByWordLyricsEnabled() = host.wordByWordLyricsEnabled()
 
-    internal fun wordLyricsSubtitle(): String {
-        return if (karaokeLyricsEnabled()) {
-            host.getString(R.string.ui_local_enhanced_lrc)
+    internal fun wordByWordLyricsSubtitle(): String {
+        return if (wordByWordLyricsEnabled()) {
+            host.getString(R.string.ui_local_word_by_word_lyrics)
         } else {
             host.getString(R.string.ui_off)
         }
@@ -170,13 +170,13 @@ internal class FloatingPageScope(
         }
     }
 
-    internal fun karaokePreviewText(): CharSequence {
+    internal fun wordByWordPreviewText(): CharSequence {
         val text = host.getString(R.string.ui_floating_preview_sample)
         val firstLineEnd = text.indexOf('\n').takeIf { it > 0 } ?: text.length
         val highlightEnd = (firstLineEnd / 2).coerceAtLeast(1).coerceAtMost(firstLineEnd)
         return SpannableString(text).apply {
             setSpan(
-                ForegroundColorSpan(style().karaokeHighlightColor),
+                ForegroundColorSpan(style().wordByWordHighlightColor),
                 0,
                 highlightEnd,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -223,8 +223,8 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_text_alignment), localizedGravityTitle(latestStyle.gravity))
         updateFloatingTileSubtitle(host.getString(R.string.ui_lyrics_offset), host.uiActions.currentLyricsOffsetSummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_switch_animation), host.localizedLyricsSwitchAnimationTitle(switchAnimationMode()))
-        updateFloatingTileSubtitle(host.getString(R.string.ui_enhanced_lrc), wordLyricsSubtitle())
-        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), AirColorUtils.colorSummary(latestStyle.karaokeHighlightColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_word_by_word_lyrics), wordByWordLyricsSubtitle())
+        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), AirColorUtils.colorSummary(latestStyle.wordByWordHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_auto_hide_when_paused), onOff(host.autoHideWhenPausedEnabled()))
     }
@@ -234,7 +234,7 @@ internal class FloatingPageScope(
     }
 
     internal fun applyLyricsDisplaySettingsChanged() {
-        previewHandle?.lyricTextView?.text = if (karaokeLyricsEnabled()) karaokePreviewText() else previewLyricsText()
+        previewHandle?.lyricTextView?.text = if (wordByWordLyricsEnabled()) wordByWordPreviewText() else previewLyricsText()
         previewHandle?.lyricTextView?.maxLines = previewMaxLines(lineDisplayMode())
         previewHandle?.bodyView?.requestLayout()
         refreshFloatingSettingTiles()
@@ -247,9 +247,9 @@ internal class FloatingPageScope(
         host.notifyFloatingStyleChanged()
     }
 
-    internal fun applyKaraokeLyricsChanged(enabled: Boolean) {
-        host.setKaraokeLyricsEnabled(enabled)
-        previewHandle?.lyricTextView?.text = if (enabled) karaokePreviewText() else previewLyricsText()
+    internal fun applyWordByWordLyricsChanged(enabled: Boolean) {
+        host.setWordByWordLyricsEnabled(enabled)
+        previewHandle?.lyricTextView?.text = if (enabled) wordByWordPreviewText() else previewLyricsText()
         refreshFloatingSettingTiles()
         host.uiActions.reloadFloatingLyrics()
     }
@@ -279,7 +279,7 @@ internal class FloatingPageScope(
         val latestStyle = style()
         previewHandle?.summaryTextView?.text = host.floatingPreviewSummary(latestStyle)
         previewHandle?.lyricTextView?.apply {
-            text = if (karaokeLyricsEnabled()) karaokePreviewText() else previewLyricsText()
+            text = if (wordByWordLyricsEnabled()) wordByWordPreviewText() else previewLyricsText()
             with(host) {
                 applyFloatingPreviewStyle(latestStyle)
             }

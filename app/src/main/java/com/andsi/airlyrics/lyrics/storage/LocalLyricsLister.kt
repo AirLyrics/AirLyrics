@@ -7,7 +7,7 @@ import java.io.File
 internal object LocalLyricsLister {
     fun listRecent(context: Context, limit: Int): List<LyricsStorage.LocalLyricsItem> {
         val indexEntries = LyricsIndexStore.read(context)
-        val indexedByFileName = indexEntries.associateBy { it.file.substringAfterLast('/') }
+        val indexedByFileName = indexEntries.associateBy { it.plainFile.substringAfterLast('/') }
         val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
 
         val items = if (treeUri != null) {
@@ -26,10 +26,10 @@ internal object LocalLyricsLister {
                     sizeBytes = file.length(),
                     title = entry?.title.orEmpty(),
                     artist = entry?.artist.orEmpty(),
-                    source = entry?.source ?: LyricsStorage.SOURCE_LEGACY,
-                    provider = entry?.provider ?: "local",
+                    source = entry?.plainSource ?: LyricsStorage.SOURCE_LEGACY,
+                    provider = entry?.plainProvider ?: "local",
                     hasPlainLyrics = true,
-                    hasKaraokeLyrics = entry?.karaokeFile?.isNotBlank() == true
+                    hasWordByWordLyrics = entry?.wordByWordFile?.isNotBlank() == true
                 )
             }
         } else {
@@ -48,31 +48,31 @@ internal object LocalLyricsLister {
                     sizeBytes = file.length(),
                     title = entry?.title.orEmpty(),
                     artist = entry?.artist.orEmpty(),
-                    source = entry?.source ?: LyricsStorage.SOURCE_LEGACY,
-                    provider = entry?.provider ?: "local",
+                    source = entry?.plainSource ?: LyricsStorage.SOURCE_LEGACY,
+                    provider = entry?.plainProvider ?: "local",
                     hasPlainLyrics = true,
-                    hasKaraokeLyrics = entry?.karaokeFile?.isNotBlank() == true
+                    hasWordByWordLyrics = entry?.wordByWordFile?.isNotBlank() == true
                 )
             }
         }
 
-        val indexedOnlyKaraokeItems = indexEntries
-            .filter { it.file.isBlank() && it.karaokeFile.isNotBlank() }
+        val indexedOnlyWordByWordItems = indexEntries
+            .filter { it.plainFile.isBlank() && it.wordByWordFile.isNotBlank() }
             .map { entry ->
                 LyricsStorage.LocalLyricsItem(
-                    name = entry.karaokeFile.substringAfterLast('/'),
+                    name = entry.wordByWordFile.substringAfterLast('/'),
                     modifiedTimeMillis = entry.updatedAt,
                     sizeBytes = 0L,
                     title = entry.title,
                     artist = entry.artist,
-                    source = entry.source,
-                    provider = entry.provider,
+                    source = entry.plainSource,
+                    provider = entry.plainProvider,
                     hasPlainLyrics = false,
-                    hasKaraokeLyrics = true
+                    hasWordByWordLyrics = true
                 )
             }
 
-        return (items + indexedOnlyKaraokeItems)
+        return (items + indexedOnlyWordByWordItems)
             .distinctBy { item -> item.title.lowercase().trim() + "|" + item.artist.lowercase().trim() + "|" + item.name }
             .sortedByDescending { it.modifiedTimeMillis }
             .take(limit.coerceAtLeast(1))

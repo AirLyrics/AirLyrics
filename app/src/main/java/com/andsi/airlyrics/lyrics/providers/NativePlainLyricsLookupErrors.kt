@@ -5,7 +5,7 @@ import com.andsi.airlyrics.lyrics.LyricsLookupException
 
 private const val NATIVE_LOAD_FAILURE_MESSAGE = "Native lyrics core is missing or failed to load"
 
-internal fun NativeLyricsJsonResult.toNativeLyricsLookupException(
+internal fun NativePlainLyricsJsonResult.toNativePlainLyricsLookupException(
     providerId: String,
     providerName: String,
     defaultMessage: String

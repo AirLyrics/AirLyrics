@@ -56,9 +56,9 @@ class FloatingLyricsServiceLatestMediaTest {
 
     @Test
     fun newMediaCancelsOldLookup_andOnlyLatestLyricsReachTextView() {
-        saveLocalLyrics(OLD_TITLE, "[00:01.00]old lyrics")
-        saveLocalLyrics(NEW_TITLE, "[00:01.00]new lyrics")
-        saveLocalLyrics(DESTROYED_TITLE, "[00:01.00]destroyed lyrics")
+        saveLocalPlainLyrics(OLD_TITLE, "[00:01.00]old lyrics")
+        saveLocalPlainLyrics(NEW_TITLE, "[00:01.00]new lyrics")
+        saveLocalPlainLyrics(DESTROYED_TITLE, "[00:01.00]destroyed lyrics")
 
         val controller = Robolectric.buildService(QueuedLookupFloatingLyricsService::class.java)
             .create()
@@ -125,7 +125,7 @@ class FloatingLyricsServiceLatestMediaTest {
 
     @Test
     fun lyricsChanged_visibleServiceReloadsSameSongAndIgnoresDifferentSong() {
-        saveLocalLyrics(OLD_TITLE, "[00:01.00]initial lyrics")
+        saveLocalPlainLyrics(OLD_TITLE, "[00:01.00]initial lyrics")
         val controller = Robolectric.buildService(QueuedLookupFloatingLyricsService::class.java)
             .create()
             .also { serviceController = it }
@@ -137,7 +137,7 @@ class FloatingLyricsServiceLatestMediaTest {
         callbackDispatcher.takeDelivery().invoke()
         assertEquals("initial lyrics", lyricsView.text.toString())
 
-        saveLocalLyrics(OLD_TITLE, "[00:01.00]first changed lyrics")
+        saveLocalPlainLyrics(OLD_TITLE, "[00:01.00]first changed lyrics")
         publishLyricsChanged(
             SongIdentity(
                 title = OLD_TITLE.lowercase(),
@@ -148,7 +148,7 @@ class FloatingLyricsServiceLatestMediaTest {
         )
         val firstChangedDelivery = callbackDispatcher.takeDelivery()
 
-        saveLocalLyrics(OLD_TITLE, "[00:01.00]latest changed lyrics")
+        saveLocalPlainLyrics(OLD_TITLE, "[00:01.00]latest changed lyrics")
         publishLyricsChanged(song(OLD_TITLE))
         val latestChangedDelivery = callbackDispatcher.takeDelivery()
 
@@ -167,15 +167,15 @@ class FloatingLyricsServiceLatestMediaTest {
         assertNull(service.activeLyricsLookupRequestKey)
     }
 
-    private fun saveLocalLyrics(title: String, lyrics: String) {
+    private fun saveLocalPlainLyrics(title: String, plainLrc: String) {
         assertTrue(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = context,
                 title = title,
                 artist = ARTIST,
                 duration = DURATION_MS,
-                lyrics = lyrics,
-                provider = "service-test"
+                plainLrc = plainLrc,
+                plainProvider = "service-test"
             )
         )
     }

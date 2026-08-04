@@ -2,25 +2,25 @@ package com.andsi.airlyrics.core.model
 
 /** User-facing lyrics lookup and display configuration. */
 data class LyricsSettings(
-    val source: LyricsSearchSource,
+    val plainLyricsSearchSource: PlainLyricsSearchSource,
     val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean,
     val contentDisplayMode: LyricsContentDisplayMode = LyricsContentDisplayMode.default,
     val lineDisplayMode: LyricsLineDisplayMode = LyricsLineDisplayMode.default,
     val switchAnimationMode: LyricsSwitchAnimationMode = LyricsSwitchAnimationMode.default,
-    val karaokeLyricsEnabled: Boolean = false
+    val wordByWordLyricsEnabled: Boolean = false
 )
 
 /** The user's selected online lookup source. Local lyrics are always checked first. */
-enum class LyricsSearchSource(val key: String) {
+enum class PlainLyricsSearchSource(val key: String) {
     LOCAL_ONLY("local_only"),
     NETEASE("netease"),
     MUSIXMATCH("musixmatch");
 
     companion object {
-        val default: LyricsSearchSource = NETEASE
+        val default: PlainLyricsSearchSource = NETEASE
 
-        fun fromKeyOrNull(key: String?): LyricsSearchSource? {
+        fun fromKeyOrNull(key: String?): PlainLyricsSearchSource? {
             return entries.firstOrNull { it.key == key }
         }
 

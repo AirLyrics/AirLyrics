@@ -7,6 +7,10 @@ import org.json.JSONObject
 import java.io.File
 
 internal object LyricsIndexStore {
+    // Persisted compatibility contract. Do not change the serialized values.
+    private const val WORD_BY_WORD_FILE_JSON_FIELD = "karaokeFile"
+    private const val WORD_BY_WORD_PROVIDER_JSON_FIELD = "karaokeProvider"
+
     sealed class RawSnapshot {
         object Missing : RawSnapshot()
         object Unreadable : RawSnapshot()
@@ -35,15 +39,15 @@ internal object LyricsIndexStore {
                     artist = obj.optString("artist"),
                     album = obj.optString("album"),
                     durationMs = obj.optLong("durationMs"),
-                    file = obj.optString("file"),
-                    karaokeFile = obj.optString("karaokeFile"),
-                    source = obj.optString("source", LyricsStorage.SOURCE_DOWNLOADED),
-                    provider = obj.optString("provider", "local"),
-                    karaokeProvider = obj.optString("karaokeProvider"),
+                    plainFile = obj.optString("file"),
+                    wordByWordFile = obj.optString(WORD_BY_WORD_FILE_JSON_FIELD),
+                    plainSource = obj.optString("source", LyricsStorage.SOURCE_DOWNLOADED),
+                    plainProvider = obj.optString("provider", "local"),
+                    wordByWordProvider = obj.optString(WORD_BY_WORD_PROVIDER_JSON_FIELD),
                     createdAt = obj.optLong("createdAt"),
                     updatedAt = obj.optLong("updatedAt")
                 )
-            }.filter { it.key.isNotBlank() && (it.file.isNotBlank() || it.karaokeFile.isNotBlank()) }
+            }.filter { it.key.isNotBlank() && (it.plainFile.isNotBlank() || it.wordByWordFile.isNotBlank()) }
         }.getOrDefault(emptyList())
     }
 
@@ -56,11 +60,11 @@ internal object LyricsIndexStore {
                 put("artist", entry.artist)
                 put("album", entry.album)
                 put("durationMs", entry.durationMs)
-                put("file", entry.file)
-                put("karaokeFile", entry.karaokeFile)
-                put("source", entry.source)
-                put("provider", entry.provider)
-                put("karaokeProvider", entry.karaokeProvider)
+                put("file", entry.plainFile)
+                put(WORD_BY_WORD_FILE_JSON_FIELD, entry.wordByWordFile)
+                put("source", entry.plainSource)
+                put("provider", entry.plainProvider)
+                put(WORD_BY_WORD_PROVIDER_JSON_FIELD, entry.wordByWordProvider)
                 put("createdAt", entry.createdAt)
                 put("updatedAt", entry.updatedAt)
             })
@@ -143,7 +147,7 @@ internal object LyricsIndexStore {
     fun findByFileName(context: Context, fileName: String): LyricsIndexEntry? {
         val safeName = fileName.substringAfterLast('/')
         return read(context).firstOrNull {
-            it.file.substringAfterLast('/') == safeName || it.karaokeFile.substringAfterLast('/') == safeName
+            it.plainFile.substringAfterLast('/') == safeName || it.wordByWordFile.substringAfterLast('/') == safeName
         }
     }
 }

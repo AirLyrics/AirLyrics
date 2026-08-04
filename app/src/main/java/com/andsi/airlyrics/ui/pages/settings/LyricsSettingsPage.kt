@@ -5,8 +5,8 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizedLyricsSourceHint
-import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
+import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceHint
+import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -46,9 +46,18 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
 
     container.addView(
         card(activity) {
-            addView(bigText(activity, getString(R.string.ui_lyrics_source)))
-            val sourceStatus = normalText(activity, getString(R.string.settings_current_value, localizedLyricsSourceTitle(settings.selectedSource)))
-            val sourceHint = smallHint(activity, localizedLyricsSourceHint(settings.selectedSource))
+            addView(bigText(activity, getString(R.string.ui_plain_lyrics_source)))
+            val sourceStatus = normalText(
+                activity,
+                getString(
+                    R.string.settings_current_value,
+                    localizedPlainLyricsSourceTitle(settings.selectedPlainLyricsSource)
+                )
+            )
+            val sourceHint = smallHint(
+                activity,
+                localizedPlainLyricsSourceHint(settings.selectedPlainLyricsSource)
+            )
             val sourceFeedback = TextView(activity).apply {
                 text = ""
                 textSize = AirUiTokens.TextSize.Caption
@@ -61,17 +70,17 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
             addView(sourceFeedback)
             lateinit var sourceGrid: LinearLayout
             sourceGrid = liveOptionGrid(
-                settings.sourceOptions.map { source ->
+                settings.plainLyricsSourceOptions.map { plainLyricsSearchSource ->
                     KeyedOptionItem(
-                        key = source.key,
-                        title = localizedLyricsSourceTitle(source),
-                        selected = source == settings.selectedSource,
+                        key = plainLyricsSearchSource.key,
+                        title = localizedPlainLyricsSourceTitle(plainLyricsSearchSource),
+                        selected = plainLyricsSearchSource == settings.selectedPlainLyricsSource,
                         action = {
-                            uiActions.selectLyricsSource(source)
-                            sourceStatus.text = getString(R.string.settings_current_value, localizedLyricsSourceTitle(
-                                source
+                            uiActions.selectPlainLyricsSource(plainLyricsSearchSource)
+                            sourceStatus.text = getString(R.string.settings_current_value, localizedPlainLyricsSourceTitle(
+                                plainLyricsSearchSource
                             ))
-                            sourceHint.text = localizedLyricsSourceHint(source)
+                            sourceHint.text = localizedPlainLyricsSourceHint(plainLyricsSearchSource)
                             playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, getString(R.string.ui_saved))
                         }
                     )

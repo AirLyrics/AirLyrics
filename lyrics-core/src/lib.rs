@@ -38,7 +38,10 @@ pub(crate) struct NativeResult {
     lrc: Option<String>,
     translated_lrc: Option<String>,
     merged_lrc: Option<String>,
-    karaoke_json: Option<String>,
+    // Legacy internal JNI wire field. Runtime writers keep it null pending native cleanup;
+    // keep the serialized key unchanged for the current contract.
+    #[serde(rename = "karaoke_json")]
+    word_by_word_json: Option<String>,
     error_type: Option<&'static str>,
     error: Option<String>,
 }
@@ -199,7 +202,7 @@ fn fallback_error(source: &'static str, error_type: &'static str, message: &str)
         lrc: None,
         translated_lrc: None,
         merged_lrc: None,
-        karaoke_json: None,
+        word_by_word_json: None,
         error_type: Some(error_type),
         error: Some(message.to_string()),
     })
@@ -403,7 +406,7 @@ fn fetch_best_lyrics(
                     lrc,
                     translated_lrc,
                     merged_lrc,
-                    karaoke_json: None,
+                    word_by_word_json: None,
                     error_type: None,
                     error: None,
                 })

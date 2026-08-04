@@ -71,7 +71,7 @@ AirLyrics 是悬浮歌词应用，不是找歌词项目。除非目前的歌词�
 
 确实需要新增歌词来源时，请保持 Provider 的职责单一。
 
-1. 在 `lyrics/providers/` 下实现 `LyricsProvider`。
+1. 在 `lyrics/providers/` 下实现 `PlainLyricsProvider`。
 2. 注册到 `LyricsRepository`。
 3. 如果需要让用户手动选择来源，请在设置中暴露这个 Provider。
 4. 安全处理网络失败、无结果和模糊匹配。

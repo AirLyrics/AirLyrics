@@ -120,21 +120,21 @@ class LyricsStorageSafInstrumentedTest {
                 album = "Document Tree Album",
                 durationMs = 215_000L,
             )
-        val lyrics = "[00:01.00]first line\n[00:02.00]second line"
+        val plainLrc = "[00:01.00]first line\n[00:02.00]second line"
         val provider = "saf-instrumentation"
         val managedFileName = LyricsFileNaming.managedPlainFileName(identity)
         val fallbackManagedFile = registerFallbackIdentity(identity)
 
         assertTrue(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = context,
                 title = identity.title,
                 artist = identity.artist,
                 duration = identity.durationMs,
-                lyrics = lyrics,
+                plainLrc = plainLrc,
                 album = identity.album,
-                source = LyricsStorage.SOURCE_DOWNLOADED,
-                provider = provider,
+                plainSource = LyricsStorage.SOURCE_DOWNLOADED,
+                plainProvider = provider,
             ),
         )
 
@@ -142,7 +142,7 @@ class LyricsStorageSafInstrumentedTest {
         val managedDir = requireNotNull(treeRoot.findFile(MANAGED_LYRICS_DIR))
         val managedFile = requireNotNull(managedDir.findFile(managedFileName))
         assertEquals(TestDocumentsProvider.AUTHORITY, managedFile.uri.authority)
-        assertEquals(lyrics, readText(managedFile.uri))
+        assertEquals(plainLrc, readText(managedFile.uri))
 
         val indexFile = requireNotNull(treeRoot.findFile(INDEX_FILE_NAME))
         assertEquals(TestDocumentsProvider.AUTHORITY, indexFile.uri.authority)
@@ -171,12 +171,12 @@ class LyricsStorageSafInstrumentedTest {
             )
         assertNotNull(indexEntry)
         assertEquals(identity.storageKey(), indexEntry?.key)
-        assertEquals(LyricsFileNaming.managedRelativePath(managedFileName), indexEntry?.file)
-        assertEquals(LyricsStorage.SOURCE_DOWNLOADED, indexEntry?.source)
-        assertEquals(provider, indexEntry?.provider)
+        assertEquals(LyricsFileNaming.managedRelativePath(managedFileName), indexEntry?.plainFile)
+        assertEquals(LyricsStorage.SOURCE_DOWNLOADED, indexEntry?.plainSource)
+        assertEquals(provider, indexEntry?.plainProvider)
         assertEquals(
-            lyrics,
-            LyricsStorage.readLocalLyrics(
+            plainLrc,
+            LyricsStorage.readPlainLyrics(
                 context,
                 identity.title,
                 identity.artist,
@@ -189,8 +189,8 @@ class LyricsStorageSafInstrumentedTest {
             LyricsStorage.getLyricsDirRawPath(freshPackageContext),
         )
         assertEquals(
-            lyrics,
-            LyricsStorage.readLocalLyrics(
+            plainLrc,
+            LyricsStorage.readPlainLyrics(
                 freshPackageContext,
                 identity.title,
                 identity.artist,
@@ -229,7 +229,7 @@ class LyricsStorageSafInstrumentedTest {
             ),
         )
         assertNull(
-            LyricsStorage.readLocalLyrics(
+            LyricsStorage.readPlainLyrics(
                 context,
                 identity.title,
                 identity.artist,
@@ -262,14 +262,14 @@ class LyricsStorageSafInstrumentedTest {
         val fallbackManagedFile = registerFallbackIdentity(identity)
 
         assertFalse(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = context,
                 title = identity.title,
                 artist = identity.artist,
                 duration = identity.durationMs,
-                lyrics = "[00:01.00]must not be reported as saved",
-                source = LyricsStorage.SOURCE_DOWNLOADED,
-                provider = "failing-test-provider",
+                plainLrc = "[00:01.00]must not be reported as saved",
+                plainSource = LyricsStorage.SOURCE_DOWNLOADED,
+                plainProvider = "failing-test-provider",
             ),
         )
         assertNull(
@@ -281,7 +281,7 @@ class LyricsStorageSafInstrumentedTest {
             ),
         )
         assertNull(
-            LyricsStorage.readLocalLyrics(
+            LyricsStorage.readPlainLyrics(
                 context,
                 identity.title,
                 identity.artist,

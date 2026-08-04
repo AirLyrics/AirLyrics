@@ -195,13 +195,13 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertNull(service.activeLyricsLookupRequestKey)
         assertEquals(0, service.callbackDispatcher.pendingDeliveryCount())
 
-        saveLocalLyrics("[00:01.00]initial command lyrics")
+        saveLocalPlainLyrics("[00:01.00]initial command lyrics")
         application.sendBroadcast(CurrentMediaBroadcast.mediaUpdateIntent(application, media()))
         ShadowLooper.idleMainLooper()
         service.callbackDispatcher.takeDelivery().invoke()
         assertEquals("initial command lyrics", lyricsView.text.toString())
 
-        saveLocalLyrics("[00:01.00]reloaded command lyrics")
+        saveLocalPlainLyrics("[00:01.00]reloaded command lyrics")
         send(service, FloatingServiceCommand.ReloadLyrics)
         assertNotNull(
             "ReloadLyrics must enter the existing lookup runner",
@@ -217,7 +217,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
     fun destroy_cleansWindowReceiversAndPendingCallbacks() {
         MediaSourceStore.saveSelectedPackage(application, SOURCE_PACKAGE)
         FloatingLyricsStyleStore.setAutoHideWhenPaused(application, true)
-        saveLocalLyrics("[00:01.00]must not render after destroy")
+        saveLocalPlainLyrics("[00:01.00]must not render after destroy")
         val mediaIntent = CurrentMediaBroadcast.mediaUpdateIntent(
             application,
             media(isPlaying = true)
@@ -329,15 +329,15 @@ class FloatingLyricsServiceCommandLifecycleTest {
         }
     }
 
-    private fun saveLocalLyrics(lyrics: String) {
+    private fun saveLocalPlainLyrics(plainLrc: String) {
         assertTrue(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = application,
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS,
-                lyrics = lyrics,
-                provider = "service-command-test"
+                plainLrc = plainLrc,
+                plainProvider = "service-command-test"
             )
         )
     }

@@ -2,13 +2,13 @@ package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
 import android.net.Uri
-import com.andsi.airlyrics.lyrics.KaraokeLine
+import com.andsi.airlyrics.lyrics.WordByWordLine
 
 /**
  * Public facade for local lyric persistence.
  *
  * Keep external callers here, but keep implementation details in focused helpers:
- * paths, files, index matching, song identity, listing, editing, and karaoke codecs.
+ * paths, files, index matching, song identity, listing, editing, and word-by-word codecs.
  */
 object LyricsStorage {
     private val storageLock = Any()
@@ -17,12 +17,13 @@ object LyricsStorage {
 
     const val SOURCE_MANUAL_IMPORT = "manual_import"
     const val SOURCE_DOWNLOADED = "downloaded"
-    const val SOURCE_KARAOKE_FALLBACK = "karaoke_fallback"
+    // Persisted compatibility contract. Do not change the serialized value.
+    const val SOURCE_WORD_BY_WORD_FALLBACK = "karaoke_fallback"
     const val SOURCE_LEGACY = "legacy"
 
-    enum class DeleteMode { PLAIN, KARAOKE, ALL }
+    enum class DeleteMode { PLAIN, WORD_BY_WORD, ALL }
 
-    enum class LocalLyricsEditTarget { PLAIN, KARAOKE }
+    enum class LocalLyricsEditTarget { PLAIN, WORD_BY_WORD }
 
     sealed class ImportLyricsResult {
         object Saved : ImportLyricsResult()
@@ -36,26 +37,26 @@ object LyricsStorage {
         object SaveFailed : ImportLyricsResult()
         object SnapshotFailed : ImportLyricsResult()
         data class RollbackFailed(
-            val originalFailureStep: KaraokeImportFailureStep,
-            val originalFailureCause: KaraokeImportFailureCause,
-            val failedRollbackSteps: List<KaraokeRollbackFailureStep>
+            val originalFailureStep: WordByWordImportFailureStep,
+            val originalFailureCause: WordByWordImportFailureCause,
+            val failedRollbackSteps: List<WordByWordRollbackFailureStep>
         ) : ImportLyricsResult()
     }
 
-    enum class KaraokeImportFailureStep {
-        KARAOKE_FILE_WRITE,
+    enum class WordByWordImportFailureStep {
+        WORD_BY_WORD_FILE_WRITE,
         PLAIN_FALLBACK_FILE_WRITE,
         INDEX_WRITE
     }
 
-    enum class KaraokeImportFailureCause {
+    enum class WordByWordImportFailureCause {
         IO_OPERATION_RETURNED_FALSE
     }
 
-    enum class KaraokeRollbackFailureStep {
+    enum class WordByWordRollbackFailureStep {
         RESTORE_INDEX,
         RESTORE_PLAIN_FILE,
-        RESTORE_KARAOKE_FILE
+        RESTORE_WORD_BY_WORD_FILE
     }
 
     data class LocalLyricsItem(
@@ -67,26 +68,26 @@ object LyricsStorage {
         val source: String = SOURCE_LEGACY,
         val provider: String = "local",
         val hasPlainLyrics: Boolean = true,
-        val hasKaraokeLyrics: Boolean = false
+        val hasWordByWordLyrics: Boolean = false
     ) {
         val displayTitle: String
             get() = title.ifBlank { LyricsFileNaming.friendlyDisplayName(name) }
     }
 
-    data class LocalLyricsInfo(
+    data class LocalPlainLyricsInfo(
         val title: String,
         val artist: String,
         val durationMs: Long,
-        val fileName: String,
-        val source: String,
-        val provider: String,
+        val plainFileName: String,
+        val plainSource: String,
+        val plainProvider: String,
         val updatedAt: Long
     ) {
         val friendlyTitle: String
             get() = if (title.isNotBlank()) {
                 if (artist.isBlank()) title else "$title - $artist"
             } else {
-                fileName
+                plainFileName
             }
     }
 
@@ -107,21 +108,21 @@ object LyricsStorage {
         LocalLyricsEditor.readItemText(context, item, target)
     }
 
-    fun updateLocalLyricsItemTextWithResult(
+    fun updatePlainLyricsItemTextWithResult(
         context: Context,
         item: LocalLyricsItem,
-        text: String
-    ): LocalLyricsUpdateResult = LocalLyricsEditor.updatePlainItemTextWithResult(context, item, text)
+        plainLrc: String
+    ): LocalLyricsUpdateResult = LocalLyricsEditor.updatePlainItemTextWithResult(context, item, plainLrc)
 
-    fun validateKaraokeLyricsItemText(text: String): LocalLyricsUpdateResult {
-        return LocalLyricsEditor.validateKaraokeItemText(text)
+    fun validateWordByWordLyricsItemText(wordByWordLrc: String): LocalLyricsUpdateResult {
+        return LocalLyricsEditor.validateWordByWordItemText(wordByWordLrc)
     }
 
-    fun updateKaraokeLyricsItemTextWithResult(
+    fun updateWordByWordLyricsItemTextWithResult(
         context: Context,
         item: LocalLyricsItem,
-        text: String
-    ): LocalLyricsUpdateResult = LocalLyricsEditor.updateKaraokeItemTextWithResult(context, item, text)
+        wordByWordLrc: String
+    ): LocalLyricsUpdateResult = LocalLyricsEditor.updateWordByWordItemTextWithResult(context, item, wordByWordLrc)
 
     fun saveLyricsDirUri(context: Context, uri: Uri) = withStorageLock {
         LyricsStoragePaths.saveLyricsDirUri(context, uri)
@@ -131,48 +132,48 @@ object LyricsStorage {
 
     fun getLyricsDirRawPath(context: Context): String = LyricsStoragePaths.getLyricsDirRawPath(context)
 
-    fun getLocalLyricsInfo(
+    fun getLocalPlainLyricsInfo(
         context: Context,
         title: String,
         artist: String,
         duration: Long
-    ): LocalLyricsInfo? = withStorageLock {
-        PlainLyricsStorageOps.getLocalLyricsInfo(context, title, artist, duration)
+    ): LocalPlainLyricsInfo? = withStorageLock {
+        PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, title, artist, duration)
     }
 
-    fun hasLocalLyrics(context: Context, title: String, artist: String, duration: Long): Boolean {
-        return readLocalLyrics(context, title, artist, duration) != null
+    fun hasPlainLyrics(context: Context, title: String, artist: String, duration: Long): Boolean {
+        return readPlainLyrics(context, title, artist, duration) != null
     }
 
-    fun readLocalLyrics(context: Context, title: String, artist: String, duration: Long): String? = withStorageLock {
-        PlainLyricsStorageOps.readLocalLyrics(context, title, artist, duration)
+    fun readPlainLyrics(context: Context, title: String, artist: String, duration: Long): String? = withStorageLock {
+        PlainLyricsStorageOps.readPlainLyrics(context, title, artist, duration)
     }
 
-    fun saveLyrics(
+    fun savePlainLyrics(
         context: Context,
         title: String,
         artist: String,
         duration: Long,
-        lyrics: String,
+        plainLrc: String,
         album: String = "",
-        source: String = SOURCE_DOWNLOADED,
-        provider: String = "local",
+        plainSource: String = SOURCE_DOWNLOADED,
+        plainProvider: String = "local",
         overwrite: Boolean = true
     ): Boolean = withStorageLock {
-        PlainLyricsStorageOps.saveLyrics(
+        PlainLyricsStorageOps.savePlainLyrics(
             context = context,
             title = title,
             artist = artist,
             duration = duration,
-            lyrics = lyrics,
+            plainLrc = plainLrc,
             album = album,
-            source = source,
-            provider = provider,
+            plainSource = plainSource,
+            plainProvider = plainProvider,
             overwrite = overwrite
         )
     }
 
-    fun importLyricsFromUri(
+    fun importPlainLyricsFromUri(
         context: Context,
         uri: Uri,
         title: String,
@@ -180,7 +181,7 @@ object LyricsStorage {
         duration: Long,
         album: String = "",
         overwrite: Boolean = true
-    ): Boolean = importLyricsFromUriWithResult(
+    ): Boolean = importPlainLyricsFromUriWithResult(
         context = context,
         uri = uri,
         title = title,
@@ -190,7 +191,7 @@ object LyricsStorage {
         overwrite = overwrite
     ) is ImportLyricsResult.Saved
 
-    fun importLyricsFromUriWithResult(
+    fun importPlainLyricsFromUriWithResult(
         context: Context,
         uri: Uri,
         title: String,
@@ -199,7 +200,7 @@ object LyricsStorage {
         album: String = "",
         overwrite: Boolean = true
     ): ImportLyricsResult {
-        return PlainLyricsStorageOps.importLyricsFromUriWithResult(
+        return PlainLyricsStorageOps.importPlainLyricsFromUriWithResult(
             context = context,
             uri = uri,
             title = title,
@@ -210,41 +211,41 @@ object LyricsStorage {
         )
     }
 
-    fun hasKaraokeLyrics(context: Context, title: String, artist: String, duration: Long): Boolean = withStorageLock {
-        KaraokeLyricsStorageOps.hasKaraokeLyrics(context, title, artist, duration)
+    fun hasWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): Boolean = withStorageLock {
+        WordByWordLyricsStorageOps.hasWordByWordLyrics(context, title, artist, duration)
     }
 
-    fun readKaraokeLyrics(context: Context, title: String, artist: String, duration: Long): List<KaraokeLine> = withStorageLock {
-        KaraokeLyricsStorageOps.readKaraokeLyrics(context, title, artist, duration)
+    fun readWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): List<WordByWordLine> = withStorageLock {
+        WordByWordLyricsStorageOps.readWordByWordLyrics(context, title, artist, duration)
     }
 
-    fun saveKaraokeLyrics(
+    fun saveWordByWordLyrics(
         context: Context,
         title: String,
         artist: String,
         duration: Long,
-        karaokeLines: List<KaraokeLine>,
+        wordByWordLines: List<WordByWordLine>,
         album: String = "",
-        source: String = SOURCE_DOWNLOADED,
-        provider: String = "local",
+        wordByWordSource: String = SOURCE_DOWNLOADED,
+        wordByWordProvider: String = "local",
         overwrite: Boolean = true,
         metadataLines: List<String> = emptyList()
     ): Boolean = withStorageLock {
-        KaraokeLyricsStorageOps.saveKaraokeLyrics(
+        WordByWordLyricsStorageOps.saveWordByWordLyrics(
             context = context,
             title = title,
             artist = artist,
             duration = duration,
-            karaokeLines = karaokeLines,
+            wordByWordLines = wordByWordLines,
             album = album,
-            source = source,
-            provider = provider,
+            wordByWordSource = wordByWordSource,
+            wordByWordProvider = wordByWordProvider,
             overwrite = overwrite,
             metadataLines = metadataLines
         )
     }
 
-    fun importKaraokeLyricsFromUriWithResult(
+    fun importWordByWordLyricsFromUriWithResult(
         context: Context,
         uri: Uri,
         title: String,
@@ -253,7 +254,7 @@ object LyricsStorage {
         album: String = "",
         overwrite: Boolean = true
     ): ImportLyricsResult {
-        return KaraokeLyricsStorageOps.importKaraokeLyricsFromUriWithResult(
+        return WordByWordLyricsStorageOps.importWordByWordLyricsFromUriWithResult(
             context = context,
             uri = uri,
             title = title,
@@ -266,7 +267,7 @@ object LyricsStorage {
         )
     }
 
-    internal fun importKaraokeLyricsFromUriWithResult(
+    internal fun importWordByWordLyricsFromUriWithResult(
         context: Context,
         uri: Uri,
         title: String,
@@ -277,7 +278,7 @@ object LyricsStorage {
         managedLyricsIo: ManagedLyricsIo,
         indexIo: LyricsIndexIo = AndroidLyricsIndexIo
     ): ImportLyricsResult {
-        return KaraokeLyricsStorageOps.importKaraokeLyricsFromUriWithResult(
+        return WordByWordLyricsStorageOps.importWordByWordLyricsFromUriWithResult(
             context = context,
             uri = uri,
             title = title,

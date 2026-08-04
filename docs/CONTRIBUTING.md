@@ -79,7 +79,7 @@ online providers.
 
 When a new provider is truly needed, keep the Provider responsibility narrow.
 
-1. Implement `LyricsProvider` under `lyrics/providers/`.
+1. Implement `PlainLyricsProvider` under `lyrics/providers/`.
 2. Register it in `LyricsRepository`.
 3. If users need to choose the source manually, expose this Provider in settings.
 4. Handle network failures, no-result cases and ambiguous matches safely.

@@ -34,7 +34,7 @@ class LyricsStorageConcurrencyInvariantTest {
     }
 
     @Test
-    fun concurrentPlainAndKaraokeImport_preservesMutualExclusion() {
+    fun concurrentPlainAndWordByWordImport_preservesMutualExclusion() {
         val plainUri = Uri.parse("content://airlyrics.test/plain-race.lrc")
         val blockingPlainInput = GateInputStream("[00:10.00]manual plain")
         shadowOf(context.contentResolver).registerInputStream(plainUri, blockingPlainInput)
@@ -42,7 +42,7 @@ class LyricsStorageConcurrencyInvariantTest {
 
         try {
             val plainFuture = executor.submit<LyricsStorage.ImportLyricsResult> {
-                LyricsStorage.importLyricsFromUriWithResult(
+                LyricsStorage.importPlainLyricsFromUriWithResult(
                     context = context,
                     uri = plainUri,
                     title = TITLE,
@@ -56,7 +56,7 @@ class LyricsStorageConcurrencyInvariantTest {
                 blockingPlainInput.awaitReadStarted()
             )
 
-            val karaokeResult = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+            val wordByWordResult = LyricsStorage.importWordByWordLyricsFromUriWithResult(
                 context = context,
                 uri = writeImportFile(),
                 title = TITLE,
@@ -64,36 +64,36 @@ class LyricsStorageConcurrencyInvariantTest {
                 duration = DURATION_MS
             )
             assertTrue(
-                "Karaoke import should win while the earlier plain import is paused",
-                karaokeResult is LyricsStorage.ImportLyricsResult.Saved
+                "Word-by-word import should win while the earlier plain import is paused",
+                wordByWordResult is LyricsStorage.ImportLyricsResult.Saved
             )
 
             blockingPlainInput.releaseRead()
             val plainResult = plainFuture.get(5, TimeUnit.SECONDS)
 
             assertTrue(
-                "The resumed plain import must observe the committed karaoke lyrics, but was $plainResult",
+                "The resumed plain import must observe the committed word-by-word lyrics, but was $plainResult",
                 plainResult is LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
             )
-            assertTrue(LyricsStorage.hasKaraokeLyrics(context, TITLE, ARTIST, DURATION_MS))
+            assertTrue(LyricsStorage.hasWordByWordLyrics(context, TITLE, ARTIST, DURATION_MS))
             assertEquals(
                 "[00:10.00]karaoke",
-                LyricsStorage.readLocalLyrics(context, TITLE, ARTIST, DURATION_MS)
+                LyricsStorage.readPlainLyrics(context, TITLE, ARTIST, DURATION_MS)
             )
 
             val matchingEntries = LyricsIndexStore.read(context)
                 .filter { it.title == TITLE && it.artist == ARTIST }
             assertEquals("Exactly one index entry must own both generated files", 1, matchingEntries.size)
             val entry = matchingEntries.single()
-            assertEquals(LyricsStorage.SOURCE_KARAOKE_FALLBACK, entry.source)
-            assertTrue(entry.file.isNotBlank())
-            assertTrue(entry.karaokeFile.isNotBlank())
+            assertEquals(LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK, entry.plainSource)
+            assertTrue(entry.plainFile.isNotBlank())
+            assertTrue(entry.wordByWordFile.isNotBlank())
             assertEquals(
                 "[00:10.00]karaoke",
-                LyricsFileStore.readManagedLyrics(context, entry.file)
+                LyricsFileStore.readManagedLyrics(context, entry.plainFile)
             )
             assertTrue(
-                LyricsFileStore.readManagedLyrics(context, entry.karaokeFile)
+                LyricsFileStore.readManagedLyrics(context, entry.wordByWordFile)
                     ?.isNotBlank() == true
             )
         } finally {
@@ -105,7 +105,7 @@ class LyricsStorageConcurrencyInvariantTest {
 
     private fun writeImportFile(): Uri {
         return Uri.fromFile(
-            File(context.cacheDir, "karaoke-race.lrc").apply {
+            File(context.cacheDir, "word-by-word-race.lrc").apply {
                 writeText("[00:10.00]<00:10.00>karaoke")
             }
         )

@@ -22,13 +22,13 @@ import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
-import com.andsi.airlyrics.i18n.localizedLocalLyricsSource
+import com.andsi.airlyrics.i18n.localizedLocalPlainLyricsSource
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
 import com.andsi.airlyrics.i18n.localizedLocalLyricsType
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -236,15 +236,15 @@ internal class MainActivityUiHost(
     override fun applyFloatingPaddingHorizontal(paddingDp: Int) = graph.floatingController.applyPaddingHorizontal(paddingDp)
     override fun applyFloatingPaddingVertical(paddingDp: Int) = graph.floatingController.applyPaddingVertical(paddingDp)
     override fun applyFloatingCornerRadius(radiusDp: Int) = graph.floatingController.applyCornerRadius(radiusDp)
-    override fun applyFloatingKaraokeHighlightColor(color: Int) = graph.floatingController.applyKaraokeHighlightColor(color)
+    override fun applyFloatingWordByWordHighlightColor(color: Int) = graph.floatingController.applyWordByWordHighlightColor(color)
     override fun lyricsContentDisplayMode(): LyricsContentDisplayMode = LyricsSettingsStore.getContentDisplayMode(this)
     override fun lyricsLineDisplayMode(): LyricsLineDisplayMode = LyricsSettingsStore.getLineDisplayMode(this)
     override fun lyricsSwitchAnimationMode(): LyricsSwitchAnimationMode = LyricsSettingsStore.getSwitchAnimationMode(this)
-    override fun karaokeLyricsEnabled(): Boolean = LyricsSettingsStore.isKaraokeLyricsEnabled(this)
+    override fun wordByWordLyricsEnabled(): Boolean = LyricsSettingsStore.isWordByWordLyricsEnabled(this)
     override fun setLyricsContentDisplayMode(mode: LyricsContentDisplayMode) = LyricsSettingsStore.setContentDisplayMode(this, mode)
     override fun setLyricsLineDisplayMode(mode: LyricsLineDisplayMode) = LyricsSettingsStore.setLineDisplayMode(this, mode)
     override fun setLyricsSwitchAnimationMode(mode: LyricsSwitchAnimationMode) = LyricsSettingsStore.setSwitchAnimationMode(this, mode)
-    override fun setKaraokeLyricsEnabled(enabled: Boolean) = LyricsSettingsStore.setKaraokeLyricsEnabled(this, enabled)
+    override fun setWordByWordLyricsEnabled(enabled: Boolean) = LyricsSettingsStore.setWordByWordLyricsEnabled(this, enabled)
     override fun notifyFloatingStyleChanged() = graph.floatingController.notifyStyleChanged()
 
     override fun settingsHomeHeader(): View = settingsHomeHeaderImpl()
@@ -276,15 +276,15 @@ internal class MainActivityUiHost(
         val media = graph.lyricsController.getCurrentMediaInfo()
         val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(this, it.toSongIdentity()) } ?: 0L
         val localInfo = media?.let {
-            LyricsStorage.getLocalLyricsInfo(
+            LyricsStorage.getLocalPlainLyricsInfo(
                 context = this,
                 title = it.title,
                 artist = it.artist,
                 duration = it.durationMs
             )
         }
-        val localWordByWord = media?.let {
-            LyricsStorage.hasKaraokeLyrics(
+        val hasLocalWordByWordLyrics = media?.let {
+            LyricsStorage.hasWordByWordLyrics(
                 context = this,
                 title = it.title,
                 artist = it.artist,
@@ -293,13 +293,14 @@ internal class MainActivityUiHost(
         } == true
         return CurrentLyricsUiState(
             media = media?.toUiInfo(),
-            localSourceText = localInfo?.let { localizedLocalLyricsSource(it) },
+            localSourceText = localInfo?.let { localizedLocalPlainLyricsSource(it) },
             plainLyricsTitle = localInfo?.friendlyTitle,
-            plainLyricsDownloaded = localInfo?.source == LyricsStorage.SOURCE_DOWNLOADED,
+            plainLyricsDownloaded = localInfo?.plainSource == LyricsStorage.SOURCE_DOWNLOADED,
             hasPlainLyrics = localInfo != null,
-            canRemoveAllLyrics = localInfo != null && localInfo.source != LyricsStorage.SOURCE_KARAOKE_FALLBACK,
-            localWordByWord = localWordByWord,
-            karaokeEnabled = LyricsSettingsStore.isKaraokeLyricsEnabled(this),
+            canRemoveAllLyrics =
+                localInfo != null && localInfo.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
+            hasLocalWordByWordLyrics = hasLocalWordByWordLyrics,
+            wordByWordLyricsEnabled = LyricsSettingsStore.isWordByWordLyricsEnabled(this),
             offsetMs = offsetMs
         )
     }
@@ -315,8 +316,8 @@ internal class MainActivityUiHost(
 
     override fun lyricsSettingsState(): LyricsSettingsUiState {
         return LyricsSettingsUiState(
-            selectedSource = LyricsSettingsStore.getLyricsSearchSource(this),
-            sourceOptions = LyricsSearchSource.entries,
+            selectedPlainLyricsSource = LyricsSettingsStore.getPlainLyricsSearchSource(this),
+            plainLyricsSourceOptions = PlainLyricsSearchSource.entries,
             autoSearchOnline = LyricsSettingsStore.isAutoSearchOnlineEnabled(this),
             autoSaveLocal = LyricsSettingsStore.isAutoSaveLocalEnabled(this),
             lyricsDirectoryPath = LyricsStorage.getLyricsDirRawPath(this)
@@ -407,28 +408,28 @@ internal class MainActivityUiHost(
 
 private fun MainActivityUiHost.currentLocalLyricsItem(media: com.andsi.airlyrics.media.model.CurrentMediaInfo?): LocalLyricsUiItem? {
     media ?: return null
-    val info = LyricsStorage.getLocalLyricsInfo(
+    val info = LyricsStorage.getLocalPlainLyricsInfo(
         context = this,
         title = media.title,
         artist = media.artist,
         duration = media.durationMs
     ) ?: return null
-    val hasWordByWord = LyricsStorage.hasKaraokeLyrics(
+    val hasWordByWordLyrics = LyricsStorage.hasWordByWordLyrics(
         context = this,
         title = media.title,
         artist = media.artist,
         duration = media.durationMs
     )
     return LyricsStorage.LocalLyricsItem(
-        name = info.fileName,
+        name = info.plainFileName,
         modifiedTimeMillis = info.updatedAt,
         sizeBytes = 0L,
         title = info.title,
         artist = info.artist,
-        source = info.source,
-        provider = info.provider,
+        source = info.plainSource,
+        provider = info.plainProvider,
         hasPlainLyrics = true,
-        hasKaraokeLyrics = hasWordByWord
+        hasWordByWordLyrics = hasWordByWordLyrics
     ).let { toUiItem(it) }
 }
 
@@ -442,7 +443,7 @@ private fun MainActivityUiHost.toUiItem(item: LyricsStorage.LocalLyricsItem): Lo
         source = item.source,
         provider = item.provider,
         hasPlainLyrics = item.hasPlainLyrics,
-        hasKaraokeLyrics = item.hasKaraokeLyrics,
+        hasWordByWordLyrics = item.hasWordByWordLyrics,
         displayTitle = item.displayTitle,
         subtitle = localizedLocalLyricsSubtitle(item),
         typeText = localizedLocalLyricsType(item),
@@ -460,7 +461,7 @@ internal fun LocalLyricsUiItem.toStorageItem(): LyricsStorage.LocalLyricsItem {
         source = source.ifBlank { LyricsStorage.SOURCE_LEGACY },
         provider = provider,
         hasPlainLyrics = hasPlainLyrics,
-        hasKaraokeLyrics = hasKaraokeLyrics
+        hasWordByWordLyrics = hasWordByWordLyrics
     )
 }
 
@@ -474,7 +475,7 @@ private fun com.andsi.airlyrics.media.model.CurrentMediaInfo.toUiInfo(): Current
 internal fun LyricsDeleteMode.toStorageDeleteMode(): LyricsStorage.DeleteMode {
     return when (this) {
         LyricsDeleteMode.PLAIN -> LyricsStorage.DeleteMode.PLAIN
-        LyricsDeleteMode.KARAOKE -> LyricsStorage.DeleteMode.KARAOKE
+        LyricsDeleteMode.WORD_BY_WORD -> LyricsStorage.DeleteMode.WORD_BY_WORD
         LyricsDeleteMode.ALL -> LyricsStorage.DeleteMode.ALL
     }
 }

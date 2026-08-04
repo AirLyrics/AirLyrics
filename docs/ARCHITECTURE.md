@@ -20,8 +20,8 @@ Music app
           -> MainGraph
       -> FloatingLyricsService
           -> LyricsRepository
-              -> LocalLyricsProvider
-              -> NeteaseLyricsProvider or MusixmatchLyricsProvider
+              -> LocalPlainLyricsProvider
+              -> NeteasePlainLyricsProvider or MusixmatchPlainLyricsProvider
               -> LyricsStorage for optional local saving
           -> FloatingLyricsWindow
           -> FloatingLyricsRenderer
@@ -144,7 +144,7 @@ The default flow is:
 3. Save online results locally according to the user settings.
 4. When word-by-word lyrics are enabled, try to attach locally saved word-by-word lyrics.
 
-Unless the request explicitly skips the local lookup, `LocalLyricsProvider`
+Unless the request explicitly skips the local lookup, `LocalPlainLyricsProvider`
 always takes priority over online providers.
 
 After word-by-word lyrics are imported, a normal LRC fallback is generated for normal display modes.

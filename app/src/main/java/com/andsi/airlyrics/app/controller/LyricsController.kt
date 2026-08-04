@@ -16,7 +16,7 @@ import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
-import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -109,13 +109,13 @@ internal class LyricsController(
     ) {
         val importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
         val overwriteMessage = request.target.displayText + "\n\n" + if (importAsWordByWord) {
-            context.getString(R.string.ui_overwrite_enhanced_keep_plain_msg)
+            context.getString(R.string.ui_overwrite_word_by_word_regenerate_plain_fallback_msg)
         } else {
-            context.getString(R.string.ui_overwrite_plain_keep_enhanced_msg)
+            context.getString(R.string.ui_overwrite_plain_lyrics_msg)
         }
         dialogHost.showConfirmDialog(
             title = if (importAsWordByWord) {
-                context.getString(R.string.ui_overwrite_local_enhanced_lrc)
+                context.getString(R.string.ui_overwrite_local_word_by_word_lyrics)
             } else {
                 context.getString(R.string.ui_overwrite_plain_lyrics)
             },
@@ -131,18 +131,18 @@ internal class LyricsController(
         importAsWordByWord: Boolean
     ): LyricsStorage.ImportLyricsResult? {
         return if (importAsWordByWord) {
-            val localInfo = LyricsStorage.getLocalLyricsInfo(
+            val localInfo = LyricsStorage.getLocalPlainLyricsInfo(
                 context = context,
                 title = target.title,
                 artist = target.artist,
                 duration = target.durationMs
             )
-            if (localInfo != null && localInfo.source != LyricsStorage.SOURCE_KARAOKE_FALLBACK) {
+            if (localInfo != null && localInfo.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK) {
                 LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists
             } else {
                 null
             }
-        } else if (LyricsStorage.hasKaraokeLyrics(
+        } else if (LyricsStorage.hasWordByWordLyrics(
                 context = context,
                 title = target.title,
                 artist = target.artist,
@@ -157,14 +157,14 @@ internal class LyricsController(
 
     private fun hasLyricsForTarget(target: SongIdentity, importAsWordByWord: Boolean): Boolean {
         return if (importAsWordByWord) {
-            LyricsStorage.hasKaraokeLyrics(
+            LyricsStorage.hasWordByWordLyrics(
                 context = context,
                 title = target.title,
                 artist = target.artist,
                 duration = target.durationMs
             )
         } else {
-            LyricsStorage.hasLocalLyrics(
+            LyricsStorage.hasPlainLyrics(
                 context = context,
                 title = target.title,
                 artist = target.artist,
@@ -187,7 +187,7 @@ internal class LyricsController(
         when (result) {
             LyricsStorage.ImportLyricsResult.Saved -> {
                 val message = if (importAsWordByWord) {
-                    context.getString(R.string.ui_enhanced_lrc_import_success)
+                    context.getString(R.string.ui_word_by_word_lyrics_import_success)
                 } else {
                     context.getString(R.string.ui_plain_lrc_import_success)
                 }
@@ -200,14 +200,14 @@ internal class LyricsController(
                 showImportFormatError(result.invalidLineNumbers, importAsWordByWord)
             }
             LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists -> {
-                AirToast.showLong(context, R.string.ui_enhanced_lrc_blocked_by_plain_lrc)
+                AirToast.showLong(context, R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc)
             }
             LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists -> {
-                AirToast.showLong(context, R.string.ui_plain_lrc_blocked_by_enhanced_lrc)
+                AirToast.showLong(context, R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics)
             }
             LyricsStorage.ImportLyricsResult.ReadFailed -> {
                 val message = if (importAsWordByWord) {
-                    context.getString(R.string.ui_cannot_read_enhanced_lrc_file)
+                    context.getString(R.string.ui_cannot_read_word_by_word_lyrics_file)
                 } else {
                     context.getString(R.string.ui_cannot_read_this_lyric_file)
                 }
@@ -222,7 +222,7 @@ internal class LyricsController(
             is LyricsStorage.ImportLyricsResult.RollbackFailed -> {
                 Log.e(
                     "LyricsController",
-                    "Karaoke import rollback failed after ${result.originalFailureStep} " +
+                    "Word-by-word lyrics import rollback failed after ${result.originalFailureStep} " +
                         "(${result.originalFailureCause}); " +
                         "failed steps=${result.failedRollbackSteps}"
                 )
@@ -236,7 +236,7 @@ internal class LyricsController(
         importAsWordByWord: Boolean
     ) {
         val message = if (importAsWordByWord) {
-            context.enhancedLyricsFormatErrorMessage(invalidLineNumbers)
+            context.wordByWordLyricsFormatErrorMessage(invalidLineNumbers)
         } else {
             context.plainLyricsFormatErrorMessage(invalidLineNumbers)
         }
@@ -260,7 +260,7 @@ internal class LyricsController(
                 if (deleted) {
                     val message = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_plain_lrc_removed_for_this_song)
-                        LyricsStorage.DeleteMode.KARAOKE -> context.getString(R.string.ui_enhanced_lrc_removed_for_this_song)
+                        LyricsStorage.DeleteMode.WORD_BY_WORD -> context.getString(R.string.ui_word_by_word_lyrics_removed_for_this_song)
                         LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_all_local_lyrics_removed)
                     }
                     AirToast.showLong(context, message)
@@ -273,7 +273,7 @@ internal class LyricsController(
                 } else {
                     val message = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)
-                        LyricsStorage.DeleteMode.KARAOKE -> context.getString(R.string.ui_no_enhanced_lrc_to_remove)
+                        LyricsStorage.DeleteMode.WORD_BY_WORD -> context.getString(R.string.ui_no_word_by_word_lyrics_to_remove)
                         LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_no_local_lyrics_to_remove)
                     }
                     AirToast.showShort(context, message)

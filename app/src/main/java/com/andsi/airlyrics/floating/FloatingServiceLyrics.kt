@@ -5,7 +5,7 @@ import android.os.SystemClock
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
-import com.andsi.airlyrics.i18n.localizedLyricsSourceTitle
+import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository
@@ -33,7 +33,7 @@ internal fun FloatingLyricsService.stopLyricsSync() {
 }
 
 internal fun FloatingLyricsService.lyricsSyncIntervalMs(): Long {
-    return if (renderer.isKaraokeActive()) 80L else 300L
+    return if (renderer.isWordByWordActive()) 80L else 300L
 }
 
 internal fun FloatingLyricsService.applyLyricsOffset(offsetMs: Long) {
@@ -128,14 +128,14 @@ internal fun FloatingLyricsService.applyLyricsResult(
     media: CurrentMediaInfo
 ) {
     val lyricsResult = result.getOrNull()
-    val lyricText = lyricsResult?.lyrics
+    val plainLrc = lyricsResult?.plainLrc
 
-    if (lyricText != null) {
+    if (plainLrc != null) {
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
         renderer.parseAndShow(
-            lyrics = lyricText,
-            translatedLyrics = lyricsResult.translatedLyrics,
-            karaokeLines = lyricsResult.karaokeLines,
+            plainLrc = plainLrc,
+            translatedLrc = lyricsResult.translatedLrc,
+            wordByWordLines = lyricsResult.wordByWordLines,
             emptyText = "♪ " + getString(R.string.ui_parsed_lyrics_are_empty) + "\n" + media.displayText
         )
         return
@@ -158,12 +158,13 @@ internal fun FloatingLyricsService.notFoundText(media: CurrentMediaInfo): String
     return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
         "♪ ${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
     } else {
-        val sourceTitle = localizedLyricsSourceTitle(LyricsSettingsStore.getLyricsSearchSource(this))
-        "♪ ${media.displayText}\n${getString(R.string.ui_source)}$sourceTitle\n${getString(R.string.ui_lyrics_not_found)}"
+        val plainLyricsSourceTitle =
+            localizedPlainLyricsSourceTitle(LyricsSettingsStore.getPlainLyricsSearchSource(this))
+        "♪ ${media.displayText}\n${getString(R.string.ui_source)}$plainLyricsSourceTitle\n${getString(R.string.ui_lyrics_not_found)}"
     }
 }
 
-internal fun FloatingLyricsService.importLyrics(uri: Uri, overwrite: Boolean) {
+internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolean) {
     lyricsLookupRunner.cancelActive()
     activeLyricsLookupRequestKey = null
     val media = currentMedia
@@ -173,7 +174,7 @@ internal fun FloatingLyricsService.importLyrics(uri: Uri, overwrite: Boolean) {
         return
     }
 
-    val imported = LyricsStorage.importLyricsFromUri(
+    val imported = LyricsStorage.importPlainLyricsFromUri(
         context = this,
         uri = uri,
         title = media.title,
@@ -188,19 +189,19 @@ internal fun FloatingLyricsService.importLyrics(uri: Uri, overwrite: Boolean) {
         return
     }
 
-    val localLyrics = LyricsStorage.readLocalLyrics(
+    val localPlainLrc = LyricsStorage.readPlainLyrics(
         context = this,
         title = media.title,
         artist = media.artist,
         duration = media.durationMs
     )
 
-    if (localLyrics != null) {
+    if (localPlainLrc != null) {
         lastPlaybackLyricsKey = media.playbackLyricsKey()
         activeLyricsLookupRequestKey = null
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
         renderer.parseAndShow(
-            lyrics = localLyrics,
+            plainLrc = localPlainLrc,
             emptyText = "♪ " + getString(R.string.ui_lyrics_import_empty_error)
         )
     } else {

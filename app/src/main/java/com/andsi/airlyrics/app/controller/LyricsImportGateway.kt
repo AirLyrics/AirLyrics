@@ -28,7 +28,7 @@ internal class StorageLyricsImportGateway : LyricsImportGateway {
         target: SongIdentity,
         overwrite: Boolean
     ): LyricsStorage.ImportLyricsResult {
-        return LyricsStorage.importLyricsFromUriWithResult(
+        return LyricsStorage.importPlainLyricsFromUriWithResult(
             context = context,
             uri = uri,
             title = target.title,
@@ -45,7 +45,7 @@ internal class StorageLyricsImportGateway : LyricsImportGateway {
         target: SongIdentity,
         overwrite: Boolean
     ): LyricsStorage.ImportLyricsResult {
-        return LyricsStorage.importKaraokeLyricsFromUriWithResult(
+        return LyricsStorage.importWordByWordLyricsFromUriWithResult(
             context = context,
             uri = uri,
             title = target.title,

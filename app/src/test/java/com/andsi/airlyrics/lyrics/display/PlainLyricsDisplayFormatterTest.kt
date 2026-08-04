@@ -6,8 +6,8 @@ import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-class LyricsDisplayFormatterTest {
-    private val lines = listOf(
+class PlainLyricsDisplayFormatterTest {
+    private val plainLines = listOf(
         LrcLine(timeMs = 1_000L, text = "first", translation = "第一句"),
         LrcLine(timeMs = 2_000L, text = "second", translation = "第二句"),
         LrcLine(timeMs = 3_000L, text = "third", translation = null)
@@ -17,8 +17,8 @@ class LyricsDisplayFormatterTest {
     fun format_returnsEmptyTextForInvalidIndexes() {
         assertEquals(
             "",
-            LyricsDisplayFormatter.format(
-                lines = lines,
+            PlainLyricsDisplayFormatter.format(
+                plainLines = plainLines,
                 currentIndex = -1,
                 contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
                 lineMode = LyricsLineDisplayMode.CURRENT_ONLY
@@ -26,9 +26,9 @@ class LyricsDisplayFormatterTest {
         )
         assertEquals(
             "",
-            LyricsDisplayFormatter.format(
-                lines = lines,
-                currentIndex = lines.size,
+            PlainLyricsDisplayFormatter.format(
+                plainLines = plainLines,
+                currentIndex = plainLines.size,
                 contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
                 lineMode = LyricsLineDisplayMode.CURRENT_ONLY
             )
@@ -37,8 +37,8 @@ class LyricsDisplayFormatterTest {
 
     @Test
     fun format_originalWithTranslationRendersCurrentLineInDisplayOrder() {
-        val rendered = LyricsDisplayFormatter.format(
-            lines = lines,
+        val rendered = PlainLyricsDisplayFormatter.format(
+            plainLines = plainLines,
             currentIndex = 1,
             contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             lineMode = LyricsLineDisplayMode.CURRENT_ONLY
@@ -49,8 +49,8 @@ class LyricsDisplayFormatterTest {
 
     @Test
     fun format_translationOnlyUsesFallbackWhenSelectedLinesHaveNoTranslation() {
-        val rendered = LyricsDisplayFormatter.format(
-            lines = lines,
+        val rendered = PlainLyricsDisplayFormatter.format(
+            plainLines = plainLines,
             currentIndex = 2,
             contentMode = LyricsContentDisplayMode.TRANSLATION_ONLY,
             lineMode = LyricsLineDisplayMode.CURRENT_ONLY,
@@ -62,8 +62,8 @@ class LyricsDisplayFormatterTest {
 
     @Test
     fun format_metadataLinesRenderRegardlessOfContentMode() {
-        val rendered = LyricsDisplayFormatter.format(
-            lines = listOf(
+        val rendered = PlainLyricsDisplayFormatter.format(
+            plainLines = listOf(
                 LrcLine(
                     timeMs = 0L,
                     text = "[ar:Artist]\n[ti:Title]",
@@ -81,20 +81,20 @@ class LyricsDisplayFormatterTest {
 
     @Test
     fun format_previousCurrentNextPreservesOrderAndSkipsOutOfBoundsIndexes() {
-        val middleRendered = LyricsDisplayFormatter.format(
-            lines = lines,
+        val middleRendered = PlainLyricsDisplayFormatter.format(
+            plainLines = plainLines,
             currentIndex = 1,
             contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
             lineMode = LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT
         )
-        val firstRendered = LyricsDisplayFormatter.format(
-            lines = lines,
+        val firstRendered = PlainLyricsDisplayFormatter.format(
+            plainLines = plainLines,
             currentIndex = 0,
             contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
             lineMode = LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT
         )
-        val lastRendered = LyricsDisplayFormatter.format(
-            lines = lines,
+        val lastRendered = PlainLyricsDisplayFormatter.format(
+            plainLines = plainLines,
             currentIndex = 2,
             contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
             lineMode = LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT
@@ -107,8 +107,8 @@ class LyricsDisplayFormatterTest {
 
     @Test
     fun format_previousAndCurrentPreservesNeighborOrder() {
-        val rendered = LyricsDisplayFormatter.format(
-            lines = lines,
+        val rendered = PlainLyricsDisplayFormatter.format(
+            plainLines = plainLines,
             currentIndex = 1,
             contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
             lineMode = LyricsLineDisplayMode.PREVIOUS_AND_CURRENT

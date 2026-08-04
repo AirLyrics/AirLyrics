@@ -13,12 +13,12 @@ internal fun Context.plainLyricsFormatErrorMessage(invalidLineNumbers: List<Int>
     }
 }
 
-internal fun Context.enhancedLyricsFormatErrorMessage(invalidLineNumbers: List<Int>): String {
+internal fun Context.wordByWordLyricsFormatErrorMessage(invalidLineNumbers: List<Int>): String {
     return if (invalidLineNumbers.isNotEmpty()) {
         val lines = invalidLineNumbers.take(8).joinToString(", ")
         val suffix = if (invalidLineNumbers.size > 8) "..." else ""
-        getString(R.string.lyrics_enhanced_format_invalid_lines, lines, suffix)
+        getString(R.string.lyrics_word_by_word_format_invalid_lines, lines, suffix)
     } else {
-        getString(R.string.ui_no_valid_enhanced_lrc_line_was_found)
+        getString(R.string.ui_no_valid_word_by_word_lyrics_line_was_found)
     }
 }

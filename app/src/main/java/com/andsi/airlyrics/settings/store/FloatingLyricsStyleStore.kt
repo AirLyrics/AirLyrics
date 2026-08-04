@@ -15,7 +15,8 @@ object FloatingLyricsStyleStore {
     private const val KEY_PRESET = "preset"
     private const val KEY_TEXT_SIZE = "text_size"
     private const val KEY_TEXT_COLOR = "text_color"
-    private const val KEY_KARAOKE_HIGHLIGHT_COLOR = "karaoke_highlight_color"
+    // Persisted compatibility contract. Do not change the serialized value.
+    private const val KEY_WORD_BY_WORD_HIGHLIGHT_COLOR = "karaoke_highlight_color"
     private const val KEY_SHADOW_COLOR = "shadow_color"
     private const val KEY_SHADOW_RADIUS = "shadow_radius"
     private const val KEY_BACKGROUND_ENABLED = "background_enabled"
@@ -43,7 +44,7 @@ object FloatingLyricsStyleStore {
     private data class PresetValues(
         val key: String,
         val textColor: Int = Color.WHITE,
-        val karaokeHighlightColor: Int = Color.rgb(120, 220, 255),
+        val wordByWordHighlightColor: Int = Color.rgb(120, 220, 255),
         val shadowColor: Int = Color.BLACK,
         val shadowRadius: Float,
         val backgroundEnabled: Boolean,
@@ -108,7 +109,7 @@ object FloatingLyricsStyleStore {
             presetName = normalizePreset(prefs.getString(KEY_PRESET, DEFAULT_PRESET)),
             textSizeSp = prefs.getFloat(KEY_TEXT_SIZE, 28f),
             textColor = prefs.getInt(KEY_TEXT_COLOR, Color.WHITE),
-            karaokeHighlightColor = prefs.getInt(KEY_KARAOKE_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255)),
+            wordByWordHighlightColor = prefs.getInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255)),
             shadowColor = prefs.getInt(KEY_SHADOW_COLOR, Color.BLACK),
             shadowRadius = prefs.getFloat(KEY_SHADOW_RADIUS, 8f),
             backgroundEnabled = prefs.getBoolean(KEY_BACKGROUND_ENABLED, true),
@@ -127,7 +128,7 @@ object FloatingLyricsStyleStore {
         prefs(context).edit {
             putString(KEY_PRESET, values.key)
             putInt(KEY_TEXT_COLOR, values.textColor)
-            putInt(KEY_KARAOKE_HIGHLIGHT_COLOR, values.karaokeHighlightColor)
+            putInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, values.wordByWordHighlightColor)
             putInt(KEY_SHADOW_COLOR, values.shadowColor)
             putFloat(KEY_SHADOW_RADIUS, values.shadowRadius)
             putBoolean(KEY_BACKGROUND_ENABLED, values.backgroundEnabled)
@@ -149,8 +150,8 @@ object FloatingLyricsStyleStore {
         prefs(context).setInt(KEY_TEXT_COLOR, color)
     }
 
-    fun setKaraokeHighlightColor(context: Context, color: Int) {
-        prefs(context).setInt(KEY_KARAOKE_HIGHLIGHT_COLOR, color)
+    fun setWordByWordHighlightColor(context: Context, color: Int) {
+        prefs(context).setInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, color)
     }
 
     fun setBackgroundColor(context: Context, color: Int) {

@@ -1,13 +1,13 @@
 package com.andsi.airlyrics.lyrics
 
-data class KaraokeLine(
+data class WordByWordLine(
     val startMs: Long,
     val endMs: Long,
     val text: String,
-    val tokens: List<KaraokeToken> = emptyList()
+    val segments: List<WordByWordSegment> = emptyList()
 )
 
-data class KaraokeToken(
+data class WordByWordSegment(
     val text: String,
     val startMs: Long,
     val endMs: Long

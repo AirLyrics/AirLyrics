@@ -31,8 +31,8 @@ open class FloatingLyricsService : Service() {
         contentModeProvider = { LyricsSettingsStore.getContentDisplayMode(this) },
         lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
-        karaokeEnabledProvider = { LyricsSettingsStore.isKaraokeLyricsEnabled(this) },
-        karaokeHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).karaokeHighlightColor },
+        wordByWordLyricsEnabledProvider = { LyricsSettingsStore.isWordByWordLyricsEnabled(this) },
+        wordByWordHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).wordByWordHighlightColor },
         noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric) }
     )
     internal val syncHandler = Handler(Looper.getMainLooper())

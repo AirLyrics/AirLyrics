@@ -8,8 +8,8 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
-import com.andsi.airlyrics.lyrics.KaraokeLine
-import com.andsi.airlyrics.lyrics.display.LyricsDisplayFormatter
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.display.PlainLyricsDisplayFormatter
 import com.andsi.airlyrics.lyrics.parser.LrcLine
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
@@ -25,13 +25,13 @@ class FloatingLyricsRenderer(
     private val contentModeProvider: () -> LyricsContentDisplayMode = { LyricsContentDisplayMode.default },
     private val lineModeProvider: () -> LyricsLineDisplayMode = { LyricsLineDisplayMode.default },
     private val switchAnimationModeProvider: () -> LyricsSwitchAnimationMode = { LyricsSwitchAnimationMode.default },
-    private val karaokeEnabledProvider: () -> Boolean = { false },
-    private val karaokeHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) },
+    private val wordByWordLyricsEnabledProvider: () -> Boolean = { false },
+    private val wordByWordHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) },
     private val noTranslationTextProvider: () -> String = { "No translation for this lyric" },
     private val uptimeMillisProvider: () -> Long = { SystemClock.uptimeMillis() }
 ) {
-    private var currentLyrics: List<LrcLine> = emptyList()
-    private var currentKaraokeLines: List<KaraokeLine> = emptyList()
+    private var currentPlainLines: List<LrcLine> = emptyList()
+    private var currentWordByWordLines: List<WordByWordLine> = emptyList()
     private var currentPositionMs: Long = 0L
     private var lastPositionUpdateUptimeMs: Long = 0L
     private var currentIsPlaying: Boolean = false
@@ -52,8 +52,8 @@ class FloatingLyricsRenderer(
     }
 
     fun clear() {
-        currentLyrics = emptyList()
-        currentKaraokeLines = emptyList()
+        currentPlainLines = emptyList()
+        currentWordByWordLines = emptyList()
         currentPositionMs = 0L
         lastPositionUpdateUptimeMs = 0L
         currentIsPlaying = false
@@ -63,8 +63,8 @@ class FloatingLyricsRenderer(
     }
 
     fun show(text: String) {
-        currentLyrics = emptyList()
-        currentKaraokeLines = emptyList()
+        currentPlainLines = emptyList()
+        currentWordByWordLines = emptyList()
         setTextImmediately(text)
     }
 
@@ -79,17 +79,17 @@ class FloatingLyricsRenderer(
     }
 
     fun parseAndShow(
-        lyrics: String,
-        translatedLyrics: String? = null,
-        karaokeLines: List<KaraokeLine> = emptyList(),
+        plainLrc: String,
+        translatedLrc: String? = null,
+        wordByWordLines: List<WordByWordLine> = emptyList(),
         emptyText: String
     ) {
-        currentLyrics = LrcParser.parseWithTranslation(lyrics, translatedLyrics)
-        currentKaraokeLines = karaokeLines
+        currentPlainLines = LrcParser.parseWithTranslation(plainLrc, translatedLrc)
+        currentWordByWordLines = wordByWordLines
 
-        val text = if (currentLyrics.isNotEmpty() || currentKaraokeLines.isNotEmpty()) {
+        val text = if (currentPlainLines.isNotEmpty() || currentWordByWordLines.isNotEmpty()) {
             renderAtCurrentPosition().takeIf { it.isNotBlankText() }
-                ?: renderTextAtIndex(0).takeIf { it.isNotBlankText() }
+                ?: renderPlainTextAtIndex(0).takeIf { it.isNotBlankText() }
                 ?: emptyText
         } else {
             emptyText
@@ -99,44 +99,43 @@ class FloatingLyricsRenderer(
     }
 
     fun tick() {
-        if (currentLyrics.isEmpty() && currentKaraokeLines.isEmpty()) return
+        if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) return
 
         val text = renderAtCurrentPosition().takeIf { it.isNotBlankText() } ?: return
         setTextWithOptionalAnimation(text)
     }
 
-    fun isKaraokeActive(): Boolean {
-        return karaokeEnabledProvider() && currentKaraokeLines.isNotEmpty()
+    fun isWordByWordActive(): Boolean {
+        return wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()
     }
 
     fun refresh() {
-        if (currentLyrics.isEmpty() && currentKaraokeLines.isEmpty()) return
+        if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) return
         val text = renderAtCurrentPosition().takeIf { it.isNotBlankText() }
-            ?: renderTextAtIndex(0).takeIf { it.isNotBlankText() }
+            ?: renderPlainTextAtIndex(0).takeIf { it.isNotBlankText() }
             ?: return
         setTextImmediately(text)
     }
 
     private fun renderAtCurrentPosition(): CharSequence {
         val positionMs = getEstimatedPositionMs()
-        val currentIndex = LrcParser.findCurrentIndex(currentLyrics, positionMs)
+        val currentIndex = LrcParser.findCurrentIndex(currentPlainLines, positionMs)
 
         if (currentIndex != null) {
-            if (karaokeEnabledProvider() && currentKaraokeLines.isNotEmpty()) {
-                renderTextAtIndexWithKaraoke(currentIndex, positionMs)
+            if (wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()) {
+                renderTextAtIndexWithWordByWord(currentIndex, positionMs)
                     .takeIf { it.isNotBlankText() }
                     ?.let { return it }
             }
-            return renderTextAtIndex(currentIndex)
+            return renderPlainTextAtIndex(currentIndex)
         }
 
-        // Safety fallback for unusual provider payloads. Normal providers should always
-        // return LRC lines; karaoke data is only an enhancement layer and must never make
-        // the floating window blank.
-        if (karaokeEnabledProvider() && currentKaraokeLines.isNotEmpty()) {
-            val karaokeIndex = findCurrentKaraokeIndex(positionMs)
-            if (karaokeIndex != null) {
-                renderKaraokeOnlyAtIndex(karaokeIndex, positionMs)
+        // Safety fallback for unusual payloads. Word-by-word lyrics are independent segment
+        // timing data, so they can still render when the accompanying plain LRC has no usable line.
+        if (wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()) {
+            val wordByWordIndex = findCurrentWordByWordIndex(positionMs)
+            if (wordByWordIndex != null) {
+                renderWordByWordOnlyAtIndex(wordByWordIndex, positionMs)
                     .takeIf { it.isNotBlankText() }
                     ?.let { return it }
             }
@@ -145,9 +144,9 @@ class FloatingLyricsRenderer(
         return ""
     }
 
-    private fun renderTextAtIndex(index: Int): CharSequence {
-        return LyricsDisplayFormatter.format(
-            lines = currentLyrics,
+    private fun renderPlainTextAtIndex(index: Int): CharSequence {
+        return PlainLyricsDisplayFormatter.format(
+            plainLines = currentPlainLines,
             currentIndex = index,
             contentMode = contentModeProvider(),
             lineMode = lineModeProvider(),
@@ -156,22 +155,22 @@ class FloatingLyricsRenderer(
     }
 
     /**
-     * Renders exactly the same content modes as [LyricsDisplayFormatter], but replaces only
-     * the current original line with wrap-safe karaoke highlighting when a matching local word-by-word line exists.
+     * Renders exactly the same content modes as [PlainLyricsDisplayFormatter], but replaces only
+     * the current original line with wrap-safe word-by-word highlighting when a matching local word-by-word line exists.
      * This keeps “original only / translation only / original + translation” independent of
-     * karaoke and prevents word-by-word text from leaking translations into original-only mode.
+     * word-by-word highlighting and prevents timed text from leaking translations into original-only mode.
      */
-    private fun renderTextAtIndexWithKaraoke(currentIndex: Int, positionMs: Long): CharSequence {
-        if (currentLyrics.isEmpty() || currentIndex !in currentLyrics.indices) return ""
+    private fun renderTextAtIndexWithWordByWord(currentIndex: Int, positionMs: Long): CharSequence {
+        if (currentPlainLines.isEmpty() || currentIndex !in currentPlainLines.indices) return ""
 
-        val indexes = visibleLrcIndexes(currentIndex)
+        val indexes = visiblePlainLineIndexes(currentIndex)
         if (indexes.isEmpty()) return ""
 
         val renderedLines = mutableListOf<CharSequence>()
         val contentMode = contentModeProvider()
 
         indexes.forEach { index ->
-            val line = currentLyrics[index]
+            val line = currentPlainLines[index]
             val original = line.text.trim()
             val translation = line.translation.orEmpty().trim()
             if (line.isMetadata) {
@@ -180,14 +179,14 @@ class FloatingLyricsRenderer(
             }
 
             val isCurrent = index == currentIndex
-            val karaokeLine = if (isCurrent) findKaraokeLineForLrc(line, positionMs) else null
+            val wordByWordLine = if (isCurrent) findWordByWordLineForPlainLine(line, positionMs) else null
 
             when (contentMode) {
                 LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
                     val block = SpannableStringBuilder()
                     if (original.isNotBlank()) {
                         block.append(
-                            if (karaokeLine != null) karaokeLineSpan(karaokeLine, original, positionMs)
+                            if (wordByWordLine != null) wordByWordLineSpan(wordByWordLine, original, positionMs)
                             else original
                         )
                     }
@@ -200,8 +199,8 @@ class FloatingLyricsRenderer(
 
                 LyricsContentDisplayMode.ORIGINAL_ONLY -> {
                     if (original.isNotBlank()) {
-                        renderedLines += if (karaokeLine != null) {
-                            karaokeLineSpan(karaokeLine, original, positionMs)
+                        renderedLines += if (wordByWordLine != null) {
+                            wordByWordLineSpan(wordByWordLine, original, positionMs)
                         } else {
                             original
                         }
@@ -230,48 +229,48 @@ class FloatingLyricsRenderer(
         }
     }
 
-    private fun visibleLrcIndexes(currentIndex: Int): List<Int> {
+    private fun visiblePlainLineIndexes(currentIndex: Int): List<Int> {
         val indexes = when (lineModeProvider()) {
             LyricsLineDisplayMode.CURRENT_ONLY -> listOf(currentIndex)
             LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> listOf(currentIndex - 1, currentIndex)
             LyricsLineDisplayMode.CURRENT_AND_NEXT -> listOf(currentIndex, currentIndex + 1)
             LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> listOf(currentIndex - 1, currentIndex, currentIndex + 1)
         }
-        return indexes.filter { it in currentLyrics.indices }
+        return indexes.filter { it in currentPlainLines.indices }
     }
 
-    private fun findKaraokeLineForLrc(line: LrcLine, positionMs: Long): KaraokeLine? {
-        if (line.isMetadata) return null
-        if (currentKaraokeLines.isEmpty()) return null
+    private fun findWordByWordLineForPlainLine(plainLine: LrcLine, positionMs: Long): WordByWordLine? {
+        if (plainLine.isMetadata) return null
+        if (currentWordByWordLines.isEmpty()) return null
 
-        fun List<KaraokeLine>.bestCompatible(maxDistanceMs: Long): KaraokeLine? {
-            return sortedBy { kotlin.math.abs(it.startMs - line.timeMs) }
+        fun List<WordByWordLine>.bestCompatible(maxDistanceMs: Long): WordByWordLine? {
+            return sortedBy { kotlin.math.abs(it.startMs - plainLine.timeMs) }
                 .firstOrNull { candidate ->
-                    kotlin.math.abs(candidate.startMs - line.timeMs) <= maxDistanceMs &&
-                        isTextCompatible(line.text, karaokeOriginalText(candidate))
+                    kotlin.math.abs(candidate.startMs - plainLine.timeMs) <= maxDistanceMs &&
+                        isTextCompatible(plainLine.text, wordByWordOriginalText(candidate))
                 }
         }
 
-        val aroundPosition = currentKaraokeLines
+        val aroundPosition = currentWordByWordLines
             .filter { positionMs in (it.startMs - 350L)..(it.endMs + 700L) }
             .bestCompatible(maxDistanceMs = 2_500L)
         if (aroundPosition != null) return aroundPosition
 
-        return currentKaraokeLines.bestCompatible(maxDistanceMs = 1_500L)
+        return currentWordByWordLines.bestCompatible(maxDistanceMs = 1_500L)
     }
 
-    private fun renderKaraokeOnlyAtIndex(index: Int, positionMs: Long): CharSequence {
+    private fun renderWordByWordOnlyAtIndex(index: Int, positionMs: Long): CharSequence {
         if (contentModeProvider() == LyricsContentDisplayMode.TRANSLATION_ONLY) {
             return noTranslationTextProvider()
         }
 
-        val renderedLines = visibleKaraokeIndexes(index).mapNotNull { visibleIndex ->
-            val line = currentKaraokeLines.getOrNull(visibleIndex) ?: return@mapNotNull null
-            val original = karaokeOriginalText(line)
+        val renderedLines = visibleWordByWordIndexes(index).mapNotNull { visibleIndex ->
+            val wordByWordLine = currentWordByWordLines.getOrNull(visibleIndex) ?: return@mapNotNull null
+            val original = wordByWordOriginalText(wordByWordLine)
             if (original.isBlank()) {
                 null
             } else if (visibleIndex == index) {
-                karaokeLineSpan(line, original, positionMs)
+                wordByWordLineSpan(wordByWordLine, original, positionMs)
             } else {
                 original
             }
@@ -287,26 +286,30 @@ class FloatingLyricsRenderer(
         }
     }
 
-    private fun visibleKaraokeIndexes(currentIndex: Int): List<Int> {
+    private fun visibleWordByWordIndexes(currentIndex: Int): List<Int> {
         val indexes = when (lineModeProvider()) {
             LyricsLineDisplayMode.CURRENT_ONLY -> listOf(currentIndex)
             LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> listOf(currentIndex - 1, currentIndex)
             LyricsLineDisplayMode.CURRENT_AND_NEXT -> listOf(currentIndex, currentIndex + 1)
             LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> listOf(currentIndex - 1, currentIndex, currentIndex + 1)
         }
-        return indexes.filter { it in currentKaraokeLines.indices }
+        return indexes.filter { it in currentWordByWordLines.indices }
     }
 
-    private fun karaokeLineSpan(line: KaraokeLine, displayText: String, positionMs: Long): CharSequence {
+    private fun wordByWordLineSpan(
+        wordByWordLine: WordByWordLine,
+        displayText: String,
+        positionMs: Long
+    ): CharSequence {
         val text = displayText.trim()
         if (text.isBlank()) return ""
 
-        val highlightEnd = karaokeHighlightEnd(line, text, positionMs)
+        val highlightEnd = wordByWordHighlightEnd(wordByWordLine, text, positionMs)
             .coerceIn(0, text.length)
         val span = SpannableString(text)
         if (highlightEnd > 0) {
             span.setSpan(
-                ForegroundColorSpan(karaokeHighlightColorProvider()),
+                ForegroundColorSpan(wordByWordHighlightColorProvider()),
                 0,
                 highlightEnd,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -315,8 +318,8 @@ class FloatingLyricsRenderer(
         return span
     }
 
-    private fun karaokeOriginalText(line: KaraokeLine): String {
-        return line.text
+    private fun wordByWordOriginalText(wordByWordLine: WordByWordLine): String {
+        return wordByWordLine.text
             .replace(" / ", "\n")
             .replace("／", "\n")
             .lines()
@@ -325,62 +328,66 @@ class FloatingLyricsRenderer(
             .orEmpty()
     }
 
-    private fun karaokeHighlightEnd(line: KaraokeLine, displayText: String, positionMs: Long): Int {
+    private fun wordByWordHighlightEnd(
+        wordByWordLine: WordByWordLine,
+        displayText: String,
+        positionMs: Long
+    ): Int {
         if (displayText.isBlank()) return 0
-        if (positionMs <= line.startMs) return 0
-        if (positionMs >= line.endMs) return displayText.length
+        if (positionMs <= wordByWordLine.startMs) return 0
+        if (positionMs >= wordByWordLine.endMs) return displayText.length
 
         var searchStart = 0
         var completedCharEnd = 0
 
-        for (token in line.tokens) {
-            val tokenText = token.text.trim()
-            if (tokenText.isBlank()) continue
+        for (segment in wordByWordLine.segments) {
+            val segmentText = segment.text.trim()
+            if (segmentText.isBlank()) continue
 
-            val tokenStart = displayText.indexOf(tokenText, searchStart).takeIf { it >= 0 }
-                ?: displayText.indexOf(tokenText).takeIf { it >= 0 }
+            val segmentStart = displayText.indexOf(segmentText, searchStart).takeIf { it >= 0 }
+                ?: displayText.indexOf(segmentText).takeIf { it >= 0 }
                 ?: continue
-            val tokenEnd = tokenStart + tokenText.length
-            searchStart = tokenEnd
+            val segmentEnd = segmentStart + segmentText.length
+            searchStart = segmentEnd
 
             when {
-                positionMs >= token.endMs -> completedCharEnd = tokenEnd
-                positionMs in token.startMs until token.endMs -> {
-                    val duration = (token.endMs - token.startMs).coerceAtLeast(1L)
-                    val tokenProgress = ((positionMs - token.startMs).toFloat() / duration.toFloat())
+                positionMs >= segment.endMs -> completedCharEnd = segmentEnd
+                positionMs in segment.startMs until segment.endMs -> {
+                    val duration = (segment.endMs - segment.startMs).coerceAtLeast(1L)
+                    val segmentProgress = ((positionMs - segment.startMs).toFloat() / duration.toFloat())
                         .coerceIn(0f, 1f)
-                    val eased = smoothStep(tokenProgress)
-                    val currentEnd = tokenStart + kotlin.math.ceil(tokenText.length * eased).toInt()
+                    val eased = smoothStep(segmentProgress)
+                    val currentEnd = segmentStart + kotlin.math.ceil(segmentText.length * eased).toInt()
                     return currentEnd.coerceAtLeast(completedCharEnd).coerceIn(0, displayText.length)
                 }
                 else -> return completedCharEnd.coerceIn(0, displayText.length)
             }
         }
 
-        val duration = (line.endMs - line.startMs).coerceAtLeast(1L)
-        val lineProgress = ((positionMs - line.startMs).toFloat() / duration.toFloat())
+        val duration = (wordByWordLine.endMs - wordByWordLine.startMs).coerceAtLeast(1L)
+        val lineProgress = ((positionMs - wordByWordLine.startMs).toFloat() / duration.toFloat())
             .coerceIn(0f, 1f)
         return kotlin.math.ceil(displayText.length * smoothStep(lineProgress)).toInt()
             .coerceIn(0, displayText.length)
     }
 
-    private fun normalizeKaraokeMatchText(text: String): String {
+    private fun normalizeWordByWordMatchText(text: String): String {
         return text.lowercase()
             .replace(Regex("""[^\p{L}\p{N}]"""), "")
             .trim()
     }
 
-    private fun isTextCompatible(lrcText: String, karaokeText: String): Boolean {
-        val lrc = normalizeKaraokeMatchText(lrcText)
-        val karaoke = normalizeKaraokeMatchText(karaokeText)
-        if (lrc.isBlank() || karaoke.isBlank()) return false
-        if (lrc == karaoke) return true
-        if (lrc.length >= 2 && karaoke.length >= 2 && (lrc.contains(karaoke) || karaoke.contains(lrc))) {
+    private fun isTextCompatible(lrcText: String, wordByWordText: String): Boolean {
+        val lrc = normalizeWordByWordMatchText(lrcText)
+        val wordByWordLyrics = normalizeWordByWordMatchText(wordByWordText)
+        if (lrc.isBlank() || wordByWordLyrics.isBlank()) return false
+        if (lrc == wordByWordLyrics) return true
+        if (lrc.length >= 2 && wordByWordLyrics.length >= 2 && (lrc.contains(wordByWordLyrics) || wordByWordLyrics.contains(lrc))) {
             return true
         }
 
-        val shorter = if (lrc.length <= karaoke.length) lrc else karaoke
-        val longer = if (lrc.length <= karaoke.length) karaoke else lrc
+        val shorter = if (lrc.length <= wordByWordLyrics.length) lrc else wordByWordLyrics
+        val longer = if (lrc.length <= wordByWordLyrics.length) wordByWordLyrics else lrc
         val minCommonLength = when {
             shorter.length >= 12 -> 8
             shorter.length >= 6 -> 4
@@ -397,16 +404,16 @@ class FloatingLyricsRenderer(
         return t * t * (3f - 2f * t)
     }
 
-    private fun findCurrentKaraokeIndex(positionMs: Long): Int? {
-        if (currentKaraokeLines.isEmpty()) return null
+    private fun findCurrentWordByWordIndex(positionMs: Long): Int? {
+        if (currentWordByWordLines.isEmpty()) return null
 
         var left = 0
-        var right = currentKaraokeLines.lastIndex
+        var right = currentWordByWordLines.lastIndex
         var result: Int? = null
 
         while (left <= right) {
             val mid = (left + right) / 2
-            val line = currentKaraokeLines[mid]
+            val line = currentWordByWordLines[mid]
 
             if (line.startMs <= positionMs) {
                 result = mid
@@ -432,11 +439,11 @@ class FloatingLyricsRenderer(
 
     private fun setTextWithOptionalAnimation(text: CharSequence) {
         val textKey = text.toString()
-        val isKaraokeTick = karaokeEnabledProvider() && currentKaraokeLines.isNotEmpty()
-        if (!isKaraokeTick && textKey == lastRenderedText) return
+        val isWordByWordTick = wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()
+        if (!isWordByWordTick && textKey == lastRenderedText) return
 
         val mode = switchAnimationModeProvider()
-        if (isKaraokeTick || lastRenderedText == null) {
+        if (isWordByWordTick || lastRenderedText == null) {
             setTextImmediately(text)
             return
         }

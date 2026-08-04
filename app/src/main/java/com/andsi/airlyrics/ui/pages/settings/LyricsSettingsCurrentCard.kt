@@ -54,16 +54,22 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             return
         }
 
-        val karaokeSummary = when {
-            state.localWordByWord && state.karaokeEnabled -> getString(R.string.ui_available_local_enhanced_lrc)
-            state.localWordByWord -> getString(R.string.ui_imported_off)
+        val wordByWordSummary = when {
+            state.hasLocalWordByWordLyrics && state.wordByWordLyricsEnabled -> getString(R.string.ui_available_local_word_by_word_lyrics)
+            state.hasLocalWordByWordLyrics -> getString(R.string.ui_imported_off)
             else -> getString(R.string.ui_not_imported)
         }
 
         body.addView(normalText(activity, media.displayText))
-        body.addView(settingRow(activity, getString(R.string.ui_lyrics_source), state.localSourceText ?: getString(R.string.ui_no_plain_lrc)))
+        body.addView(
+            settingRow(
+                activity,
+                getString(R.string.ui_plain_lyrics_source),
+                state.localSourceText ?: getString(R.string.ui_no_plain_lrc)
+            )
+        )
         body.addView(settingRow(activity, getString(R.string.ui_plain_lyrics), state.plainLyricsTitle ?: getString(R.string.ui_not_bound)))
-        body.addView(karaokeStatusRow(activity, karaokeSummary))
+        body.addView(wordByWordStatusRow(activity, wordByWordSummary))
         body.addView(settingRow(activity, getString(R.string.ui_current_offset), localizedOffsetDescription(state.offsetMs)))
         if (state.offsetMs != 0L) {
             body.addView(smallHint(activity, getString(R.string.ui_offset_per_song_hint)))
@@ -83,7 +89,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             }
         }
 
-        if (state.hasPlainLyrics && !state.localWordByWord) {
+        if (state.hasPlainLyrics && !state.hasLocalWordByWordLyrics) {
             val plainLabel = if (state.plainLyricsDownloaded) getString(R.string.ui_remove_downloaded_lrc) else getString(R.string.ui_remove_plain_lrc)
             body.addView(actionButton(activity, plainLabel) {
                 confirmDeleteLyrics(
@@ -94,17 +100,17 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             })
         }
 
-        if (state.localWordByWord) {
-            body.addView(actionButton(activity, getString(R.string.ui_remove_enhanced_lrc)) {
+        if (state.hasLocalWordByWordLyrics) {
+            body.addView(actionButton(activity, getString(R.string.ui_remove_word_by_word_lyrics)) {
                 confirmDeleteLyrics(
-                    label = getString(R.string.ui_remove_enhanced_lrc_confirm),
-                    mode = LyricsDeleteMode.KARAOKE,
-                    message = getString(R.string.ui_remove_enhanced_lrc_message)
+                    label = getString(R.string.ui_remove_word_by_word_lyrics_confirm),
+                    mode = LyricsDeleteMode.WORD_BY_WORD,
+                    message = getString(R.string.ui_remove_word_by_word_lyrics_message)
                 )
             })
         }
 
-        if (state.canRemoveAllLyrics && state.localWordByWord) {
+        if (state.canRemoveAllLyrics && state.hasLocalWordByWordLyrics) {
             body.addView(actionButton(activity, getString(R.string.ui_remove_all_lyrics)) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_all_lyrics_confirm),
@@ -114,7 +120,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             })
         }
 
-        if (!state.localWordByWord) {
+        if (!state.hasLocalWordByWordLyrics) {
             body.addView(actionButton(activity, getString(R.string.ui_search_online_again)) {
                 activity.showAirConfirmDialog(
                     title = getString(R.string.ui_search_online_again_confirm),
@@ -176,14 +182,14 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
     }
 }
 
-private fun karaokeStatusRow(activity: MainUiHost, value: String): View = with(activity) {
+private fun wordByWordStatusRow(activity: MainUiHost, value: String): View = with(activity) {
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
 
         addView(TextView(activity).apply {
-            text = getString(R.string.ui_enhanced_lrc)
+            text = getString(R.string.ui_word_by_word_lyrics)
             textSize = AirUiTokens.TextSize.Button
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -214,8 +220,8 @@ private fun karaokeStatusRow(activity: MainUiHost, value: String): View = with(a
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
             setOnClickListener {
                 activity.showAirInfoDialog(
-                    title = getString(R.string.ui_local_enhanced_lrc_title),
-                    message = getString(R.string.ui_enhanced_lrc_local_only_message)
+                    title = getString(R.string.ui_local_word_by_word_lyrics_title),
+                    message = getString(R.string.ui_word_by_word_lyrics_local_only_message)
                 )
             }
         })

@@ -8,11 +8,11 @@ internal data class LyricsIndexEntry(
     val artist: String,
     val album: String,
     val durationMs: Long,
-    val file: String,
-    val karaokeFile: String = "",
-    val source: String,
-    val provider: String,
-    val karaokeProvider: String = "",
+    val plainFile: String,
+    val wordByWordFile: String = "",
+    val plainSource: String,
+    val plainProvider: String,
+    val wordByWordProvider: String = "",
     val createdAt: Long,
     val updatedAt: Long
 )

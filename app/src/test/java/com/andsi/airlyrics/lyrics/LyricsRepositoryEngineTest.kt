@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import java.util.concurrent.CancellationException
@@ -28,23 +28,26 @@ class LyricsRepositoryEngineTest {
 
     @Test
     fun findLyrics_returnsLocalLyricsBeforeOnlineProvider() {
-        val local = FakeProvider("local", Result.success(result("local", "[00:01.00]local")))
-        val online = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
+        val local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]local")))
+        val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(local = local, online = online)
 
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
 
-        assertEquals("local", found?.providerId)
+        assertEquals("local", found?.plainProviderId)
         assertEquals(1, local.calls)
         assertEquals(0, online.calls)
     }
 
     @Test
     fun findLyrics_localOnlyDoesNotCallOnlineProvider() {
-        val online = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
+        val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
             online = online,
-            settings = settings(source = LyricsSearchSource.LOCAL_ONLY, autoSearchOnline = false)
+            settings = settings(
+                plainLyricsSearchSource = PlainLyricsSearchSource.LOCAL_ONLY,
+                autoSearchOnline = false
+            )
         )
 
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
@@ -55,7 +58,7 @@ class LyricsRepositoryEngineTest {
 
     @Test
     fun findLyrics_respectsAutoSearchOnlineWhenNotIgnored() {
-        val online = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
+        val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
             online = online,
             settings = settings(autoSearchOnline = false)
@@ -69,10 +72,10 @@ class LyricsRepositoryEngineTest {
 
     @Test
     fun findLyrics_doesNotFallbackWhenSelectedOnlineProviderIsMissing() {
-        val netease = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
+        val netease = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
             online = netease,
-            settings = settings(source = LyricsSearchSource.MUSIXMATCH)
+            settings = settings(plainLyricsSearchSource = PlainLyricsSearchSource.MUSIXMATCH)
         )
 
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
@@ -83,7 +86,7 @@ class LyricsRepositoryEngineTest {
 
     @Test
     fun findLyrics_ignoreAutoSearchSettingAllowsManualOnlineLookup() {
-        val online = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
+        val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
             online = online,
             settings = settings(autoSearchOnline = false)
@@ -97,14 +100,14 @@ class LyricsRepositoryEngineTest {
             ignoreAutoSearchSetting = true
         ).getOrThrow()
 
-        assertEquals("netease", found?.providerId)
+        assertEquals("netease", found?.plainProviderId)
         assertEquals(1, online.calls)
     }
 
     @Test
     fun findLyrics_bypassLocalCallsOnlineProvider() {
-        val local = FakeProvider("local", Result.success(result("local", "[00:01.00]local")))
-        val online = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online")))
+        val local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]local")))
+        val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(local = local, online = online)
 
         val found = engine.findLyrics(
@@ -115,38 +118,38 @@ class LyricsRepositoryEngineTest {
             bypassLocal = true
         ).getOrThrow()
 
-        assertEquals("netease", found?.providerId)
+        assertEquals("netease", found?.plainProviderId)
         assertEquals(0, local.calls)
         assertEquals(1, online.calls)
     }
 
     @Test
     fun findLyrics_autoSavesSuccessfulOnlineResult() {
-        val onlineResult = result(
-            providerId = "netease",
-            lyrics = "[00:01.00]hello",
-            translatedLyrics = "[00:01.00]你好"
+        val onlinePlainLyricsResult = result(
+            plainProviderId = "netease",
+            plainLrc = "[00:01.00]hello",
+            translatedLrc = "[00:01.00]你好"
         )
-        val saver = RecordingSaver()
+        val saver = RecordingPlainLyricsSaver()
         val engine = engine(
-            online = FakeProvider("netease", Result.success(onlineResult)),
-            localLyricsSaver = saver
+            online = FakePlainLyricsProvider("netease", Result.success(onlinePlainLyricsResult)),
+            localPlainLyricsSaver = saver
         )
 
         engine.findLyrics(context, "Song", "Artist", album = "Album", durationMs = 180_000L).getOrThrow()
 
         assertEquals(1, saver.saved.size)
-        assertSame(onlineResult, saver.saved.single().result)
+        assertSame(onlinePlainLyricsResult, saver.saved.single().plainLyricsResult)
         assertEquals("Album", saver.saved.single().album)
     }
 
     @Test
     fun findLyrics_forceSaveOnlineOverridesAutoSaveDisabled() {
-        val saver = RecordingSaver()
+        val saver = RecordingPlainLyricsSaver()
         val engine = engine(
-            online = FakeProvider("netease", Result.success(result("netease", "[00:01.00]online"))),
+            online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online"))),
             settings = settings(autoSaveLocal = false),
-            localLyricsSaver = saver
+            localPlainLyricsSaver = saver
         )
 
         engine.findLyrics(
@@ -161,22 +164,22 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun findLyrics_attachesCachedKaraokeWhenEnabled() {
-        val karaokeLine = KaraokeLine(
+    fun findLyrics_attachesCachedWordByWordWhenEnabled() {
+        val wordByWordLine = WordByWordLine(
             startMs = 1_000L,
             endMs = 2_000L,
             text = "hello",
-            tokens = listOf(KaraokeToken("hello", 1_000L, 2_000L))
+            segments = listOf(WordByWordSegment("hello", 1_000L, 2_000L))
         )
         val engine = engine(
-            local = FakeProvider("local", Result.success(result("local", "[00:01.00]hello"))),
-            settings = settings(karaokeLyricsEnabled = true),
-            karaokeLyricsReader = KaraokeLyricsReader { _, _, _, _ -> listOf(karaokeLine) }
+            local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]hello"))),
+            settings = settings(wordByWordLyricsEnabled = true),
+            wordByWordLyricsReader = WordByWordLyricsReader { _, _, _, _ -> listOf(wordByWordLine) }
         )
 
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
 
-        assertEquals(listOf(karaokeLine), found?.karaokeLines)
+        assertEquals(listOf(wordByWordLine), found?.wordByWordLines)
     }
 
     @Test
@@ -184,7 +187,7 @@ class LyricsRepositoryEngineTest {
         val failure = IllegalStateException("provider down")
         val logger = RecordingLogger()
         val engine = engine(
-            online = FakeProvider("netease", Result.failure(failure)),
+            online = FakePlainLyricsProvider("netease", Result.failure(failure)),
             lookupLogger = logger
         )
 
@@ -196,7 +199,7 @@ class LyricsRepositoryEngineTest {
 
     @Test
     fun findLyrics_stopsWhenCancellationTokenIsAlreadyCanceled() {
-        val local = FakeProvider("local", Result.success(result("local", "[00:01.00]local")))
+        val local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]local")))
         val engine = engine(local = local)
         val token = LyricsLookupCancellationToken(requestKey = "song", generation = 1L)
         token.cancel()
@@ -214,70 +217,70 @@ class LyricsRepositoryEngineTest {
     }
 
     private fun engine(
-        local: LyricsProvider = FakeProvider("local", Result.success(null)),
-        online: LyricsProvider = FakeProvider("netease", Result.success(null)),
+        local: PlainLyricsProvider = FakePlainLyricsProvider("local", Result.success(null)),
+        online: PlainLyricsProvider = FakePlainLyricsProvider("netease", Result.success(null)),
         settings: LyricsSettings = settings(),
-        localLyricsSaver: LocalLyricsSaver = RecordingSaver(),
-        karaokeLyricsReader: KaraokeLyricsReader = KaraokeLyricsReader { _, _, _, _ -> emptyList() },
+        localPlainLyricsSaver: LocalPlainLyricsSaver = RecordingPlainLyricsSaver(),
+        wordByWordLyricsReader: WordByWordLyricsReader = WordByWordLyricsReader { _, _, _, _ -> emptyList() },
         lookupLogger: LyricsLookupLogger = RecordingLogger()
     ): LyricsRepositoryEngine {
         return LyricsRepositoryEngine(
-            localProvider = local,
-            onlineProviders = mapOf(LyricsSearchSource.NETEASE to online),
+            localPlainLyricsProvider = local,
+            onlinePlainLyricsProviders = mapOf(PlainLyricsSearchSource.NETEASE to online),
             settingsReader = { settings },
-            localLyricsSaver = localLyricsSaver,
-            karaokeLyricsReader = karaokeLyricsReader,
+            localPlainLyricsSaver = localPlainLyricsSaver,
+            wordByWordLyricsReader = wordByWordLyricsReader,
             lookupLogger = lookupLogger
         )
     }
 
     private fun settings(
-        source: LyricsSearchSource = LyricsSearchSource.NETEASE,
+        plainLyricsSearchSource: PlainLyricsSearchSource = PlainLyricsSearchSource.NETEASE,
         autoSearchOnline: Boolean = true,
         autoSaveLocal: Boolean = true,
-        karaokeLyricsEnabled: Boolean = false
+        wordByWordLyricsEnabled: Boolean = false
     ): LyricsSettings {
         return LyricsSettings(
-            source = source,
+            plainLyricsSearchSource = plainLyricsSearchSource,
             autoSearchOnline = autoSearchOnline,
             autoSaveLocal = autoSaveLocal,
             contentDisplayMode = LyricsContentDisplayMode.default,
             lineDisplayMode = LyricsLineDisplayMode.default,
             switchAnimationMode = LyricsSwitchAnimationMode.default,
-            karaokeLyricsEnabled = karaokeLyricsEnabled
+            wordByWordLyricsEnabled = wordByWordLyricsEnabled
         )
     }
 
     private fun result(
-        providerId: String,
-        lyrics: String,
-        translatedLyrics: String? = null
+        plainProviderId: String,
+        plainLrc: String,
+        translatedLrc: String? = null
     ): LyricsProviderResult {
         return LyricsProviderResult(
-            providerId = providerId,
-            providerName = providerId,
-            lyrics = lyrics,
-            translatedLyrics = translatedLyrics
+            plainProviderId = plainProviderId,
+            plainProviderName = plainProviderId,
+            plainLrc = plainLrc,
+            translatedLrc = translatedLrc
         )
     }
 
-    private class FakeProvider(
+    private class FakePlainLyricsProvider(
         override val id: String,
         private val response: Result<LyricsProviderResult?>
-    ) : LyricsProvider {
+    ) : PlainLyricsProvider {
         override val name: String = id
-        private val requests = mutableListOf<LyricsSearchRequest>()
+        private val requests = mutableListOf<PlainLyricsSearchRequest>()
         val calls: Int
             get() = requests.size
 
-        override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
+        override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
             requests += request
             return response
         }
     }
 
-    private class RecordingSaver : LocalLyricsSaver {
-        val saved = mutableListOf<SavedLyrics>()
+    private class RecordingPlainLyricsSaver : LocalPlainLyricsSaver {
+        val saved = mutableListOf<SavedPlainLyrics>()
 
         override fun save(
             context: Context,
@@ -285,18 +288,18 @@ class LyricsRepositoryEngineTest {
             artist: String,
             album: String,
             durationMs: Long,
-            result: LyricsProviderResult
+            plainLyricsResult: LyricsProviderResult
         ) {
-            saved += SavedLyrics(title, artist, album, durationMs, result)
+            saved += SavedPlainLyrics(title, artist, album, durationMs, plainLyricsResult)
         }
     }
 
-    private data class SavedLyrics(
+    private data class SavedPlainLyrics(
         val title: String,
         val artist: String,
         val album: String,
         val durationMs: Long,
-        val result: LyricsProviderResult
+        val plainLyricsResult: LyricsProviderResult
     )
 
     private class RecordingLogger : LyricsLookupLogger {
@@ -304,7 +307,7 @@ class LyricsRepositoryEngineTest {
             private set
 
         override fun logProviderFailure(
-            provider: LyricsProvider,
+            provider: PlainLyricsProvider,
             title: String,
             artist: String,
             durationMs: Long,

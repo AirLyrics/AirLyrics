@@ -20,8 +20,8 @@ AirLyrics 是一个 Android 手机端悬浮歌词应用。Android 端使用 Kotl
           -> MainGraph
       -> FloatingLyricsService
           -> LyricsRepository
-              -> LocalLyricsProvider
-              -> NeteaseLyricsProvider 或 MusixmatchLyricsProvider
+              -> LocalPlainLyricsProvider
+              -> NeteasePlainLyricsProvider 或 MusixmatchPlainLyricsProvider
               -> LyricsStorage 可选本地保存
           -> FloatingLyricsWindow
           -> FloatingLyricsRenderer
@@ -139,7 +139,7 @@ app/render/MainHandRenderer.kt
 3. 根据用户设置，将联网查询结果保存到本地。
 4. 启用逐字歌词时，尝试附加本地保存的逐字歌词。
 
-除非请求明确跳过本地查询，否则 `LocalLyricsProvider`
+除非请求明确跳过本地查询，否则 `LocalPlainLyricsProvider`
 始终优先于联网歌词来源。
 
 逐字歌词导入后会生成普通 LRC 作为普通显示模式的回退内容。该普通 LRC 由逐字歌词维护；

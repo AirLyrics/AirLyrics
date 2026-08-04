@@ -18,22 +18,22 @@ internal fun Context.localizedOffsetDescription(offsetMs: Long): String {
     }
 }
 
-internal fun Context.localizedProviderName(providerIdOrName: String): String {
-    return when (providerIdOrName.trim().lowercase(Locale.ROOT)) {
-        "local", "local lyrics" -> getString(R.string.provider_local_lyrics)
-        "netease", "netease lyrics", "netease cloud music", "\u7f51\u6613\u4e91\u6b4c\u8bcd", "\u7f51\u6613\u4e91\u97f3\u4e50" -> getString(R.string.provider_netease_lyrics)
+internal fun Context.localizedPlainLyricsProviderName(plainProviderIdOrName: String): String {
+    return when (plainProviderIdOrName.trim().lowercase(Locale.ROOT)) {
+        "local", "local lyrics" -> getString(R.string.provider_local_plain_lyrics)
+        "netease", "netease lyrics", "netease cloud music", "\u7f51\u6613\u4e91\u6b4c\u8bcd", "\u7f51\u6613\u4e91\u97f3\u4e50" -> getString(R.string.provider_netease_plain_lyrics)
         "musixmatch" -> getString(R.string.provider_musixmatch)
-        else -> providerIdOrName.ifBlank { getString(R.string.provider_local_lyrics) }
+        else -> plainProviderIdOrName.ifBlank { getString(R.string.provider_local_plain_lyrics) }
     }
 }
 
-internal fun Context.localizedLocalLyricsSource(source: String, provider: String): String {
-    return when (source) {
+internal fun Context.localizedLocalPlainLyricsSource(plainSource: String, plainProvider: String): String {
+    return when (plainSource) {
         LyricsStorage.SOURCE_MANUAL_IMPORT -> getString(R.string.ui_import)
-        LyricsStorage.SOURCE_KARAOKE_FALLBACK -> getString(R.string.ui_generated_from_enhanced_lrc)
+        LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK -> getString(R.string.ui_generated_from_word_by_word_lyrics)
         LyricsStorage.SOURCE_DOWNLOADED -> {
-            val providerName = localizedProviderName(provider)
-            if (provider.isBlank() || provider.trim().equals("local", ignoreCase = true)) {
+            val providerName = localizedPlainLyricsProviderName(plainProvider)
+            if (plainProvider.isBlank() || plainProvider.trim().equals("local", ignoreCase = true)) {
                 getString(R.string.ui_cache)
             } else {
                 getString(R.string.local_source_cache_provider, providerName)
@@ -44,18 +44,18 @@ internal fun Context.localizedLocalLyricsSource(source: String, provider: String
     }
 }
 
-internal fun Context.localizedLocalLyricsSource(info: LyricsStorage.LocalLyricsInfo): String {
-    return localizedLocalLyricsSource(info.source, info.provider)
+internal fun Context.localizedLocalPlainLyricsSource(info: LyricsStorage.LocalPlainLyricsInfo): String {
+    return localizedLocalPlainLyricsSource(info.plainSource, info.plainProvider)
 }
 
 internal fun Context.localizedLocalLyricsSubtitle(item: LyricsStorage.LocalLyricsItem): String {
     val artistPart = item.artist.ifBlank { getString(R.string.ui_unknown_artist) }
-    return artistPart + " · " + localizedLocalLyricsSource(item.source, item.provider)
+    return artistPart + " · " + localizedLocalPlainLyricsSource(item.source, item.provider)
 }
 
 internal fun Context.localizedLocalLyricsType(item: LyricsStorage.LocalLyricsItem): String {
     return when {
-        item.hasKaraokeLyrics -> getString(R.string.ui_enhanced)
+        item.hasWordByWordLyrics -> getString(R.string.ui_word_by_word)
         item.hasPlainLyrics -> getString(R.string.ui_plain)
         else -> getString(R.string.ui_unknown_type)
     }
@@ -79,7 +79,7 @@ internal fun Context.localizedLocalLyricsMeta(item: LyricsStorage.LocalLyricsIte
 }
 
 internal fun Context.localizedLyricsLookupMessage(error: LyricsLookupException): String {
-    val providerName = localizedProviderName(error.providerId.ifBlank { error.providerName })
+    val providerName = localizedPlainLyricsProviderName(error.providerId.ifBlank { error.providerName })
     return when (error.errorType) {
         LyricsLookupErrorType.NotFound -> getString(R.string.lyrics_lookup_not_found, providerName)
         LyricsLookupErrorType.NeedCredential -> getString(R.string.lyrics_lookup_need_credentials, providerName)

@@ -12,7 +12,7 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class PendingLyricsImportTest {
     @Test
-    fun bundleRoundTrip_preservesTargetAndType() {
+    fun wordByWordBundle_writesCompatibilityTypeValue() {
         val request = PendingLyricsImport(
             target = SongIdentity(
                 title = "Original song",
@@ -23,7 +23,25 @@ class PendingLyricsImportTest {
             type = LyricsImportType.WORD_BY_WORD
         )
 
-        assertEquals(request, request.toBundle().toPendingLyricsImport())
+        assertEquals("WORD_BY_WORD", request.toBundle().getString("type"))
+    }
+
+    @Test
+    fun wordByWordBundle_restoresCompatibilityTypeValue() {
+        val expected = PendingLyricsImport(
+            target = SongIdentity(
+                title = "Original song",
+                artist = "Original artist",
+                album = "Original album",
+                durationMs = 185_000L
+            ),
+            type = LyricsImportType.WORD_BY_WORD
+        )
+        val persistedBundle = expected.toBundle().apply {
+            putString("type", "WORD_BY_WORD")
+        }
+
+        assertEquals(expected, persistedBundle.toPendingLyricsImport())
     }
 
     @Test

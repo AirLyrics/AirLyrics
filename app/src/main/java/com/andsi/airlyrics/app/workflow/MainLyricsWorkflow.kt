@@ -84,7 +84,7 @@ internal class MainLyricsWorkflow(
 
         if (!LyricsImportValidator.isLikelyLyricsDocument(activity, uri)) {
             val message = if (importAsWordByWord) {
-                activity.getString(R.string.ui_please_choose_an_enhanced_lrc_file)
+                activity.getString(R.string.ui_please_choose_a_word_by_word_lrc_file)
             } else {
                 activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
             }
@@ -160,13 +160,13 @@ internal class MainLyricsWorkflow(
         }
 
         graph.runOnAppIo {
-            val localInfo = LyricsStorage.getLocalLyricsInfo(
+            val localInfo = LyricsStorage.getLocalPlainLyricsInfo(
                 context = activity,
                 title = media.title,
                 artist = media.artist,
                 duration = media.durationMs
             )
-            val hasWordByWordLyrics = LyricsStorage.hasKaraokeLyrics(
+            val hasWordByWordLyrics = LyricsStorage.hasWordByWordLyrics(
                 context = activity,
                 title = media.title,
                 artist = media.artist,
@@ -174,7 +174,7 @@ internal class MainLyricsWorkflow(
             )
             val plainImportEnabled = !hasWordByWordLyrics
             val wordByWordImportEnabled = localInfo == null ||
-                localInfo.source == LyricsStorage.SOURCE_KARAOKE_FALLBACK
+                localInfo.plainSource == LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
 
             graph.runOnMainThread {
                 var dialog: Dialog? = null
@@ -214,18 +214,18 @@ internal class MainLyricsWorkflow(
                         subtitle = if (plainImportEnabled) {
                             activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
                         } else {
-                            activity.getString(R.string.ui_plain_lrc_blocked_by_enhanced_lrc)
+                            activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word_lyrics)
                         },
                         primary = true,
                         rowEnabled = plainImportEnabled
                     ) { launchImport(false) })
 
                     addView(importLyricsChoiceRow(
-                        title = activity.getString(R.string.ui_enhanced_lrc_lyrics_enhanced_lrc),
+                        title = activity.getString(R.string.ui_word_by_word_lyrics_lrc_file),
                         subtitle = if (wordByWordImportEnabled) {
-                            activity.getString(R.string.ui_please_choose_an_enhanced_lrc_file)
+                            activity.getString(R.string.ui_please_choose_a_word_by_word_lrc_file)
                         } else {
-                            activity.getString(R.string.ui_enhanced_lrc_blocked_by_plain_lrc)
+                            activity.getString(R.string.ui_word_by_word_lyrics_blocked_by_plain_lrc)
                         },
                         primary = false,
                         rowEnabled = wordByWordImportEnabled

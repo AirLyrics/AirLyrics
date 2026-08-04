@@ -2,12 +2,12 @@ package com.andsi.airlyrics.lyrics.providers
 
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
-import com.andsi.airlyrics.lyrics.LyricsProvider
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
-import com.andsi.airlyrics.lyrics.LyricsSearchRequest
+import com.andsi.airlyrics.lyrics.PlainLyricsProvider
+import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 
-data class NeteaseLyricsResult(
-    val source: String,
+data class NeteasePlainLyricsResult(
+    val plainSource: String,
     val songId: String,
     val title: String,
     val artist: String,
@@ -17,12 +17,12 @@ data class NeteaseLyricsResult(
     val translatedLrc: String?
 )
 
-object NeteaseLyricsProvider : LyricsProvider {
+object NeteasePlainLyricsProvider : PlainLyricsProvider {
     override val id: String = "netease"
     override val name: String = "NetEase Lyrics"
 
-    override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
-        return fetchBestLyrics(
+    override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
+        return fetchBestPlainLyrics(
             title = request.title,
             artist = request.artist,
             album = request.album,
@@ -33,13 +33,13 @@ object NeteaseLyricsProvider : LyricsProvider {
         }
     }
 
-    fun fetchBestLyrics(
+    fun fetchBestPlainLyrics(
         title: String,
         artist: String,
         album: String = "",
         durationMs: Long,
         cancellationToken: LyricsLookupCancellationToken? = null
-    ): Result<NeteaseLyricsResult?> {
+    ): Result<NeteasePlainLyricsResult?> {
         return runCatching {
             cancellationToken?.throwIfCancellationRequested()
             val jsonText = withNativeLyricsCancellation(
@@ -51,12 +51,12 @@ object NeteaseLyricsProvider : LyricsProvider {
                     album = album,
                     durationMs = durationMs,
                     lookupId = lookupId,
-                    requestKlyric = false
+                    reserved = false
                 )
             }
             cancellationToken?.throwIfCancellationRequested()
 
-            mapNativeResultJson(
+            mapNativePlainLyricsResultJson(
                 jsonText = jsonText,
                 fallbackTitle = title,
                 fallbackArtist = artist,
@@ -68,13 +68,13 @@ object NeteaseLyricsProvider : LyricsProvider {
         )
     }
 
-    internal fun mapNativeResultJson(
+    internal fun mapNativePlainLyricsResultJson(
         jsonText: String,
         fallbackTitle: String,
         fallbackArtist: String,
         fallbackDurationMs: Long,
-    ): NeteaseLyricsResult? {
-        val nativeResult = NativeLyricsResultParser.parse(
+    ): NeteasePlainLyricsResult? {
+        val nativeResult = NativePlainLyricsResultParser.parse(
             jsonText = jsonText,
             defaultSource = "netease-rust",
             fallbackTitle = fallbackTitle,
@@ -87,18 +87,18 @@ object NeteaseLyricsProvider : LyricsProvider {
                 return null
             }
 
-            throw nativeResult.toNativeLyricsLookupException(
+            throw nativeResult.toNativePlainLyricsLookupException(
                 providerId = id,
                 providerName = name,
                 defaultMessage = "NetEase lookup failed",
             )
         }
 
-        val primaryLrc = nativeResult.primaryLyrics(allowTranslatedFallback = true)
+        val primaryLrc = nativeResult.primaryPlainLrc(allowTranslatedFallback = true)
         if (primaryLrc.isBlank()) return null
 
-        return NeteaseLyricsResult(
-            source = nativeResult.source,
+        return NeteasePlainLyricsResult(
+            plainSource = nativeResult.plainSource,
             songId = nativeResult.id,
             title = nativeResult.title,
             artist = nativeResult.artist,
@@ -109,13 +109,13 @@ object NeteaseLyricsProvider : LyricsProvider {
         )
     }
 
-    internal fun toProviderResult(result: NeteaseLyricsResult?): LyricsProviderResult? {
+    internal fun toProviderResult(result: NeteasePlainLyricsResult?): LyricsProviderResult? {
         return result?.let {
             LyricsProviderResult(
-                providerId = id,
-                providerName = name,
-                lyrics = it.lrc,
-                translatedLyrics = it.translatedLrc,
+                plainProviderId = id,
+                plainProviderName = name,
+                plainLrc = it.lrc,
+                translatedLrc = it.translatedLrc,
                 matchedTitle = it.title,
                 matchedArtist = it.artist,
                 matchedAlbum = it.album,

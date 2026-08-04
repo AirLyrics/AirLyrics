@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.core.model.LyricsSearchSource
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
@@ -39,27 +39,27 @@ class LyricsRepositoryPersistenceTest {
     }
 
     @Test
-    fun onlineResult_autoSave_persistsMergedLyricsAndIndexUnlessKaraokeExists() {
+    fun onlineResult_autoSave_persistsMergedPlainLrcAndIndexUnlessWordByWordExists() {
         val storedSongResult = providerResult(
-            lyrics = "[00:01.00]hello",
-            translatedLyrics = "[00:01.00]你好"
+            plainLrc = "[00:01.00]hello",
+            translatedLrc = "[00:01.00]你好"
         )
-        val karaokeProtectedResult = providerResult(
-            lyrics = "[00:10.00]online replacement",
-            translatedLyrics = "[00:10.00]线上替换"
+        val wordByWordProtectedResult = providerResult(
+            plainLrc = "[00:10.00]online replacement",
+            translatedLrc = "[00:10.00]线上替换"
         )
-        val provider = object : LyricsProvider {
+        val provider = object : PlainLyricsProvider {
             override val id: String = "netease"
             override val name: String = "NetEase Lyrics"
 
-            override fun fetch(request: LyricsSearchRequest): Result<LyricsProviderResult?> {
+            override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
                 return Result.success(
-                    if (request.title == STORED_TITLE) storedSongResult else karaokeProtectedResult
+                    if (request.title == STORED_TITLE) storedSongResult else wordByWordProtectedResult
                 )
             }
         }
 
-        withNeteaseProvider(provider) {
+        withNeteasePlainLyricsProvider(provider) {
             val found = LyricsRepository.findLyrics(
                 context = context,
                 settings = onlineAutoSaveSettings(),
@@ -72,7 +72,7 @@ class LyricsRepositoryPersistenceTest {
             assertEquals(storedSongResult, found)
             assertEquals(
                 "[00:01.00]hello / 你好",
-                LyricsStorage.readLocalLyrics(
+                LyricsStorage.readPlainLyrics(
                     context,
                     STORED_TITLE,
                     ARTIST,
@@ -89,21 +89,21 @@ class LyricsRepositoryPersistenceTest {
             assertNotNull("Auto-save must create a managed index entry", storedEntry)
             storedEntry!!
             assertEquals(ALBUM, storedEntry.album)
-            assertEquals(LyricsStorage.SOURCE_DOWNLOADED, storedEntry.source)
-            assertEquals("netease", storedEntry.provider)
-            assertTrue(storedEntry.file.isNotBlank())
+            assertEquals(LyricsStorage.SOURCE_DOWNLOADED, storedEntry.plainSource)
+            assertEquals("netease", storedEntry.plainProvider)
+            assertTrue(storedEntry.plainFile.isNotBlank())
             assertEquals(
                 "[00:01.00]hello / 你好",
-                LyricsFileStore.readManagedLyrics(context, storedEntry.file)
+                LyricsFileStore.readManagedLyrics(context, storedEntry.plainFile)
             )
 
-            val karaokeLines = listOf(
-                KaraokeLine(
+            val wordByWordLines = listOf(
+                WordByWordLine(
                     startMs = 10_000L,
                     endMs = 11_000L,
                     text = "protected karaoke",
-                    tokens = listOf(
-                        KaraokeToken(
+                    segments = listOf(
+                        WordByWordSegment(
                             text = "protected karaoke",
                             startMs = 10_000L,
                             endMs = 11_000L
@@ -112,97 +112,97 @@ class LyricsRepositoryPersistenceTest {
                 )
             )
             assertTrue(
-                LyricsStorage.saveKaraokeLyrics(
+                LyricsStorage.saveWordByWordLyrics(
                     context = context,
-                    title = KARAOKE_TITLE,
+                    title = WORD_BY_WORD_TITLE,
                     artist = ARTIST,
-                    duration = KARAOKE_DURATION_MS,
-                    karaokeLines = karaokeLines,
+                    duration = WORD_BY_WORD_DURATION_MS,
+                    wordByWordLines = wordByWordLines,
                     album = ALBUM,
-                    provider = "local-karaoke"
+                    wordByWordProvider = "local-karaoke"
                 )
             )
 
             val protectedFound = LyricsRepository.findLyrics(
                 context = context,
                 settings = onlineAutoSaveSettings(),
-                title = KARAOKE_TITLE,
+                title = WORD_BY_WORD_TITLE,
                 artist = ARTIST,
                 album = ALBUM,
-                durationMs = KARAOKE_DURATION_MS
+                durationMs = WORD_BY_WORD_DURATION_MS
             ).getOrThrow()
 
-            assertEquals(karaokeProtectedResult, protectedFound)
+            assertEquals(wordByWordProtectedResult, protectedFound)
             assertNull(
-                "Online auto-save must not add or replace plain lyrics when karaoke exists",
-                LyricsStorage.readLocalLyrics(
+                "Online auto-save must not add or replace plain lyrics when word-by-word lyrics exist",
+                LyricsStorage.readPlainLyrics(
                     context,
-                    KARAOKE_TITLE,
+                    WORD_BY_WORD_TITLE,
                     ARTIST,
-                    KARAOKE_DURATION_MS
+                    WORD_BY_WORD_DURATION_MS
                 )
             )
             assertEquals(
-                karaokeLines,
-                LyricsStorage.readKaraokeLyrics(
+                wordByWordLines,
+                LyricsStorage.readWordByWordLyrics(
                     context,
-                    KARAOKE_TITLE,
+                    WORD_BY_WORD_TITLE,
                     ARTIST,
-                    KARAOKE_DURATION_MS
+                    WORD_BY_WORD_DURATION_MS
                 )
             )
             val protectedEntry = LyricsIndexStore.find(
                 context,
-                KARAOKE_TITLE,
+                WORD_BY_WORD_TITLE,
                 ARTIST,
-                KARAOKE_DURATION_MS
+                WORD_BY_WORD_DURATION_MS
             )
             assertNotNull(protectedEntry)
-            assertTrue(protectedEntry!!.file.isBlank())
-            assertTrue(protectedEntry.karaokeFile.isNotBlank())
-            assertEquals("local-karaoke", protectedEntry.karaokeProvider)
+            assertTrue(protectedEntry!!.plainFile.isBlank())
+            assertTrue(protectedEntry.wordByWordFile.isNotBlank())
+            assertEquals("local-karaoke", protectedEntry.wordByWordProvider)
         }
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun <T> withNeteaseProvider(provider: LyricsProvider, block: () -> T): T {
-        val field = LyricsRepository::class.java.getDeclaredField("onlineProviders").apply {
+    private fun <T> withNeteasePlainLyricsProvider(provider: PlainLyricsProvider, block: () -> T): T {
+        val field = LyricsRepository::class.java.getDeclaredField("onlinePlainLyricsProviders").apply {
             isAccessible = true
         }
-        val providers = field.get(LyricsRepository) as MutableMap<LyricsSearchSource, LyricsProvider>
-        val previous = providers.put(LyricsSearchSource.NETEASE, provider)
+        val providers = field.get(LyricsRepository) as MutableMap<PlainLyricsSearchSource, PlainLyricsProvider>
+        val previous = providers.put(PlainLyricsSearchSource.NETEASE, provider)
         return try {
             block()
         } finally {
             if (previous == null) {
-                providers.remove(LyricsSearchSource.NETEASE)
+                providers.remove(PlainLyricsSearchSource.NETEASE)
             } else {
-                providers[LyricsSearchSource.NETEASE] = previous
+                providers[PlainLyricsSearchSource.NETEASE] = previous
             }
         }
     }
 
     private fun onlineAutoSaveSettings(): LyricsSettings {
         return LyricsSettings(
-            source = LyricsSearchSource.NETEASE,
+            plainLyricsSearchSource = PlainLyricsSearchSource.NETEASE,
             autoSearchOnline = true,
             autoSaveLocal = true,
             contentDisplayMode = LyricsContentDisplayMode.default,
             lineDisplayMode = LyricsLineDisplayMode.default,
             switchAnimationMode = LyricsSwitchAnimationMode.default,
-            karaokeLyricsEnabled = false
+            wordByWordLyricsEnabled = false
         )
     }
 
     private fun providerResult(
-        lyrics: String,
-        translatedLyrics: String
+        plainLrc: String,
+        translatedLrc: String
     ): LyricsProviderResult {
         return LyricsProviderResult(
-            providerId = "netease",
-            providerName = "NetEase Lyrics",
-            lyrics = lyrics,
-            translatedLyrics = translatedLyrics,
+            plainProviderId = "netease",
+            plainProviderName = "NetEase Lyrics",
+            plainLrc = plainLrc,
+            translatedLrc = translatedLrc,
             matchedTitle = "matched title",
             matchedArtist = "matched artist",
             matchedAlbum = "matched album",
@@ -221,10 +221,10 @@ class LyricsRepositoryPersistenceTest {
 
     private companion object {
         const val STORED_TITLE = "Repository Persisted Song"
-        const val KARAOKE_TITLE = "Repository Karaoke Song"
+        const val WORD_BY_WORD_TITLE = "Repository Karaoke Song"
         const val ARTIST = "AndSi"
         const val ALBUM = "Repository Album"
         const val STORED_DURATION_MS = 180_000L
-        const val KARAOKE_DURATION_MS = 200_000L
+        const val WORD_BY_WORD_DURATION_MS = 200_000L
     }
 }

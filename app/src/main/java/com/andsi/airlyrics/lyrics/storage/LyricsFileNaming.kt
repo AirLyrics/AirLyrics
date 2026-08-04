@@ -5,7 +5,8 @@ import java.security.MessageDigest
 
 internal object LyricsFileNaming {
     const val PLAIN_LYRICS_EXTENSION = ".lrc"
-    const val KARAOKE_LYRICS_EXTENSION = ".karaoke.json"
+    // Persisted compatibility contract. Do not change the serialized value.
+    const val WORD_BY_WORD_LYRICS_EXTENSION = ".karaoke.json"
 
     private const val MANAGED_KEY_LENGTH = 16
     private val invalidFileNameChars = Regex("[\\\\/:*?\"<>|]")
@@ -15,8 +16,8 @@ internal object LyricsFileNaming {
         return managedFileName(identity.storageKey(), PLAIN_LYRICS_EXTENSION)
     }
 
-    fun managedKaraokeFileName(identity: SongIdentity): String {
-        return managedFileName(identity.storageKey(), KARAOKE_LYRICS_EXTENSION)
+    fun managedWordByWordFileName(identity: SongIdentity): String {
+        return managedFileName(identity.storageKey(), WORD_BY_WORD_LYRICS_EXTENSION)
     }
 
     fun legacyPlainFileName(title: String, artist: String, duration: Long): String {
@@ -47,8 +48,8 @@ internal object LyricsFileNaming {
         return fileName?.endsWith(PLAIN_LYRICS_EXTENSION, ignoreCase = true) == true
     }
 
-    fun isKaraokeLyricsFile(fileName: String?): Boolean {
-        return fileName?.endsWith(KARAOKE_LYRICS_EXTENSION, ignoreCase = true) == true
+    fun isWordByWordLyricsFile(fileName: String?): Boolean {
+        return fileName?.endsWith(WORD_BY_WORD_LYRICS_EXTENSION, ignoreCase = true) == true
     }
 
     fun friendlyDisplayName(fileName: String): String {
@@ -67,7 +68,7 @@ internal object LyricsFileNaming {
 
     private fun String.removeKnownExtension(): String {
         return when {
-            endsWith(KARAOKE_LYRICS_EXTENSION, ignoreCase = true) -> dropLast(KARAOKE_LYRICS_EXTENSION.length)
+            endsWith(WORD_BY_WORD_LYRICS_EXTENSION, ignoreCase = true) -> dropLast(WORD_BY_WORD_LYRICS_EXTENSION.length)
             endsWith(PLAIN_LYRICS_EXTENSION, ignoreCase = true) -> dropLast(PLAIN_LYRICS_EXTENSION.length)
             else -> this
         }

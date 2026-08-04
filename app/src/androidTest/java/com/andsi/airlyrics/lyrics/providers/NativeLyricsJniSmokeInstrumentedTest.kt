@@ -21,39 +21,39 @@ class NativeLyricsJniSmokeInstrumentedTest {
             }
 
             LyricsNativeCancellation.cancelLookup(CANCEL_BEFORE_START_LOOKUP_ID)
-            val canceledBeforeStart = fetchNeteaseValidation(CANCEL_BEFORE_START_LOOKUP_ID)
-            assertNativeError(
-                result = canceledBeforeStart,
+            val canceledBeforeStart = fetchNeteasePlainLyricsValidation(CANCEL_BEFORE_START_LOOKUP_ID)
+            assertNativePlainLyricsError(
+                plainLyricsResult = canceledBeforeStart,
                 expectedSource = "netease-rust",
                 expectedMessage = "lookup canceled",
             )
 
             LyricsNativeCancellation.cancelLookup(MARKER_CONSUMPTION_LOOKUP_ID)
-            val markerPending = fetchNeteaseValidation(MARKER_CONSUMPTION_LOOKUP_ID)
-            assertNativeError(
-                result = markerPending,
+            val markerPending = fetchNeteasePlainLyricsValidation(MARKER_CONSUMPTION_LOOKUP_ID)
+            assertNativePlainLyricsError(
+                plainLyricsResult = markerPending,
                 expectedSource = "netease-rust",
                 expectedMessage = "lookup canceled",
             )
-            val consumedCancellation = fetchNeteaseValidation(MARKER_CONSUMPTION_LOOKUP_ID)
-            assertNativeError(
-                result = consumedCancellation,
+            val consumedCancellation = fetchNeteasePlainLyricsValidation(MARKER_CONSUMPTION_LOOKUP_ID)
+            assertNativePlainLyricsError(
+                plainLyricsResult = consumedCancellation,
                 expectedSource = "netease-rust",
                 expectedMessage = "empty title",
             )
 
             LyricsNativeCancellation.cancelLookup(EXPLICIT_CLEAR_LOOKUP_ID)
             LyricsNativeCancellation.clearLookup(EXPLICIT_CLEAR_LOOKUP_ID)
-            val explicitlyClearedCancellation = fetchNeteaseValidation(EXPLICIT_CLEAR_LOOKUP_ID)
-            assertNativeError(
-                result = explicitlyClearedCancellation,
+            val explicitlyClearedCancellation = fetchNeteasePlainLyricsValidation(EXPLICIT_CLEAR_LOOKUP_ID)
+            assertNativePlainLyricsError(
+                plainLyricsResult = explicitlyClearedCancellation,
                 expectedSource = "netease-rust",
                 expectedMessage = "empty title",
             )
 
-            val musixmatchValidation = fetchMusixmatchValidation()
-            assertNativeError(
-                result = musixmatchValidation,
+            val musixmatchValidation = fetchMusixmatchPlainLyricsValidation()
+            assertNativePlainLyricsError(
+                plainLyricsResult = musixmatchValidation,
                 expectedSource = "musixmatch-rust",
                 expectedMessage = "empty title",
             )
@@ -69,22 +69,22 @@ class NativeLyricsJniSmokeInstrumentedTest {
         MultipleFailureException.assertEmpty(failures)
     }
 
-    private fun fetchNeteaseValidation(lookupId: Long): NativeLyricsJsonResult {
-        return parseNativeResult(
+    private fun fetchNeteasePlainLyricsValidation(lookupId: Long): NativePlainLyricsJsonResult {
+        return parseNativePlainLyricsResult(
             NeteaseLyricsNative.fetchBestLyricsJson(
                 title = "",
                 artist = "",
                 album = "",
                 durationMs = 0L,
                 lookupId = lookupId,
-                requestKlyric = false,
+                reserved = false,
             ),
             defaultSource = "netease-rust",
         )
     }
 
-    private fun fetchMusixmatchValidation(): NativeLyricsJsonResult {
-        return parseNativeResult(
+    private fun fetchMusixmatchPlainLyricsValidation(): NativePlainLyricsJsonResult {
+        return parseNativePlainLyricsResult(
             MusixmatchLyricsNative.fetchBestLyricsJson(
                 title = "",
                 artist = "",
@@ -98,11 +98,11 @@ class NativeLyricsJniSmokeInstrumentedTest {
         )
     }
 
-    private fun parseNativeResult(
+    private fun parseNativePlainLyricsResult(
         jsonText: String,
         defaultSource: String,
-    ): NativeLyricsJsonResult {
-        return NativeLyricsResultParser.parse(
+    ): NativePlainLyricsJsonResult {
+        return NativePlainLyricsResultParser.parse(
             jsonText = jsonText,
             defaultSource = defaultSource,
             fallbackTitle = "",
@@ -112,16 +112,16 @@ class NativeLyricsJniSmokeInstrumentedTest {
         )
     }
 
-    private fun assertNativeError(
-        result: NativeLyricsJsonResult,
+    private fun assertNativePlainLyricsError(
+        plainLyricsResult: NativePlainLyricsJsonResult,
         expectedSource: String,
         expectedMessage: String,
     ) {
-        assertFalse(result.ok)
-        assertEquals(expectedSource, result.source)
-        assertEquals("Unknown", result.errorTypeName)
-        assertEquals(LyricsLookupErrorType.Unknown, result.errorType)
-        assertEquals(expectedMessage, result.errorMessage)
+        assertFalse(plainLyricsResult.ok)
+        assertEquals(expectedSource, plainLyricsResult.plainSource)
+        assertEquals("Unknown", plainLyricsResult.errorTypeName)
+        assertEquals(LyricsLookupErrorType.Unknown, plainLyricsResult.errorType)
+        assertEquals(expectedMessage, plainLyricsResult.errorMessage)
     }
 
     private companion object {

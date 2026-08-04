@@ -3,8 +3,8 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.andsi.airlyrics.lyrics.KaraokeLine
-import com.andsi.airlyrics.lyrics.KaraokeToken
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -39,64 +39,64 @@ class LyricsStorageInstrumentedTest {
         val title = "Storage Test Song"
         val artist = "AndSi"
         val duration = 123_456L
-        val lyrics = "[00:01.00]hello\n[00:02.00]world"
+        val plainLrc = "[00:01.00]hello\n[00:02.00]world"
 
         assertTrue(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = context,
                 title = title,
                 artist = artist,
                 duration = duration,
-                lyrics = lyrics,
+                plainLrc = plainLrc,
                 album = "Test Album",
-                source = LyricsStorage.SOURCE_DOWNLOADED,
-                provider = "unit-provider"
+                plainSource = LyricsStorage.SOURCE_DOWNLOADED,
+                plainProvider = "unit-provider"
             )
         )
 
-        assertEquals(lyrics, LyricsStorage.readLocalLyrics(context, title, artist, duration))
-        assertTrue(LyricsStorage.hasLocalLyrics(context, title, artist, duration))
+        assertEquals(plainLrc, LyricsStorage.readPlainLyrics(context, title, artist, duration))
+        assertTrue(LyricsStorage.hasPlainLyrics(context, title, artist, duration))
 
-        val info = LyricsStorage.getLocalLyricsInfo(context, title, artist, duration)
+        val info = LyricsStorage.getLocalPlainLyricsInfo(context, title, artist, duration)
         assertNotNull(info)
         assertEquals(title, info!!.title)
         assertEquals(artist, info.artist)
-        assertEquals("unit-provider", info.provider)
+        assertEquals("unit-provider", info.plainProvider)
 
         val recentItem = LyricsStorage.listRecentLyrics(context, limit = 10)
             .firstOrNull { it.title == title && it.artist == artist }
         assertNotNull(recentItem)
         assertEquals(title, recentItem!!.displayTitle)
         assertTrue(recentItem.hasPlainLyrics)
-        assertFalse(recentItem.hasKaraokeLyrics)
+        assertFalse(recentItem.hasWordByWordLyrics)
 
         assertTrue(LyricsStorage.deleteLocalLyrics(context, title, artist, duration))
-        assertNull(LyricsStorage.readLocalLyrics(context, title, artist, duration))
-        assertFalse(LyricsStorage.hasLocalLyrics(context, title, artist, duration))
+        assertNull(LyricsStorage.readPlainLyrics(context, title, artist, duration))
+        assertFalse(LyricsStorage.hasPlainLyrics(context, title, artist, duration))
     }
 
     @Test
-    fun saveKaraokeDeleteKaraokeOnly_keepsPlainLyrics() {
+    fun saveWordByWordLyrics_deleteWordByWordOnly_keepsPlainLyrics() {
         val title = "Storage Karaoke Song"
         val artist = "AndSi"
         val duration = 222_000L
-        val plainLyrics = "[00:01.00]plain line"
-        val karaokeLines = listOf(
-            KaraokeLine(
+        val plainLrc = "[00:01.00]plain line"
+        val wordByWordLines = listOf(
+            WordByWordLine(
                 startMs = 1_000L,
                 endMs = 2_000L,
                 text = "sing",
-                tokens = listOf(
-                    KaraokeToken("si", 1_000L, 1_500L),
-                    KaraokeToken("ng", 1_500L, 2_000L)
+                segments = listOf(
+                    WordByWordSegment("si", 1_000L, 1_500L),
+                    WordByWordSegment("ng", 1_500L, 2_000L)
                 )
             )
         )
 
-        assertTrue(LyricsStorage.saveLyrics(context, title, artist, duration, plainLyrics))
-        assertTrue(LyricsStorage.saveKaraokeLyrics(context, title, artist, duration, karaokeLines))
-        assertTrue(LyricsStorage.hasKaraokeLyrics(context, title, artist, duration))
-        assertEquals(karaokeLines, LyricsStorage.readKaraokeLyrics(context, title, artist, duration))
+        assertTrue(LyricsStorage.savePlainLyrics(context, title, artist, duration, plainLrc))
+        assertTrue(LyricsStorage.saveWordByWordLyrics(context, title, artist, duration, wordByWordLines))
+        assertTrue(LyricsStorage.hasWordByWordLyrics(context, title, artist, duration))
+        assertEquals(wordByWordLines, LyricsStorage.readWordByWordLyrics(context, title, artist, duration))
 
         assertTrue(
             LyricsStorage.deleteLocalLyrics(
@@ -104,42 +104,42 @@ class LyricsStorageInstrumentedTest {
                 title = title,
                 artist = artist,
                 duration = duration,
-                mode = LyricsStorage.DeleteMode.KARAOKE
+                mode = LyricsStorage.DeleteMode.WORD_BY_WORD
             )
         )
 
-        assertEquals(plainLyrics, LyricsStorage.readLocalLyrics(context, title, artist, duration))
-        assertFalse(LyricsStorage.hasKaraokeLyrics(context, title, artist, duration))
+        assertEquals(plainLrc, LyricsStorage.readPlainLyrics(context, title, artist, duration))
+        assertFalse(LyricsStorage.hasWordByWordLyrics(context, title, artist, duration))
     }
 
     @Test
-    fun saveLyrics_respectsOverwriteFalse() {
+    fun savePlainLyrics_respectsOverwriteFalse() {
         val title = "Overwrite Test Song"
         val artist = "AndSi"
         val duration = 333_000L
         val first = "[00:01.00]first"
         val second = "[00:01.00]second"
 
-        assertTrue(LyricsStorage.saveLyrics(context, title, artist, duration, first, overwrite = true))
-        assertFalse(LyricsStorage.saveLyrics(context, title, artist, duration, second, overwrite = false))
-        assertEquals(first, LyricsStorage.readLocalLyrics(context, title, artist, duration))
+        assertTrue(LyricsStorage.savePlainLyrics(context, title, artist, duration, first, overwrite = true))
+        assertFalse(LyricsStorage.savePlainLyrics(context, title, artist, duration, second, overwrite = false))
+        assertEquals(first, LyricsStorage.readPlainLyrics(context, title, artist, duration))
     }
 
     @Test
-    fun concurrentSaveLyrics_keepsEveryIndexEntry() {
+    fun concurrentSavePlainLyrics_keepsEveryIndexEntry() {
         val count = 32
         val startGate = CountDownLatch(1)
         val executor = Executors.newFixedThreadPool(8)
         val futures = (0 until count).map { index ->
             executor.submit<Boolean> {
                 startGate.await()
-                LyricsStorage.saveLyrics(
+                LyricsStorage.savePlainLyrics(
                     context = context,
                     title = "Concurrent Song $index",
                     artist = "AndSi",
                     duration = 400_000L + index,
-                    lyrics = "[00:01.00]line $index",
-                    provider = "concurrent-test"
+                    plainLrc = "[00:01.00]line $index",
+                    plainProvider = "concurrent-test"
                 )
             }
         }
@@ -150,7 +150,7 @@ class LyricsStorageInstrumentedTest {
         assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS))
 
         val entries = LyricsIndexStore.read(context)
-            .filter { it.provider == "concurrent-test" }
+            .filter { it.plainProvider == "concurrent-test" }
 
         assertEquals(count, entries.size)
         (0 until count).forEach { index ->

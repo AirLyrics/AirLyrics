@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.KaraokeLine
+import com.andsi.airlyrics.lyrics.WordByWordLine
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -23,7 +23,7 @@ import org.json.JSONArray
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class LyricsStorageKaraokeAtomicityTest {
+class WordByWordLyricsStorageAtomicityTest {
     private lateinit var context: Context
 
     @Before
@@ -38,7 +38,7 @@ class LyricsStorageKaraokeAtomicityTest {
     }
 
     @Test
-    fun importKaraokeLyrics_plainFallbackWriteFails_rollsBackEntireImport() {
+    fun importWordByWordLyrics_plainFallbackWriteFails_rollsBackEntireImport() {
         val identity = SongIdentity(
             title = TITLE,
             artist = ARTIST,
@@ -46,7 +46,7 @@ class LyricsStorageKaraokeAtomicityTest {
             durationMs = DURATION_MS
         )
         val plainFileName = LyricsFileNaming.managedPlainFileName(identity)
-        val karaokeFileName = LyricsFileNaming.managedKaraokeFileName(identity)
+        val wordByWordFileName = LyricsFileNaming.managedWordByWordFileName(identity)
         val managedDir = LyricsStoragePaths.fallbackManagedLyricsDir(context)
         val beforeIndex = LyricsIndexStore.read(context)
         val failureTriggered = AtomicBoolean(false)
@@ -56,10 +56,10 @@ class LyricsStorageKaraokeAtomicityTest {
                 fileName == plainFileName && failureTriggered.compareAndSet(false, true)
             }
         )
-        val result = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
             context = context,
             uri = writeImportFile(
-                name = "karaoke-plain-fallback-failure.lrc",
+                name = "word-by-word-plain-fallback-failure.lrc",
                 text = "[00:10.00]<00:10.00>atomic karaoke"
             ),
             title = TITLE,
@@ -73,22 +73,22 @@ class LyricsStorageKaraokeAtomicityTest {
         assertTrue(result is LyricsStorage.ImportLyricsResult.SaveFailed)
 
         val stateAfterFailure = ImportState(
-            karaokeFileExists = File(managedDir, karaokeFileName).exists(),
+            wordByWordFileExists = File(managedDir, wordByWordFileName).exists(),
             plainFileExists = File(managedDir, plainFileName).exists(),
             indexEntries = LyricsIndexStore.read(context),
-            hasKaraokeLyrics = LyricsStorage.hasKaraokeLyrics(
+            hasWordByWordLyrics = LyricsStorage.hasWordByWordLyrics(
                 context,
                 TITLE,
                 ARTIST,
                 DURATION_MS
             ),
-            localLyrics = LyricsStorage.readLocalLyrics(
+            plainLrc = LyricsStorage.readPlainLyrics(
                 context,
                 TITLE,
                 ARTIST,
                 DURATION_MS
             ),
-            karaokeLines = LyricsStorage.readKaraokeLyrics(
+            wordByWordLines = LyricsStorage.readWordByWordLyrics(
                 context,
                 TITLE,
                 ARTIST,
@@ -99,32 +99,32 @@ class LyricsStorageKaraokeAtomicityTest {
         assertEquals(
             "SaveFailed must restore the complete pre-import state",
             ImportState(
-                karaokeFileExists = false,
+                wordByWordFileExists = false,
                 plainFileExists = false,
                 indexEntries = beforeIndex,
-                hasKaraokeLyrics = false,
-                localLyrics = null,
-                karaokeLines = emptyList()
+                hasWordByWordLyrics = false,
+                plainLrc = null,
+                wordByWordLines = emptyList()
             ),
             stateAfterFailure
         )
     }
 
     @Test
-    fun karaokeImport_failure_restoresPreexistingState() {
+    fun wordByWordImport_failure_restoresPreexistingState() {
         val identity = SongIdentity(
             title = TITLE,
             artist = ARTIST,
             album = ALBUM,
             durationMs = DURATION_MS
         )
-        val oldKaraokeLines = listOf(
-            KaraokeLine(
+        val oldWordByWordLines = listOf(
+            WordByWordLine(
                 startMs = 10_000L,
                 endMs = 11_000L,
                 text = "old karaoke",
-                tokens = listOf(
-                    com.andsi.airlyrics.lyrics.KaraokeToken(
+                segments = listOf(
+                    com.andsi.airlyrics.lyrics.WordByWordSegment(
                         text = "old karaoke",
                         startMs = 10_000L,
                         endMs = 11_000L
@@ -133,28 +133,28 @@ class LyricsStorageKaraokeAtomicityTest {
             )
         )
         assertTrue(
-            LyricsStorage.saveKaraokeLyrics(
+            LyricsStorage.saveWordByWordLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS,
-                karaokeLines = oldKaraokeLines,
+                wordByWordLines = oldWordByWordLines,
                 album = ALBUM,
-                source = LyricsStorage.SOURCE_DOWNLOADED,
-                provider = "old-karaoke",
+                wordByWordSource = LyricsStorage.SOURCE_DOWNLOADED,
+                wordByWordProvider = "old-karaoke",
                 metadataLines = listOf("[ar:Old Artist]", "[ti:Old Title]")
             )
         )
         assertTrue(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS,
-                lyrics = "[ar:Old Artist]\n[00:10.00]old fallback",
+                plainLrc = "[ar:Old Artist]\n[00:10.00]old fallback",
                 album = ALBUM,
-                source = LyricsStorage.SOURCE_KARAOKE_FALLBACK,
-                provider = "old-plain"
+                plainSource = LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
+                plainProvider = "old-plain"
             )
         )
 
@@ -162,9 +162,9 @@ class LyricsStorageKaraokeAtomicityTest {
             LyricsIndexStore.find(context, TITLE, ARTIST, DURATION_MS)
         )
         val expectedEntry = generatedEntry.copy(
-            source = LyricsStorage.SOURCE_KARAOKE_FALLBACK,
-            provider = "old-plain",
-            karaokeProvider = "old-karaoke",
+            plainSource = LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
+            plainProvider = "old-plain",
+            wordByWordProvider = "old-karaoke",
             createdAt = 101L,
             updatedAt = 202L
         )
@@ -183,10 +183,10 @@ class LyricsStorageKaraokeAtomicityTest {
                 fileName == plainFileName && failureTriggered.compareAndSet(false, true)
             }
         )
-        val result = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
             context = context,
             uri = writeImportFile(
-                name = "karaoke-replace-fallback-failure.lrc",
+                name = "word-by-word-replace-fallback-failure.lrc",
                 text = "[00:20.00]<00:20.00>new karaoke"
             ),
             title = TITLE,
@@ -204,7 +204,7 @@ class LyricsStorageKaraokeAtomicityTest {
     }
 
     @Test
-    fun karaokeImport_rollbackIoFailure_reportsDistinctRiskAndKeepsIndexAuthoritative() {
+    fun wordByWordImport_rollbackIoFailure_reportsDistinctRiskAndKeepsIndexAuthoritative() {
         val identity = SongIdentity(
             title = TITLE,
             artist = ARTIST,
@@ -212,8 +212,8 @@ class LyricsStorageKaraokeAtomicityTest {
             durationMs = DURATION_MS
         )
         val plainFileName = LyricsFileNaming.managedPlainFileName(identity)
-        val karaokeRelativeFile = LyricsFileNaming.managedRelativePath(
-            LyricsFileNaming.managedKaraokeFileName(identity)
+        val wordByWordRelativeFile = LyricsFileNaming.managedRelativePath(
+            LyricsFileNaming.managedWordByWordFileName(identity)
         )
         val originalFailureTriggered = AtomicBoolean(false)
         val rollbackFailureTriggered = AtomicBoolean(false)
@@ -223,15 +223,15 @@ class LyricsStorageKaraokeAtomicityTest {
                     originalFailureTriggered.compareAndSet(false, true)
             },
             shouldFailDelete = { relativeFile ->
-                relativeFile == karaokeRelativeFile &&
+                relativeFile == wordByWordRelativeFile &&
                     rollbackFailureTriggered.compareAndSet(false, true)
             }
         )
 
-        val result = LyricsStorage.importKaraokeLyricsFromUriWithResult(
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
             context = context,
             uri = writeImportFile(
-                name = "karaoke-rollback-delete-failure.lrc",
+                name = "word-by-word-rollback-delete-failure.lrc",
                 text = "[00:30.00]<00:30.00>orphaned karaoke"
             ),
             title = TITLE,
@@ -246,18 +246,18 @@ class LyricsStorageKaraokeAtomicityTest {
         assertEquals(
             LyricsStorage.ImportLyricsResult.RollbackFailed(
                 originalFailureStep =
-                    LyricsStorage.KaraokeImportFailureStep.PLAIN_FALLBACK_FILE_WRITE,
+                    LyricsStorage.WordByWordImportFailureStep.PLAIN_FALLBACK_FILE_WRITE,
                 originalFailureCause =
-                    LyricsStorage.KaraokeImportFailureCause.IO_OPERATION_RETURNED_FALSE,
+                    LyricsStorage.WordByWordImportFailureCause.IO_OPERATION_RETURNED_FALSE,
                 failedRollbackSteps = listOf(
-                    LyricsStorage.KaraokeRollbackFailureStep.RESTORE_KARAOKE_FILE
+                    LyricsStorage.WordByWordRollbackFailureStep.RESTORE_WORD_BY_WORD_FILE
                 )
             ),
             result
         )
         assertTrue(LyricsIndexStore.read(context).isEmpty())
-        assertFalse(LyricsStorage.hasKaraokeLyrics(context, TITLE, ARTIST, DURATION_MS))
-        assertTrue(managedLyricsIo.exists(context, karaokeRelativeFile))
+        assertFalse(LyricsStorage.hasWordByWordLyrics(context, TITLE, ARTIST, DURATION_MS))
+        assertTrue(managedLyricsIo.exists(context, wordByWordRelativeFile))
         assertFalse(
             managedLyricsIo.exists(
                 context,
@@ -265,21 +265,21 @@ class LyricsStorageKaraokeAtomicityTest {
             )
         )
         assertTrue(currentRawIndex().isEmpty())
-        assertEquals(null, LyricsStorage.readLocalLyrics(context, TITLE, ARTIST, DURATION_MS))
+        assertEquals(null, LyricsStorage.readPlainLyrics(context, TITLE, ARTIST, DURATION_MS))
         assertTrue(
-            LyricsStorage.readKaraokeLyrics(context, TITLE, ARTIST, DURATION_MS)
+            LyricsStorage.readWordByWordLyrics(context, TITLE, ARTIST, DURATION_MS)
                 .isEmpty()
         )
     }
 
     @Test
-    fun karaokeImport_plainRestoreWriteFails_reportsResidualNewPlainWithOldIndex() {
+    fun wordByWordImport_plainRestoreWriteFails_reportsResidualNewPlainWithOldIndex() {
         val seeded = seedPreexistingState()
         val restoreFailureTriggered = AtomicBoolean(false)
         val managedLyricsIo = FailingManagedLyricsIo(
             shouldFailWrite = { fileName, lyrics ->
                 fileName == seeded.plainFileName &&
-                    lyrics == seeded.plainLyrics &&
+                    lyrics == seeded.plainLrc &&
                     restoreFailureTriggered.compareAndSet(false, true)
             }
         )
@@ -287,7 +287,7 @@ class LyricsStorageKaraokeAtomicityTest {
             writeAction = { _, _ -> false }
         )
 
-        val result = importKaraoke(
+        val result = importWordByWordLyrics(
             importName = "plain-restore-write-failure.lrc",
             importText = "[00:40.00]<00:40.00>new plain residue",
             managedLyricsIo = managedLyricsIo,
@@ -298,7 +298,7 @@ class LyricsStorageKaraokeAtomicityTest {
         assertRollbackFailed(
             result = result,
             expectedFailedSteps = listOf(
-                LyricsStorage.KaraokeRollbackFailureStep.RESTORE_PLAIN_FILE
+                LyricsStorage.WordByWordRollbackFailureStep.RESTORE_PLAIN_FILE
             )
         )
         assertTrue(
@@ -307,15 +307,15 @@ class LyricsStorageKaraokeAtomicityTest {
                 .contains("new plain residue")
         )
         assertEquals(
-            seeded.karaokeLines,
-            LyricsStorage.readKaraokeLyrics(context, TITLE, ARTIST, DURATION_MS)
+            seeded.wordByWordLines,
+            LyricsStorage.readWordByWordLyrics(context, TITLE, ARTIST, DURATION_MS)
         )
         assertEquals(seeded.rawIndex.toList(), currentRawIndex().toList())
         assertEquals(seeded.indexEntry, LyricsIndexStore.read(context).single())
     }
 
     @Test
-    fun karaokeImport_rawIndexRestoreFails_keepsCompleteNewFilesForAuthoritativeNewIndex() {
+    fun wordByWordImport_rawIndexRestoreFails_keepsCompleteNewFilesForAuthoritativeNewIndex() {
         val seeded = seedPreexistingState()
         val indexWriteFailureTriggered = AtomicBoolean(false)
         val indexRestoreFailureTriggered = AtomicBoolean(false)
@@ -331,7 +331,7 @@ class LyricsStorageKaraokeAtomicityTest {
             }
         )
 
-        val result = importKaraoke(
+        val result = importWordByWordLyrics(
             importName = "raw-index-restore-failure.lrc",
             importText = "[00:50.00]<00:50.00>new index residue",
             managedLyricsIo = AndroidManagedLyricsIo,
@@ -343,33 +343,33 @@ class LyricsStorageKaraokeAtomicityTest {
         assertRollbackFailed(
             result = result,
             expectedFailedSteps = listOf(
-                LyricsStorage.KaraokeRollbackFailureStep.RESTORE_INDEX
+                LyricsStorage.WordByWordRollbackFailureStep.RESTORE_INDEX
             )
         )
         val residualEntry = LyricsIndexStore.read(context).single()
-        assertEquals(LyricsStorage.SOURCE_KARAOKE_FALLBACK, residualEntry.source)
-        assertEquals("local", residualEntry.provider)
-        assertEquals("local", residualEntry.karaokeProvider)
+        assertEquals(LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK, residualEntry.plainSource)
+        assertEquals("local", residualEntry.plainProvider)
+        assertEquals("local", residualEntry.wordByWordProvider)
         assertFalse(seeded.rawIndex.contentEquals(currentRawIndex()))
         assertTrue(
-            LyricsStorage.readLocalLyrics(context, TITLE, ARTIST, DURATION_MS)
+            LyricsStorage.readPlainLyrics(context, TITLE, ARTIST, DURATION_MS)
                 .orEmpty()
                 .contains("new index residue")
         )
         assertEquals(
             "new index residue",
-            LyricsStorage.readKaraokeLyrics(context, TITLE, ARTIST, DURATION_MS)
+            LyricsStorage.readWordByWordLyrics(context, TITLE, ARTIST, DURATION_MS)
                 .single()
                 .text
         )
         assertTrue(
-            "The residual new index must point to the complete new karaoke content",
-            LyricsStorage.hasKaraokeLyrics(context, TITLE, ARTIST, DURATION_MS)
+            "The residual new index must point to the complete new word-by-word content",
+            LyricsStorage.hasWordByWordLyrics(context, TITLE, ARTIST, DURATION_MS)
         )
     }
 
     @Test
-    fun karaokeImport_twoFileRestoresFail_reportsEveryStepOnceAndLeavesBothNewFiles() {
+    fun wordByWordImport_twoFileRestoresFail_reportsEveryStepOnceAndLeavesBothNewFiles() {
         val seeded = seedPreexistingState()
         val writeCount = AtomicInteger(0)
         val managedLyricsIo = FailingManagedLyricsIo(
@@ -379,7 +379,7 @@ class LyricsStorageKaraokeAtomicityTest {
             writeAction = { _, _ -> false }
         )
 
-        val result = importKaraoke(
+        val result = importWordByWordLyrics(
             importName = "two-restore-failures.lrc",
             importText = "[01:00.00]<01:00.00>new dual residue",
             managedLyricsIo = managedLyricsIo,
@@ -389,19 +389,19 @@ class LyricsStorageKaraokeAtomicityTest {
         assertRollbackFailed(
             result = result,
             expectedFailedSteps = listOf(
-                LyricsStorage.KaraokeRollbackFailureStep.RESTORE_PLAIN_FILE,
-                LyricsStorage.KaraokeRollbackFailureStep.RESTORE_KARAOKE_FILE
+                LyricsStorage.WordByWordRollbackFailureStep.RESTORE_PLAIN_FILE,
+                LyricsStorage.WordByWordRollbackFailureStep.RESTORE_WORD_BY_WORD_FILE
             )
         )
         assertEquals(4, writeCount.get())
         assertTrue(
-            LyricsStorage.readLocalLyrics(context, TITLE, ARTIST, DURATION_MS)
+            LyricsStorage.readPlainLyrics(context, TITLE, ARTIST, DURATION_MS)
                 .orEmpty()
                 .contains("new dual residue")
         )
         assertEquals(
             "new dual residue",
-            LyricsStorage.readKaraokeLyrics(context, TITLE, ARTIST, DURATION_MS)
+            LyricsStorage.readWordByWordLyrics(context, TITLE, ARTIST, DURATION_MS)
                 .single()
                 .text
         )
@@ -410,7 +410,7 @@ class LyricsStorageKaraokeAtomicityTest {
     }
 
     @Test
-    fun karaokeImport_rootSwitchWaitsForSnapshotWritesCommitAndRollback() {
+    fun wordByWordImport_rootSwitchWaitsForSnapshotWritesCommitAndRollback() {
         val fallbackRoot = LyricsStoragePaths.fallbackLyricsDir(context).absolutePath
         val operations = CopyOnWriteArrayList<RootOperation>()
         val firstWriteEntered = CountDownLatch(1)
@@ -429,7 +429,7 @@ class LyricsStorageKaraokeAtomicityTest {
         val switchCompleted = CountDownLatch(1)
 
         val importFuture = actors.submit<LyricsStorage.ImportLyricsResult> {
-            importKaraoke(
+            importWordByWordLyrics(
                 importName = "root-stability.lrc",
                 importText = "[01:10.00]<01:10.00>root stable",
                 managedLyricsIo = managedLyricsIo,
@@ -481,13 +481,13 @@ class LyricsStorageKaraokeAtomicityTest {
         }
     }
 
-    private fun importKaraoke(
+    private fun importWordByWordLyrics(
         importName: String,
         importText: String,
         managedLyricsIo: ManagedLyricsIo,
         indexIo: LyricsIndexIo
     ): LyricsStorage.ImportLyricsResult {
-        return LyricsStorage.importKaraokeLyricsFromUriWithResult(
+        return LyricsStorage.importWordByWordLyricsFromUriWithResult(
             context = context,
             uri = writeImportFile(importName, importText),
             title = TITLE,
@@ -506,13 +506,13 @@ class LyricsStorageKaraokeAtomicityTest {
             album = ALBUM,
             durationMs = DURATION_MS
         )
-        val karaokeLines = listOf(
-            KaraokeLine(
+        val wordByWordLines = listOf(
+            WordByWordLine(
                 startMs = 10_000L,
                 endMs = 11_000L,
                 text = "old karaoke",
-                tokens = listOf(
-                    com.andsi.airlyrics.lyrics.KaraokeToken(
+                segments = listOf(
+                    com.andsi.airlyrics.lyrics.WordByWordSegment(
                         text = "old karaoke",
                         startMs = 10_000L,
                         endMs = 11_000L
@@ -520,38 +520,38 @@ class LyricsStorageKaraokeAtomicityTest {
                 )
             )
         )
-        val plainLyrics = "[ar:Old Artist]\n[00:10.00]old fallback"
+        val plainLrc = "[ar:Old Artist]\n[00:10.00]old fallback"
         assertTrue(
-            LyricsStorage.saveKaraokeLyrics(
+            LyricsStorage.saveWordByWordLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS,
-                karaokeLines = karaokeLines,
+                wordByWordLines = wordByWordLines,
                 album = ALBUM,
-                source = LyricsStorage.SOURCE_DOWNLOADED,
-                provider = "old-karaoke",
+                wordByWordSource = LyricsStorage.SOURCE_DOWNLOADED,
+                wordByWordProvider = "old-karaoke",
                 metadataLines = listOf("[ar:Old Artist]", "[ti:Old Title]")
             )
         )
         assertTrue(
-            LyricsStorage.saveLyrics(
+            LyricsStorage.savePlainLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS,
-                lyrics = plainLyrics,
+                plainLrc = plainLrc,
                 album = ALBUM,
-                source = LyricsStorage.SOURCE_KARAOKE_FALLBACK,
-                provider = "old-plain"
+                plainSource = LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
+                plainProvider = "old-plain"
             )
         )
         val entry = requireNotNull(
             LyricsIndexStore.find(context, TITLE, ARTIST, DURATION_MS)
         ).copy(
-            source = LyricsStorage.SOURCE_KARAOKE_FALLBACK,
-            provider = "old-plain",
-            karaokeProvider = "old-karaoke",
+            plainSource = LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
+            plainProvider = "old-plain",
+            wordByWordProvider = "old-karaoke",
             createdAt = 101L,
             updatedAt = 202L
         )
@@ -560,8 +560,8 @@ class LyricsStorageKaraokeAtomicityTest {
         return SeededState(
             plainFileName = plainFileName,
             plainRelativeFile = LyricsFileNaming.managedRelativePath(plainFileName),
-            plainLyrics = plainLyrics,
-            karaokeLines = karaokeLines,
+            plainLrc = plainLrc,
+            wordByWordLines = wordByWordLines,
             indexEntry = entry,
             rawIndex = currentRawIndex()
         )
@@ -569,15 +569,15 @@ class LyricsStorageKaraokeAtomicityTest {
 
     private fun assertRollbackFailed(
         result: LyricsStorage.ImportLyricsResult,
-        expectedFailedSteps: List<LyricsStorage.KaraokeRollbackFailureStep>
+        expectedFailedSteps: List<LyricsStorage.WordByWordRollbackFailureStep>
     ) {
         val rollbackFailed = result as LyricsStorage.ImportLyricsResult.RollbackFailed
         assertEquals(
-            LyricsStorage.KaraokeImportFailureStep.INDEX_WRITE,
+            LyricsStorage.WordByWordImportFailureStep.INDEX_WRITE,
             rollbackFailed.originalFailureStep
         )
         assertEquals(
-            LyricsStorage.KaraokeImportFailureCause.IO_OPERATION_RETURNED_FALSE,
+            LyricsStorage.WordByWordImportFailureCause.IO_OPERATION_RETURNED_FALSE,
             rollbackFailed.originalFailureCause
         )
         assertEquals(expectedFailedSteps, rollbackFailed.failedRollbackSteps)
@@ -594,25 +594,25 @@ class LyricsStorageKaraokeAtomicityTest {
 
     private fun observableState(identity: SongIdentity): ImportState {
         val plainFileName = LyricsFileNaming.managedPlainFileName(identity)
-        val karaokeFileName = LyricsFileNaming.managedKaraokeFileName(identity)
+        val wordByWordFileName = LyricsFileNaming.managedWordByWordFileName(identity)
         val managedDir = LyricsStoragePaths.fallbackManagedLyricsDir(context)
         return ImportState(
-            karaokeFileExists = File(managedDir, karaokeFileName).exists(),
+            wordByWordFileExists = File(managedDir, wordByWordFileName).exists(),
             plainFileExists = File(managedDir, plainFileName).exists(),
             indexEntries = LyricsIndexStore.read(context),
-            hasKaraokeLyrics = LyricsStorage.hasKaraokeLyrics(
+            hasWordByWordLyrics = LyricsStorage.hasWordByWordLyrics(
                 context,
                 TITLE,
                 ARTIST,
                 DURATION_MS
             ),
-            localLyrics = LyricsStorage.readLocalLyrics(
+            plainLrc = LyricsStorage.readPlainLyrics(
                 context,
                 TITLE,
                 ARTIST,
                 DURATION_MS
             ),
-            karaokeLines = LyricsStorage.readKaraokeLyrics(
+            wordByWordLines = LyricsStorage.readWordByWordLyrics(
                 context,
                 TITLE,
                 ARTIST,
@@ -639,19 +639,19 @@ class LyricsStorageKaraokeAtomicityTest {
     }
 
     private data class ImportState(
-        val karaokeFileExists: Boolean,
+        val wordByWordFileExists: Boolean,
         val plainFileExists: Boolean,
         val indexEntries: List<LyricsIndexEntry>,
-        val hasKaraokeLyrics: Boolean,
-        val localLyrics: String?,
-        val karaokeLines: List<KaraokeLine>
+        val hasWordByWordLyrics: Boolean,
+        val plainLrc: String?,
+        val wordByWordLines: List<WordByWordLine>
     )
 
     private class SeededState(
         val plainFileName: String,
         val plainRelativeFile: String,
-        val plainLyrics: String,
-        val karaokeLines: List<KaraokeLine>,
+        val plainLrc: String,
+        val wordByWordLines: List<WordByWordLine>,
         val indexEntry: LyricsIndexEntry,
         val rawIndex: ByteArray
     )

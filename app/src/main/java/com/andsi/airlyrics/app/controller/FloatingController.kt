@@ -293,8 +293,8 @@ internal class FloatingController(
         notifyStyleChanged()
     }
 
-    fun applyKaraokeHighlightColor(color: Int) {
-        FloatingLyricsStyleStore.setKaraokeHighlightColor(context, color)
+    fun applyWordByWordHighlightColor(color: Int) {
+        FloatingLyricsStyleStore.setWordByWordHighlightColor(context, color)
         notifyStyleChanged()
     }
 

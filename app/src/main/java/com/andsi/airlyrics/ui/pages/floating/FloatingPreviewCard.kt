@@ -34,9 +34,9 @@ internal fun MainUiHost.createFloatingPreviewCard(
     setExpanded: (Boolean) -> Unit,
     style: () -> FloatingLyricsStyle,
     lineDisplayMode: () -> LyricsLineDisplayMode,
-    isKaraokeEnabled: () -> Boolean,
+    isWordByWordLyricsEnabled: () -> Boolean,
     plainPreviewText: () -> String,
-    karaokePreviewText: () -> CharSequence,
+    wordByWordPreviewText: () -> CharSequence,
     summaryText: () -> String,
     onExpandedChanged: () -> Unit
 ): FloatingPreviewCardHandle {
@@ -51,7 +51,7 @@ internal fun MainUiHost.createFloatingPreviewCard(
         bodyView = LinearLayout(this@createFloatingPreviewCard).apply {
             orientation = LinearLayout.VERTICAL
             lyricView = floatingPreviewText(
-                if (isKaraokeEnabled()) karaokePreviewText() else plainPreviewText(),
+                if (isWordByWordLyricsEnabled()) wordByWordPreviewText() else plainPreviewText(),
                 style()
             ).apply {
                 layoutParams = LinearLayout.LayoutParams(

@@ -65,7 +65,7 @@ class FloatingLyricsRendererTest {
     private fun renderer(uptimeMillisProvider: () -> Long): FloatingLyricsRenderer {
         return FloatingLyricsRenderer(
             textViewProvider = { null },
-            karaokeHighlightColorProvider = { 0 },
+            wordByWordHighlightColorProvider = { 0 },
             uptimeMillisProvider = uptimeMillisProvider
         )
     }

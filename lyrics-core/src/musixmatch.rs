@@ -130,7 +130,7 @@ pub(crate) fn fetch_best_lyrics(
                 lrc: Some(lrc),
                 translated_lrc,
                 merged_lrc: Some(merged_lrc),
-                karaoke_json: None,
+                word_by_word_json: None,
                 error_type: None,
                 error: None,
             })

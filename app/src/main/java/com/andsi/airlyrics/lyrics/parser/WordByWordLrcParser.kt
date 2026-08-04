@@ -1,65 +1,65 @@
 package com.andsi.airlyrics.lyrics.parser
 
-import com.andsi.airlyrics.lyrics.KaraokeLine
-import com.andsi.airlyrics.lyrics.KaraokeToken
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import java.util.Locale
 
-data class ParsedKaraokeImport(
-    val karaokeLines: List<KaraokeLine>,
+data class ParsedWordByWordLyrics(
+    val wordByWordLines: List<WordByWordLine>,
     val plainLrc: String,
     val hasTranslation: Boolean,
     val metadataLines: List<String> = emptyList()
 )
 
-object KaraokeLrcParser {
+object WordByWordLrcParser {
     data class StorageValidationResult(
         val isValid: Boolean,
         val invalidLineNumbers: List<Int> = emptyList()
     )
 
-    fun parse(rawLrc: String): List<KaraokeLine> {
-        return parseImport(rawLrc).karaokeLines
+    fun parse(wordByWordLrc: String): List<WordByWordLine> {
+        return parseImport(wordByWordLrc).wordByWordLines
     }
 
-    fun parseImport(rawLrc: String): ParsedKaraokeImport {
-        if (rawLrc.isBlank()) {
-            return emptyKaraokeImport()
+    fun parseImport(wordByWordLrc: String): ParsedWordByWordLyrics {
+        if (wordByWordLrc.isBlank()) {
+            return emptyParsedWordByWordLyrics()
         }
 
-        val importParts = collectImportParts(rawLrc)
+        val importParts = collectImportParts(wordByWordLrc)
         val sortedRawLines = importParts.rawLines.sortedBy { it.startMs }
         if (sortedRawLines.isEmpty()) {
-            return emptyKaraokeImport(importParts.metadataLines)
+            return emptyParsedWordByWordLyrics(importParts.metadataLines)
         }
 
-        val karaokeLines = buildKaraokeLines(sortedRawLines)
-        if (karaokeLines.isEmpty()) {
-            return emptyKaraokeImport(importParts.metadataLines)
+        val wordByWordLines = buildWordByWordLines(sortedRawLines)
+        if (wordByWordLines.isEmpty()) {
+            return emptyParsedWordByWordLyrics(importParts.metadataLines)
         }
 
         val translationsByStartMs = groupTranslationsByStartMs(
             rawLines = sortedRawLines,
             translationCandidates = importParts.translationCandidates
         )
-        val effectiveTranslations = buildEffectiveTranslations(karaokeLines, translationsByStartMs)
+        val effectiveTranslations = buildEffectiveTranslations(wordByWordLines, translationsByStartMs)
 
-        return ParsedKaraokeImport(
-            karaokeLines = karaokeLines,
-            plainLrc = linesToPlainLrc(karaokeLines, importParts.metadataLines, effectiveTranslations),
+        return ParsedWordByWordLyrics(
+            wordByWordLines = wordByWordLines,
+            plainLrc = wordByWordLinesToPlainLrc(wordByWordLines, importParts.metadataLines, effectiveTranslations),
             hasTranslation = effectiveTranslations.isNotEmpty(),
             metadataLines = importParts.metadataLines
         )
     }
 
-    fun validateForStorage(rawLrc: String): StorageValidationResult {
-        val invalidLineNumbers = rawLrc
+    fun validateForStorage(wordByWordLrc: String): StorageValidationResult {
+        val invalidLineNumbers = wordByWordLrc
             .lineSequence()
             .mapIndexedNotNull { index, rawLine ->
                 val line = rawLine.trim()
                 if (line.isBlank() || parseMetadataLine(line) != null) {
                     return@mapIndexedNotNull null
                 }
-                if (isValidEnhancedLrcImportLine(line)) null else index + 1
+                if (isValidWordByWordLrcImportLine(line)) null else index + 1
             }
             .toList()
 
@@ -67,53 +67,53 @@ object KaraokeLrcParser {
             return StorageValidationResult(isValid = false, invalidLineNumbers = invalidLineNumbers)
         }
 
-        return StorageValidationResult(isValid = parse(rawLrc).isNotEmpty())
+        return StorageValidationResult(isValid = parse(wordByWordLrc).isNotEmpty())
     }
 
-    fun linesToEnhancedLrc(
-        lines: List<KaraokeLine>,
+    fun wordByWordLinesToWordByWordLrc(
+        wordByWordLines: List<WordByWordLine>,
         metadataLines: List<String> = emptyList()
     ): String {
-        val lyricLines = lines
+        val wordByWordLrcLines = wordByWordLines
             .sortedBy { it.startMs }
             .map { line ->
-                val tokenText = line.tokens
+                val segmentText = line.segments
                     .sortedBy { it.startMs }
-                    .joinToString(separator = "") { token ->
-                        "<${formatLrcTimeTag(token.startMs)}>${token.text}"
+                    .joinToString(separator = "") { segment ->
+                        "<${formatLrcTimeTag(segment.startMs)}>${segment.text}"
                     }
-                "[${formatLrcTimeTag(line.startMs)}]$tokenText"
+                "[${formatLrcTimeTag(line.startMs)}]$segmentText"
             }
 
-        return joinMetadataAndLyricLines(metadataLines, lyricLines)
+        return joinMetadataAndLyricLines(metadataLines, wordByWordLrcLines)
     }
 
-    fun linesToPlainLrc(
-        lines: List<KaraokeLine>,
+    fun wordByWordLinesToPlainLrc(
+        wordByWordLines: List<WordByWordLine>,
         metadataLines: List<String> = emptyList()
     ): String {
-        return linesToPlainLrc(lines, metadataLines, emptyMap())
+        return wordByWordLinesToPlainLrc(wordByWordLines, metadataLines, emptyMap())
     }
 
-    fun linesToPlainLrc(
-        lines: List<KaraokeLine>,
+    fun wordByWordLinesToPlainLrc(
+        wordByWordLines: List<WordByWordLine>,
         metadataLines: List<String>,
         translationsByStartMs: Map<Long, List<String>>
     ): String {
-        return formatPlainLrc(lines, metadataLines, translationsByStartMs)
+        return formatPlainLrc(wordByWordLines, metadataLines, translationsByStartMs)
     }
 }
 
-private const val FALLBACK_TOKEN_DURATION_MS = 400L
+private const val FALLBACK_SEGMENT_DURATION_MS = 400L
 
-private data class RawEnhancedLine(
+private data class RawWordByWordLine(
     val startMs: Long,
-    val tokens: List<Pair<String, Long>>
+    val segments: List<Pair<String, Long>>
 )
 
-private data class KaraokeImportParts(
+private data class WordByWordImportParts(
     val metadataLines: List<String>,
-    val rawLines: List<RawEnhancedLine>,
+    val rawLines: List<RawWordByWordLine>,
     val translationCandidates: List<TimedTextSegment>
 )
 
@@ -122,10 +122,10 @@ private data class TimedTextSegment(
     val text: String
 )
 
-private fun emptyKaraokeImport(
+private fun emptyParsedWordByWordLyrics(
     metadataLines: List<String> = emptyList()
-): ParsedKaraokeImport {
-    return ParsedKaraokeImport(
+): ParsedWordByWordLyrics {
+    return ParsedWordByWordLyrics(
         emptyList(),
         plainLrc = "",
         hasTranslation = false,
@@ -133,12 +133,12 @@ private fun emptyKaraokeImport(
     )
 }
 
-private fun collectImportParts(rawLrc: String): KaraokeImportParts {
+private fun collectImportParts(wordByWordLrc: String): WordByWordImportParts {
     val metadataLines = mutableListOf<String>()
-    val rawLines = mutableListOf<RawEnhancedLine>()
+    val rawLines = mutableListOf<RawWordByWordLine>()
     val translationCandidates = mutableListOf<TimedTextSegment>()
 
-    rawLrc.lineSequence().forEach { rawLine ->
+    wordByWordLrc.lineSequence().forEach { rawLine ->
         val line = rawLine.trim()
         if (line.isBlank()) return@forEach
 
@@ -147,9 +147,9 @@ private fun collectImportParts(rawLrc: String): KaraokeImportParts {
             return@forEach
         }
 
-        val rawEnhancedLine = parseRawEnhancedLine(line)
-        if (rawEnhancedLine != null) {
-            rawLines += rawEnhancedLine
+        val rawWordByWordLine = parseRawWordByWordLine(line)
+        if (rawWordByWordLine != null) {
+            rawLines += rawWordByWordLine
             return@forEach
         }
 
@@ -158,66 +158,66 @@ private fun collectImportParts(rawLrc: String): KaraokeImportParts {
         translationCandidates += parseTimedTextSegments(line)
     }
 
-    return KaraokeImportParts(
+    return WordByWordImportParts(
         metadataLines = metadataLines,
         rawLines = rawLines,
         translationCandidates = translationCandidates
     )
 }
 
-private fun buildKaraokeLines(
-    sortedRawLines: List<RawEnhancedLine>
-): List<KaraokeLine> {
+private fun buildWordByWordLines(
+    sortedRawLines: List<RawWordByWordLine>
+): List<WordByWordLine> {
     return sortedRawLines.mapIndexedNotNull { index, rawLine ->
         val nextLineStart = sortedRawLines.getOrNull(index + 1)?.startMs
-        buildKaraokeLine(rawLine, nextLineStart)
+        buildWordByWordLine(rawLine, nextLineStart)
     }
 }
 
-private fun buildKaraokeLine(
-    rawLine: RawEnhancedLine,
+private fun buildWordByWordLine(
+    rawLine: RawWordByWordLine,
     nextLineStart: Long?
-): KaraokeLine? {
-    val tokenList = buildTokenList(rawLine, nextLineStart)
-    val lineText = tokenList.joinToString(separator = "") { it.text }
+): WordByWordLine? {
+    val segmentList = buildSegmentList(rawLine, nextLineStart)
+    val lineText = segmentList.joinToString(separator = "") { it.text }
         .replace(whitespaceRegex, " ")
         .trim()
-    if (lineText.isBlank() || tokenList.isEmpty()) return null
+    if (lineText.isBlank() || segmentList.isEmpty()) return null
 
-    val lineEnd = nextLineStart ?: tokenList.last().endMs
+    val lineEnd = nextLineStart ?: segmentList.last().endMs
     if (lineEnd <= rawLine.startMs) return null
 
-    return KaraokeLine(
+    return WordByWordLine(
         startMs = rawLine.startMs,
         endMs = lineEnd,
         text = lineText,
-        tokens = tokenList
+        segments = segmentList
     )
 }
 
-private fun buildTokenList(
-    rawLine: RawEnhancedLine,
+private fun buildSegmentList(
+    rawLine: RawWordByWordLine,
     nextLineStart: Long?
-): List<KaraokeToken> {
-    return rawLine.tokens.mapIndexed { tokenIndex, (tokenText, tokenStartMs) ->
-        val nextTokenStart = rawLine.tokens.getOrNull(tokenIndex + 1)?.second
+): List<WordByWordSegment> {
+    return rawLine.segments.mapIndexed { segmentIndex, (segmentText, segmentStartMs) ->
+        val nextSegmentStart = rawLine.segments.getOrNull(segmentIndex + 1)?.second
             ?: nextLineStart
-            ?: (tokenStartMs + FALLBACK_TOKEN_DURATION_MS)
-        KaraokeToken(
-            text = tokenText,
-            startMs = tokenStartMs,
-            endMs = nextTokenStart.coerceAtLeast(tokenStartMs + 1L)
+            ?: (segmentStartMs + FALLBACK_SEGMENT_DURATION_MS)
+        WordByWordSegment(
+            text = segmentText,
+            startMs = segmentStartMs,
+            endMs = nextSegmentStart.coerceAtLeast(segmentStartMs + 1L)
         )
     }
 }
 
 private fun groupTranslationsByStartMs(
-    rawLines: List<RawEnhancedLine>,
+    rawLines: List<RawWordByWordLine>,
     translationCandidates: List<TimedTextSegment>
 ): Map<Long, List<String>> {
-    val karaokeStartTimes = rawLines.map { it.startMs }.toSet()
+    val wordByWordStartTimes = rawLines.map { it.startMs }.toSet()
     return translationCandidates
-        .filter { it.startMs in karaokeStartTimes }
+        .filter { it.startMs in wordByWordStartTimes }
         .groupBy(
             keySelector = { it.startMs },
             valueTransform = { it.text }
@@ -226,42 +226,42 @@ private fun groupTranslationsByStartMs(
 }
 
 private fun buildEffectiveTranslations(
-    karaokeLines: List<KaraokeLine>,
+    wordByWordLines: List<WordByWordLine>,
     translationsByStartMs: Map<Long, List<String>>
 ): Map<Long, List<String>> {
     return translationsByStartMs
         .mapValues { (startMs, translations) ->
-            val originalText = karaokeLines.firstOrNull { it.startMs == startMs }?.text.orEmpty()
+            val originalText = wordByWordLines.firstOrNull { it.startMs == startMs }?.text.orEmpty()
             cleanTranslationParts(translations, originalText)
         }
         .filterValues { it.isNotEmpty() }
 }
 
-private fun isValidEnhancedLrcImportLine(line: String): Boolean {
-    if (parseRawEnhancedLine(line) != null) return true
+private fun isValidWordByWordLrcImportLine(line: String): Boolean {
+    if (parseRawWordByWordLine(line) != null) return true
     if (wordTimeTagRegex.containsMatchIn(line)) return false
     return parseTimedTextSegments(line).isNotEmpty()
 }
 
-private fun parseRawEnhancedLine(line: String): RawEnhancedLine? {
+private fun parseRawWordByWordLine(line: String): RawWordByWordLine? {
     val lineStart = timeTagRegex.find(line)?.let { parseTimeTag(it) }
         ?: return null
     val content = line.replace(timeTagRegex, "").trim()
     val wordTags = wordTimeTagRegex.findAll(content).toList()
     if (wordTags.isEmpty()) return null
 
-    val tokens = wordTags.mapIndexedNotNull { index, match ->
+    val segments = wordTags.mapIndexedNotNull { index, match ->
         val startMs = parseTimeTag(match) ?: return@mapIndexedNotNull null
         val textStart = match.range.last + 1
         val textEndExclusive = wordTags.getOrNull(index + 1)?.range?.first ?: content.length
         if (textStart > textEndExclusive || textStart > content.length) return@mapIndexedNotNull null
-        val tokenText = content.substring(textStart, textEndExclusive)
+        val segmentText = content.substring(textStart, textEndExclusive)
             .replace(wordTimeTagRegex, "")
-        if (tokenText.isBlank()) return@mapIndexedNotNull null
-        tokenText to startMs
+        if (segmentText.isBlank()) return@mapIndexedNotNull null
+        segmentText to startMs
     }.filter { (_, startMs) -> startMs >= lineStart }
 
-    return if (tokens.isEmpty()) null else RawEnhancedLine(lineStart, tokens)
+    return if (segments.isEmpty()) null else RawWordByWordLine(lineStart, segments)
 }
 
 private fun parseTimedTextSegments(line: String): List<TimedTextSegment> {
@@ -292,11 +292,11 @@ private fun parseTimedTextSegments(line: String): List<TimedTextSegment> {
 }
 
 private fun formatPlainLrc(
-    lines: List<KaraokeLine>,
+    wordByWordLines: List<WordByWordLine>,
     metadataLines: List<String>,
     translationsByStartMs: Map<Long, List<String>>
 ): String {
-    val lyricLines = lines
+    val plainLrcLines = wordByWordLines
         .sortedBy { it.startMs }
         .map { line ->
             val originalText = line.text.trim()
@@ -312,14 +312,14 @@ private fun formatPlainLrc(
             "[${formatLrcTimeTag(line.startMs)}]$storedText"
         }
 
-    return joinMetadataAndLyricLines(metadataLines, lyricLines)
+    return joinMetadataAndLyricLines(metadataLines, plainLrcLines)
 }
 
 private fun joinMetadataAndLyricLines(
     metadataLines: List<String>,
-    lyricLines: List<String>
+    formattedLrcLines: List<String>
 ): String {
-    return (formatMetadataForStorage(metadataLines) + lyricLines)
+    return (formatMetadataForStorage(metadataLines) + formattedLrcLines)
         .joinToString("\n")
 }
 

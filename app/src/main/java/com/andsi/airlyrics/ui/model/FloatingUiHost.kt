@@ -41,14 +41,14 @@ internal interface FloatingUiHost {
     fun applyFloatingPaddingHorizontal(paddingDp: Int)
     fun applyFloatingPaddingVertical(paddingDp: Int)
     fun applyFloatingCornerRadius(radiusDp: Int)
-    fun applyFloatingKaraokeHighlightColor(color: Int)
+    fun applyFloatingWordByWordHighlightColor(color: Int)
     fun lyricsContentDisplayMode(): LyricsContentDisplayMode
     fun lyricsLineDisplayMode(): LyricsLineDisplayMode
     fun lyricsSwitchAnimationMode(): LyricsSwitchAnimationMode
-    fun karaokeLyricsEnabled(): Boolean
+    fun wordByWordLyricsEnabled(): Boolean
     fun setLyricsContentDisplayMode(mode: LyricsContentDisplayMode)
     fun setLyricsLineDisplayMode(mode: LyricsLineDisplayMode)
     fun setLyricsSwitchAnimationMode(mode: LyricsSwitchAnimationMode)
-    fun setKaraokeLyricsEnabled(enabled: Boolean)
+    fun setWordByWordLyricsEnabled(enabled: Boolean)
     fun notifyFloatingStyleChanged()
 }

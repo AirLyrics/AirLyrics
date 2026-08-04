@@ -11,7 +11,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.lyrics.importer.enhancedLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -95,8 +95,8 @@ private fun MainUiHost.openLocalLyricsEditorForItem(
     onLyricsSaved: (() -> Unit)?
 ) {
     when {
-        item.hasKaraokeLyrics -> {
-            openLocalLyricsEditor(item.toStorageItem(), LyricsStorage.LocalLyricsEditTarget.KARAOKE, onLyricsSaved)
+        item.hasWordByWordLyrics -> {
+            openLocalLyricsEditor(item.toStorageItem(), LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD, onLyricsSaved)
         }
         else -> {
             openLocalLyricsEditor(item.toStorageItem(), LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
@@ -109,7 +109,7 @@ private fun MainUiHost.openLocalLyricsEditor(
     target: LyricsStorage.LocalLyricsEditTarget,
     onLyricsSaved: (() -> Unit)?
 ) {
-    val isKaraoke = target == LyricsStorage.LocalLyricsEditTarget.KARAOKE
+    val isWordByWord = target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
     AirToast.showShort(this, R.string.ui_loading)
 
     localLyricsEditorLoadRunner.submit(
@@ -119,8 +119,8 @@ private fun MainUiHost.openLocalLyricsEditor(
         if (rawLyrics == null) {
             showAirDialog(
                 title = getString(R.string.ui_read_failed),
-                message = if (isKaraoke) {
-                    getString(R.string.ui_cannot_read_enhanced_lrc_file)
+                message = if (isWordByWord) {
+                    getString(R.string.ui_cannot_read_word_by_word_lyrics_file)
                 } else {
                     getString(R.string.ui_cannot_read_this_lyric_file)
                 },
@@ -138,7 +138,7 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
     rawLyrics: String,
     onLyricsSaved: (() -> Unit)?
 ) {
-    val isKaraoke = target == LyricsStorage.LocalLyricsEditTarget.KARAOKE
+    val isWordByWord = target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
     val editor = EditText(this).apply {
         setText(rawLyrics)
         textSize = AirUiTokens.TextSize.BodySmall
@@ -170,13 +170,13 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
     }
 
     editDialog = showAirDialog(
-        title = if (isKaraoke) {
-            getString(R.string.ui_item_displaytitle_enhanced_lrc, item.displayTitle)
+        title = if (isWordByWord) {
+            getString(R.string.ui_item_display_title_word_by_word_lyrics, item.displayTitle)
         } else {
             item.displayTitle
         },
-        message = if (isKaraoke) {
-            getString(R.string.ui_enhanced_lrc_format_hint)
+        message = if (isWordByWord) {
+            getString(R.string.ui_word_by_word_lyrics_format_hint)
         } else null,
         positiveText = null,
         negativeText = null,
@@ -188,18 +188,18 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                 setPadding(0, dp(AirUiTokens.Space.ButtonH), 0, 0)
 
                 addView(localLyricsDialogButton(getString(R.string.ui_check_format), primary = false) {
-                    if (isKaraoke) {
-                        val validation = LyricsStorage.validateKaraokeLyricsItemText(editor.text.toString())
+                    if (isWordByWord) {
+                        val validation = LyricsStorage.validateWordByWordLyricsItemText(editor.text.toString())
                         if (validation.saved) {
                             showAirDialog(
                                 title = getString(R.string.ui_format_looks_good),
-                                message = getString(R.string.ui_this_enhanced_lrc_can_be_saved),
+                                message = getString(R.string.ui_this_word_by_word_lyrics_can_be_saved),
                                 positiveText = getString(R.string.ui_ok)
                             )
                         } else if (validation.invalidLineNumbers.isNotEmpty()) {
-                            showEnhancedLyricsFormatErrorDialog(validation.invalidLineNumbers)
+                            showWordByWordLyricsFormatErrorDialog(validation.invalidLineNumbers)
                         } else {
-                            showEnhancedLyricsFormatErrorDialog(emptyList())
+                            showWordByWordLyricsFormatErrorDialog(emptyList())
                         }
                     } else {
                         val validation = LrcParser.validateForStorage(editor.text.toString())
@@ -225,10 +225,10 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                     setSavingState(true)
                     AirToast.showShort(this@showLocalLyricsEditorDialog, R.string.ui_saving)
                     runOnAppIo {
-                        val result = if (isKaraoke) {
-                            LyricsStorage.updateKaraokeLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
+                        val result = if (isWordByWord) {
+                            LyricsStorage.updateWordByWordLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
                         } else {
-                            LyricsStorage.updateLocalLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
+                            LyricsStorage.updatePlainLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
                         }
                         runOnMainThread {
                             when {
@@ -239,12 +239,12 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                                 }
                                 result.invalidLineNumbers.isNotEmpty() -> {
                                     setSavingState(false)
-                                    if (isKaraoke) showEnhancedLyricsFormatErrorDialog(result.invalidLineNumbers) else showLyricsFormatErrorDialog(result.invalidLineNumbers)
+                                    if (isWordByWord) showWordByWordLyricsFormatErrorDialog(result.invalidLineNumbers) else showLyricsFormatErrorDialog(result.invalidLineNumbers)
                                 }
                                 else -> {
                                     setSavingState(false)
-                                    if (isKaraoke) {
-                                        showEnhancedLyricsFormatErrorDialog(emptyList())
+                                    if (isWordByWord) {
+                                        showWordByWordLyricsFormatErrorDialog(emptyList())
                                     } else {
                                         showAirDialog(
                                             title = getString(R.string.ui_save_failed),
@@ -271,10 +271,10 @@ private fun MainUiHost.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>
     )
 }
 
-private fun MainUiHost.showEnhancedLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
+private fun MainUiHost.showWordByWordLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     showAirDialog(
         title = getString(R.string.ui_invalid_format),
-        message = enhancedLyricsFormatErrorMessage(invalidLineNumbers),
+        message = wordByWordLyricsFormatErrorMessage(invalidLineNumbers),
         positiveText = getString(R.string.ui_back_to_edit)
     )
 }

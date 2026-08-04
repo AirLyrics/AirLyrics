@@ -66,8 +66,8 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             LyricsSettingsStore.setAutoSaveLocalEnabled(activity, enabled)
             enabled
         },
-        selectLyricsSource = { source ->
-            LyricsSettingsStore.setLyricsSearchSource(activity, source)
+        selectPlainLyricsSource = { plainLyricsSearchSource ->
+            LyricsSettingsStore.setPlainLyricsSearchSource(activity, plainLyricsSearchSource)
             floatingController.reloadLyrics()
         },
         openUrl = uiHost::openUrl,
