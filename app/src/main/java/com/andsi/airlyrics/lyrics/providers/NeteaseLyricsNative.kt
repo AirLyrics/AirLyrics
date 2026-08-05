@@ -10,7 +10,6 @@ object NeteaseLyricsNative {
         artist: String,
         album: String,
         durationMs: Long,
-        lookupId: Long,
-        reserved: Boolean
+        lookupId: Long
     ): String
 }

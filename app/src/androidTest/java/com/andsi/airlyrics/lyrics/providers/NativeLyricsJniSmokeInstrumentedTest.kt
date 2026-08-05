@@ -77,7 +77,6 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 album = "",
                 durationMs = 0L,
                 lookupId = lookupId,
-                reserved = false,
             ),
             defaultSource = "netease-rust",
         )
@@ -92,7 +91,6 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 durationMs = 0L,
                 translationLanguageCode = "zh",
                 lookupId = MUSIXMATCH_VALIDATION_LOOKUP_ID,
-                reserved = false,
             ),
             defaultSource = "musixmatch-rust",
         )

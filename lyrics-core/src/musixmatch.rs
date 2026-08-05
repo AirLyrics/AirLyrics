@@ -26,7 +26,6 @@ pub(crate) fn fetch_best_lyrics(
     duration_ms: Option<u64>,
     translation_language: &str,
     lookup_id: jni::sys::jlong,
-    _reserved: bool,
 ) -> Result<NativeResult, String> {
     let _cancellation_guard = begin_lookup_cancellation(lookup_id)?;
     check_lookup_cancelled(lookup_id)?;
@@ -130,7 +129,6 @@ pub(crate) fn fetch_best_lyrics(
                 lrc: Some(lrc),
                 translated_lrc,
                 merged_lrc: Some(merged_lrc),
-                word_by_word_json: None,
                 error_type: None,
                 error: None,
             })

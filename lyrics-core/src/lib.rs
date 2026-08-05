@@ -38,10 +38,6 @@ pub(crate) struct NativeResult {
     lrc: Option<String>,
     translated_lrc: Option<String>,
     merged_lrc: Option<String>,
-    // Legacy internal JNI wire field. Runtime writers keep it null pending native cleanup;
-    // keep the serialized key unchanged for the current contract.
-    #[serde(rename = "karaoke_json")]
-    word_by_word_json: Option<String>,
     error_type: Option<&'static str>,
     error: Option<String>,
 }
@@ -55,23 +51,8 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_NeteaseLyricsNa
     album: JString,
     duration_ms: jni::sys::jlong,
     lookup_id: jni::sys::jlong,
-    _reserved: jni::sys::jboolean,
 ) -> jstring {
     fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms, lookup_id)
-}
-
-// Keep the old root-package symbol as a compatibility alias for older APKs/builds.
-#[no_mangle]
-pub extern "system" fn Java_com_andsi_airlyrics_NeteaseLyricsNative_fetchBestLyricsJson(
-    env: JNIEnv,
-    this: JObject,
-    title: JString,
-    artist: JString,
-    album: JString,
-    duration_ms: jni::sys::jlong,
-    _reserved: jni::sys::jboolean,
-) -> jstring {
-    fetch_netease_lyrics_json(env, this, title, artist, album, duration_ms, 0)
 }
 
 #[no_mangle]
@@ -84,7 +65,6 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
     duration_ms: jni::sys::jlong,
     translation_language: JString,
     lookup_id: jni::sys::jlong,
-    _reserved: jni::sys::jboolean,
 ) -> jstring {
     let title = jstring_to_string(&mut env, title);
     let artist = jstring_to_string(&mut env, artist);
@@ -104,7 +84,6 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
             duration_ms,
             &translation_language,
             lookup_id,
-            false,
         )
     })
     .unwrap_or_else(|_| Err("native panic while fetching musixmatch lyrics".to_string()));
@@ -202,7 +181,6 @@ fn fallback_error(source: &'static str, error_type: &'static str, message: &str)
         lrc: None,
         translated_lrc: None,
         merged_lrc: None,
-        word_by_word_json: None,
         error_type: Some(error_type),
         error: Some(message.to_string()),
     })
@@ -406,7 +384,6 @@ fn fetch_best_lyrics(
                     lrc,
                     translated_lrc,
                     merged_lrc,
-                    word_by_word_json: None,
                     error_type: None,
                     error: None,
                 })

@@ -68,8 +68,7 @@ object MusixmatchPlainLyricsProvider : PlainLyricsProvider {
                     album = album,
                     durationMs = durationMs,
                     translationLanguageCode = translationLanguageCode,
-                    lookupId = lookupId,
-                    reserved = false
+                    lookupId = lookupId
                 )
             }
             cancellationToken?.throwIfCancellationRequested()

@@ -50,8 +50,7 @@ object NeteasePlainLyricsProvider : PlainLyricsProvider {
                     artist = artist,
                     album = album,
                     durationMs = durationMs,
-                    lookupId = lookupId,
-                    reserved = false
+                    lookupId = lookupId
                 )
             }
             cancellationToken?.throwIfCancellationRequested()

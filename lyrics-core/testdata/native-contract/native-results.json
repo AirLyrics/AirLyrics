@@ -10,7 +10,6 @@
     "lrc": "[00:01.00]Original line",
     "translated_lrc": "[00:01.00]Translated line",
     "merged_lrc": "[00:01.00]Original line / Translated line",
-    "karaoke_json": null,
     "error_type": null,
     "error": null
   },
@@ -25,7 +24,6 @@
     "lrc": "[00:03.00]Original subtitle",
     "translated_lrc": "[00:03.00]Translated subtitle",
     "merged_lrc": "[00:03.00]Original subtitle / Translated subtitle",
-    "karaoke_json": null,
     "error_type": null,
     "error": null
   },
@@ -40,7 +38,6 @@
     "lrc": null,
     "translated_lrc": null,
     "merged_lrc": null,
-    "karaoke_json": null,
     "error_type": "RateLimited",
     "error": "musixmatch rate limit exceeded"
   },
@@ -55,7 +52,6 @@
     "lrc": "[00:02.00]Original only",
     "translated_lrc": null,
     "merged_lrc": "[00:02.00]Original only",
-    "karaoke_json": null,
     "error_type": null,
     "error": null
   }

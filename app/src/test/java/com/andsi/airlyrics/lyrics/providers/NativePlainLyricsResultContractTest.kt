@@ -4,6 +4,7 @@ import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,6 +14,16 @@ import org.robolectric.shadows.ShadowLog
 
 @RunWith(RobolectricTestRunner::class)
 class NativePlainLyricsResultContractTest {
+    @Test
+    fun sharedFixture_omitsRemovedKaraokeJsonField() {
+        FIXTURE_CASES.forEach { caseName ->
+            assertFalse(
+                "$caseName must not contain removed karaoke_json field",
+                fixture.getJSONObject(caseName).has("karaoke_json"),
+            )
+        }
+    }
+
     @Test
     fun successFixture_mapsThroughNeteasePlainLyricsProductionProvider() {
         val nativeResult =
@@ -136,5 +147,7 @@ class NativePlainLyricsResultContractTest {
 
     private companion object {
         const val FIXTURE_RESOURCE = "native-contract/native-results.json"
+        val FIXTURE_CASES =
+            listOf("success", "translated_success", "provider_error", "nullable_success")
     }
 }
