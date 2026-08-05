@@ -2,100 +2,179 @@
 
 [English](ARCHITECTURE.md) · [简体中文](ARCHITECTURE.zh-CN.md)
 
-AirLyrics is an Android floating lyrics application. The Android side is written in Kotlin,
-while online lyrics sources are integrated through the native lyrics core written in Rust.
+AirLyrics is an Android floating lyrics application. The Android application is written in Kotlin,
+while the online lyrics integrations are implemented by a Rust native core exposed through JNI.
 
-The codebase is divided by responsibility into shared models, media detection, lyrics lookup,
-local lyrics storage, floating window rendering, settings persistence, design tokens, and UI screens.
+The codebase is organized around media detection, lyrics lookup and storage, floating-window
+rendering, settings persistence, localization, UI rendering, and application-level coordination.
+
+## Project Layout
+
+```text
+app/              Android application module and Kotlin sources
+lyrics-core/      Rust lyrics lookup core compiled as a native library
+scripts/          Repository checks and development helpers
+docs/             User, contributor, format, and architecture documentation
+```
+
+The Gradle project contains one Android module, `:app`. `lyrics-core/` is a Cargo crate rather than
+a Gradle subproject. The app module's `buildRustLyrics` task builds the crate with `cargo ndk` and
+places `libairlyrics_lyrics.so` under `app/src/main/jniLibs/`. Normal pre-build tasks depend on it
+unless `-Pairlyrics.skipRustBuild=true` is supplied.
 
 ## Runtime Flow
 
 ```text
 Music app
-  -> Android media notification / media session
+  -> Android media session and notification lifecycle
   -> MediaNotificationListenerService
-  -> CurrentMediaBroadcast
-      -> MainReceivers
-          -> MediaSourceController
-          -> MainGraph
-      -> FloatingLyricsService
-          -> LyricsRepository
-              -> LocalPlainLyricsProvider
-              -> NeteasePlainLyricsProvider or MusixmatchPlainLyricsProvider
-              -> LyricsStorage for optional local saving
-          -> FloatingLyricsWindow
-          -> FloatingLyricsRenderer
+      -> MediaSessionObserver
+          -> CurrentMediaReader
+          -> CurrentMediaBroadcast
+              -> MainReceivers
+                  -> MediaSourceController
+                  -> Main UI invalidation
+              -> FloatingLyricsService
+                  -> MediaSnapshotGate
+                  -> LyricsLookupRunner
+                      -> LyricsRepository
+                          -> LocalPlainLyricsProvider
+                              -> LyricsStorage
+                          -> NeteasePlainLyricsProvider or MusixmatchPlainLyricsProvider
+                              -> JNI
+                              -> lyrics-core
+                          -> optional local save and local word-by-word attachment
+                  -> FloatingLyricsRenderer
+                  -> FloatingLyricsWindow
 ```
 
-The main UI and the floating lyrics service receive media state updates separately.
-The main UI displays state and handles user actions, while the floating lyrics service
-looks up lyrics, manages the floating window, and updates the displayed lyrics.
+The main UI and the floating service consume media broadcasts independently. The main UI displays
+state and handles user actions. The floating service accepts updates only from the selected media
+package, looks up lyrics, maintains playback timing, and updates the overlay.
 
-Local lyrics always take priority unless the caller explicitly skips the local lookup.
-Online lyrics lookup only runs when allowed by the user settings.
+While floating lyrics are active, the service also periodically reads the selected media session
+through `CurrentMediaReader`. This recovers delayed or missed listener updates and keeps the selected
+session synchronized. `MediaSnapshotGate` rejects older sequenced snapshots so stale callbacks
+cannot move playback state backwards.
+
+Lyrics lookup uses latest-request-wins semantics. `LyricsLookupRunner` cancels the previous Kotlin
+worker and its native lookup when a newer song or reload request arrives. The floating service also
+checks its request key before applying a completed result.
+
+Successful lyrics imports use a separate durable-change flow:
+
+```text
+Lyrics import
+  -> MainLyricsWorkflow
+  -> LyricsController
+  -> LyricsStorage
+  -> LyricsChangedBroadcast
+      -> MainReceivers -> rebuild affected UI
+      -> FloatingLyricsService -> reload when the changed song is current
+```
 
 ## Main Android Packages
 
 ```text
-app/              Main UI entry point, dependency assembly, lifecycle coordination, and feature control
-core/             Shared stable models used across packages
-design/           Shared UI tokens that are not owned by a specific screen package
-media/            Media notification and media session reading, plus selected player persistence
-lyrics/           Lyrics lookup, providers, parsing, importing, display formatting, and storage
-floating/         Foreground service, floating window control, and lyrics rendering
-settings/         Settings persistence
-ui/               Screens, shared components, navigation, themes, and widgets
-i18n/             Localization utilities and text handling
+app/              Composition root, lifecycle coordination, controllers, workflows, and UI adapters
+core/             Dependency-stable models, color helpers, and preference abstractions
+design/           Shared UI design tokens
+media/            Media-session observation, current-media models, broadcasts, and source persistence
+lyrics/           Lookup, cancellation, providers, parsing, importing, formatting, and storage
+floating/         Foreground service, service commands, overlay control, and lyrics rendering
+settings/         Feature-specific settings persistence and toast policy
+ui/               Screens, components, navigation, themes, UI models, and async UI helpers
+i18n/             Language selection, localized assets, and user-facing text formatters
 ```
+
+## Package Boundaries
+
+The current top-level Kotlin package dependencies are:
+
+```text
+core      -> (none)
+design    -> (none)
+settings  -> core
+lyrics    -> core
+i18n      -> core, lyrics
+media     -> core, i18n
+ui        -> core, design, i18n
+floating  -> core, design, i18n, lyrics, media, settings
+app       -> core, design, floating, i18n, lyrics, media, settings, ui
+```
+
+Arrows mean “imports from”; generated `R` and platform libraries are omitted.
+
+The important boundary rules are:
+
+- `core/` and `design/` do not depend on feature packages.
+- `lyrics/` and `media/` remain independent of each other and do not depend on `app/`, `floating/`,
+  `settings/`, or `ui/`.
+- `ui/` does not import concrete media, lyrics, settings, or floating implementations. It receives
+  UI-facing data and actions through interfaces under `ui/model/`.
+- `floating/` may coordinate media, lyrics, and settings, but it does not depend on the main app
+  shell or UI pages.
+- `app/` is the composition layer that is allowed to connect all feature packages.
+
+`scripts/check_architecture_boundaries.sh` enforces these import restrictions in CI.
 
 ## App-Local Communication Protocols
 
-Cross-component communication is owned by dedicated protocol objects instead of a shared
-constants package that exposes raw action and extra names.
+Cross-component communication is owned by dedicated protocol objects. Raw action and extra names
+must not be duplicated by senders or receivers.
 
 ```text
 CurrentMediaBroadcast
-Owns media state broadcasts. MediaNotificationListenerService sends current media changes,
-while MainReceivers / MediaSourceController and FloatingLyricsService receive them separately.
+Owns media-update and media-source-lost broadcasts. MediaNotificationListenerService sends them;
+MainReceivers / MediaSourceController and FloatingLyricsService consume them independently.
 
 FloatingServiceCommand
-Owns startService commands sent to FloatingLyricsService. Main UI controllers and the
-foreground notification create typed command objects, this object converts them to Intents,
-and the service uses the same object to parse incoming Intents.
+Owns commands sent to FloatingLyricsService through startForegroundService or PendingIntent.
+Callers construct typed command objects, and the service parses commands through the same object.
 
 FloatingWindowStateBroadcast
-Owns floating window visibility, lock, and touch-through state broadcasts. FloatingLyricsService
-sends state updates, while MainReceivers / FloatingController receive them and update main UI state.
+Owns floating-window visibility, lock, and touch-through state broadcasts. FloatingLyricsService
+sends actual window state; MainReceivers / FloatingController synchronize the main UI.
+
+LyricsChangedBroadcast
+Owns durable lyrics-change notifications keyed by SongIdentity. LyricsController publishes after a
+successful import; the main UI refreshes and the service reloads only if the changed song is current.
 ```
 
-Notification relationships:
+The broadcasts are package-scoped and registered as not exported. The foreground notification is
+created by `FloatingServiceNotification`; its actions create `PendingIntent`s through
+`FloatingServiceCommand` and return to `FloatingLyricsService.handleCommand`.
+
+`AppLocalProtocolGuardTest` ensures that app-local action strings remain in the four protocol-owner
+files.
+
+## App Shell and UI Boundary
+
+`MainActivity` is a thin Android entry point. It creates `MainGraph` and forwards activity lifecycle
+and saved-state callbacks.
+
+`MainGraph` is the main-screen composition root and lifecycle coordinator. It assembles controllers,
+activity-result launchers, broadcast receivers, the UI host, the renderer, the lyrics workflow, and
+the app I/O executor. It also preserves navigation and pending lyrics-import state across activity
+recreation.
+
+Feature work is split as follows:
 
 ```text
-Android media notification / media session
-  -> MediaNotificationListenerService
-  -> CurrentMediaBroadcast
-  -> Main UI and FloatingLyricsService
-
-FloatingLyricsService foreground notification
-  -> FloatingServiceNotification
-  -> PendingIntent
-  -> FloatingServiceCommand
-  -> FloatingLyricsService.handleCommand
-
-FloatingLyricsService floating window state changes
-  -> FloatingWindowStateBroadcast
-  -> MainReceivers
-  -> FloatingController
+controller/       Media-source, lyrics, and floating-feature orchestration
+contracts/        Small app-layer dependency interfaces
+host/             Adapters that implement UI host capabilities and MainUiActions
+lifecycle/        Activity-result launchers and receiver registration
+platform/         Android permission and navigation helpers
+render/           Main view construction, references, and targeted invalidation
+state/            Main-screen and pending-operation state
+workflow/         Multi-step lyrics import and directory-selection flows
 ```
 
-## App Shell
-
-`MainActivity` is a thin UI entry point. It only creates `MainGraph`
-and forwards lifecycle events such as creation, resume, and destruction to it.
-
-`MainGraph` is the dependency assembly entry point and lifecycle coordinator for the main UI.
-Permission results, activity result callbacks, broadcast handling, page rendering, and feature-specific logic
-are split into `controller/`, `contracts/`, `host/`, `lifecycle/`, `platform/`, `render/`, and `state/`.
+The handwritten screens under `ui/pages/` depend on `MainUiHost` and other UI models rather than
+reading feature stores directly. `app/host/` converts media, lyrics, settings, and floating state
+into page data and maps `MainUiActions` back to controllers. `LatestUiTaskRunner` prevents older
+asynchronous page loads from overwriting newer UI state.
 
 Important files:
 
@@ -105,94 +184,141 @@ app/MainGraph.kt
 app/controller/MediaSourceController.kt
 app/controller/LyricsController.kt
 app/controller/FloatingController.kt
-app/contracts/MainAppContracts.kt
-app/platform/PermissionHelper.kt
+app/workflow/MainLyricsWorkflow.kt
 app/lifecycle/MainLaunchers.kt
 app/lifecycle/MainReceivers.kt
+app/host/MainActivityUiHost.kt
 app/render/MainHandRenderer.kt
+ui/model/MainUiHost.kt
+ui/model/MainUiActions.kt
 ```
 
 ## Media Detection
 
-`MediaNotificationListenerService` reads active media notifications and media sessions,
-then broadcasts the current playback state through `CurrentMediaBroadcast`.
+`MediaNotificationListenerService` provides the notification-listener permission boundary. Android
+notification changes trigger a debounced session rescan, while `MediaSessionObserver` listens to
+active-session changes and controller metadata or playback callbacks.
 
-`MediaSessionObserver` listens for active media sessions, registers controller callbacks,
-and applies one shared controller selection strategy when a media app exposes multiple
-sessions. `CurrentMediaReader` owns that strategy: prefer playing controllers that
-can produce a media title, then controllers with a media title, then playing,
-metadata-bearing, or first usable sessions as fallbacks.
+The observer registers one callback per media-session token and publishes the best usable controller
+for each media package. `CurrentMediaReader` owns the shared selection rule used by the observer,
+main UI, and floating service: prefer a titled playing controller, then a titled controller, then a
+playing, metadata-bearing, or first usable controller.
 
-`MediaSourceStore` stores the package name of the media app selected by the user,
-which allows the app to handle cases where multiple music apps are active at the same time.
+`CurrentMediaInfo` contains the source package, song metadata, playback state, estimated position,
+and a monotonically increasing snapshot sequence. `CurrentMediaBroadcast` transports that model
+between Android components.
 
-The media screen displays the current media item and available players.
-Refresh operations only update the relevant media state and do not rebuild the entire UI.
+`MediaSourceStore` persists the package selected by the user. This selection scopes media display,
+lyrics import and deletion, and floating-service updates when several players are active.
 
 ## Lyrics Lookup
 
-`LyricsRepository` is the unified entry point for lyrics lookup.
-Lyrics operations in the UI are usually started by `LyricsController`,
-while the floating lyrics service also performs lyrics lookup directly when the current media changes.
-The repository receives the current `LyricsSettings` model from its caller, so the lyrics package
-does not depend on the settings storage implementation.
+`LyricsRepository` is the unified lookup entry point. UI lyrics operations are coordinated by
+`LyricsController` and `MainLyricsWorkflow`; the floating service calls the repository when the
+selected media changes or lyrics are explicitly reloaded.
 
-The default flow is:
+The repository receives a `LyricsSettings` value from its caller, so `lyrics/` does not depend on the
+settings storage implementation. The normal lookup order is:
 
-1. Look up locally imported or previously saved lyrics.
-2. If no local lyrics are found, query the online provider selected in settings.
-3. Save online results locally according to the user settings.
-4. When word-by-word lyrics are enabled, try to attach locally saved word-by-word lyrics.
+1. Read locally imported or previously cached plain lyrics.
+2. If local lyrics are absent and online lookup is enabled, call the selected online provider.
+3. Save a successful online result locally when auto-save or forced save is enabled.
+4. If word-by-word display is enabled, attach locally stored word timing data when available.
 
-Unless the request explicitly skips the local lookup, `LocalPlainLyricsProvider`
-always takes priority over online providers.
+Local plain lyrics always take priority unless a request explicitly bypasses local lookup. Online
+auto-save does not replace plain lyrics while word-by-word lyrics exist.
 
-After word-by-word lyrics are imported, a normal LRC fallback is generated for normal display modes.
-That fallback is maintained by the word-by-word lyrics: editing word-by-word lyrics regenerates it,
-and removing word-by-word lyrics removes the generated fallback.
+Word-by-word lyrics are local-import-first. Importing them creates a generated plain LRC fallback for
+normal display modes. Editing word-by-word lyrics regenerates that fallback; removing word-by-word
+lyrics removes it when it is still the generated copy. A separately managed plain LRC and
+word-by-word LRC cannot be imported for the same song at the same time.
+
+## Native Lyrics Core
+
+`NeteasePlainLyricsProvider` and `MusixmatchPlainLyricsProvider` adapt the Kotlin provider contract
+to JNI. `LyricsNativeLibrary` loads `libairlyrics_lyrics.so`, and provider-specific JNI objects pass
+song metadata, translation language, and a native lookup ID to the Rust core.
+
+The Rust core searches and scores provider candidates, fetches plain and translated LRC, and returns
+a JSON result with stable success and error fields. Kotlin maps this JSON into `LyricsProviderResult`
+or typed `LyricsLookupException` values. Cancellation IDs allow newer requests to stop native work
+between network stages.
+
+The native result shape is covered by shared Rust and Kotlin contract fixtures under
+`lyrics-core/testdata/native-contract/`.
+
+## Lyrics Storage
+
+`LyricsStorage` is the public facade for local lyrics persistence. Its implementation is split into
+focused helpers for paths, file I/O, file naming, index access, listing, editing, deletion, plain
+lyrics, and word-by-word lyrics.
+
+The default backend is the app-specific files directory. A user-selected directory uses Android's
+Storage Access Framework with persistable read/write permission. Managed lyrics live under a
+`lyrics/` directory and are described by `lyrics_index.json`.
+
+`SongIdentity` centralizes normalized song matching and stable storage keys. Storage operations are
+serialized through the facade so concurrent imports cannot interleave index and file updates.
+Word-by-word import coordinates the word timing data, generated plain fallback, and index entry as
+one operation; it snapshots existing state and attempts rollback if a later write fails. Editing
+word-by-word lyrics regenerates the fallback while holding the same storage lock.
+
+Recent-lyrics listing and editing also go through the facade. The UI never edits the index or files
+directly.
 
 ## Floating Lyrics
 
-`FloatingLyricsService` is the coordination entry point for the foreground service
-and floating lyrics features.
+`FloatingLyricsService` is the foreground-service coordination entry point. The class owns shared
+runtime state, while focused files split command handling, selected-media observation, lyrics lookup,
+pause visibility, notification controls, and protocol keys.
 
-It receives media changes, looks up lyrics, creates the foreground notification,
-and coordinates the floating lyrics window with the lyrics renderer.
-It does not select or register media controllers directly; media session selection
-belongs to the `media/` layer.
+The service does not implement media-session selection itself; it uses `CurrentMediaReader` from the
+media layer and filters all updates by `MediaSourceStore`. Its persisted desired visibility is kept
+separate from actual window visibility, which is reported to the UI through
+`FloatingWindowStateBroadcast`.
 
-The foreground notification is created by `FloatingServiceNotification`. Notification
-buttons do not expose raw action strings; they create `PendingIntent`s through
-`FloatingServiceCommand`, which are parsed by `FloatingLyricsService.handleCommand`.
+`FloatingLyricsWindow` owns `WindowManager` operations: creation, removal, position persistence,
+style application, dragging, locking, and touch-through flags. Window-operation failures converge on
+a hidden state and broadcast that actual state.
 
-Floating window state changes are broadcast through `FloatingWindowStateBroadcast`,
-which keeps visible, locked, and touch-through state synchronized with the main UI.
+`FloatingLyricsRenderer` owns LRC timelines, playback position estimation, lyrics offset, current and
+neighboring-line selection, original/translation display modes, line transitions, and word-by-word
+highlighting.
 
-`FloatingLyricsWindow` manages creation, updates, and removal of the floating window,
-as well as window position, appearance, locking, and touch-through behavior.
-
-`FloatingLyricsRenderer` manages the lyrics timeline, current line selection,
-text updates, line transition animations, and word-by-word highlighting.
-
-The floating window supports appearance customization, locking, touch-through mode,
-position persistence, lyrics offset, line transition animations,
-and word-by-word highlighting when word-level lyrics are available.
+When auto hide/show is enabled, a paused track temporarily removes the window without clearing the
+user's desired-visible setting. Selected-media observation continues so playback can restore the
+window when it resumes.
 
 ## Settings
 
-Settings are read and written through dedicated storage classes under `settings/store/`.
-UI screens do not access raw `SharedPreferences` keys directly, and they do not read
-`settings/store/`, `lyrics/storage/`, or `media/` package data sources directly.
-Screen code receives page data through UI host methods and triggers work through `MainUiActions`.
+Feature settings are read and written through dedicated stores under `settings/store/`:
 
-Settings for different features are managed separately instead of being concentrated in a single file.
-Shared setting value models live under `core/model/`, which keeps `settings/`, `lyrics/`, `media/`,
-`floating/`, and `ui/` from depending on each other's package-local models.
+```text
+AppSettingsStore             Global app and toast behavior
+FloatingLyricsStyleStore     Overlay appearance, behavior, position, and preview state
+LyricsOffsetStore            Per-song timing offsets
+LyricsSettingsStore          Lookup and lyrics-display preferences
+QuickFloatingStore           Persisted desired overlay visibility
+ThemeSettingsStore           Main UI theme
+```
+
+UI pages do not access raw `SharedPreferences` keys or concrete settings, lyrics-storage, or media
+data sources. Shared setting value models live under `core/model/`, allowing feature packages to
+exchange stable values without depending on each other's stores.
 
 ## Localization
 
-Short UI strings are stored in Android string resources.
+Short UI text is stored in Android string resources. Longer help and changelog content is stored
+under `assets/` and loaded according to the current language.
 
-Longer text is stored under `assets/` and loaded according to the current language.
+`LanguageSettingsStore` persists system, English, or Simplified Chinese mode and applies it to both
+activities and services. Other helpers under `i18n/` format media state, settings values, lookup
+errors, offsets, and floating-style labels.
 
-`i18n/` provides shared language detection, text formatting, and feature-specific text helpers.
+## Architecture Safeguards
+
+- `scripts/check_architecture_boundaries.sh` checks forbidden top-level package imports.
+- `AppLocalProtocolGuardTest` prevents app-local action strings from escaping protocol owners.
+- Native-result contract tests keep Rust JSON and Kotlin parsing aligned.
+- Storage atomicity, song identity, latest-result gating, and floating-service lifecycle behavior are
+  covered by focused unit, Robolectric, and instrumentation tests.
