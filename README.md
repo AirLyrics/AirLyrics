@@ -48,34 +48,25 @@ Compatibility may still vary depending on Android version, device manufacturer a
 
 ---
 
-## Download
+## Quick Start
 
-Download the latest APK from [GitHub Releases](https://github.com/AirLyrics/AirLyrics/releases).
+1. Install AirLyrics (Android 8.0 or later).
+2. Grant the required permissions.
+3. Manually select the current media source.
+4. Open **Floating**, then tap **Show** in the bottom bar.
 
-System requirement: Android 8.0 or later.
+For detailed setup and troubleshooting, see the [User Guide](docs/USER_GUIDE.md).
 
 ---
 
 ## Features
 
-- Automatically detects current media playback
-- Displays synced lyrics above other apps
-- Provides online lyrics search
-- Supports local lyrics import, including same-timestamp translation lines
-- Supports word-by-word lyrics import with translation-aware normal lyric generation
-- Customizable floating window style
-- Adjustable lyrics offset
-- Supports original / translated lyrics display
-- Supports light / dark themes
-
----
-
-## Quick Start
-
-1. Install AirLyrics.
-2. Grant permissions.
-3. Select the current media source.
-4. Show the floating lyrics window.
+- Detects current media playback and shows synced lyrics over other apps
+- Searches lyrics online and imports local LRC files
+- Supports original, translated, and locally imported word-by-word lyrics
+- Customizable floating window styles and animations
+- Saves lyrics offsets for each song
+- Supports light and dark themes
 
 ---
 
@@ -116,13 +107,15 @@ System requirement: Android 8.0 or later.
 
 ## Permissions
 
-AirLyrics uses these Android permissions:
+AirLyrics uses these Android permissions and system access points:
 
-| Permission              | Purpose                         |
-|-------------------------|---------------------------------|
-| Display over other apps | Show the floating lyrics window |
-| Notification access     | Detect current media playback   |
-| File picker             | Import local lyrics files       |
+| Permission / access     | Purpose                                           |
+|-------------------------|---------------------------------------------------|
+| Display over other apps | Shows the floating lyrics window                  |
+| Notification access     | Detects current media playback                    |
+| Notifications           | Shows foreground-service controls                 |
+| Internet access         | Searches lyrics online                            |
+| File picker             | Imports local lyrics files and selects a save folder |
 
 See [Privacy Policy](PRIVACY.md) for details about permissions, local data and online lyrics search.
 

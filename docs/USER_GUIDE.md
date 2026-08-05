@@ -7,90 +7,72 @@ Thank you for reading this guide!
 ## Table of Contents
 
 1. [First Launch](#first-launch)
-2. [Select Media Source](#select-media-source)
-3. [Configure Floating Window](#configure-floating-window)
-4. [Settings](#settings)
+2. [Select a Media Source](#select-a-media-source)
+3. [Use Floating Lyrics](#use-floating-lyrics)
+4. [Lyrics and Local Files](#lyrics-and-local-files)
+5. [System Settings](#system-settings)
+6. [Troubleshooting](#troubleshooting)
 
 ## First Launch
 
-1. Go to the Settings page first and grant the required permissions. Some devices may handle
-   permission pages differently, so follow your device's system prompts if they appear.
-2. Return to the Media Source page. On first launch, if a media stream is already playing,
-   AirLyrics will automatically select it. If no media stream is playing, nothing will be selected
-   and you will need to choose one manually later.
-3. Go to the Floating Window page and tap the show button at the bottom to display the floating
-   window. After that, you can adjust the floating window style on this page according to your
-   preferences.
+1. Open **Settings > System**. Enable **Overlay** and **Notif. access**. Enable **Notify** if you
+   want notification controls.
+2. Start playing music, open **Media**, and select the player AirLyrics should follow.
+3. Open **Floating**, then tap **Show** in the bottom bar. Granting overlay permission alone does not
+   display the floating window.
 
-## Select Media Source
+## Select a Media Source
 
-On this page, you can choose the media source you want to listen to.
+The **Media** page selects the player that AirLyrics follows. This selection is saved and also scopes
+current-song lyrics actions.
 
-If no media source is displayed, please check whether the required permissions have been enabled.
+Automatic selection is attempted only when AirLyrics starts. After granting notification access,
+select the player manually even if its media session is already visible.
 
-On first launch, AirLyrics automatically selects a media stream only when one is already playing. If
-lyrics do not display correctly after enabling the floating window, please first confirm that a
-media source has been selected.
+If no player appears, start playback, confirm that notification access is enabled, and tap
+**Refresh media status**.
 
-## Configure Floating Window
+## Use Floating Lyrics
 
-This page contains settings related to the floating window. Here are a few special settings that may
-need some explanation:
+Appearance, lyrics display, animation, behavior, and window position are saved automatically.
 
-1. **Lyrics offset**: This only applies to the current song and will be saved automatically. The
-   next time you play the same song, the saved offset will continue to be applied.
-2. **Word-by-word lyrics**: These can only be used through local import. If you
-   need this feature, you can search for and download the corresponding lyrics yourself, then import
-   them into AirLyrics.
-3. **Highlight color in animation effects**: This refers to the color of the already displayed part
-   in word-by-word lyrics.
+- **Display control** provides show/hide, drag lock, and click-through controls. Notification
+  **Adjustment mode** makes the window draggable and touchable again.
+- **Auto hide/show** hides the window while playback is paused and restores it when playback resumes.
+- **Lyrics offset** is saved per song and does not modify the original lyrics files.
+- **Word-by-word lyrics** use local imports. When enabled and available, **Highlight color** marks
+  the elapsed part of the current line.
 
-Settings on this page are automatically saved locally. The floating window position is also
-remembered.
+## Lyrics and Local Files
 
-## Settings
+Open **Settings > Lyrics** to manage lyrics. Lookup priority is fixed:
+manual import > local cache > online search.
 
-### Permissions
+- **Search strategy** controls online fallback, auto-save, and the Local only, NetEase, or
+  Musixmatch source.
+- **Current song lyrics** can import or remove lyrics. **Search online again** bypasses the current
+  plain lyrics cache; show the floating window before using it.
+- **Recent local lyrics** can be opened to check their format, edit, and save.
+- The default lyrics folder is removed when AirLyrics is uninstalled. A custom folder must be
+  selected through the system file picker.
 
-In theory, the only required permissions are **floating window permission** and **notification
-access permission** (used to listen to media playback).
+Plain and word-by-word lyrics cannot be imported as two independently managed versions of the same
+song. Remove existing plain lyrics before importing word-by-word lyrics. AirLyrics then generates a
+plain LRC fallback and keeps it synchronized when the word-by-word lyrics are edited or removed.
 
-Notification permission is mainly used to create a control entry in the notification bar, so you can
-quickly hide the floating window or adjust its position in special situations, such as while playing
-a game.
+See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC examples.
 
-You can enable or disable it depending on your own usage.
+## System Settings
 
-### Toast Popups
+- **Overlay** allows AirLyrics to draw the floating window over other apps.
+- **Notif. access** allows AirLyrics to detect local media playback.
+- **Notify** displays foreground-service controls; it is separate from notification access.
+- **Language** selects system, English, or Simplified Chinese mode.
+- **Hide toast popups** disables AirLyrics toast messages.
 
-The System page includes **Hide toast popups**, which hides AirLyrics toast popups, the small
-messages that appear over the lower-middle part of the screen.
+## Troubleshooting
 
-### Lyrics Fetching Settings
+**The floating window does not appear:** confirm the selected player and overlay permission, then
+open **Floating** and tap **Show** in the bottom bar. Permission alone does not show the window.
 
-Basic features will not be explained too much here. This section only covers a few things worth
-noting:
-
-1. **Lyrics save directory**  
-   The default save directory is recommended. If you choose a custom directory, make sure AirLyrics
-   can access it through the system file picker.
-
-2. **Uninstalling the app will remove files in the default directory**  
-   This also means all lyrics saved in the default directory will be removed, so please be careful.
-
-3. **Lyrics format**  
-   AirLyrics includes a quick lyrics editing window. If you want to learn about the lyrics format, please refer to the related instructions.
-
-4. **Importing word-by-word lyrics**  
-   If the song already has normal lyrics, AirLyrics does not allow importing word-by-word lyrics.
-   Remove the existing normal lyrics first, then import the word-by-word lyrics. After import,
-   AirLyrics automatically generates normal lyrics from the word-by-word lyrics. If the file contains
-   same-timestamp translation lines, the generated normal lyrics include those translations.
-
-5. **Editing and deleting word-by-word lyrics**
-   When a song uses word-by-word lyrics, edit the word-by-word lyrics only. Saving them updates the
-   generated normal lyrics. Removing word-by-word lyrics also removes the generated normal lyrics.
-
----
-
-I am not very good at writing guides, so if this guide helps you, that would be really nice.:)
+For other known problems, search [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues).
