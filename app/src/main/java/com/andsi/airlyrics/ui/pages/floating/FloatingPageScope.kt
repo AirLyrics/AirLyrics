@@ -9,6 +9,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
+import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
@@ -46,6 +48,7 @@ internal class FloatingPageScope(
     internal var focusOverlay: FrameLayout? = null
     internal var activeBubble: LinearLayout? = null
     internal var selectedTileView: View? = null
+    internal var activePanelResetStateUpdater: (() -> Unit)? = null
     internal val pageRefs = FloatingPageRefs()
     internal var previewExpanded = host.isFloatingPreviewExpanded()
 
@@ -118,6 +121,10 @@ internal class FloatingPageScope(
         return if (value) host.getString(R.string.ui_on) else host.getString(R.string.ui_off)
     }
 
+    internal fun updateActivePanelResetState() {
+        activePanelResetStateUpdater?.invoke()
+    }
+
     internal fun localizedPresetTitle(key: String): String {
         return host.localizedFloatingPresetTitle(key)
     }
@@ -127,6 +134,29 @@ internal class FloatingPageScope(
     }
 
     internal fun style() = host.floatingStyle()
+
+    internal fun stylePanelReset(
+        isAtDefault: (FloatingLyricsStyle, FloatingLyricsStyle) -> Boolean,
+        restoreDefaults: (FloatingLyricsStyle, FloatingLyricsStyle) -> FloatingLyricsStyle
+    ): FloatingPanelReset {
+        return FloatingPanelReset(
+            isAtDefault = {
+                val current = style()
+                isAtDefault(current, host.floatingStyleDefaults(current.presetName))
+            },
+            reset = {
+                val previous = style()
+                val defaults = host.floatingStyleDefaults(previous.presetName)
+                host.applyFloatingStyle(restoreDefaults(previous, defaults))
+                refreshFloatingPreview()
+                val undo: () -> Unit = {
+                    host.applyFloatingStyle(previous)
+                    refreshFloatingPreview()
+                }
+                undo
+            }
+        )
+    }
 
     internal fun contentDisplayMode() = host.lyricsContentDisplayMode()
 
@@ -244,6 +274,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), AirColorUtils.colorSummary(latestStyle.wordByWordHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_auto_hide_when_paused), onOff(host.autoHideWhenPausedEnabled()))
+        updateActivePanelResetState()
     }
 
     private fun updateFloatingTileSubtitle(title: String, subtitle: String) {

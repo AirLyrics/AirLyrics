@@ -8,17 +8,25 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 
+internal data class FloatingFocusBubbleHandle(
+    val view: LinearLayout,
+    val rebuildContent: () -> Unit,
+    val updateResetAction: (Boolean, Boolean) -> Unit
+)
+
 internal interface FloatingUiHost {
     fun settingGrid(vararg items: FloatingSettingTile): LinearLayout
     fun floatingTile(item: FloatingSettingTile): LinearLayout
     fun floatingFocusBubble(
         title: String,
         subtitle: String,
+        onReset: (() -> Unit)?,
         onClose: () -> Unit,
         content: LinearLayout.() -> Unit
-    ): LinearLayout
+    ): FloatingFocusBubbleHandle
 
     fun floatingStyle(): FloatingLyricsStyle
+    fun floatingStyleDefaults(preset: String): FloatingLyricsStyle
     fun floatingPresets(): List<FloatingLyricsPreset>
     fun isFloatingPreviewExpanded(): Boolean
     fun setFloatingPreviewExpanded(expanded: Boolean)
@@ -29,6 +37,7 @@ internal interface FloatingUiHost {
     fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView
     fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle)
     fun applyFloatingPreset(preset: String)
+    fun applyFloatingStyle(style: FloatingLyricsStyle)
     fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean = true)
     fun applyFloatingTextColor(color: Int, refreshPage: Boolean = true)
     fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean = true)

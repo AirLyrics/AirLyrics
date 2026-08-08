@@ -5,10 +5,16 @@ import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
 
+internal data class FloatingPanelReset(
+    val isAtDefault: () -> Boolean,
+    val reset: () -> (() -> Unit)
+)
+
 internal fun FloatingPageScope.openPanel(
     anchor: View,
     title: String,
     subtitle: String,
+    reset: FloatingPanelReset? = null,
     content: LinearLayout.() -> Unit
 ) {
     val overlay = focusOverlay ?: return
@@ -22,9 +28,36 @@ internal fun FloatingPageScope.openPanel(
         .setInterpolator(DecelerateInterpolator())
         .start()
 
-    val bubble = host.floatingFocusBubble(title, subtitle, ::closePanel) {
+    lateinit var bubbleHandle: com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
+    var pendingUndo: (() -> Unit)? = null
+
+    fun rebuildContentIfOpen() {
+        if (activeBubble === bubbleHandle.view) {
+            bubbleHandle.rebuildContent()
+        }
+    }
+
+    fun performResetOrUndo() {
+        val resetAction = reset ?: return
+        pendingUndo?.let { undo ->
+            pendingUndo = null
+            undo()
+            rebuildContentIfOpen()
+            updateActivePanelResetState()
+            return
+        }
+        if (resetAction.isAtDefault()) return
+
+        pendingUndo = resetAction.reset()
+        rebuildContentIfOpen()
+        updateActivePanelResetState()
+    }
+
+    val onReset = if (reset == null) null else ::performResetOrUndo
+    bubbleHandle = host.floatingFocusBubble(title, subtitle, onReset, ::closePanel) {
         content()
     }
+    val bubble = bubbleHandle.view
 
     overlay.removeAllViews()
     overlay.visibility = View.VISIBLE
@@ -32,6 +65,16 @@ internal fun FloatingPageScope.openPanel(
     overlay.setOnClickListener { closePanel() }
     overlay.addView(bubble)
     activeBubble = bubble
+    activePanelResetStateUpdater = reset?.let { resetAction ->
+        {
+            val undoAvailable = pendingUndo != null
+            bubbleHandle.updateResetAction(
+                undoAvailable || !resetAction.isAtDefault(),
+                undoAvailable
+            )
+        }
+    }
+    updateActivePanelResetState()
 
     bubble.setOnClickListener { /* keep clicks inside the bubble */ }
     bubble.isClickable = true
@@ -98,6 +141,7 @@ private fun FloatingPageScope.closePanel() {
 }
 
 private fun FloatingPageScope.clearContentFocus() {
+    activePanelResetStateUpdater = null
     selectedTileView?.animate()
         ?.scaleX(1f)
         ?.scaleY(1f)

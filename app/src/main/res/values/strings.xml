@@ -248,6 +248,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_range">Range</string>
     <string name="ui_read_failed">Read failed</string>
     <string name="ui_read_local_lyrics_only">Read local lyrics only</string>
+    <string name="ui_reset">Reset</string>
     <string name="ui_recent_local_lyrics">Recent local lyrics</string>
     <string name="ui_red">Red</string>
     <string name="ui_refresh_media_status">Refresh media status</string>
@@ -323,6 +324,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_unknown_type">Unknown type</string>
     <string name="ui_updated">Updated</string>
     <string name="ui_using_local_lyrics_only">Using local lyrics only</string>
+    <string name="ui_undo">Undo</string>
     <string name="ui_version_project_link_and_changelog">Version, project link, and changelog.</string>
     <string name="ui_vertical_padding">Vertical padding</string>
     <string name="ui_view_current_setup">View current setup</string>

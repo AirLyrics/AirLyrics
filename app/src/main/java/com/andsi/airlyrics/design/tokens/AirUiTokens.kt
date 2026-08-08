@@ -28,7 +28,6 @@ object AirUiTokens {
         const val Sm = 16
         const val Md = 18
         const val Card = 24
-        const val Preview = 20
         const val Dialog = 28
         const val Pill = 99
     }
@@ -87,6 +86,7 @@ object AirUiTokens {
         const val ThemeToggleSize = 42
         const val SettingsIconBubbleSize = 46
         const val FloatingTileIconSize = 40
+        const val FloatingResetActionWidth = 72
         const val ColorSwatchHeight = 42
         const val FloatingTileHeight = 112
         const val FloatingPanelWidthInset = 72

@@ -102,6 +102,25 @@ class SettingsStoresTest {
     }
 
     @Test
+    fun floatingStyleStore_presetDefaultsIgnoreEditsAndFullStyleCanBeRestored() {
+        FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_SUBTITLE)
+        FloatingLyricsStyleStore.setTextSize(context, 44f)
+        FloatingLyricsStyleStore.setBackgroundEnabled(context, true)
+        FloatingLyricsStyleStore.setCornerRadius(context, 4)
+
+        val editedStyle = FloatingLyricsStyleStore.getStyle(context)
+        val defaults = FloatingLyricsStyleStore.getPresetDefaults(editedStyle.presetName)
+
+        assertEquals(28f, defaults.textSizeSp)
+        assertFalse(defaults.backgroundEnabled)
+        assertEquals(20, defaults.cornerRadiusDp)
+
+        FloatingLyricsStyleStore.setStyle(context, defaults)
+
+        assertEquals(defaults, FloatingLyricsStyleStore.getStyle(context))
+    }
+
+    @Test
     fun floatingStyleStore_backgroundControlsPersistIndependentlyAndClampAlpha() {
         FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_SUBTITLE)
         FloatingLyricsStyleStore.setBackgroundColor(context, Color.argb(127, 1, 2, 3))

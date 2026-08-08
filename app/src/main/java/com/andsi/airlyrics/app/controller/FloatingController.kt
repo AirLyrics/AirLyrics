@@ -12,6 +12,7 @@ import com.andsi.airlyrics.app.contracts.OverlayPermissionRequester
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.FloatingServiceCommand
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
@@ -232,6 +233,11 @@ internal class FloatingController(
 
     fun applyPreset(preset: String) {
         FloatingLyricsStyleStore.applyPreset(context, preset)
+        notifyStyleChanged()
+    }
+
+    fun applyStyle(style: FloatingLyricsStyle) {
+        FloatingLyricsStyleStore.setStyle(context, style)
         notifyStyleChanged()
     }
 

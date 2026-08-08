@@ -118,6 +118,45 @@ object FloatingLyricsStyleStore {
         )
     }
 
+    fun getPresetDefaults(preset: String): FloatingLyricsStyle {
+        val values = presetValues[normalizePreset(preset)] ?: bubblePresetValues
+        return FloatingLyricsStyle(
+            presetName = values.key,
+            textSizeSp = 28f,
+            textColor = values.textColor,
+            wordByWordHighlightColor = values.wordByWordHighlightColor,
+            shadowColor = values.shadowColor,
+            shadowRadius = values.shadowRadius,
+            backgroundEnabled = values.backgroundEnabled,
+            backgroundColor = values.backgroundColor,
+            backgroundAlpha = values.backgroundAlpha,
+            cornerRadiusDp = values.cornerRadiusDp,
+            paddingHorizontalDp = values.paddingHorizontalDp,
+            paddingVerticalDp = values.paddingVerticalDp,
+            maxWidthPercent = values.maxWidthPercent,
+            gravity = values.gravity
+        )
+    }
+
+    fun setStyle(context: Context, style: FloatingLyricsStyle) {
+        prefs(context).edit {
+            putString(KEY_PRESET, normalizePreset(style.presetName))
+            putFloat(KEY_TEXT_SIZE, style.textSizeSp)
+            putInt(KEY_TEXT_COLOR, style.textColor)
+            putInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, style.wordByWordHighlightColor)
+            putInt(KEY_SHADOW_COLOR, style.shadowColor)
+            putFloat(KEY_SHADOW_RADIUS, style.shadowRadius)
+            putBoolean(KEY_BACKGROUND_ENABLED, style.backgroundEnabled)
+            putInt(KEY_BACKGROUND_COLOR, style.backgroundColor)
+            putInt(KEY_BACKGROUND_ALPHA, style.backgroundAlpha)
+            putInt(KEY_CORNER_RADIUS, style.cornerRadiusDp)
+            putInt(KEY_PADDING_HORIZONTAL, style.paddingHorizontalDp)
+            putInt(KEY_PADDING_VERTICAL, style.paddingVerticalDp)
+            putInt(KEY_MAX_WIDTH_PERCENT, style.maxWidthPercent)
+            putInt(KEY_GRAVITY, style.gravity)
+        }
+    }
+
     fun applyPreset(context: Context, preset: String) {
         val values = presetValues[normalizePreset(preset)] ?: return
         prefs(context).edit {

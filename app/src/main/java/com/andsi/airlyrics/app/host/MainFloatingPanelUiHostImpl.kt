@@ -6,15 +6,20 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.spacer
+import com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorBubble
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -110,11 +115,19 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
 internal fun MainUiHost.floatingFocusBubbleImpl(
     title: String,
     subtitle: String,
+    onReset: (() -> Unit)?,
     onClose: () -> Unit,
     content: LinearLayout.() -> Unit
-): LinearLayout {
+): FloatingFocusBubbleHandle {
     val activity = this
-    return LinearLayout(this).apply {
+    lateinit var contentContainer: LinearLayout
+    var resetButton: TextView? = null
+    var resetActionInitialized = false
+    var resetActionEnabled = false
+    var resetActionIsUndo = false
+    var resetActionAnimating = false
+    var resetActionAnimationGeneration = 0
+    val bubble = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Radius.Md))
         elevation = dp(AirUiTokens.Space.Xxl).toFloat()
@@ -152,6 +165,34 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
                     })
                 }
             })
+            if (onReset != null) {
+                addView(TextView(activity).apply {
+                    resetButton = this
+                    text = getString(R.string.ui_reset)
+                    textSize = AirUiTokens.TextSize.BodySmall
+                    typeface = Typeface.DEFAULT_BOLD
+                    gravity = Gravity.CENTER
+                    setTextColor(colorAccent)
+                    setPadding(
+                        dp(AirUiTokens.Space.ButtonH),
+                        0,
+                        dp(AirUiTokens.Space.ButtonH),
+                        0
+                    )
+                    layoutParams = LinearLayout.LayoutParams(
+                        dp(AirUiTokens.Layout.FloatingResetActionWidth),
+                        dp(AirUiTokens.Layout.DialogCloseSize)
+                    ).apply {
+                        setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
+                    }
+                    background = GradientDrawable().apply {
+                        cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
+                        setColor(colorSurfaceLight)
+                    }
+                    enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+                    setOnClickListener { onReset() }
+                })
+            }
             addView(TextView(activity).apply {
                 text = "×"
                 gravity = Gravity.CENTER
@@ -159,7 +200,7 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorTextMuted)
                 layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.DialogCloseSize), dp(AirUiTokens.Layout.DialogCloseSize)).apply {
-                    setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
+                    setMargins(dp(AirUiTokens.Space.PageH), 0, 0, 0)
                 }
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
@@ -170,6 +211,75 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
             })
         })
         addView(spacer(activity, 8))
-        content()
+        contentContainer = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            content()
+        }
+        addView(contentContainer)
     }
+
+    return FloatingFocusBubbleHandle(
+        view = bubble,
+        rebuildContent = {
+            contentContainer.removeAllViews()
+            contentContainer.content()
+        },
+        updateResetAction = { enabled, isUndo ->
+            resetButton?.apply {
+                val enabledChanged = resetActionEnabled != enabled
+                resetActionEnabled = enabled
+                if (!resetActionInitialized) {
+                    resetActionInitialized = true
+                    resetActionIsUndo = isUndo
+                    text = getString(if (isUndo) R.string.ui_undo else R.string.ui_reset)
+                    isEnabled = enabled
+                    alpha = if (enabled) 1f else 0.34f
+                    setTextColor(if (isUndo) colorAccentMint else colorAccent)
+                } else if (resetActionIsUndo != isUndo) {
+                    resetActionIsUndo = isUndo
+                    resetActionAnimating = true
+                    val generation = ++resetActionAnimationGeneration
+                    animate().cancel()
+                    isEnabled = false
+                    animate()
+                        .alpha(0f)
+                        .scaleX(0.88f)
+                        .scaleY(0.88f)
+                        .setDuration(AirUiTokens.Layout.FastFadeMs)
+                        .setInterpolator(DecelerateInterpolator())
+                        .withEndAction {
+                            if (generation != resetActionAnimationGeneration) return@withEndAction
+                            text = getString(if (resetActionIsUndo) R.string.ui_undo else R.string.ui_reset)
+                            setTextColor(if (resetActionIsUndo) colorAccentMint else colorAccent)
+                            scaleX = 0.9f
+                            scaleY = 0.9f
+                            animate()
+                                .alpha(if (resetActionEnabled) 1f else 0.34f)
+                                .scaleX(1f)
+                                .scaleY(1f)
+                                .setDuration(AirUiTokens.Layout.RestoreFadeMs)
+                                .setInterpolator(OvershootInterpolator(AirUiTokens.Motion.OvershootSoft))
+                                .withEndAction {
+                                    if (generation == resetActionAnimationGeneration) {
+                                        resetActionAnimating = false
+                                        isEnabled = resetActionEnabled
+                                    }
+                                }
+                                .start()
+                        }
+                        .start()
+                } else if (!resetActionAnimating && enabledChanged) {
+                    isEnabled = enabled
+                    animate()
+                        .alpha(if (enabled) 1f else 0.34f)
+                        .setDuration(AirUiTokens.Layout.FastFadeMs)
+                        .start()
+                }
+            }
+        }
+    )
 }

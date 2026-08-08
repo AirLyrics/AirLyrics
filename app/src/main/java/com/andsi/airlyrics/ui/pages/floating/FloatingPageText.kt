@@ -1,8 +1,5 @@
 package com.andsi.airlyrics.ui.pages.floating
 
-import com.andsi.airlyrics.R
-
-import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.text.SpannableStringBuilder
@@ -10,7 +7,6 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
-import android.view.Gravity
 import android.widget.TextView
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -37,22 +33,6 @@ internal fun MainUiHost.floatingSectionTitle(title: CharSequence): TextView {
             0,
             dp(FloatingPageTokens.SECTION_TITLE_PADDING_BOTTOM_DP)
         )
-    }
-}
-
-internal fun Context.localizedFloatingPresetTitle(key: String): String {
-    return when (key) {
-        "subtitle" -> getString(R.string.ui_clean_letters)
-        "bubble" -> getString(R.string.ui_vinyl_bubble)
-        else -> getString(R.string.ui_vinyl_bubble)
-    }
-}
-
-internal fun Context.localizedFloatingGravityTitle(gravity: Int): String {
-    return when (gravity) {
-        Gravity.START or Gravity.CENTER_VERTICAL -> getString(R.string.ui_left)
-        Gravity.END or Gravity.CENTER_VERTICAL -> getString(R.string.ui_right)
-        else -> getString(R.string.ui_center)
     }
 }
 

@@ -1,9 +1,8 @@
 package com.andsi.airlyrics.i18n
 
-import com.andsi.airlyrics.R
-
 import android.content.Context
 import android.view.Gravity
+import com.andsi.airlyrics.R
 
 internal fun Context.localizedFloatingPresetTitle(key: String): String = when (key) {
     "subtitle" -> getString(R.string.ui_clean_letters)

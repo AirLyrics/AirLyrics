@@ -41,7 +41,15 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = AirColorUtils.colorSummary(style().textColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_text_color), "") {
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_text_color),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults -> current.textColor == defaults.textColor },
+                            restoreDefaults = { current, defaults -> current.copy(textColor = defaults.textColor) }
+                        )
+                    ) {
                         addView(colorControl(getString(R.string.ui_text), style().textColor) { color ->
                             applyFloatingTextColor(color, refreshPage = false)
                             refreshFloatingPreview()
@@ -54,7 +62,25 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = if (style().backgroundEnabled) getString(R.string.ui_on) else getString(R.string.ui_off),
                 iconRes = R.drawable.ic_air_chat_bubble,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_background_bubble), "") {
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_background_bubble),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults ->
+                                current.backgroundEnabled == defaults.backgroundEnabled &&
+                                    current.backgroundColor == defaults.backgroundColor &&
+                                    current.backgroundAlpha == defaults.backgroundAlpha
+                            },
+                            restoreDefaults = { current, defaults ->
+                                current.copy(
+                                    backgroundEnabled = defaults.backgroundEnabled,
+                                    backgroundColor = defaults.backgroundColor,
+                                    backgroundAlpha = defaults.backgroundAlpha
+                                )
+                            }
+                        )
+                    ) {
                         val backgroundButton = actionButton(host, if (style().backgroundEnabled) getString(R.string.ui_background_on) else getString(R.string.ui_background_off)) { }
                         backgroundButton.setOnClickListener {
                             val enabled = !floatingStyle().backgroundEnabled
@@ -89,7 +115,15 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = "${style().textSizeSp.toInt()} sp",
                 iconRes = R.drawable.ic_air_format_size,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_font_size), "") {
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_font_size),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults -> current.textSizeSp == defaults.textSizeSp },
+                            restoreDefaults = { current, defaults -> current.copy(textSizeSp = defaults.textSizeSp) }
+                        )
+                    ) {
                         addView(
                             sliderRow(
                                 title = getString(R.string.ui_size),
@@ -113,7 +147,23 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = getString(R.string.ui_radius) + " ${style().shadowRadius.toInt()}",
                 iconRes = R.drawable.ic_air_shadow,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_shadow_stroke), "") {
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_shadow_stroke),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults ->
+                                current.shadowRadius == defaults.shadowRadius &&
+                                    current.shadowColor == defaults.shadowColor
+                            },
+                            restoreDefaults = { current, defaults ->
+                                current.copy(
+                                    shadowRadius = defaults.shadowRadius,
+                                    shadowColor = defaults.shadowColor
+                                )
+                            }
+                        )
+                    ) {
                         addView(sliderRow(getString(R.string.ui_shadow_radius), style().shadowRadius.toInt(), 0, 24, "") { value ->
                             applyFloatingShadowRadius(value.toFloat())
                             refreshFloatingPreview()
@@ -130,7 +180,27 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = getString(R.string.ui_width) + " ${style().maxWidthPercent}%",
                 iconRes = R.drawable.ic_air_pip,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_window_layout), "") {
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_window_layout),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults ->
+                                current.maxWidthPercent == defaults.maxWidthPercent &&
+                                    current.paddingHorizontalDp == defaults.paddingHorizontalDp &&
+                                    current.paddingVerticalDp == defaults.paddingVerticalDp &&
+                                    current.cornerRadiusDp == defaults.cornerRadiusDp
+                            },
+                            restoreDefaults = { current, defaults ->
+                                current.copy(
+                                    maxWidthPercent = defaults.maxWidthPercent,
+                                    paddingHorizontalDp = defaults.paddingHorizontalDp,
+                                    paddingVerticalDp = defaults.paddingVerticalDp,
+                                    cornerRadiusDp = defaults.cornerRadiusDp
+                                )
+                            }
+                        )
+                    ) {
                         addView(sliderRow(getString(R.string.ui_max_width), style().maxWidthPercent, 45, 100, "%") { value ->
                             applyFloatingMaxWidthPercent(value)
                             refreshFloatingPreview()

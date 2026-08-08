@@ -58,7 +58,19 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
                 subtitle = AirColorUtils.colorSummary(style().wordByWordHighlightColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
-                    openPanel(tile, getString(R.string.ui_word_by_word_color), "") {
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_word_by_word_color),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults ->
+                                current.wordByWordHighlightColor == defaults.wordByWordHighlightColor
+                            },
+                            restoreDefaults = { current, defaults ->
+                                current.copy(wordByWordHighlightColor = defaults.wordByWordHighlightColor)
+                            }
+                        )
+                    ) {
                         addView(colorControl(getString(R.string.ui_highlight), style().wordByWordHighlightColor) { color ->
                             applyFloatingWordByWordHighlightColor(color)
                             refreshFloatingPreview()

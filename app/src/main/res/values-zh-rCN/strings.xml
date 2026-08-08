@@ -248,6 +248,7 @@
     <string name="ui_range">范围</string>
     <string name="ui_read_failed">读取失败</string>
     <string name="ui_read_local_lyrics_only">只读取本地歌词</string>
+    <string name="ui_reset">重置</string>
     <string name="ui_recent_local_lyrics">最近的本地歌词</string>
     <string name="ui_red">红</string>
     <string name="ui_refresh_media_status">刷新媒体状态</string>
@@ -323,6 +324,7 @@
     <string name="ui_unknown_type">未知类型</string>
     <string name="ui_updated">已更新</string>
     <string name="ui_using_local_lyrics_only">仅使用本地歌词</string>
+    <string name="ui_undo">撤销</string>
     <string name="ui_version_project_link_and_changelog">版本号、项目地址、更新记录。</string>
     <string name="ui_vertical_padding">纵向内边距</string>
     <string name="ui_view_current_setup">查看当前配置</string>

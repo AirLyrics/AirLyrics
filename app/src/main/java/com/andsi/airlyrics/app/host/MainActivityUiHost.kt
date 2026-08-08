@@ -19,18 +19,18 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.platform.PermissionHelper
 import com.andsi.airlyrics.app.render.MainActivityViewRefs
+import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
-import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
-import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
-import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
-import com.andsi.airlyrics.i18n.localizedLocalPlainLyricsSource
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
 import com.andsi.airlyrics.i18n.localizedLocalLyricsType
+import com.andsi.airlyrics.i18n.localizedLocalPlainLyricsSource
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
@@ -42,27 +42,26 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
-import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
 import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
-import com.andsi.airlyrics.ui.refs.FloatingPageRefs
+import com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
+import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.LanguageOptionUiItem
 import com.andsi.airlyrics.ui.model.LanguageSettingsUiState
+import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.LyricsSettingsUiState
-import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.MediaPageState
 import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.model.RecentLyricsUiState
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
 import com.andsi.airlyrics.ui.pages.floating.previewTextSizeSp
-import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
+import com.andsi.airlyrics.ui.refs.FloatingPageRefs
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 import kotlin.math.roundToInt
@@ -158,10 +157,12 @@ internal class MainActivityUiHost(
     override fun floatingFocusBubble(
         title: String,
         subtitle: String,
+        onReset: (() -> Unit)?,
         onClose: () -> Unit,
         content: LinearLayout.() -> Unit
-    ): LinearLayout = floatingFocusBubbleImpl(title, subtitle, onClose, content)
+    ): FloatingFocusBubbleHandle = floatingFocusBubbleImpl(title, subtitle, onReset, onClose, content)
     override fun floatingStyle(): FloatingLyricsStyle = FloatingLyricsStyleStore.getStyle(this)
+    override fun floatingStyleDefaults(preset: String): FloatingLyricsStyle = FloatingLyricsStyleStore.getPresetDefaults(preset)
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)
     override fun setFloatingPreviewExpanded(expanded: Boolean) = FloatingLyricsStyleStore.setPreviewExpanded(this, expanded)
@@ -228,6 +229,7 @@ internal class MainActivityUiHost(
     }
 
     override fun applyFloatingPreset(preset: String) = graph.floatingController.applyPreset(preset)
+    override fun applyFloatingStyle(style: FloatingLyricsStyle) = graph.floatingController.applyStyle(style)
     override fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean) = graph.floatingController.applyTextSize(textSizeSp, refreshPage)
     override fun applyFloatingTextColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyTextColor(color, refreshPage)
     override fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyBackgroundColor(color, refreshPage)
