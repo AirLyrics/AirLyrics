@@ -25,6 +25,7 @@ internal fun MainUiHost.sliderRowImpl(
     min: Int,
     max: Int,
     suffix: String,
+    onChangeFinished: ((Int) -> Unit)?,
     onChanged: (Int) -> Unit
 ): LinearLayout {
     val activity = this
@@ -44,15 +45,36 @@ internal fun MainUiHost.sliderRowImpl(
         addView(SeekBar(activity).apply {
             this.max = max - min
             progress = safeValue - min
+            var latestValue = safeValue
+            var isTracking = false
+            var changedWhileTracking = false
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                     val newValue = min + progress
+                    latestValue = newValue
                     valueText.text = getString(R.string.field_value_with_suffix, title, newValue, suffix)
-                    if (fromUser) onChanged(newValue)
+                    if (fromUser) {
+                        onChanged(newValue)
+                        if (isTracking) {
+                            changedWhileTracking = true
+                        } else {
+                            onChangeFinished?.invoke(newValue)
+                        }
+                    }
                 }
 
-                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                    isTracking = true
+                    changedWhileTracking = false
+                }
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                    isTracking = false
+                    if (changedWhileTracking) {
+                        onChangeFinished?.invoke(latestValue)
+                    }
+                    changedWhileTracking = false
+                }
             })
         })
     }

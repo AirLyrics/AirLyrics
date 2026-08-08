@@ -76,14 +76,25 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
             ),
             trackedFloatingTile(
                 title = getString(R.string.ui_font_size),
-                subtitle = "${style().textSizeSp.toInt()}sp",
+                subtitle = "${style().textSizeSp.toInt()} sp",
                 iconRes = R.drawable.ic_air_format_size,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_font_size), "") {
-                        addView(sliderRow(getString(R.string.ui_size), style().textSizeSp.toInt(), 14, 56, "sp") { value ->
-                            applyFloatingTextSize(value.toFloat(), refreshPage = false)
-                            refreshFloatingPreview()
-                        })
+                        addView(
+                            sliderRow(
+                                title = getString(R.string.ui_size),
+                                value = style().textSizeSp.toInt(),
+                                min = 14,
+                                max = 56,
+                                suffix = " sp",
+                                onChangeFinished = { value ->
+                                    applyFloatingTextSize(value.toFloat(), refreshPage = false)
+                                    refreshFloatingPreview()
+                                }
+                            ) { value ->
+                                previewFloatingTextSize(value.toFloat())
+                            }
+                        )
                     }
                 }
             ),

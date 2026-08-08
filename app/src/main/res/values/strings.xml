@@ -3,7 +3,6 @@
     <string name="field_value">%1$s: %2$d</string>
     <string name="field_value_with_suffix">%1$s: %2$d%3$s</string>
     <string name="floating_color_summary">%1$s: %2$s</string>
-    <string name="floating_preview_summary">Current: %1$s · %2$dsp · %3$s · Width %4$d%%</string>
     <string name="floating_slider_value">%1$s: %2$d</string>
     <string name="local_source_cache_provider">Cache · %1$s</string>
     <string name="lyrics_word_by_word_format_invalid_lines">Line %1$s%2$s has an invalid format.\n\nWord-by-word lyric lines must use [00:12.34] for line time and &lt;00:12.34&gt; for word tokens. Same-timestamp translation lines may use plain [00:12.34]text.</string>
@@ -68,8 +67,9 @@
     <string name="ui_click_through_off">Click-through: Off</string>
     <string name="ui_click_through_on">Click-through: On</string>
     <string name="ui_clickable">Clickable</string>
+    <string name="ui_collapse_preview">Collapse preview</string>
+    <string name="ui_expand_preview">Expand preview</string>
     <string name="ui_close">Close</string>
-    <string name="ui_collapse">Collapse</string>
     <string name="ui_connected">Connected</string>
     <string name="ui_connecting">Connecting</string>
     <string name="ui_content">Content</string>
@@ -105,10 +105,8 @@
     <string name="ui_word_by_word_blocked_by_plain_lrc">Remove existing plain lyrics before importing word-by-word lyrics.</string>
     <string name="ui_plain_lrc_blocked_by_word_by_word">Remove word-by-word lyrics before importing plain lyrics.</string>
     <string name="ui_word_by_word_lyrics_removed">Word-by-word lyrics removed for this song.</string>
-    <string name="ui_expand_preview">Expand preview</string>
     <string name="ui_fast_forwarding">Fast-forwarding</string>
     <string name="ui_floating">Floating</string>
-    <string name="ui_floating_preview_sample">This is a lyric preview</string>
     <string name="ui_follow_system">Follow system</string>
     <string name="ui_font_size">Font size</string>
     <string name="ui_format_looks_good">Format looks good</string>
@@ -165,7 +163,8 @@
     <string name="ui_media">Media</string>
     <string name="ui_media_source_waiting_status">Media source selected. Waiting for that player to update</string>
     <string name="ui_netease_cloud_music">NetEase Cloud Music</string>
-    <string name="ui_next_lyric_preview">Next lyric preview</string>
+    <string name="ui_next_lyric_preview">これは次の歌詞プレビューです</string>
+    <string name="ui_next_lyric_preview_translation">This is the next lyric preview</string>
     <string name="ui_no_active_media_found">No active media found.</string>
     <string name="ui_no_active_media_found_short">No active media found</string>
     <string name="ui_no_auto_save">No auto-save</string>
@@ -241,7 +240,8 @@ Word-by-word lyrics recommended format:
     <string name="ui_preferred">Preferred</string>
     <string name="ui_prev_current_next">Prev + current + next</string>
     <string name="ui_previous_current">Previous + current</string>
-    <string name="ui_previous_lyric_preview">Previous lyric preview</string>
+    <string name="ui_previous_lyric_preview">これは前の歌詞プレビューです</string>
+    <string name="ui_previous_lyric_preview_translation">This is the previous lyric preview</string>
     <string name="ui_lyrics_priority_hint">Priority: manual imports &gt; local cache &gt; online search.</string>
     <string name="ui_purple">Purple</string>
     <string name="ui_radius">Radius</string>
@@ -307,7 +307,8 @@ Word-by-word lyrics recommended format:
     <string name="ui_text_alignment">Text alignment</string>
     <string name="ui_text_color">Text color</string>
     <string name="ui_this_word_by_word_lyrics_can_be_saved">These word-by-word lyrics can be saved.</string>
-    <string name="ui_this_is_a_lyric_preview">This is a lyric preview</string>
+    <string name="ui_this_is_a_lyric_preview">これは歌詞プレビューの一行です</string>
+    <string name="ui_this_is_a_lyric_preview_translation">This is a lyric preview</string>
     <string name="ui_this_plain_lrc_can_be_saved">This plain LRC can be saved.</string>
     <string name="ui_word_by_word_overwrite_message">This song already has local word-by-word lyrics. Overwriting replaces them and regenerates plain lyrics.</string>
     <string name="ui_overwrite_plain_lyrics_msg">This song already has plain lyrics. Overwriting replaces the plain lyrics.</string>

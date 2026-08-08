@@ -3,7 +3,6 @@
     <string name="field_value">%1$s：%2$d</string>
     <string name="field_value_with_suffix">%1$s：%2$d%3$s</string>
     <string name="floating_color_summary">%1$s：%2$s</string>
-    <string name="floating_preview_summary">当前：%1$s · %2$dsp · %3$s · 宽度 %4$d%%</string>
     <string name="floating_slider_value">%1$s：%2$d</string>
     <string name="local_source_cache_provider">本地缓存 · %1$s</string>
     <string name="lyrics_word_by_word_format_invalid_lines">第 %1$s%2$s 行格式不正确。\n\n逐字歌词原文行需要使用逐字格式：行时间为 [00:12.34]，每个字词时间为 &lt;00:12.34&gt;歌词。同时间戳翻译行可以使用普通 [00:12.34]翻译 格式。</string>
@@ -68,8 +67,9 @@
     <string name="ui_click_through_off">点击穿透：已关闭</string>
     <string name="ui_click_through_on">点击穿透：已开启</string>
     <string name="ui_clickable">可点击</string>
+    <string name="ui_collapse_preview">收起预览</string>
+    <string name="ui_expand_preview">展开预览</string>
     <string name="ui_close">关闭</string>
-    <string name="ui_collapse">收起</string>
     <string name="ui_connected">已连接</string>
     <string name="ui_connecting">连接中</string>
     <string name="ui_content">显示内容</string>
@@ -105,11 +105,8 @@
     <string name="ui_word_by_word_blocked_by_plain_lrc">请先移除已有普通歌词，再导入逐字歌词。</string>
     <string name="ui_plain_lrc_blocked_by_word_by_word">当前音乐已使用逐字歌词，请先移除逐字歌词，再导入普通歌词。</string>
     <string name="ui_word_by_word_lyrics_removed">已移除当前音乐的逐字歌词</string>
-    <string name="ui_expand_preview">展开预览</string>
     <string name="ui_fast_forwarding">快进中</string>
     <string name="ui_floating">悬浮窗</string>
-    <string name="ui_floating_preview_sample">这是一行歌词预览
-This is a lyric preview</string>
     <string name="ui_follow_system">跟随系统</string>
     <string name="ui_font_size">字体大小</string>
     <string name="ui_format_looks_good">格式正确</string>
@@ -166,7 +163,8 @@ This is a lyric preview</string>
     <string name="ui_media">媒体流</string>
     <string name="ui_media_source_waiting_status">已选择媒体来源，等待该播放器更新</string>
     <string name="ui_netease_cloud_music">网易云音乐</string>
-    <string name="ui_next_lyric_preview">下一行歌词预览</string>
+    <string name="ui_next_lyric_preview">これは次の歌詞プレビューです</string>
+    <string name="ui_next_lyric_preview_translation">这是下一行歌词预览</string>
     <string name="ui_no_active_media_found">当前没有可识别的播放媒体。</string>
     <string name="ui_no_active_media_found_short">当前没有可识别的播放媒体</string>
     <string name="ui_no_auto_save">不自动保存</string>
@@ -242,7 +240,8 @@ This is a lyric preview</string>
     <string name="ui_preferred">优先显示</string>
     <string name="ui_prev_current_next">上 + 当前 + 下</string>
     <string name="ui_previous_current">上一句 + 当前句</string>
-    <string name="ui_previous_lyric_preview">上一行歌词预览</string>
+    <string name="ui_previous_lyric_preview">これは前の歌詞プレビューです</string>
+    <string name="ui_previous_lyric_preview_translation">这是上一行歌词预览</string>
     <string name="ui_lyrics_priority_hint">使用顺序固定为：手动导入歌词 &gt; 本地缓存歌词 &gt; 联网搜索歌词。</string>
     <string name="ui_purple">紫</string>
     <string name="ui_radius">半径</string>
@@ -308,7 +307,8 @@ This is a lyric preview</string>
     <string name="ui_text_alignment">文字对齐</string>
     <string name="ui_text_color">文字颜色</string>
     <string name="ui_this_word_by_word_lyrics_can_be_saved">这份逐字歌词可以保存。</string>
-    <string name="ui_this_is_a_lyric_preview">这是一行歌词预览</string>
+    <string name="ui_this_is_a_lyric_preview">これは歌詞プレビューの一行です</string>
+    <string name="ui_this_is_a_lyric_preview_translation">这是一行歌词预览</string>
     <string name="ui_this_plain_lrc_can_be_saved">这份普通 LRC 可以保存。</string>
     <string name="ui_word_by_word_overwrite_message">这首歌已经有本地逐字歌词。覆盖会替换逐字歌词，并重新生成普通歌词。</string>
     <string name="ui_overwrite_plain_lyrics_msg">这首歌已经有普通歌词。覆盖会替换普通歌词。</string>

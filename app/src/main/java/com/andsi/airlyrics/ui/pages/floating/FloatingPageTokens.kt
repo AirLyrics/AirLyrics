@@ -14,14 +14,11 @@ internal object FloatingPageTokens {
     const val SECTION_TITLE_PADDING_TOP_DP = 12
     const val SECTION_TITLE_PADDING_BOTTOM_DP = 10
 
-    const val PREVIEW_HEIGHT_DP = 72
-    const val PREVIEW_MARGIN_HORIZONTAL_DP = 12
-    const val PREVIEW_MARGIN_BOTTOM_DP = 6
-    const val PREVIEW_SUMMARY_TEXT_SP = 13f
-    const val PREVIEW_TOGGLE_TEXT_SP = 12f
-    const val PREVIEW_TOGGLE_PADDING_HORIZONTAL_DP = 10
-    const val PREVIEW_TOGGLE_PADDING_VERTICAL_DP = 5
-    const val PREVIEW_TOGGLE_RADIUS_DP = 16
+    const val PREVIEW_CARD_MARGIN_BOTTOM_DP = 8
+    const val PREVIEW_LINE_SPACING_EXTRA_DP = 2
+    const val PREVIEW_TOGGLE_SIZE_DP = 36
+    const val PREVIEW_TOGGLE_TEXT_SP = 16f
+    const val PREVIEW_TOGGLE_ALPHA = 0.62f
 
     const val PANEL_SELECTED_SCALE = 1.04f
     const val PANEL_SELECTED_ALPHA = 0.92f

@@ -59,10 +59,13 @@ import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.model.RecentLyricsUiState
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
+import com.andsi.airlyrics.ui.pages.floating.previewTextSizeSp
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
+import kotlin.math.roundToInt
 
 /** Bridges handwritten main UI helpers to the UI-facing host boundary. */
 internal class MainActivityUiHost(
@@ -140,8 +143,9 @@ internal class MainActivityUiHost(
         min: Int,
         max: Int,
         suffix: String,
+        onChangeFinished: ((Int) -> Unit)?,
         onChanged: (Int) -> Unit
-    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, onChanged)
+    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, onChangeFinished, onChanged)
     override fun colorControl(title: String, color: Int, onChanged: (Int) -> Unit): LinearLayout = colorControlImpl(title, color, onChanged)
     override fun colorPreviewBackground(color: Int): GradientDrawable = colorPreviewBackgroundImpl(color)
     override fun settingGrid(vararg items: FloatingSettingTile): LinearLayout = settingGridImpl(*items)
@@ -156,16 +160,6 @@ internal class MainActivityUiHost(
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)
     override fun setFloatingPreviewExpanded(expanded: Boolean) = FloatingLyricsStyleStore.setPreviewExpanded(this, expanded)
-
-    override fun floatingPreviewSummary(style: FloatingLyricsStyle): String {
-        return getString(
-            R.string.floating_preview_summary,
-            localizedFloatingPresetTitle(style.presetName),
-            style.textSizeSp.toInt(),
-            localizedFloatingGravityTitle(style.gravity),
-            style.maxWidthPercent
-        )
-    }
 
     override fun floatingDisplaySummary(): String {
         val lockedText = if (uiState.locked) getString(R.string.ui_locked) else getString(R.string.ui_draggable)
@@ -203,20 +197,24 @@ internal class MainActivityUiHost(
     }
 
     override fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle) {
-        textSize = AirUiTokens.TextSize.Title
-        typeface = Typeface.DEFAULT_BOLD
+        val thumbnailTextSizeSp = previewTextSizeSp(style.textSizeSp, lyricsLineDisplayMode())
+        val thumbnailScale = (thumbnailTextSizeSp / style.textSizeSp.coerceAtLeast(1f)).coerceAtMost(1f)
+        textSize = thumbnailTextSizeSp
+        typeface = Typeface.DEFAULT
         gravity = style.gravity
+        textAlignment = View.TEXT_ALIGNMENT_GRAVITY
         setTextColor(style.textColor)
-        setShadowLayer(style.shadowRadius, 0f, 0f, style.shadowColor)
+        setLineSpacing(dp(FloatingPageTokens.PREVIEW_LINE_SPACING_EXTRA_DP).toFloat(), 1f)
+        setShadowLayer(style.shadowRadius * thumbnailScale, 0f, 0f, style.shadowColor)
         setPadding(
-            dp(style.paddingHorizontalDp.coerceAtMost(24)),
-            dp(style.paddingVerticalDp.coerceAtMost(12)),
-            dp(style.paddingHorizontalDp.coerceAtMost(24)),
-            dp(style.paddingVerticalDp.coerceAtMost(12))
+            dp((style.paddingHorizontalDp * thumbnailScale).roundToInt()),
+            dp((style.paddingVerticalDp * thumbnailScale).roundToInt()),
+            dp((style.paddingHorizontalDp * thumbnailScale).roundToInt()),
+            dp((style.paddingVerticalDp * thumbnailScale).roundToInt())
         )
         background = if (style.backgroundEnabled) {
             GradientDrawable().apply {
-                cornerRadius = dp(style.cornerRadiusDp.coerceAtMost(24)).toFloat()
+                cornerRadius = dp((style.cornerRadiusDp * thumbnailScale).roundToInt()).toFloat()
                 setColor(AirColorUtils.withAlpha(style.backgroundColor, style.backgroundAlpha))
             }
         } else {

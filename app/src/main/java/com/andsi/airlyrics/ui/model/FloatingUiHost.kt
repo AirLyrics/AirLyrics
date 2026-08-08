@@ -18,7 +18,6 @@ internal interface FloatingUiHost {
         content: LinearLayout.() -> Unit
     ): LinearLayout
 
-    fun floatingPreviewSummary(style: FloatingLyricsStyle): String
     fun floatingStyle(): FloatingLyricsStyle
     fun floatingPresets(): List<FloatingLyricsPreset>
     fun isFloatingPreviewExpanded(): Boolean

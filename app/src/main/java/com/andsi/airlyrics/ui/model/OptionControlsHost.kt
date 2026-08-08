@@ -16,6 +16,7 @@ internal interface OptionControlsHost {
         min: Int,
         max: Int,
         suffix: String,
+        onChangeFinished: ((Int) -> Unit)? = null,
         onChanged: (Int) -> Unit
     ): LinearLayout
 

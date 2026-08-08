@@ -1,10 +1,8 @@
 package com.andsi.airlyrics.ui.pages.floating
 
-import android.graphics.Typeface
-import android.text.SpannableString
+import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
-import android.text.style.StyleSpan
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -15,6 +13,8 @@ import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.pageContainer
 import com.andsi.airlyrics.ui.components.scroll
@@ -65,10 +65,8 @@ internal class FloatingPageScope(
             style = ::style,
             lineDisplayMode = ::lineDisplayMode,
             isWordByWordLyricsEnabled = ::wordByWordLyricsEnabled,
-            plainPreviewText = ::previewLyricsText,
-            wordByWordPreviewText = ::wordByWordPreviewText,
-            summaryText = { floatingPreviewSummary(style()) },
-            onExpandedChanged = { refreshFloatingSettingTiles() }
+            plainPreviewText = { previewLyricsText(style()) },
+            wordByWordPreviewText = { wordByWordPreviewText(style()) }
         )
         previewHandle = createdPreviewHandle
         root.addView(createdPreviewHandle.cardView)
@@ -146,48 +144,67 @@ internal class FloatingPageScope(
         }
     }
 
-    internal fun previewLyricsText(): String {
-        val previous = previewLineText(
-            contentDisplayMode(),
-            host.getString(R.string.ui_previous_lyric_preview),
-            "Previous lyric preview"
+    internal fun previewLyricsText(previewStyle: FloatingLyricsStyle): CharSequence {
+        return formattedPreviewLyrics(
+            mode = contentDisplayMode(),
+            lines = visiblePreviewLyricLines(),
+            textColor = previewStyle.textColor
         )
-        val current = previewLineText(
-            contentDisplayMode(),
-            host.getString(R.string.ui_this_is_a_lyric_preview),
-            "This is a lyric preview"
+    }
+
+    internal fun wordByWordPreviewText(previewStyle: FloatingLyricsStyle): CharSequence {
+        val currentLine = currentPreviewLyricLine()
+        val visibleLines = visiblePreviewLyricLines()
+        val result = SpannableStringBuilder(
+            formattedPreviewLyrics(
+                mode = contentDisplayMode(),
+                lines = visibleLines,
+                textColor = previewStyle.textColor
+            )
         )
-        val next = previewLineText(
-            contentDisplayMode(),
-            host.getString(R.string.ui_next_lyric_preview),
-            "Next lyric preview"
+        if (contentDisplayMode() != LyricsContentDisplayMode.TRANSLATION_ONLY) {
+            val currentLineStart = result.toString().indexOf(currentLine.original)
+            val highlightedCharacters = (currentLine.original.length / 2)
+                .coerceAtLeast(1)
+                .coerceAtMost(currentLine.original.length)
+            if (currentLineStart >= 0) {
+                result.setSpan(
+                    ForegroundColorSpan(previewStyle.wordByWordHighlightColor),
+                    currentLineStart,
+                    currentLineStart + highlightedCharacters,
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+        }
+        return result
+    }
+
+    private fun visiblePreviewLyricLines(): List<FloatingPreviewLyricLine> {
+        val previous = FloatingPreviewLyricLine(
+            original = host.getString(R.string.ui_previous_lyric_preview),
+            translation = host.getString(R.string.ui_previous_lyric_preview_translation),
+            isCurrent = false
+        )
+        val current = currentPreviewLyricLine()
+        val next = FloatingPreviewLyricLine(
+            original = host.getString(R.string.ui_next_lyric_preview),
+            translation = host.getString(R.string.ui_next_lyric_preview_translation),
+            isCurrent = false
         )
         return when (lineDisplayMode()) {
-            LyricsLineDisplayMode.CURRENT_ONLY -> current
-            LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> listOf(previous, current).joinToString("\n")
-            LyricsLineDisplayMode.CURRENT_AND_NEXT -> listOf(current, next).joinToString("\n")
-            LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> listOf(previous, current, next).joinToString("\n")
+            LyricsLineDisplayMode.CURRENT_ONLY -> listOf(current)
+            LyricsLineDisplayMode.PREVIOUS_AND_CURRENT -> listOf(previous, current)
+            LyricsLineDisplayMode.CURRENT_AND_NEXT -> listOf(current, next)
+            LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> listOf(previous, current, next)
         }
     }
 
-    internal fun wordByWordPreviewText(): CharSequence {
-        val text = host.getString(R.string.ui_floating_preview_sample)
-        val firstLineEnd = text.indexOf('\n').takeIf { it > 0 } ?: text.length
-        val highlightEnd = (firstLineEnd / 2).coerceAtLeast(1).coerceAtMost(firstLineEnd)
-        return SpannableString(text).apply {
-            setSpan(
-                ForegroundColorSpan(style().wordByWordHighlightColor),
-                0,
-                highlightEnd,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-            setSpan(
-                StyleSpan(Typeface.BOLD),
-                0,
-                highlightEnd,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
-        }
+    private fun currentPreviewLyricLine(): FloatingPreviewLyricLine {
+        return FloatingPreviewLyricLine(
+            original = host.getString(R.string.ui_this_is_a_lyric_preview),
+            translation = host.getString(R.string.ui_this_is_a_lyric_preview_translation),
+            isCurrent = true
+        )
     }
 
     internal fun trackedFloatingTile(
@@ -215,7 +232,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_skin_preset), localizedPresetTitle(latestStyle.presetName))
         updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), AirColorUtils.colorSummary(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_background_bubble), if (latestStyle.backgroundEnabled) host.getString(R.string.ui_on) else host.getString(R.string.ui_off))
-        updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()}sp")
+        updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()} sp")
         updateFloatingTileSubtitle(host.getString(R.string.ui_shadow_stroke), host.getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
         updateFloatingTileSubtitle(host.getString(R.string.ui_window_layout), host.getString(R.string.ui_width) + " ${latestStyle.maxWidthPercent}%")
         updateFloatingTileSubtitle(host.getString(R.string.ui_content), host.localizedLyricsContentModeTitle(contentDisplayMode()))
@@ -234,9 +251,7 @@ internal class FloatingPageScope(
     }
 
     internal fun applyLyricsDisplaySettingsChanged() {
-        previewHandle?.lyricTextView?.text = if (wordByWordLyricsEnabled()) wordByWordPreviewText() else previewLyricsText()
-        previewHandle?.lyricTextView?.maxLines = previewMaxLines(lineDisplayMode())
-        previewHandle?.bodyView?.requestLayout()
+        renderFloatingPreview(style())
         refreshFloatingSettingTiles()
         host.notifyFloatingStyleChanged()
     }
@@ -249,7 +264,7 @@ internal class FloatingPageScope(
 
     internal fun applyWordByWordLyricsChanged(enabled: Boolean) {
         host.setWordByWordLyricsEnabled(enabled)
-        previewHandle?.lyricTextView?.text = if (enabled) wordByWordPreviewText() else previewLyricsText()
+        renderFloatingPreview(style())
         refreshFloatingSettingTiles()
         host.uiActions.reloadFloatingLyrics()
     }
@@ -277,14 +292,30 @@ internal class FloatingPageScope(
 
     internal fun refreshFloatingPreview() {
         val latestStyle = style()
-        previewHandle?.summaryTextView?.text = host.floatingPreviewSummary(latestStyle)
+        renderFloatingPreview(latestStyle)
+        refreshFloatingSettingTiles()
+    }
+
+    internal fun previewFloatingTextSize(textSizeSp: Float) {
+        val previewStyle = style().copy(textSizeSp = textSizeSp)
+        renderFloatingPreview(previewStyle)
+        updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${textSizeSp.toInt()} sp")
+    }
+
+    private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {
+        previewHandle?.updateLineMode?.invoke(lineDisplayMode())
+        previewHandle?.updateStyle?.invoke(latestStyle)
         previewHandle?.lyricTextView?.apply {
-            text = if (wordByWordLyricsEnabled()) wordByWordPreviewText() else previewLyricsText()
+            text = if (wordByWordLyricsEnabled()) {
+                wordByWordPreviewText(latestStyle)
+            } else {
+                previewLyricsText(latestStyle)
+            }
             with(host) {
                 applyFloatingPreviewStyle(latestStyle)
             }
         }
-        refreshFloatingSettingTiles()
+        previewHandle?.bodyView?.requestLayout()
     }
 
 }

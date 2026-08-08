@@ -16,7 +16,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -79,26 +78,6 @@ internal fun card(activity: MainUiHost, content: LinearLayout.() -> Unit): Linea
             cornerRadius = dp(AirUiTokens.Radius.Card).toFloat()
             setColor(colorCard)
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-        }
-        content()
-    }
-}
-
-internal fun floatingStatusPreviewCard(activity: MainUiHost, content: LinearLayout.() -> Unit): LinearLayout = with(activity) floatingStatusPreviewCard@ {
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
-        val params = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        params.setMargins(0, 0, 0, dp(AirUiTokens.Space.Xl))
-        layoutParams = params
-        elevation = dp(AirUiTokens.Space.Sm).toFloat()
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Preview).toFloat()
-            setColor(colorCard)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
         }
         content()
     }
