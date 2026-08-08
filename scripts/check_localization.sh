@@ -26,9 +26,14 @@ NUMERIC_KEY_ALLOWLIST = {
 }
 
 # Language names may intentionally be shown in their own writing system even
-# when the app is currently using the default English resource bundle.
+# when the app is currently using the default English resource bundle. The
+# floating preview samples also intentionally use Japanese as the original
+# lyric so the translated line remains visually distinct.
 DEFAULT_RESOURCE_CJK_ALLOWLIST = {
     'ui_chinese_simplified',
+    'ui_next_lyric_preview',
+    'ui_previous_lyric_preview',
+    'ui_this_is_a_lyric_preview',
 }
 
 def fail(message: str) -> None:
