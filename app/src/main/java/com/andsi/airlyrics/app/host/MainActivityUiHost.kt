@@ -146,7 +146,12 @@ internal class MainActivityUiHost(
         onChangeFinished: ((Int) -> Unit)?,
         onChanged: (Int) -> Unit
     ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, onChangeFinished, onChanged)
-    override fun colorControl(title: String, color: Int, onChanged: (Int) -> Unit): LinearLayout = colorControlImpl(title, color, onChanged)
+    override fun colorControl(
+        title: String,
+        color: Int,
+        includeOpacity: Boolean,
+        onChanged: (Int) -> Unit
+    ): LinearLayout = colorControlImpl(title, color, includeOpacity, onChanged)
     override fun colorPreviewBackground(color: Int): GradientDrawable = colorPreviewBackgroundImpl(color)
     override fun settingGrid(vararg items: FloatingSettingTile): LinearLayout = settingGridImpl(*items)
     override fun floatingTile(item: FloatingSettingTile): LinearLayout = floatingTileImpl(item)
@@ -227,6 +232,7 @@ internal class MainActivityUiHost(
     override fun applyFloatingTextColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyTextColor(color, refreshPage)
     override fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyBackgroundColor(color, refreshPage)
     override fun applyFloatingBackgroundEnabled(enabled: Boolean) = graph.floatingController.applyBackgroundEnabled(enabled)
+    override fun applyFloatingBackgroundAlpha(alpha: Int) = graph.floatingController.applyBackgroundAlpha(alpha)
     override fun applyFloatingGravity(gravity: Int) = graph.floatingController.applyGravity(gravity)
     override fun applyFloatingShadowRadius(radius: Float) = graph.floatingController.applyShadowRadius(radius)
     override fun applyFloatingShadowColor(color: Int) = graph.floatingController.applyShadowColor(color)

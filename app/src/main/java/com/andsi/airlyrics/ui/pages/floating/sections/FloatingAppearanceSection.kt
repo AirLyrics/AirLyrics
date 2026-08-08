@@ -8,6 +8,7 @@ import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
 import com.andsi.airlyrics.core.color.AirColorUtils
+import kotlin.math.roundToInt
 
 internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_appearance)))
@@ -62,12 +63,21 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                             refreshFloatingPreview()
                         }
                         addView(backgroundButton)
-                        val currentStyle = style()
-                        val backgroundColor = AirColorUtils.withAlpha(
-                            currentStyle.backgroundColor,
-                            currentStyle.backgroundAlpha
-                        )
-                        addView(colorControl(getString(R.string.ui_background), backgroundColor) { color ->
+                        addView(sliderRow(
+                            title = getString(R.string.ui_opacity),
+                            value = alphaToOpacityPercent(style().backgroundAlpha),
+                            min = 0,
+                            max = 100,
+                            suffix = "%"
+                        ) { value ->
+                            applyFloatingBackgroundAlpha(opacityPercentToAlpha(value))
+                            refreshFloatingPreview()
+                        })
+                        addView(colorControl(
+                            title = getString(R.string.ui_background),
+                            color = style().backgroundColor,
+                            includeOpacity = false
+                        ) { color ->
                             applyFloatingBackgroundColor(color, refreshPage = false)
                             refreshFloatingPreview()
                         })
@@ -142,4 +152,12 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
             )
         )
     )
+}
+
+internal fun alphaToOpacityPercent(alpha: Int): Int {
+    return (alpha.coerceIn(0, 255) * 100f / 255f).roundToInt()
+}
+
+internal fun opacityPercentToAlpha(percent: Int): Int {
+    return (percent.coerceIn(0, 100) * 255f / 100f).roundToInt()
 }

@@ -258,6 +258,11 @@ internal class FloatingController(
         notifyStyleChanged()
     }
 
+    fun applyBackgroundAlpha(alpha: Int) {
+        FloatingLyricsStyleStore.setBackgroundAlpha(context, alpha)
+        notifyStyleChanged()
+    }
+
     fun applyGravity(gravity: Int) {
         FloatingLyricsStyleStore.setGravity(context, gravity)
         notifyStyleChanged()

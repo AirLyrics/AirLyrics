@@ -57,29 +57,24 @@ object FloatingLyricsStyleStore {
         val gravity: Int = Gravity.CENTER
     )
 
+    private val bubblePresetValues = PresetValues(
+        key = PRESET_BUBBLE,
+        shadowRadius = 8f,
+        backgroundEnabled = true,
+        backgroundColor = Color.rgb(10, 14, 24),
+        backgroundAlpha = 170,
+        cornerRadiusDp = 20,
+        paddingHorizontalDp = 18,
+        paddingVerticalDp = 10,
+        maxWidthPercent = 85
+    )
+
     private val presetValues = listOf(
-        PresetValues(
+        bubblePresetValues.copy(
             key = PRESET_SUBTITLE,
-            shadowRadius = 14f,
-            backgroundEnabled = false,
-            backgroundColor = Color.TRANSPARENT,
-            backgroundAlpha = 0,
-            cornerRadiusDp = 0,
-            paddingHorizontalDp = 12,
-            paddingVerticalDp = 8,
-            maxWidthPercent = 92
+            backgroundEnabled = false
         ),
-        PresetValues(
-            key = PRESET_BUBBLE,
-            shadowRadius = 8f,
-            backgroundEnabled = true,
-            backgroundColor = Color.rgb(10, 14, 24),
-            backgroundAlpha = 170,
-            cornerRadiusDp = 20,
-            paddingHorizontalDp = 18,
-            paddingVerticalDp = 10,
-            maxWidthPercent = 85
-        )
+        bubblePresetValues
     ).associateBy { it.key }
 
     val presets = listOf(
@@ -155,15 +150,15 @@ object FloatingLyricsStyleStore {
     }
 
     fun setBackgroundColor(context: Context, color: Int) {
-        prefs(context).edit {
-            putBoolean(KEY_BACKGROUND_ENABLED, Color.alpha(color) > 0)
-            putInt(KEY_BACKGROUND_COLOR, AirColorUtils.opaqueRgb(color))
-            putInt(KEY_BACKGROUND_ALPHA, Color.alpha(color))
-        }
+        prefs(context).setInt(KEY_BACKGROUND_COLOR, AirColorUtils.opaqueRgb(color))
     }
 
     fun setBackgroundEnabled(context: Context, enabled: Boolean) {
         prefs(context).setBoolean(KEY_BACKGROUND_ENABLED, enabled)
+    }
+
+    fun setBackgroundAlpha(context: Context, alpha: Int) {
+        prefs(context).setInt(KEY_BACKGROUND_ALPHA, alpha.coerceIn(0, 255))
     }
 
     fun setGravity(context: Context, gravity: Int) {

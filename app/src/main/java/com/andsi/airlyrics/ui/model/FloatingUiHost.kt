@@ -33,6 +33,7 @@ internal interface FloatingUiHost {
     fun applyFloatingTextColor(color: Int, refreshPage: Boolean = true)
     fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean = true)
     fun applyFloatingBackgroundEnabled(enabled: Boolean)
+    fun applyFloatingBackgroundAlpha(alpha: Int)
     fun applyFloatingGravity(gravity: Int)
     fun applyFloatingShadowRadius(radius: Float)
     fun applyFloatingShadowColor(color: Int)

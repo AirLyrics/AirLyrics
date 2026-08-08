@@ -64,6 +64,8 @@ class SettingsStoresTest {
         FloatingLyricsStyleStore.setPaddingVertical(context, -10)
         FloatingLyricsStyleStore.setMaxWidthPercent(context, 20)
         FloatingLyricsStyleStore.setBackgroundColor(context, Color.argb(12, 1, 2, 3))
+        FloatingLyricsStyleStore.setBackgroundAlpha(context, 12)
+        FloatingLyricsStyleStore.setBackgroundEnabled(context, true)
         FloatingLyricsStyleStore.savePosition(context, 321, 654)
         FloatingLyricsStyleStore.setPreviewExpanded(context, false)
 
@@ -80,6 +82,47 @@ class SettingsStoresTest {
         assertEquals(12, style.backgroundAlpha)
         assertEquals(321 to 654, FloatingLyricsStyleStore.getPosition(context))
         assertFalse(FloatingLyricsStyleStore.isPreviewExpanded(context))
+    }
+
+    @Test
+    fun floatingStyleStore_cleanLettersMatchesBubbleExceptForDisabledBackground() {
+        FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_BUBBLE)
+        val bubbleStyle = FloatingLyricsStyleStore.getStyle(context)
+
+        FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_SUBTITLE)
+        val cleanLettersStyle = FloatingLyricsStyleStore.getStyle(context)
+
+        assertEquals(
+            bubbleStyle.copy(
+                presetName = FloatingLyricsStyleStore.PRESET_SUBTITLE,
+                backgroundEnabled = false
+            ),
+            cleanLettersStyle
+        )
+    }
+
+    @Test
+    fun floatingStyleStore_backgroundControlsPersistIndependentlyAndClampAlpha() {
+        FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_SUBTITLE)
+        FloatingLyricsStyleStore.setBackgroundColor(context, Color.argb(127, 1, 2, 3))
+
+        var style = FloatingLyricsStyleStore.getStyle(context)
+        assertFalse(style.backgroundEnabled)
+        assertEquals(Color.rgb(1, 2, 3), style.backgroundColor)
+        assertEquals(170, style.backgroundAlpha)
+
+        FloatingLyricsStyleStore.setBackgroundAlpha(context, 300)
+
+        style = FloatingLyricsStyleStore.getStyle(context)
+        assertFalse(style.backgroundEnabled)
+        assertEquals(255, style.backgroundAlpha)
+
+        FloatingLyricsStyleStore.setBackgroundEnabled(context, true)
+        FloatingLyricsStyleStore.setBackgroundAlpha(context, -1)
+
+        style = FloatingLyricsStyleStore.getStyle(context)
+        assertTrue(style.backgroundEnabled)
+        assertEquals(0, style.backgroundAlpha)
     }
 
     @Test

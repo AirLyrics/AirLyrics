@@ -20,6 +20,11 @@ internal interface OptionControlsHost {
         onChanged: (Int) -> Unit
     ): LinearLayout
 
-    fun colorControl(title: String, color: Int, onChanged: (Int) -> Unit): LinearLayout
+    fun colorControl(
+        title: String,
+        color: Int,
+        includeOpacity: Boolean = true,
+        onChanged: (Int) -> Unit
+    ): LinearLayout
     fun colorPreviewBackground(color: Int): GradientDrawable
 }

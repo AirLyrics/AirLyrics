@@ -83,13 +83,14 @@ internal fun MainUiHost.sliderRowImpl(
 internal fun MainUiHost.colorControlImpl(
     title: String,
     color: Int,
+    includeOpacity: Boolean,
     onChanged: (Int) -> Unit
 ): LinearLayout {
     val activity = this
     var red = Color.red(color)
     var green = Color.green(color)
     var blue = Color.blue(color)
-    var alpha = Color.alpha(color)
+    var alpha = if (includeOpacity) Color.alpha(color) else 255
     var rgbExpanded = false
 
     val standardColors = listOf(
@@ -215,7 +216,11 @@ internal fun MainUiHost.colorControlImpl(
         val redSlider = colorSliderRow("R", red) { red = it }
         val greenSlider = colorSliderRow("G", green) { green = it }
         val blueSlider = colorSliderRow("B", blue) { blue = it }
-        val alphaSlider = colorSliderRow(getString(R.string.ui_opacity), alpha) { alpha = it }
+        val alphaSlider = if (includeOpacity) {
+            colorSliderRow(getString(R.string.ui_opacity), alpha) { alpha = it }
+        } else {
+            null
+        }
 
         fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
             pair.first.progress = value.coerceIn(0, 255)
@@ -226,7 +231,7 @@ internal fun MainUiHost.colorControlImpl(
             setSlider(redSlider, "R", red)
             setSlider(greenSlider, "G", green)
             setSlider(blueSlider, "B", blue)
-            setSlider(alphaSlider, getString(R.string.ui_opacity), alpha)
+            alphaSlider?.let { setSlider(it, getString(R.string.ui_opacity), alpha) }
         }
 
         fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
