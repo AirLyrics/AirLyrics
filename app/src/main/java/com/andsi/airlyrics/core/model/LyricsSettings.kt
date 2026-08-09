@@ -66,7 +66,7 @@ enum class LyricsSwitchAnimationMode(val key: String) {
     SCALE_FADE("scale_fade");
 
     companion object {
-        val default: LyricsSwitchAnimationMode = SLIDE_UP
+        val default: LyricsSwitchAnimationMode = FADE
 
         fun fromKey(key: String?): LyricsSwitchAnimationMode {
             return entries.firstOrNull { it.key == key } ?: default

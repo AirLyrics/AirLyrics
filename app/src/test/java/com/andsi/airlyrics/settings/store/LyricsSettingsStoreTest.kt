@@ -33,7 +33,7 @@ class LyricsSettingsStoreTest {
         assertTrue(settings.autoSaveLocal)
         assertEquals(LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION, settings.contentDisplayMode)
         assertEquals(LyricsLineDisplayMode.CURRENT_ONLY, settings.lineDisplayMode)
-        assertEquals(LyricsSwitchAnimationMode.SLIDE_UP, settings.switchAnimationMode)
+        assertEquals(LyricsSwitchAnimationMode.FADE, settings.switchAnimationMode)
         assertFalse(settings.wordByWordLyricsEnabled)
     }
 

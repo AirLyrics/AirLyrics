@@ -38,7 +38,7 @@ class SettingsStoresTest {
         val style = FloatingLyricsStyleStore.getStyle(context)
 
         assertEquals(FloatingLyricsStyleStore.DEFAULT_PRESET, style.presetName)
-        assertEquals(28f, style.textSizeSp)
+        assertEquals(18f, style.textSizeSp)
         assertEquals(Color.WHITE, style.textColor)
         assertEquals(Color.rgb(120, 220, 255), style.wordByWordHighlightColor)
         assertEquals(Color.BLACK, style.shadowColor)
@@ -112,7 +112,7 @@ class SettingsStoresTest {
         val editedStyle = FloatingLyricsStyleStore.getStyle(context)
         val defaults = FloatingLyricsStyleStore.getPresetDefaults(editedStyle.presetName)
 
-        assertEquals(28f, defaults.textSizeSp)
+        assertEquals(18f, defaults.textSizeSp)
         assertFalse(defaults.backgroundEnabled)
         assertEquals(20, defaults.cornerRadiusDp)
 

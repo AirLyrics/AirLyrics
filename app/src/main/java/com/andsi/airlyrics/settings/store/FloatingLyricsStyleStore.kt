@@ -102,7 +102,7 @@ object FloatingLyricsStyleStore {
         val prefs = prefs(context)
         return FloatingLyricsStyle(
             presetName = normalizePreset(prefs.getString(KEY_PRESET, DEFAULT_PRESET)),
-            textSizeSp = prefs.getFloat(KEY_TEXT_SIZE, 28f),
+            textSizeSp = prefs.getFloat(KEY_TEXT_SIZE, 18f),
             textColor = prefs.getInt(KEY_TEXT_COLOR, Color.WHITE),
             wordByWordHighlightColor = prefs.getInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255)),
             shadowColor = prefs.getInt(KEY_SHADOW_COLOR, Color.BLACK),
@@ -122,7 +122,7 @@ object FloatingLyricsStyleStore {
         val values = presetValues[normalizePreset(preset)] ?: bubblePresetValues
         return FloatingLyricsStyle(
             presetName = values.key,
-            textSizeSp = 28f,
+            textSizeSp = 18f,
             textColor = values.textColor,
             wordByWordHighlightColor = values.wordByWordHighlightColor,
             shadowColor = values.shadowColor,
