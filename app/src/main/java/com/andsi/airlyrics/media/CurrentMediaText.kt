@@ -4,7 +4,7 @@ import com.andsi.airlyrics.media.model.CurrentMediaInfo
 
 internal val CurrentMediaInfo.displayText: String
     get() = if (artist.isNotBlank()) {
-        "♪ $title - $artist"
+        "$title - $artist"
     } else {
-        "♪ $title"
+        title
     }

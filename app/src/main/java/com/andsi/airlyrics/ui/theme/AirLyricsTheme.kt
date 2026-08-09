@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.theme
 
 import android.graphics.Color
 import com.andsi.airlyrics.core.model.ThemeAccent
+import com.andsi.airlyrics.design.theme.ThemeAccentPalettes
 
 internal object AirLyricsTheme {
     private val lightPalette = AirLyricsPalette(

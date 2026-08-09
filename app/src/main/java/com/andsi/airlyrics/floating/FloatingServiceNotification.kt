@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.design.theme.ThemeAccentPalettes
+import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 
 /**
  * Builds the foreground-service notification used by the floating lyrics service.
@@ -32,6 +34,10 @@ object FloatingServiceNotification {
         ensureChannel(context)
 
         val contentText = state.feedback?.let { "${state.summary(context)} · $it" } ?: state.summary(context)
+        val accentColor = ThemeAccentPalettes.resolve(
+            accent = ThemeSettingsStore.getAccent(context),
+            isDark = ThemeSettingsStore.isDark(context)
+        ).accent
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(context.getString(R.string.ui_airlyrics_floating_lyrics))
@@ -40,11 +46,11 @@ object FloatingServiceNotification {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setColor(0xFF64B5F6.toInt())
+            .setColor(accentColor)
             .setColorized(false)
             .addAction(
                 NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_menu_view,
+                    R.drawable.ic_air_visibility,
                     checkedTitle(
                         active = state.visible,
                         activeText = context.getString(R.string.ui_shown),
@@ -55,7 +61,7 @@ object FloatingServiceNotification {
             )
             .addAction(
                 NotificationCompat.Action.Builder(
-                    android.R.drawable.ic_menu_manage,
+                    R.drawable.ic_air_open_with,
                     state.adjustModeActionTitle(context),
                     serviceActionIntent(context, FloatingServiceCommand.ToggleAdjustModeFromNotification, 1002)
                 ).build()
@@ -133,6 +139,6 @@ object FloatingServiceNotification {
         activeText: String,
         inactiveText: String
     ): String {
-        return if (active) "● $activeText" else "○ $inactiveText"
+        return if (active) activeText else inactiveText
     }
 }

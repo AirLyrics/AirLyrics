@@ -25,7 +25,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
             trackedFloatingTile(
                 title = getString(R.string.ui_content),
                 subtitle = localizedLyricsContentModeTitle(contentDisplayMode()),
-                iconRes = R.drawable.ic_air_lyrics,
+                iconRes = R.drawable.ic_air_subtitles,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_content), "") {
                         addView(liveOptionGrid(
@@ -92,7 +92,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
             trackedFloatingTile(
                 title = getString(R.string.ui_lyrics_offset),
                 subtitle = uiActions.currentLyricsOffsetSummary(),
-                iconRes = R.drawable.ic_air_motion,
+                iconRes = R.drawable.ic_air_sync_alt,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_lyrics_offset), "") {
                         val statusText = normalText(host, uiActions.currentLyricsOffsetSummary()).apply {

@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.bigText
+import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
@@ -172,19 +173,20 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
                         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                     })
 
-                    addView(TextView(activity).apply {
-                        text = "!"
-                        textSize = AirUiTokens.TextSize.Caption
-                        typeface = Typeface.DEFAULT_BOLD
-                        gravity = Gravity.CENTER
-                        setTextColor(colorTextMuted)
-                        setPadding(0, 0, 0, dp(AirUiTokens.Stroke.Hairline))
+                    addView(airIconView(
+                        iconRes = R.drawable.ic_air_info,
+                        tint = colorTextMuted,
+                        contentDescription = getString(R.string.ui_recent_local_lyrics)
+                    ).apply {
                         background = GradientDrawable().apply {
                             shape = GradientDrawable.OVAL
                             setColor(colorSurfaceLight)
                             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
                         }
-                        layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            dp(AirUiTokens.Layout.CompactIconButtonSize),
+                            dp(AirUiTokens.Layout.CompactIconButtonSize)
+                        ).apply {
                             setMargins(dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Xl), 0)
                         }
                         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
@@ -206,13 +208,15 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
                     setMargins(0, 0, dp(AirUiTokens.Space.Lg), 0)
                 })
 
-                addView(TextView(activity).apply {
-                    text = "↻"
-                    textSize = AirUiTokens.TextSize.PageTitle
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(colorAccent)
-                    gravity = Gravity.CENTER
-                    setPadding(dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Sm))
+                addView(airIconView(
+                    iconRes = R.drawable.ic_air_refresh,
+                    tint = colorAccent,
+                    contentDescription = getString(R.string.ui_refresh_media_status)
+                ).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        dp(AirUiTokens.Layout.IconTouchSize),
+                        dp(AirUiTokens.Layout.IconTouchSize)
+                    )
                     enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                     setOnClickListener {
                         closeHeaderHint()

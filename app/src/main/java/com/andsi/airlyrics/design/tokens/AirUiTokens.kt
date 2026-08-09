@@ -78,6 +78,9 @@ object AirUiTokens {
     }
 
     object Layout {
+        const val IconSize = 24
+        const val CompactIconButtonSize = 32
+        const val IconTouchSize = 48
         const val OptionColumns = 2
         const val SwatchColumns = 3
         const val ChildEnterMaxIndex = 8
@@ -98,9 +101,7 @@ object AirUiTokens {
         const val FloatingPanelWidthInset = 72
         const val FloatingPanelMaxWidth = 360
         const val BottomBarHeight = 86
-        const val BottomTabIconTextSp = 24
         const val BottomTabLabelTextSp = 10
-        const val ChevronTextSp = 28f
         const val BottomTabFloatingPadding = 62
         const val BottomTabDefaultPadding = 58
         const val BottomTabMinWidth = 104

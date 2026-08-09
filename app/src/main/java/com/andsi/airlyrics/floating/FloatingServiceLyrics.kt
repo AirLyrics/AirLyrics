@@ -48,7 +48,7 @@ internal fun FloatingLyricsService.reloadCurrentLyrics(
     ignoreAutoSearchSetting: Boolean = false
 ) {
     if (currentMedia.isEmpty) {
-        clearLyricsState("♪ " + getString(R.string.ui_waiting_for_media) + "...")
+        clearLyricsState(getString(R.string.ui_waiting_for_media) + "...")
         return
     }
 
@@ -92,9 +92,9 @@ internal fun FloatingLyricsService.loadLyricsForSong(
 ) {
     renderer.show(
         if (media.isPlaying) {
-            "♪ ${getString(R.string.ui_searching_lyrics)}...\n${media.displayText}"
+            "${getString(R.string.ui_searching_lyrics)}...\n${media.displayText}"
         } else {
-            "Ⅱ ${getString(R.string.ui_paused)}\n${media.displayText}"
+            "${getString(R.string.ui_paused)}\n${media.displayText}"
         }
     )
 
@@ -136,7 +136,7 @@ internal fun FloatingLyricsService.applyLyricsResult(
             plainLrc = plainLrc,
             translatedLrc = lyricsResult.translatedLrc,
             wordByWordLines = lyricsResult.wordByWordLines,
-            emptyText = "♪ " + getString(R.string.ui_parsed_lyrics_are_empty) + "\n" + media.displayText
+            emptyText = getString(R.string.ui_parsed_lyrics_are_empty) + "\n" + media.displayText
         )
         return
     }
@@ -148,7 +148,7 @@ internal fun FloatingLyricsService.applyLyricsResult(
 internal fun FloatingLyricsService.lookupFailureText(error: Throwable?, media: CurrentMediaInfo): String {
     val lookupError = error as? LyricsLookupException
     return if (lookupError != null) {
-        "♪ ${media.displayText}\n${localizedLyricsLookupMessage(lookupError)}"
+        "${media.displayText}\n${localizedLyricsLookupMessage(lookupError)}"
     } else {
         notFoundText(media)
     }
@@ -156,11 +156,11 @@ internal fun FloatingLyricsService.lookupFailureText(error: Throwable?, media: C
 
 internal fun FloatingLyricsService.notFoundText(media: CurrentMediaInfo): String {
     return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
-        "♪ ${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
+        "${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
     } else {
         val plainLyricsSourceTitle =
             localizedPlainLyricsSourceTitle(LyricsSettingsStore.getPlainLyricsSearchSource(this))
-        "♪ ${media.displayText}\n${getString(R.string.ui_source)}$plainLyricsSourceTitle\n${getString(R.string.ui_lyrics_not_found)}"
+        "${media.displayText}\n${getString(R.string.ui_source)}$plainLyricsSourceTitle\n${getString(R.string.ui_lyrics_not_found)}"
     }
 }
 
@@ -170,7 +170,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
     val media = currentMedia
 
     if (media.title.isBlank()) {
-        renderer.show("♪ " + getString(R.string.ui_no_song_for_lyrics_binding))
+        renderer.show(getString(R.string.ui_no_song_for_lyrics_binding))
         return
     }
 
@@ -185,7 +185,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
     )
 
     if (!imported) {
-        renderer.show("♪ " + getString(R.string.ui_lyrics_import_failed))
+        renderer.show(getString(R.string.ui_lyrics_import_failed))
         return
     }
 
@@ -202,9 +202,9 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
         renderer.parseAndShow(
             plainLrc = localPlainLrc,
-            emptyText = "♪ " + getString(R.string.ui_lyrics_import_empty_error)
+            emptyText = getString(R.string.ui_lyrics_import_empty_error)
         )
     } else {
-        renderer.show("♪ " + getString(R.string.ui_lyrics_import_failed))
+        renderer.show(getString(R.string.ui_lyrics_import_failed))
     }
 }

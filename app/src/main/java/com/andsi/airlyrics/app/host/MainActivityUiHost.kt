@@ -257,15 +257,14 @@ internal class MainActivityUiHost(
 
     override fun settingsHomeHeader(): View = settingsHomeHeaderImpl()
     override fun settingsBackHeader(title: String, subtitle: String): View = settingsBackHeaderImpl(title, subtitle)
-    override fun themeToggleButton(): TextView = themeToggleButtonImpl()
+    override fun themeToggleButton(): View = themeToggleButtonImpl()
     override fun settingsCategoryCard(
         title: String,
         subtitle: String,
         status: String,
-        accent: Int,
         iconRes: Int,
         onClick: () -> Unit
-    ): View = settingsCategoryCardImpl(title, subtitle, status, accent, iconRes, onClick)
+    ): View = settingsCategoryCardImpl(title, subtitle, status, iconRes, onClick)
     override fun localLyricsRow(
         item: LocalLyricsUiItem,
         onLyricsSaved: (() -> Unit)?,

@@ -17,7 +17,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
             trackedFloatingTile(
                 title = getString(R.string.ui_switch_animation),
                 subtitle = localizedLyricsSwitchAnimationTitle(switchAnimationMode()),
-                iconRes = R.drawable.ic_air_motion,
+                iconRes = R.drawable.ic_air_lyrics,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_switch_animation), "") {
                         addView(liveOptionGrid(
@@ -56,7 +56,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
             trackedFloatingTile(
                 title = getString(R.string.ui_highlight_color),
                 subtitle = AirColorUtils.colorSummary(style().wordByWordHighlightColor),
-                iconRes = R.drawable.ic_air_text_color,
+                iconRes = R.drawable.ic_air_highlight,
                 onClick = { tile ->
                     openPanel(
                         tile,

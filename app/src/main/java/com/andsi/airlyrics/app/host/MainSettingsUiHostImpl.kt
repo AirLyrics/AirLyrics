@@ -1,10 +1,5 @@
 package com.andsi.airlyrics.app.host
 
-import com.andsi.airlyrics.app.platform.AppNavigator
-import com.andsi.airlyrics.R
-import com.andsi.airlyrics.ui.model.MainUiHost
-
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.provider.Settings
@@ -13,22 +8,26 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.R
+import com.andsi.airlyrics.app.platform.AppNavigator
+import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.smallHint
+import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.pages.settings.createSettingsAppearanceHeader
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
-import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.settingsHomeHeaderImpl(): View {
     return createSettingsAppearanceHeader(this)
@@ -42,17 +41,26 @@ internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String =
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            isClickable = true
+            isFocusable = true
+            setPadding(0, 0, 0, dp(AirUiTokens.Space.Xxl))
+            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+            setOnClickListener {
+                uiActions.backToSettingsHome()
+            }
+            addView(airIconView(R.drawable.ic_air_arrow_back, colorAccent).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    dp(AirUiTokens.Layout.IconSize),
+                    dp(AirUiTokens.Layout.IconSize)
+                )
+            })
             addView(TextView(activity).apply {
                 text = getString(R.string.ui_settings_back_label)
                 textSize = AirUiTokens.TextSize.Body
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
-                setPadding(0, 0, 0, dp(AirUiTokens.Space.Xxl))
+                setPadding(dp(AirUiTokens.Space.Lg), 0, 0, 0)
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                setOnClickListener {
-                    uiActions.backToSettingsHome()
-                }
             })
         })
         addView(TextView(activity).apply {
@@ -72,14 +80,17 @@ internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String =
     }
 }
 
-internal fun MainUiHost.themeToggleButtonImpl(): TextView {
-    return TextView(this).apply {
-        text = if (isDarkTheme()) "☀" else "☾"
-        textSize = AirUiTokens.TextSize.PageTitle - 4f
-        typeface = Typeface.DEFAULT_BOLD
-        gravity = Gravity.CENTER
-        setTextColor(colorAccent)
-        contentDescription = if (isDarkTheme()) getString(R.string.ui_switch_to_light_mode) else getString(R.string.ui_switch_to_dark_mode)
+internal fun MainUiHost.themeToggleButtonImpl(): View {
+    val contentDescription = if (isDarkTheme()) {
+        getString(R.string.ui_switch_to_light_mode)
+    } else {
+        getString(R.string.ui_switch_to_dark_mode)
+    }
+    return airIconView(
+        iconRes = if (isDarkTheme()) R.drawable.ic_air_light_mode else R.drawable.ic_air_dark_mode,
+        tint = colorAccent,
+        contentDescription = contentDescription
+    ).apply {
         layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.ThemeToggleSize), dp(AirUiTokens.Layout.ThemeToggleSize)).apply {
             setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
         }
@@ -100,7 +111,6 @@ internal fun MainUiHost.settingsCategoryCardImpl(
     title: String,
     subtitle: String,
     status: String,
-    accent: Int,
     iconRes: Int,
     onClick: () -> Unit
 ): View {
@@ -117,13 +127,14 @@ internal fun MainUiHost.settingsCategoryCardImpl(
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(accent)
+                setColor(colorAccent)
             }
-            addView(ImageView(activity).apply {
-                setImageResource(iconRes)
-                setColorFilter(Color.WHITE)
-                scaleType = ImageView.ScaleType.CENTER
-                layoutParams = FrameLayout.LayoutParams(dp(AirUiTokens.Radius.Card), dp(AirUiTokens.Radius.Card), Gravity.CENTER)
+            addView(airIconView(iconRes, colorIconOnAccent).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    dp(AirUiTokens.Layout.IconSize),
+                    dp(AirUiTokens.Layout.IconSize),
+                    Gravity.CENTER
+                )
             })
         })
 
@@ -135,11 +146,11 @@ internal fun MainUiHost.settingsCategoryCardImpl(
             addView(smallHint(activity, status))
         })
 
-        addView(TextView(activity).apply {
-            text = "›"
-            textSize = AirUiTokens.Layout.ChevronTextSp
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorAccent)
+        addView(airIconView(R.drawable.ic_air_chevron_right, colorAccent).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                dp(AirUiTokens.Layout.IconSize),
+                dp(AirUiTokens.Layout.IconSize)
+            )
         })
     }
 }

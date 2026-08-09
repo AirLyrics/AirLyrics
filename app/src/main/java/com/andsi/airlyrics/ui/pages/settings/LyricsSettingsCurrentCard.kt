@@ -10,6 +10,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.ui.components.actionButton
+import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -164,13 +165,15 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
                 setMargins(0, 0, dp(AirUiTokens.Space.Xl), 0)
             })
-            addView(TextView(activity).apply {
-                text = "↻"
-                textSize = AirUiTokens.TextSize.PageTitle
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorAccent)
-                gravity = Gravity.CENTER
-                setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm))
+            addView(airIconView(
+                iconRes = R.drawable.ic_air_refresh,
+                tint = colorAccent,
+                contentDescription = getString(R.string.ui_refresh_media_status)
+            ).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    dp(AirUiTokens.Layout.IconTouchSize),
+                    dp(AirUiTokens.Layout.IconTouchSize)
+                )
                 enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
                 setOnClickListener {
                     animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
@@ -202,19 +205,20 @@ private fun wordByWordStatusRow(activity: MainUiHost, value: String): View = wit
             gravity = Gravity.CENTER_VERTICAL
         })
 
-        addView(TextView(activity).apply {
-            text = "!"
-            textSize = AirUiTokens.TextSize.Caption
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setTextColor(colorTextMuted)
-            setPadding(0, 0, 0, dp(AirUiTokens.Stroke.Hairline))
+        addView(airIconView(
+            iconRes = R.drawable.ic_air_info,
+            tint = colorTextMuted,
+            contentDescription = getString(R.string.ui_local_word_by_word_lyrics_title)
+        ).apply {
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
                 setColor(colorSurfaceLight)
                 setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
             }
-            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                dp(AirUiTokens.Layout.CompactIconButtonSize),
+                dp(AirUiTokens.Layout.CompactIconButtonSize)
+            ).apply {
                 setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
             }
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)

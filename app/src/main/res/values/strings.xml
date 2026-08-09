@@ -283,7 +283,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_searching_lyrics">Searching lyrics</string>
     <string name="ui_searching_online_again">Searching online again</string>
     <string name="ui_settings">Settings</string>
-    <string name="ui_settings_back_label">‹ Settings</string>
+    <string name="ui_settings_back_label">Settings</string>
     <string name="ui_shadow">Shadow</string>
     <string name="ui_shadow_radius">Shadow radius</string>
     <string name="ui_shadow_stroke">Shadow stroke</string>
@@ -336,7 +336,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_vinyl_bubble">Vinyl bubble</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
     <string name="ui_waiting_for_media">Waiting for media</string>
-    <string name="ui_waiting_for_media_message">♪ Waiting for media…</string>
+    <string name="ui_waiting_for_media_message">Waiting for media…</string>
     <string name="ui_waiting_for_music_signal">Waiting for music signal</string>
     <string name="ui_whats_new">New in this version</string>
     <string name="ui_white">White</string>

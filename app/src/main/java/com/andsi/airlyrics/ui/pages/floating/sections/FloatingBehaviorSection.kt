@@ -57,7 +57,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
             trackedFloatingTile(
                 title = getString(R.string.ui_auto_hide_when_paused),
                 subtitle = autoHideWhenPausedSubtitle(),
-                iconRes = R.drawable.ic_air_motion,
+                iconRes = R.drawable.ic_air_visibility_off,
                 onClick = { tile ->
                     openPanel(
                         tile,

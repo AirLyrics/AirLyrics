@@ -8,10 +8,11 @@ import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.spacer
 import com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
@@ -20,14 +21,13 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
-import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorBubble
 import com.andsi.airlyrics.ui.theme.colorCard
+import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.settingGridImpl(vararg items: FloatingSettingTile): LinearLayout {
     val activity = this
@@ -81,11 +81,12 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
                 shape = GradientDrawable.OVAL
                 setColor(colorAccent)
             }
-            addView(ImageView(activity).apply {
-                setImageResource(item.iconRes)
-                setColorFilter(colorOnAccent)
-                scaleType = ImageView.ScaleType.CENTER
-                layoutParams = FrameLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize), Gravity.CENTER)
+            addView(airIconView(item.iconRes, colorIconOnAccent).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    dp(AirUiTokens.Layout.IconSize),
+                    dp(AirUiTokens.Layout.IconSize),
+                    Gravity.CENTER
+                )
             })
         })
 
@@ -193,12 +194,11 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
                     setOnClickListener { onReset() }
                 })
             }
-            addView(TextView(activity).apply {
-                text = "×"
-                gravity = Gravity.CENTER
-                textSize = AirUiTokens.TextSize.PageTitle - 4f
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorTextMuted)
+            addView(airIconView(
+                iconRes = R.drawable.ic_air_close,
+                tint = colorTextMuted,
+                contentDescription = getString(R.string.ui_close)
+            ).apply {
                 layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.DialogCloseSize), dp(AirUiTokens.Layout.DialogCloseSize)).apply {
                     setMargins(dp(AirUiTokens.Space.PageH), 0, 0, 0)
                 }

@@ -4,9 +4,6 @@ import com.andsi.airlyrics.R
 
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.SpannableString
-import android.text.Spanned
-import android.text.style.AbsoluteSizeSpan
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -16,8 +13,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
+import com.andsi.airlyrics.ui.components.setAirTopIcon
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorOnAccent
+import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
@@ -107,24 +106,22 @@ internal fun addTab(activity: MainUiHost, parent: LinearLayout, page: Page, titl
     parent.addView(slot)
 }
 
-internal fun quickFloatingTabText(
-    activity: MainUiHost,
+private fun MainUiHost.quickFloatingTabLabel(
     visible: Boolean,
     overlayPermissionGranted: Boolean
-): SpannableString  = with(activity) quickFloatingTabText@ {
-    val icon = when {
-        !overlayPermissionGranted -> "!"
-        visible -> "×"
-        else -> "♪"
-    }
-    val label = when {
+): String {
+    return when {
         !overlayPermissionGranted -> getString(R.string.ui_permit)
         visible -> getString(R.string.ui_hide)
         else -> getString(R.string.ui_show)
     }
-    return SpannableString("$icon\n$label").apply {
-        setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabIconTextSp, true), 0, icon.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        setSpan(AbsoluteSizeSpan(AirUiTokens.Layout.BottomTabLabelTextSp, true), icon.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+}
+
+private fun quickFloatingTabIconRes(visible: Boolean, overlayPermissionGranted: Boolean): Int {
+    return when {
+        !overlayPermissionGranted -> R.drawable.ic_air_error
+        visible -> R.drawable.ic_air_close
+        else -> R.drawable.ic_air_music_note
     }
 }
 
@@ -137,8 +134,8 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
     tabViews.forEach { (page, view) ->
         val selected = page == currentPage
         val quickControlSelected = page == Page.FLOATING && selected
-        val targetText: CharSequence = if (quickControlSelected) {
-            quickFloatingTabText(activity, quickFloatingVisible, overlayPermissionGranted)
+        val targetText = if (quickControlSelected) {
+            quickFloatingTabLabel(quickFloatingVisible, overlayPermissionGranted)
         } else {
             when (page) {
                 Page.MEDIA -> getString(R.string.ui_media)
@@ -146,14 +143,25 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
                 Page.SETTINGS -> getString(R.string.ui_settings)
             }
         }
-        if (view.text.toString() != targetText.toString()) {
+        val targetIconRes = if (quickControlSelected) {
+            quickFloatingTabIconRes(quickFloatingVisible, overlayPermissionGranted)
+        } else {
+            null
+        }
+        if (view.text.toString() != targetText || view.tag != targetIconRes) {
             view.animate().cancel()
             view.alpha = AirUiTokens.Layout.TabTextSwapAlpha
             view.scaleX = AirUiTokens.Layout.TabTextSwapScale
             view.scaleY = AirUiTokens.Layout.TabTextSwapScale
             view.text = targetText
+            view.tag = targetIconRes
         }
-        view.textSize = AirUiTokens.TextSize.Button
+        view.setAirTopIcon(activity, targetIconRes, if (selected) colorIconOnAccent else colorTextMuted)
+        view.textSize = if (quickControlSelected) {
+            AirUiTokens.Layout.BottomTabLabelTextSp.toFloat()
+        } else {
+            AirUiTokens.TextSize.Button
+        }
         view.setLineSpacing(0f, AirUiTokens.Layout.TabTextSwapScale)
         view.setTextColor(if (selected) colorOnAccent else colorTextMuted)
         view.background = null

@@ -175,9 +175,9 @@ internal class LyricsController(
 
     private val SongIdentity.displayText: String
         get() = if (artist.isNotBlank()) {
-            "♪ $title - $artist"
+            "$title - $artist"
         } else {
-            "♪ $title"
+            title
         }
 
     private fun handleImportResult(

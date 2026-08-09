@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.theme
 
+import android.graphics.Color
 import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.core.model.ThemeAccent
 import org.junit.Assert.assertEquals
@@ -11,6 +12,17 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class AirLyricsThemeTest {
+    @Test
+    fun iconForegroundUsesEightyPercentOnAccentAlpha() {
+        val onAccent = AirLyricsTheme.palette(isDark = false, ThemeAccent.PINK).onAccent
+        val iconColor = iconColorOnAccent(onAccent)
+
+        assertEquals(204, Color.alpha(iconColor))
+        assertEquals(Color.red(onAccent), Color.red(iconColor))
+        assertEquals(Color.green(onAccent), Color.green(iconColor))
+        assertEquals(Color.blue(onAccent), Color.blue(iconColor))
+    }
+
     @Test
     fun everyAccentHasDistinctLightAndDarkPrimaryColors() {
         val lightColors = ThemeAccent.entries.map { AirLyricsTheme.palette(isDark = false, it).accent }

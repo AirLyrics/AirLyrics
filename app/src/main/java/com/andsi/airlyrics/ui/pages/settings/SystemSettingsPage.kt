@@ -14,6 +14,7 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorOnAccent
+import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextStrong
@@ -116,11 +117,13 @@ private fun languageChoiceCard(activity: MainUiHost): View = with(activity) lang
             setTextColor(colorAccent)
         })
 
-        addView(TextView(activity).apply {
-            text = "  ›"
-            textSize = AirUiTokens.TextSize.PageTitle
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorAccent)
+        addView(airIconView(R.drawable.ic_air_chevron_right, colorAccent).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                dp(AirUiTokens.Layout.IconSize),
+                dp(AirUiTokens.Layout.IconSize)
+            ).apply {
+                setMargins(dp(AirUiTokens.Space.Lg), 0, 0, 0)
+            }
         })
     }
 }
@@ -156,10 +159,15 @@ private fun LinearLayout.addLanguageOption(
 ) {
     val selected = mode == currentMode
     addView(TextView(activity).apply {
-        text = if (selected) "✓ $title" else title
+        text = title
         textSize = AirUiTokens.TextSize.Button
         typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         setTextColor(if (selected) activity.colorOnAccent else activity.colorTextStrong)
+        setAirStartIcon(
+            host = activity,
+            iconRes = R.drawable.ic_air_check.takeIf { selected },
+            tint = if (selected) activity.colorIconOnAccent else activity.colorTextStrong
+        )
         gravity = Gravity.CENTER_VERTICAL
         setPadding(activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV), activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV))
         val params = LinearLayout.LayoutParams(

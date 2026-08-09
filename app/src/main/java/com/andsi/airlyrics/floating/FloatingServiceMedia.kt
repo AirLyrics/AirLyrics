@@ -163,9 +163,9 @@ internal fun FloatingLyricsService.selectMediaSource(packageName: String?) {
 
     clearLyricsState(
         if (packageName == null) {
-            "♪ " + getString(R.string.ui_no_media_source_status)
+            getString(R.string.ui_no_media_source_status)
         } else {
-            "♪ " + getString(R.string.ui_media_source_waiting_status) + "..."
+            getString(R.string.ui_media_source_waiting_status) + "..."
         }
     )
 

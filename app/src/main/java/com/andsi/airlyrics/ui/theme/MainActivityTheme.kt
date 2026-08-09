@@ -1,6 +1,10 @@
 package com.andsi.airlyrics.ui.theme
 
+import androidx.annotation.ColorInt
+import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.model.MainUiHost
+
+private const val ON_ACCENT_ICON_ALPHA = 204
 
 internal val MainUiHost.airLyricsPalette: AirLyricsPalette
     get() = AirLyricsTheme.palette(isDarkTheme(), themeAccent())
@@ -21,12 +25,12 @@ internal val MainUiHost.colorAccent: Int
     get() = airLyricsPalette.accent
 internal val MainUiHost.colorOnAccent: Int
     get() = airLyricsPalette.onAccent
+internal val MainUiHost.colorIconOnAccent: Int
+    get() = iconColorOnAccent(colorOnAccent)
 internal val MainUiHost.colorAccentLight: Int
     get() = airLyricsPalette.accentLight
 internal val MainUiHost.colorAccentSoft: Int
     get() = airLyricsPalette.accentSoft
-internal val MainUiHost.colorAccentPink: Int
-    get() = airLyricsPalette.accentPink
 internal val MainUiHost.colorAccentMint: Int
     get() = airLyricsPalette.accentMint
 internal val MainUiHost.colorTextStrong: Int
@@ -35,3 +39,8 @@ internal val MainUiHost.colorText: Int
     get() = airLyricsPalette.text
 internal val MainUiHost.colorTextMuted: Int
     get() = airLyricsPalette.textMuted
+
+@ColorInt
+internal fun iconColorOnAccent(@ColorInt colorOnAccent: Int): Int {
+    return AirColorUtils.withAlpha(colorOnAccent, ON_ACCENT_ICON_ALPHA)
+}

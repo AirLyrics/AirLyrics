@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.R
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -9,12 +10,14 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
+import com.andsi.airlyrics.ui.components.setAirStartIcon
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
 import com.andsi.airlyrics.ui.theme.colorOnAccent
+import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
@@ -120,8 +123,13 @@ internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
 }
 
 internal fun MainUiHost.applyOptionButtonStateImpl(button: TextView, title: String, selected: Boolean) {
-    button.text = if (selected) "✓ $title" else title
+    button.text = title
     button.setTextColor(if (selected) colorOnAccent else colorText)
+    button.setAirStartIcon(
+        host = this,
+        iconRes = R.drawable.ic_air_check.takeIf { selected },
+        tint = if (selected) colorIconOnAccent else colorText
+    )
     button.background = GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
         setColor(if (selected) colorAccent else colorSurfaceLight)

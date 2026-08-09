@@ -1,16 +1,15 @@
 package com.andsi.airlyrics.ui.pages.settings
 
-import android.annotation.SuppressLint
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
-import android.view.ViewGroup
 import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -19,6 +18,7 @@ import androidx.core.view.isGone
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
@@ -28,6 +28,7 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.theme.iconColorOnAccent
 
 /** Settings title and the two app-wide appearance controls shown beside it. */
 internal fun createSettingsAppearanceHeader(host: MainUiHost): View {
@@ -161,12 +162,7 @@ private class SettingsAppearanceHeader(
             isFocusable = true
             enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
 
-            addView(TextView(host).apply {
-                text = if (selected) "✓" else ""
-                gravity = Gravity.CENTER
-                textSize = AirUiTokens.TextSize.Button
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(palette.onAccent)
+            addView(FrameLayout(host).apply {
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.OVAL
                     setColor(palette.accent)
@@ -180,6 +176,18 @@ private class SettingsAppearanceHeader(
                     host.dp(AirUiTokens.Layout.ThemeAccentSwatchSize),
                     Gravity.CENTER
                 )
+                if (selected) {
+                    addView(host.airIconView(
+                        R.drawable.ic_air_check,
+                        iconColorOnAccent(palette.onAccent)
+                    ).apply {
+                        layoutParams = FrameLayout.LayoutParams(
+                            host.dp(AirUiTokens.Layout.IconSize),
+                            host.dp(AirUiTokens.Layout.IconSize),
+                            Gravity.CENTER
+                        )
+                    })
+                }
             })
 
             setOnClickListener {

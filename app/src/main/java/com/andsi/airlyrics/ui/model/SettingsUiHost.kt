@@ -1,17 +1,15 @@
 package com.andsi.airlyrics.ui.model
 
 import android.view.View
-import android.widget.TextView
 
 internal interface SettingsUiHost {
     fun settingsHomeHeader(): View
     fun settingsBackHeader(title: String, subtitle: String = ""): View
-    fun themeToggleButton(): TextView
+    fun themeToggleButton(): View
     fun settingsCategoryCard(
         title: String,
         subtitle: String,
         status: String,
-        accent: Int,
         iconRes: Int,
         onClick: () -> Unit
     ): View
