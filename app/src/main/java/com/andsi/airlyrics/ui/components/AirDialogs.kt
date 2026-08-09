@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat
 import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -257,7 +258,7 @@ private fun MainUiHost.dialogButton(
         textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        setTextColor(if (primary) Color.WHITE else colorTextStrong)
+        setTextColor(if (primary) colorOnAccent else colorTextStrong)
         setPadding(dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.Xxl))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,

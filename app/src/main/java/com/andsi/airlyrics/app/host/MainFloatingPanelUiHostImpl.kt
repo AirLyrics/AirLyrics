@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.host
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -21,6 +20,7 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorBubble
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -83,7 +83,7 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
             }
             addView(ImageView(activity).apply {
                 setImageResource(item.iconRes)
-                setColorFilter(Color.WHITE)
+                setColorFilter(colorOnAccent)
                 scaleType = ImageView.ScaleType.CENTER
                 layoutParams = FrameLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize), Gravity.CENTER)
             })

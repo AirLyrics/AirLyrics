@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.navigation
 
 import com.andsi.airlyrics.R
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.SpannableString
@@ -18,6 +17,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorSurface
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
@@ -155,7 +155,7 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         }
         view.textSize = AirUiTokens.TextSize.Button
         view.setLineSpacing(0f, AirUiTokens.Layout.TabTextSwapScale)
-        view.setTextColor(if (selected) Color.WHITE else colorTextMuted)
+        view.setTextColor(if (selected) colorOnAccent else colorTextMuted)
         view.background = null
         val targetScale = if (quickControlSelected) AirUiTokens.Layout.TabQuickScale else if (selected) AirUiTokens.Layout.TabSelectedScale else AirUiTokens.Motion.RestScale
         val targetAlpha = if (selected) AirUiTokens.Motion.RestScale else AirUiTokens.Layout.TabUnselectedAlpha

@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.host
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.InputType
@@ -23,6 +22,7 @@ import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -289,7 +289,7 @@ private fun MainUiHost.localLyricsDialogButton(
         textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        setTextColor(if (primary) Color.WHITE else colorTextStrong)
+        setTextColor(if (primary) colorOnAccent else colorTextStrong)
         setPadding(dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,

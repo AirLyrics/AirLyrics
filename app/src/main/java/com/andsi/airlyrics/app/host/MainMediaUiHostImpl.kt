@@ -6,6 +6,7 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 import android.view.View
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -24,6 +25,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
@@ -51,11 +53,18 @@ internal fun MainUiHost.refreshMediaButtonImpl(): View {
             setColor(buttonColor)
         }
         labelView.text = buttonText
-        labelView.setTextColor(if (mediaRefreshState == RefreshState.REFRESHING) colorText else Color.WHITE)
+        labelView.setTextColor(
+            when (mediaRefreshState) {
+                RefreshState.IDLE -> colorOnAccent
+                RefreshState.REFRESHING -> colorText
+                RefreshState.DONE -> Color.WHITE
+            }
+        )
 
         if (mediaRefreshState == RefreshState.REFRESHING && progressView == null) {
             progressView = ProgressBar(activity).apply {
                 isIndeterminate = true
+                indeterminateTintList = ColorStateList.valueOf(colorAccent)
                 layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.StatusIconSize), dp(AirUiTokens.Layout.StatusIconSize)).apply {
                     setMargins(0, 0, dp(AirUiTokens.Space.Xxl), 0)
                 }

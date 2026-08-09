@@ -5,6 +5,7 @@ import android.graphics.Color
 import android.view.Gravity
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import java.util.Locale
 import org.junit.After
@@ -294,6 +295,30 @@ class SettingsStoresTest {
 
         ThemeSettingsStore.setDark(context, false)
         assertFalse(ThemeSettingsStore.isDark(context))
+    }
+
+    @Test
+    fun themeSettingsStore_defaultsAndRoundTripsAccentChoice() {
+        assertEquals(ThemeAccent.DEFAULT, ThemeSettingsStore.getAccent(context))
+
+        ThemeSettingsStore.setAccent(context, ThemeAccent.BLUE)
+
+        assertEquals(ThemeAccent.BLUE, ThemeSettingsStore.getAccent(context))
+        assertEquals(
+            ThemeAccent.BLUE.preferenceValue,
+            context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+                .getString("accent", null)
+        )
+    }
+
+    @Test
+    fun themeSettingsStore_unknownAccentFallsBackToDefault() {
+        context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+            .edit()
+            .putString("accent", "future-accent")
+            .commit()
+
+        assertEquals(ThemeAccent.DEFAULT, ThemeSettingsStore.getAccent(context))
     }
 
     @Test

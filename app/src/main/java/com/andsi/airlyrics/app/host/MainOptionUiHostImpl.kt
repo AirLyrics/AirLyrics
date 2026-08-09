@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.host
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -15,6 +14,7 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
@@ -121,7 +121,7 @@ internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
 
 internal fun MainUiHost.applyOptionButtonStateImpl(button: TextView, title: String, selected: Boolean) {
     button.text = if (selected) "✓ $title" else title
-    button.setTextColor(if (selected) Color.WHITE else colorText)
+    button.setTextColor(if (selected) colorOnAccent else colorText)
     button.background = GradientDrawable().apply {
         cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
         setColor(if (selected) colorAccent else colorSurfaceLight)

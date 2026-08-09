@@ -13,10 +13,11 @@ import androidx.appcompat.widget.SwitchCompat
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import android.graphics.Color
+import com.andsi.airlyrics.ui.theme.applyAirThemeTint
 import android.graphics.drawable.GradientDrawable
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
@@ -55,6 +56,7 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
 private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toasterMuteCard@ {
     val toasterSwitch = SwitchCompat(activity).apply {
         isChecked = isToasterMuted()
+        applyAirThemeTint(activity)
         contentDescription = getString(R.string.ui_toaster_mute)
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -157,7 +159,7 @@ private fun LinearLayout.addLanguageOption(
         text = if (selected) "✓ $title" else title
         textSize = AirUiTokens.TextSize.Button
         typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setTextColor(if (selected) Color.WHITE else activity.colorTextStrong)
+        setTextColor(if (selected) activity.colorOnAccent else activity.colorTextStrong)
         gravity = Gravity.CENTER_VERTICAL
         setPadding(activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV), activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV))
         val params = LinearLayout.LayoutParams(

@@ -21,6 +21,7 @@ import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.smallHint
+import com.andsi.airlyrics.ui.pages.settings.createSettingsAppearanceHeader
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -30,24 +31,7 @@ import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.settingsHomeHeaderImpl(): View {
-    val activity = this
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg))
-
-        addView(LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(TextView(activity).apply {
-                text = getString(R.string.ui_settings)
-                textSize = AirUiTokens.TextSize.PageTitle
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorTextStrong)
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            addView(activity.themeToggleButton())
-        })
-    }
+    return createSettingsAppearanceHeader(this)
 }
 
 internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String = ""): View {

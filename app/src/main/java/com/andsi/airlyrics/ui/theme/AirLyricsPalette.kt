@@ -8,6 +8,7 @@ internal data class AirLyricsPalette(
     val bubble: Int,
     val stroke: Int,
     val accent: Int,
+    val onAccent: Int,
     val accentLight: Int,
     val accentSoft: Int,
     val accentPink: Int,

@@ -1,9 +1,10 @@
 package com.andsi.airlyrics.ui.theme
 
 import android.graphics.Color
+import com.andsi.airlyrics.core.model.ThemeAccent
 
 internal object AirLyricsTheme {
-    val lightPalette = AirLyricsPalette(
+    private val lightPalette = AirLyricsPalette(
         background = Color.rgb(255, 249, 243),
         surface = Color.rgb(255, 244, 236),
         surfaceLight = Color.rgb(255, 250, 246),
@@ -11,6 +12,7 @@ internal object AirLyricsTheme {
         bubble = Color.argb(246, 255, 252, 248),
         stroke = Color.rgb(245, 221, 215),
         accent = Color.rgb(241, 143, 169),
+        onAccent = Color.rgb(75, 42, 54),
         accentLight = Color.rgb(255, 184, 202),
         accentSoft = Color.rgb(159, 214, 203),
         accentPink = Color.rgb(255, 177, 197),
@@ -20,7 +22,7 @@ internal object AirLyricsTheme {
         textMuted = Color.rgb(166, 132, 142)
     )
 
-    val darkPalette = AirLyricsPalette(
+    private val darkPalette = AirLyricsPalette(
         background = Color.rgb(27, 23, 30),
         surface = Color.rgb(36, 30, 39),
         surfaceLight = Color.rgb(49, 40, 53),
@@ -28,6 +30,7 @@ internal object AirLyricsTheme {
         bubble = Color.argb(248, 43, 35, 47),
         stroke = Color.rgb(75, 58, 70),
         accent = Color.rgb(246, 138, 171),
+        onAccent = Color.rgb(64, 36, 47),
         accentLight = Color.rgb(255, 179, 202),
         accentSoft = Color.rgb(111, 191, 184),
         accentPink = Color.rgb(236, 126, 164),
@@ -37,7 +40,13 @@ internal object AirLyricsTheme {
         textMuted = Color.rgb(178, 148, 164)
     )
 
-    fun palette(isDark: Boolean): AirLyricsPalette {
-        return if (isDark) darkPalette else lightPalette
+    fun palette(isDark: Boolean, accent: ThemeAccent): AirLyricsPalette {
+        val base = if (isDark) darkPalette else lightPalette
+        val colors = ThemeAccentPalettes.resolve(accent, isDark)
+        return base.copy(
+            accent = colors.accent,
+            onAccent = colors.onAccent,
+            accentLight = colors.accentLight
+        )
     }
 }

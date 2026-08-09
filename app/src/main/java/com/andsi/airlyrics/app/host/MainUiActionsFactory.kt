@@ -29,6 +29,7 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             uiInvalidator.rebuildCurrentPage(PageRebuildReason.SETTINGS_NAVIGATION)
         },
         toggleThemeMode = uiHost::toggleThemeMode,
+        selectThemeAccent = uiHost::selectThemeAccent,
         toggleFloatingFromNav = floatingController::toggleFromNav,
         showFloatingLyrics = { floatingController.showLyrics() },
         hideFloatingLyrics = { floatingController.hideLyrics() },

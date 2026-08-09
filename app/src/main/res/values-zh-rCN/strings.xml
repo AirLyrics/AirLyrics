@@ -33,6 +33,9 @@
     <string name="ui_all_local_lyrics_removed">已移除当前音乐的全部本地歌词</string>
     <string name="ui_animation">动画效果</string>
     <string name="ui_appearance">外观</string>
+    <string name="ui_accent_color">重点色</string>
+    <string name="ui_accent_color_option">%1$s重点色</string>
+    <string name="ui_accent_color_selected">%1$s重点色，已选择</string>
     <string name="ui_applied">已生效</string>
     <string name="ui_auto_save">自动保存</string>
     <string name="ui_auto_hide_when_paused">自动隐藏/显示</string>
@@ -60,6 +63,7 @@
     <string name="ui_check_format">检查格式</string>
     <string name="ui_chinese_simplified">简体中文</string>
     <string name="ui_choose_import_type">选择导入类型</string>
+    <string name="ui_choose_accent_color">选择重点色</string>
     <string name="ui_choose_lyrics_save_folder">选择歌词保存目录</string>
     <string name="ui_choose_the_player_airlyrics_follows">选择要跟随的播放器，AirLyrics 会从这里读取歌曲状态。</string>
     <string name="ui_clean_letters">纯净字母</string>

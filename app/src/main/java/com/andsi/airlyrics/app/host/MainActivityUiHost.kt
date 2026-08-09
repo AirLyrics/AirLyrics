@@ -25,6 +25,7 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
+import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
@@ -110,6 +111,7 @@ internal class MainActivityUiHost(
 
     override fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     override fun isDarkTheme(): Boolean = ThemeSettingsStore.isDark(this)
+    override fun themeAccent(): ThemeAccent = ThemeSettingsStore.getAccent(this)
 
     override fun getActiveMediaControllers(): List<MediaController> = graph.mediaSourceController.getActiveControllers()
     override fun mediaPageState(): MediaPageState {
@@ -363,7 +365,20 @@ internal class MainActivityUiHost(
 
     fun toggleThemeMode() {
         val nextDark = !isDarkTheme()
-        ThemeSettingsStore.setDark(this, nextDark)
+        applyThemeChange {
+            ThemeSettingsStore.setDark(this, nextDark)
+        }
+    }
+
+    fun selectThemeAccent(accent: ThemeAccent) {
+        if (accent == themeAccent()) return
+        applyThemeChange {
+            ThemeSettingsStore.setAccent(this, accent)
+        }
+    }
+
+    private fun applyThemeChange(updateSetting: () -> Unit) {
+        updateSetting()
         applySystemBarsTheme()
         val oldContainer = contentContainer
         oldContainer?.animate()

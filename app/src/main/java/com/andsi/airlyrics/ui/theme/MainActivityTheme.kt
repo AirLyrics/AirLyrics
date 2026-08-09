@@ -3,7 +3,7 @@ package com.andsi.airlyrics.ui.theme
 import com.andsi.airlyrics.ui.model.MainUiHost
 
 internal val MainUiHost.airLyricsPalette: AirLyricsPalette
-    get() = AirLyricsTheme.palette(isDarkTheme())
+    get() = AirLyricsTheme.palette(isDarkTheme(), themeAccent())
 
 internal val MainUiHost.colorBackground: Int
     get() = airLyricsPalette.background
@@ -19,6 +19,8 @@ internal val MainUiHost.colorStroke: Int
     get() = airLyricsPalette.stroke
 internal val MainUiHost.colorAccent: Int
     get() = airLyricsPalette.accent
+internal val MainUiHost.colorOnAccent: Int
+    get() = airLyricsPalette.onAccent
 internal val MainUiHost.colorAccentLight: Int
     get() = airLyricsPalette.accentLight
 internal val MainUiHost.colorAccentSoft: Int

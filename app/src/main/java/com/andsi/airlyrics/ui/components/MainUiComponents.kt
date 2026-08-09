@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.components
 
 import android.annotation.SuppressLint
 import android.animation.LayoutTransition
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -17,6 +16,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
@@ -89,7 +89,7 @@ internal fun actionButton(activity: MainUiHost, text: String, onClick: () -> Uni
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(Color.WHITE)
+        setTextColor(colorOnAccent)
         setPadding(dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -118,7 +118,7 @@ internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String
                 gravity = Gravity.CENTER
                 textSize = AirUiTokens.TextSize.Button
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(Color.WHITE)
+                setTextColor(colorOnAccent)
                 setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
                 val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                 params.setMargins(
@@ -167,7 +167,7 @@ internal fun statusPill(activity: MainUiHost, text: String, playing: Boolean): T
     return TextView(this).apply {
         this.text = text
         textSize = AirUiTokens.TextSize.BodySmall
-        setTextColor(if (playing) Color.WHITE else colorTextMuted)
+        setTextColor(if (playing) colorOnAccent else colorTextMuted)
         setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Lg))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,

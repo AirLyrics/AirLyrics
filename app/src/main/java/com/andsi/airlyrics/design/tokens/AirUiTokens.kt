@@ -34,6 +34,7 @@ object AirUiTokens {
 
     object Stroke {
         const val Hairline = 1
+        const val Selected = 2
     }
 
     object TextSize {
@@ -61,6 +62,7 @@ object AirUiTokens {
         const val HintOutMs = 120L
         const val FeedbackOutMs = 240L
         const val FeedbackHoldMs = 900L
+        const val ThemePickerExpandMs = 190L
 
         const val PressAlpha = 0.88f
         const val DefaultPressScale = 0.97f
@@ -84,6 +86,10 @@ object AirUiTokens {
         const val StatusIconSize = 22
         const val DialogCloseSize = 36
         const val ThemeToggleSize = 42
+        const val ThemeAccentDotSize = 18
+        const val ThemeAccentSwatchSize = 38
+        const val ThemeAccentTouchSize = 48
+        const val ThemePickerSlideDistance = 8
         const val SettingsIconBubbleSize = 46
         const val FloatingTileIconSize = 40
         const val FloatingResetActionWidth = 72

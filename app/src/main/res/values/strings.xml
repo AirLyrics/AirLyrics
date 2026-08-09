@@ -33,6 +33,9 @@
     <string name="ui_all_local_lyrics_removed">All local lyrics removed for this song.</string>
     <string name="ui_animation">Animation</string>
     <string name="ui_appearance">Appearance</string>
+    <string name="ui_accent_color">Accent color</string>
+    <string name="ui_accent_color_option">%1$s accent color</string>
+    <string name="ui_accent_color_selected">%1$s accent color, selected</string>
     <string name="ui_applied">Applied</string>
     <string name="ui_auto_save">Auto-save</string>
     <string name="ui_auto_hide_when_paused">Auto hide/show</string>
@@ -60,6 +63,7 @@
     <string name="ui_check_format">Check format</string>
     <string name="ui_chinese_simplified">简体中文</string>
     <string name="ui_choose_import_type">Choose import type</string>
+    <string name="ui_choose_accent_color">Choose accent color</string>
     <string name="ui_choose_lyrics_save_folder">Choose lyrics save folder</string>
     <string name="ui_choose_the_player_airlyrics_follows">Choose the player AirLyrics follows.</string>
     <string name="ui_clean_letters">Clean letters</string>

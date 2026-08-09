@@ -2,7 +2,6 @@ package com.andsi.airlyrics.app.workflow
 
 import android.app.Dialog
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
@@ -28,6 +27,7 @@ import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -266,7 +266,7 @@ internal class MainLyricsWorkflow(
             alpha = if (rowEnabled) 1f else 0.68f
             setTextColor(when {
                 !rowEnabled -> uiHost.colorTextMuted
-                usePrimary -> Color.WHITE
+                usePrimary -> uiHost.colorOnAccent
                 else -> uiHost.colorTextStrong
             })
             setLineSpacing(uiHost.dp(AirUiTokens.Space.Xxs).toFloat(), 1f)
