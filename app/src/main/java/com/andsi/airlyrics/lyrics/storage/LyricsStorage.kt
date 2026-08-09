@@ -23,6 +23,8 @@ object LyricsStorage {
 
     enum class DeleteMode { PLAIN, WORD_BY_WORD, ALL }
 
+    enum class DeleteAllSavedLyricsResult { DELETED, NOTHING_TO_DELETE, FAILED }
+
     enum class LocalLyricsEditTarget { PLAIN, WORD_BY_WORD }
 
     sealed class ImportLyricsResult {
@@ -299,5 +301,9 @@ object LyricsStorage {
         mode: DeleteMode = DeleteMode.ALL
     ): Boolean = withStorageLock {
         LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode)
+    }
+
+    fun deleteAllSavedLyrics(context: Context): DeleteAllSavedLyricsResult = withStorageLock {
+        LocalLyricsDeleteOps.deleteAllSavedLyrics(context)
     }
 }

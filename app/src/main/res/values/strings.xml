@@ -33,6 +33,7 @@
     <string name="ui_alignment">Alignment</string>
     <string name="ui_all_local_lyrics_removed">All local lyrics removed for this song.</string>
     <string name="ui_animation">Animation</string>
+    <string name="ui_all_saved_lyrics_deleted">All saved lyrics deleted.</string>
     <string name="ui_appearance">Appearance</string>
     <string name="ui_accent_color">Accent color</string>
     <string name="ui_accent_color_option">%1$s accent color</string>
@@ -90,6 +91,11 @@
     <string name="ui_cyan">Cyan</string>
     <string name="ui_delay_0_1s">Delay 0.1s</string>
     <string name="ui_delay_1s">Delay 1s</string>
+    <string name="ui_delete">Delete</string>
+    <string name="ui_delete_all_saved_lyrics">Delete all saved lyrics</string>
+    <string name="ui_delete_all_saved_lyrics_confirm">Delete all saved lyrics?</string>
+    <string name="ui_delete_all_saved_lyrics_failed">Some lyrics could not be deleted. Check the lyrics folder permission and try again.</string>
+    <string name="ui_delete_all_saved_lyrics_message">Permanently deletes all plain and word-by-word lyrics saved by AirLyrics in the current lyrics folder. This can’t be undone.</string>
     <string name="ui_remove_all_lyrics_message">Deletes both plain lyrics and word-by-word lyrics for this song.</string>
     <string name="ui_remove_plain_lrc_message">Deletes this song’s plain lyrics.</string>
     <string name="ui_remove_word_by_word_lyrics_message">Deletes this song’s word-by-word lyrics. If the plain lyrics were generated from them, those plain lyrics are removed too.</string>
@@ -284,6 +290,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_remove_word_by_word_lyrics_confirm">Remove word-by-word lyrics?</string>
     <string name="ui_remove_plain_lrc">Remove plain LRC</string>
     <string name="ui_remove_plain_lrc_confirm">Remove Plain LRC?</string>
+    <string name="ui_no_saved_lyrics_to_delete">There are no saved lyrics to delete.</string>
     <string name="ui_reset_current_song_offset">Reset current song offset</string>
     <string name="ui_rewinding">Rewinding</string>
     <string name="ui_rgb_tune">RGB tune</string>

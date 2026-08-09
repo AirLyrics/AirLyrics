@@ -33,6 +33,7 @@
     <string name="ui_alignment">对齐</string>
     <string name="ui_all_local_lyrics_removed">已移除当前音乐的全部本地歌词</string>
     <string name="ui_animation">动画效果</string>
+    <string name="ui_all_saved_lyrics_deleted">已删除所有保存的歌词。</string>
     <string name="ui_appearance">外观</string>
     <string name="ui_accent_color">重点色</string>
     <string name="ui_accent_color_option">%1$s重点色</string>
@@ -90,6 +91,11 @@
     <string name="ui_cyan">青</string>
     <string name="ui_delay_0_1s">延后 0.1s</string>
     <string name="ui_delay_1s">延后 1s</string>
+    <string name="ui_delete">删除</string>
+    <string name="ui_delete_all_saved_lyrics">删除所有保存的歌词</string>
+    <string name="ui_delete_all_saved_lyrics_confirm">删除所有保存的歌词？</string>
+    <string name="ui_delete_all_saved_lyrics_failed">部分歌词无法删除，请检查歌词目录权限后重试。</string>
+    <string name="ui_delete_all_saved_lyrics_message">将永久删除 AirLyrics 保存在当前歌词目录中的所有普通歌词和逐字歌词。此操作无法撤销。</string>
     <string name="ui_remove_all_lyrics_message">会删除这首歌关联的普通歌词和逐字歌词。</string>
     <string name="ui_remove_plain_lrc_message">会删除这首歌关联的普通歌词。</string>
     <string name="ui_remove_word_by_word_lyrics_message">会删除这首歌关联的逐字歌词；如果普通歌词是由逐字歌词自动生成的，也会一起删除。</string>
@@ -284,6 +290,7 @@
     <string name="ui_remove_word_by_word_lyrics_confirm">移除逐字歌词？</string>
     <string name="ui_remove_plain_lrc">移除普通歌词</string>
     <string name="ui_remove_plain_lrc_confirm">移除普通歌词？</string>
+    <string name="ui_no_saved_lyrics_to_delete">没有可删除的已保存歌词。</string>
     <string name="ui_reset_current_song_offset">重置当前歌曲偏移</string>
     <string name="ui_rewinding">快退中</string>
     <string name="ui_rgb_tune">展开 RGB 细调</string>

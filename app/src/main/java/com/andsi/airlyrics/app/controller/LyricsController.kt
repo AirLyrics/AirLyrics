@@ -282,6 +282,40 @@ internal class LyricsController(
         }
     }
 
+    fun deleteAllSavedLyrics() {
+        taskRunner.runOnAppIo {
+            val result = LyricsStorage.deleteAllSavedLyrics(context)
+
+            taskRunner.runOnMainThread {
+                when (result) {
+                    LyricsStorage.DeleteAllSavedLyricsResult.DELETED -> {
+                        AirToast.showLong(context, R.string.ui_all_saved_lyrics_deleted)
+                        floatingLyricsReloader.reloadFloatingLyrics()
+                        invalidator.rebuildCurrentPage(
+                            reason = PageRebuildReason.LYRICS_CHANGED,
+                            animateContent = false,
+                            animateTabs = false
+                        )
+                    }
+
+                    LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE -> {
+                        AirToast.showShort(context, R.string.ui_no_saved_lyrics_to_delete)
+                    }
+
+                    LyricsStorage.DeleteAllSavedLyricsResult.FAILED -> {
+                        AirToast.showLong(context, R.string.ui_delete_all_saved_lyrics_failed)
+                        floatingLyricsReloader.reloadFloatingLyrics()
+                        invalidator.rebuildCurrentPage(
+                            reason = PageRebuildReason.LYRICS_CHANGED,
+                            animateContent = false,
+                            animateTabs = false
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     fun getCurrentMediaInfo(): CurrentMediaInfo? {
         val selectedPackage = MediaSourceStore.getSelectedPackage(context)
         val selectedController = CurrentMediaReader.selectedController(

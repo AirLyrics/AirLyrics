@@ -16,6 +16,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
+import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -100,6 +101,36 @@ internal fun actionButton(activity: MainUiHost, text: String, onClick: () -> Uni
         background = GradientDrawable().apply {
             cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
             setColor(colorAccent)
+        }
+        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
+        setOnClickListener {
+            onClick()
+            playTinyPulse(this)
+        }
+    }
+}
+
+internal fun dangerActionButton(activity: MainUiHost, text: String, onClick: () -> Unit): TextView = with(activity) dangerActionButton@ {
+    return TextView(this).apply {
+        this.text = text
+        gravity = Gravity.CENTER
+        textSize = AirUiTokens.TextSize.Button
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(colorDanger)
+        setPadding(
+            dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+            dp(AirUiTokens.Space.Lg),
+            dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+            dp(AirUiTokens.Space.Lg)
+        )
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        background = GradientDrawable().apply {
+            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
+            setColor(colorSurfaceLight)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorDanger)
         }
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {

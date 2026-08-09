@@ -33,6 +33,8 @@ internal val MainUiHost.colorAccentSoft: Int
     get() = airLyricsPalette.accentSoft
 internal val MainUiHost.colorAccentMint: Int
     get() = airLyricsPalette.accentMint
+internal val MainUiHost.colorDanger: Int
+    get() = airLyricsPalette.danger
 internal val MainUiHost.colorTextStrong: Int
     get() = airLyricsPalette.textStrong
 internal val MainUiHost.colorText: Int

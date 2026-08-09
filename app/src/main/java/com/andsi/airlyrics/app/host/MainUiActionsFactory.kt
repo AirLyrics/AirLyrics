@@ -56,6 +56,7 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
                 lyricsController.deleteLyricsForCurrentMedia(media, mode.toStorageDeleteMode())
             }
         },
+        deleteAllSavedLyrics = lyricsController::deleteAllSavedLyrics,
         toggleLyricsAutoSearch = {
             val enabled = !LyricsSettingsStore.isAutoSearchOnlineEnabled(activity)
             LyricsSettingsStore.setAutoSearchOnlineEnabled(activity, enabled)

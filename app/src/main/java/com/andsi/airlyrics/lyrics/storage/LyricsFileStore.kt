@@ -17,6 +17,11 @@ internal object LyricsFileStore {
         object Failed : ReadTextResult()
     }
 
+    data class DeleteAllFilesResult(
+        val foundAny: Boolean,
+        val deletedAll: Boolean
+    )
+
     fun readTextFromUriWithResult(
         context: Context,
         uri: Uri,
@@ -222,6 +227,79 @@ internal object LyricsFileStore {
 
         val file = File(LyricsStoragePaths.fallbackLyricsDir(context), plainFileName)
         return file.exists() && file.delete()
+    }
+
+    fun deleteAllSavedLyricsFiles(
+        context: Context,
+        indexedRelativeFiles: Collection<String>
+    ): DeleteAllFilesResult {
+        val indexedFileNames = indexedRelativeFiles
+            .asSequence()
+            .filter { it.isNotBlank() }
+            .map { it.substringAfterLast('/') }
+            .toSet()
+        val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
+
+        return if (treeUri != null) {
+            deleteAllSavedLyricsDocuments(context, treeUri, indexedFileNames)
+        } else {
+            deleteAllSavedLyricsFallbackFiles(context, indexedFileNames)
+        }
+    }
+
+    private fun deleteAllSavedLyricsDocuments(
+        context: Context,
+        treeUri: Uri,
+        indexedFileNames: Set<String>
+    ): DeleteAllFilesResult {
+        return runCatching {
+            val root = DocumentFile.fromTreeUri(context, treeUri)
+                ?.takeIf { it.canRead() && it.canWrite() }
+                ?: return DeleteAllFilesResult(foundAny = indexedFileNames.isNotEmpty(), deletedAll = false)
+            val managedFiles = root.findFile(MANAGED_LYRICS_DIR)
+                ?.takeIf { it.isDirectory }
+                ?.listFiles()
+                .orEmpty()
+                .filter { file ->
+                    file.isFile && isManagedLyricsCandidate(file.name, indexedFileNames)
+                }
+            val legacyFiles = root.listFiles().filter { file ->
+                file.isFile && LyricsFileNaming.isLegacyPlainLyricsFile(file.name)
+            }
+            val candidates = (managedFiles + legacyFiles).distinctBy { it.uri }
+            DeleteAllFilesResult(
+                foundAny = candidates.isNotEmpty(),
+                deletedAll = candidates.map { file -> file.delete() }.all { it }
+            )
+        }.getOrElse {
+            DeleteAllFilesResult(foundAny = indexedFileNames.isNotEmpty(), deletedAll = false)
+        }
+    }
+
+    private fun deleteAllSavedLyricsFallbackFiles(
+        context: Context,
+        indexedFileNames: Set<String>
+    ): DeleteAllFilesResult {
+        return runCatching {
+            val root = LyricsStoragePaths.fallbackLyricsDir(context)
+            val managedFiles = File(root, MANAGED_LYRICS_DIR).listFiles().orEmpty()
+                .filter { file -> file.isFile && isManagedLyricsCandidate(file.name, indexedFileNames) }
+            val legacyFiles = root.listFiles().orEmpty()
+                .filter { file -> file.isFile && LyricsFileNaming.isLegacyPlainLyricsFile(file.name) }
+            val candidates = (managedFiles + legacyFiles).distinctBy { it.absolutePath }
+            DeleteAllFilesResult(
+                foundAny = candidates.isNotEmpty(),
+                deletedAll = candidates.map { file -> file.delete() }.all { it }
+            )
+        }.getOrElse {
+            DeleteAllFilesResult(foundAny = indexedFileNames.isNotEmpty(), deletedAll = false)
+        }
+    }
+
+    private fun isManagedLyricsCandidate(fileName: String?, indexedFileNames: Set<String>): Boolean {
+        return (fileName != null && fileName in indexedFileNames) ||
+            LyricsFileNaming.isPlainLyricsFile(fileName) ||
+            LyricsFileNaming.isWordByWordLyricsFile(fileName)
     }
 }
 

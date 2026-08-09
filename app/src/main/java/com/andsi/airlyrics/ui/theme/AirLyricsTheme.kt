@@ -18,6 +18,7 @@ internal object AirLyricsTheme {
         accentSoft = Color.rgb(159, 214, 203),
         accentPink = Color.rgb(255, 177, 197),
         accentMint = Color.rgb(150, 211, 203),
+        danger = Color.rgb(198, 40, 40),
         textStrong = Color.rgb(91, 67, 76),
         text = Color.rgb(122, 94, 105),
         textMuted = Color.rgb(166, 132, 142)
@@ -36,6 +37,7 @@ internal object AirLyricsTheme {
         accentSoft = Color.rgb(111, 191, 184),
         accentPink = Color.rgb(236, 126, 164),
         accentMint = Color.rgb(105, 190, 182),
+        danger = Color.rgb(255, 107, 107),
         textStrong = Color.rgb(247, 229, 237),
         text = Color.rgb(224, 199, 211),
         textMuted = Color.rgb(178, 148, 164)

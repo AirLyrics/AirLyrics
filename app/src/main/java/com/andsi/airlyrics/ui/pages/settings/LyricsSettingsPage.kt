@@ -1,7 +1,9 @@
 package com.andsi.airlyrics.ui.pages.settings
 
 import android.graphics.Typeface
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
@@ -106,6 +108,39 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
     )
 
     container.addView(createRecentLyricsCard(activity))
+
+    container.addView(
+        card(activity) {
+            addView(LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+
+                addView(bigText(activity, getString(R.string.ui_delete_all_saved_lyrics)).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                })
+                addView(dangerActionButton(activity, getString(R.string.ui_delete)) {
+                    activity.showAirConfirmDialog(
+                        title = getString(R.string.ui_delete_all_saved_lyrics_confirm),
+                        message = getString(R.string.ui_delete_all_saved_lyrics_message),
+                        positiveText = getString(R.string.ui_delete)
+                    ) {
+                        uiActions.deleteAllSavedLyrics()
+                    }
+                }.apply {
+                    (layoutParams as LinearLayout.LayoutParams).setMargins(
+                        dp(AirUiTokens.Space.Xxl),
+                        0,
+                        0,
+                        0
+                    )
+                })
+            })
+        }
+    )
 
     return scroll(activity, container, animateChildren = false)
 }

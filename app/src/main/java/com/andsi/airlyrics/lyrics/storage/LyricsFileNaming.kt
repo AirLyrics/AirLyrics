@@ -11,6 +11,7 @@ internal object LyricsFileNaming {
     private const val MANAGED_KEY_LENGTH = 16
     private val invalidFileNameChars = Regex("[\\\\/:*?\"<>|]")
     private val legacyHashSuffix = Regex("\\s*\\[[0-9a-fA-F]{8}]$")
+    private val legacyPlainFileName = Regex(".*\\s\\[[0-9a-fA-F]{8}]\\.lrc$", RegexOption.IGNORE_CASE)
 
     fun managedPlainFileName(identity: SongIdentity): String {
         return managedFileName(identity.storageKey(), PLAIN_LYRICS_EXTENSION)
@@ -50,6 +51,10 @@ internal object LyricsFileNaming {
 
     fun isWordByWordLyricsFile(fileName: String?): Boolean {
         return fileName?.endsWith(WORD_BY_WORD_LYRICS_EXTENSION, ignoreCase = true) == true
+    }
+
+    fun isLegacyPlainLyricsFile(fileName: String?): Boolean {
+        return fileName?.let(legacyPlainFileName::matches) == true
     }
 
     fun friendlyDisplayName(fileName: String): String {

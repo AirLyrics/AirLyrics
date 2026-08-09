@@ -4,6 +4,28 @@ import android.content.Context
 import com.andsi.airlyrics.core.model.SongIdentity
 
 internal object LocalLyricsDeleteOps {
+    fun deleteAllSavedLyrics(context: Context): LyricsStorage.DeleteAllSavedLyricsResult {
+        val entries = LyricsIndexStore.read(context)
+        val indexedFiles = entries.flatMap { entry ->
+            listOf(entry.plainFile, entry.wordByWordFile)
+        }
+        val fileResult = LyricsFileStore.deleteAllSavedLyricsFiles(context, indexedFiles)
+        val hadSavedLyrics = entries.isNotEmpty() || fileResult.foundAny
+
+        if (!fileResult.deletedAll) {
+            return LyricsStorage.DeleteAllSavedLyricsResult.FAILED
+        }
+        if (entries.isNotEmpty() && !LyricsIndexStore.write(context, emptyList())) {
+            return LyricsStorage.DeleteAllSavedLyricsResult.FAILED
+        }
+
+        return if (hadSavedLyrics) {
+            LyricsStorage.DeleteAllSavedLyricsResult.DELETED
+        } else {
+            LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE
+        }
+    }
+
     fun deleteLocalLyrics(
         context: Context,
         title: String,

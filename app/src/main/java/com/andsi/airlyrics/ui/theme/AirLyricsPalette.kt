@@ -13,6 +13,7 @@ internal data class AirLyricsPalette(
     val accentSoft: Int,
     val accentPink: Int,
     val accentMint: Int,
+    val danger: Int,
     val textStrong: Int,
     val text: Int,
     val textMuted: Int

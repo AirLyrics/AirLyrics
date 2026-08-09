@@ -30,6 +30,7 @@ internal data class MainUiActions(
     val copyLyricsDirectory: () -> Unit,
     val importLyricsForCurrentMedia: () -> Unit,
     val deleteLyricsForCurrentMedia: (LyricsDeleteMode) -> Unit,
+    val deleteAllSavedLyrics: () -> Unit,
     val toggleLyricsAutoSearch: () -> Boolean,
     val toggleLyricsAutoSave: () -> Boolean,
     val selectPlainLyricsSource: (PlainLyricsSearchSource) -> Unit,
