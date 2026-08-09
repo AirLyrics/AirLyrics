@@ -32,6 +32,8 @@ import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
+import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.model.MainUiActions
@@ -57,6 +59,7 @@ internal class MainGraph(
     val launchers: MainLaunchers = MainLaunchers(
         activity = activity,
         onLyricsFileResult = { uri -> lyricsWorkflow.handleLyricsFileResult(uri) },
+        onFloatingFontFileResult = ::handleFloatingFontFileResult,
         onLyricsDirectorySelected = { uri -> lyricsWorkflow.handleLyricsDirectorySelected(uri) },
         onNotificationPermissionResult = ::handleNotificationPermissionResult
     )
@@ -281,6 +284,42 @@ internal class MainGraph(
 
         AirToast.showLong(activity, message)
         uiInvalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
+    }
+
+    private fun handleFloatingFontFileResult(uri: android.net.Uri?) {
+        uri ?: return
+        AirToast.showShort(activity, R.string.ui_importing_font)
+        runOnAppIo {
+            val result = FloatingLyricsFontStore.importFont(activity, uri)
+            runOnMainThread {
+                if (destroyed || activity.isDestroyed) return@runOnMainThread
+                val message = when (result) {
+                    is FloatingLyricsFontStore.ImportResult.Success -> {
+                        FloatingLyricsStyleStore.setFontFamily(
+                            activity,
+                            FloatingLyricsFontFamily.CUSTOM
+                        )
+                        floatingController.notifyStyleChanged()
+                        uiInvalidator.rebuildCurrentPage(
+                            reason = PageRebuildReason.FLOATING_STRUCTURE_CHANGED,
+                            animateContent = false,
+                            animateTabs = false
+                        )
+                        activity.getString(R.string.ui_font_import_success, result.displayName)
+                    }
+
+                    FloatingLyricsFontStore.ImportResult.UnsupportedFormat ->
+                        activity.getString(R.string.ui_font_format_unsupported)
+                    FloatingLyricsFontStore.ImportResult.TooLarge ->
+                        activity.getString(R.string.ui_font_file_too_large)
+                    FloatingLyricsFontStore.ImportResult.InvalidFont ->
+                        activity.getString(R.string.ui_invalid_font_file)
+                    FloatingLyricsFontStore.ImportResult.ReadFailed ->
+                        activity.getString(R.string.ui_font_import_failed)
+                }
+                AirToast.showLong(activity, message)
+            }
+        }
     }
 
     fun requestOverlayPermission() {

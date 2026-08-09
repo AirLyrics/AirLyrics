@@ -25,11 +25,15 @@ internal fun MainUiHost.sliderRowImpl(
     min: Int,
     max: Int,
     suffix: String,
+    step: Int,
     onChangeFinished: ((Int) -> Unit)?,
     onChanged: (Int) -> Unit
 ): LinearLayout {
     val activity = this
-    val safeValue = value.coerceIn(min, max)
+    val safeStep = step.coerceAtLeast(1)
+    val safeValue = value.coerceIn(min, max).let {
+        min + ((it - min + safeStep / 2) / safeStep) * safeStep
+    }.coerceAtMost(max)
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
@@ -43,14 +47,14 @@ internal fun MainUiHost.sliderRowImpl(
         addView(valueText)
 
         addView(SeekBar(activity).apply {
-            this.max = max - min
-            progress = safeValue - min
+            this.max = (max - min) / safeStep
+            progress = (safeValue - min) / safeStep
             var latestValue = safeValue
             var isTracking = false
             var changedWhileTracking = false
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    val newValue = min + progress
+                    val newValue = min + progress * safeStep
                     latestValue = newValue
                     valueText.text = getString(R.string.field_value_with_suffix, title, newValue, suffix)
                     if (fromUser) {

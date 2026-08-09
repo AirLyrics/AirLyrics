@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 internal class MainLaunchers(
     activity: AppCompatActivity,
     private val onLyricsFileResult: (Uri?) -> Unit,
+    private val onFloatingFontFileResult: (Uri?) -> Unit,
     private val onLyricsDirectorySelected: (Uri) -> Unit,
     private val onNotificationPermissionResult: (Boolean) -> Unit
 ) {
@@ -31,6 +32,23 @@ internal class MainLaunchers(
             onLyricsFileResult(uri)
         }
 
+    private val floatingFontMimeTypes = arrayOf(
+        "font/ttf",
+        "font/otf",
+        "application/font-sfnt",
+        "application/x-font-ttf",
+        "application/x-font-truetype",
+        "application/x-font-otf",
+        "application/x-font-opentype",
+        "application/vnd.ms-opentype",
+        "application/octet-stream"
+    )
+
+    private val floatingFontFileLauncher =
+        activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            onFloatingFontFileResult(uri)
+        }
+
     private val lyricsDirectoryLauncher =
         activity.registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null) onLyricsDirectorySelected(uri)
@@ -43,6 +61,10 @@ internal class MainLaunchers(
 
     fun selectLyricsFile() {
         lyricsFileLauncher.launch(lyricsDocumentMimeTypes)
+    }
+
+    fun selectFloatingFontFile() {
+        floatingFontFileLauncher.launch(floatingFontMimeTypes)
     }
 
     fun selectLyricsDirectory() {

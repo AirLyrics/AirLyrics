@@ -3,6 +3,9 @@ package com.andsi.airlyrics.ui.pages.floating.sections
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.actionButton
+import com.andsi.airlyrics.ui.components.normalText
+import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
+import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
@@ -139,6 +142,80 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                                 previewFloatingTextSize(value.toFloat())
                             }
                         )
+                    }
+                }
+            ),
+            trackedFloatingTile(
+                title = getString(R.string.ui_font),
+                subtitle = fontFamilySubtitle(),
+                iconRes = R.drawable.ic_air_font,
+                onClick = { tile ->
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_font),
+                        ""
+                    ) {
+                        val availableFonts = FloatingLyricsFontFamily.entries.filter { fontFamily ->
+                            fontFamily != FloatingLyricsFontFamily.CUSTOM || hasFloatingCustomFont()
+                        }
+                        addView(liveOptionGrid(
+                            availableFonts.map { fontFamily ->
+                                KeyedOptionItem(
+                                    key = fontFamily.key,
+                                    title = localizedFontFamilyTitle(fontFamily),
+                                    selected = fontFamily == style().fontFamily,
+                                    action = {
+                                        applyFloatingStyle(style().copy(fontFamily = fontFamily))
+                                        refreshFloatingPreview()
+                                    }
+                                )
+                            }
+                        ))
+                        addView(actionButton(
+                            host,
+                            getString(
+                                if (hasFloatingCustomFont()) {
+                                    R.string.ui_reimport_font
+                                } else {
+                                    R.string.ui_import_font
+                                }
+                            )
+                        ) {
+                            selectFloatingFontFile()
+                        })
+                        addView(normalText(host, getString(R.string.ui_font_formats_hint)))
+                    }
+                }
+            ),
+            trackedFloatingTile(
+                title = getString(R.string.ui_font_weight),
+                subtitle = fontWeightSubtitle(),
+                iconRes = R.drawable.ic_air_font_weight,
+                onClick = { tile ->
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_font_weight),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults -> current.fontWeight == defaults.fontWeight },
+                            restoreDefaults = { current, defaults -> current.copy(fontWeight = defaults.fontWeight) }
+                        )
+                    ) {
+                        addView(sliderRow(
+                            title = getString(R.string.ui_font_weight),
+                            value = style().fontWeight,
+                            min = FloatingLyricsFontWeight.MIN,
+                            max = FloatingLyricsFontWeight.MAX,
+                            suffix = "",
+                            step = FloatingLyricsFontWeight.STEP,
+                            onChangeFinished = { value ->
+                                applyFloatingStyle(style().copy(fontWeight = value))
+                                refreshFloatingPreview()
+                            }
+                        ) { value ->
+                            previewFloatingFontWeight(value)
+                        })
+                        addView(normalText(host, getString(R.string.ui_font_weight_hint)))
                     }
                 }
             ),

@@ -3,6 +3,8 @@ package com.andsi.airlyrics.settings.store
 import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
+import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
+import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.prefs.PreferenceStore
@@ -27,6 +29,8 @@ object FloatingLyricsStyleStore {
     private const val KEY_PADDING_VERTICAL = "padding_vertical"
     private const val KEY_MAX_WIDTH_PERCENT = "max_width_percent"
     private const val KEY_GRAVITY = "gravity"
+    private const val KEY_FONT_FAMILY = "font_family"
+    private const val KEY_FONT_WEIGHT = "font_weight"
     private const val KEY_LOCKED = "locked"
     private const val KEY_CLICK_THROUGH = "click_through"
     private const val KEY_POS_X = "pos_x"
@@ -114,7 +118,13 @@ object FloatingLyricsStyleStore {
             paddingHorizontalDp = prefs.getInt(KEY_PADDING_HORIZONTAL, 18),
             paddingVerticalDp = prefs.getInt(KEY_PADDING_VERTICAL, 10),
             maxWidthPercent = prefs.getInt(KEY_MAX_WIDTH_PERCENT, 85),
-            gravity = prefs.getInt(KEY_GRAVITY, Gravity.CENTER)
+            gravity = prefs.getInt(KEY_GRAVITY, Gravity.CENTER),
+            fontFamily = FloatingLyricsFontFamily.fromKey(
+                prefs.getString(KEY_FONT_FAMILY, FloatingLyricsFontFamily.SYSTEM_DEFAULT.key)
+            ),
+            fontWeight = FloatingLyricsFontWeight.normalize(
+                prefs.getInt(KEY_FONT_WEIGHT, FloatingLyricsFontWeight.DEFAULT)
+            )
         )
     }
 
@@ -134,7 +144,9 @@ object FloatingLyricsStyleStore {
             paddingHorizontalDp = values.paddingHorizontalDp,
             paddingVerticalDp = values.paddingVerticalDp,
             maxWidthPercent = values.maxWidthPercent,
-            gravity = values.gravity
+            gravity = values.gravity,
+            fontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT,
+            fontWeight = FloatingLyricsFontWeight.DEFAULT
         )
     }
 
@@ -154,6 +166,8 @@ object FloatingLyricsStyleStore {
             putInt(KEY_PADDING_VERTICAL, style.paddingVerticalDp)
             putInt(KEY_MAX_WIDTH_PERCENT, style.maxWidthPercent)
             putInt(KEY_GRAVITY, style.gravity)
+            putString(KEY_FONT_FAMILY, style.fontFamily.key)
+            putInt(KEY_FONT_WEIGHT, FloatingLyricsFontWeight.normalize(style.fontWeight))
         }
     }
 
@@ -202,6 +216,14 @@ object FloatingLyricsStyleStore {
 
     fun setGravity(context: Context, gravity: Int) {
         prefs(context).setInt(KEY_GRAVITY, gravity)
+    }
+
+    fun setFontFamily(context: Context, fontFamily: FloatingLyricsFontFamily) {
+        prefs(context).setString(KEY_FONT_FAMILY, fontFamily.key)
+    }
+
+    fun setFontWeight(context: Context, fontWeight: Int) {
+        prefs(context).setInt(KEY_FONT_WEIGHT, FloatingLyricsFontWeight.normalize(fontWeight))
     }
 
     fun setShadowColor(context: Context, color: Int) {

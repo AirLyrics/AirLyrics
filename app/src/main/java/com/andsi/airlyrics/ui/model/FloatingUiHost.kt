@@ -28,6 +28,9 @@ internal interface FloatingUiHost {
     fun floatingStyle(): FloatingLyricsStyle
     fun floatingStyleDefaults(preset: String): FloatingLyricsStyle
     fun floatingPresets(): List<FloatingLyricsPreset>
+    fun floatingCustomFontName(): String?
+    fun hasFloatingCustomFont(): Boolean
+    fun selectFloatingFontFile()
     fun isFloatingPreviewExpanded(): Boolean
     fun setFloatingPreviewExpanded(expanded: Boolean)
     fun floatingDisplaySummary(): String

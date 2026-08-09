@@ -15,6 +15,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatTextView
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.core.color.AirColorUtils
 import kotlin.math.abs
 
@@ -188,6 +189,11 @@ class FloatingLyricsWindow(
         val maxWidth = (screenWidth * style.maxWidthPercent / 100f).toInt()
 
         view.textSize = style.textSizeSp
+        view.typeface = FloatingLyricsFontStore.resolveTypeface(
+            context,
+            style.fontFamily,
+            style.fontWeight
+        )
         view.setTextColor(style.textColor)
         view.gravity = style.gravity
         view.textAlignment = View.TEXT_ALIGNMENT_GRAVITY

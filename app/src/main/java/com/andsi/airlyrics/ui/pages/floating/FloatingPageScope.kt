@@ -10,12 +10,15 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
+import com.andsi.airlyrics.i18n.localizedFloatingFontFamilyTitle
+import com.andsi.airlyrics.i18n.localizedFloatingFontWeightTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.pageContainer
@@ -131,6 +134,22 @@ internal class FloatingPageScope(
 
     internal fun localizedGravityTitle(gravity: Int): String {
         return host.localizedFloatingGravityTitle(gravity)
+    }
+
+    internal fun localizedFontFamilyTitle(fontFamily: FloatingLyricsFontFamily): String {
+        return host.localizedFloatingFontFamilyTitle(fontFamily)
+    }
+
+    internal fun fontFamilySubtitle(fontFamily: FloatingLyricsFontFamily = style().fontFamily): String {
+        return if (fontFamily == FloatingLyricsFontFamily.CUSTOM) {
+            host.floatingCustomFontName() ?: localizedFontFamilyTitle(fontFamily)
+        } else {
+            localizedFontFamilyTitle(fontFamily)
+        }
+    }
+
+    internal fun fontWeightSubtitle(fontWeight: Int = style().fontWeight): String {
+        return host.localizedFloatingFontWeightTitle(fontWeight)
     }
 
     internal fun style() = host.floatingStyle()
@@ -263,6 +282,8 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), AirColorUtils.colorSummary(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_background_bubble), if (latestStyle.backgroundEnabled) host.getString(R.string.ui_on) else host.getString(R.string.ui_off))
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()} sp")
+        updateFloatingTileSubtitle(host.getString(R.string.ui_font), fontFamilySubtitle(latestStyle.fontFamily))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_font_weight), fontWeightSubtitle(latestStyle.fontWeight))
         updateFloatingTileSubtitle(host.getString(R.string.ui_shadow_stroke), host.getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
         updateFloatingTileSubtitle(host.getString(R.string.ui_window_layout), host.getString(R.string.ui_width) + " ${latestStyle.maxWidthPercent}%")
         updateFloatingTileSubtitle(host.getString(R.string.ui_content), host.localizedLyricsContentModeTitle(contentDisplayMode()))
@@ -331,6 +352,12 @@ internal class FloatingPageScope(
         val previewStyle = style().copy(textSizeSp = textSizeSp)
         renderFloatingPreview(previewStyle)
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${textSizeSp.toInt()} sp")
+    }
+
+    internal fun previewFloatingFontWeight(fontWeight: Int) {
+        val previewStyle = style().copy(fontWeight = fontWeight)
+        renderFloatingPreview(previewStyle)
+        updateFloatingTileSubtitle(host.getString(R.string.ui_font_weight), fontWeightSubtitle(fontWeight))
     }
 
     private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {

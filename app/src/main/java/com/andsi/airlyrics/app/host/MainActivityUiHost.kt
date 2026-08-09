@@ -1,7 +1,6 @@
 package com.andsi.airlyrics.app.host
 
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.media.session.MediaController
 import android.os.Build
@@ -40,6 +39,7 @@ import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
@@ -144,9 +144,10 @@ internal class MainActivityUiHost(
         min: Int,
         max: Int,
         suffix: String,
+        step: Int,
         onChangeFinished: ((Int) -> Unit)?,
         onChanged: (Int) -> Unit
-    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, onChangeFinished, onChanged)
+    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, step, onChangeFinished, onChanged)
     override fun colorControl(
         title: String,
         color: Int,
@@ -166,6 +167,9 @@ internal class MainActivityUiHost(
     override fun floatingStyle(): FloatingLyricsStyle = FloatingLyricsStyleStore.getStyle(this)
     override fun floatingStyleDefaults(preset: String): FloatingLyricsStyle = FloatingLyricsStyleStore.getPresetDefaults(preset)
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
+    override fun floatingCustomFontName(): String? = FloatingLyricsFontStore.customFontDisplayName(this)
+    override fun hasFloatingCustomFont(): Boolean = FloatingLyricsFontStore.hasCustomFont(this)
+    override fun selectFloatingFontFile() = graph.launchers.selectFloatingFontFile()
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)
     override fun setFloatingPreviewExpanded(expanded: Boolean) = FloatingLyricsStyleStore.setPreviewExpanded(this, expanded)
 
@@ -208,7 +212,7 @@ internal class MainActivityUiHost(
         val thumbnailTextSizeSp = previewTextSizeSp(style.textSizeSp, lyricsLineDisplayMode())
         val thumbnailScale = (thumbnailTextSizeSp / style.textSizeSp.coerceAtLeast(1f)).coerceAtMost(1f)
         textSize = thumbnailTextSizeSp
-        typeface = Typeface.DEFAULT
+        typeface = FloatingLyricsFontStore.resolveTypeface(this@MainActivityUiHost, style.fontFamily, style.fontWeight)
         gravity = style.gravity
         textAlignment = View.TEXT_ALIGNMENT_GRAVITY
         setTextColor(style.textColor)

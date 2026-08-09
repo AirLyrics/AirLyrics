@@ -5,6 +5,8 @@ import android.graphics.Color
 import android.view.Gravity
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
+import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import java.util.Locale
@@ -51,6 +53,8 @@ class SettingsStoresTest {
         assertEquals(10, style.paddingVerticalDp)
         assertEquals(85, style.maxWidthPercent)
         assertEquals(Gravity.CENTER, style.gravity)
+        assertEquals(FloatingLyricsFontFamily.SYSTEM_DEFAULT, style.fontFamily)
+        assertEquals(FloatingLyricsFontWeight.DEFAULT, style.fontWeight)
         assertEquals(100 to 300, FloatingLyricsStyleStore.getPosition(context))
         assertTrue(FloatingLyricsStyleStore.isPreviewExpanded(context))
         assertFalse(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
@@ -119,6 +123,26 @@ class SettingsStoresTest {
         FloatingLyricsStyleStore.setStyle(context, defaults)
 
         assertEquals(defaults, FloatingLyricsStyleStore.getStyle(context))
+    }
+
+    @Test
+    fun floatingStyleStore_fontSettingsRoundTripAndNormalizeWeight() {
+        FloatingLyricsStyleStore.setFontFamily(context, FloatingLyricsFontFamily.MONOSPACE)
+        FloatingLyricsStyleStore.setFontWeight(context, 555)
+
+        var style = FloatingLyricsStyleStore.getStyle(context)
+        assertEquals(FloatingLyricsFontFamily.MONOSPACE, style.fontFamily)
+        assertEquals(560, style.fontWeight)
+
+        context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
+            .edit()
+            .putString("font_family", "future_font")
+            .putInt("font_weight", 2_000)
+            .commit()
+
+        style = FloatingLyricsStyleStore.getStyle(context)
+        assertEquals(FloatingLyricsFontFamily.SYSTEM_DEFAULT, style.fontFamily)
+        assertEquals(FloatingLyricsFontWeight.MAX, style.fontWeight)
     }
 
     @Test
