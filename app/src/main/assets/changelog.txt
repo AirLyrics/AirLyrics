@@ -1,3 +1,12 @@
+v1.2.1 - 2026-08-11
+
+Improved
+- Clarified lyrics source descriptions.
+
+Fixed
+- Recent lyrics now show their file size instead of "Unknown size."
+
+
 v1.2.0 - 2026-08-11
 
 Added

@@ -1,13 +1,7 @@
-v1.2.0 - 2026-08-11
-
-Added
-- Floating-lyrics font selection and imports, with weight and opacity controls.
-- App accent colors and separate floating-background opacity.
-- Reset and undo for floating-window appearance settings.
-- Delete all saved lyrics.
+v1.2.1 - 2026-08-11
 
 Improved
-- Clearer floating preview, refreshed icons, and smoother word-by-word highlighting.
+- Clarified lyrics source descriptions.
 
 Fixed
-- Lyrics removal, online search, imports, media sync, song matching, and local storage reliability.
+- Recent lyrics now show their file size instead of "Unknown size."

@@ -1,0 +1,3 @@
+v1.2.1
+• Clarify lyrics source descriptions.
+• Fix recent lyrics showing "Unknown size."
