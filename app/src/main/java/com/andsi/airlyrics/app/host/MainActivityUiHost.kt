@@ -212,7 +212,7 @@ internal class MainActivityUiHost(
         val thumbnailTextSizeSp = previewTextSizeSp(style.textSizeSp, lyricsLineDisplayMode())
         val thumbnailScale = (thumbnailTextSizeSp / style.textSizeSp.coerceAtLeast(1f)).coerceAtMost(1f)
         textSize = thumbnailTextSizeSp
-        typeface = FloatingLyricsFontStore.resolveTypeface(this@MainActivityUiHost, style.fontFamily, style.fontWeight)
+        FloatingLyricsFontStore.applyTypeface(this, style.fontFamily, style.fontWeight)
         gravity = style.gravity
         textAlignment = View.TEXT_ALIGNMENT_GRAVITY
         setTextColor(style.textColor)

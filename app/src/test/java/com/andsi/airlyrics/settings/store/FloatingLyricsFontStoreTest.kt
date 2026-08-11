@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -77,5 +79,53 @@ class FloatingLyricsFontStoreTest {
                     )
                 )
             }
+    }
+
+    @Test
+    fun hasWeightVariationAxis_readsFvarAxisRecords() {
+        val weightVariableFont = File(testDirectory, "weight-variable.ttf")
+        val widthVariableFont = File(testDirectory, "width-variable.ttf")
+        writeMinimalVariableFont(weightVariableFont, "wght")
+        writeMinimalVariableFont(widthVariableFont, "wdth")
+
+        assertTrue(FloatingLyricsFontStore.hasWeightVariationAxis(weightVariableFont))
+        assertFalse(FloatingLyricsFontStore.hasWeightVariationAxis(widthVariableFont))
+    }
+
+    private fun writeMinimalVariableFont(file: File, axisTag: String) {
+        val tableOffset = 28
+        val fvarLength = 36
+        val bytes = ByteBuffer.allocate(tableOffset + fvarLength)
+            .order(ByteOrder.BIG_ENDIAN)
+            .apply {
+                putInt(0x0001_0000)
+                putShort(1.toShort())
+                putShort(0.toShort())
+                putShort(0.toShort())
+                putShort(0.toShort())
+
+                put("fvar".toByteArray(Charsets.US_ASCII))
+                putInt(0)
+                putInt(tableOffset)
+                putInt(fvarLength)
+
+                putShort(1.toShort())
+                putShort(0.toShort())
+                putShort(16.toShort())
+                putShort(2.toShort())
+                putShort(1.toShort())
+                putShort(20.toShort())
+                putShort(0.toShort())
+                putShort(0.toShort())
+
+                put(axisTag.toByteArray(Charsets.US_ASCII))
+                putInt(100 shl 16)
+                putInt(400 shl 16)
+                putInt(900 shl 16)
+                putShort(0.toShort())
+                putShort(256.toShort())
+            }
+            .array()
+        file.writeBytes(bytes)
     }
 }

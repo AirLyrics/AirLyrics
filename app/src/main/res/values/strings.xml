@@ -3,7 +3,6 @@
     <string name="field_value">%1$s: %2$d</string>
     <string name="field_value_with_suffix">%1$s: %2$d%3$s</string>
     <string name="floating_color_summary">%1$s: %2$s</string>
-    <string name="floating_font_weight_summary">%1$d · %2$s</string>
     <string name="floating_slider_value">%1$s: %2$d</string>
     <string name="local_source_cache_provider">Cache · %1$s</string>
     <string name="lyrics_word_by_word_format_invalid_lines">Line %1$s%2$s has an invalid format.\n\nWord-by-word lyric lines must use [00:12.34] for line time and &lt;00:12.34&gt; for word tokens. Same-timestamp translation lines may use plain [00:12.34]text.</string>
@@ -128,7 +127,6 @@
     <string name="ui_font_import_success">Font imported: %1$s</string>
     <string name="ui_font_size">Font size</string>
     <string name="ui_font_weight">Font weight</string>
-    <string name="ui_font_weight_hint">Fine adjustment works best with variable fonts. Static fonts use the closest available weight.</string>
     <string name="ui_import_font">Import font</string>
     <string name="ui_importing_font">Importing font…</string>
     <string name="ui_invalid_font_file">This is not a valid font file.</string>
@@ -365,15 +363,6 @@ Word-by-word lyrics recommended format:
     <string name="ui_waiting_for_music_signal">Waiting for music signal</string>
     <string name="ui_whats_new">New in this version</string>
     <string name="ui_white">White</string>
-    <string name="ui_weight_black">Black</string>
-    <string name="ui_weight_bold">Bold</string>
-    <string name="ui_weight_extra_bold">Extra bold</string>
-    <string name="ui_weight_extra_light">Extra light</string>
-    <string name="ui_weight_light">Light</string>
-    <string name="ui_weight_medium">Medium</string>
-    <string name="ui_weight_regular">Regular</string>
-    <string name="ui_weight_semi_bold">Semi bold</string>
-    <string name="ui_weight_thin">Thin</string>
     <string name="ui_width">Width</string>
     <string name="ui_window_layout">Window layout</string>
     <string name="ui_yay">Yay!</string>

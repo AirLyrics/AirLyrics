@@ -127,12 +127,15 @@ class SettingsStoresTest {
 
     @Test
     fun floatingStyleStore_fontSettingsRoundTripAndNormalizeWeight() {
+        assertEquals(6, FloatingLyricsFontWeight.toLevel(555))
+        assertEquals(600, FloatingLyricsFontWeight.fromLevel(6))
+
         FloatingLyricsStyleStore.setFontFamily(context, FloatingLyricsFontFamily.MONOSPACE)
         FloatingLyricsStyleStore.setFontWeight(context, 555)
 
         var style = FloatingLyricsStyleStore.getStyle(context)
         assertEquals(FloatingLyricsFontFamily.MONOSPACE, style.fontFamily)
-        assertEquals(560, style.fontWeight)
+        assertEquals(600, style.fontWeight)
 
         context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
             .edit()

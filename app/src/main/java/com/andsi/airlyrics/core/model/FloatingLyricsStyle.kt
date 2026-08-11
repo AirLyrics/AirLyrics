@@ -40,17 +40,24 @@ enum class FloatingLyricsFontFamily(val key: String) {
     }
 }
 
-/** Shared bounds for the fine-grained floating lyrics font-weight control. */
+/** Shared standard values for the floating lyrics font-weight control. */
 object FloatingLyricsFontWeight {
     const val MIN = 100
     const val MAX = 900
-    const val STEP = 10
+    const val STEP = 100
     const val DEFAULT = 400
+    const val LEVEL_MIN = 1
+    const val LEVEL_MAX = 9
+    const val LEVEL_STEP = 1
 
     fun normalize(weight: Int): Int {
         val clamped = weight.coerceIn(MIN, MAX)
         return ((clamped + STEP / 2) / STEP * STEP).coerceIn(MIN, MAX)
     }
+
+    fun toLevel(weight: Int): Int = normalize(weight) / STEP
+
+    fun fromLevel(level: Int): Int = level.coerceIn(LEVEL_MIN, LEVEL_MAX) * STEP
 }
 
 /** A named preset shown in the floating-window settings page. */

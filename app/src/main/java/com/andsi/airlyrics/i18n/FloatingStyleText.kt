@@ -28,19 +28,5 @@ internal fun Context.localizedFloatingFontFamilyTitle(fontFamily: FloatingLyrics
     }
 
 internal fun Context.localizedFloatingFontWeightTitle(fontWeight: Int): String {
-    val weight = FloatingLyricsFontWeight.normalize(fontWeight)
-    val label = getString(
-        when (weight) {
-            in 100..150 -> R.string.ui_weight_thin
-            in 160..250 -> R.string.ui_weight_extra_light
-            in 260..350 -> R.string.ui_weight_light
-            in 360..450 -> R.string.ui_weight_regular
-            in 460..550 -> R.string.ui_weight_medium
-            in 560..650 -> R.string.ui_weight_semi_bold
-            in 660..750 -> R.string.ui_weight_bold
-            in 760..850 -> R.string.ui_weight_extra_bold
-            else -> R.string.ui_weight_black
-        }
-    )
-    return getString(R.string.floating_font_weight_summary, weight, label)
+    return FloatingLyricsFontWeight.toLevel(fontWeight).toString()
 }

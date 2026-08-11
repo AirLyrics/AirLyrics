@@ -10,12 +10,14 @@ import android.os.Build
 import android.provider.OpenableColumns
 import android.util.AtomicFile
 import android.util.LruCache
+import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.core.graphics.TypefaceCompat
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.core.prefs.prefs
 import java.io.File
+import java.io.RandomAccessFile
 
 /** Imports and resolves fonts used exclusively by the floating lyrics window. */
 object FloatingLyricsFontStore {
@@ -25,6 +27,13 @@ object FloatingLyricsFontStore {
     private const val CUSTOM_FONT_FILE = "custom_font"
     private const val TEMP_FONT_FILE = "custom_font.importing"
     private const val MAX_FONT_BYTES = 20L * 1024L * 1024L
+    private const val MAX_SFNT_TABLES = 512
+    private const val SFNT_HEADER_SIZE = 12L
+    private const val SFNT_TABLE_RECORD_SIZE = 16L
+    private const val FVAR_HEADER_SIZE = 16L
+    private const val FVAR_AXIS_RECORD_MIN_SIZE = 20
+    private const val FVAR_TAG = 0x66766172
+    private const val WEIGHT_AXIS_TAG = 0x77676874
 
     sealed class ImportResult {
         data class Success(val displayName: String) : ImportResult()
@@ -111,7 +120,7 @@ object FloatingLyricsFontStore {
         typefaceCache.get(cacheKey)?.let { return it }
 
         val resolved = if (fontFamily == FloatingLyricsFontFamily.CUSTOM && hasCustomFont(context)) {
-            buildCustomTypeface(customFile, weight)
+            buildCustomTypeface(context, customFile, weight)
                 ?: weightedSystemTypeface(context, Typeface.DEFAULT, weight)
         } else {
             val base = when (fontFamily) {
@@ -127,6 +136,17 @@ object FloatingLyricsFontStore {
         return resolved
     }
 
+    /** Applies both the requested face and its variable-font axis to rendered lyrics text. */
+    fun applyTypeface(
+        view: TextView,
+        fontFamily: FloatingLyricsFontFamily,
+        fontWeight: Int
+    ) {
+        val weight = FloatingLyricsFontWeight.normalize(fontWeight)
+        view.typeface = resolveTypeface(view.context, fontFamily, weight)
+        view.setFontVariationSettings("'wght' $weight")
+    }
+
     internal fun isSupportedFontFileName(displayName: String): Boolean {
         val lower = displayName.lowercase()
         return lower.endsWith(".ttf") || lower.endsWith(".otf")
@@ -136,32 +156,97 @@ object FloatingLyricsFontStore {
         return TypefaceCompat.create(context, base, weight, false)
     }
 
-    private fun buildCustomTypeface(file: File, weight: Int): Typeface? {
+    private fun buildCustomTypeface(context: Context, file: File, weight: Int): Typeface? {
+        val hasWeightAxis = hasWeightVariationAxis(file)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            return buildCustomTypefaceWithSystemFallback(file, weight)
+            return buildCustomTypefaceWithSystemFallback(file, weight, hasWeightAxis)
         }
         return runCatching {
-            Typeface.Builder(file)
-                .setFontVariationSettings("'wght' $weight")
-                .setWeight(weight)
+            val builder = Typeface.Builder(file)
                 .setFallback("sans-serif")
-                .build()
+            if (hasWeightAxis) {
+                builder
+                    .setFontVariationSettings("'wght' $weight")
+                    .setWeight(weight)
+                    .build()
+            } else {
+                val base = builder.build()
+                TypefaceCompat.create(context, base, weight, false)
+            }
         }.getOrNull()
     }
 
     @RequiresApi(Build.VERSION_CODES.Q)
-    private fun buildCustomTypefaceWithSystemFallback(file: File, weight: Int): Typeface? {
+    private fun buildCustomTypefaceWithSystemFallback(
+        file: File,
+        weight: Int,
+        hasWeightAxis: Boolean
+    ): Typeface? {
         return runCatching {
-            val font = Font.Builder(file)
-                .setFontVariationSettings("'wght' $weight")
-                .setWeight(weight)
-                .build()
+            val fontBuilder = Font.Builder(file)
+            val font = if (hasWeightAxis) {
+                fontBuilder
+                    .setFontVariationSettings("'wght' $weight")
+                    .setWeight(weight)
+                    .build()
+            } else {
+                fontBuilder.build()
+            }
             val family = FontFamily.Builder(font).build()
             Typeface.CustomFallbackBuilder(family)
                 .setSystemFallback("sans-serif")
                 .setStyle(FontStyle(weight, FontStyle.FONT_SLANT_UPRIGHT))
                 .build()
         }.getOrNull()
+    }
+
+    internal fun hasWeightVariationAxis(file: File): Boolean {
+        return runCatching {
+            RandomAccessFile(file, "r").use { font ->
+                if (font.length() < SFNT_HEADER_SIZE) return@use false
+                font.seek(4L)
+                val tableCount = font.readUnsignedShort()
+                if (tableCount !in 1..MAX_SFNT_TABLES) return@use false
+
+                val directoryEnd = SFNT_HEADER_SIZE + tableCount * SFNT_TABLE_RECORD_SIZE
+                if (directoryEnd > font.length()) return@use false
+
+                repeat(tableCount) { index ->
+                    font.seek(SFNT_HEADER_SIZE + index * SFNT_TABLE_RECORD_SIZE)
+                    if (font.readInt() == FVAR_TAG) {
+                        font.skipBytes(4)
+                        val offset = font.readUnsignedIntCompat()
+                        val length = font.readUnsignedIntCompat()
+                        return@use fvarContainsWeightAxis(font, offset, length)
+                    }
+                }
+                false
+            }
+        }.getOrDefault(false)
+    }
+
+    private fun fvarContainsWeightAxis(font: RandomAccessFile, offset: Long, length: Long): Boolean {
+        if (length < FVAR_HEADER_SIZE || offset > font.length() - length) return false
+        font.seek(offset + 4L)
+        val axesArrayOffset = font.readUnsignedShort()
+        font.skipBytes(2)
+        val axisCount = font.readUnsignedShort()
+        val axisSize = font.readUnsignedShort()
+        if (axisCount == 0 || axisSize < FVAR_AXIS_RECORD_MIN_SIZE) return false
+
+        val axesStart = offset + axesArrayOffset
+        val axesEnd = axesStart + axisCount.toLong() * axisSize
+        if (axesStart < offset || axesEnd > offset + length) return false
+
+        repeat(axisCount) { index ->
+            font.seek(axesStart + index.toLong() * axisSize)
+            if (font.readInt() == WEIGHT_AXIS_TAG) return true
+        }
+        return false
+    }
+
+    private fun RandomAccessFile.readUnsignedIntCompat(): Long {
+        return readInt().toLong() and 0xffff_ffffL
     }
 
     private fun isValidFontFile(file: File): Boolean {

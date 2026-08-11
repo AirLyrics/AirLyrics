@@ -189,8 +189,8 @@ class FloatingLyricsWindow(
         val maxWidth = (screenWidth * style.maxWidthPercent / 100f).toInt()
 
         view.textSize = style.textSizeSp
-        view.typeface = FloatingLyricsFontStore.resolveTypeface(
-            context,
+        FloatingLyricsFontStore.applyTypeface(
+            view,
             style.fontFamily,
             style.fontWeight
         )

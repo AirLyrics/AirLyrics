@@ -3,7 +3,6 @@
     <string name="field_value">%1$s：%2$d</string>
     <string name="field_value_with_suffix">%1$s：%2$d%3$s</string>
     <string name="floating_color_summary">%1$s：%2$s</string>
-    <string name="floating_font_weight_summary">%1$d · %2$s</string>
     <string name="floating_slider_value">%1$s：%2$d</string>
     <string name="local_source_cache_provider">本地缓存 · %1$s</string>
     <string name="lyrics_word_by_word_format_invalid_lines">第 %1$s%2$s 行格式不正确。\n\n逐字歌词原文行需要使用逐字格式：行时间为 [00:12.34]，每个字词时间为 &lt;00:12.34&gt;歌词。同时间戳翻译行可以使用普通 [00:12.34]翻译 格式。</string>
@@ -128,7 +127,6 @@
     <string name="ui_font_import_success">已导入字体：%1$s</string>
     <string name="ui_font_size">字体大小</string>
     <string name="ui_font_weight">字体粗细</string>
-    <string name="ui_font_weight_hint">可变字体的细调效果最佳；普通静态字体会使用最接近的可用字重。</string>
     <string name="ui_import_font">导入字体</string>
     <string name="ui_importing_font">正在导入字体…</string>
     <string name="ui_invalid_font_file">这不是有效的字体文件。</string>
@@ -365,15 +363,6 @@
     <string name="ui_waiting_for_music_signal">等待音乐信号</string>
     <string name="ui_whats_new">当前版本更新</string>
     <string name="ui_white">白</string>
-    <string name="ui_weight_black">极粗</string>
-    <string name="ui_weight_bold">粗体</string>
-    <string name="ui_weight_extra_bold">特粗</string>
-    <string name="ui_weight_extra_light">特细</string>
-    <string name="ui_weight_light">细体</string>
-    <string name="ui_weight_medium">中等</string>
-    <string name="ui_weight_regular">正常</string>
-    <string name="ui_weight_semi_bold">半粗</string>
-    <string name="ui_weight_thin">极细</string>
     <string name="ui_width">宽度</string>
     <string name="ui_window_layout">窗口布局</string>
     <string name="ui_yay">我会非常非常非常开心的！</string>

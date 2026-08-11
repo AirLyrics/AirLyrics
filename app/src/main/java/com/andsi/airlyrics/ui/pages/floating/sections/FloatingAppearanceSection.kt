@@ -203,19 +203,20 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                     ) {
                         addView(sliderRow(
                             title = getString(R.string.ui_font_weight),
-                            value = style().fontWeight,
-                            min = FloatingLyricsFontWeight.MIN,
-                            max = FloatingLyricsFontWeight.MAX,
+                            value = FloatingLyricsFontWeight.toLevel(style().fontWeight),
+                            min = FloatingLyricsFontWeight.LEVEL_MIN,
+                            max = FloatingLyricsFontWeight.LEVEL_MAX,
                             suffix = "",
-                            step = FloatingLyricsFontWeight.STEP,
-                            onChangeFinished = { value ->
-                                applyFloatingStyle(style().copy(fontWeight = value))
+                            step = FloatingLyricsFontWeight.LEVEL_STEP,
+                            onChangeFinished = { level ->
+                                applyFloatingStyle(
+                                    style().copy(fontWeight = FloatingLyricsFontWeight.fromLevel(level))
+                                )
                                 refreshFloatingPreview()
                             }
-                        ) { value ->
-                            previewFloatingFontWeight(value)
+                        ) { level ->
+                            previewFloatingFontWeight(FloatingLyricsFontWeight.fromLevel(level))
                         })
-                        addView(normalText(host, getString(R.string.ui_font_weight_hint)))
                     }
                 }
             ),
