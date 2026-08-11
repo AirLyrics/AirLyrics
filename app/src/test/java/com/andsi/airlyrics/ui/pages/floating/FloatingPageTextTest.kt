@@ -73,4 +73,14 @@ class FloatingPageTextTest {
             assertTrue(previewTextSizeSp(42f, mode) > previewTextSizeSp(28f, mode))
         }
     }
+
+    @Test
+    fun `opacity conversion uses display percentages`() {
+        assertEquals(0, alphaToOpacityPercent(-1))
+        assertEquals(50, alphaToOpacityPercent(128))
+        assertEquals(100, alphaToOpacityPercent(300))
+        assertEquals(0, opacityPercentToAlpha(-1))
+        assertEquals(128, opacityPercentToAlpha(50))
+        assertEquals(255, opacityPercentToAlpha(101))
+    }
 }

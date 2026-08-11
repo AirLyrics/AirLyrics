@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.pages.floating.sections
 
+import android.graphics.Color
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.actionButton
@@ -8,10 +9,11 @@ import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
+import com.andsi.airlyrics.ui.pages.floating.alphaToOpacityPercent
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
+import com.andsi.airlyrics.ui.pages.floating.opacityPercentToAlpha
 import com.andsi.airlyrics.ui.pages.floating.openPanel
 import com.andsi.airlyrics.core.color.AirColorUtils
-import kotlin.math.roundToInt
 
 internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_appearance)))
@@ -49,14 +51,29 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                         getString(R.string.ui_text_color),
                         "",
                         reset = stylePanelReset(
-                            isAtDefault = { current, defaults -> current.textColor == defaults.textColor },
-                            restoreDefaults = { current, defaults -> current.copy(textColor = defaults.textColor) }
+                            isAtDefault = { current, defaults ->
+                                AirColorUtils.opaqueRgb(current.textColor) == AirColorUtils.opaqueRgb(defaults.textColor)
+                            },
+                            restoreDefaults = { current, defaults ->
+                                current.copy(
+                                    textColor = AirColorUtils.withAlpha(
+                                        defaults.textColor,
+                                        Color.alpha(current.textColor)
+                                    )
+                                )
+                            }
                         )
                     ) {
-                        addView(colorControl(getString(R.string.ui_text), style().textColor) { color ->
-                            applyFloatingTextColor(color, refreshPage = false)
-                            refreshFloatingPreview()
-                        })
+                        addView(
+                            colorControl(
+                                title = getString(R.string.ui_text),
+                                color = AirColorUtils.opaqueRgb(style().textColor),
+                                includeOpacity = false
+                            ) { color ->
+                                applyFloatingTextColor(color, refreshPage = false)
+                                refreshFloatingPreview()
+                            }
+                        )
                     }
                 }
             ),
@@ -221,6 +238,48 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                title = getString(R.string.ui_font_opacity),
+                subtitle = fontOpacitySubtitle(),
+                iconRes = R.drawable.ic_air_opacity,
+                onClick = { tile ->
+                    openPanel(
+                        tile,
+                        getString(R.string.ui_font_opacity),
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, defaults ->
+                                Color.alpha(current.textColor) == Color.alpha(defaults.textColor)
+                            },
+                            restoreDefaults = { current, defaults ->
+                                current.copy(
+                                    textColor = AirColorUtils.withAlpha(
+                                        current.textColor,
+                                        Color.alpha(defaults.textColor)
+                                    )
+                                )
+                            }
+                        )
+                    ) {
+                        addView(sliderRow(
+                            title = getString(R.string.ui_opacity),
+                            value = alphaToOpacityPercent(Color.alpha(style().textColor)),
+                            min = 0,
+                            max = 100,
+                            suffix = "%",
+                            onChangeFinished = { percent ->
+                                applyFloatingTextAlpha(
+                                    opacityPercentToAlpha(percent),
+                                    refreshPage = false
+                                )
+                                refreshFloatingPreview()
+                            }
+                        ) { percent ->
+                            previewFloatingFontOpacity(percent)
+                        })
+                    }
+                }
+            ),
+            trackedFloatingTile(
                 title = getString(R.string.ui_shadow_stroke),
                 subtitle = getString(R.string.ui_radius) + " ${style().shadowRadius.toInt()}",
                 iconRes = R.drawable.ic_air_shadow,
@@ -300,12 +359,4 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
             )
         )
     )
-}
-
-internal fun alphaToOpacityPercent(alpha: Int): Int {
-    return (alpha.coerceIn(0, 255) * 100f / 255f).roundToInt()
-}
-
-internal fun opacityPercentToAlpha(percent: Int): Int {
-    return (percent.coerceIn(0, 100) * 255f / 100f).roundToInt()
 }

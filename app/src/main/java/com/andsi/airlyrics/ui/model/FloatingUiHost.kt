@@ -43,6 +43,7 @@ internal interface FloatingUiHost {
     fun applyFloatingStyle(style: FloatingLyricsStyle)
     fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean = true)
     fun applyFloatingTextColor(color: Int, refreshPage: Boolean = true)
+    fun applyFloatingTextAlpha(alpha: Int, refreshPage: Boolean = true)
     fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean = true)
     fun applyFloatingBackgroundEnabled(enabled: Boolean)
     fun applyFloatingBackgroundAlpha(alpha: Int)

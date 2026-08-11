@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.ui.pages.floating
 
-import android.graphics.Color
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
@@ -94,8 +93,7 @@ internal fun MainUiHost.createFloatingPreviewCard(
             lyricView.requestLayout()
         },
         updateStyle = { previewStyle ->
-            val toggleAlpha = (Color.alpha(previewStyle.textColor) * FloatingPageTokens.PREVIEW_TOGGLE_ALPHA)
-                .roundToInt()
+            val toggleAlpha = (255 * FloatingPageTokens.PREVIEW_TOGGLE_ALPHA).roundToInt()
             toggleView.setTextColor(AirColorUtils.withAlpha(previewStyle.textColor, toggleAlpha))
         },
         updateFold = { expanded ->

@@ -123,6 +123,7 @@
     <string name="ui_font_formats_hint">TTF, OTF, and variable fonts supported.</string>
     <string name="ui_font_import_failed">Couldn’t import this font.</string>
     <string name="ui_font_import_success">Font imported: %1$s</string>
+    <string name="ui_font_opacity">Font opacity</string>
     <string name="ui_font_size">Font size</string>
     <string name="ui_font_weight">Font weight</string>
     <string name="ui_import_font">Import font</string>

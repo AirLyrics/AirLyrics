@@ -123,6 +123,7 @@
     <string name="ui_font_formats_hint">支持 TTF、OTF 和可变字体</string>
     <string name="ui_font_import_failed">字体导入失败</string>
     <string name="ui_font_import_success">已导入字体：%1$s</string>
+    <string name="ui_font_opacity">字体不透明度</string>
     <string name="ui_font_size">字体大小</string>
     <string name="ui_font_weight">字体粗细</string>
     <string name="ui_import_font">导入字体</string>

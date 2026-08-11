@@ -149,6 +149,30 @@ class SettingsStoresTest {
     }
 
     @Test
+    fun floatingStyleStore_fontOpacitySurvivesColorAndPresetChanges() {
+        FloatingLyricsStyleStore.setTextAlpha(context, 96)
+        FloatingLyricsStyleStore.setTextColor(context, Color.argb(12, 1, 2, 3))
+
+        var style = FloatingLyricsStyleStore.getStyle(context)
+        assertEquals(Color.argb(96, 1, 2, 3), style.textColor)
+
+        FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_SUBTITLE)
+
+        style = FloatingLyricsStyleStore.getStyle(context)
+        assertEquals(96, Color.alpha(style.textColor))
+        assertEquals(
+            Color.WHITE,
+            Color.rgb(Color.red(style.textColor), Color.green(style.textColor), Color.blue(style.textColor))
+        )
+
+        FloatingLyricsStyleStore.setTextAlpha(context, 300)
+        assertEquals(255, Color.alpha(FloatingLyricsStyleStore.getStyle(context).textColor))
+
+        FloatingLyricsStyleStore.setTextAlpha(context, -1)
+        assertEquals(0, Color.alpha(FloatingLyricsStyleStore.getStyle(context).textColor))
+    }
+
+    @Test
     fun floatingStyleStore_backgroundControlsPersistIndependentlyAndClampAlpha() {
         FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_SUBTITLE)
         FloatingLyricsStyleStore.setBackgroundColor(context, Color.argb(127, 1, 2, 3))

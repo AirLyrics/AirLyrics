@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.pages.floating
 
+import android.graphics.Color
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -152,6 +153,10 @@ internal class FloatingPageScope(
         return localizedFloatingFontWeightTitle(fontWeight)
     }
 
+    internal fun fontOpacitySubtitle(textColor: Int = style().textColor): String {
+        return "${alphaToOpacityPercent(Color.alpha(textColor))}%"
+    }
+
     internal fun style() = host.floatingStyle()
 
     internal fun stylePanelReset(
@@ -218,7 +223,12 @@ internal class FloatingPageScope(
                 .coerceAtMost(currentLine.original.length)
             if (currentLineStart >= 0) {
                 result.setSpan(
-                    ForegroundColorSpan(previewStyle.wordByWordHighlightColor),
+                    ForegroundColorSpan(
+                        AirColorUtils.multiplyAlpha(
+                            previewStyle.wordByWordHighlightColor,
+                            Color.alpha(previewStyle.textColor)
+                        )
+                    ),
                     currentLineStart,
                     currentLineStart + highlightedCharacters,
                     Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -284,6 +294,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()} sp")
         updateFloatingTileSubtitle(host.getString(R.string.ui_font), fontFamilySubtitle(latestStyle.fontFamily))
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_weight), fontWeightSubtitle(latestStyle.fontWeight))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_font_opacity), fontOpacitySubtitle(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_shadow_stroke), host.getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
         updateFloatingTileSubtitle(host.getString(R.string.ui_window_layout), host.getString(R.string.ui_width) + " ${latestStyle.maxWidthPercent}%")
         updateFloatingTileSubtitle(host.getString(R.string.ui_content), host.localizedLyricsContentModeTitle(contentDisplayMode()))
@@ -358,6 +369,21 @@ internal class FloatingPageScope(
         val previewStyle = style().copy(fontWeight = fontWeight)
         renderFloatingPreview(previewStyle)
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_weight), fontWeightSubtitle(fontWeight))
+    }
+
+    internal fun previewFloatingFontOpacity(opacityPercent: Int) {
+        val currentStyle = style()
+        val previewStyle = currentStyle.copy(
+            textColor = AirColorUtils.withAlpha(
+                currentStyle.textColor,
+                opacityPercentToAlpha(opacityPercent)
+            )
+        )
+        renderFloatingPreview(previewStyle)
+        updateFloatingTileSubtitle(
+            host.getString(R.string.ui_font_opacity),
+            fontOpacitySubtitle(previewStyle.textColor)
+        )
     }
 
     private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {

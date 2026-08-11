@@ -207,7 +207,12 @@ class FloatingLyricsWindow(
         )
 
         if (style.shadowRadius > 0f) {
-            view.setShadowLayer(style.shadowRadius, 0f, 0f, style.shadowColor)
+            view.setShadowLayer(
+                style.shadowRadius,
+                0f,
+                0f,
+                AirColorUtils.multiplyAlpha(style.shadowColor, Color.alpha(style.textColor))
+            )
         } else {
             view.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
         }

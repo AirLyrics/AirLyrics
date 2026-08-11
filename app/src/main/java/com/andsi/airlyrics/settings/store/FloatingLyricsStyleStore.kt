@@ -173,9 +173,11 @@ object FloatingLyricsStyleStore {
 
     fun applyPreset(context: Context, preset: String) {
         val values = presetValues[normalizePreset(preset)] ?: return
-        prefs(context).edit {
+        val prefs = prefs(context)
+        val textAlpha = Color.alpha(prefs.getInt(KEY_TEXT_COLOR, Color.WHITE))
+        prefs.edit {
             putString(KEY_PRESET, values.key)
-            putInt(KEY_TEXT_COLOR, values.textColor)
+            putInt(KEY_TEXT_COLOR, AirColorUtils.withAlpha(values.textColor, textAlpha))
             putInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, values.wordByWordHighlightColor)
             putInt(KEY_SHADOW_COLOR, values.shadowColor)
             putFloat(KEY_SHADOW_RADIUS, values.shadowRadius)
@@ -195,7 +197,15 @@ object FloatingLyricsStyleStore {
     }
 
     fun setTextColor(context: Context, color: Int) {
-        prefs(context).setInt(KEY_TEXT_COLOR, color)
+        val prefs = prefs(context)
+        val currentAlpha = Color.alpha(prefs.getInt(KEY_TEXT_COLOR, Color.WHITE))
+        prefs.setInt(KEY_TEXT_COLOR, AirColorUtils.withAlpha(color, currentAlpha))
+    }
+
+    fun setTextAlpha(context: Context, alpha: Int) {
+        val prefs = prefs(context)
+        val color = prefs.getInt(KEY_TEXT_COLOR, Color.WHITE)
+        prefs.setInt(KEY_TEXT_COLOR, AirColorUtils.withAlpha(color, alpha))
     }
 
     fun setWordByWordHighlightColor(context: Context, color: Int) {

@@ -1,0 +1,10 @@
+<!-- Material Icons: opacity. Licensed under Apache-2.0. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17.66,8L12,2.35L6.34,8C4.78,9.56 4,11.44 4,13.35C4,17.77 7.58,21.35 12,21.35C16.42,21.35 20,17.77 20,13.35C20,11.44 19.22,9.56 17.66,8ZM6,14C6.01,12 7,10.73 8.26,9.45L12,5.6L15.74,9.45C17,10.73 17.99,12 18,14H6Z" />
+</vector>

@@ -220,7 +220,12 @@ internal class MainActivityUiHost(
         textAlignment = View.TEXT_ALIGNMENT_GRAVITY
         setTextColor(style.textColor)
         setLineSpacing(dp(FloatingPageTokens.PREVIEW_LINE_SPACING_EXTRA_DP).toFloat(), 1f)
-        setShadowLayer(style.shadowRadius * thumbnailScale, 0f, 0f, style.shadowColor)
+        setShadowLayer(
+            style.shadowRadius * thumbnailScale,
+            0f,
+            0f,
+            AirColorUtils.multiplyAlpha(style.shadowColor, Color.alpha(style.textColor))
+        )
         setPadding(
             dp((style.paddingHorizontalDp * thumbnailScale).roundToInt()),
             dp((style.paddingVerticalDp * thumbnailScale).roundToInt()),
@@ -241,6 +246,7 @@ internal class MainActivityUiHost(
     override fun applyFloatingStyle(style: FloatingLyricsStyle) = graph.floatingController.applyStyle(style)
     override fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean) = graph.floatingController.applyTextSize(textSizeSp, refreshPage)
     override fun applyFloatingTextColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyTextColor(color, refreshPage)
+    override fun applyFloatingTextAlpha(alpha: Int, refreshPage: Boolean) = graph.floatingController.applyTextAlpha(alpha, refreshPage)
     override fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyBackgroundColor(color, refreshPage)
     override fun applyFloatingBackgroundEnabled(enabled: Boolean) = graph.floatingController.applyBackgroundEnabled(enabled)
     override fun applyFloatingBackgroundAlpha(alpha: Int) = graph.floatingController.applyBackgroundAlpha(alpha)

@@ -16,6 +16,11 @@ internal object AirColorUtils {
         return Color.rgb(Color.red(color), Color.green(color), Color.blue(color))
     }
 
+    fun multiplyAlpha(color: Int, alpha: Int): Int {
+        val combinedAlpha = (Color.alpha(color) * alpha.coerceIn(0, 255) + 127) / 255
+        return withAlpha(color, combinedAlpha)
+    }
+
     fun isDarkColor(color: Int): Boolean {
         val luminance = (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color))
         return luminance < 150

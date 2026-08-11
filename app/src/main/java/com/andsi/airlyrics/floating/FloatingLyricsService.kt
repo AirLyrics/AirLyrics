@@ -4,11 +4,13 @@ import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
@@ -37,7 +39,13 @@ open class FloatingLyricsService : Service() {
         lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
         wordByWordLyricsEnabledProvider = { LyricsSettingsStore.isWordByWordLyricsEnabled(this) },
-        wordByWordHighlightColorProvider = { FloatingLyricsStyleStore.getStyle(this).wordByWordHighlightColor },
+        wordByWordHighlightColorProvider = {
+            val style = FloatingLyricsStyleStore.getStyle(this)
+            AirColorUtils.multiplyAlpha(
+                style.wordByWordHighlightColor,
+                Color.alpha(style.textColor)
+            )
+        },
         noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric) }
     )
     internal val syncHandler = Handler(Looper.getMainLooper())

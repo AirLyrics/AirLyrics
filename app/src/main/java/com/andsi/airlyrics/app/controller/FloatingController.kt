@@ -242,6 +242,12 @@ internal class FloatingController(
         if (refreshPage) invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
     }
 
+    fun applyTextAlpha(alpha: Int, refreshPage: Boolean = true) {
+        FloatingLyricsStyleStore.setTextAlpha(context, alpha)
+        notifyStyleChanged()
+        if (refreshPage) invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
+    }
+
     fun applyBackgroundColor(color: Int, refreshPage: Boolean = true) {
         FloatingLyricsStyleStore.setBackgroundColor(context, color)
         notifyStyleChanged()

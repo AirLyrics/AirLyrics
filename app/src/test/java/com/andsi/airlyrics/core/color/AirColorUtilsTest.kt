@@ -27,6 +27,15 @@ class AirColorUtilsTest {
     }
 
     @Test
+    fun multiplyAlpha_scalesAndClampsAlpha() {
+        val color = Color.argb(128, 10, 20, 30)
+
+        assertEquals(Color.argb(64, 10, 20, 30), AirColorUtils.multiplyAlpha(color, 128))
+        assertEquals(Color.argb(0, 10, 20, 30), AirColorUtils.multiplyAlpha(color, -1))
+        assertEquals(color, AirColorUtils.multiplyAlpha(color, 300))
+    }
+
+    @Test
     fun isDarkColor_usesLuminanceThreshold() {
         assertTrue(AirColorUtils.isDarkColor(Color.rgb(20, 20, 20)))
         assertFalse(AirColorUtils.isDarkColor(Color.rgb(240, 240, 240)))

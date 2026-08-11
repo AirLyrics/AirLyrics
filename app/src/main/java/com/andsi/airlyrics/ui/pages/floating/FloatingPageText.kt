@@ -63,6 +63,14 @@ internal fun previewTextSizeSp(
     return previewMin + (previewMax - previewMin) * progress
 }
 
+internal fun alphaToOpacityPercent(alpha: Int): Int {
+    return (alpha.coerceIn(0, 255) * 100f / 255f).roundToInt()
+}
+
+internal fun opacityPercentToAlpha(percent: Int): Int {
+    return (percent.coerceIn(0, 100) * 255f / 100f).roundToInt()
+}
+
 internal fun formattedPreviewLyrics(
     mode: LyricsContentDisplayMode,
     lines: List<FloatingPreviewLyricLine>,

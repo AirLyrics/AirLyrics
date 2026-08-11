@@ -87,6 +87,7 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
             addView(settingRow(host, getString(R.string.ui_font_size), "${style().textSizeSp.toInt()}sp"))
             addView(settingRow(host, getString(R.string.ui_font), fontFamilySubtitle()))
             addView(settingRow(host, getString(R.string.ui_font_weight), fontWeightSubtitle()))
+            addView(settingRow(host, getString(R.string.ui_font_opacity), fontOpacitySubtitle()))
             addView(settingRow(host, getString(R.string.ui_text), AirColorUtils.colorSummary(style().textColor)))
             addView(settingRow(host, getString(R.string.ui_highlight), AirColorUtils.colorSummary(style().wordByWordHighlightColor)))
             addView(settingRow(host, getString(R.string.ui_background), onOff(style().backgroundEnabled)))
