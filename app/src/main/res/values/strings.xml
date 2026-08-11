@@ -136,8 +136,8 @@
     <string name="ui_system_default_font">System default</string>
     <string name="ui_format_looks_good">Format looks good</string>
     <string name="ui_give_it_a_star">Star on GitHub</string>
-    <string name="ui_good_for_chinese_songs">Chinese songs</string>
-    <string name="ui_musixmatch_source_hint">International songs · translations when available</string>
+    <string name="ui_netease_source_hint">Users in mainland China or Taiwan</string>
+    <string name="ui_musixmatch_source_hint">Overseas users · translations when available</string>
     <string name="ui_green">Green</string>
     <string name="ui_hidden">Hidden</string>
     <string name="ui_hide">Hide</string>

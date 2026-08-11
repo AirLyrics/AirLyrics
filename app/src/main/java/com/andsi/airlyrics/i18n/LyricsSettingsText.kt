@@ -20,7 +20,7 @@ internal fun Context.localizedPlainLyricsSourceHint(
     plainLyricsSearchSource: PlainLyricsSearchSource
 ): String = when (plainLyricsSearchSource) {
     PlainLyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_read_local_lyrics_only)
-    PlainLyricsSearchSource.NETEASE -> getString(R.string.ui_good_for_chinese_songs)
+    PlainLyricsSearchSource.NETEASE -> getString(R.string.ui_netease_source_hint)
     PlainLyricsSearchSource.MUSIXMATCH -> getString(R.string.ui_musixmatch_source_hint)
 }
 
