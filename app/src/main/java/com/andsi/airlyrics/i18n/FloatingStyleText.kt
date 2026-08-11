@@ -27,6 +27,6 @@ internal fun Context.localizedFloatingFontFamilyTitle(fontFamily: FloatingLyrics
         FloatingLyricsFontFamily.CUSTOM -> getString(R.string.ui_custom_font)
     }
 
-internal fun Context.localizedFloatingFontWeightTitle(fontWeight: Int): String {
+internal fun localizedFloatingFontWeightTitle(fontWeight: Int): String {
     return FloatingLyricsFontWeight.toLevel(fontWeight).toString()
 }

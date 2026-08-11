@@ -144,7 +144,7 @@ object FloatingLyricsFontStore {
     ) {
         val weight = FloatingLyricsFontWeight.normalize(fontWeight)
         view.typeface = resolveTypeface(view.context, fontFamily, weight)
-        view.setFontVariationSettings("'wght' $weight")
+        view.fontVariationSettings = "'wght' $weight"
     }
 
     internal fun isSupportedFontFileName(displayName: String): Boolean {

@@ -8,6 +8,7 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.display.PlainLyricsDisplayFormatter
 import com.andsi.airlyrics.lyrics.parser.LrcLine
@@ -304,16 +305,33 @@ class FloatingLyricsRenderer(
         val text = displayText.trim()
         if (text.isBlank()) return ""
 
-        val highlightEnd = wordByWordHighlightEnd(wordByWordLine, text, positionMs)
-            .coerceIn(0, text.length)
+        val progress = wordByWordHighlightProgress(wordByWordLine, text, positionMs)
         val span = SpannableString(text)
-        if (highlightEnd > 0) {
-            span.setSpan(
-                ForegroundColorSpan(wordByWordHighlightColorProvider()),
-                0,
-                highlightEnd,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-            )
+        if (progress.completedEnd > 0 || progress.hasActiveCharacter) {
+            val highlightColor = wordByWordHighlightColorProvider()
+            if (progress.completedEnd > 0) {
+                span.setSpan(
+                    ForegroundColorSpan(highlightColor),
+                    0,
+                    progress.completedEnd.coerceIn(0, text.length),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
+
+            if (progress.hasActiveCharacter) {
+                val baseColor = textViewProvider()?.currentTextColor ?: Color.WHITE
+                val transitioningColor = ColorUtils.blendARGB(
+                    baseColor,
+                    highlightColor,
+                    progress.activeFraction
+                )
+                span.setSpan(
+                    ForegroundColorSpan(transitioningColor),
+                    progress.activeStart.coerceIn(0, text.length),
+                    progress.activeEnd.coerceIn(0, text.length),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                )
+            }
         }
         return span
     }
@@ -326,49 +344,6 @@ class FloatingLyricsRenderer(
             .firstOrNull { it.isNotBlank() }
             ?.trim()
             .orEmpty()
-    }
-
-    private fun wordByWordHighlightEnd(
-        wordByWordLine: WordByWordLine,
-        displayText: String,
-        positionMs: Long
-    ): Int {
-        if (displayText.isBlank()) return 0
-        if (positionMs <= wordByWordLine.startMs) return 0
-        if (positionMs >= wordByWordLine.endMs) return displayText.length
-
-        var searchStart = 0
-        var completedCharEnd = 0
-
-        for (segment in wordByWordLine.segments) {
-            val segmentText = segment.text.trim()
-            if (segmentText.isBlank()) continue
-
-            val segmentStart = displayText.indexOf(segmentText, searchStart).takeIf { it >= 0 }
-                ?: displayText.indexOf(segmentText).takeIf { it >= 0 }
-                ?: continue
-            val segmentEnd = segmentStart + segmentText.length
-            searchStart = segmentEnd
-
-            when {
-                positionMs >= segment.endMs -> completedCharEnd = segmentEnd
-                positionMs in segment.startMs until segment.endMs -> {
-                    val duration = (segment.endMs - segment.startMs).coerceAtLeast(1L)
-                    val segmentProgress = ((positionMs - segment.startMs).toFloat() / duration.toFloat())
-                        .coerceIn(0f, 1f)
-                    val eased = smoothStep(segmentProgress)
-                    val currentEnd = segmentStart + kotlin.math.ceil(segmentText.length * eased).toInt()
-                    return currentEnd.coerceAtLeast(completedCharEnd).coerceIn(0, displayText.length)
-                }
-                else -> return completedCharEnd.coerceIn(0, displayText.length)
-            }
-        }
-
-        val duration = (wordByWordLine.endMs - wordByWordLine.startMs).coerceAtLeast(1L)
-        val lineProgress = ((positionMs - wordByWordLine.startMs).toFloat() / duration.toFloat())
-            .coerceIn(0f, 1f)
-        return kotlin.math.ceil(displayText.length * smoothStep(lineProgress)).toInt()
-            .coerceIn(0, displayText.length)
     }
 
     private fun normalizeWordByWordMatchText(text: String): String {
@@ -397,11 +372,6 @@ class FloatingLyricsRenderer(
         return (0..(shorter.length - minCommonLength)).any { start ->
             longer.contains(shorter.substring(start, start + minCommonLength))
         }
-    }
-
-    private fun smoothStep(value: Float): Float {
-        val t = value.coerceIn(0f, 1f)
-        return t * t * (3f - 2f * t)
     }
 
     private fun findCurrentWordByWordIndex(positionMs: Long): Int? {

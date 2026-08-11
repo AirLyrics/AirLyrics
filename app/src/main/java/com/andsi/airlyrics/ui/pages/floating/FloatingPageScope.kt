@@ -149,7 +149,7 @@ internal class FloatingPageScope(
     }
 
     internal fun fontWeightSubtitle(fontWeight: Int = style().fontWeight): String {
-        return host.localizedFloatingFontWeightTitle(fontWeight)
+        return localizedFloatingFontWeightTitle(fontWeight)
     }
 
     internal fun style() = host.floatingStyle()

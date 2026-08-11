@@ -33,7 +33,7 @@ internal fun FloatingLyricsService.stopLyricsSync() {
 }
 
 internal fun FloatingLyricsService.lyricsSyncIntervalMs(): Long {
-    return if (renderer.isWordByWordActive()) 80L else 300L
+    return if (renderer.isWordByWordActive()) 40L else 300L
 }
 
 internal fun FloatingLyricsService.applyLyricsOffset(offsetMs: Long) {
