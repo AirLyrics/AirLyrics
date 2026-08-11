@@ -252,6 +252,62 @@ class LyricsStorageImportValidationTest {
     }
 
     @Test
+    fun localLyricsFileSize_reportsStoredPlainLyricsSize() {
+        val plainLyrics = "[00:01.00]歌詞 size"
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = context,
+                title = "Sized Plain Lyrics",
+                artist = "AndSi",
+                duration = 182_000L,
+                plainLrc = plainLyrics
+            )
+        )
+
+        val info = LyricsStorage.getLocalPlainLyricsInfo(
+            context,
+            "Sized Plain Lyrics",
+            "AndSi",
+            182_000L
+        )
+
+        assertEquals(
+            plainLyrics.toByteArray().size.toLong(),
+            LyricsStorage.localLyricsFileSize(context, info!!.plainFileName)
+        )
+    }
+
+    @Test
+    fun listRecentLyrics_reportsStoredSizeForWordByWordOnlyItem() {
+        val wordByWordLines = listOf(
+            com.andsi.airlyrics.lyrics.WordByWordLine(
+                startMs = 1_000L,
+                endMs = 2_000L,
+                text = "lyrics",
+                segments = listOf(
+                    com.andsi.airlyrics.lyrics.WordByWordSegment("lyrics", 1_000L, 2_000L)
+                )
+            )
+        )
+        assertTrue(
+            LyricsStorage.saveWordByWordLyrics(
+                context = context,
+                title = "Sized Word By Word Lyrics",
+                artist = "AndSi",
+                duration = 183_000L,
+                wordByWordLines = wordByWordLines
+            )
+        )
+
+        val item = LyricsStorage.listRecentLyrics(context)
+            .single { it.title == "Sized Word By Word Lyrics" }
+
+        assertFalse(item.hasPlainLyrics)
+        assertTrue(item.hasWordByWordLyrics)
+        assertTrue(item.sizeBytes > 0L)
+    }
+
+    @Test
     fun importWordByWordLyrics_reportsInvalidLineNumbers() {
         val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
             context = context,

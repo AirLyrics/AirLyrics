@@ -456,7 +456,7 @@ private fun MainActivityUiHost.currentLocalLyricsItem(media: com.andsi.airlyrics
     return LyricsStorage.LocalLyricsItem(
         name = info.plainFileName,
         modifiedTimeMillis = info.updatedAt,
-        sizeBytes = 0L,
+        sizeBytes = LyricsStorage.localLyricsFileSize(this, info.plainFileName),
         title = info.title,
         artist = info.artist,
         source = info.plainSource,

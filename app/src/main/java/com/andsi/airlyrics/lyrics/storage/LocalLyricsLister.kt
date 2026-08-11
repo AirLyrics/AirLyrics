@@ -23,7 +23,7 @@ internal object LocalLyricsLister {
                 LyricsStorage.LocalLyricsItem(
                     name = file.name.orEmpty(),
                     modifiedTimeMillis = file.lastModified().takeIf { it > 0L } ?: entry?.updatedAt ?: 0L,
-                    sizeBytes = file.length(),
+                    sizeBytes = LyricsFileStore.documentFileSize(context, file),
                     title = entry?.title.orEmpty(),
                     artist = entry?.artist.orEmpty(),
                     source = entry?.plainSource ?: LyricsStorage.SOURCE_LEGACY,
@@ -62,7 +62,7 @@ internal object LocalLyricsLister {
                 LyricsStorage.LocalLyricsItem(
                     name = entry.wordByWordFile.substringAfterLast('/'),
                     modifiedTimeMillis = entry.updatedAt,
-                    sizeBytes = 0L,
+                    sizeBytes = LyricsFileStore.storedLyricsFileSize(context, entry.wordByWordFile),
                     title = entry.title,
                     artist = entry.artist,
                     source = entry.plainSource,

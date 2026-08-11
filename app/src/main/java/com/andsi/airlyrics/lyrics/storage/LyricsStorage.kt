@@ -102,6 +102,10 @@ object LyricsStorage {
         LocalLyricsLister.listRecent(context, limit)
     }
 
+    internal fun localLyricsFileSize(context: Context, relativeFile: String): Long = withStorageLock {
+        LyricsFileStore.storedLyricsFileSize(context, relativeFile)
+    }
+
     fun readLocalLyricsItemText(
         context: Context,
         item: LocalLyricsItem,

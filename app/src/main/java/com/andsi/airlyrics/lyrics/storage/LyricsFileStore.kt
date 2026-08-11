@@ -22,6 +22,45 @@ internal object LyricsFileStore {
         val deletedAll: Boolean
     )
 
+    fun storedLyricsFileSize(context: Context, relativeFile: String): Long {
+        val fileName = relativeFile.substringAfterLast('/')
+        val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
+
+        if (treeUri != null) {
+            val root = DocumentFile.fromTreeUri(context, treeUri) ?: return 0L
+            val file = root.findFile(fileName)
+                ?: root.findFile(MANAGED_LYRICS_DIR)
+                    ?.takeIf { it.isDirectory }
+                    ?.findFile(fileName)
+                ?: return 0L
+            return documentFileSize(context, file)
+        }
+
+        val managedFile = File(LyricsStoragePaths.fallbackManagedLyricsDir(context), fileName)
+        if (managedFile.isFile) return managedFile.length()
+
+        val legacyFile = File(LyricsStoragePaths.fallbackLyricsDir(context), fileName)
+        return legacyFile.takeIf { it.isFile }?.length() ?: 0L
+    }
+
+    fun documentFileSize(context: Context, file: DocumentFile): Long {
+        val reportedSize = runCatching { file.length() }.getOrDefault(0L)
+        if (reportedSize > 0L) return reportedSize
+
+        return runCatching {
+            context.contentResolver.openInputStream(file.uri)?.use { input ->
+                val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                var totalBytes = 0L
+                while (true) {
+                    val bytesRead = input.read(buffer)
+                    if (bytesRead < 0) break
+                    totalBytes += bytesRead
+                }
+                totalBytes
+            }
+        }.getOrNull() ?: reportedSize
+    }
+
     fun readTextFromUriWithResult(
         context: Context,
         uri: Uri,
