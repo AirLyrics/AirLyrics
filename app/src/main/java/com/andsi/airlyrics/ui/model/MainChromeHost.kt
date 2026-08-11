@@ -17,6 +17,7 @@ internal interface MainChromeHost {
     var floatingPanelBackHandler: (() -> Boolean)?
     var contentContainer: FrameLayout?
     var floatingPageRefs: FloatingPageRefs?
+    var lyricsSettingsContentRefresh: (() -> Unit)?
     val mediaRefreshHandler: Handler
 
     fun rebuildCurrentPage(

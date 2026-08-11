@@ -1,8 +1,10 @@
 package com.andsi.airlyrics.app.host
 
 import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.R
 import android.content.Intent
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
+import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
@@ -37,7 +39,10 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
         toggleClickThrough = floatingController::toggleClickThrough,
         toggleAutoHideWhenPaused = floatingController::toggleAutoHideWhenPaused,
         reloadFloatingLyrics = floatingController::reloadLyrics,
-        reloadFloatingLyricsFromOnline = floatingController::reloadLyricsFromOnline,
+        searchOnlineLyricsForCurrentMedia = {
+            lyricsController.getCurrentMediaInfo()?.let(lyricsController::searchOnlineLyricsForCurrentMedia)
+                ?: AirToast.showShort(activity, R.string.ui_no_active_media_found)
+        },
         currentLyricsOffsetSummary = lyricsWorkflow::currentLyricsOffsetSummary,
         adjustLyricsOffsetForCurrentMedia = lyricsWorkflow::adjustLyricsOffsetForCurrentMedia,
         resetLyricsOffsetForCurrentMedia = lyricsWorkflow::resetLyricsOffsetForCurrentMedia,

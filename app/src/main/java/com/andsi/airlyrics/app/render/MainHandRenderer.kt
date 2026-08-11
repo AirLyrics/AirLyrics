@@ -175,6 +175,10 @@ internal class MainHandRenderer(
         refs.clickThroughButton?.text = host.floatingClickThroughButtonText()
     }
 
+    override fun refreshLyricsSettingsContent() {
+        host.lyricsSettingsContentRefresh?.invoke()
+    }
+
     override fun recreateMainView(reason: PageRebuildReason) {
         graph.uiHost.applySystemBarsTheme()
         graph.activity.setContentView(createMainView())

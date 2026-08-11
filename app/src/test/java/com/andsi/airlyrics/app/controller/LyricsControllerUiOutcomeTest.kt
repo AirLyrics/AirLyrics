@@ -16,10 +16,15 @@ import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.LyricsChange
+import com.andsi.airlyrics.lyrics.LyricsChangeKind
 import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
@@ -102,6 +107,7 @@ class LyricsControllerUiOutcomeTest {
             assertFalse(successErrorToastTexts().any(ShadowToast::showedToast))
             assertTrue(dialogHost.shownDialogs.isEmpty())
             assertEquals(listOf(case.target), publisher.targets)
+            assertEquals(listOf(LyricsChangeKind.UPDATED), publisher.changes.map(LyricsChange::kind))
             assertTrue(reloader.commands.isEmpty())
             assertTrue(invalidator.rebuildCalls.isEmpty())
             if (case.wordByWordLyrics) {
@@ -264,12 +270,126 @@ class LyricsControllerUiOutcomeTest {
         }
     }
 
+    @Test
+    fun manualOnlineLookup_publishesSavedLyricsWithoutRequiringFloatingWindow() {
+        val runner = ControlledTaskRunner()
+        val invalidator = RecordingInvalidator()
+        val reloader = RecordingReloader()
+        val publisher = RecordingLyricsChangedPublisher()
+        val media = media("Manual online lookup")
+        val gateway = RecordingOnlineLyricsLookupGateway(
+            Result.success(
+                LyricsProviderResult(
+                    plainProviderId = "netease",
+                    plainProviderName = "NetEase",
+                    plainLrc = "[00:01.00]online result"
+                )
+            )
+        )
+        val controller = controller(
+            runner = runner,
+            invalidator = invalidator,
+            reloader = reloader,
+            publisher = publisher,
+            onlineGateway = gateway
+        )
+
+        controller.searchOnlineLyricsForCurrentMedia(media)
+        runner.drain()
+
+        assertEquals(listOf(activity), gateway.contextRequests)
+        assertEquals(listOf(media), gateway.mediaRequests)
+        assertEquals(listOf(media.toSongIdentity()), publisher.targets)
+        assertEquals(listOf(LyricsChangeKind.UPDATED), publisher.changes.map(LyricsChange::kind))
+        assertTrue(ShadowToast.showedToast(activity.getString(R.string.ui_online_lyrics_saved)))
+        assertTrue(reloader.commands.isEmpty())
+        assertTrue(invalidator.rebuildCalls.isEmpty())
+    }
+
+    @Test
+    fun manualOnlineLookup_notFoundReportsOutcomeWithoutPublishingChange() {
+        val runner = ControlledTaskRunner()
+        val publisher = RecordingLyricsChangedPublisher()
+        val gateway = RecordingOnlineLyricsLookupGateway(Result.success(null))
+        val controller = controller(
+            runner = runner,
+            invalidator = RecordingInvalidator(),
+            reloader = RecordingReloader(),
+            publisher = publisher,
+            onlineGateway = gateway
+        )
+
+        controller.searchOnlineLyricsForCurrentMedia(media("No online result"))
+        runner.drain()
+
+        assertTrue(ShadowToast.showedToast(activity.getString(R.string.ui_lyrics_not_found)))
+        assertTrue(publisher.targets.isEmpty())
+    }
+
+    @Test
+    fun deleteCurrentLyrics_publishesChangeWithoutRequestingPageRebuild() {
+        val runner = ControlledTaskRunner()
+        val invalidator = RecordingInvalidator()
+        val reloader = RecordingReloader()
+        val publisher = RecordingLyricsChangedPublisher()
+        val media = media("Delete without page rebuild")
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = activity,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs,
+                album = media.album,
+                plainLrc = "[00:01.00]delete me"
+            )
+        )
+        val controller = controller(runner, invalidator, reloader, publisher = publisher)
+
+        controller.deleteLyricsForCurrentMedia(media, LyricsStorage.DeleteMode.PLAIN)
+        runner.drain()
+
+        assertFalse(LyricsStorage.hasPlainLyrics(activity, media.title, media.artist, media.durationMs))
+        assertEquals(listOf(media.toSongIdentity()), publisher.targets)
+        assertEquals(listOf(LyricsChangeKind.DELETED), publisher.changes.map(LyricsChange::kind))
+        assertTrue(invalidator.rebuildCalls.isEmpty())
+        assertTrue(reloader.commands.isEmpty())
+    }
+
+    @Test
+    fun deleteAllLyrics_publishesGlobalDeletionWithoutOrdinaryReload() {
+        val runner = ControlledTaskRunner()
+        val invalidator = RecordingInvalidator()
+        val reloader = RecordingReloader()
+        val publisher = RecordingLyricsChangedPublisher()
+        val media = media("Delete all without online refill")
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = activity,
+                title = media.title,
+                artist = media.artist,
+                duration = media.durationMs,
+                album = media.album,
+                plainLrc = "[00:01.00]delete everything"
+            )
+        )
+        val controller = controller(runner, invalidator, reloader, publisher = publisher)
+
+        controller.deleteAllSavedLyrics()
+        runner.drain()
+
+        assertFalse(LyricsStorage.hasPlainLyrics(activity, media.title, media.artist, media.durationMs))
+        assertEquals(listOf(LyricsChange.deleted()), publisher.changes)
+        assertTrue(invalidator.rebuildCalls.isEmpty())
+        assertTrue(reloader.commands.isEmpty())
+    }
+
     private fun controller(
         runner: ControlledTaskRunner,
         invalidator: RecordingInvalidator,
         reloader: RecordingReloader,
         gateway: LyricsImportGateway? = null,
-        publisher: LyricsChangedPublisher = RecordingLyricsChangedPublisher()
+        publisher: LyricsChangedPublisher = RecordingLyricsChangedPublisher(),
+        onlineGateway: OnlineLyricsLookupGateway = RecordingOnlineLyricsLookupGateway(Result.success(null))
     ): LyricsController {
         val common = LyricsControllerDependencies(
             runner = runner,
@@ -279,25 +399,23 @@ class LyricsControllerUiOutcomeTest {
         return if (gateway == null) {
             LyricsController(
                 context = activity,
-                invalidator = common.invalidator,
                 taskRunner = common.runner,
                 dialogHost = dialogHost,
                 mediaControllerProvider = EmptyMediaControllerProvider(),
-                floatingLyricsReloader = common.reloader,
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
-                lyricsChangedPublisher = publisher
+                lyricsChangedPublisher = publisher,
+                onlineLyricsLookupGateway = onlineGateway
             )
         } else {
             LyricsController(
                 context = activity,
-                invalidator = common.invalidator,
                 taskRunner = common.runner,
                 dialogHost = dialogHost,
                 mediaControllerProvider = EmptyMediaControllerProvider(),
-                floatingLyricsReloader = common.reloader,
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsImportGateway = gateway,
-                lyricsChangedPublisher = publisher
+                lyricsChangedPublisher = publisher,
+                onlineLyricsLookupGateway = onlineGateway
             )
         }
     }
@@ -388,6 +506,18 @@ class LyricsControllerUiOutcomeTest {
         )
     }
 
+    private fun media(name: String): CurrentMediaInfo {
+        return CurrentMediaInfo(
+            sourcePackage = "com.example.player",
+            title = name,
+            artist = "Outcome artist",
+            album = "Outcome album",
+            durationMs = 180_000L,
+            isPlaying = true,
+            positionMs = 1_000L
+        )
+    }
+
     private fun writeImportFile(name: String, text: String): Uri {
         return Uri.fromFile(File(activity.cacheDir, name).apply { writeText(text) })
     }
@@ -446,6 +576,22 @@ class LyricsControllerUiOutcomeTest {
         ): LyricsStorage.ImportLyricsResult = result
     }
 
+    private class RecordingOnlineLyricsLookupGateway(
+        private val result: Result<LyricsProviderResult?>
+    ) : OnlineLyricsLookupGateway {
+        val contextRequests = mutableListOf<Context>()
+        val mediaRequests = mutableListOf<CurrentMediaInfo>()
+
+        override fun findAndSave(
+            context: Context,
+            media: CurrentMediaInfo
+        ): Result<LyricsProviderResult?> {
+            contextRequests += context
+            mediaRequests += media
+            return result
+        }
+    }
+
     private class ControlledTaskRunner : MainTaskRunner {
         private val ioTasks = ArrayDeque<() -> Unit>()
         private val mainTasks = ArrayDeque<() -> Unit>()
@@ -493,19 +639,17 @@ class LyricsControllerUiOutcomeTest {
         }
     }
 
-    private class RecordingReloader : com.andsi.airlyrics.app.contracts.FloatingLyricsReloader {
+    private class RecordingReloader {
         val commands = mutableListOf<String>()
-
-        override fun reloadFloatingLyrics() {
-            commands += "reloadFloatingLyrics"
-        }
     }
 
     private class RecordingLyricsChangedPublisher : LyricsChangedPublisher {
-        val targets = mutableListOf<SongIdentity>()
+        val changes = mutableListOf<LyricsChange>()
+        val targets: List<SongIdentity>
+            get() = changes.mapNotNull(LyricsChange::target)
 
-        override fun publish(target: SongIdentity) {
-            targets += target
+        override fun publish(change: LyricsChange) {
+            changes += change
         }
     }
 
@@ -523,6 +667,7 @@ class LyricsControllerUiOutcomeTest {
         override fun refreshTabs(animate: Boolean) = Unit
         override fun refreshFloatingChrome() = Unit
         override fun refreshFloatingControls() = Unit
+        override fun refreshLyricsSettingsContent() = Unit
         override fun recreateMainView(reason: PageRebuildReason) = Unit
     }
 

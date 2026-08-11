@@ -8,22 +8,22 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.app.contracts.FloatingLyricsReloader
 import com.andsi.airlyrics.app.contracts.MainDialogHost
 import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
-import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
+import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.AirToast
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 internal fun interface LyricsOverwriteConfirmationRequester {
     fun requestConfirmation(request: PendingLyricsOverwrite)
@@ -31,14 +31,13 @@ internal fun interface LyricsOverwriteConfirmationRequester {
 
 internal class LyricsController(
     private val context: Context,
-    private val invalidator: UiInvalidator,
     private val taskRunner: MainTaskRunner,
     private val dialogHost: MainDialogHost,
     private val mediaControllerProvider: MediaControllerProvider,
-    private val floatingLyricsReloader: FloatingLyricsReloader,
     private val overwriteConfirmationRequester: LyricsOverwriteConfirmationRequester,
     private val lyricsChangedPublisher: LyricsChangedPublisher,
-    private val lyricsImportGateway: LyricsImportGateway = StorageLyricsImportGateway()
+    private val lyricsImportGateway: LyricsImportGateway = StorageLyricsImportGateway(),
+    private val onlineLyricsLookupGateway: OnlineLyricsLookupGateway = RepositoryOnlineLyricsLookupGateway
 ) {
     fun importLyricsForTarget(
         uri: Uri,
@@ -264,12 +263,7 @@ internal class LyricsController(
                         LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_all_local_lyrics_removed)
                     }
                     AirToast.showLong(context, message)
-                    floatingLyricsReloader.reloadFloatingLyrics()
-                    invalidator.rebuildCurrentPage(
-                        reason = PageRebuildReason.LYRICS_CHANGED,
-                        animateContent = false,
-                        animateTabs = false
-                    )
+                    lyricsChangedPublisher.publishDeleted(media.toSongIdentity())
                 } else {
                     val message = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)
@@ -290,12 +284,7 @@ internal class LyricsController(
                 when (result) {
                     LyricsStorage.DeleteAllSavedLyricsResult.DELETED -> {
                         AirToast.showLong(context, R.string.ui_all_saved_lyrics_deleted)
-                        floatingLyricsReloader.reloadFloatingLyrics()
-                        invalidator.rebuildCurrentPage(
-                            reason = PageRebuildReason.LYRICS_CHANGED,
-                            animateContent = false,
-                            animateTabs = false
-                        )
+                        lyricsChangedPublisher.publishDeleted()
                     }
 
                     LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE -> {
@@ -304,13 +293,32 @@ internal class LyricsController(
 
                     LyricsStorage.DeleteAllSavedLyricsResult.FAILED -> {
                         AirToast.showLong(context, R.string.ui_delete_all_saved_lyrics_failed)
-                        floatingLyricsReloader.reloadFloatingLyrics()
-                        invalidator.rebuildCurrentPage(
-                            reason = PageRebuildReason.LYRICS_CHANGED,
-                            animateContent = false,
-                            animateTabs = false
-                        )
+                        lyricsChangedPublisher.publishDeleted()
                     }
+                }
+            }
+        }
+    }
+
+    fun searchOnlineLyricsForCurrentMedia(media: CurrentMediaInfo) {
+        AirToast.showShort(context, R.string.ui_searching_online_again)
+        taskRunner.runOnAppIo {
+            val result = onlineLyricsLookupGateway.findAndSave(context, media)
+            val foundLyrics = result.getOrNull()?.takeIf { it.plainLrc.isNotBlank() }
+            val lookupError = result.exceptionOrNull() as? LyricsLookupException
+            if (foundLyrics != null) {
+                lyricsChangedPublisher.publish(media.toSongIdentity())
+            }
+
+            taskRunner.runOnMainThread {
+                when {
+                    foundLyrics != null -> AirToast.showLong(context, R.string.ui_online_lyrics_saved)
+                    lookupError != null -> AirToast.showLong(
+                        context,
+                        context.localizedLyricsLookupMessage(lookupError)
+                    )
+                    result.isFailure -> AirToast.showLong(context, R.string.ui_online_lyrics_search_failed)
+                    else -> AirToast.showLong(context, R.string.ui_lyrics_not_found)
                 }
             }
         }

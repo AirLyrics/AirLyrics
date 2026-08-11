@@ -52,7 +52,3 @@ internal interface MainDialogHost {
         message: String
     )
 }
-
-internal fun interface FloatingLyricsReloader {
-    fun reloadFloatingLyrics()
-}

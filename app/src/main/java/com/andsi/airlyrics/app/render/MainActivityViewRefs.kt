@@ -16,9 +16,11 @@ internal class MainActivityViewRefs {
     var tabHighlight: WaterTabHighlightView? = null
     var floatingPanelBackHandler: (() -> Boolean)? = null
     var floatingPageRefs: FloatingPageRefs? = null
+    var lyricsSettingsContentRefresh: (() -> Unit)? = null
 
     fun clearPageRefs() {
         floatingPageRefs?.clear()
         floatingPageRefs = null
+        lyricsSettingsContentRefresh = null
     }
 }

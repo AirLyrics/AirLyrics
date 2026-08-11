@@ -247,6 +247,33 @@ class MainActivityLyricsImportLifecycleTest {
         )
     }
 
+    @Test
+    fun lyricsChanged_refreshesMountedCardsWithoutReplacingSettingsPage() {
+        installCurrentMedia(context, SONG_A)
+        val controller = launchActivity()
+        val activity = controller.get()
+        showLyricsSettings(activity)
+        awaitAppIo(activity)
+        val mountedPage = activity.graph.uiHost.contentContainer?.getChildAt(0)
+
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = activity,
+                title = SONG_A.title,
+                artist = SONG_A.artist,
+                duration = SONG_A.durationMs,
+                album = SONG_A.album,
+                plainLrc = "[00:01.00]targeted refresh lyrics"
+            )
+        )
+        BroadcastLyricsChangedPublisher(activity).publish(SONG_A)
+        ShadowLooper.idleMainLooper()
+        awaitAppIo(activity)
+
+        assertSame(mountedPage, activity.graph.uiHost.contentContainer?.getChildAt(0))
+        assertFalse(activity.visibleTexts().contains(activity.getString(R.string.ui_not_bound)))
+    }
+
     private fun launchActivity(): ActivityController<MainActivity> {
         return Robolectric.buildActivity(MainActivity::class.java)
             .setup()

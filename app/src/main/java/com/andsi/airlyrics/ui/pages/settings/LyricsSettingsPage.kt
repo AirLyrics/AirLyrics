@@ -21,7 +21,8 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
 
     container.addView(settingsBackHeader(getString(R.string.ui_lyrics)))
 
-    container.addView(createCurrentLyricsCard(activity))
+    val currentLyricsCard = createCurrentLyricsCard(activity)
+    container.addView(currentLyricsCard.view)
 
     container.addView(
         card(activity) {
@@ -107,7 +108,8 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
         }
     )
 
-    container.addView(createRecentLyricsCard(activity))
+    val recentLyricsCard = createRecentLyricsCard(activity)
+    container.addView(recentLyricsCard.view)
 
     container.addView(
         card(activity) {
@@ -141,6 +143,11 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
             })
         }
     )
+
+    lyricsSettingsContentRefresh = {
+        currentLyricsCard.refreshContent()
+        recentLyricsCard.refreshContent()
+    }
 
     return scroll(activity, container, animateChildren = false)
 }

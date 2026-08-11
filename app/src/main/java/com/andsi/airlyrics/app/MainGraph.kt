@@ -93,11 +93,9 @@ internal class MainGraph(
     val lyricsController: LyricsController by lazy {
         LyricsController(
             context = activity,
-            invalidator = uiInvalidator,
             taskRunner = mainTaskRunner,
             dialogHost = mainDialogHost,
             mediaControllerProvider = mediaSourceController,
-            floatingLyricsReloader = { floatingController.reloadLyrics() },
             overwriteConfirmationRequester = { request ->
                 lyricsWorkflow.requestOverwriteConfirmation(request)
             },
@@ -235,11 +233,7 @@ internal class MainGraph(
 
     private fun handleLyricsChanged() {
         if (destroyed || activity.isDestroyed) return
-        uiInvalidator.rebuildCurrentPage(
-            reason = PageRebuildReason.LYRICS_CHANGED,
-            animateContent = false,
-            animateTabs = false
-        )
+        uiInvalidator.refreshLyricsSettingsContent()
     }
 
     private fun restoreNavigationState(savedInstanceState: Bundle?) {

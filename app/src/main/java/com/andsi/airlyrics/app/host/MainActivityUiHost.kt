@@ -94,6 +94,9 @@ internal class MainActivityUiHost(
     override var floatingPageRefs: FloatingPageRefs?
         get() = viewRefs.floatingPageRefs
         set(value) { viewRefs.floatingPageRefs = value }
+    override var lyricsSettingsContentRefresh: (() -> Unit)?
+        get() = viewRefs.lyricsSettingsContentRefresh
+        set(value) { viewRefs.lyricsSettingsContentRefresh = value }
     override val mediaRefreshHandler
         get() = graph.mediaRefreshHandler
 
@@ -328,7 +331,7 @@ internal class MainActivityUiHost(
     override fun lyricsSettingsState(): LyricsSettingsUiState {
         return LyricsSettingsUiState(
             selectedPlainLyricsSource = LyricsSettingsStore.getPlainLyricsSearchSource(this),
-            plainLyricsSourceOptions = PlainLyricsSearchSource.entries,
+            plainLyricsSourceOptions = PlainLyricsSearchSource.onlineSources,
             autoSearchOnline = LyricsSettingsStore.isAutoSearchOnlineEnabled(this),
             autoSaveLocal = LyricsSettingsStore.isAutoSaveLocalEnabled(this),
             lyricsDirectoryPath = LyricsStorage.getLyricsDirRawPath(this)

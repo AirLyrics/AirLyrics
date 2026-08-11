@@ -9,13 +9,18 @@ import android.os.IBinder
 import android.os.Looper
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.lyrics.LyricsLookupRunner
+import com.andsi.airlyrics.core.model.LyricsSettings
+import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
+import com.andsi.airlyrics.lyrics.LyricsLookupRunner
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 
 open class FloatingLyricsService : Service() {
@@ -44,8 +49,25 @@ open class FloatingLyricsService : Service() {
         return LyricsLookupRunner(threadNamePrefix = "AirLyrics-LyricsRepository")
     }
 
+    internal open fun lookupLyricsForMedia(
+        media: CurrentMediaInfo,
+        settings: LyricsSettings,
+        cancellationToken: LyricsLookupCancellationToken
+    ): Result<LyricsProviderResult?> {
+        return LyricsRepository.findLyrics(
+            context = this,
+            settings = settings,
+            title = media.title,
+            artist = media.artist,
+            album = media.album,
+            durationMs = media.durationMs,
+            cancellationToken = cancellationToken
+        )
+    }
+
     internal var currentMedia: CurrentMediaInfo = CurrentMediaInfo.Empty
     internal var lastPlaybackLyricsKey: PlaybackLyricsKey? = null
+    internal var automaticOnlineLookupSuppressedSong: SongIdentity? = null
     internal var activeLyricsLookupRequestKey: LyricsLookupRequestKey? = null
     internal var selectedSourcePackage: String? = null
     internal var autoHiddenForPause = false
@@ -94,7 +116,7 @@ open class FloatingLyricsService : Service() {
 
     private val lyricsChangedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            LyricsChangedBroadcast.readTarget(intent)?.let(::handleLyricsChanged)
+            LyricsChangedBroadcast.readChange(intent)?.let(::handleLyricsChanged)
         }
     }
 

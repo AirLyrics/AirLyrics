@@ -67,6 +67,11 @@ internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo
     applyAutoHideWhenPaused()
 
     val playbackLyricsKey = media.playbackLyricsKey()
+    if (automaticOnlineLookupSuppressedSong != null &&
+        !isAutomaticOnlineLookupSuppressed(media)
+    ) {
+        automaticOnlineLookupSuppressedSong = null
+    }
     if (playbackLyricsKey == lastPlaybackLyricsKey) {
         renderer.tick()
         return true

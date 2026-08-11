@@ -38,19 +38,42 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
-    fun setPlainLyricsSearchSource_localOnlyDisablesOnlineSearch() {
+    fun setPlainLyricsSearchSource_localOnlyMigratesToDefaultManualProviderAndDisablesAutomaticSearch() {
         LyricsSettingsStore.setPlainLyricsSearchSource(context, PlainLyricsSearchSource.LOCAL_ONLY)
 
         assertEquals(
-            PlainLyricsSearchSource.LOCAL_ONLY,
+            PlainLyricsSearchSource.NETEASE,
             LyricsSettingsStore.getPlainLyricsSearchSource(context)
         )
         assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
     }
 
     @Test
-    fun setAutoSearchOnlineEnabled_reselectsDefaultProviderWhenReEnabledFromLocalOnly() {
-        LyricsSettingsStore.setPlainLyricsSearchSource(context, PlainLyricsSearchSource.LOCAL_ONLY)
+    fun setAutoSearchOnlineEnabled_falsePreservesProviderForManualSearch() {
+        LyricsSettingsStore.setPlainLyricsSearchSource(context, PlainLyricsSearchSource.MUSIXMATCH)
+        LyricsSettingsStore.setAutoSearchOnlineEnabled(context, false)
+
+        val settings = LyricsSettingsStore.getSettings(context)
+        assertEquals(PlainLyricsSearchSource.MUSIXMATCH, settings.plainLyricsSearchSource)
+        assertFalse(settings.autoSearchOnline)
+    }
+
+    @Test
+    fun selectingProviderDoesNotChangeAutomaticSearchPreference() {
+        LyricsSettingsStore.setAutoSearchOnlineEnabled(context, false)
+        LyricsSettingsStore.setPlainLyricsSearchSource(context, PlainLyricsSearchSource.MUSIXMATCH)
+
+        assertEquals(PlainLyricsSearchSource.MUSIXMATCH, LyricsSettingsStore.getPlainLyricsSearchSource(context))
+        assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
+    }
+
+    @Test
+    fun enablingAutomaticSearchMigratesPersistedLegacyLocalOnlySource() {
+        context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
+            .putString("lyrics_source", PlainLyricsSearchSource.LOCAL_ONLY.key)
+            .putBoolean("auto_search_online", false)
+            .commit()
+
         LyricsSettingsStore.setAutoSearchOnlineEnabled(context, true)
 
         assertEquals(PlainLyricsSearchSource.NETEASE, LyricsSettingsStore.getPlainLyricsSearchSource(context))
@@ -92,24 +115,24 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
-    fun legacyStringSetterHandlesUnknownSourceAsLocalOnly() {
+    fun legacyStringSetterHandlesUnknownSourceAsAutomaticOffWithDefaultManualProvider() {
         LyricsSettingsStore.setPlainLyricsSource(context, "unknown-provider")
 
         assertEquals(
-            PlainLyricsSearchSource.LOCAL_ONLY,
+            PlainLyricsSearchSource.NETEASE,
             LyricsSettingsStore.getPlainLyricsSearchSource(context)
         )
         assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
     }
 
     @Test
-    fun getPlainLyricsSearchSource_handlesPersistedUnknownSourceAsLocalOnly() {
+    fun getPlainLyricsSearchSource_handlesPersistedUnknownSourceAsAutomaticOffWithDefaultManualProvider() {
         context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
             .putString("lyrics_source", "unknown-provider")
             .commit()
 
         assertEquals(
-            PlainLyricsSearchSource.LOCAL_ONLY,
+            PlainLyricsSearchSource.NETEASE,
             LyricsSettingsStore.getPlainLyricsSearchSource(context)
         )
         assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))

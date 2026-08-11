@@ -3,12 +3,12 @@ package com.andsi.airlyrics.floating
 import android.net.Uri
 import android.os.SystemClock
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
+import com.andsi.airlyrics.lyrics.LyricsChange
+import com.andsi.airlyrics.lyrics.LyricsChangeKind
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
-import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
@@ -42,11 +42,7 @@ internal fun FloatingLyricsService.applyLyricsOffset(offsetMs: Long) {
     }
 }
 
-internal fun FloatingLyricsService.reloadCurrentLyrics(
-    bypassLocal: Boolean = false,
-    forceSaveOnline: Boolean = false,
-    ignoreAutoSearchSetting: Boolean = false
-) {
+internal fun FloatingLyricsService.reloadCurrentLyrics() {
     if (currentMedia.isEmpty) {
         clearLyricsState(getString(R.string.ui_waiting_for_media) + "...")
         return
@@ -60,21 +56,26 @@ internal fun FloatingLyricsService.reloadCurrentLyrics(
     activeLyricsLookupRequestKey = lookupRequestKey
     loadLyricsForSong(
         media = currentMedia,
-        lookupRequestKey = lookupRequestKey,
-        bypassLocal = bypassLocal,
-        forceSaveOnline = forceSaveOnline,
-        ignoreAutoSearchSetting = ignoreAutoSearchSetting
+        lookupRequestKey = lookupRequestKey
     )
 }
 
-internal fun FloatingLyricsService.handleLyricsChanged(target: SongIdentity) {
+internal fun FloatingLyricsService.handleLyricsChanged(change: LyricsChange) {
     if (currentMedia.isEmpty) return
-    if (!currentMedia.toSongIdentity().isSameSong(target)) return
+    if (change.target?.let { !currentMedia.toSongIdentity().isSameSong(it) } == true) return
+
+    val currentSong = currentMedia.toSongIdentity()
+    automaticOnlineLookupSuppressedSong = when (change.kind) {
+        LyricsChangeKind.DELETED -> currentSong
+        LyricsChangeKind.UPDATED -> automaticOnlineLookupSuppressedSong
+            ?.takeUnless(currentSong::isSameSong)
+    }
     reloadCurrentLyrics()
 }
 
 internal fun FloatingLyricsService.clearLyricsState(message: String) {
     lastPlaybackLyricsKey = null
+    automaticOnlineLookupSuppressedSong = null
     activeLyricsLookupRequestKey = null
     lyricsLookupRunner.cancelActive()
     currentMedia = CurrentMediaInfo.Empty
@@ -86,10 +87,15 @@ internal fun FloatingLyricsService.clearLyricsState(message: String) {
 internal fun FloatingLyricsService.loadLyricsForSong(
     media: CurrentMediaInfo,
     lookupRequestKey: LyricsLookupRequestKey,
-    bypassLocal: Boolean = false,
-    forceSaveOnline: Boolean = false,
-    ignoreAutoSearchSetting: Boolean = false
 ) {
+    val suppressAutomaticOnlineLookup = isAutomaticOnlineLookupSuppressed(media)
+    val lookupSettings = LyricsSettingsStore.getSettings(this).let { settings ->
+        if (suppressAutomaticOnlineLookup) {
+            settings.copy(autoSearchOnline = false)
+        } else {
+            settings
+        }
+    }
     renderer.show(
         if (media.isPlaying) {
             "${getString(R.string.ui_searching_lyrics)}...\n${media.displayText}"
@@ -101,18 +107,7 @@ internal fun FloatingLyricsService.loadLyricsForSong(
     lyricsLookupRunner.submit(
         requestKey = lookupRequestKey.value,
         lookup = { token ->
-            LyricsRepository.findLyrics(
-                context = this,
-                settings = LyricsSettingsStore.getSettings(this),
-                title = media.title,
-                artist = media.artist,
-                album = media.album,
-                durationMs = media.durationMs,
-                bypassLocal = bypassLocal,
-                forceSaveOnline = forceSaveOnline,
-                ignoreAutoSearchSetting = ignoreAutoSearchSetting,
-                cancellationToken = token
-            )
+            lookupLyricsForMedia(media, lookupSettings, token)
         },
         callback = { completedLookupRequestKey, result ->
             if (activeLyricsLookupRequestKey == LyricsLookupRequestKey(completedLookupRequestKey)) {
@@ -155,7 +150,9 @@ internal fun FloatingLyricsService.lookupFailureText(error: Throwable?, media: C
 }
 
 internal fun FloatingLyricsService.notFoundText(media: CurrentMediaInfo): String {
-    return if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
+    return if (isAutomaticOnlineLookupSuppressed(media)) {
+        "${media.displayText}\n${getString(R.string.ui_lyrics_removed_auto_search_paused)}"
+    } else if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
         "${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
     } else {
         val plainLyricsSourceTitle =
@@ -197,6 +194,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
     )
 
     if (localPlainLrc != null) {
+        automaticOnlineLookupSuppressedSong = null
         lastPlaybackLyricsKey = media.playbackLyricsKey()
         activeLyricsLookupRequestKey = null
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
@@ -207,4 +205,11 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
     } else {
         renderer.show(getString(R.string.ui_lyrics_import_failed))
     }
+}
+
+internal fun FloatingLyricsService.isAutomaticOnlineLookupSuppressed(
+    media: CurrentMediaInfo
+): Boolean {
+    return automaticOnlineLookupSuppressedSong
+        ?.isSameSong(media.toSongIdentity()) == true
 }

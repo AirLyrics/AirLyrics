@@ -78,7 +78,6 @@ private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toaster
                 setMargins(0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), 0)
             }
             addView(bigText(activity, getString(R.string.ui_toaster_mute)))
-            addView(normalText(activity, getString(R.string.ui_toaster_mute_hint)))
         })
 
         addView(toasterSwitch)

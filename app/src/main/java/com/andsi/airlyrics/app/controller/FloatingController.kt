@@ -67,17 +67,6 @@ internal class FloatingController(
         sendFloatingCommand(FloatingServiceCommand.ApplyLyricsOffset(offsetMs))
     }
 
-    fun reloadLyricsFromOnline() {
-        if (!state.quickFloatingVisible) {
-            AirToast.showLong(context, R.string.ui_show_overlay_then_search_hint)
-            return
-        }
-
-        if (sendFloatingCommand(FloatingServiceCommand.ReloadOnlineLyrics)) {
-            AirToast.showShort(context, R.string.ui_searching_online_again)
-        }
-    }
-
     fun showLyrics(): Boolean {
         setDesiredVisible(true)
         if (!updateOverlayPermissionGranted()) {

@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
-import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.LyricsChange
 import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 
@@ -20,7 +20,7 @@ internal class MainReceivers(
     private val context: Context,
     private val onMediaChanged: (Intent) -> Unit,
     private val onFloatingStateChanged: (Intent) -> Unit,
-    private val onLyricsChanged: (SongIdentity) -> Unit
+    private val onLyricsChanged: (LyricsChange) -> Unit
 ) {
     private val mediaReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -36,7 +36,7 @@ internal class MainReceivers(
 
     private val lyricsChangedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            LyricsChangedBroadcast.readTarget(intent)?.let(onLyricsChanged)
+            LyricsChangedBroadcast.readChange(intent)?.let(onLyricsChanged)
         }
     }
 

@@ -19,7 +19,6 @@ internal sealed class FloatingServiceCommand {
     object ApplyAutoHideWhenPaused : FloatingServiceCommand()
     object ApplyStyle : FloatingServiceCommand()
     object ReloadLyrics : FloatingServiceCommand()
-    object ReloadOnlineLyrics : FloatingServiceCommand()
     data class ApplyLyricsOffset(val offsetMs: Long) : FloatingServiceCommand()
     data class SelectMediaSource(val packageName: String?) : FloatingServiceCommand()
     data class ImportPlainLyrics(val uri: Uri, val overwrite: Boolean = true) : FloatingServiceCommand()
@@ -55,7 +54,6 @@ internal sealed class FloatingServiceCommand {
             ApplyAutoHideWhenPaused -> ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED
             ApplyStyle -> ACTION_APPLY_STYLE
             ReloadLyrics -> ACTION_RELOAD_LYRICS
-            ReloadOnlineLyrics -> ACTION_RELOAD_ONLINE_LYRICS
             is ApplyLyricsOffset -> ACTION_APPLY_LYRICS_OFFSET
             is SelectMediaSource -> ACTION_SELECT_MEDIA_SOURCE
             is ImportPlainLyrics -> ACTION_IMPORT_PLAIN_LYRICS
@@ -79,7 +77,6 @@ internal sealed class FloatingServiceCommand {
             "com.andsi.airlyrics.APPLY_AUTO_HIDE_WHEN_PAUSED"
         private const val ACTION_APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
         private const val ACTION_RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
-        private const val ACTION_RELOAD_ONLINE_LYRICS = "com.andsi.airlyrics.RELOAD_ONLINE_LYRICS"
         private const val ACTION_APPLY_LYRICS_OFFSET = "com.andsi.airlyrics.APPLY_LYRICS_OFFSET"
         private const val ACTION_SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
         private const val ACTION_IMPORT_PLAIN_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
@@ -103,7 +100,6 @@ internal sealed class FloatingServiceCommand {
                 ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED -> ApplyAutoHideWhenPaused
                 ACTION_APPLY_STYLE -> ApplyStyle
                 ACTION_RELOAD_LYRICS -> ReloadLyrics
-                ACTION_RELOAD_ONLINE_LYRICS -> ReloadOnlineLyrics
                 ACTION_APPLY_LYRICS_OFFSET -> ApplyLyricsOffset(
                     intent.getLongExtra(EXTRA_LYRICS_OFFSET_MS, 0L)
                 )

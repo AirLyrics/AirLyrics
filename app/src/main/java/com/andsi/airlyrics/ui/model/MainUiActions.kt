@@ -19,7 +19,7 @@ internal data class MainUiActions(
     val toggleClickThrough: () -> Unit,
     val toggleAutoHideWhenPaused: () -> Boolean,
     val reloadFloatingLyrics: () -> Unit,
-    val reloadFloatingLyricsFromOnline: () -> Unit,
+    val searchOnlineLyricsForCurrentMedia: () -> Unit,
     val currentLyricsOffsetSummary: () -> String,
     val adjustLyricsOffsetForCurrentMedia: (Long) -> Long?,
     val resetLyricsOffsetForCurrentMedia: () -> Boolean,

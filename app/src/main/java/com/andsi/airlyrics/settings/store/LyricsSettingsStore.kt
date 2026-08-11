@@ -23,18 +23,19 @@ object LyricsSettingsStore {
 
     fun getPlainLyricsSearchSource(context: Context): PlainLyricsSearchSource {
         val value = store(context).getString(KEY_PLAIN_LYRICS_SOURCE)
-
-        return if (value == null) {
-            PlainLyricsSearchSource.default
-        } else {
-            PlainLyricsSearchSource.fromKeyOrNull(value) ?: PlainLyricsSearchSource.LOCAL_ONLY
-        }
+        val persisted = PlainLyricsSearchSource.fromKeyOrNull(value)
+        return persisted?.takeIf { it in PlainLyricsSearchSource.onlineSources }
+            ?: PlainLyricsSearchSource.default
     }
 
     fun setPlainLyricsSearchSource(context: Context, plainLyricsSearchSource: PlainLyricsSearchSource) {
-        store(context).edit {
-            putString(KEY_PLAIN_LYRICS_SOURCE, plainLyricsSearchSource.key)
-            putBoolean(KEY_AUTO_SEARCH_ONLINE, plainLyricsSearchSource != PlainLyricsSearchSource.LOCAL_ONLY)
+        if (plainLyricsSearchSource == PlainLyricsSearchSource.LOCAL_ONLY) {
+            store(context).edit {
+                putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.default.key)
+                putBoolean(KEY_AUTO_SEARCH_ONLINE, false)
+            }
+        } else {
+            store(context).setString(KEY_PLAIN_LYRICS_SOURCE, plainLyricsSearchSource.key)
         }
     }
 
@@ -47,18 +48,21 @@ object LyricsSettingsStore {
 
 
     fun isAutoSearchOnlineEnabled(context: Context): Boolean {
-        if (getPlainLyricsSearchSource(context) == PlainLyricsSearchSource.LOCAL_ONLY) return false
+        val persistedSourceKey = store(context).getString(KEY_PLAIN_LYRICS_SOURCE)
+        val persistedSource = PlainLyricsSearchSource.fromKeyOrNull(persistedSourceKey)
+        if (persistedSourceKey != null && persistedSource !in PlainLyricsSearchSource.onlineSources) {
+            return false
+        }
         return store(context).getBoolean(KEY_AUTO_SEARCH_ONLINE, true)
     }
 
     fun setAutoSearchOnlineEnabled(context: Context, enabled: Boolean) {
-        val currentPlainLyricsSearchSource = getPlainLyricsSearchSource(context)
+        val persistedSource = PlainLyricsSearchSource.fromKeyOrNull(
+            store(context).getString(KEY_PLAIN_LYRICS_SOURCE)
+        )
         store(context).edit {
             putBoolean(KEY_AUTO_SEARCH_ONLINE, enabled)
-
-            if (!enabled) {
-                putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.LOCAL_ONLY.key)
-            } else if (currentPlainLyricsSearchSource == PlainLyricsSearchSource.LOCAL_ONLY) {
+            if (enabled && persistedSource !in PlainLyricsSearchSource.onlineSources) {
                 putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.default.key)
             }
         }

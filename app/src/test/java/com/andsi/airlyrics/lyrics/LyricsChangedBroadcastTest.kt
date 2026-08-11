@@ -27,8 +27,32 @@ class LyricsChangedBroadcastTest {
         val intent = LyricsChangedBroadcast.lyricsChangedIntent(context, target)
 
         assertEquals(context.packageName, intent?.`package`)
+        assertEquals(LyricsChange.updated(target), LyricsChangedBroadcast.readChange(intent))
         assertEquals(target, LyricsChangedBroadcast.readTarget(intent))
         assertTrue(LyricsChangedBroadcast.lyricsChangedFilter().hasAction(intent?.action))
+    }
+
+    @Test
+    fun deletedChange_roundTripsForOneSongOrTheWholeLibrary() {
+        val target = SongIdentity(
+            title = "Removed Song",
+            artist = "Artist",
+            album = "Album",
+            durationMs = 180_000L
+        )
+
+        val targetedIntent = LyricsChangedBroadcast.lyricsChangedIntent(
+            context,
+            LyricsChange.deleted(target)
+        )
+        val globalIntent = LyricsChangedBroadcast.lyricsChangedIntent(
+            context,
+            LyricsChange.deleted()
+        )
+
+        assertEquals(LyricsChange.deleted(target), LyricsChangedBroadcast.readChange(targetedIntent))
+        assertEquals(LyricsChange.deleted(), LyricsChangedBroadcast.readChange(globalIntent))
+        assertNull(LyricsChangedBroadcast.readTarget(globalIntent))
     }
 
     @Test
@@ -44,6 +68,7 @@ class LyricsChangedBroadcastTest {
         )
         val wrongAction = Intent("com.example.UNRELATED").putExtras(valid)
         val missingDuration = Intent(valid).apply { removeExtra("duration") }
+        val invalidKind = Intent(valid).putExtra("changeKind", "UNKNOWN")
         val blankTitle = LyricsChangedBroadcast.lyricsChangedIntent(
             context,
             validTarget.copy(title = " ")
@@ -51,6 +76,7 @@ class LyricsChangedBroadcastTest {
 
         assertNull(LyricsChangedBroadcast.readTarget(wrongAction))
         assertNull(LyricsChangedBroadcast.readTarget(missingDuration))
+        assertNull(LyricsChangedBroadcast.readChange(invalidKind))
         assertNull(blankTitle)
         assertNull(LyricsChangedBroadcast.readTarget(null))
     }

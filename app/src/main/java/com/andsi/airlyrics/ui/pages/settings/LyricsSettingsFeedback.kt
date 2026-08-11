@@ -5,6 +5,11 @@ import android.widget.TextView
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
+internal data class RefreshableSettingsCard(
+    val view: View,
+    val refreshContent: () -> Unit
+)
+
 internal fun showInlineRefreshFeedback(feedback: TextView?, message: String) {
     feedback?.apply {
         animate().cancel()

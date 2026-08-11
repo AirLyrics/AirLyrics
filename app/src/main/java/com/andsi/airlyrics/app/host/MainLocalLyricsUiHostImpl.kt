@@ -193,7 +193,7 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                         if (validation.saved) {
                             showAirDialog(
                                 title = getString(R.string.ui_format_looks_good),
-                                message = getString(R.string.ui_this_word_by_word_lyrics_can_be_saved),
+                                message = null,
                                 positiveText = getString(R.string.ui_ok)
                             )
                         } else if (validation.invalidLineNumbers.isNotEmpty()) {
@@ -206,7 +206,7 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                         if (validation.isValid) {
                             showAirDialog(
                                 title = getString(R.string.ui_format_looks_good),
-                                message = getString(R.string.ui_this_plain_lrc_can_be_saved),
+                                message = null,
                                 positiveText = getString(R.string.ui_ok)
                             )
                         } else {

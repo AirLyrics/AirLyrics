@@ -30,11 +30,6 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
             refreshQuickControls(if (applied) null else getString(R.string.ui_overlay_update_failed))
         }
         FloatingServiceCommand.ReloadLyrics -> reloadCurrentLyrics()
-        FloatingServiceCommand.ReloadOnlineLyrics -> reloadCurrentLyrics(
-            bypassLocal = true,
-            forceSaveOnline = true,
-            ignoreAutoSearchSetting = true
-        )
         is FloatingServiceCommand.ApplyLyricsOffset -> applyLyricsOffset(command.offsetMs)
         is FloatingServiceCommand.SelectMediaSource -> selectMediaSource(command.packageName)
         is FloatingServiceCommand.ImportPlainLyrics -> importPlainLyrics(uri = command.uri, overwrite = command.overwrite)

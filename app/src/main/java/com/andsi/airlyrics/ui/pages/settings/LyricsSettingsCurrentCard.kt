@@ -33,7 +33,7 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 private val currentLyricsLoadRunner = LatestUiTaskRunner()
 
-internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity) {
+internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsCard = with(activity) {
     val body = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
     }
@@ -80,10 +80,10 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             uiActions.importLyricsForCurrentMedia()
         })
 
-        fun confirmDeleteLyrics(label: String, mode: LyricsDeleteMode, message: String) {
+        fun confirmDeleteLyrics(label: String, mode: LyricsDeleteMode, message: String? = null) {
             activity.showAirConfirmDialog(
                 title = label,
-                message = media.displayText + "\n\n" + message,
+                message = message?.let { media.displayText + "\n\n" + it } ?: media.displayText,
                 positiveText = getString(R.string.ui_remove)
             ) {
                 uiActions.deleteLyricsForCurrentMedia(mode)
@@ -95,8 +95,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             body.addView(actionButton(activity, plainLabel) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_plain_lrc_confirm),
-                    mode = LyricsDeleteMode.PLAIN,
-                    message = getString(R.string.ui_remove_plain_lrc_message)
+                    mode = LyricsDeleteMode.PLAIN
                 )
             })
         }
@@ -115,8 +114,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
             body.addView(actionButton(activity, getString(R.string.ui_remove_all_lyrics)) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_all_lyrics_confirm),
-                    mode = LyricsDeleteMode.ALL,
-                    message = getString(R.string.ui_remove_all_lyrics_message)
+                    mode = LyricsDeleteMode.ALL
                 )
             })
         }
@@ -128,16 +126,19 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
                     message = getString(R.string.ui_search_online_replace_cache_msg),
                     positiveText = getString(R.string.ui_search)
                 ) {
-                    uiActions.reloadFloatingLyricsFromOnline()
+                    uiActions.searchOnlineLyricsForCurrentMedia()
                 }
             })
         }
     }
 
-    fun populate(showRefreshFeedback: Boolean = false) {
+    fun populate(
+        showRefreshFeedback: Boolean = false,
+        preserveContent: Boolean = false
+    ) {
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
-        } else {
+        } else if (!preserveContent) {
             body.removeAllViews()
             body.addView(normalText(activity, getString(R.string.ui_loading)))
         }
@@ -155,7 +156,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
 
     populate()
 
-    return card(activity) {
+    val cardView = card(activity) {
         addView(LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -183,6 +184,10 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): View = with(activity
         })
         addView(body)
     }
+    return RefreshableSettingsCard(
+        view = cardView,
+        refreshContent = { populate(preserveContent = true) }
+    )
 }
 
 private fun wordByWordStatusRow(activity: MainUiHost, value: String): View = with(activity) {

@@ -3,16 +3,22 @@ package com.andsi.airlyrics.floating
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
+import com.andsi.airlyrics.lyrics.LyricsChange
+import com.andsi.airlyrics.lyrics.LyricsChangeKind
 import com.andsi.airlyrics.lyrics.LyricsLookupCallbackDispatcher
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.createLyricsLookupExecutor
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
@@ -167,6 +173,78 @@ class FloatingLyricsServiceLatestMediaTest {
         assertNull(service.activeLyricsLookupRequestKey)
     }
 
+    @Test
+    fun deletedLyrics_pauseAutomaticLookupUntilManualUpdateOrTrackChange() {
+        LyricsSettingsStore.setAutoSearchOnlineEnabled(context, true)
+        val controller = Robolectric.buildService(RecordingLookupFloatingLyricsService::class.java)
+            .create()
+            .also { serviceController = it }
+        val service = controller.get()
+        val firstMedia = media(OLD_TITLE, sequence = 1L, isPlaying = true)
+        assertTrue(service.showLyrics())
+        val lyricsView = requireNotNull(service.lyricsView)
+        service.currentMedia = firstMedia
+        service.lastPlaybackLyricsKey = firstMedia.playbackLyricsKey()
+
+        service.lookupResult = Result.success(null)
+        publishLyricsChanged(song(OLD_TITLE), LyricsChangeKind.DELETED)
+        assertFalse(service.takeLookupSettings().autoSearchOnline)
+        assertEquals(firstMedia, service.lastLookupMedia)
+        service.callbackDispatcher.takeDelivery().invoke()
+
+        assertEquals(song(OLD_TITLE), service.automaticOnlineLookupSuppressedSong)
+        assertTrue(
+            lyricsView.text.toString().contains(
+                context.getString(R.string.ui_lyrics_removed_auto_search_paused)
+            )
+        )
+
+        service.lookupResult = Result.success(
+            LyricsProviderResult(
+                plainProviderId = "manual-test",
+                plainProviderName = "Manual Test",
+                plainLrc = "[00:01.00]manual lyrics"
+            )
+        )
+        publishLyricsChanged(song(OLD_TITLE), LyricsChangeKind.UPDATED)
+        assertTrue(service.takeLookupSettings().autoSearchOnline)
+        service.callbackDispatcher.takeDelivery().invoke()
+
+        assertNull(service.automaticOnlineLookupSuppressedSong)
+        assertEquals("manual lyrics", lyricsView.text.toString())
+
+        service.lookupResult = Result.success(null)
+        publishAllLyricsDeleted()
+        assertFalse(service.takeLookupSettings().autoSearchOnline)
+        service.callbackDispatcher.takeDelivery().invoke()
+
+        val enrichedCurrentMedia = firstMedia.copy(
+            album = "Updated metadata album",
+            durationMs = DURATION_MS + 3_000L,
+            snapshotSequence = 2L
+        )
+        assertTrue(service.applyCurrentMediaInfo(enrichedCurrentMedia))
+        assertFalse(service.takeLookupSettings().autoSearchOnline)
+        assertEquals(enrichedCurrentMedia, service.lastLookupMedia)
+        service.callbackDispatcher.takeDelivery().invoke()
+        assertEquals(song(OLD_TITLE), service.automaticOnlineLookupSuppressedSong)
+
+        service.lookupResult = Result.success(
+            LyricsProviderResult(
+                plainProviderId = "automatic-test",
+                plainProviderName = "Automatic Test",
+                plainLrc = "[00:01.00]next song lyrics"
+            )
+        )
+        assertTrue(service.applyCurrentMediaInfo(media(NEW_TITLE, sequence = 3L, isPlaying = true)))
+        assertTrue(service.takeLookupSettings().autoSearchOnline)
+        assertEquals(NEW_TITLE, service.lastLookupMedia?.title)
+        service.callbackDispatcher.takeDelivery().invoke()
+
+        assertNull(service.automaticOnlineLookupSuppressedSong)
+        assertEquals("next song lyrics", lyricsView.text.toString())
+    }
+
     private fun saveLocalPlainLyrics(title: String, plainLrc: String) {
         assertTrue(
             LyricsStorage.savePlainLyrics(
@@ -206,8 +284,16 @@ class FloatingLyricsServiceLatestMediaTest {
         )
     }
 
-    private fun publishLyricsChanged(target: SongIdentity) {
-        BroadcastLyricsChangedPublisher(context).publish(target)
+    private fun publishLyricsChanged(
+        target: SongIdentity,
+        kind: LyricsChangeKind = LyricsChangeKind.UPDATED
+    ) {
+        BroadcastLyricsChangedPublisher(context).publish(LyricsChange(target, kind))
+        ShadowLooper.idleMainLooper()
+    }
+
+    private fun publishAllLyricsDeleted() {
+        BroadcastLyricsChangedPublisher(context).publishDeleted()
         ShadowLooper.idleMainLooper()
     }
 
@@ -280,6 +366,43 @@ class FloatingLyricsServiceLatestMediaTest {
                 callbackDispatcher = { block -> block() },
                 executor = rejectedExecutor
             )
+        }
+    }
+
+    class RecordingLookupFloatingLyricsService : FloatingLyricsService() {
+        val callbackDispatcher = QueuedCallbackDispatcher()
+        private val lookupExecutor = Executors.newSingleThreadExecutor()
+        private val lookupSettings = LinkedBlockingQueue<LyricsSettings>()
+
+        @Volatile
+        var lookupResult: Result<LyricsProviderResult?> = Result.success(null)
+
+        @Volatile
+        var lastLookupMedia: CurrentMediaInfo? = null
+
+        override fun createLyricsLookupRunner(): LyricsLookupRunner {
+            return LyricsLookupRunner(
+                threadNamePrefix = "FloatingLyricsRecordingLookupTest",
+                callbackDispatcher = callbackDispatcher,
+                executor = lookupExecutor
+            )
+        }
+
+        override fun lookupLyricsForMedia(
+            media: CurrentMediaInfo,
+            settings: LyricsSettings,
+            cancellationToken: LyricsLookupCancellationToken
+        ): Result<LyricsProviderResult?> {
+            cancellationToken.throwIfCancellationRequested()
+            lastLookupMedia = media
+            lookupSettings.put(settings)
+            return lookupResult
+        }
+
+        fun takeLookupSettings(): LyricsSettings {
+            return requireNotNull(lookupSettings.poll(5, TimeUnit.SECONDS)) {
+                "Timed out waiting for lyrics lookup settings"
+            }
         }
     }
 

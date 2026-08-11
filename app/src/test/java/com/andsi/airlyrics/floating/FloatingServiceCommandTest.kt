@@ -40,8 +40,7 @@ class FloatingServiceCommandTest {
             FloatingServiceCommand.ToggleAdjustModeFromNotification,
             FloatingServiceCommand.ApplyAutoHideWhenPaused,
             FloatingServiceCommand.ApplyStyle,
-            FloatingServiceCommand.ReloadLyrics,
-            FloatingServiceCommand.ReloadOnlineLyrics
+            FloatingServiceCommand.ReloadLyrics
         )
 
         commands.forEach { command ->

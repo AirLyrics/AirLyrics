@@ -4,18 +4,18 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.text.TextUtils
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.ui.components.bigText
+import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.components.airIconView
+import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
-import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -25,11 +25,10 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 private val recentLyricsLoadRunner = LatestUiTaskRunner()
 
-internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity) {
+internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCard = with(activity) {
     val listBody = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
     }
@@ -42,7 +41,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
     }
     var closeHeaderHint: () -> Unit = {}
 
-    lateinit var populateRecentLyrics: (Boolean) -> Unit
+    lateinit var populateRecentLyrics: (Boolean, Boolean) -> Unit
 
     fun renderLyricsList(
         currentItem: LocalLyricsUiItem?,
@@ -55,7 +54,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
         if (currentItem != null) {
             listBody.addView(localLyricsRow(currentItem, onLyricsSaved = {
                 closeHeaderHint()
-                populateRecentLyrics(false)
+                populateRecentLyrics(false, false)
                 playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
             }, badgeText = getString(R.string.ui_now_playing)))
         } else {
@@ -104,7 +103,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
                 .forEach { item ->
                     listBody.addView(localLyricsRow(item, onLyricsSaved = {
                         closeHeaderHint()
-                        populateRecentLyrics(false)
+                        populateRecentLyrics(false, false)
                         playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
                     }))
                 }
@@ -120,10 +119,10 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
         }
     }
 
-    populateRecentLyrics = { showRefreshFeedback ->
+    populateRecentLyrics = { showRefreshFeedback, preserveContent ->
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
-        } else {
+        } else if (!preserveContent) {
             listBody.removeAllViews()
             listBody.addView(normalText(activity, getString(R.string.ui_loading)))
         }
@@ -136,9 +135,9 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
         }
     }
 
-    populateRecentLyrics(false)
+    populateRecentLyrics(false, false)
 
-    return card(activity) {
+    val cardView = card(activity) {
         val hintText = TextView(activity).apply {
             text = getString(R.string.ui_tap_to_preview_or_edit)
             textSize = AirUiTokens.TextSize.Caption
@@ -221,7 +220,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
                     setOnClickListener {
                         closeHeaderHint()
                         animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
-                        populateRecentLyrics(true)
+                        populateRecentLyrics(true, true)
                     }
                 })
             })
@@ -230,4 +229,8 @@ internal fun createRecentLyricsCard(activity: MainUiHost): View = with(activity)
         })
         addView(listBody)
     }
+    return RefreshableSettingsCard(
+        view = cardView,
+        refreshContent = { populateRecentLyrics(false, true) }
+    )
 }
