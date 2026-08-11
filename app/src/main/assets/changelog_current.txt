@@ -1,19 +1,13 @@
-v1.1.0 - 2026-07-13
+v1.2.0 - 2026-08-11
 
 Added
-- Added an auto hide/show option for floating lyrics so the window can hide while playback is paused and return when playback resumes.
-- Added a global Hide toast popups preference for AirLyrics toast messages.
-- Added enter and exit animations to Air dialogs.
+- Floating-lyrics font selection and imports, with weight and opacity controls.
+- App accent colors and separate floating-background opacity.
+- Reset and undo for floating-window appearance settings.
+- Delete all saved lyrics.
+
+Improved
+- Clearer floating preview, refreshed icons, and smoother word-by-word highlighting.
 
 Fixed
-- Scoped lyrics actions to the selected media source.
-- Reloaded current lyrics when toggling word-by-word LRC.
-- Distinguished lyrics import read failures from save failures.
-- Refreshed floating controls locally without rebuilding unrelated UI.
-- Improved display cutout, edge-to-edge inset, repeated tab tap, and locale change handling.
-
-Changed
-- Split the floating runtime, lyrics storage, handwritten UI pages, host boundaries, and shared models into clearer modules.
-- Constrained word-by-word lyrics imports to generated plain fallbacks to avoid conflicting local lyrics.
-- Optimized release builds with R8, resource shrinking, and updated ProGuard rules.
-- Added core tests and architecture boundary checks.
+- Lyrics removal, online search, imports, media sync, song matching, and local storage reliability.

@@ -1,0 +1,7 @@
+v1.2.0
+• Choose or import floating-lyrics fonts, then adjust weight and opacity.
+• Choose an app accent color and adjust floating-background opacity.
+• Reset or undo floating-window appearance changes.
+• Delete all saved lyrics.
+• Clearer preview, refreshed icons, and smoother word-by-word highlighting.
+• Fix lyrics removal, online search, imports, media sync, song matching, and local storage.
