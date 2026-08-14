@@ -24,7 +24,7 @@
     <string name="settings_current_value">Current: %1$s</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">About</string>
-    <string name="ui_active_players">Active players</string>
+    <string name="ui_active_players">Active media</string>
     <string name="ui_adjustment_mode">Adjustment mode</string>
     <string name="ui_advance_0_1s">Advance 0.1s</string>
     <string name="ui_advance_1s">Advance 1s</string>
@@ -40,8 +40,8 @@
     <string name="ui_applied">Applied</string>
     <string name="ui_auto_save">Auto-save</string>
     <string name="ui_auto_hide_when_paused">Hide when paused</string>
-    <string name="ui_auto_hide_when_paused_off">Hide when paused: off</string>
-    <string name="ui_auto_hide_when_paused_on">Hide when paused: on</string>
+    <string name="ui_auto_hide_when_paused_off">off</string>
+    <string name="ui_auto_hide_when_paused_on">on</string>
     <string name="ui_auto_save_off">Auto-save: off</string>
     <string name="ui_auto_save_on">Auto-save: on</string>
     <string name="ui_available">Available</string>
@@ -54,20 +54,20 @@
     <string name="ui_behavior">Behavior</string>
     <string name="ui_blue">Blue</string>
     <string name="ui_buffering">Buffering</string>
-    <string name="ui_cache">Cache</string>
+    <string name="ui_cache" translatable="false">Cache</string>
     <string name="ui_cancel">Cancel</string>
     <string name="ui_cannot_read_word_by_word_lyrics_file">Cannot read this word-by-word lyrics file.</string>
     <string name="ui_cannot_read_this_lyric_file">Cannot read this lyric file.</string>
     <string name="ui_center">Center</string>
     <string name="ui_changelog">Changelog</string>
-    <string name="ui_view_full_changelog">View full changelog</string>
+    <string name="ui_view_full_changelog">Full changelog</string>
     <string name="ui_check_format">Check format</string>
     <string name="ui_chinese_simplified">简体中文</string>
     <string name="ui_choose_import_type">Choose import type</string>
     <string name="ui_choose_accent_color">Choose accent color</string>
     <string name="ui_choose_lyrics_save_folder">Choose lyrics save folder</string>
     <string name="ui_choose_the_player_airlyrics_follows">Choose a player to follow.</string>
-    <string name="ui_clean_letters">Clean letters</string>
+    <string name="ui_clean_letters">Clean</string>
     <string name="ui_click_through">Click-through</string>
     <string name="ui_click_through_off">Click-through: Off</string>
     <string name="ui_click_through_on">Click-through: On</string>
@@ -78,7 +78,7 @@
     <string name="ui_connected">Connected</string>
     <string name="ui_connecting">Connecting</string>
     <string name="ui_content">Content</string>
-    <string name="ui_copy_lyrics_save_folder">Copy lyrics save folder</string>
+    <string name="ui_copy_lyrics_save_folder">Copy save folder path</string>
     <string name="ui_corner_radius">Corner radius</string>
     <string name="ui_current_line">Current line</string>
     <string name="ui_current_media">Current media</string>
@@ -135,7 +135,7 @@
     <string name="ui_serif">Serif</string>
     <string name="ui_system_default_font">System default</string>
     <string name="ui_format_looks_good">Format looks good</string>
-    <string name="ui_give_it_a_star">Star on GitHub</string>
+    <string name="ui_give_it_a_star">Give it a star!</string>
     <string name="ui_netease_source_hint">Users in mainland China or Taiwan</string>
     <string name="ui_musixmatch_source_hint">Overseas users · translations when available</string>
     <string name="ui_green">Green</string>
@@ -157,7 +157,7 @@
     <string name="ui_item_title_word_by_word_lyrics">%1$s · word-by-word lyrics</string>
     <string name="ui_language">Language</string>
     <string name="ui_left">Left</string>
-    <string name="ui_like_it">Like AirLyrics?</string>
+    <string name="ui_like_it">Like it?</string>
     <string name="ui_line_range">Line range</string>
     <string name="ui_local">Local</string>
     <string name="ui_local_word_by_word_lyrics">Local word-by-word lyrics</string>
@@ -252,8 +252,8 @@
 Word-by-word lyrics recommended format:
 [00:12.34]&lt;00:12.34&gt;T&lt;00:12.50&gt;ext
 [00:12.34]Translation</string>
-    <string name="ui_manage_lyrics_select_player_hint">Play a song, then select a player on Media.</string>
-    <string name="ui_media_streams_empty_hint">Play music to detect players.</string>
+    <string name="ui_manage_lyrics_select_player_hint">Play a song, then select a player to follow in Media.</string>
+    <string name="ui_media_streams_empty_hint">No active media detected</string>
     <string name="ui_playback_error">Playback error</string>
     <string name="ui_playing">Playing</string>
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">Choose a plain lyrics .lrc file</string>
@@ -279,7 +279,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_reset">Reset</string>
     <string name="ui_recent_local_lyrics">Recent local lyrics</string>
     <string name="ui_red">Red</string>
-    <string name="ui_refresh_media_status">Refresh media status</string>
+    <string name="ui_refresh_media_status">Refresh</string>
     <string name="ui_refreshed">Refreshed</string>
     <string name="ui_refreshing">Refreshing</string>
     <string name="ui_remove">Remove</string>
@@ -354,15 +354,15 @@ Word-by-word lyrics recommended format:
     <string name="ui_vertical_padding">Vertical padding</string>
     <string name="ui_view_current_setup">View current setup</string>
     <string name="ui_view_lrc_examples_hint">Plain and word-by-word examples</string>
-    <string name="ui_vinyl_bubble">Vinyl bubble</string>
+    <string name="ui_vinyl_bubble">Vinyl</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
     <string name="ui_waiting_for_media">Waiting for media</string>
     <string name="ui_waiting_for_media_message">Waiting for media…</string>
-    <string name="ui_waiting_for_music_signal">Waiting for music signal</string>
+    <string name="ui_waiting_for_music_signal">Waiting for music</string>
     <string name="ui_whats_new">New in this version</string>
     <string name="ui_white">White</string>
     <string name="ui_width">Width</string>
     <string name="ui_window_layout">Window layout</string>
-    <string name="ui_yay">Thanks!</string>
+    <string name="ui_yay">Yay!</string>
     <string name="ui_overlay_update_failed">Overlay update failed</string>
 </resources>

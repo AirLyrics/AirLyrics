@@ -24,7 +24,7 @@
     <string name="settings_current_value">当前：%1$s</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">关于</string>
-    <string name="ui_active_players">活跃播放器</string>
+    <string name="ui_active_players">活跃媒体</string>
     <string name="ui_adjustment_mode">调整模式</string>
     <string name="ui_advance_0_1s">提前 0.1s</string>
     <string name="ui_advance_1s">提前 1s</string>
@@ -40,8 +40,8 @@
     <string name="ui_applied">已生效</string>
     <string name="ui_auto_save">自动保存</string>
     <string name="ui_auto_hide_when_paused">暂停时隐藏</string>
-    <string name="ui_auto_hide_when_paused_off">暂停时隐藏：关闭</string>
-    <string name="ui_auto_hide_when_paused_on">暂停时隐藏：开启</string>
+    <string name="ui_auto_hide_when_paused_off">关闭</string>
+    <string name="ui_auto_hide_when_paused_on">开启</string>
     <string name="ui_auto_save_off">自动保存：关闭</string>
     <string name="ui_auto_save_on">自动保存：开启</string>
     <string name="ui_available">可选择</string>
@@ -60,14 +60,14 @@
     <string name="ui_cannot_read_this_lyric_file">无法读取这份歌词。</string>
     <string name="ui_center">居中</string>
     <string name="ui_changelog">更新日志</string>
-    <string name="ui_view_full_changelog">查看完整更新日志</string>
+    <string name="ui_view_full_changelog">完整更新日志</string>
     <string name="ui_check_format">检查格式</string>
     <string name="ui_chinese_simplified">简体中文</string>
     <string name="ui_choose_import_type">选择导入类型</string>
     <string name="ui_choose_accent_color">选择重点色</string>
     <string name="ui_choose_lyrics_save_folder">选择歌词保存目录</string>
     <string name="ui_choose_the_player_airlyrics_follows">选择要跟随的播放器</string>
-    <string name="ui_clean_letters">纯净字母</string>
+    <string name="ui_clean_letters">纯净</string>
     <string name="ui_click_through">穿透</string>
     <string name="ui_click_through_off">点击穿透：已关闭</string>
     <string name="ui_click_through_on">点击穿透：已开启</string>
@@ -78,7 +78,7 @@
     <string name="ui_connected">已连接</string>
     <string name="ui_connecting">连接中</string>
     <string name="ui_content">显示内容</string>
-    <string name="ui_copy_lyrics_save_folder">复制歌词保存目录</string>
+    <string name="ui_copy_lyrics_save_folder">复制保存目录</string>
     <string name="ui_corner_radius">圆角</string>
     <string name="ui_current_line">当前句</string>
     <string name="ui_current_media">当前媒体</string>
@@ -135,7 +135,7 @@
     <string name="ui_serif">衬线字体</string>
     <string name="ui_system_default_font">系统默认</string>
     <string name="ui_format_looks_good">格式正确</string>
-    <string name="ui_give_it_a_star">在 GitHub 上加星</string>
+    <string name="ui_give_it_a_star">点个star!</string>
     <string name="ui_netease_source_hint">适合中国大陆及台湾用户</string>
     <string name="ui_musixmatch_source_hint">适合海外用户 · 可用时提供系统语言翻译</string>
     <string name="ui_green">绿</string>
@@ -157,7 +157,7 @@
     <string name="ui_item_title_word_by_word_lyrics">%1$s · 逐字歌词</string>
     <string name="ui_language">语言</string>
     <string name="ui_left">左对齐</string>
-    <string name="ui_like_it">喜欢 AirLyrics？</string>
+    <string name="ui_like_it">如果你喜欢这个项目</string>
     <string name="ui_line_range">显示范围</string>
     <string name="ui_local">本地歌词</string>
     <string name="ui_local_word_by_word_lyrics">本地逐字歌词</string>
@@ -186,7 +186,7 @@
     <string name="ui_plain_lyrics_source">歌词搜索来源</string>
     <string name="ui_plain_lrc_edit_format_hint">每行需以 [00:12.34] 开头</string>
     <string name="ui_max_width">最大宽度</string>
-    <string name="ui_media">媒体流</string>
+    <string name="ui_media">媒体</string>
     <string name="ui_media_source_waiting_status">等待播放器更新</string>
     <string name="ui_netease_cloud_music">网易云音乐</string>
     <string name="ui_next_lyric_preview">これは次の歌詞プレビューです</string>
@@ -199,7 +199,7 @@
     <string name="ui_no_local_lyrics_to_remove">没有可移除的本地歌词</string>
     <string name="ui_no_media_detected_yet">尚未检测到媒体</string>
     <string name="ui_no_media_source_status">尚未选择播放器，请在 AirLyrics 中选择</string>
-    <string name="ui_no_offset">未偏移</string>
+    <string name="ui_no_offset">无偏移</string>
     <string name="ui_no_plain_lrc_bound_to_song">暂无普通歌词</string>
     <string name="ui_no_plain_lrc">暂无普通歌词</string>
     <string name="ui_no_plain_lrc_to_remove_for_this_song">没有可移除的普通歌词</string>
@@ -252,8 +252,8 @@
 逐字歌词推荐格式：
 [00:12.34]&lt;00:12.34&gt;这&lt;00:12.50&gt;是&lt;00:12.70&gt;逐字歌词
 [00:12.34]翻译歌词</string>
-    <string name="ui_manage_lyrics_select_player_hint">播放歌曲，并在“媒体流”中选择播放器</string>
-    <string name="ui_media_streams_empty_hint">播放音乐以识别播放器</string>
+    <string name="ui_manage_lyrics_select_player_hint">播放歌曲，并在“媒体”中选择目标播放器</string>
+    <string name="ui_media_streams_empty_hint">未检查到活跃媒体</string>
     <string name="ui_playback_error">播放异常</string>
     <string name="ui_playing">播放中</string>
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">选择普通歌词 .lrc 文件</string>
@@ -279,7 +279,7 @@
     <string name="ui_reset">重置</string>
     <string name="ui_recent_local_lyrics">最近歌词</string>
     <string name="ui_red">红</string>
-    <string name="ui_refresh_media_status">刷新媒体状态</string>
+    <string name="ui_refresh_media_status">刷新</string>
     <string name="ui_refreshed">已刷新</string>
     <string name="ui_refreshing">刷新中</string>
     <string name="ui_remove">移除</string>
@@ -354,15 +354,15 @@
     <string name="ui_vertical_padding">纵向内边距</string>
     <string name="ui_view_current_setup">查看当前配置</string>
     <string name="ui_view_lrc_examples_hint">普通与逐字歌词示例</string>
-    <string name="ui_vinyl_bubble">黑胶气泡</string>
+    <string name="ui_vinyl_bubble">黑胶</string>
     <string name="ui_waiting_for_current_song">等待当前歌曲</string>
     <string name="ui_waiting_for_media">等待媒体信息</string>
     <string name="ui_waiting_for_media_message">等待媒体信息…</string>
-    <string name="ui_waiting_for_music_signal">等待音乐信号</string>
+    <string name="ui_waiting_for_music_signal">等待音乐中</string>
     <string name="ui_whats_new">当前版本更新</string>
     <string name="ui_white">白</string>
     <string name="ui_width">宽度</string>
     <string name="ui_window_layout">窗口布局</string>
-    <string name="ui_yay">感谢支持</string>
+    <string name="ui_yay">我会非常非常非常开心的！</string>
     <string name="ui_overlay_update_failed">悬浮窗更新失败</string>
 </resources>
