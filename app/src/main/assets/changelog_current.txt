@@ -1,7 +1,5 @@
-v1.2.1 - 2026-08-11
+v1.2.2 - 2026-08-15
 
 Improved
-- Clarified lyrics source descriptions.
-
-Fixed
-- Recent lyrics now show their file size instead of "Unknown size."
+- Refined labels and guidance across media, floating lyrics, and About screens.
+- Refreshed the app listing and localized screenshots, including the lyrics editor and notification controls.

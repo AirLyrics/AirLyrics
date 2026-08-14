@@ -1,3 +1,10 @@
+v1.2.2 - 2026-08-15
+
+Improved
+- Refined labels and guidance across media, floating lyrics, and About screens.
+- Refreshed the app listing and localized screenshots, including the lyrics editor and notification controls.
+
+
 v1.2.1 - 2026-08-11
 
 Improved

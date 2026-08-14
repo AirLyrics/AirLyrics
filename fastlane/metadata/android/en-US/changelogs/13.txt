@@ -1,0 +1,3 @@
+v1.2.2
+• Refine labels and guidance across media, floating lyrics, and About screens.
+• Refresh the app listing and localized screenshots, including the lyrics editor and notification controls.
