@@ -1,21 +1,14 @@
-AirLyrics is a lightweight Android floating lyrics app.
-
-It detects the current media playback on your device and shows synced lyrics in a customizable floating window above other apps.
+AirLyrics is a lightweight floating lyrics app.
 
 Features:
 
-• Floating synced lyrics
-• Current media playback detection
-• Online lyrics search
-• Local lyrics import with same-timestamp translation support
-• Normal LRC and word-by-word lyrics support
-• Adjustable lyrics offset
-• Original and translated lyrics display
-• Customizable floating window style
-• Light and dark themes
+• Detect current media and show synced floating lyrics
+• Search for lyrics online through NetEase Cloud Music or Musixmatch
+• Import local standard LRC or word-by-word lyrics, display translations, and adjust timing
+• Customize the floating window and switch between light and dark themes
 
-AirLyrics is not a music player and is not designed to be a full lyrics database. Online lyrics matching may be imperfect. For accurate lyrics, local lyrics import is recommended.
+AirLyrics is not a music player and does not include a complete lyrics database. If an online match is inaccurate, you can import local lyrics.
 
 Privacy:
 
-AirLyrics does not collect, upload, sell, or share personal data. Notification access is used locally to detect media playback information. Online lyrics search only sends the song information required to search lyrics.
+AirLyrics does not collect or share personal data. Notification access is used only on-device for media detection; online search sends only the song information required to find lyrics.

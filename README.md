@@ -117,7 +117,16 @@ For detailed setup and troubleshooting, see the [User Guide](docs/USER_GUIDE.md)
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="System integration settings" />
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="Lyrics editor with format validation and save controls" />
+      <br />
+      <sub>Lyrics Editor</sub>
+    </td>
+  </tr>
+  <tr>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center" colspan="3">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.jpg" width="240" alt="System integration settings" />
       <br />
       <sub>System Settings</sub>
     </td>
@@ -125,7 +134,7 @@ For detailed setup and troubleshooting, see the [User Guide](docs/USER_GUIDE.md)
 </table>
 
 <!--suppress CheckImageSize -->
-<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.jpg" width="720" alt="AirLyrics notification and media controls" />
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/8.jpg" width="720" alt="AirLyrics notification and media controls" />
 <br />
 <sub>Notification Controls</sub>
 

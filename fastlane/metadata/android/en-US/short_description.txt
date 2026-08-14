@@ -1,1 +1,1 @@
-Floating synced lyrics for Android
+Synced floating lyrics: online search, local imports, and word-by-word support

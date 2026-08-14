@@ -116,7 +116,16 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/6.jpg" width="240" alt="系统集成设置" />
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/6.jpg" width="240" alt="歌词编辑、格式检查与保存" />
+      <br />
+      <sub>歌词编辑</sub>
+    </td>
+  </tr>
+  <tr>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center" colspan="3">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/7.jpg" width="240" alt="系统集成设置" />
       <br />
       <sub>系统设置</sub>
     </td>
@@ -124,7 +133,7 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
 </table>
 
 <!--suppress CheckImageSize -->
-<img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/7.jpg" width="720" alt="AirLyrics 通知与媒体控制" />
+<img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/8.jpg" width="720" alt="AirLyrics 通知与媒体控制" />
 <br />
 <sub>通知栏控制</sub>
 
