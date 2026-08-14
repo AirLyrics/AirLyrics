@@ -79,26 +79,54 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="媒体流检测" />
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/1.jpg" width="240" alt="媒体检测设置" />
       <br />
-      <sub>媒体流检测</sub>
+      <sub>媒体</sub>
     </td>
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="docs/assets/screenshot-lyrics-source.jpg" width="240" alt="歌词获取与本地歌词设置" />
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/2.jpg" width="240" alt="悬浮歌词外观设置" />
       <br />
-      <sub>歌词获取</sub>
+      <sub>悬浮歌词外观</sub>
     </td>
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="悬浮窗自定义" />
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/3.jpg" width="240" alt="悬浮歌词控制与行为设置" />
       <br />
-      <sub>悬浮窗自定义</sub>
+      <sub>悬浮窗控制</sub>
+    </td>
+  </tr>
+  <tr>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/4.jpg" width="240" alt="当前歌词与搜索设置" />
+      <br />
+      <sub>当前歌词</sub>
+    </td>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/5.jpg" width="240" alt="歌词来源、存储与本地歌词管理" />
+      <br />
+      <sub>本地歌词管理</sub>
+    </td>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/6.jpg" width="240" alt="系统集成设置" />
+      <br />
+      <sub>系统设置</sub>
     </td>
   </tr>
 </table>
+
+<!--suppress CheckImageSize -->
+<img src="fastlane/metadata/android/zh-CN/images/phoneScreenshots/7.jpg" width="720" alt="AirLyrics 通知与媒体控制" />
+<br />
+<sub>通知栏控制</sub>
 
 </div>
 

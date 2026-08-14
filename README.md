@@ -80,26 +80,54 @@ For detailed setup and troubleshooting, see the [User Guide](docs/USER_GUIDE.md)
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="docs/assets/screenshot-media-source.jpg" width="240" alt="Media source detection" />
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/1.jpg" width="240" alt="Media detection settings" />
       <br />
-      <sub>Media Source</sub>
+      <sub>Media</sub>
     </td>
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="docs/assets/screenshot-lyrics-source.jpg" width="240" alt="Lyrics search and local lyrics settings" />
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/2.jpg" width="240" alt="Floating lyrics appearance settings" />
       <br />
-      <sub>Lyrics Search</sub>
+      <sub>Floating Appearance</sub>
     </td>
     <!--suppress HtmlDeprecatedAttribute -->
     <td align="center">
       <!--suppress CheckImageSize -->
-      <img src="docs/assets/screenshot-floating-settings.jpg" width="240" alt="Floating window customization" />
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/3.jpg" width="240" alt="Floating lyrics controls and behavior settings" />
       <br />
-      <sub>Floating Customization</sub>
+      <sub>Floating Controls</sub>
+    </td>
+  </tr>
+  <tr>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/4.jpg" width="240" alt="Current lyrics and search settings" />
+      <br />
+      <sub>Current Lyrics</sub>
+    </td>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/5.jpg" width="240" alt="Lyrics sources, storage, and local library settings" />
+      <br />
+      <sub>Lyrics Library</sub>
+    </td>
+    <!--suppress HtmlDeprecatedAttribute -->
+    <td align="center">
+      <!--suppress CheckImageSize -->
+      <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/6.jpg" width="240" alt="System integration settings" />
+      <br />
+      <sub>System Settings</sub>
     </td>
   </tr>
 </table>
+
+<!--suppress CheckImageSize -->
+<img src="fastlane/metadata/android/en-US/images/phoneScreenshots/7.jpg" width="720" alt="AirLyrics notification and media controls" />
+<br />
+<sub>Notification Controls</sub>
 
 </div>
 
