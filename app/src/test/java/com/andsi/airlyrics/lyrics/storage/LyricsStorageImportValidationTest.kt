@@ -111,6 +111,31 @@ class LyricsStorageImportValidationTest {
     }
 
     @Test
+    fun importPlainLyrics_preservesTimedEmptyLine() {
+        val result = LyricsStorage.importPlainLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "plain-timed-empty-line.lrc",
+                text = "[04:45.03]final lyric\n[04:48.92] "
+            ),
+            title = "Plain Timed Empty Line",
+            artist = "AndSi",
+            duration = 300_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+        assertEquals(
+            "[04:45.03]final lyric\n[04:48.92]",
+            LyricsStorage.readPlainLyrics(
+                context,
+                "Plain Timed Empty Line",
+                "AndSi",
+                300_000L
+            )
+        )
+    }
+
+    @Test
     fun readPlainLyrics_usesLegacyIndexPathAfterStorageKeyBecomesRootStable() {
         val plainLrc = "[00:01.00]legacy locale path"
         val identity = SongIdentity(

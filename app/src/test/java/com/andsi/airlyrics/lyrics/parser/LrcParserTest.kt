@@ -31,6 +31,14 @@ class LrcParserTest {
     }
 
     @Test
+    fun parse_preservesTimedEmptyLines() {
+        val lines = LrcParser.parse("[00:01.00]before\n[00:02.00] \n[00:03.00]")
+
+        assertEquals(listOf(1_000L, 2_000L, 3_000L), lines.map { it.timeMs })
+        assertEquals(listOf("before", "", ""), lines.map { it.text })
+    }
+
+    @Test
     fun parse_splitsStoredOriginalAndTranslation() {
         val lines = LrcParser.parse("[00:03.00]星が降らない街 / 星星不落的街道")
 
@@ -113,6 +121,19 @@ class LrcParserTest {
     }
 
     @Test
+    fun parseWithTranslation_doesNotMatchTimedEmptyLines() {
+        val original = "[00:10.00]Original A\n[00:10.40]\n[00:20.00]Original B"
+        val translated = "[00:10.00]\n[00:10.20]Translation A\n[00:20.20]Translation B"
+
+        val lines = LrcParser.parseWithTranslation(original, translated)
+
+        assertEquals("Translation A", lines[0].translation)
+        assertEquals("", lines[1].text)
+        assertNull(lines[1].translation)
+        assertEquals("Translation B", lines[2].translation)
+    }
+
+    @Test
     fun normalizeForStorage_outputsStableOneLinePerLyricFormat() {
         val normalized = LrcParser.normalizeForStorage(
             """
@@ -123,6 +144,27 @@ class LrcParserTest {
         )
 
         assertEquals("[ar:Artist]\n[00:01.00]one / 一\n[00:02.50]two point five", normalized)
+    }
+
+    @Test
+    fun normalizeForStorage_preservesTimedEmptyLines() {
+        val normalized = LrcParser.normalizeForStorage(
+            "[04:45.03]final lyric\n[04:48.92] "
+        )
+
+        assertEquals("[04:45.03]final lyric\n[04:48.92]", normalized)
+    }
+
+    @Test
+    fun normalizeForStorage_keepsTimedEmptyLineSeparateAtSameTimestamp() {
+        val normalized = LrcParser.normalizeForStorage(
+            "[00:10.00]\n[00:10.00]original\n[00:10.00]translation"
+        )
+
+        assertEquals(
+            "[00:10.00]\n[00:10.00]original / translation",
+            normalized
+        )
     }
 
     @Test
