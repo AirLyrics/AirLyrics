@@ -180,7 +180,7 @@ private class TranslationMatcher(
         var firstTranslationCandidateIndex = 0
 
         originalLines.forEachIndexed { originalIndex, original ->
-            if (original.isMetadata) return@forEachIndexed
+            if (original.isMetadata || original.text.isBlank()) return@forEachIndexed
 
             val earliestMatchTimeMs = original.timeMs - TRANSLATION_MATCH_TOLERANCE_MS
             while (
@@ -195,7 +195,7 @@ private class TranslationMatcher(
                 val translation = translationLines[translationIndex]
                 if (translation.timeMs > original.timeMs + TRANSLATION_MATCH_TOLERANCE_MS) break
 
-                if (!translation.isMetadata) {
+                if (!translation.isMetadata && translation.text.isNotBlank()) {
                     candidates += TranslationCandidate(
                         originalIndex = originalIndex,
                         translationIndex = translationIndex,
@@ -243,7 +243,6 @@ private fun buildMetadataDisplayLine(metadataLines: List<String>): LrcLine? {
 
 private fun formatLinesForStorage(lines: List<LrcLine>): String {
     return lines
-        .filter { it.text.isNotBlank() || it.hasTranslation() }
         .joinToString("\n", transform = ::formatLineForStorage)
 }
 
@@ -314,7 +313,7 @@ private fun mergeSameTimestampGroup(lines: List<LrcLine>): List<LrcLine> {
 }
 
 private fun LrcLine.canMergeWithSameTimestampLyrics(): Boolean {
-    return !isMetadata && !text.looksLikeKeyValueLine()
+    return !isMetadata && text.isNotBlank() && !text.looksLikeKeyValueLine()
 }
 
 private fun mergeLyricTimestampGroup(lines: List<LrcLine>): LrcLine {
@@ -379,6 +378,14 @@ private fun parseTimedSegments(rawLine: String): List<LrcLine> {
     val parsedLines = mutableListOf<LrcLine>()
     val tagsWaitingForText = mutableListOf<MatchResult>()
 
+    fun flushWaitingTags(text: String, translation: String? = null) {
+        tagsWaitingForText.mapNotNullTo(parsedLines) { pendingTag ->
+            val timeMs = parseTimeTag(pendingTag) ?: return@mapNotNullTo null
+            LrcLine(timeMs, text, translation)
+        }
+        tagsWaitingForText.clear()
+    }
+
     timeTags.forEachIndexed { index, timeTag ->
         tagsWaitingForText += timeTag
 
@@ -387,12 +394,10 @@ private fun parseTimedSegments(rawLine: String): List<LrcLine> {
 
         val text = normalizeDisplayText(rawText)
         val (originalText, translationText) = splitOriginalAndTranslation(text)
-        tagsWaitingForText.mapNotNullTo(parsedLines) { pendingTag ->
-            val timeMs = parseTimeTag(pendingTag) ?: return@mapNotNullTo null
-            LrcLine(timeMs, originalText, translationText)
-        }
-        tagsWaitingForText.clear()
+        flushWaitingTags(originalText, translationText)
     }
+
+    flushWaitingTags(text = "")
 
     return parsedLines
 }
