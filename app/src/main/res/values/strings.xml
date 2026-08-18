@@ -6,8 +6,8 @@
     <string name="floating_slider_value">%1$s: %2$d</string>
     <string name="local_source_cache_provider">Cache · %1$s</string>
     <string name="lyrics_word_by_word_format_invalid_lines">Invalid lines: %1$s%2$s\n\nLine [00:12.34] · word &lt;00:12.34&gt;. Translation lines need only [00:12.34].</string>
-    <string name="lyrics_lookup_failed">%1$s lookup failed</string>
-    <string name="lyrics_lookup_native_error">%1$s native module error</string>
+    <string name="lyrics_lookup_failed">%1$s search failed</string>
+    <string name="lyrics_lookup_native_error">%1$s lyrics module error</string>
     <string name="lyrics_lookup_need_credentials">%1$s needs credentials</string>
     <string name="lyrics_lookup_network_failed">%1$s network request failed</string>
     <string name="lyrics_lookup_not_found">%1$s found no lyrics</string>
@@ -16,7 +16,7 @@
     <string name="lyrics_lookup_restricted">%1$s lyrics are restricted</string>
     <string name="lyrics_offset_advance">Lyrics advance %1$s</string>
     <string name="lyrics_offset_delay">Lyrics delay %1$s</string>
-    <string name="lyrics_plain_format_invalid_lines">Invalid lines: %1$s%2$s\n\nStart lyric lines with [00:12.34]. Metadata and blank lines are allowed.</string>
+    <string name="lyrics_plain_format_invalid_lines">Invalid lines: %1$s%2$s\n\nStart lyric lines with [00:12.34].</string>
     <string name="permissions_summary">Basic permissions enabled: %1$d / %2$d</string>
     <string name="provider_local_plain_lyrics">Local lyrics</string>
     <string name="provider_musixmatch">Musixmatch</string>
@@ -32,7 +32,7 @@
     <string name="ui_alignment">Alignment</string>
     <string name="ui_all_local_lyrics_removed">All local lyrics removed for this song.</string>
     <string name="ui_animation">Animation</string>
-    <string name="ui_all_saved_lyrics_deleted">All saved lyrics deleted.</string>
+    <string name="ui_all_saved_lyrics_deleted">Deleted</string>
     <string name="ui_appearance">Appearance</string>
     <string name="ui_accent_color">Accent color</string>
     <string name="ui_accent_color_option">%1$s accent color</string>
@@ -56,8 +56,8 @@
     <string name="ui_buffering">Buffering</string>
     <string name="ui_cache" translatable="false">Cache</string>
     <string name="ui_cancel">Cancel</string>
-    <string name="ui_cannot_read_word_by_word_lyrics_file">Cannot read this word-by-word lyrics file.</string>
-    <string name="ui_cannot_read_this_lyric_file">Cannot read this lyric file.</string>
+    <string name="ui_cannot_read_word_by_word_lyrics_file">Cannot read word-by-word lyrics file.</string>
+    <string name="ui_cannot_read_this_lyric_file">Cannot read lyrics file.</string>
     <string name="ui_center">Center</string>
     <string name="ui_changelog">Changelog</string>
     <string name="ui_view_full_changelog">Full changelog</string>
@@ -136,8 +136,6 @@
     <string name="ui_system_default_font">System default</string>
     <string name="ui_format_looks_good">Format looks good</string>
     <string name="ui_give_it_a_star">Give it a star!</string>
-    <string name="ui_netease_source_hint">Users in mainland China or Taiwan</string>
-    <string name="ui_musixmatch_source_hint">Overseas users · translations when available</string>
     <string name="ui_green">Green</string>
     <string name="ui_hidden">Hidden</string>
     <string name="ui_hide">Hide</string>
@@ -175,7 +173,7 @@
     <string name="ui_lyrics_import_failed">Lyrics import failed</string>
     <string name="ui_lyrics_import_empty_error">Imported lyrics are empty</string>
     <string name="ui_lyrics_not_found">Lyrics not found</string>
-    <string name="ui_lyrics_removed_auto_search_paused">Lyrics removed · auto-search paused</string>
+    <string name="ui_lyrics_removed_auto_search_paused">Lyrics removed</string>
     <string name="ui_lyrics_offset">Lyrics offset</string>
     <string name="ui_offset_per_song_hint">Saved for this song only.</string>
     <string name="ui_lyrics_save_folder">Lyrics save folder</string>
@@ -198,7 +196,7 @@
     <string name="ui_no_word_by_word_lyrics_to_remove">No word-by-word lyrics to remove.</string>
     <string name="ui_no_local_lyrics_to_remove">No local lyrics to remove.</string>
     <string name="ui_no_media_detected_yet">No media detected yet</string>
-    <string name="ui_no_media_source_status">No player selected. Open AirLyrics to choose one.</string>
+    <string name="ui_no_media_source_status">No player selected</string>
     <string name="ui_no_offset">No offset</string>
     <string name="ui_no_plain_lrc_bound_to_song">No plain lyrics</string>
     <string name="ui_no_plain_lrc">No plain lyrics</string>
@@ -235,7 +233,7 @@
     <string name="ui_overwrite">Overwrite</string>
     <string name="ui_overwrite_local_word_by_word_lyrics">Overwrite local word-by-word lyrics?</string>
     <string name="ui_overwrite_plain_lyrics">Overwrite plain lyrics?</string>
-    <string name="ui_parsed_lyrics_are_empty">Parsed lyrics are empty</string>
+    <string name="ui_parsed_lyrics_are_empty">No valid lyrics parsed</string>
     <string name="ui_paused">Paused</string>
     <string name="ui_permissions">Permissions</string>
     <string name="ui_pink">Pink</string>
@@ -275,7 +273,6 @@ Word-by-word lyrics recommended format:
     <string name="ui_radius">Radius</string>
     <string name="ui_range">Range</string>
     <string name="ui_read_failed">Read failed</string>
-    <string name="ui_read_local_lyrics_only">Local files only</string>
     <string name="ui_reset">Reset</string>
     <string name="ui_recent_local_lyrics">Recent local lyrics</string>
     <string name="ui_red">Red</string>

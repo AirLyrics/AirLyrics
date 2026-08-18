@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceHint
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
@@ -57,10 +56,6 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
                     localizedPlainLyricsSourceTitle(settings.selectedPlainLyricsSource)
                 )
             )
-            val sourceHint = smallHint(
-                activity,
-                localizedPlainLyricsSourceHint(settings.selectedPlainLyricsSource)
-            )
             val sourceFeedback = TextView(activity).apply {
                 text = ""
                 textSize = AirUiTokens.TextSize.Caption
@@ -69,7 +64,6 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
                 setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
             }
             addView(sourceStatus)
-            addView(sourceHint)
             addView(sourceFeedback)
             lateinit var sourceGrid: LinearLayout
             sourceGrid = liveOptionGrid(
@@ -83,7 +77,6 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
                             sourceStatus.text = getString(R.string.settings_current_value, localizedPlainLyricsSourceTitle(
                                 plainLyricsSearchSource
                             ))
-                            sourceHint.text = localizedPlainLyricsSourceHint(plainLyricsSearchSource)
                             playLocalRefreshFeedback(activity, sourceGrid, sourceFeedback, getString(R.string.ui_saved))
                         }
                     )

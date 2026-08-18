@@ -1,16 +1,18 @@
 Plain LRC
-[00:12.34]This is a lyric line
-[00:15.60]Original lyric / Translation
+[00:12.34]This is a line of lyrics
 
-Translation on a separate line:
-[00:15.60]Original lyric
+Original lyrics and translation can be written on the same line:
+[00:15.60]Original lyrics / Translation
+
+They can also be written on separate lines with the same timestamp:
+[00:15.60]Original lyrics
 [00:15.60]Translation
 
 Word-by-word LRC
-[00:12.34]<00:12.34>T<00:12.50>ext
+[00:12.34]<00:12.34>Ly<00:12.50>rics
 
-Translation on a separate line:
-[00:12.34]<00:12.34>T<00:12.50>ext
+The translation uses the same line timestamp as the original:
+[00:12.34]<00:12.34>Ly<00:12.50>rics
 [00:12.34]Translation
 
-Remove the song’s plain lyrics before importing word-by-word lyrics. A plain version is created and kept in sync.
+Remove existing plain lyrics before importing word-by-word lyrics. Plain lyrics will be generated automatically and kept in sync.

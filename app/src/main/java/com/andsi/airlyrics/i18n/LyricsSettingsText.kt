@@ -16,13 +16,6 @@ internal fun Context.localizedPlainLyricsSourceTitle(
     PlainLyricsSearchSource.MUSIXMATCH -> getString(R.string.provider_musixmatch)
 }
 
-internal fun Context.localizedPlainLyricsSourceHint(
-    plainLyricsSearchSource: PlainLyricsSearchSource
-): String = when (plainLyricsSearchSource) {
-    PlainLyricsSearchSource.LOCAL_ONLY -> getString(R.string.ui_read_local_lyrics_only)
-    PlainLyricsSearchSource.NETEASE -> getString(R.string.ui_netease_source_hint)
-    PlainLyricsSearchSource.MUSIXMATCH -> getString(R.string.ui_musixmatch_source_hint)
-}
 
 internal fun Context.localizedLyricsContentModeTitle(mode: LyricsContentDisplayMode): String = when (mode) {
     LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> getString(R.string.ui_original_translation)
