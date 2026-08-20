@@ -46,7 +46,12 @@ internal fun FloatingLyricsService.scheduleSelectedCurrentMediaInfoRefresh() {
 internal fun FloatingLyricsService.refreshSelectedCurrentMediaInfo() {
     if (!shouldObserveSelectedMedia()) return
 
-    readSelectedCurrentMediaInfo()?.let(::applyCurrentMediaInfo)
+    val media = readSelectedCurrentMediaInfo()
+    if (media != null) {
+        applyCurrentMediaInfo(media)
+    } else {
+        selectedSourcePackage?.let(::handleMediaSourceLost)
+    }
 }
 
 internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo): Boolean {

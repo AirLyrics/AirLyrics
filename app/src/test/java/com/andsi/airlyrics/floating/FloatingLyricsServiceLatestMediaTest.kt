@@ -20,6 +20,7 @@ import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import java.io.File
+import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -36,6 +37,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.android.controller.ServiceController
 import org.robolectric.annotation.LooperMode
 import org.robolectric.shadows.ShadowSettings
+import org.robolectric.shadows.ShadowSystemClock
 import org.robolectric.shadows.ShadowLooper
 
 @RunWith(RobolectricTestRunner::class)
@@ -127,6 +129,37 @@ class FloatingLyricsServiceLatestMediaTest {
             )
         )
         assertTrue(lyricsView.text.toString().contains(REJECTED_TITLE))
+    }
+
+    @Test
+    fun selectedSessionDisappears_pollingPausesRendererAtLastEstimatedPosition() {
+        val controller = Robolectric.buildService(FloatingLyricsService::class.java)
+            .create()
+            .also { serviceController = it }
+        val service = controller.get()
+
+        assertTrue(service.showLyrics())
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(10))
+        val playingMedia = media(OLD_TITLE, sequence = 1L, isPlaying = true)
+        service.currentMedia = playingMedia
+        service.renderer.updatePlayback(
+            positionMs = playingMedia.positionMs,
+            isPlaying = true
+        )
+        ShadowSystemClock.advanceBy(Duration.ofMillis(750))
+        val positionAtSessionLoss = service.renderer.getEstimatedPositionMs()
+
+        assertTrue(positionAtSessionLoss > playingMedia.positionMs)
+        assertNull(service.readSelectedCurrentMediaInfo())
+
+        service.refreshSelectedCurrentMediaInfo()
+
+        assertFalse(service.currentMedia.isPlaying)
+        assertEquals(positionAtSessionLoss, service.currentMedia.positionMs)
+        assertEquals(positionAtSessionLoss, service.renderer.getEstimatedPositionMs())
+
+        ShadowSystemClock.advanceBy(Duration.ofSeconds(2))
+        assertEquals(positionAtSessionLoss, service.renderer.getEstimatedPositionMs())
     }
 
     @Test
