@@ -1,5 +1,8 @@
-v1.2.2 - 2026-08-15
+v1.2.3 - 2026-08-21
 
 Improved
-- Refined labels and guidance across media, floating lyrics, and About screens.
-- Refreshed the app listing and localized screenshots, including the lyrics editor and notification controls.
+- Clearer wording throughout the app.
+
+Fixed
+- Empty timestamped lines in LRC files are now preserved.
+- Floating lyrics now stop when the selected player closes or becomes unavailable.

@@ -1,3 +1,13 @@
+v1.2.3 - 2026-08-21
+
+Improved
+- Clearer wording throughout the app.
+
+Fixed
+- Empty timestamped lines in LRC files are now preserved.
+- Floating lyrics now stop when the selected player closes or becomes unavailable.
+
+
 v1.2.2 - 2026-08-15
 
 Improved

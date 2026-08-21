@@ -1,0 +1,4 @@
+v1.2.3
+• Preserve empty timestamped lines in LRC files.
+• Stop floating lyrics when the selected player closes or becomes unavailable.
+• Improve wording throughout the app.
