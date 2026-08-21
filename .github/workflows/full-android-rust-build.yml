@@ -194,7 +194,7 @@ jobs:
                   totals[key] += int(suite.attrib.get(key, "0"))
 
           print("Instrumentation results:", totals)
-          expected = {"tests": 7, "failures": 0, "errors": 0, "skipped": 0}
+          expected = {"tests": 8, "failures": 0, "errors": 0, "skipped": 0}
           if totals != expected:
               sys.exit(f"Expected {expected}, got {totals}")
           PY

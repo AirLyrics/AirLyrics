@@ -8,7 +8,10 @@ import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.util.Base64
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertSame
@@ -67,6 +70,38 @@ class FloatingLyricsFontStoreTest {
     }
 
     @Test
+    fun importFont_validFont_replacesStoredFontAndResolvesCustomFamily() {
+        val first = File(testDirectory, "First Font.ttf")
+        writeValidFontFixture(first)
+
+        assertEquals(
+            FloatingLyricsFontStore.ImportResult.Success("First Font.ttf"),
+            FloatingLyricsFontStore.importFont(context, Uri.fromFile(first))
+        )
+        assertTrue(FloatingLyricsFontStore.hasCustomFont(context))
+        assertEquals("First Font.ttf", FloatingLyricsFontStore.customFontDisplayName(context))
+        assertArrayEquals(first.readBytes(), storedCustomFont().readBytes())
+        assertNotNull(
+            FloatingLyricsFontStore.resolveTypeface(
+                context,
+                FloatingLyricsFontFamily.CUSTOM,
+                FloatingLyricsFontWeight.normalize(555)
+            )
+        )
+
+        storedCustomFont().writeText("stale font bytes")
+        val replacement = File(testDirectory, "Replacement Font.ttf")
+        writeValidFontFixture(replacement)
+
+        assertEquals(
+            FloatingLyricsFontStore.ImportResult.Success("Replacement Font.ttf"),
+            FloatingLyricsFontStore.importFont(context, Uri.fromFile(replacement))
+        )
+        assertEquals("Replacement Font.ttf", FloatingLyricsFontStore.customFontDisplayName(context))
+        assertArrayEquals(replacement.readBytes(), storedCustomFont().readBytes())
+    }
+
+    @Test
     fun resolveTypeface_supportsEverySystemFamilyAndNormalizedWeight() {
         FloatingLyricsFontFamily.entries
             .filter { it != FloatingLyricsFontFamily.CUSTOM }
@@ -90,6 +125,17 @@ class FloatingLyricsFontStoreTest {
 
         assertTrue(FloatingLyricsFontStore.hasWeightVariationAxis(weightVariableFont))
         assertFalse(FloatingLyricsFontStore.hasWeightVariationAxis(widthVariableFont))
+    }
+
+    private fun storedCustomFont(): File {
+        return File(context.filesDir, "floating_fonts/custom_font")
+    }
+
+    private fun writeValidFontFixture(file: File) {
+        val encoded = requireNotNull(
+            javaClass.classLoader?.getResourceAsStream(VALID_FONT_FIXTURE)
+        ).bufferedReader().use { it.readText() }
+        file.writeBytes(Base64.getMimeDecoder().decode(encoded))
     }
 
     private fun writeMinimalVariableFont(file: File, axisTag: String) {
@@ -127,5 +173,9 @@ class FloatingLyricsFontStoreTest {
             }
             .array()
         file.writeBytes(bytes)
+    }
+
+    private companion object {
+        const val VALID_FONT_FIXTURE = "fonts/noto-sans-lydian-regular.ttf.base64"
     }
 }

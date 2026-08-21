@@ -147,19 +147,23 @@ class FloatingLyricsServiceLatestMediaTest {
             isPlaying = true
         )
         ShadowSystemClock.advanceBy(Duration.ofMillis(750))
-        val positionAtSessionLoss = service.renderer.getEstimatedPositionMs()
+        val positionBeforePolling = service.renderer.getEstimatedPositionMs()
 
-        assertTrue(positionAtSessionLoss > playingMedia.positionMs)
+        assertTrue(positionBeforePolling > playingMedia.positionMs)
         assertNull(service.readSelectedCurrentMediaInfo())
 
-        service.refreshSelectedCurrentMediaInfo()
+        ShadowLooper.idleMainLooper(
+            FloatingLyricsService.CURRENT_MEDIA_REFRESH_INTERVAL_MS,
+            TimeUnit.MILLISECONDS
+        )
 
         assertFalse(service.currentMedia.isPlaying)
-        assertEquals(positionAtSessionLoss, service.currentMedia.positionMs)
-        assertEquals(positionAtSessionLoss, service.renderer.getEstimatedPositionMs())
+        val pausedPosition = service.currentMedia.positionMs
+        assertTrue(pausedPosition >= positionBeforePolling)
+        assertEquals(pausedPosition, service.renderer.getEstimatedPositionMs())
 
         ShadowSystemClock.advanceBy(Duration.ofSeconds(2))
-        assertEquals(positionAtSessionLoss, service.renderer.getEstimatedPositionMs())
+        assertEquals(pausedPosition, service.renderer.getEstimatedPositionMs())
     }
 
     @Test

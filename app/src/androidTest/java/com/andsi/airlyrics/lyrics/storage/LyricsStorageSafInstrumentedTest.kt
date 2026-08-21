@@ -99,19 +99,7 @@ class LyricsStorageSafInstrumentedTest {
     @Test
     fun customDocumentTree_saveReadIndexDelete_roundTrips() {
         val session = createTreeSession()
-        context.contentResolver.takePersistableUriPermission(
-            session.treeUri,
-            URI_READ_WRITE_FLAGS,
-        )
-        session.persistablePermissionTaken = true
-        assertTrue(
-            context.contentResolver.persistedUriPermissions.any {
-                it.uri == session.treeUri && it.isReadPermission && it.isWritePermission
-            },
-        )
-        assertTrue(LyricsStorage.validateLyricsDir(context, session.treeUri))
-        LyricsStorage.saveLyricsDirUri(context, session.treeUri)
-        assertEquals(session.treeUri.toString(), LyricsStorage.getLyricsDirRawPath(context))
+        selectTreeSession(session)
 
         val identity =
             SongIdentity(
@@ -246,6 +234,79 @@ class LyricsStorageSafInstrumentedTest {
         assertFallbackIndexUnchanged()
 
         assertStreamFailureIsNotReportedAsSuccess()
+    }
+
+    @Test
+    fun customDocumentTree_deleteAllSavedLyrics_removesOnlyLyricsFiles() {
+        val session = createTreeSession()
+        selectTreeSession(session)
+        val identity =
+            SongIdentity(
+                title = "SAF Delete All $runId",
+                artist = "Instrumentation Artist $runId",
+                durationMs = 180_000L,
+            )
+        val managedFileName = LyricsFileNaming.managedPlainFileName(identity)
+
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = context,
+                title = identity.title,
+                artist = identity.artist,
+                duration = identity.durationMs,
+                plainLrc = "[00:01.00]managed",
+            ),
+        )
+        assertTrue(LyricsFileStore.writeManagedLyrics(context, "orphan.karaoke.json", "{}"))
+        assertTrue(LyricsFileStore.writeManagedLyrics(context, "notes.txt", "keep"))
+
+        val root = requireNotNull(DocumentFile.fromTreeUri(context, session.treeUri))
+        val managedDir = requireNotNull(root.findFile(MANAGED_LYRICS_DIR))
+        val legacyFileName =
+            LyricsFileNaming.legacyPlainFileName("Legacy SAF", "AirLyrics", 200_000L)
+        writeDocument(root, legacyFileName, "[00:01.00]legacy")
+        writeDocument(root, "personal-reference.lrc", "[00:01.00]keep")
+
+        assertEquals(
+            LyricsStorage.DeleteAllSavedLyricsResult.DELETED,
+            LyricsStorage.deleteAllSavedLyrics(context),
+        )
+
+        assertNull(managedDir.findFile(managedFileName))
+        assertNull(managedDir.findFile("orphan.karaoke.json"))
+        assertNotNull(managedDir.findFile("notes.txt"))
+        assertNull(root.findFile(legacyFileName))
+        assertNotNull(root.findFile("personal-reference.lrc"))
+        assertEquals(0, JSONArray(readText(requireNotNull(root.findFile(INDEX_FILE_NAME)).uri)).length())
+        assertEquals(
+            LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE,
+            LyricsStorage.deleteAllSavedLyrics(context),
+        )
+        assertFallbackIndexUnchanged()
+    }
+
+    private fun selectTreeSession(session: TestTreeSession) {
+        context.contentResolver.takePersistableUriPermission(
+            session.treeUri,
+            URI_READ_WRITE_FLAGS,
+        )
+        session.persistablePermissionTaken = true
+        assertTrue(
+            context.contentResolver.persistedUriPermissions.any {
+                it.uri == session.treeUri && it.isReadPermission && it.isWritePermission
+            },
+        )
+        assertTrue(LyricsStorage.validateLyricsDir(context, session.treeUri))
+        LyricsStorage.saveLyricsDirUri(context, session.treeUri)
+        assertEquals(session.treeUri.toString(), LyricsStorage.getLyricsDirRawPath(context))
+    }
+
+    private fun writeDocument(parent: DocumentFile, name: String, text: String): DocumentFile {
+        val file = requireNotNull(parent.createFile("application/octet-stream", name))
+        requireNotNull(context.contentResolver.openOutputStream(file.uri, "wt"))
+            .bufferedWriter()
+            .use { it.write(text) }
+        return file
     }
 
     private fun assertStreamFailureIsNotReportedAsSuccess() {
