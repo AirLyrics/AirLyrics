@@ -97,7 +97,8 @@ internal object WordByWordLyricsJsonCodec {
                 val segments = buildList {
                     for (segmentIndex in 0 until segmentArray.length()) {
                         val segment = segmentArray.optJSONObject(segmentIndex) ?: continue
-                        val segmentText = segment.optString(KEY_TEXT, "").trim()
+                        // Segment-edge whitespace separates words and must survive editor round trips.
+                        val segmentText = segment.optString(KEY_TEXT, "")
                         val segmentStartMs = segment.optLong(KEY_START_MS, -1L)
                         val segmentEndMs = segment.optLong(KEY_END_MS, -1L)
                         if (segmentText.isNotBlank() && segmentStartMs in startMs until segmentEndMs) {
