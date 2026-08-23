@@ -12,7 +12,7 @@ import java.util.Locale
 object LyricsOffsetStore {
     private const val PREFS_NAME = "lyrics_offset_store"
     private const val KEY_PREFIX = "song_offset_ms_"
-    private const val MAX_OFFSET_MS = 30_000L
+    private const val MAX_OFFSET_MS = 300_000L
 
     private fun store(context: Context) = prefs(context, PREFS_NAME)
 

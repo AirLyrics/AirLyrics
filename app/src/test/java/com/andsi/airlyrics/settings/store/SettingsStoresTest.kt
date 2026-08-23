@@ -248,11 +248,11 @@ class SettingsStoresTest {
         val identity = SongIdentity("Song", "Artist", durationMs = 180_000L)
         val nearbyDuration = identity.copy(durationMs = 184_000L)
 
-        assertEquals(30_000L, LyricsOffsetStore.setOffsetMs(context, identity, 40_000L))
-        assertEquals(30_000L, LyricsOffsetStore.getOffsetMs(context, identity))
-        assertEquals(30_000L, LyricsOffsetStore.getOffsetMs(context, nearbyDuration))
+        assertEquals(300_000L, LyricsOffsetStore.setOffsetMs(context, identity, 400_000L))
+        assertEquals(300_000L, LyricsOffsetStore.getOffsetMs(context, identity))
+        assertEquals(300_000L, LyricsOffsetStore.getOffsetMs(context, nearbyDuration))
 
-        assertEquals(29_500L, LyricsOffsetStore.adjustOffsetMs(context, nearbyDuration, -500L))
+        assertEquals(299_500L, LyricsOffsetStore.adjustOffsetMs(context, nearbyDuration, -500L))
 
         LyricsOffsetStore.resetOffset(context, identity)
 
