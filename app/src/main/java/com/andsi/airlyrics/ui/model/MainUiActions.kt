@@ -9,7 +9,6 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 internal data class MainUiActions(
     val selectPage: (Page) -> Unit,
     val openSettingsSubPage: (SettingsSubPage) -> Unit,
-    val backToSettingsHome: () -> Unit,
     val toggleThemeMode: () -> Unit,
     val selectThemeAccent: (ThemeAccent) -> Unit,
     val toggleFloatingFromNav: () -> Unit,
@@ -30,6 +29,7 @@ internal data class MainUiActions(
     val copyLyricsDirectory: () -> Unit,
     val importLyricsForCurrentMedia: () -> Unit,
     val deleteLyricsForCurrentMedia: (LyricsDeleteMode) -> Unit,
+    val deleteSavedLyrics: (LocalLyricsUiItem, (Boolean) -> Unit) -> Unit,
     val deleteAllSavedLyrics: () -> Unit,
     val toggleLyricsAutoSearch: () -> Boolean,
     val toggleLyricsAutoSave: () -> Boolean,

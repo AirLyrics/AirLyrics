@@ -16,6 +16,8 @@ internal data class CurrentMediaUiInfo(
 
 internal enum class LyricsDeleteMode { PLAIN, WORD_BY_WORD, ALL }
 
+internal enum class LocalLyricsUiChange { SAVED, DELETED }
+
 internal data class CurrentLyricsUiState(
     val media: CurrentMediaUiInfo?,
     val localSourceText: String?,
@@ -34,10 +36,14 @@ internal data class LocalLyricsUiItem(
     val sizeBytes: Long,
     val title: String = "",
     val artist: String = "",
+    val album: String = "",
+    val durationMs: Long = 0L,
+    val indexKey: String = "",
     val source: String = "",
     val provider: String = "local",
     val hasPlainLyrics: Boolean = true,
     val hasWordByWordLyrics: Boolean = false,
+    val canDelete: Boolean = false,
     val displayTitle: String,
     val subtitle: String = "",
     val typeText: String = "",
@@ -48,6 +54,10 @@ internal data class RecentLyricsUiState(
     val currentItem: LocalLyricsUiItem?,
     val recentLyrics: List<LocalLyricsUiItem>,
     val media: CurrentMediaUiInfo?
+)
+
+internal data class SavedLyricsUiState(
+    val lyrics: List<LocalLyricsUiItem>
 )
 
 internal data class LyricsSettingsUiState(

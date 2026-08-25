@@ -145,7 +145,14 @@ internal class MainHandRenderer(
             Page.SETTINGS -> createSettingsPage(host)
         }
 
-        val restoreY = state.pageScrollY[state.currentPage] ?: 0
+        val restoreY = if (
+            state.currentPage == Page.SETTINGS &&
+            state.settingsSubPage != oldSubPage
+        ) {
+            0
+        } else {
+            state.pageScrollY[state.currentPage] ?: 0
+        }
         container.addView(pageView)
         if (shouldAnimate) animatePageEnter(host, pageView, slideFromRight)
         state.renderedPage = state.currentPage

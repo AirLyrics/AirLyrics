@@ -26,10 +26,6 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             state.settingsSubPage = subPage
             uiInvalidator.rebuildCurrentPage(PageRebuildReason.SETTINGS_NAVIGATION)
         },
-        backToSettingsHome = {
-            state.settingsSubPage = SettingsSubPage.HOME
-            uiInvalidator.rebuildCurrentPage(PageRebuildReason.SETTINGS_NAVIGATION)
-        },
         toggleThemeMode = uiHost::toggleThemeMode,
         selectThemeAccent = uiHost::selectThemeAccent,
         toggleFloatingFromNav = floatingController::toggleFromNav,
@@ -60,6 +56,9 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             lyricsController.getCurrentMediaInfo()?.let { media ->
                 lyricsController.deleteLyricsForCurrentMedia(media, mode.toStorageDeleteMode())
             }
+        },
+        deleteSavedLyrics = { item, onCompleted ->
+            lyricsController.deleteSavedLyricsItem(item.toStorageItem(), onCompleted)
         },
         deleteAllSavedLyrics = lyricsController::deleteAllSavedLyrics,
         toggleLyricsAutoSearch = {

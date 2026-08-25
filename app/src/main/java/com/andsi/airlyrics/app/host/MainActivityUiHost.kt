@@ -51,6 +51,7 @@ import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.LanguageOptionUiItem
 import com.andsi.airlyrics.ui.model.LanguageSettingsUiState
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
+import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.LyricsSettingsUiState
 import com.andsi.airlyrics.ui.model.MainUiActions
@@ -58,6 +59,7 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.MediaPageState
 import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.model.RecentLyricsUiState
+import com.andsi.airlyrics.ui.model.SavedLyricsUiState
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
 import com.andsi.airlyrics.ui.pages.floating.previewTextSizeSp
@@ -269,7 +271,8 @@ internal class MainActivityUiHost(
     override fun notifyFloatingStyleChanged() = graph.floatingController.notifyStyleChanged()
 
     override fun settingsHomeHeader(): View = settingsHomeHeaderImpl()
-    override fun settingsBackHeader(title: String, subtitle: String): View = settingsBackHeaderImpl(title, subtitle)
+    override fun settingsBackHeader(title: String, subtitle: String, titleAction: View?): View =
+        settingsBackHeaderImpl(title, subtitle, titleAction)
     override fun themeToggleButton(): View = themeToggleButtonImpl()
     override fun settingsCategoryCard(
         title: String,
@@ -280,9 +283,9 @@ internal class MainActivityUiHost(
     ): View = settingsCategoryCardImpl(title, subtitle, status, iconRes, onClick)
     override fun localLyricsRow(
         item: LocalLyricsUiItem,
-        onLyricsSaved: (() -> Unit)?,
+        onLyricsChanged: ((LocalLyricsUiChange) -> Unit)?,
         badgeText: CharSequence?
-    ): View = localLyricsRowImpl(item, onLyricsSaved, badgeText)
+    ): View = localLyricsRowImpl(item, onLyricsChanged, badgeText)
     override fun changelogItem(title: String, body: String): View = changelogItemImpl(title, body)
     override fun permissionSummary(): String = permissionSummaryImpl()
     override fun getAppVersionName(): String = getAppVersionNameImpl()
@@ -331,6 +334,12 @@ internal class MainActivityUiHost(
             currentItem = currentLocalLyricsItem(media),
             recentLyrics = LyricsStorage.listRecentLyrics(this, limit).map { toUiItem(it) },
             media = media?.toUiInfo()
+        )
+    }
+
+    override fun savedLyricsState(): SavedLyricsUiState {
+        return SavedLyricsUiState(
+            lyrics = LyricsStorage.listAllLyrics(this).map { toUiItem(it) }
         )
     }
 
@@ -459,6 +468,9 @@ private fun MainActivityUiHost.currentLocalLyricsItem(media: com.andsi.airlyrics
         sizeBytes = LyricsStorage.localLyricsFileSize(this, info.plainFileName),
         title = info.title,
         artist = info.artist,
+        album = info.album,
+        durationMs = info.durationMs,
+        indexKey = info.indexKey,
         source = info.plainSource,
         provider = info.plainProvider,
         hasPlainLyrics = true,
@@ -473,10 +485,14 @@ private fun MainActivityUiHost.toUiItem(item: LyricsStorage.LocalLyricsItem): Lo
         sizeBytes = item.sizeBytes,
         title = item.title,
         artist = item.artist,
+        album = item.album,
+        durationMs = item.durationMs,
+        indexKey = item.indexKey,
         source = item.source,
         provider = item.provider,
         hasPlainLyrics = item.hasPlainLyrics,
         hasWordByWordLyrics = item.hasWordByWordLyrics,
+        canDelete = item.canDelete,
         displayTitle = item.displayTitle,
         subtitle = localizedLocalLyricsSubtitle(item),
         typeText = localizedLocalLyricsType(item),
@@ -491,6 +507,9 @@ internal fun LocalLyricsUiItem.toStorageItem(): LyricsStorage.LocalLyricsItem {
         sizeBytes = sizeBytes,
         title = title,
         artist = artist,
+        album = album,
+        durationMs = durationMs,
+        indexKey = indexKey,
         source = source.ifBlank { LyricsStorage.SOURCE_LEGACY },
         provider = provider,
         hasPlainLyrics = hasPlainLyrics,

@@ -20,6 +20,8 @@ import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
+import com.andsi.airlyrics.ui.navigation.parentPage
 import com.andsi.airlyrics.ui.pages.settings.createSettingsAppearanceHeader
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -33,8 +35,13 @@ internal fun MainUiHost.settingsHomeHeaderImpl(): View {
     return createSettingsAppearanceHeader(this)
 }
 
-internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String = ""): View {
+internal fun MainUiHost.settingsBackHeaderImpl(
+    title: String,
+    subtitle: String = "",
+    titleAction: View? = null
+): View {
     val activity = this
+    val parentPage = settingsSubPage.parentPage()
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg))
@@ -46,7 +53,7 @@ internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String =
             setPadding(0, 0, 0, dp(AirUiTokens.Space.Xxl))
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
             setOnClickListener {
-                uiActions.backToSettingsHome()
+                parentPage?.let(uiActions.openSettingsSubPage)
             }
             addView(airIconView(R.drawable.ic_air_arrow_back, colorAccent).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -55,7 +62,11 @@ internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String =
                 )
             })
             addView(TextView(activity).apply {
-                text = getString(R.string.ui_settings_back_label)
+                text = if (parentPage == SettingsSubPage.LYRICS) {
+                    getString(R.string.ui_lyrics)
+                } else {
+                    getString(R.string.ui_settings_back_label)
+                }
                 textSize = AirUiTokens.TextSize.Body
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -63,11 +74,23 @@ internal fun MainUiHost.settingsBackHeaderImpl(title: String, subtitle: String =
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             })
         })
-        addView(TextView(activity).apply {
-            text = title
-            textSize = AirUiTokens.TextSize.PageTitle
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
+        addView(LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(activity).apply {
+                text = title
+                textSize = AirUiTokens.TextSize.PageTitle
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorTextStrong)
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            })
+            titleAction?.let { action ->
+                addView(action)
+            }
         })
         if (subtitle.isNotBlank()) {
             addView(TextView(activity).apply {

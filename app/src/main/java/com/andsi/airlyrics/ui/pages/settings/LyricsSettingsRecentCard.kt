@@ -18,7 +18,9 @@ import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
+import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -52,10 +54,12 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
         listBody.removeAllViews()
 
         if (currentItem != null) {
-            listBody.addView(localLyricsRow(currentItem, onLyricsSaved = {
+            listBody.addView(localLyricsRow(currentItem, onLyricsChanged = { change ->
                 closeHeaderHint()
                 populateRecentLyrics(false, false)
-                playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
+                if (change == LocalLyricsUiChange.SAVED) {
+                    playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
+                }
             }, badgeText = getString(R.string.ui_now_playing)))
         } else {
             listBody.addView(LinearLayout(activity).apply {
@@ -94,19 +98,62 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
             })
         }
 
-        if (recentLyrics.isEmpty()) {
+        val otherRecentLyrics = recentLyrics.filterNot { item ->
+            if (currentItem == null) {
+                false
+            } else if (currentItem.indexKey.isNotBlank() && item.indexKey.isNotBlank()) {
+                currentItem.indexKey == item.indexKey
+            } else {
+                currentItem.name == item.name
+            }
+        }
+
+        if (currentItem == null && otherRecentLyrics.isEmpty()) {
             listBody.addView(normalText(activity, getString(R.string.ui_recent_lyrics_empty_hint)))
         } else {
-            val currentName = currentItem?.name?.substringAfterLast('/')
-            recentLyrics
-                .filterNot { item -> currentName != null && item.name.substringAfterLast('/') == currentName }
-                .forEach { item ->
-                    listBody.addView(localLyricsRow(item, onLyricsSaved = {
-                        closeHeaderHint()
-                        populateRecentLyrics(false, false)
+            otherRecentLyrics.forEach { item ->
+                listBody.addView(localLyricsRow(item, onLyricsChanged = { change ->
+                    closeHeaderHint()
+                    populateRecentLyrics(false, false)
+                    if (change == LocalLyricsUiChange.SAVED) {
                         playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
-                    }))
+                    }
+                }))
+            }
+        }
+
+        if (currentItem != null || recentLyrics.isNotEmpty()) {
+            listBody.addView(LinearLayout(activity).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
+                setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
+                isClickable = true
+                isFocusable = true
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+                setOnClickListener {
+                    closeHeaderHint()
+                    uiActions.openSettingsSubPage(SettingsSubPage.SAVED_LYRICS)
                 }
+
+                addView(TextView(activity).apply {
+                    text = getString(R.string.ui_view_all)
+                    textSize = AirUiTokens.TextSize.Body
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(colorAccent)
+                })
+                addView(airIconView(
+                    iconRes = R.drawable.ic_air_chevron_right,
+                    tint = colorAccent
+                ).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        dp(AirUiTokens.Layout.IconSize),
+                        dp(AirUiTokens.Layout.IconSize)
+                    ).apply {
+                        setMargins(dp(AirUiTokens.Space.Sm), 0, 0, 0)
+                    }
+                })
+            })
         }
 
         if (showRefreshFeedback) {

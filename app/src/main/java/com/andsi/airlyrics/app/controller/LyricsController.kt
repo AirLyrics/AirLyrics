@@ -276,6 +276,58 @@ internal class LyricsController(
         }
     }
 
+    fun deleteSavedLyricsItem(
+        item: LyricsStorage.LocalLyricsItem,
+        onCompleted: (Boolean) -> Unit
+    ) {
+        val currentMedia = getCurrentMediaInfo()
+        val currentTarget = currentMedia?.toSongIdentity()
+        taskRunner.runOnAppIo {
+            val currentLyricsInfo = currentMedia?.let { media ->
+                LyricsStorage.getLocalPlainLyricsInfo(
+                    context = context,
+                    title = media.title,
+                    artist = media.artist,
+                    duration = media.durationMs
+                )
+            }
+            val deletesCurrentItem = currentLyricsInfo?.let { info ->
+                if (item.indexKey.isNotBlank()) {
+                    item.indexKey == info.indexKey
+                } else {
+                    info.indexKey.isBlank() && item.name == info.plainFileName
+                }
+            } == true
+            val result = LyricsStorage.deleteLocalLyricsItem(context, item)
+
+            taskRunner.runOnMainThread {
+                when (result) {
+                    is LyricsStorage.DeleteLocalLyricsItemResult.Deleted -> {
+                        AirToast.showLong(context, R.string.ui_all_saved_lyrics_deleted)
+                        val deletedTarget = result.target
+                        val deletesCurrentWordByWordOnlyItem = currentLyricsInfo == null &&
+                            deletedTarget != null &&
+                            currentTarget?.isStrongSameSong(deletedTarget) == true
+                        if (currentTarget != null && (deletesCurrentItem || deletesCurrentWordByWordOnlyItem)) {
+                            lyricsChangedPublisher.publishDeleted(currentTarget)
+                        }
+                        onCompleted(true)
+                    }
+
+                    LyricsStorage.DeleteLocalLyricsItemResult.NotFound -> {
+                        AirToast.showShort(context, R.string.ui_lyrics_not_found)
+                        onCompleted(false)
+                    }
+
+                    LyricsStorage.DeleteLocalLyricsItemResult.Failed -> {
+                        AirToast.showLong(context, R.string.ui_delete_saved_lyrics_failed)
+                        onCompleted(false)
+                    }
+                }
+            }
+        }
+    }
+
     fun deleteAllSavedLyrics() {
         taskRunner.runOnAppIo {
             val result = LyricsStorage.deleteAllSavedLyrics(context)

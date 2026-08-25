@@ -1,0 +1,10 @@
+<!-- Material Symbols Rounded: FILL 0, wght 300, opsz 24. Licensed under Apache-2.0. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:fillColor="#FFFFFFFF"
+      android:pathData="M380,640Q271,640 195.5,563.5Q120,487 120,378Q120,269 196.5,192.5Q273,116 382,116Q491,116 567.5,192.5Q644,269 644,378Q644,421 630.5,461Q617,501 590,535L821,766Q830,775 830,787.5Q830,800 821,809Q812,818 799.5,818Q787,818 778,809L547,578Q513,605 473,622.5Q433,640 380,640ZM382,580Q466,580 525,521Q584,462 584,378Q584,294 525,235Q466,176 382,176Q298,176 239,235Q180,294 180,378Q180,462 239,521Q298,580 382,580Z"/>
+</vector>

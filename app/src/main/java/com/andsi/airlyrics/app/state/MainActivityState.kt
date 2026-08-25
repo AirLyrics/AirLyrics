@@ -11,6 +11,8 @@ internal class MainActivityState : MainFloatingState, MainUiState {
     override var clickThrough: Boolean = false
     override var currentPage: Page = Page.MEDIA
     override var settingsSubPage: SettingsSubPage = SettingsSubPage.HOME
+    override var savedLyricsSearchOpen: Boolean = false
+    override var savedLyricsSearchQuery: String = ""
     override var quickFloatingVisible: Boolean = false
     override var overlayPermissionGranted: Boolean = false
     override val pageScrollY: MutableMap<Page, Int> = mutableMapOf()

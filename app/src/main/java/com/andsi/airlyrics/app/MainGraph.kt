@@ -39,6 +39,7 @@ import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
+import com.andsi.airlyrics.ui.navigation.parentPage
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import java.util.concurrent.Executors
 
@@ -49,6 +50,8 @@ internal class MainGraph(
     private companion object {
         const val KEY_CURRENT_PAGE = "airlyrics.current_page"
         const val KEY_SETTINGS_SUB_PAGE = "airlyrics.settings_sub_page"
+        const val KEY_SAVED_LYRICS_SEARCH_OPEN = "airlyrics.saved_lyrics_search_open"
+        const val KEY_SAVED_LYRICS_SEARCH_QUERY = "airlyrics.saved_lyrics_search_query"
         const val KEY_PENDING_LYRICS_IMPORT = "airlyrics.pending_lyrics_import"
         const val KEY_PENDING_LYRICS_OVERWRITE = "airlyrics.pending_lyrics_overwrite"
     }
@@ -185,6 +188,8 @@ internal class MainGraph(
     fun onSaveInstanceState(outState: Bundle) {
         outState.putString(KEY_CURRENT_PAGE, state.currentPage.name)
         outState.putString(KEY_SETTINGS_SUB_PAGE, state.settingsSubPage.name)
+        outState.putBoolean(KEY_SAVED_LYRICS_SEARCH_OPEN, state.savedLyricsSearchOpen)
+        outState.putString(KEY_SAVED_LYRICS_SEARCH_QUERY, state.savedLyricsSearchQuery)
         outState.remove(KEY_PENDING_LYRICS_IMPORT)
         state.pendingLyricsImport?.let { request ->
             outState.putBundle(KEY_PENDING_LYRICS_IMPORT, request.toBundle())
@@ -244,6 +249,14 @@ internal class MainGraph(
         state.settingsSubPage = savedInstanceState.getString(KEY_SETTINGS_SUB_PAGE)
             ?.let { runCatching { SettingsSubPage.valueOf(it) }.getOrNull() }
             ?: state.settingsSubPage
+        state.savedLyricsSearchOpen = savedInstanceState.getBoolean(
+            KEY_SAVED_LYRICS_SEARCH_OPEN,
+            state.savedLyricsSearchOpen
+        )
+        state.savedLyricsSearchQuery = savedInstanceState.getString(
+            KEY_SAVED_LYRICS_SEARCH_QUERY,
+            state.savedLyricsSearchQuery
+        )
     }
 
     private fun restorePendingLyricsState(savedInstanceState: Bundle?) {
@@ -261,7 +274,7 @@ internal class MainGraph(
         }
 
         if (state.currentPage == Page.SETTINGS && state.settingsSubPage != SettingsSubPage.HOME) {
-            state.settingsSubPage = SettingsSubPage.HOME
+            state.settingsSubPage = state.settingsSubPage.parentPage() ?: SettingsSubPage.HOME
             uiInvalidator.rebuildCurrentPage(PageRebuildReason.BACK_NAVIGATION)
             return true
         }

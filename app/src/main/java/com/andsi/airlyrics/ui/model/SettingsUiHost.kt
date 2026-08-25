@@ -4,7 +4,11 @@ import android.view.View
 
 internal interface SettingsUiHost {
     fun settingsHomeHeader(): View
-    fun settingsBackHeader(title: String, subtitle: String = ""): View
+    fun settingsBackHeader(
+        title: String,
+        subtitle: String = "",
+        titleAction: View? = null
+    ): View
     fun themeToggleButton(): View
     fun settingsCategoryCard(
         title: String,
@@ -16,7 +20,7 @@ internal interface SettingsUiHost {
 
     fun localLyricsRow(
         item: LocalLyricsUiItem,
-        onLyricsSaved: (() -> Unit)? = null,
+        onLyricsChanged: ((LocalLyricsUiChange) -> Unit)? = null,
         badgeText: CharSequence? = null
     ): View
 
@@ -31,6 +35,7 @@ internal interface SettingsUiHost {
 
     fun currentLyricsState(): CurrentLyricsUiState
     fun recentLyricsState(limit: Int): RecentLyricsUiState
+    fun savedLyricsState(): SavedLyricsUiState
     fun lyricsSettingsState(): LyricsSettingsUiState
     fun languageSettingsState(): LanguageSettingsUiState
     fun setLanguageMode(mode: String)

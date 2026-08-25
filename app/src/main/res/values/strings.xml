@@ -54,7 +54,7 @@
     <string name="ui_behavior">Behavior</string>
     <string name="ui_blue">Blue</string>
     <string name="ui_buffering">Buffering</string>
-    <string name="ui_cache" translatable="false">Cache</string>
+    <string name="ui_cache">Cache</string>
     <string name="ui_cancel">Cancel</string>
     <string name="ui_cannot_read_word_by_word_lyrics_file">Cannot read word-by-word lyrics file.</string>
     <string name="ui_cannot_read_this_lyric_file">Cannot read lyrics file.</string>
@@ -75,6 +75,7 @@
     <string name="ui_collapse_preview">Collapse preview</string>
     <string name="ui_expand_preview">Expand preview</string>
     <string name="ui_close">Close</string>
+    <string name="ui_close_search">Close search</string>
     <string name="ui_connected">Connected</string>
     <string name="ui_connecting">Connecting</string>
     <string name="ui_content">Content</string>
@@ -95,6 +96,9 @@
     <string name="ui_delete_all_saved_lyrics_confirm">Delete all saved lyrics?</string>
     <string name="ui_delete_all_saved_lyrics_failed">Couldn’t delete some lyrics. Check folder access.</string>
     <string name="ui_delete_all_saved_lyrics_message">This can’t be undone.</string>
+    <string name="ui_delete_saved_lyrics_confirm">Delete “%1$s”?</string>
+    <string name="ui_delete_saved_lyrics_action">Delete saved lyrics for “%1$s”</string>
+    <string name="ui_delete_saved_lyrics_failed">Couldn’t delete lyrics; check folder access</string>
     <string name="ui_remove_word_by_word_lyrics_message">Also removes generated plain lyrics.</string>
     <string name="ui_display_control">Display control</string>
     <string name="ui_drag_lock_off">Drag lock: Off</string>
@@ -296,8 +300,12 @@ Word-by-word lyrics recommended format:
     <string name="ui_save_failed">Save failed</string>
     <string name="ui_save_folder">Save folder: </string>
     <string name="ui_saved">Saved</string>
+    <string name="ui_saved_lyrics">Saved lyrics</string>
+    <string name="ui_saved_lyrics_empty_hint">No saved lyrics yet</string>
+    <string name="ui_saved_lyrics_no_search_results">No matching lyrics</string>
     <string name="ui_scale_fade">Scale fade</string>
     <string name="ui_search">Search</string>
+    <string name="ui_search_saved_lyrics_hint">Search songs, artists, or sources</string>
     <string name="ui_search_online_again">Search online</string>
     <string name="ui_search_online_replace_cache_msg">Saves the result as plain lyrics, replacing any local copy.</string>
     <string name="ui_search_online_again_confirm">Search online?</string>
@@ -332,6 +340,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_text">Text</string>
     <string name="ui_text_alignment">Text alignment</string>
     <string name="ui_text_color">Text color</string>
+    <string name="ui_view_all">View all</string>
     <string name="ui_this_is_a_lyric_preview">これは歌詞プレビューの一行です</string>
     <string name="ui_this_is_a_lyric_preview_translation">This is a lyric preview</string>
     <string name="ui_word_by_word_overwrite_message">Replaces word-by-word lyrics and rebuilds plain lyrics.</string>

@@ -75,6 +75,7 @@
     <string name="ui_collapse_preview">收起预览</string>
     <string name="ui_expand_preview">展开预览</string>
     <string name="ui_close">关闭</string>
+    <string name="ui_close_search">关闭搜索</string>
     <string name="ui_connected">已连接</string>
     <string name="ui_connecting">连接中</string>
     <string name="ui_content">显示内容</string>
@@ -95,6 +96,9 @@
     <string name="ui_delete_all_saved_lyrics_confirm">删除所有保存的歌词？</string>
     <string name="ui_delete_all_saved_lyrics_failed">部分歌词删除失败，请检查目录权限</string>
     <string name="ui_delete_all_saved_lyrics_message">此操作无法撤销</string>
+    <string name="ui_delete_saved_lyrics_confirm">删除“%1$s”？</string>
+    <string name="ui_delete_saved_lyrics_action">删除“%1$s”的已保存歌词</string>
+    <string name="ui_delete_saved_lyrics_failed">无法删除歌词，请检查目录权限</string>
     <string name="ui_remove_word_by_word_lyrics_message">由此生成的普通歌词也会一并移除</string>
     <string name="ui_display_control">显示控制</string>
     <string name="ui_drag_lock_off">拖动锁定：已关闭</string>
@@ -296,8 +300,12 @@
     <string name="ui_save_failed">保存失败</string>
     <string name="ui_save_folder">保存目录：</string>
     <string name="ui_saved">已保存</string>
+    <string name="ui_saved_lyrics">已保存歌词</string>
+    <string name="ui_saved_lyrics_empty_hint">暂无已保存歌词</string>
+    <string name="ui_saved_lyrics_no_search_results">没有匹配的歌词</string>
     <string name="ui_scale_fade">轻微缩放</string>
     <string name="ui_search">搜索</string>
+    <string name="ui_search_saved_lyrics_hint">搜索歌曲、歌手或来源</string>
     <string name="ui_search_online_again">联网搜索</string>
     <string name="ui_search_online_replace_cache_msg">搜索结果将保存为普通歌词，并覆盖本地版本</string>
     <string name="ui_search_online_again_confirm">联网搜索歌词？</string>
@@ -332,6 +340,7 @@
     <string name="ui_text">文字</string>
     <string name="ui_text_alignment">文字对齐</string>
     <string name="ui_text_color">文字颜色</string>
+    <string name="ui_view_all">查看全部</string>
     <string name="ui_this_is_a_lyric_preview">これは歌詞プレビューの一行です</string>
     <string name="ui_this_is_a_lyric_preview_translation">这是一行歌词预览</string>
     <string name="ui_word_by_word_overwrite_message">将替换逐字歌词，并重新生成普通歌词。</string>

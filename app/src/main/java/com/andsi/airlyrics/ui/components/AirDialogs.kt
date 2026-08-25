@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -110,6 +111,7 @@ internal fun MainUiHost.showAirDialog(
     message: String? = null,
     positiveText: String? = DEFAULT_POSITIVE_TEXT,
     negativeText: String? = null,
+    headerAction: (LinearLayout.() -> Unit)? = null,
     body: (LinearLayout.() -> Unit)? = null,
     onNegative: () -> Unit = {},
     onPositive: () -> Unit = {}
@@ -127,11 +129,25 @@ internal fun MainUiHost.showAirDialog(
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
 
-        addView(TextView(this@showAirDialog).apply {
-            text = title
-            textSize = AirUiTokens.TextSize.DialogTitle
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
+        addView(LinearLayout(this@showAirDialog).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+
+            addView(TextView(this@showAirDialog).apply {
+                text = title
+                textSize = AirUiTokens.TextSize.DialogTitle
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorTextStrong)
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+                layoutParams = LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    1f
+                )
+            })
+
+            headerAction?.invoke(this)
         })
 
         if (!message.isNullOrBlank()) {

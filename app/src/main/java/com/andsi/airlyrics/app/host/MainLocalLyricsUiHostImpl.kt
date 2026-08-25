@@ -10,30 +10,34 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.AirToast
+import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
+import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.showAirDialog
-import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
+import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
+import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
+import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 private val localLyricsEditorLoadRunner = LatestUiTaskRunner()
 
 internal fun MainUiHost.localLyricsRowImpl(
     item: LocalLyricsUiItem,
-    onLyricsSaved: (() -> Unit)? = null,
+    onLyricsChanged: ((LocalLyricsUiChange) -> Unit)? = null,
     badgeText: CharSequence? = null
 ): View {
     val activity = this
@@ -85,36 +89,37 @@ internal fun MainUiHost.localLyricsRowImpl(
             setPadding(0, dp(AirUiTokens.Space.Xxs), 0, 0)
         })
         setOnClickListener {
-            activity.openLocalLyricsEditorForItem(item, onLyricsSaved)
+            activity.openLocalLyricsEditorForItem(item, onLyricsChanged)
         }
     }
 }
 
 private fun MainUiHost.openLocalLyricsEditorForItem(
     item: LocalLyricsUiItem,
-    onLyricsSaved: (() -> Unit)?
+    onLyricsChanged: ((LocalLyricsUiChange) -> Unit)?
 ) {
     when {
         item.hasWordByWordLyrics -> {
-            openLocalLyricsEditor(item.toStorageItem(), LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD, onLyricsSaved)
+            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD, onLyricsChanged)
         }
         else -> {
-            openLocalLyricsEditor(item.toStorageItem(), LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsSaved)
+            openLocalLyricsEditor(item, LyricsStorage.LocalLyricsEditTarget.PLAIN, onLyricsChanged)
         }
     }
 }
 
 private fun MainUiHost.openLocalLyricsEditor(
-    item: LyricsStorage.LocalLyricsItem,
+    item: LocalLyricsUiItem,
     target: LyricsStorage.LocalLyricsEditTarget,
-    onLyricsSaved: (() -> Unit)?
+    onLyricsChanged: ((LocalLyricsUiChange) -> Unit)?
 ) {
     val isWordByWord = target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
+    val storageItem = item.toStorageItem()
     AirToast.showShort(this, R.string.ui_loading)
 
     localLyricsEditorLoadRunner.submit(
         runtime = this,
-        load = { LyricsStorage.readLocalLyricsItemText(this, item, target) }
+        load = { LyricsStorage.readLocalLyricsItemText(this, storageItem, target) }
     ) { rawLyrics ->
         if (rawLyrics == null) {
             showAirDialog(
@@ -127,18 +132,19 @@ private fun MainUiHost.openLocalLyricsEditor(
                 positiveText = getString(R.string.ui_ok)
             )
         } else {
-            showLocalLyricsEditorDialog(item, target, rawLyrics, onLyricsSaved)
+            showLocalLyricsEditorDialog(item, target, rawLyrics, onLyricsChanged)
         }
     }
 }
 
 private fun MainUiHost.showLocalLyricsEditorDialog(
-    item: LyricsStorage.LocalLyricsItem,
+    item: LocalLyricsUiItem,
     target: LyricsStorage.LocalLyricsEditTarget,
     rawLyrics: String,
-    onLyricsSaved: (() -> Unit)?
+    onLyricsChanged: ((LocalLyricsUiChange) -> Unit)?
 ) {
     val isWordByWord = target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
+    val storageItem = item.toStorageItem()
     val editor = EditText(this).apply {
         setText(rawLyrics)
         textSize = AirUiTokens.TextSize.BodySmall
@@ -161,12 +167,67 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
     }
 
     var editDialog: android.app.Dialog? = null
-    var isSaving = false
-    lateinit var saveButton: TextView
-    fun setSavingState(saving: Boolean) {
-        isSaving = saving
-        saveButton.isEnabled = !saving
-        saveButton.alpha = if (saving) 0.55f else 1f
+    var isBusy = false
+    var checkButton: TextView? = null
+    var cancelButton: TextView? = null
+    var saveButton: TextView? = null
+    var deleteButton: View? = null
+    fun setBusyState(busy: Boolean) {
+        isBusy = busy
+        editor.isEnabled = !busy
+        listOf(checkButton, cancelButton, saveButton, deleteButton).forEach { action ->
+            action?.isEnabled = !busy
+            action?.alpha = if (busy) 0.55f else 1f
+        }
+        editDialog?.setCancelable(!busy)
+    }
+
+    val deleteHeaderAction: (LinearLayout.() -> Unit)? = if (item.canDelete) {
+        {
+            val createdDeleteButton = airIconView(
+                iconRes = R.drawable.ic_air_delete,
+                tint = colorDanger,
+                contentDescription = getString(
+                    R.string.ui_delete_saved_lyrics_action,
+                    item.displayTitle
+                )
+            ).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    dp(AirUiTokens.Layout.IconTouchSize),
+                    dp(AirUiTokens.Layout.IconTouchSize)
+                ).apply {
+                    setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
+                }
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(colorSurfaceLight)
+                }
+                isFocusable = true
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+                setOnClickListener {
+                    if (isBusy) return@setOnClickListener
+                    showAirConfirmDialog(
+                        title = getString(R.string.ui_delete_saved_lyrics_confirm, item.displayTitle),
+                        message = getString(R.string.ui_delete_all_saved_lyrics_message),
+                        positiveText = getString(R.string.ui_delete)
+                    ) {
+                        setBusyState(true)
+                        uiActions.deleteSavedLyrics(item) { deleted ->
+                            if (deleted) {
+                                editDialog?.dismiss()
+                                onLyricsChanged?.invoke(LocalLyricsUiChange.DELETED)
+                            } else {
+                                setBusyState(false)
+                            }
+                        }
+                    }
+                }
+            }
+            deleteButton = createdDeleteButton
+            addView(createdDeleteButton)
+        }
+    } else {
+        null
     }
 
     editDialog = showAirDialog(
@@ -180,14 +241,18 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
         } else null,
         positiveText = null,
         negativeText = null,
+        headerAction = deleteHeaderAction,
         body = {
             addView(editor)
             addView(LinearLayout(this@showLocalLyricsEditorDialog).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                orientation = LinearLayout.VERTICAL
                 setPadding(0, dp(AirUiTokens.Space.ButtonH), 0, 0)
 
-                addView(localLyricsDialogButton(getString(R.string.ui_check_format), primary = false) {
+                val createdCheckButton = localLyricsDialogButton(
+                    text = getString(R.string.ui_check_format),
+                    style = LocalLyricsDialogActionStyle.ACCENT_TEXT
+                ) {
+                    if (isBusy) return@localLyricsDialogButton
                     if (isWordByWord) {
                         val validation = LyricsStorage.validateWordByWordLyricsItemText(editor.text.toString())
                         if (validation.saved) {
@@ -213,51 +278,70 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                             showLyricsFormatErrorDialog(validation.invalidLineNumbers)
                         }
                     }
-                })
+                }
+                checkButton = createdCheckButton
+                addView(createdCheckButton)
 
-                addView(localLyricsDialogButton(getString(R.string.ui_close), primary = false) {
-                    editDialog?.dismiss()
-                })
+                addView(LinearLayout(this@showLocalLyricsEditorDialog).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.END or Gravity.CENTER_VERTICAL
+                    setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
 
-                saveButton = localLyricsDialogButton(getString(R.string.ui_save_changes), primary = true) {
-                    if (isSaving) return@localLyricsDialogButton
-                    val newText = editor.text.toString()
-                    setSavingState(true)
-                    AirToast.showShort(this@showLocalLyricsEditorDialog, R.string.ui_saving)
-                    runOnAppIo {
-                        val result = if (isWordByWord) {
-                            LyricsStorage.updateWordByWordLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
-                        } else {
-                            LyricsStorage.updatePlainLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, item, newText)
-                        }
-                        runOnMainThread {
-                            when {
-                                result.saved -> {
-                                    editDialog?.dismiss()
-                                    uiActions.reloadFloatingLyrics()
-                                    onLyricsSaved?.invoke()
-                                }
-                                result.invalidLineNumbers.isNotEmpty() -> {
-                                    setSavingState(false)
-                                    if (isWordByWord) showWordByWordLyricsFormatErrorDialog(result.invalidLineNumbers) else showLyricsFormatErrorDialog(result.invalidLineNumbers)
-                                }
-                                else -> {
-                                    setSavingState(false)
-                                    if (isWordByWord) {
-                                        showWordByWordLyricsFormatErrorDialog(emptyList())
-                                    } else {
-                                        showAirDialog(
-                                            title = getString(R.string.ui_save_failed),
-                                            message = getString(R.string.ui_plain_lrc_edit_format_hint),
-                                            positiveText = getString(R.string.ui_ok)
-                                        )
+                    val createdCancelButton = localLyricsDialogButton(
+                        text = getString(R.string.ui_cancel),
+                        style = LocalLyricsDialogActionStyle.TEXT
+                    ) {
+                        if (isBusy) return@localLyricsDialogButton
+                        editDialog?.dismiss()
+                    }
+                    cancelButton = createdCancelButton
+                    addView(createdCancelButton)
+
+                    val createdSaveButton = localLyricsDialogButton(
+                        text = getString(R.string.ui_save_changes),
+                        style = LocalLyricsDialogActionStyle.PRIMARY,
+                        marginStartDp = AirUiTokens.Space.Lg
+                    ) {
+                        if (isBusy) return@localLyricsDialogButton
+                        val newText = editor.text.toString()
+                        setBusyState(true)
+                        AirToast.showShort(this@showLocalLyricsEditorDialog, R.string.ui_saving)
+                        runOnAppIo {
+                            val result = if (isWordByWord) {
+                                LyricsStorage.updateWordByWordLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, storageItem, newText)
+                            } else {
+                                LyricsStorage.updatePlainLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, storageItem, newText)
+                            }
+                            runOnMainThread {
+                                when {
+                                    result.saved -> {
+                                        editDialog?.dismiss()
+                                        uiActions.reloadFloatingLyrics()
+                                        onLyricsChanged?.invoke(LocalLyricsUiChange.SAVED)
+                                    }
+                                    result.invalidLineNumbers.isNotEmpty() -> {
+                                        setBusyState(false)
+                                        if (isWordByWord) showWordByWordLyricsFormatErrorDialog(result.invalidLineNumbers) else showLyricsFormatErrorDialog(result.invalidLineNumbers)
+                                    }
+                                    else -> {
+                                        setBusyState(false)
+                                        if (isWordByWord) {
+                                            showWordByWordLyricsFormatErrorDialog(emptyList())
+                                        } else {
+                                            showAirDialog(
+                                                title = getString(R.string.ui_save_failed),
+                                                message = getString(R.string.ui_plain_lrc_edit_format_hint),
+                                                positiveText = getString(R.string.ui_ok)
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-                addView(saveButton)
+                    saveButton = createdSaveButton
+                    addView(createdSaveButton)
+                })
             })
         }
     )
@@ -279,32 +363,55 @@ private fun MainUiHost.showWordByWordLyricsFormatErrorDialog(invalidLineNumbers:
     )
 }
 
+private enum class LocalLyricsDialogActionStyle {
+    ACCENT_TEXT,
+    TEXT,
+    PRIMARY
+}
+
 private fun MainUiHost.localLyricsDialogButton(
     text: String,
-    primary: Boolean,
+    style: LocalLyricsDialogActionStyle,
+    marginStartDp: Int = 0,
     onClick: () -> Unit
 ): TextView {
     return TextView(this).apply {
         this.text = text
-        textSize = AirUiTokens.TextSize.Body
+        textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        setTextColor(if (primary) colorOnAccent else colorTextStrong)
-        setPadding(dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl))
+        setTextColor(
+            when (style) {
+                LocalLyricsDialogActionStyle.ACCENT_TEXT -> colorAccent
+                LocalLyricsDialogActionStyle.TEXT -> colorTextStrong
+                LocalLyricsDialogActionStyle.PRIMARY -> colorOnAccent
+            }
+        )
+        val horizontalPadding = when (style) {
+            LocalLyricsDialogActionStyle.ACCENT_TEXT -> AirUiTokens.Space.Sm
+            LocalLyricsDialogActionStyle.TEXT -> AirUiTokens.Space.Xl
+            LocalLyricsDialogActionStyle.PRIMARY -> AirUiTokens.Space.Xl + AirUiTokens.Space.Lg
+        }
+        setPadding(
+            dp(horizontalPadding),
+            dp(AirUiTokens.Space.Xxl),
+            dp(horizontalPadding),
+            dp(AirUiTokens.Space.Xxl)
+        )
+        minHeight = dp(AirUiTokens.Layout.IconTouchSize)
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         ).apply {
-            setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
+            setMargins(dp(marginStartDp), 0, 0, 0)
         }
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
-            if (primary) {
+        background = if (style == LocalLyricsDialogActionStyle.PRIMARY) {
+            GradientDrawable().apply {
+                cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
                 setColor(colorAccent)
-            } else {
-                setColor(colorSurfaceLight)
-                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
             }
+        } else {
+            null
         }
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener { onClick() }

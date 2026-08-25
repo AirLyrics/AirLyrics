@@ -31,6 +31,12 @@ internal abstract class MainUiHost(
     var settingsSubPage: SettingsSubPage
         get() = uiState.settingsSubPage
         set(value) { uiState.settingsSubPage = value }
+    var savedLyricsSearchOpen: Boolean
+        get() = uiState.savedLyricsSearchOpen
+        set(value) { uiState.savedLyricsSearchOpen = value }
+    var savedLyricsSearchQuery: String
+        get() = uiState.savedLyricsSearchQuery
+        set(value) { uiState.savedLyricsSearchQuery = value }
     var quickFloatingVisible: Boolean
         get() = uiState.quickFloatingVisible
         set(value) { uiState.quickFloatingVisible = value }
