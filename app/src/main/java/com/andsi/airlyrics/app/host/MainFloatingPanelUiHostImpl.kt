@@ -37,9 +37,14 @@ internal fun MainUiHost.settingGridImpl(vararg items: FloatingSettingTile): Line
         tileItems.chunked(AirUiTokens.Layout.OptionColumns).forEach { rowItems ->
             addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
+                // The row derives its height from the tallest tile, then remeasures these evenly.
                 rowItems.forEachIndexed { index, item ->
                     addView(floatingTile(item).apply {
-                        val params = LinearLayout.LayoutParams(0, dp(AirUiTokens.Layout.FloatingTileHeight), 1f)
+                        val params = LinearLayout.LayoutParams(
+                            0,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            1f
+                        )
                         params.setMargins(
                             if (index == 0) 0 else dp(AirUiTokens.Space.Lg),
                             0,
@@ -51,7 +56,11 @@ internal fun MainUiHost.settingGridImpl(vararg items: FloatingSettingTile): Line
                 }
                 if (rowItems.size == 1) {
                     addView(View(activity).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
+                        layoutParams = LinearLayout.LayoutParams(
+                            0,
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            1f
+                        ).apply {
                             setMargins(dp(AirUiTokens.Space.Lg), 0, 0, 0)
                         }
                     })
@@ -66,6 +75,7 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = dp(AirUiTokens.Layout.FloatingTileMinHeight)
         setPadding(dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         background = GradientDrawable().apply {
             cornerRadius = dp(AirUiTokens.Radius.Card).toFloat()

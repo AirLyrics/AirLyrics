@@ -97,7 +97,7 @@ object AirUiTokens {
         const val FloatingTileIconSize = 40
         const val FloatingResetActionWidth = 72
         const val ColorSwatchHeight = 42
-        const val FloatingTileHeight = 112
+        const val FloatingTileMinHeight = 112
         const val FloatingPanelWidthInset = 72
         const val FloatingPanelMaxWidth = 360
         const val BottomBarHeight = 86
