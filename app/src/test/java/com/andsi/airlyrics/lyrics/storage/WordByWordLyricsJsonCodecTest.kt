@@ -257,6 +257,32 @@ class WordByWordLyricsJsonCodecTest {
         assertEquals(originalWordByWordLines, parsedWordByWordLines)
     }
 
+    @Test
+    fun wordByWordJsonRoundTrip_preservesSpacesBetweenSegments() {
+        val originalWordByWordLines = listOf(
+            WordByWordLine(
+                startMs = 10_000L,
+                endMs = 11_000L,
+                text = "I love you",
+                segments = listOf(
+                    WordByWordSegment("I ", 10_000L, 10_300L),
+                    WordByWordSegment("love ", 10_300L, 10_600L),
+                    WordByWordSegment("you", 10_600L, 11_000L)
+                )
+            )
+        )
+
+        val parsedWordByWordLines = WordByWordLyricsJsonCodec.parseWordByWordLinesJson(
+            WordByWordLyricsJsonCodec.wordByWordLinesToJson(originalWordByWordLines)
+        )
+
+        assertEquals(originalWordByWordLines, parsedWordByWordLines)
+        assertEquals(
+            "[00:10.00]<00:10.00>I <00:10.30>love <00:10.60>you",
+            WordByWordLrcParser.wordByWordLinesToWordByWordLrc(parsedWordByWordLines)
+        )
+    }
+
     private fun assertSerializedLine(wordByWordLineJson: JSONObject) {
         assertEquals(4, wordByWordLineJson.length())
         assertEquals(5_000L, wordByWordLineJson.getLong("startMs"))

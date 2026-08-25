@@ -387,6 +387,53 @@ class LyricsStorageImportValidationTest {
     }
 
     @Test
+    fun editWordByWordLyrics_roundTripPreservesSpacesBetweenWords() {
+        val originalLyrics = "[00:10.00]<00:10.00>I <00:10.30>love <00:10.60>you"
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                name = "word-by-word-spaces.lrc",
+                text = originalLyrics
+            ),
+            title = "Karaoke Spaces",
+            artist = "AndSi",
+            duration = 11_000L
+        )
+        val item = LyricsStorage.listRecentLyrics(context, limit = 8)
+            .single { it.title == "Karaoke Spaces" }
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+        val editorText = requireNotNull(
+            LyricsStorage.readLocalLyricsItemText(
+                context = context,
+                item = item,
+                target = LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
+            )
+        )
+        assertEquals(originalLyrics, editorText)
+
+        val update = LyricsStorage.updateWordByWordLyricsItemTextWithResult(
+            context = context,
+            item = item,
+            wordByWordLrc = editorText
+        )
+
+        assertTrue(update.saved)
+        assertEquals(
+            originalLyrics,
+            LyricsStorage.readLocalLyricsItemText(
+                context = context,
+                item = item,
+                target = LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
+            )
+        )
+        assertEquals(
+            "[00:10.00]I love you",
+            LyricsStorage.readPlainLyrics(context, "Karaoke Spaces", "AndSi", 11_000L)
+        )
+    }
+
+    @Test
     fun importWordByWordLyrics_marksGeneratedPlainFallbackSource() {
         val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
             context = context,
