@@ -96,18 +96,13 @@ internal object LyricsFileStore {
         )
     }
 
-    fun readPlainLyricsFileByName(context: Context, plainFileName: String): String? {
-        val safeName = plainFileName.substringAfterLast('/')
+    fun readRootPlainLyricsFileByName(context: Context, plainFileName: String): String? {
+        if (!LyricsFileNaming.isSafePlainLyricsBaseName(plainFileName)) return null
         val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
 
         if (treeUri != null) {
             val root = DocumentFile.fromTreeUri(context, treeUri) ?: return null
-            root.findFile(safeName)?.let { file ->
-                return context.contentResolver.openInputStream(file.uri)
-                    ?.bufferedReader()
-                    ?.use { it.readText() }
-            }
-            LyricsStoragePaths.managedDocumentDir(context)?.findFile(safeName)?.let { file ->
+            root.findFile(plainFileName)?.let { file ->
                 return context.contentResolver.openInputStream(file.uri)
                     ?.bufferedReader()
                     ?.use { it.readText() }
@@ -115,52 +110,32 @@ internal object LyricsFileStore {
             return null
         }
 
-        val managedFile = File(LyricsStoragePaths.fallbackManagedLyricsDir(context), safeName)
-        if (managedFile.exists()) return managedFile.readText()
-
-        val legacyFile = File(LyricsStoragePaths.fallbackLyricsDir(context), safeName)
-        if (legacyFile.exists()) return legacyFile.readText()
+        val rootFile = File(LyricsStoragePaths.fallbackLyricsDir(context), plainFileName)
+        if (rootFile.isFile) return rootFile.readText()
 
         return null
     }
 
-    fun writePlainLyricsFileByName(context: Context, plainFileName: String, plainLrc: String): Boolean {
+    fun writeRootPlainLyricsFileByName(context: Context, plainFileName: String, plainLrc: String): Boolean {
         return runCatching {
-            val safeName = plainFileName.substringAfterLast('/')
+            if (!LyricsFileNaming.isSafePlainLyricsBaseName(plainFileName)) return false
             val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
 
             if (treeUri != null) {
                 val root = DocumentFile.fromTreeUri(context, treeUri) ?: return false
-                val rootFile = root.findFile(safeName)
-                if (rootFile != null) {
-                    context.contentResolver.openOutputStream(rootFile.uri, "wt")
-                        ?.bufferedWriter()
-                        ?.use { it.write(plainLrc) }
-                        ?: return false
-                    return true
-                }
-
-                val managedFile = LyricsStoragePaths.managedDocumentDir(context)?.findFile(safeName) ?: return false
-                context.contentResolver.openOutputStream(managedFile.uri, "wt")
+                val rootFile = root.findFile(plainFileName)?.takeIf { it.isFile } ?: return false
+                context.contentResolver.openOutputStream(rootFile.uri, "wt")
                     ?.bufferedWriter()
                     ?.use { it.write(plainLrc) }
                     ?: return false
                 return true
             }
 
-            val managedFile = File(LyricsStoragePaths.fallbackManagedLyricsDir(context), safeName)
-            if (managedFile.exists()) {
-                managedFile.writeText(plainLrc)
-                return true
-            }
-
-            val legacyFile = File(LyricsStoragePaths.fallbackLyricsDir(context), safeName)
-            if (legacyFile.exists()) {
-                legacyFile.writeText(plainLrc)
-                return true
-            }
-
-            false
+            val rootFile = File(LyricsStoragePaths.fallbackLyricsDir(context), plainFileName)
+                .takeIf { it.isFile }
+                ?: return false
+            rootFile.writeText(plainLrc)
+            true
         }.getOrDefault(false)
     }
 
@@ -266,6 +241,15 @@ internal object LyricsFileStore {
 
         val file = File(LyricsStoragePaths.fallbackLyricsDir(context), plainFileName)
         return file.exists() && file.delete()
+    }
+
+    fun legacyPlainLyricsExists(context: Context, plainFileName: String): Boolean {
+        val treeUri = LyricsStoragePaths.getLyricsDirUri(context)
+        return if (treeUri != null) {
+            DocumentFile.fromTreeUri(context, treeUri)?.findFile(plainFileName)?.isFile == true
+        } else {
+            File(LyricsStoragePaths.fallbackLyricsDir(context), plainFileName).isFile
+        }
     }
 
     fun deleteAllSavedLyricsFiles(

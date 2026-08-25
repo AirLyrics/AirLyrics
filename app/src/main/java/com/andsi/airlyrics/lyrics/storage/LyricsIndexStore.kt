@@ -144,12 +144,6 @@ internal object LyricsIndexStore {
             ?: entries.firstOrNull { it.isWeakSameSong(identity) }
     }
 
-    fun findByFileName(context: Context, fileName: String): LyricsIndexEntry? {
-        val safeName = fileName.substringAfterLast('/')
-        return read(context).firstOrNull {
-            it.plainFile.substringAfterLast('/') == safeName || it.wordByWordFile.substringAfterLast('/') == safeName
-        }
-    }
 }
 
 internal interface LyricsIndexIo {

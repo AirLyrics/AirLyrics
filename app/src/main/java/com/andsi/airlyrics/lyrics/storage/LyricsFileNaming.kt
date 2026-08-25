@@ -49,6 +49,13 @@ internal object LyricsFileNaming {
         return fileName?.endsWith(PLAIN_LYRICS_EXTENSION, ignoreCase = true) == true
     }
 
+    fun isSafePlainLyricsBaseName(fileName: String): Boolean {
+        return fileName.isNotBlank() &&
+            '/' !in fileName &&
+            '\\' !in fileName &&
+            isPlainLyricsFile(fileName)
+    }
+
     fun isWordByWordLyricsFile(fileName: String?): Boolean {
         return fileName?.endsWith(WORD_BY_WORD_LYRICS_EXTENSION, ignoreCase = true) == true
     }

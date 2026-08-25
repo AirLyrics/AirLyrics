@@ -21,7 +21,9 @@ internal object PlainLyricsStorageOps {
                 plainFileName = indexed.plainFile.substringAfterLast('/'),
                 plainSource = indexed.plainSource,
                 plainProvider = indexed.plainProvider,
-                updatedAt = indexed.updatedAt
+                updatedAt = indexed.updatedAt,
+                indexKey = indexed.key,
+                album = indexed.album
             )
         }
 

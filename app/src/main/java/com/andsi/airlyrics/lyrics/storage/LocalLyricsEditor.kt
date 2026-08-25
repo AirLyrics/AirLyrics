@@ -10,13 +10,15 @@ internal object LocalLyricsEditor {
         item: LyricsStorage.LocalLyricsItem,
         target: LyricsStorage.LocalLyricsEditTarget
     ): String? {
-        val entry = LyricsIndexStore.findByFileName(context, item.name)
+        val entry = findEntry(context, item)
         return when (target) {
             LyricsStorage.LocalLyricsEditTarget.PLAIN -> {
-                if (item.hasPlainLyrics && entry?.plainFile?.isNotBlank() == true) {
-                    LyricsFileStore.readManagedLyrics(context, entry.plainFile)?.let { return it }
+                if (!item.hasPlainLyrics) return null
+                if (item.indexKey.isNotBlank()) {
+                    val relativeFile = entry?.plainFile?.takeIf { it.isNotBlank() } ?: return null
+                    return LyricsFileStore.readManagedLyrics(context, relativeFile)
                 }
-                if (item.hasPlainLyrics) LyricsFileStore.readPlainLyricsFileByName(context, item.name) else null
+                LyricsFileStore.readRootPlainLyricsFileByName(context, item.name)
             }
             LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD -> {
                 val wordByWordText = entry?.wordByWordFile
@@ -52,12 +54,15 @@ internal object LocalLyricsEditor {
         if (normalizedPlainLrc.isBlank()) return LyricsStorage.LocalLyricsUpdateResult(saved = false)
 
         return LyricsStorage.withStorageLock {
-            val entry = LyricsIndexStore.findByFileName(context, item.name)
-            val plainFileName = entry?.plainFile?.substringAfterLast('/') ?: item.name
-            val saved = if (entry?.plainFile?.isNotBlank() == true) {
+            val entry = findEntry(context, item)
+            val saved = if (item.indexKey.isNotBlank()) {
+                val plainFileName = entry?.plainFile
+                    ?.takeIf { it.isNotBlank() }
+                    ?.substringAfterLast('/')
+                    ?: return@withStorageLock LyricsStorage.LocalLyricsUpdateResult(saved = false)
                 LyricsFileStore.writeManagedLyrics(context, plainFileName, normalizedPlainLrc)
             } else {
-                LyricsFileStore.writePlainLyricsFileByName(context, item.name, normalizedPlainLrc)
+                LyricsFileStore.writeRootPlainLyricsFileByName(context, item.name, normalizedPlainLrc)
             }
             if (!saved) return@withStorageLock LyricsStorage.LocalLyricsUpdateResult(saved = false)
 
@@ -107,7 +112,7 @@ internal object LocalLyricsEditor {
         )
 
         return LyricsStorage.withStorageLock {
-            val entry = LyricsIndexStore.findByFileName(context, item.name)
+            val entry = findEntry(context, item)
                 ?: return@withStorageLock LyricsStorage.LocalLyricsUpdateResult(saved = false)
             val wordByWordFileName = entry.wordByWordFile.substringAfterLast('/').takeIf { it.isNotBlank() }
                 ?: return@withStorageLock LyricsStorage.LocalLyricsUpdateResult(saved = false)
@@ -161,5 +166,15 @@ internal object LocalLyricsEditor {
                 LyricsStorage.LocalLyricsUpdateResult(saved = false)
             }
         }
+    }
+
+    private fun findEntry(
+        context: Context,
+        item: LyricsStorage.LocalLyricsItem
+    ): LyricsIndexEntry? {
+        if (item.indexKey.isNotBlank()) {
+            return LyricsIndexStore.read(context).singleOrNull { it.key == item.indexKey }
+        }
+        return null
     }
 }

@@ -2,6 +2,7 @@ package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
 import android.net.Uri
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.WordByWordLine
 
 /**
@@ -24,6 +25,12 @@ object LyricsStorage {
     enum class DeleteMode { PLAIN, WORD_BY_WORD, ALL }
 
     enum class DeleteAllSavedLyricsResult { DELETED, NOTHING_TO_DELETE, FAILED }
+
+    sealed class DeleteLocalLyricsItemResult {
+        data class Deleted(val target: SongIdentity?) : DeleteLocalLyricsItemResult()
+        object NotFound : DeleteLocalLyricsItemResult()
+        object Failed : DeleteLocalLyricsItemResult()
+    }
 
     enum class LocalLyricsEditTarget { PLAIN, WORD_BY_WORD }
 
@@ -67,6 +74,9 @@ object LyricsStorage {
         val sizeBytes: Long,
         val title: String = "",
         val artist: String = "",
+        val album: String = "",
+        val durationMs: Long = 0L,
+        val indexKey: String = "",
         val source: String = SOURCE_LEGACY,
         val provider: String = "local",
         val hasPlainLyrics: Boolean = true,
@@ -74,6 +84,9 @@ object LyricsStorage {
     ) {
         val displayTitle: String
             get() = title.ifBlank { LyricsFileNaming.friendlyDisplayName(name) }
+
+        val canDelete: Boolean
+            get() = indexKey.isNotBlank() || LyricsFileNaming.isSafePlainLyricsBaseName(name)
     }
 
     data class LocalPlainLyricsInfo(
@@ -83,7 +96,9 @@ object LyricsStorage {
         val plainFileName: String,
         val plainSource: String,
         val plainProvider: String,
-        val updatedAt: Long
+        val updatedAt: Long,
+        val indexKey: String = "",
+        val album: String = ""
     ) {
         val friendlyTitle: String
             get() = if (title.isNotBlank()) {
@@ -100,6 +115,10 @@ object LyricsStorage {
 
     fun listRecentLyrics(context: Context, limit: Int = 8): List<LocalLyricsItem> = withStorageLock {
         LocalLyricsLister.listRecent(context, limit)
+    }
+
+    fun listAllLyrics(context: Context): List<LocalLyricsItem> = withStorageLock {
+        LocalLyricsLister.listAll(context)
     }
 
     internal fun localLyricsFileSize(context: Context, relativeFile: String): Long = withStorageLock {
@@ -305,6 +324,13 @@ object LyricsStorage {
         mode: DeleteMode = DeleteMode.ALL
     ): Boolean = withStorageLock {
         LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode)
+    }
+
+    fun deleteLocalLyricsItem(
+        context: Context,
+        item: LocalLyricsItem
+    ): DeleteLocalLyricsItemResult = withStorageLock {
+        LocalLyricsDeleteOps.deleteLocalLyricsItem(context, item)
     }
 
     fun deleteAllSavedLyrics(context: Context): DeleteAllSavedLyricsResult = withStorageLock {
