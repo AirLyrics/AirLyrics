@@ -2,7 +2,9 @@ package com.andsi.airlyrics.app.controller
 
 import android.app.Dialog
 import android.content.Context
+import android.media.MediaMetadata
 import android.media.session.MediaController
+import android.media.session.MediaSession
 import android.net.Uri
 import android.util.Log
 import android.view.View
@@ -24,6 +26,7 @@ import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
@@ -40,6 +43,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowLog
 import org.robolectric.shadows.ShadowToast
@@ -62,6 +66,7 @@ class LyricsControllerUiOutcomeTest {
     @After
     fun tearDown() {
         dialogHost.dismissAll()
+        MediaSourceStore.saveSelectedPackage(activity, null)
         AppSettingsStore.setToasterMuted(activity, false)
         ShadowToast.reset()
         ShadowLog.clear()
@@ -383,13 +388,130 @@ class LyricsControllerUiOutcomeTest {
         assertTrue(reloader.commands.isEmpty())
     }
 
+    @Test
+    fun deleteSavedLyricsItem_deletesExactItemAndCompletesWithoutGlobalChange() {
+        val song = target("Delete saved item")
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = activity,
+                title = song.title,
+                artist = song.artist,
+                album = song.album,
+                duration = song.durationMs,
+                plainLrc = "[00:01.00]delete me"
+            )
+        )
+        val item = LyricsStorage.listAllLyrics(activity).single()
+        val runner = ControlledTaskRunner()
+        val invalidator = RecordingInvalidator()
+        val reloader = RecordingReloader()
+        val publisher = RecordingLyricsChangedPublisher()
+        val completions = mutableListOf<Boolean>()
+        val controller = controller(runner, invalidator, reloader, publisher = publisher)
+
+        controller.deleteSavedLyricsItem(item, completions::add)
+        runner.drain()
+
+        assertEquals(listOf(true), completions)
+        assertTrue(LyricsStorage.listAllLyrics(activity).isEmpty())
+        assertTrue(publisher.changes.isEmpty())
+        assertTrue(invalidator.rebuildCalls.isEmpty())
+        assertTrue(reloader.commands.isEmpty())
+    }
+
+    @Suppress("UsePropertyAccessSyntax")
+    @Test
+    fun deleteSavedLyricsItem_publishesTargetedDeletionOnlyForCurrentItem() {
+        val song = target("Delete current saved item")
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = activity,
+                title = song.title,
+                artist = song.artist,
+                album = song.album,
+                duration = song.durationMs,
+                plainLrc = "[00:01.00]delete current"
+            )
+        )
+        val item = LyricsStorage.listAllLyrics(activity).single()
+        val session = MediaSession(activity, "delete-saved-lyrics-current")
+        val mediaController = MediaController(activity, session.sessionToken)
+        shadowOf(mediaController).apply {
+            setPackageName(CURRENT_MEDIA_PACKAGE)
+            setMetadata(
+                MediaMetadata.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, song.title)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, song.artist)
+                    .putString(MediaMetadata.METADATA_KEY_ALBUM, song.album)
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, song.durationMs)
+                    .build()
+            )
+        }
+        MediaSourceStore.saveSelectedPackage(activity, CURRENT_MEDIA_PACKAGE)
+        val runner = ControlledTaskRunner()
+        val publisher = RecordingLyricsChangedPublisher()
+        val completions = mutableListOf<Boolean>()
+        val controller = controller(
+            runner = runner,
+            invalidator = RecordingInvalidator(),
+            reloader = RecordingReloader(),
+            publisher = publisher,
+            mediaControllerProvider = FixedMediaControllerProvider(listOf(mediaController))
+        )
+
+        try {
+            controller.deleteSavedLyricsItem(item, completions::add)
+            runner.drain()
+
+            assertEquals(listOf(true), completions)
+            assertEquals(listOf(LyricsChange.deleted(song)), publisher.changes)
+        } finally {
+            MediaSourceStore.saveSelectedPackage(activity, null)
+            session.release()
+        }
+    }
+
+    @Test
+    fun deleteSavedLyricsItem_staleKeyFailsWithoutFilenameFallback() {
+        val song = target("Stale saved item")
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = activity,
+                title = song.title,
+                artist = song.artist,
+                album = song.album,
+                duration = song.durationMs,
+                plainLrc = "[00:01.00]keep me"
+            )
+        )
+        val staleItem = LyricsStorage.listAllLyrics(activity).single().copy(indexKey = "missing-key")
+        val runner = ControlledTaskRunner()
+        val publisher = RecordingLyricsChangedPublisher()
+        val completions = mutableListOf<Boolean>()
+        val controller = controller(
+            runner = runner,
+            invalidator = RecordingInvalidator(),
+            reloader = RecordingReloader(),
+            publisher = publisher
+        )
+
+        controller.deleteSavedLyricsItem(staleItem, completions::add)
+        runner.drain()
+
+        assertEquals(listOf(false), completions)
+        assertEquals(1, LyricsStorage.listAllLyrics(activity).size)
+        assertTrue(publisher.changes.isEmpty())
+        assertTrue(ShadowToast.showedToast(activity.getString(R.string.ui_lyrics_not_found)))
+    }
+
     private fun controller(
         runner: ControlledTaskRunner,
         invalidator: RecordingInvalidator,
         reloader: RecordingReloader,
         gateway: LyricsImportGateway? = null,
         publisher: LyricsChangedPublisher = RecordingLyricsChangedPublisher(),
-        onlineGateway: OnlineLyricsLookupGateway = RecordingOnlineLyricsLookupGateway(Result.success(null))
+        onlineGateway: OnlineLyricsLookupGateway = RecordingOnlineLyricsLookupGateway(Result.success(null)),
+        mediaControllerProvider: MediaControllerProvider = EmptyMediaControllerProvider()
     ): LyricsController {
         val common = LyricsControllerDependencies(
             runner = runner,
@@ -401,7 +523,7 @@ class LyricsControllerUiOutcomeTest {
                 context = activity,
                 taskRunner = common.runner,
                 dialogHost = dialogHost,
-                mediaControllerProvider = EmptyMediaControllerProvider(),
+                mediaControllerProvider = mediaControllerProvider,
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsChangedPublisher = publisher,
                 onlineLyricsLookupGateway = onlineGateway
@@ -411,7 +533,7 @@ class LyricsControllerUiOutcomeTest {
                 context = activity,
                 taskRunner = common.runner,
                 dialogHost = dialogHost,
-                mediaControllerProvider = EmptyMediaControllerProvider(),
+                mediaControllerProvider = mediaControllerProvider,
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsImportGateway = gateway,
                 lyricsChangedPublisher = publisher,
@@ -679,5 +801,15 @@ class LyricsControllerUiOutcomeTest {
 
     private class EmptyMediaControllerProvider : MediaControllerProvider {
         override fun getActiveControllers(): List<MediaController> = emptyList()
+    }
+
+    private class FixedMediaControllerProvider(
+        private val controllers: List<MediaController>
+    ) : MediaControllerProvider {
+        override fun getActiveControllers(): List<MediaController> = controllers
+    }
+
+    private companion object {
+        const val CURRENT_MEDIA_PACKAGE = "com.example.current"
     }
 }
