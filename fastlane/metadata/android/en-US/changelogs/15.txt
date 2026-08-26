@@ -1,0 +1,5 @@
+v1.2.4
+• Browse, search, edit, and delete saved lyrics.
+• Adjust lyrics timing by up to five minutes.
+• Preserve spaces when editing word-by-word lyrics.
+• Prevent text clipping in floating lyrics settings at larger font sizes.

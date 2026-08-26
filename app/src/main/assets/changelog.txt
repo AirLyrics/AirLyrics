@@ -1,3 +1,16 @@
+v1.2.4 - 2026-08-26
+
+Added
+- Browse, search, edit, and delete saved lyrics.
+
+Improved
+- Lyrics timing offsets now support up to five minutes.
+
+Fixed
+- Spaces are preserved when editing word-by-word lyrics.
+- Text in floating lyrics settings no longer clips at larger font sizes.
+
+
 v1.2.3 - 2026-08-21
 
 Improved

@@ -1,8 +1,11 @@
-v1.2.3 - 2026-08-21
+v1.2.4 - 2026-08-26
+
+Added
+- Browse, search, edit, and delete saved lyrics.
 
 Improved
-- Clearer wording throughout the app.
+- Lyrics timing offsets now support up to five minutes.
 
 Fixed
-- Empty timestamped lines in LRC files are now preserved.
-- Floating lyrics now stop when the selected player closes or becomes unavailable.
+- Spaces are preserved when editing word-by-word lyrics.
+- Text in floating lyrics settings no longer clips at larger font sizes.
