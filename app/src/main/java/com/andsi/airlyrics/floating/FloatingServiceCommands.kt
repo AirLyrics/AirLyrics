@@ -110,7 +110,7 @@ internal fun FloatingLyricsService.toggleVisibleFromNotification() {
     if (nextVisible) {
         if (!showLyrics()) {
             refreshQuickControls(getString(R.string.ui_overlay_permission_required))
-            showQuickFeedback(getString(R.string.ui_enable_overlay_permission_first))
+            showQuickFeedback(R.string.ui_enable_overlay_permission_first)
         }
     } else {
         hideLyrics()

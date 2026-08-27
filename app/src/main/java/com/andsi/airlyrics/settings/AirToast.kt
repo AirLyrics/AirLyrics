@@ -7,24 +7,21 @@ import com.andsi.airlyrics.settings.store.AppSettingsStore
 
 /** App-level Toast wrapper that respects the user's hide-toast preference. */
 object AirToast {
-    fun showShort(context: Context, message: CharSequence) {
-        show(context, message, Toast.LENGTH_SHORT)
-    }
-
     fun showShort(context: Context, @StringRes messageRes: Int) {
-        showShort(context, context.getText(messageRes))
+        show(context, messageRes, Toast.LENGTH_SHORT)
     }
 
     fun showLong(context: Context, message: CharSequence) {
-        show(context, message, Toast.LENGTH_LONG)
+        if (AppSettingsStore.isToasterMuted(context)) return
+        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
     }
 
     fun showLong(context: Context, @StringRes messageRes: Int) {
-        showLong(context, context.getText(messageRes))
+        show(context, messageRes, Toast.LENGTH_LONG)
     }
 
-    private fun show(context: Context, message: CharSequence, duration: Int) {
+    private fun show(context: Context, @StringRes messageRes: Int, duration: Int) {
         if (AppSettingsStore.isToasterMuted(context)) return
-        Toast.makeText(context, message, duration).show()
+        Toast.makeText(context, messageRes, duration).show()
     }
 }

@@ -107,17 +107,21 @@ internal class LyricsController(
         onNegative: () -> Unit
     ) {
         val importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
-        val overwriteMessage = request.target.displayText + "\n\n" + if (importAsWordByWord) {
-            context.getString(R.string.ui_word_by_word_overwrite_message)
-        } else {
-            context.getString(R.string.ui_overwrite_plain_lyrics_msg)
-        }
-        dialogHost.showConfirmDialog(
-            title = if (importAsWordByWord) {
-                context.getString(R.string.ui_overwrite_local_word_by_word_lyrics)
+        val overwriteMessage = request.target.displayText + "\n\n" + context.getString(
+            if (importAsWordByWord) {
+                R.string.ui_word_by_word_overwrite_message
             } else {
-                context.getString(R.string.ui_overwrite_plain_lyrics)
-            },
+                R.string.ui_overwrite_plain_lyrics_msg
+            }
+        )
+        dialogHost.showConfirmDialog(
+            title = context.getString(
+                if (importAsWordByWord) {
+                    R.string.ui_overwrite_local_word_by_word_lyrics
+                } else {
+                    R.string.ui_overwrite_plain_lyrics
+                }
+            ),
             message = overwriteMessage,
             positiveText = context.getString(R.string.ui_overwrite),
             onPositive = onPositive,
@@ -185,12 +189,12 @@ internal class LyricsController(
     ) {
         when (result) {
             LyricsStorage.ImportLyricsResult.Saved -> {
-                val message = if (importAsWordByWord) {
-                    context.getString(R.string.ui_word_by_word_lyrics_import_success)
+                val messageRes = if (importAsWordByWord) {
+                    R.string.ui_word_by_word_lyrics_import_success
                 } else {
-                    context.getString(R.string.ui_plain_lrc_import_success)
+                    R.string.ui_plain_lrc_import_success
                 }
-                AirToast.showLong(context, message)
+                AirToast.showLong(context, messageRes)
             }
             LyricsStorage.ImportLyricsResult.TooLarge -> {
                 AirToast.showLong(context, R.string.ui_lrc_file_too_large)
@@ -205,12 +209,12 @@ internal class LyricsController(
                 AirToast.showLong(context, R.string.ui_plain_lrc_blocked_by_word_by_word)
             }
             LyricsStorage.ImportLyricsResult.ReadFailed -> {
-                val message = if (importAsWordByWord) {
-                    context.getString(R.string.ui_cannot_read_word_by_word_lyrics_file)
+                val messageRes = if (importAsWordByWord) {
+                    R.string.ui_cannot_read_word_by_word_lyrics_file
                 } else {
-                    context.getString(R.string.ui_cannot_read_this_lyric_file)
+                    R.string.ui_cannot_read_this_lyric_file
                 }
-                AirToast.showLong(context, message)
+                AirToast.showLong(context, messageRes)
             }
             LyricsStorage.ImportLyricsResult.SaveFailed -> {
                 AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
@@ -257,20 +261,20 @@ internal class LyricsController(
 
             taskRunner.runOnMainThread {
                 if (deleted) {
-                    val message = when (mode) {
-                        LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_plain_lrc_removed_for_this_song)
-                        LyricsStorage.DeleteMode.WORD_BY_WORD -> context.getString(R.string.ui_word_by_word_lyrics_removed)
-                        LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_all_local_lyrics_removed)
+                    val messageRes = when (mode) {
+                        LyricsStorage.DeleteMode.PLAIN -> R.string.ui_plain_lrc_removed_for_this_song
+                        LyricsStorage.DeleteMode.WORD_BY_WORD -> R.string.ui_word_by_word_lyrics_removed
+                        LyricsStorage.DeleteMode.ALL -> R.string.ui_all_local_lyrics_removed
                     }
-                    AirToast.showLong(context, message)
+                    AirToast.showLong(context, messageRes)
                     lyricsChangedPublisher.publishDeleted(media.toSongIdentity())
                 } else {
-                    val message = when (mode) {
-                        LyricsStorage.DeleteMode.PLAIN -> context.getString(R.string.ui_no_plain_lrc_to_remove_for_this_song)
-                        LyricsStorage.DeleteMode.WORD_BY_WORD -> context.getString(R.string.ui_no_word_by_word_lyrics_to_remove)
-                        LyricsStorage.DeleteMode.ALL -> context.getString(R.string.ui_no_local_lyrics_to_remove)
+                    val messageRes = when (mode) {
+                        LyricsStorage.DeleteMode.PLAIN -> R.string.ui_no_plain_lrc_to_remove_for_this_song
+                        LyricsStorage.DeleteMode.WORD_BY_WORD -> R.string.ui_no_word_by_word_lyrics_to_remove
+                        LyricsStorage.DeleteMode.ALL -> R.string.ui_no_local_lyrics_to_remove
                     }
-                    AirToast.showShort(context, message)
+                    AirToast.showShort(context, messageRes)
                 }
             }
         }

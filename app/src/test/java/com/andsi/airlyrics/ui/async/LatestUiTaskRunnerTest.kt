@@ -58,7 +58,7 @@ class LatestUiTaskRunnerTest {
             mainTasks.addLast(block)
         }
 
-        override fun showShortToast(message: CharSequence) = Unit
+        override fun showShortToast(messageRes: Int) = Unit
 
         fun runNextIo() {
             ioTasks.removeFirst().invoke()

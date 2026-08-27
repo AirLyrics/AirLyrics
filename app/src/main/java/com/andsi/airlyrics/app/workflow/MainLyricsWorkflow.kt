@@ -83,12 +83,12 @@ internal class MainLyricsWorkflow(
         val importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
 
         if (!LyricsImportValidator.isLikelyLyricsDocument(activity, uri)) {
-            val message = if (importAsWordByWord) {
-                activity.getString(R.string.ui_please_choose_a_word_by_word_lrc_file)
+            val messageRes = if (importAsWordByWord) {
+                R.string.ui_please_choose_a_word_by_word_lrc_file
             } else {
-                activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
+                R.string.ui_please_choose_a_plain_lrc_lyrics_file
             }
-            AirToast.showLong(activity, message)
+            AirToast.showLong(activity, messageRes)
             return
         }
 
@@ -211,22 +211,26 @@ internal class MainLyricsWorkflow(
 
                     addView(importLyricsChoiceRow(
                         title = activity.getString(R.string.ui_plain_lyrics_lrc),
-                        subtitle = if (plainImportEnabled) {
-                            activity.getString(R.string.ui_please_choose_a_plain_lrc_lyrics_file)
-                        } else {
-                            activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word)
-                        },
+                        subtitle = activity.getString(
+                            if (plainImportEnabled) {
+                                R.string.ui_please_choose_a_plain_lrc_lyrics_file
+                            } else {
+                                R.string.ui_plain_lrc_blocked_by_word_by_word
+                            }
+                        ),
                         primary = true,
                         rowEnabled = plainImportEnabled
                     ) { launchImport(false) })
 
                     addView(importLyricsChoiceRow(
                         title = activity.getString(R.string.ui_word_by_word_lyrics_lrc_file),
-                        subtitle = if (wordByWordImportEnabled) {
-                            activity.getString(R.string.ui_please_choose_a_word_by_word_lrc_file)
-                        } else {
-                            activity.getString(R.string.ui_word_by_word_blocked_by_plain_lrc)
-                        },
+                        subtitle = activity.getString(
+                            if (wordByWordImportEnabled) {
+                                R.string.ui_please_choose_a_word_by_word_lrc_file
+                            } else {
+                                R.string.ui_word_by_word_blocked_by_plain_lrc
+                            }
+                        ),
                         primary = false,
                         rowEnabled = wordByWordImportEnabled
                     ) { launchImport(true) })

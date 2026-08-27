@@ -122,7 +122,7 @@ internal class FloatingPageScope(
     }
 
     internal fun onOff(value: Boolean): String {
-        return if (value) host.getString(R.string.ui_on) else host.getString(R.string.ui_off)
+        return host.getString(if (value) R.string.ui_on else R.string.ui_off)
     }
 
     internal fun updateActivePanelResetState() {
@@ -191,11 +191,9 @@ internal class FloatingPageScope(
     internal fun wordByWordLyricsEnabled() = host.wordByWordLyricsEnabled()
 
     internal fun wordByWordLyricsSubtitle(): String {
-        return if (wordByWordLyricsEnabled()) {
-            host.getString(R.string.ui_local_word_by_word_lyrics)
-        } else {
-            host.getString(R.string.ui_off)
-        }
+        return host.getString(
+            if (wordByWordLyricsEnabled()) R.string.ui_local_word_by_word_lyrics else R.string.ui_off
+        )
     }
 
     internal fun previewLyricsText(previewStyle: FloatingLyricsStyle): CharSequence {
@@ -290,7 +288,7 @@ internal class FloatingPageScope(
         val latestStyle = style()
         updateFloatingTileSubtitle(host.getString(R.string.ui_skin_preset), localizedPresetTitle(latestStyle.presetName))
         updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), AirColorUtils.colorSummary(latestStyle.textColor))
-        updateFloatingTileSubtitle(host.getString(R.string.ui_background_bubble), if (latestStyle.backgroundEnabled) host.getString(R.string.ui_on) else host.getString(R.string.ui_off))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_background_bubble), host.getString(if (latestStyle.backgroundEnabled) R.string.ui_on else R.string.ui_off))
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()} sp")
         updateFloatingTileSubtitle(host.getString(R.string.ui_font), fontFamilySubtitle(latestStyle.fontFamily))
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_weight), fontWeightSubtitle(latestStyle.fontWeight))
@@ -335,8 +333,8 @@ internal class FloatingPageScope(
     internal fun applyLyricsOffsetDelta(deltaMs: Long, statusView: TextView?) {
         val offset = host.uiActions.adjustLyricsOffsetForCurrentMedia(deltaMs)
         if (offset == null) {
-            host.showShortToast(host.getString(R.string.ui_please_play_and_select_a_song_first))
-            statusView?.text = host.getString(R.string.ui_waiting_for_current_song)
+            host.showShortToast(R.string.ui_please_play_and_select_a_song_first)
+            statusView?.setText(R.string.ui_waiting_for_current_song)
             return
         }
         statusView?.text = host.localizedOffsetDescription(offset)
@@ -345,8 +343,8 @@ internal class FloatingPageScope(
 
     internal fun resetLyricsOffset(statusView: TextView?) {
         if (!host.uiActions.resetLyricsOffsetForCurrentMedia()) {
-            host.showShortToast(host.getString(R.string.ui_please_play_and_select_a_song_first))
-            statusView?.text = host.getString(R.string.ui_waiting_for_current_song)
+            host.showShortToast(R.string.ui_please_play_and_select_a_song_first)
+            statusView?.setText(R.string.ui_waiting_for_current_song)
             return
         }
         statusView?.text = host.localizedOffsetDescription(0L)

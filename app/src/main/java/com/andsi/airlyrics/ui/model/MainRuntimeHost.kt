@@ -1,7 +1,9 @@
 package com.andsi.airlyrics.ui.model
 
+import androidx.annotation.StringRes
+
 internal interface MainRuntimeHost {
     fun runOnAppIo(block: () -> Unit)
     fun runOnMainThread(block: () -> Unit)
-    fun showShortToast(message: CharSequence)
+    fun showShortToast(@StringRes messageRes: Int)
 }

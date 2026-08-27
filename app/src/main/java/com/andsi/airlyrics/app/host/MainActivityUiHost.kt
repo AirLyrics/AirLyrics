@@ -134,7 +134,7 @@ internal class MainActivityUiHost(
     override fun getPlaybackStateText(state: Int?): String = graph.mediaSourceController.getPlaybackStateText(state)
     override fun runOnAppIo(block: () -> Unit) = graph.runOnAppIo(block)
     override fun runOnMainThread(block: () -> Unit) = graph.runOnMainThread(block)
-    override fun showShortToast(message: CharSequence) = AirToast.showShort(this, message)
+    override fun showShortToast(messageRes: Int) = AirToast.showShort(this, messageRes)
 
     override fun refreshMediaButton(): View = refreshMediaButtonImpl()
     override fun mediaSourceCard(controller: MediaController, selected: Boolean): View = mediaSourceCardImpl(controller, selected)
@@ -179,8 +179,8 @@ internal class MainActivityUiHost(
     override fun setFloatingPreviewExpanded(expanded: Boolean) = FloatingLyricsStyleStore.setPreviewExpanded(this, expanded)
 
     override fun floatingDisplaySummary(): String {
-        val lockedText = if (uiState.locked) getString(R.string.ui_locked) else getString(R.string.ui_draggable)
-        val clickThroughText = if (uiState.clickThrough) getString(R.string.ui_click_through) else getString(R.string.ui_clickable)
+        val lockedText = getString(if (uiState.locked) R.string.ui_locked else R.string.ui_draggable)
+        val clickThroughText = getString(if (uiState.clickThrough) R.string.ui_click_through else R.string.ui_clickable)
         return listOfNotNull(
             if (overlayPermissionGranted) null else getString(R.string.ui_overlay_permission_required),
             lockedText,
@@ -189,11 +189,11 @@ internal class MainActivityUiHost(
     }
 
     override fun floatingLockButtonText(): String {
-        return if (uiState.locked) getString(R.string.ui_drag_lock_on) else getString(R.string.ui_drag_lock_off)
+        return getString(if (uiState.locked) R.string.ui_drag_lock_on else R.string.ui_drag_lock_off)
     }
 
     override fun floatingClickThroughButtonText(): String {
-        return if (uiState.clickThrough) getString(R.string.ui_click_through_on) else getString(R.string.ui_click_through_off)
+        return getString(if (uiState.clickThrough) R.string.ui_click_through_on else R.string.ui_click_through_off)
     }
 
     override fun autoHideWhenPausedEnabled(): Boolean {

@@ -283,13 +283,13 @@ internal class MainGraph(
     }
 
     fun handleNotificationPermissionResult(granted: Boolean) {
-        val message = if (granted) {
-            activity.getString(R.string.ui_notification_permission_enabled)
+        val messageRes = if (granted) {
+            R.string.ui_notification_permission_enabled
         } else {
-            activity.getString(R.string.ui_notif_permission_off_warning)
+            R.string.ui_notif_permission_off_warning
         }
 
-        AirToast.showLong(activity, message)
+        AirToast.showLong(activity, messageRes)
         uiInvalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
     }
 
@@ -300,7 +300,7 @@ internal class MainGraph(
             val result = FloatingLyricsFontStore.importFont(activity, uri)
             runOnMainThread {
                 if (destroyed || activity.isDestroyed) return@runOnMainThread
-                val message = when (result) {
+                when (result) {
                     is FloatingLyricsFontStore.ImportResult.Success -> {
                         FloatingLyricsStyleStore.setFontFamily(
                             activity,
@@ -312,19 +312,21 @@ internal class MainGraph(
                             animateContent = false,
                             animateTabs = false
                         )
-                        activity.getString(R.string.ui_font_import_success, result.displayName)
+                        AirToast.showLong(
+                            activity,
+                            activity.getString(R.string.ui_font_import_success, result.displayName)
+                        )
                     }
 
                     FloatingLyricsFontStore.ImportResult.UnsupportedFormat ->
-                        activity.getString(R.string.ui_font_format_unsupported)
+                        AirToast.showLong(activity, R.string.ui_font_format_unsupported)
                     FloatingLyricsFontStore.ImportResult.TooLarge ->
-                        activity.getString(R.string.ui_font_file_too_large)
+                        AirToast.showLong(activity, R.string.ui_font_file_too_large)
                     FloatingLyricsFontStore.ImportResult.InvalidFont ->
-                        activity.getString(R.string.ui_invalid_font_file)
+                        AirToast.showLong(activity, R.string.ui_invalid_font_file)
                     FloatingLyricsFontStore.ImportResult.ReadFailed ->
-                        activity.getString(R.string.ui_font_import_failed)
+                        AirToast.showLong(activity, R.string.ui_font_import_failed)
                 }
-                AirToast.showLong(activity, message)
             }
         }
     }
