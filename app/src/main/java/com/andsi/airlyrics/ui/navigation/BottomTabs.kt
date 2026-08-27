@@ -11,6 +11,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.StringRes
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.setAirTopIcon
@@ -62,16 +63,21 @@ internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) crea
     }
     tabRow = bar
 
-    addTab(activity, bar, Page.MEDIA, getString(R.string.ui_media))
-    addTab(activity, bar, Page.FLOATING, getString(R.string.ui_floating))
-    addTab(activity, bar, Page.SETTINGS, getString(R.string.ui_settings))
+    addTab(activity, bar, Page.MEDIA, R.string.ui_media)
+    addTab(activity, bar, Page.FLOATING, R.string.ui_floating)
+    addTab(activity, bar, Page.SETTINGS, R.string.ui_settings)
 
     shell.addView(tabHighlight)
     shell.addView(bar)
     return shell
 }
 
-internal fun addTab(activity: MainUiHost, parent: LinearLayout, page: Page, title: String) = with(activity) addTab@ {
+internal fun addTab(
+    activity: MainUiHost,
+    parent: LinearLayout,
+    page: Page,
+    @StringRes titleRes: Int
+) = with(activity) addTab@ {
     val slot = FrameLayout(this).apply {
         layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, AirUiTokens.Motion.RestScale)
         clipToPadding = false
@@ -88,7 +94,7 @@ internal fun addTab(activity: MainUiHost, parent: LinearLayout, page: Page, titl
     }
 
     val tab = TextView(this).apply {
-        text = title
+        setText(titleRes)
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
@@ -106,14 +112,15 @@ internal fun addTab(activity: MainUiHost, parent: LinearLayout, page: Page, titl
     parent.addView(slot)
 }
 
-private fun MainUiHost.quickFloatingTabLabel(
+@StringRes
+private fun quickFloatingTabLabelRes(
     visible: Boolean,
     overlayPermissionGranted: Boolean
-): String {
+): Int {
     return when {
-        !overlayPermissionGranted -> getString(R.string.ui_permit)
-        visible -> getString(R.string.ui_hide)
-        else -> getString(R.string.ui_show)
+        !overlayPermissionGranted -> R.string.ui_permit
+        visible -> R.string.ui_hide
+        else -> R.string.ui_show
     }
 }
 
@@ -134,15 +141,16 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
     tabViews.forEach { (page, view) ->
         val selected = page == currentPage
         val quickControlSelected = page == Page.FLOATING && selected
-        val targetText = if (quickControlSelected) {
-            quickFloatingTabLabel(quickFloatingVisible, overlayPermissionGranted)
+        val targetTextRes = if (quickControlSelected) {
+            quickFloatingTabLabelRes(quickFloatingVisible, overlayPermissionGranted)
         } else {
             when (page) {
-                Page.MEDIA -> getString(R.string.ui_media)
-                Page.FLOATING -> getString(R.string.ui_floating)
-                Page.SETTINGS -> getString(R.string.ui_settings)
+                Page.MEDIA -> R.string.ui_media
+                Page.FLOATING -> R.string.ui_floating
+                Page.SETTINGS -> R.string.ui_settings
             }
         }
+        val targetText = getString(targetTextRes)
         val targetIconRes = if (quickControlSelected) {
             quickFloatingTabIconRes(quickFloatingVisible, overlayPermissionGranted)
         } else {

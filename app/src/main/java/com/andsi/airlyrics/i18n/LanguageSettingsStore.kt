@@ -58,18 +58,15 @@ object LanguageSettingsStore {
     }
 
     fun currentDisplayName(context: Context): String {
-        return when (getMode(context)) {
-            MODE_ZH_CN -> context.getString(R.string.ui_chinese_simplified)
-            MODE_EN -> "English"
-            else -> {
-                val languageName = if (isSystemChinese()) {
-                    context.getString(R.string.ui_chinese_simplified)
-                } else {
-                    "English"
-                }
-                context.getString(R.string.ui_follow_system) + " · " + languageName
-            }
+        val mode = getMode(context)
+        if (mode != MODE_SYSTEM) {
+            val languageRes = if (mode == MODE_ZH_CN) R.string.ui_chinese_simplified else R.string.ui_english
+            return context.getString(languageRes)
         }
+
+        val languageRes = if (isSystemChinese()) R.string.ui_chinese_simplified else R.string.ui_english
+        val languageName = context.getString(languageRes)
+        return context.getString(R.string.ui_follow_system) + " · " + languageName
     }
 
     private fun isSystemChinese(): Boolean {

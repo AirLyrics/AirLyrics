@@ -36,10 +36,10 @@ internal fun MainUiHost.refreshMediaButtonImpl(): View {
     var progressView: ProgressBar? = null
 
     fun applyButtonState(animateDone: Boolean = false) {
-        val buttonText = when (mediaRefreshState) {
-            RefreshState.IDLE -> getString(R.string.ui_refresh_media_status)
-            RefreshState.REFRESHING -> getString(R.string.ui_refreshing)
-            RefreshState.DONE -> getString(R.string.ui_refreshed)
+        val buttonTextRes = when (mediaRefreshState) {
+            RefreshState.IDLE -> R.string.ui_refresh_media_status
+            RefreshState.REFRESHING -> R.string.ui_refreshing
+            RefreshState.DONE -> R.string.ui_refreshed
         }
         val buttonColor = when (mediaRefreshState) {
             RefreshState.IDLE -> colorAccent
@@ -52,7 +52,7 @@ internal fun MainUiHost.refreshMediaButtonImpl(): View {
             cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
             setColor(buttonColor)
         }
-        labelView.text = buttonText
+        labelView.setText(buttonTextRes)
         labelView.setTextColor(
             when (mediaRefreshState) {
                 RefreshState.IDLE -> colorOnAccent
@@ -153,7 +153,7 @@ internal fun MainUiHost.updateMediaSourceSelectionVisualsImpl(selectedPackage: S
             if (tagText?.startsWith("media_source_status:") == true) {
                 val packageName = tagText.removePrefix("media_source_status:")
                 val selected = packageName == selectedPackage
-                view.text = if (selected) getString(R.string.ui_connected) else getString(R.string.ui_available)
+                view.setText(if (selected) R.string.ui_connected else R.string.ui_available)
                 view.setTextColor(if (selected) colorAccentLight else colorTextMuted)
                 if (selected) playTinyPulse(view)
             }

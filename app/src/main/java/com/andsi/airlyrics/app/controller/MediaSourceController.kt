@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.media.session.MediaController
 import android.media.session.PlaybackState
 import android.view.View
+import androidx.annotation.StringRes
 import com.andsi.airlyrics.app.contracts.FloatingSourceNotifier
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.contracts.MediaPageRefreshScheduler
@@ -63,20 +64,23 @@ internal class MediaSourceController(
     }
 
     fun getPlaybackStateText(state: Int?): String {
-        return when (state) {
-            PlaybackState.STATE_PLAYING -> context.getString(R.string.ui_playing)
-            PlaybackState.STATE_PAUSED -> context.getString(R.string.ui_paused)
-            PlaybackState.STATE_STOPPED -> context.getString(R.string.ui_stopped)
-            PlaybackState.STATE_BUFFERING -> context.getString(R.string.ui_buffering)
-            PlaybackState.STATE_CONNECTING -> context.getString(R.string.ui_connecting)
-            PlaybackState.STATE_FAST_FORWARDING -> context.getString(R.string.ui_fast_forwarding)
-            PlaybackState.STATE_REWINDING -> context.getString(R.string.ui_rewinding)
-            PlaybackState.STATE_SKIPPING_TO_NEXT -> context.getString(R.string.ui_skipping_next)
-            PlaybackState.STATE_SKIPPING_TO_PREVIOUS -> context.getString(R.string.ui_skipping_previous)
-            PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM -> context.getString(R.string.ui_skipping_queue)
-            PlaybackState.STATE_NONE -> context.getString(R.string.ui_no_playback_state)
-            PlaybackState.STATE_ERROR -> context.getString(R.string.ui_playback_error)
-            else -> context.getString(R.string.ui_unknown_status)
-        }
+        return context.getString(playbackStateTextRes(state))
+    }
+
+    @StringRes
+    private fun playbackStateTextRes(state: Int?): Int = when (state) {
+        PlaybackState.STATE_PLAYING -> R.string.ui_playing
+        PlaybackState.STATE_PAUSED -> R.string.ui_paused
+        PlaybackState.STATE_STOPPED -> R.string.ui_stopped
+        PlaybackState.STATE_BUFFERING -> R.string.ui_buffering
+        PlaybackState.STATE_CONNECTING -> R.string.ui_connecting
+        PlaybackState.STATE_FAST_FORWARDING -> R.string.ui_fast_forwarding
+        PlaybackState.STATE_REWINDING -> R.string.ui_rewinding
+        PlaybackState.STATE_SKIPPING_TO_NEXT -> R.string.ui_skipping_next
+        PlaybackState.STATE_SKIPPING_TO_PREVIOUS -> R.string.ui_skipping_previous
+        PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM -> R.string.ui_skipping_queue
+        PlaybackState.STATE_NONE -> R.string.ui_no_playback_state
+        PlaybackState.STATE_ERROR -> R.string.ui_playback_error
+        else -> R.string.ui_unknown_status
     }
 }

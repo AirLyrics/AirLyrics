@@ -51,18 +51,14 @@ object FloatingServiceNotification {
             .addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_air_visibility,
-                    checkedTitle(
-                        active = state.visible,
-                        activeText = context.getString(R.string.ui_shown),
-                        inactiveText = context.getString(R.string.ui_hidden)
-                    ),
+                    context.getText(if (state.visible) R.string.ui_shown else R.string.ui_hidden),
                     serviceActionIntent(context, FloatingServiceCommand.ToggleVisibleFromNotification, 1001)
                 ).build()
             )
             .addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_air_open_with,
-                    state.adjustModeActionTitle(context),
+                    context.getText(R.string.ui_adjustment_mode),
                     serviceActionIntent(context, FloatingServiceCommand.ToggleAdjustModeFromNotification, 1002)
                 ).build()
             )
@@ -110,35 +106,17 @@ object FloatingServiceNotification {
     }
 
     private fun QuickControlState.summary(context: Context): String {
-        val visibleText = if (visible) context.getString(R.string.ui_shown) else context.getString(R.string.ui_hidden)
+        val visibleText = context.getString(if (visible) R.string.ui_shown else R.string.ui_hidden)
         return "$visibleText · ${windowModeText(context)}"
     }
 
-    private val QuickControlState.isAdjustMode: Boolean
-        get() = !locked && !clickThrough
-
     private fun QuickControlState.windowModeText(context: Context): CharSequence {
-        return when {
-            !locked && !clickThrough -> context.getString(R.string.ui_adjustment_mode)
-            locked && clickThrough -> context.getString(R.string.ui_lock_touch)
-            locked && !clickThrough -> context.getString(R.string.ui_locked_touchable)
-            else -> context.getString(R.string.ui_draggable_click_through)
+        val messageRes = when {
+            !locked && !clickThrough -> R.string.ui_adjustment_mode
+            locked && clickThrough -> R.string.ui_lock_touch
+            locked && !clickThrough -> R.string.ui_locked_touchable
+            else -> R.string.ui_draggable_click_through
         }
-    }
-
-    private fun QuickControlState.adjustModeActionTitle(context: Context): String {
-        return checkedTitle(
-            active = isAdjustMode,
-            activeText = context.getString(R.string.ui_adjustment_mode),
-            inactiveText = context.getString(R.string.ui_adjustment_mode)
-        )
-    }
-
-    private fun checkedTitle(
-        active: Boolean,
-        activeText: String,
-        inactiveText: String
-    ): String {
-        return if (active) activeText else inactiveText
+        return context.getText(messageRes)
     }
 }
