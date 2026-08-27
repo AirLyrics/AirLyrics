@@ -28,18 +28,18 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
             addView(bigText(activity, getString(R.string.ui_search_strategy)))
             addView(normalText(activity, getString(R.string.ui_lyrics_priority_hint)))
 
-            val autoSearchButton = actionButton(activity, if (settings.autoSearchOnline) getString(R.string.ui_online_fallback_on) else getString(R.string.ui_online_fallback_off)) { }
+            val autoSearchButton = actionButton(activity, getString(if (settings.autoSearchOnline) R.string.ui_online_fallback_on else R.string.ui_online_fallback_off)) { }
             autoSearchButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSearch()
-                autoSearchButton.text = if (enabled) getString(R.string.ui_online_fallback_on) else getString(R.string.ui_online_fallback_off)
+                autoSearchButton.setText(if (enabled) R.string.ui_online_fallback_on else R.string.ui_online_fallback_off)
                 playLocalRefreshFeedback(activity, autoSearchButton, null, getString(R.string.ui_updated))
             }
             addView(autoSearchButton)
 
-            val autoSaveButton = actionButton(activity, if (settings.autoSaveLocal) getString(R.string.ui_auto_save_on) else getString(R.string.ui_auto_save_off)) { }
+            val autoSaveButton = actionButton(activity, getString(if (settings.autoSaveLocal) R.string.ui_auto_save_on else R.string.ui_auto_save_off)) { }
             autoSaveButton.setOnClickListener {
                 val enabled = uiActions.toggleLyricsAutoSave()
-                autoSaveButton.text = if (enabled) getString(R.string.ui_auto_save_on) else getString(R.string.ui_auto_save_off)
+                autoSaveButton.setText(if (enabled) R.string.ui_auto_save_on else R.string.ui_auto_save_off)
                 playLocalRefreshFeedback(activity, autoSaveButton, null, getString(R.string.ui_updated))
             }
             addView(autoSaveButton)

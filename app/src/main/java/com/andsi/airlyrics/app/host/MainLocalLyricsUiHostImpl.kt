@@ -124,11 +124,13 @@ private fun MainUiHost.openLocalLyricsEditor(
         if (rawLyrics == null) {
             showAirDialog(
                 title = getString(R.string.ui_read_failed),
-                message = if (isWordByWord) {
-                    getString(R.string.ui_cannot_read_word_by_word_lyrics_file)
-                } else {
-                    getString(R.string.ui_cannot_read_this_lyric_file)
-                },
+                message = getString(
+                    if (isWordByWord) {
+                        R.string.ui_cannot_read_word_by_word_lyrics_file
+                    } else {
+                        R.string.ui_cannot_read_this_lyric_file
+                    }
+                ),
                 positiveText = getString(R.string.ui_ok)
             )
         } else {

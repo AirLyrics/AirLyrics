@@ -266,7 +266,7 @@ internal fun MainUiHost.colorControlImpl(
                         if (presetColor == null) {
                             rgbExpanded = true
                             rgbPanel.visibility = View.VISIBLE
-                            fineTuneButton.text = getString(R.string.ui_hide_rgb)
+                            fineTuneButton.setText(R.string.ui_hide_rgb)
                         } else {
                             red = Color.red(presetColor)
                             green = Color.green(presetColor)
@@ -299,7 +299,7 @@ internal fun MainUiHost.colorControlImpl(
         fineTuneButton.setOnClickListener {
             rgbExpanded = !rgbExpanded
             rgbPanel.visibility = if (rgbExpanded) View.VISIBLE else View.GONE
-            fineTuneButton.text = if (rgbExpanded) getString(R.string.ui_hide_rgb) else getString(R.string.ui_rgb_tune)
+            fineTuneButton.setText(if (rgbExpanded) R.string.ui_hide_rgb else R.string.ui_rgb_tune)
             playTinyPulse(fineTuneButton)
         }
 

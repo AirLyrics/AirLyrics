@@ -189,7 +189,7 @@
     <string name="ui_plain_lrc_edit_format_hint">Each line must start with [00:12.34]</string>
     <string name="ui_max_width">Max width</string>
     <string name="ui_media">Media</string>
-    <string name="ui_media_source_waiting_status">Waiting for player update</string>
+    <string name="ui_media_source_waiting_status">Waiting for player update…</string>
     <string name="ui_netease_cloud_music">NetEase Cloud Music</string>
     <string name="ui_next_lyric_preview">これは次の歌詞プレビューです</string>
     <string name="ui_next_lyric_preview_translation">This is the next lyric preview</string>

@@ -42,11 +42,13 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
                 addView(statusPill(activity, state, selectedController.playbackState?.state == PlaybackState.STATE_PLAYING))
             } else {
                 addView(bigText(activity, getString(R.string.ui_no_media_detected_yet)))
-                val hintText = if (notificationAccessGranted) {
-                    getString(R.string.ui_media_streams_empty_hint)
-                } else {
-                    getString(R.string.ui_enable_notif_access_hint)
-                }
+                val hintText = getString(
+                    if (notificationAccessGranted) {
+                        R.string.ui_media_streams_empty_hint
+                    } else {
+                        R.string.ui_enable_notif_access_hint
+                    }
+                )
                 addView(normalText(activity, hintText))
             }
         }

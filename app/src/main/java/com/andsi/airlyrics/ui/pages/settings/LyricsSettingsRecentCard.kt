@@ -77,7 +77,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                     setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
                 }
                 addView(TextView(activity).apply {
-                    text = getString(R.string.ui_now_playing)
+                    setText(R.string.ui_now_playing)
                     textSize = AirUiTokens.TextSize.Tiny
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorAccent)
@@ -90,7 +90,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                     setTextColor(colorTextStrong)
                 })
                 addView(TextView(activity).apply {
-                    text = getString(R.string.ui_no_plain_lrc_bound_to_song)
+                    setText(R.string.ui_no_plain_lrc_bound_to_song)
                     textSize = AirUiTokens.TextSize.Caption
                     setTextColor(colorTextMuted)
                     setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -137,7 +137,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                 }
 
                 addView(TextView(activity).apply {
-                    text = getString(R.string.ui_view_all)
+                    setText(R.string.ui_view_all)
                     textSize = AirUiTokens.TextSize.Body
                     typeface = Typeface.DEFAULT_BOLD
                     setTextColor(colorAccent)
@@ -186,7 +186,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
 
     val cardView = card(activity) {
         val hintText = TextView(activity).apply {
-            text = getString(R.string.ui_tap_to_preview_or_edit)
+            setText(R.string.ui_tap_to_preview_or_edit)
             textSize = AirUiTokens.TextSize.Caption
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextMuted)

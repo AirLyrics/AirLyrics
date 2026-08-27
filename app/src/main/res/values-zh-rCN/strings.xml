@@ -189,7 +189,7 @@
     <string name="ui_plain_lrc_edit_format_hint">每行需以 [00:12.34] 开头</string>
     <string name="ui_max_width">最大宽度</string>
     <string name="ui_media">媒体</string>
-    <string name="ui_media_source_waiting_status">等待播放器更新</string>
+    <string name="ui_media_source_waiting_status">等待播放器更新…</string>
     <string name="ui_netease_cloud_music">网易云音乐</string>
     <string name="ui_next_lyric_preview">これは次の歌詞プレビューです</string>
     <string name="ui_next_lyric_preview_translation">这是下一行歌词预览</string>

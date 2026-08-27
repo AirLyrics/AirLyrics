@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.annotation.StringRes
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.ui.components.actionButton
@@ -55,10 +56,10 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             return
         }
 
-        val wordByWordSummary = when {
-            state.hasLocalWordByWordLyrics && state.wordByWordLyricsEnabled -> getString(R.string.ui_available_local_word_by_word_lyrics)
-            state.hasLocalWordByWordLyrics -> getString(R.string.ui_imported_off)
-            else -> getString(R.string.ui_not_imported)
+        val wordByWordSummaryRes = when {
+            state.hasLocalWordByWordLyrics && state.wordByWordLyricsEnabled -> R.string.ui_available_local_word_by_word_lyrics
+            state.hasLocalWordByWordLyrics -> R.string.ui_imported_off
+            else -> R.string.ui_not_imported
         }
 
         body.addView(normalText(activity, media.displayText))
@@ -70,7 +71,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             )
         )
         body.addView(settingRow(activity, getString(R.string.ui_plain_lyrics), state.plainLyricsTitle ?: getString(R.string.ui_not_bound)))
-        body.addView(wordByWordStatusRow(activity, wordByWordSummary))
+        body.addView(wordByWordStatusRow(activity, wordByWordSummaryRes))
         body.addView(settingRow(activity, getString(R.string.ui_current_offset), localizedOffsetDescription(state.offsetMs)))
         if (state.offsetMs != 0L) {
             body.addView(smallHint(activity, getString(R.string.ui_offset_per_song_hint)))
@@ -91,7 +92,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
         }
 
         if (state.hasPlainLyrics && !state.hasLocalWordByWordLyrics) {
-            val plainLabel = if (state.plainLyricsDownloaded) getString(R.string.ui_remove_downloaded_lrc) else getString(R.string.ui_remove_plain_lrc)
+            val plainLabel = getString(if (state.plainLyricsDownloaded) R.string.ui_remove_downloaded_lrc else R.string.ui_remove_plain_lrc)
             body.addView(actionButton(activity, plainLabel) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_plain_lrc_confirm),
@@ -190,21 +191,21 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
     )
 }
 
-private fun wordByWordStatusRow(activity: MainUiHost, value: String): View = with(activity) {
+private fun wordByWordStatusRow(activity: MainUiHost, @StringRes valueRes: Int): View = with(activity) {
     return LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
 
         addView(TextView(activity).apply {
-            text = getString(R.string.ui_word_by_word_lyrics)
+            setText(R.string.ui_word_by_word_lyrics)
             textSize = AirUiTokens.TextSize.Button
             setTextColor(colorTextStrong)
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
 
         addView(TextView(activity).apply {
-            text = value
+            setText(valueRes)
             textSize = AirUiTokens.TextSize.BodySmall
             setTextColor(colorTextMuted)
             gravity = Gravity.CENTER_VERTICAL

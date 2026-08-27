@@ -44,7 +44,7 @@ internal fun FloatingLyricsService.applyLyricsOffset(offsetMs: Long) {
 
 internal fun FloatingLyricsService.reloadCurrentLyrics() {
     if (currentMedia.isEmpty) {
-        clearLyricsState(getString(R.string.ui_waiting_for_media) + "...")
+        clearLyricsState(getString(R.string.ui_waiting_for_media_message))
         return
     }
 

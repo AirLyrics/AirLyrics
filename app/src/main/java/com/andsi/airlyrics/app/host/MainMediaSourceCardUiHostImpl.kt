@@ -27,7 +27,7 @@ internal fun MainUiHost.mediaSourceCardImpl(controller: MediaController, selecte
         val appName = getAppName(controller.packageName)
         val state = getPlaybackStateText(controller.playbackState?.state)
 
-        addView(label(activity, if (selected) getString(R.string.ui_connected) else getString(R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
+        addView(label(activity, getString(if (selected) R.string.ui_connected else R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
             tag = "media_source_status:${controller.packageName}"
         })
         addView(bigText(activity, appName))

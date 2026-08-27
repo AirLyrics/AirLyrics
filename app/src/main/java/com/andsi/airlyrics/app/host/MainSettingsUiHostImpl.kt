@@ -62,11 +62,11 @@ internal fun MainUiHost.settingsBackHeaderImpl(
                 )
             })
             addView(TextView(activity).apply {
-                text = if (parentPage == SettingsSubPage.LYRICS) {
-                    getString(R.string.ui_lyrics)
+                setText(if (parentPage == SettingsSubPage.LYRICS) {
+                    R.string.ui_lyrics
                 } else {
-                    getString(R.string.ui_settings_back_label)
-                }
+                    R.string.ui_settings_back_label
+                })
                 textSize = AirUiTokens.TextSize.Body
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorAccent)
@@ -104,13 +104,12 @@ internal fun MainUiHost.settingsBackHeaderImpl(
 }
 
 internal fun MainUiHost.themeToggleButtonImpl(): View {
-    val contentDescription = if (isDarkTheme()) {
-        getString(R.string.ui_switch_to_light_mode)
-    } else {
-        getString(R.string.ui_switch_to_dark_mode)
-    }
+    val darkTheme = isDarkTheme()
+    val contentDescription = getString(
+        if (darkTheme) R.string.ui_switch_to_light_mode else R.string.ui_switch_to_dark_mode
+    )
     return airIconView(
-        iconRes = if (isDarkTheme()) R.drawable.ic_air_light_mode else R.drawable.ic_air_dark_mode,
+        iconRes = if (darkTheme) R.drawable.ic_air_light_mode else R.drawable.ic_air_dark_mode,
         tint = colorAccent,
         contentDescription = contentDescription
     ).apply {

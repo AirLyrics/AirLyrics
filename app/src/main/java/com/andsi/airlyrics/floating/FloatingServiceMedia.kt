@@ -172,11 +172,13 @@ internal fun FloatingLyricsService.selectMediaSource(packageName: String?) {
     mediaRestoreAttempt = 0
 
     clearLyricsState(
-        if (packageName == null) {
-            getString(R.string.ui_no_media_source_status)
-        } else {
-            getString(R.string.ui_media_source_waiting_status) + "..."
-        }
+        getString(
+            if (packageName == null) {
+                R.string.ui_no_media_source_status
+            } else {
+                R.string.ui_media_source_waiting_status
+            }
+        )
     )
 
     if (packageName == null) {

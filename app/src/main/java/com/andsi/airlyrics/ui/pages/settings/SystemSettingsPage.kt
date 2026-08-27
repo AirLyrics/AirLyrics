@@ -32,9 +32,9 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
     container.addView(
         card(activity) {
             addView(bigText(activity, getString(R.string.ui_permissions)))
-            addView(settingRow(activity, getString(R.string.ui_overlay), if (Settings.canDrawOverlays(activity)) getString(R.string.ui_on) else getString(R.string.ui_off)))
-            addView(settingRow(activity, getString(R.string.ui_notify), if (hasNotificationPermission()) getString(R.string.ui_on) else getString(R.string.ui_off)))
-            addView(settingRow(activity, getString(R.string.ui_notif_access), if (hasNotificationListenerAccess()) getString(R.string.ui_on) else getString(R.string.ui_off)))
+            addView(settingRow(activity, getString(R.string.ui_overlay), getString(if (Settings.canDrawOverlays(activity)) R.string.ui_on else R.string.ui_off)))
+            addView(settingRow(activity, getString(R.string.ui_notify), getString(if (hasNotificationPermission()) R.string.ui_on else R.string.ui_off)))
+            addView(settingRow(activity, getString(R.string.ui_notif_access), getString(if (hasNotificationListenerAccess()) R.string.ui_on else R.string.ui_off)))
         }
     )
 
@@ -102,7 +102,7 @@ private fun languageChoiceCard(activity: MainUiHost): View = with(activity) lang
         setOnClickListener { showLanguageDialog(activity) }
 
         addView(TextView(activity).apply {
-            text = getString(R.string.ui_language)
+            setText(R.string.ui_language)
             textSize = AirUiTokens.TextSize.PageTitle - 4f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)

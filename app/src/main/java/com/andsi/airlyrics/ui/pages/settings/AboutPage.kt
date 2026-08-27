@@ -127,7 +127,7 @@ private fun MainUiHost.githubIconButton(activity: MainUiHost): View {
 private fun MainUiHost.changeLogButton(): View {
     val activity = this
     return TextView(activity).apply {
-        text = getString(R.string.ui_changelog)
+        setText(R.string.ui_changelog)
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD

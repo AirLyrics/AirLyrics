@@ -60,7 +60,7 @@ class FloatingLyricsWindow(
         }
 
         val view = FloatingLyricsTextView(context).apply {
-            text = context.getString(R.string.ui_waiting_for_media_message)
+            setText(R.string.ui_waiting_for_media_message)
             includeFontPadding = false
         }
 

@@ -96,7 +96,7 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
             addView(settingRow(host, getString(R.string.ui_range), localizedLyricsLineModeTitle(lineDisplayMode())))
             addView(settingRow(host, getString(R.string.ui_alignment), localizedGravityTitle(style().gravity)))
             addView(settingRow(host, getString(R.string.ui_animation), localizedLyricsSwitchAnimationTitle(switchAnimationMode())))
-            addView(settingRow(host, getString(R.string.ui_word_by_word_lyrics), if (wordByWordLyricsEnabled()) getString(R.string.ui_preferred) else getString(R.string.ui_off)))
+            addView(settingRow(host, getString(R.string.ui_word_by_word_lyrics), getString(if (wordByWordLyricsEnabled()) R.string.ui_preferred else R.string.ui_off)))
             addView(settingRow(host, getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary()))
             addView(settingRow(host, getString(R.string.ui_locked), onOff(uiState.locked)))
             addView(settingRow(host, getString(R.string.ui_click_through), onOff(uiState.clickThrough)))
@@ -111,9 +111,11 @@ private fun FloatingPageScope.autoHideWhenPausedSubtitle(): String {
 }
 
 private fun FloatingPageScope.autoHideWhenPausedButtonText(): String {
-    return if (host.autoHideWhenPausedEnabled()) {
-        host.getString(R.string.ui_auto_hide_when_paused_on)
-    } else {
-        host.getString(R.string.ui_auto_hide_when_paused_off)
-    }
+    return host.getString(
+        if (host.autoHideWhenPausedEnabled()) {
+            R.string.ui_auto_hide_when_paused_on
+        } else {
+            R.string.ui_auto_hide_when_paused_off
+        }
+    )
 }

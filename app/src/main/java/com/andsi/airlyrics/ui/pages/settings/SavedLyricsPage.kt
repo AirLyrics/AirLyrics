@@ -68,7 +68,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     lateinit var populateSavedLyrics: (Boolean) -> Unit
 
     val searchInput = EditText(activity).apply {
-        hint = getString(R.string.ui_search_saved_lyrics_hint)
+        setHint(R.string.ui_search_saved_lyrics_hint)
         textSize = AirUiTokens.TextSize.Body
         setTextColor(colorTextStrong)
         setHintTextColor(colorTextMuted)

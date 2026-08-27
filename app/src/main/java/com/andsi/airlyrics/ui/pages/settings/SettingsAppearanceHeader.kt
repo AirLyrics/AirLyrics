@@ -53,7 +53,7 @@ private class SettingsAppearanceHeader(
             gravity = Gravity.CENTER_VERTICAL
 
             addView(TextView(host).apply {
-                text = host.getString(R.string.ui_settings)
+                setText(R.string.ui_settings)
                 textSize = AirUiTokens.TextSize.PageTitle
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(host.colorTextStrong)
@@ -126,7 +126,7 @@ private class SettingsAppearanceHeader(
             }
 
             addView(TextView(host).apply {
-                text = host.getString(R.string.ui_accent_color)
+                setText(R.string.ui_accent_color)
                 textSize = AirUiTokens.TextSize.BodySmall
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(host.colorTextMuted)

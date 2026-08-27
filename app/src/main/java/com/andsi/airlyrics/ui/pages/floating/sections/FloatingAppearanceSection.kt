@@ -79,7 +79,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
             ),
             trackedFloatingTile(
                 title = getString(R.string.ui_background_bubble),
-                subtitle = if (style().backgroundEnabled) getString(R.string.ui_on) else getString(R.string.ui_off),
+                subtitle = getString(if (style().backgroundEnabled) R.string.ui_on else R.string.ui_off),
                 iconRes = R.drawable.ic_air_chat_bubble,
                 onClick = { tile ->
                     openPanel(
@@ -101,11 +101,11 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                             }
                         )
                     ) {
-                        val backgroundButton = actionButton(host, if (style().backgroundEnabled) getString(R.string.ui_background_on) else getString(R.string.ui_background_off)) { }
+                        val backgroundButton = actionButton(host, getString(if (style().backgroundEnabled) R.string.ui_background_on else R.string.ui_background_off)) { }
                         backgroundButton.setOnClickListener {
                             val enabled = !floatingStyle().backgroundEnabled
                             applyFloatingBackgroundEnabled(enabled)
-                            backgroundButton.text = if (enabled) getString(R.string.ui_background_on) else getString(R.string.ui_background_off)
+                            backgroundButton.setText(if (enabled) R.string.ui_background_on else R.string.ui_background_off)
                             refreshFloatingPreview()
                         }
                         addView(backgroundButton)

@@ -179,7 +179,7 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
             if (onReset != null) {
                 addView(TextView(activity).apply {
                     resetButton = this
-                    text = getString(R.string.ui_reset)
+                    setText(R.string.ui_reset)
                     textSize = AirUiTokens.TextSize.BodySmall
                     typeface = Typeface.DEFAULT_BOLD
                     gravity = Gravity.CENTER
@@ -245,7 +245,7 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
                 if (!resetActionInitialized) {
                     resetActionInitialized = true
                     resetActionIsUndo = isUndo
-                    text = getString(if (isUndo) R.string.ui_undo else R.string.ui_reset)
+                    setText(if (isUndo) R.string.ui_undo else R.string.ui_reset)
                     isEnabled = enabled
                     alpha = if (enabled) 1f else 0.34f
                     setTextColor(if (isUndo) colorAccentMint else colorAccent)
@@ -263,7 +263,7 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
                         .setInterpolator(DecelerateInterpolator())
                         .withEndAction {
                             if (generation != resetActionAnimationGeneration) return@withEndAction
-                            text = getString(if (resetActionIsUndo) R.string.ui_undo else R.string.ui_reset)
+                            setText(if (resetActionIsUndo) R.string.ui_undo else R.string.ui_reset)
                             setTextColor(if (resetActionIsUndo) colorAccentMint else colorAccent)
                             scaleX = 0.9f
                             scaleY = 0.9f
