@@ -13,6 +13,7 @@ import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -341,11 +342,15 @@ class SettingsStoresTest {
 
     @Test
     fun themeSettingsStore_roundTripsExplicitThemeChoice() {
+        assertNull(ThemeSettingsStore.getDarkModeOverride(context))
+
         ThemeSettingsStore.setDark(context, true)
         assertTrue(ThemeSettingsStore.isDark(context))
+        assertEquals(true, ThemeSettingsStore.getDarkModeOverride(context))
 
         ThemeSettingsStore.setDark(context, false)
         assertFalse(ThemeSettingsStore.isDark(context))
+        assertEquals(false, ThemeSettingsStore.getDarkModeOverride(context))
     }
 
     @Test

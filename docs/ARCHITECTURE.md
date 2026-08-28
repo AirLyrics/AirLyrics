@@ -305,6 +305,10 @@ QuickFloatingStore           Persisted desired overlay visibility
 ThemeSettingsStore           Main UI theme
 ```
 
+`AppNightMode` applies the stored light/dark override through AppCompat DayNight before an Activity
+is created. With no override, the app follows the system. The effective DayNight configuration and
+the branded `AirLyricsTheme` palette therefore use the same light/dark choice.
+
 UI pages do not access raw `SharedPreferences` keys or concrete settings, lyrics-storage, or media
 data sources. Shared setting value models live under `core/model/`, allowing feature packages to
 exchange stable values without depending on each other's stores.

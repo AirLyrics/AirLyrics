@@ -16,6 +16,7 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.app.platform.AppNightMode
 import com.andsi.airlyrics.app.platform.PermissionHelper
 import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import com.andsi.airlyrics.core.color.AirColorUtils
@@ -385,20 +386,17 @@ internal class MainActivityUiHost(
     }
 
     fun toggleThemeMode() {
-        val nextDark = !isDarkTheme()
-        applyThemeChange {
-            ThemeSettingsStore.setDark(this, nextDark)
-        }
+        AppNightMode.setDark(this, enabled = !isDarkTheme())
     }
 
     fun selectThemeAccent(accent: ThemeAccent) {
         if (accent == themeAccent()) return
-        applyThemeChange {
+        applyPaletteChange {
             ThemeSettingsStore.setAccent(this, accent)
         }
     }
 
-    private fun applyThemeChange(updateSetting: () -> Unit) {
+    private fun applyPaletteChange(updateSetting: () -> Unit) {
         updateSetting()
         applySystemBarsTheme()
         val oldContainer = contentContainer

@@ -13,13 +13,18 @@ object ThemeSettingsStore {
 
     private fun store(context: Context) = prefs(context, PREF_NAME)
 
-    fun isDark(context: Context): Boolean {
+    /** Returns null until the user explicitly chooses light or dark mode. */
+    fun getDarkModeOverride(context: Context): Boolean? {
         val preferences = store(context)
         return if (preferences.contains(KEY_DARK_MODE)) {
             preferences.getBoolean(KEY_DARK_MODE, false)
         } else {
-            isSystemDark(context)
+            null
         }
+    }
+
+    fun isDark(context: Context): Boolean {
+        return getDarkModeOverride(context) ?: isSystemDark(context)
     }
 
     private fun isSystemDark(context: Context): Boolean {

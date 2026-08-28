@@ -280,6 +280,9 @@ QuickFloatingStore           持久化的悬浮窗期望显示状态
 ThemeSettingsStore           主界面主题
 ```
 
+`AppNightMode` 会在 Activity 创建前，通过 AppCompat DayNight 应用已保存的明暗模式；没有明确
+选择时跟随系统。DayNight 的有效配置与品牌 `AirLyricsTheme` 调色板因此使用同一明暗状态。
+
 UI 页面不直接访问裸露的 `SharedPreferences` key，也不读取具体的设置、歌词存储或媒体数据源。
 共享设置值模型位于 `core/model/`，让不同功能包可以交换稳定值，而无需依赖彼此的 store。
 
