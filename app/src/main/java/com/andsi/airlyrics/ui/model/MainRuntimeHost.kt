@@ -5,5 +5,5 @@ import androidx.annotation.StringRes
 internal interface MainRuntimeHost {
     fun runOnAppIo(block: () -> Unit)
     fun runOnMainThread(block: () -> Unit)
-    fun showShortToast(@StringRes messageRes: Int)
+    fun showMessage(@StringRes messageRes: Int)
 }

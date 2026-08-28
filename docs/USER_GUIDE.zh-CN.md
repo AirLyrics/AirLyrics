@@ -62,7 +62,7 @@ AirLyrics 只会在 App 启动时尝试自动选择。授予通知访问权限�
 - **通知访问权限**：允许 AirLyrics 检测本机媒体播放。
 - **通知权限**：显示前台服务控制入口，与通知访问权限不同。
 - **语言**：选择跟随系统、English 或简体中文。
-- **关闭 Toast 提示**：关闭 AirLyrics 的 Toast 小提示。
+- **隐藏状态提示**：隐藏 AirLyrics 的 Snackbar 和 Toast 提示。
 
 ## 常见问题
 

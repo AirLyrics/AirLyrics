@@ -82,10 +82,13 @@ design/           Shared UI design tokens
 media/            Media-session observation, current-media models, broadcasts, and source persistence
 lyrics/           Lookup, cancellation, providers, parsing, importing, formatting, and storage
 floating/         Foreground service, service commands, overlay control, and lyrics rendering
-settings/         Feature-specific settings persistence and toast policy
-ui/               Screens, components, navigation, themes, UI models, and async UI helpers
+settings/         Feature-specific settings persistence and status-popup policy
+ui/               Screens, feedback surfaces, components, navigation, themes, UI models, and async UI helpers
 i18n/             Language selection, localized assets, and user-facing text formatters
 ```
+
+Transient feedback is surface-owned: the main Activity uses an anchored Snackbar host, while the
+floating Service uses a Toast host. Both read the same status-popup preference.
 
 ## Package Boundaries
 
@@ -294,7 +297,7 @@ window when it resumes.
 Feature settings are read and written through dedicated stores under `settings/store/`:
 
 ```text
-AppSettingsStore             Global app and toast behavior
+AppSettingsStore             Global app and status-popup behavior
 FloatingLyricsStyleStore     Overlay appearance, behavior, position, and preview state
 LyricsOffsetStore            Per-song timing offsets
 LyricsSettingsStore          Lookup and lyrics-display preferences

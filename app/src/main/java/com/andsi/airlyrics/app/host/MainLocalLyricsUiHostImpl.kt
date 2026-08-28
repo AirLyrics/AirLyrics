@@ -15,7 +15,6 @@ import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -115,7 +114,7 @@ private fun MainUiHost.openLocalLyricsEditor(
 ) {
     val isWordByWord = target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
     val storageItem = item.toStorageItem()
-    AirToast.showShort(this, R.string.ui_loading)
+    showMessage(R.string.ui_loading)
 
     localLyricsEditorLoadRunner.submit(
         runtime = this,
@@ -307,7 +306,6 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                         if (isBusy) return@localLyricsDialogButton
                         val newText = editor.text.toString()
                         setBusyState(true)
-                        AirToast.showShort(this@showLocalLyricsEditorDialog, R.string.ui_saving)
                         runOnAppIo {
                             val result = if (isWordByWord) {
                                 LyricsStorage.updateWordByWordLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, storageItem, newText)

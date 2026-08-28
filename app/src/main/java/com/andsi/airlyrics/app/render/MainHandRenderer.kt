@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isNotEmpty
@@ -31,9 +32,13 @@ internal class MainHandRenderer(
         get() = graph.state
 
     fun createMainView(): View {
-        val root = LinearLayout(host).apply {
+        val contentColumn = LinearLayout(host).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(host.colorBackground)
+            layoutParams = CoordinatorLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
         }
 
         val topSafeArea = View(host).apply {
@@ -54,10 +59,16 @@ internal class MainHandRenderer(
         }
 
         val bottomTabs = createBottomTabs(host)
+        graph.viewRefs.feedbackAnchor = bottomTabs
 
-        root.addView(topSafeArea)
-        root.addView(host.contentContainer)
-        root.addView(bottomTabs)
+        contentColumn.addView(topSafeArea)
+        contentColumn.addView(host.contentContainer)
+        contentColumn.addView(bottomTabs)
+
+        val root = CoordinatorLayout(host).apply {
+            setBackgroundColor(host.colorBackground)
+            addView(contentColumn)
+        }
 
         applySystemBarInsets(root, topSafeArea, bottomTabs)
 
@@ -187,6 +198,7 @@ internal class MainHandRenderer(
     }
 
     override fun recreateMainView(reason: PageRebuildReason) {
+        graph.feedback.dismiss()
         graph.uiHost.applySystemBarsTheme()
         graph.activity.setContentView(createMainView())
         graph.uiHost.applySystemBarsTheme()

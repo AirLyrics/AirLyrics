@@ -27,7 +27,7 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
     container.addView(settingsBackHeader(getString(R.string.ui_system)))
 
     container.addView(languageChoiceCard(activity))
-    container.addView(toasterMuteCard(activity))
+    container.addView(statusPopupsMuteCard(activity))
 
     container.addView(
         card(activity) {
@@ -54,11 +54,11 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
     return scroll(activity, container)
 }
 
-private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toasterMuteCard@ {
-    val toasterSwitch = SwitchCompat(activity).apply {
-        isChecked = isToasterMuted()
+private fun statusPopupsMuteCard(activity: MainUiHost): View = with(activity) statusPopupsMuteCard@ {
+    val statusPopupsSwitch = SwitchCompat(activity).apply {
+        isChecked = areStatusPopupsMuted()
         applyAirThemeTint(activity)
-        contentDescription = getString(R.string.ui_toaster_mute)
+        contentDescription = getString(R.string.ui_status_popups_mute)
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
@@ -77,16 +77,16 @@ private fun toasterMuteCard(activity: MainUiHost): View = with(activity) toaster
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                 setMargins(0, 0, dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), 0)
             }
-            addView(bigText(activity, getString(R.string.ui_toaster_mute)))
+            addView(bigText(activity, getString(R.string.ui_status_popups_mute)))
         })
 
-        addView(toasterSwitch)
+        addView(statusPopupsSwitch)
 
-        toasterSwitch.setOnCheckedChangeListener { _, checked ->
-            setToasterMuted(checked)
+        statusPopupsSwitch.setOnCheckedChangeListener { _, checked ->
+            setStatusPopupsMuted(checked)
         }
         setOnClickListener {
-            toasterSwitch.isChecked = !toasterSwitch.isChecked
+            statusPopupsSwitch.isChecked = !statusPopupsSwitch.isChecked
         }
     }
 }

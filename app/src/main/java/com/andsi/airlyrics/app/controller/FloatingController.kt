@@ -13,9 +13,9 @@ import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.FloatingServiceCommand
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
-import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
+import com.andsi.airlyrics.ui.feedback.AirFeedback
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 internal class FloatingController(
@@ -24,7 +24,9 @@ internal class FloatingController(
     private val invalidator: UiInvalidator,
     private val serviceStarter: MainServiceStarter,
     private val overlayPermissionRequester: OverlayPermissionRequester,
-    private val navFeedback: FloatingNavFeedback
+    private val navFeedback: FloatingNavFeedback,
+    private val feedback: AirFeedback,
+    private val crossWindowFeedback: AirFeedback
 ) {
     private var overlayPermissionHintShown = false
 
@@ -71,7 +73,7 @@ internal class FloatingController(
         setDesiredVisible(true)
         if (!updateOverlayPermissionGranted()) {
             if (!overlayPermissionHintShown) {
-                AirToast.showLong(context, R.string.ui_enable_overlay_permission_first)
+                crossWindowFeedback.showError(R.string.ui_enable_overlay_permission_first)
                 overlayPermissionHintShown = true
             }
             invalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
@@ -96,7 +98,7 @@ internal class FloatingController(
             updateQuickFloatingActualVisible(false)
             invalidator.refreshFloatingChrome()
         } else {
-            AirToast.showShort(context, R.string.ui_overlay_update_failed)
+            feedback.showError(R.string.ui_overlay_update_failed)
             invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
         }
         return sent
@@ -163,7 +165,7 @@ internal class FloatingController(
             updateLocalLocked(nextLocked, persist = false)
             invalidator.refreshFloatingControls()
         } else {
-            AirToast.showShort(context, R.string.ui_overlay_update_failed)
+            feedback.showError(R.string.ui_overlay_update_failed)
         }
     }
 
@@ -187,7 +189,7 @@ internal class FloatingController(
             updateLocalClickThrough(nextClickThrough, persist = false)
             invalidator.refreshFloatingControls()
         } else {
-            AirToast.showShort(context, R.string.ui_overlay_update_failed)
+            feedback.showError(R.string.ui_overlay_update_failed)
         }
     }
 

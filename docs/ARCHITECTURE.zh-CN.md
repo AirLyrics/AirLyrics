@@ -79,10 +79,13 @@ design/           共享 UI 设计 token
 media/            媒体会话监听、当前媒体模型、广播和媒体来源持久化
 lyrics/           查询、取消、歌词来源、解析、导入、格式化和存储
 floating/         前台服务、服务命令、悬浮窗控制和歌词渲染
-settings/         各功能设置持久化和 Toast 策略
-ui/               页面、组件、导航、主题、UI 模型和异步界面工具
+settings/         各功能设置持久化和状态提示策略
+ui/               页面、反馈界面、组件、导航、主题、UI 模型和异步界面工具
 i18n/             语言选择、本地化 assets 和用户文案格式化
 ```
+
+临时反馈由交互界面负责：主 Activity 使用带锚点的 Snackbar，悬浮窗 Service 使用 Toast；
+两者读取同一个状态提示开关。
 
 ## 包边界
 
@@ -269,7 +272,7 @@ JSON 结果。Kotlin 将 JSON 映射为 `LyricsProviderResult` 或有类型的
 各功能设置通过 `settings/store/` 下的专用 store 读写：
 
 ```text
-AppSettingsStore             全局 App 和 Toast 行为
+AppSettingsStore             全局 App 和状态提示行为
 FloatingLyricsStyleStore     悬浮窗样式、行为、位置和预览状态
 LyricsOffsetStore            按歌曲保存的时间偏移
 LyricsSettingsStore          歌词查询和显示偏好

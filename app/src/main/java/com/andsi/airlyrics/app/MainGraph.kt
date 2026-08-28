@@ -30,12 +30,14 @@ import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
-import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
+import com.andsi.airlyrics.ui.feedback.AirFeedback
+import com.andsi.airlyrics.ui.feedback.SnackbarAirFeedback
+import com.andsi.airlyrics.ui.feedback.ToastAirFeedback
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
@@ -58,6 +60,14 @@ internal class MainGraph(
 
     val state: MainActivityState = MainActivityState()
     val viewRefs = MainActivityViewRefs()
+    private val toastFeedback: AirFeedback = ToastAirFeedback(activity)
+    val feedback: AirFeedback = SnackbarAirFeedback(
+        activity = activity,
+        anchorProvider = { viewRefs.feedbackAnchor },
+        fallback = toastFeedback
+    )
+    val crossWindowFeedback: AirFeedback
+        get() = toastFeedback
 
     val launchers: MainLaunchers = MainLaunchers(
         activity = activity,
@@ -78,7 +88,9 @@ internal class MainGraph(
             invalidator = uiInvalidator,
             serviceStarter = { intent -> startLyricsServiceSafely(intent) },
             overlayPermissionRequester = { requestOverlayPermission() },
-            navFeedback = { playFloatingNavToggleFeedback() }
+            navFeedback = { playFloatingNavToggleFeedback() },
+            feedback = feedback,
+            crossWindowFeedback = crossWindowFeedback
         )
     }
     val mediaSourceController: MediaSourceController by lazy {
@@ -102,7 +114,8 @@ internal class MainGraph(
             overwriteConfirmationRequester = { request ->
                 lyricsWorkflow.requestOverwriteConfirmation(request)
             },
-            lyricsChangedPublisher = BroadcastLyricsChangedPublisher(activity)
+            lyricsChangedPublisher = BroadcastLyricsChangedPublisher(activity),
+            feedback = feedback
         )
     }
     val uiActions: MainUiActions by lazy { createMainUiActions() }
@@ -230,6 +243,7 @@ internal class MainGraph(
 
     fun onDestroy() {
         destroyed = true
+        feedback.dismiss()
         state.pendingLyricsOverwrite = null
         mediaRefreshHandler.removeCallbacksAndMessages(null)
         appIoExecutor.shutdown()
@@ -289,13 +303,17 @@ internal class MainGraph(
             R.string.ui_notif_permission_off_warning
         }
 
-        AirToast.showLong(activity, messageRes)
+        if (granted) {
+            feedback.showMessage(messageRes)
+        } else {
+            feedback.showError(messageRes)
+        }
         uiInvalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
     }
 
     private fun handleFloatingFontFileResult(uri: android.net.Uri?) {
         uri ?: return
-        AirToast.showShort(activity, R.string.ui_importing_font)
+        feedback.showMessage(R.string.ui_importing_font)
         runOnAppIo {
             val result = FloatingLyricsFontStore.importFont(activity, uri)
             runOnMainThread {
@@ -312,20 +330,19 @@ internal class MainGraph(
                             animateContent = false,
                             animateTabs = false
                         )
-                        AirToast.showLong(
-                            activity,
+                        feedback.showMessage(
                             activity.getString(R.string.ui_font_import_success, result.displayName)
                         )
                     }
 
                     FloatingLyricsFontStore.ImportResult.UnsupportedFormat ->
-                        AirToast.showLong(activity, R.string.ui_font_format_unsupported)
+                        feedback.showError(R.string.ui_font_format_unsupported)
                     FloatingLyricsFontStore.ImportResult.TooLarge ->
-                        AirToast.showLong(activity, R.string.ui_font_file_too_large)
+                        feedback.showError(R.string.ui_font_file_too_large)
                     FloatingLyricsFontStore.ImportResult.InvalidFont ->
-                        AirToast.showLong(activity, R.string.ui_invalid_font_file)
+                        feedback.showError(R.string.ui_invalid_font_file)
                     FloatingLyricsFontStore.ImportResult.ReadFailed ->
-                        AirToast.showLong(activity, R.string.ui_font_import_failed)
+                        feedback.showError(R.string.ui_font_import_failed)
                 }
             }
         }

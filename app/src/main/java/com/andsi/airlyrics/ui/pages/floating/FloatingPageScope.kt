@@ -333,7 +333,7 @@ internal class FloatingPageScope(
     internal fun applyLyricsOffsetDelta(deltaMs: Long, statusView: TextView?) {
         val offset = host.uiActions.adjustLyricsOffsetForCurrentMedia(deltaMs)
         if (offset == null) {
-            host.showShortToast(R.string.ui_please_play_and_select_a_song_first)
+            host.showMessage(R.string.ui_please_play_and_select_a_song_first)
             statusView?.setText(R.string.ui_waiting_for_current_song)
             return
         }
@@ -343,7 +343,7 @@ internal class FloatingPageScope(
 
     internal fun resetLyricsOffset(statusView: TextView?) {
         if (!host.uiActions.resetLyricsOffsetForCurrentMedia()) {
-            host.showShortToast(R.string.ui_please_play_and_select_a_song_first)
+            host.showMessage(R.string.ui_please_play_and_select_a_song_first)
             statusView?.setText(R.string.ui_waiting_for_current_song)
             return
         }

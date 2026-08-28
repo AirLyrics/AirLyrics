@@ -373,14 +373,14 @@ class SettingsStoresTest {
     }
 
     @Test
-    fun appSettingsStore_toasterMuteDefaultsOffAndRoundTrips() {
-        assertFalse(AppSettingsStore.isToasterMuted(context))
+    fun appSettingsStore_statusPopupsMuteDefaultsOffAndRoundTrips() {
+        assertFalse(AppSettingsStore.areStatusPopupsMuted(context))
 
-        AppSettingsStore.setToasterMuted(context, true)
-        assertTrue(AppSettingsStore.isToasterMuted(context))
+        AppSettingsStore.setStatusPopupsMuted(context, true)
+        assertTrue(AppSettingsStore.areStatusPopupsMuted(context))
 
-        AppSettingsStore.setToasterMuted(context, false)
-        assertFalse(AppSettingsStore.isToasterMuted(context))
+        AppSettingsStore.setStatusPopupsMuted(context, false)
+        assertFalse(AppSettingsStore.areStatusPopupsMuted(context))
     }
 
     @Test

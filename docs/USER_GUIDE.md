@@ -68,7 +68,7 @@ See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC examples.
 - **Notif. access** allows AirLyrics to detect local media playback.
 - **Notify** displays foreground-service controls; it is separate from notification access.
 - **Language** selects system, English, or Simplified Chinese mode.
-- **Hide toast popups** disables AirLyrics toast messages.
+- **Hide status pop-ups** hides AirLyrics Snackbar and Toast messages.
 
 ## Troubleshooting
 

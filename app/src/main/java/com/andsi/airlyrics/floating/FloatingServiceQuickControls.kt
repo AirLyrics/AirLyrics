@@ -2,7 +2,6 @@ package com.andsi.airlyrics.floating
 
 import android.app.NotificationManager
 import androidx.annotation.StringRes
-import com.andsi.airlyrics.settings.AirToast
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 
 internal fun FloatingLyricsService.refreshQuickControls(feedback: String? = null) {
@@ -24,7 +23,7 @@ internal fun FloatingLyricsService.currentQuickControlState(
 }
 
 internal fun FloatingLyricsService.showQuickFeedback(@StringRes messageRes: Int) {
-    AirToast.showShort(this, messageRes)
+    feedback.showMessage(messageRes)
 }
 
 internal fun FloatingLyricsService.broadcastWindowVisibility(visible: Boolean) {

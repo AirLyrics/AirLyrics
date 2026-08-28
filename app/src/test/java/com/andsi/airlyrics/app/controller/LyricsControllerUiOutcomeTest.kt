@@ -29,6 +29,7 @@ import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
+import com.andsi.airlyrics.ui.feedback.ToastAirFeedback
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import java.io.File
@@ -67,7 +68,7 @@ class LyricsControllerUiOutcomeTest {
     fun tearDown() {
         dialogHost.dismissAll()
         MediaSourceStore.saveSelectedPackage(activity, null)
-        AppSettingsStore.setToasterMuted(activity, false)
+        AppSettingsStore.setStatusPopupsMuted(activity, false)
         ShadowToast.reset()
         ShadowLog.clear()
         resetStorage()
@@ -238,7 +239,7 @@ class LyricsControllerUiOutcomeTest {
             )
         )
 
-        AppSettingsStore.setToasterMuted(activity, true)
+        AppSettingsStore.setStatusPopupsMuted(activity, true)
         cases.forEachIndexed { index, case ->
             resetUiState(keepToastMuted = true)
             val runner = ControlledTaskRunner()
@@ -526,6 +527,7 @@ class LyricsControllerUiOutcomeTest {
                 mediaControllerProvider = mediaControllerProvider,
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsChangedPublisher = publisher,
+                feedback = ToastAirFeedback(activity),
                 onlineLyricsLookupGateway = onlineGateway
             )
         } else {
@@ -537,6 +539,7 @@ class LyricsControllerUiOutcomeTest {
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsImportGateway = gateway,
                 lyricsChangedPublisher = publisher,
+                feedback = ToastAirFeedback(activity),
                 onlineLyricsLookupGateway = onlineGateway
             )
         }
@@ -582,7 +585,7 @@ class LyricsControllerUiOutcomeTest {
         ShadowToast.reset()
         ShadowLog.clear()
         if (!keepToastMuted) {
-            AppSettingsStore.setToasterMuted(activity, false)
+            AppSettingsStore.setStatusPopupsMuted(activity, false)
         }
     }
 

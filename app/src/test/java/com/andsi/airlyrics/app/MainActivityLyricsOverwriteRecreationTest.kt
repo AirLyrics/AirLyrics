@@ -40,7 +40,6 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowContentResolver
 import org.robolectric.shadows.ShadowDialog
 import org.robolectric.shadows.ShadowLooper
-import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
 class MainActivityLyricsOverwriteRecreationTest {
@@ -51,20 +50,18 @@ class MainActivityLyricsOverwriteRecreationTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         resetStorage()
-        AppSettingsStore.setToasterMuted(context, false)
+        AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
         ShadowDialog.reset()
-        ShadowToast.reset()
     }
 
     @After
     fun tearDown() {
         activityController?.close()
         activityController = null
-        AppSettingsStore.setToasterMuted(context, false)
+        AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
         ShadowDialog.reset()
-        ShadowToast.reset()
         resetStorage()
     }
 
@@ -214,7 +211,10 @@ class MainActivityLyricsOverwriteRecreationTest {
         assertNull(restoredActivity.graph.state.pendingLyricsOverwrite)
         assertEquals(
             restoredActivity.getString(R.string.ui_cannot_read_word_by_word_lyrics_file),
-            ShadowToast.getTextOfLatestToast()
+            restoredActivity
+                .findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
+                ?.text
+                ?.toString()
         )
         assertEquals(
             "[00:10.00]old",

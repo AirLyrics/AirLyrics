@@ -49,7 +49,6 @@ import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowContentResolver
 import org.robolectric.shadows.ShadowDialog
-import org.robolectric.shadows.ShadowToast
 
 @RunWith(RobolectricTestRunner::class)
 class MainActivityLyricsImportLifecycleTest {
@@ -62,10 +61,9 @@ class MainActivityLyricsImportLifecycleTest {
         context = ApplicationProvider.getApplicationContext()
         resetStorage()
         clearCurrentMedia()
-        AppSettingsStore.setToasterMuted(context, false)
+        AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
         ShadowDialog.reset()
-        ShadowToast.reset()
     }
 
     @After
@@ -73,10 +71,9 @@ class MainActivityLyricsImportLifecycleTest {
         activityController?.close()
         mediaSession?.release()
         clearCurrentMedia()
-        AppSettingsStore.setToasterMuted(context, false)
+        AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
         ShadowDialog.reset()
-        ShadowToast.reset()
         resetStorage()
     }
 
@@ -177,7 +174,6 @@ class MainActivityLyricsImportLifecycleTest {
             "Initial render must complete before the old write",
             newActivity.visibleTexts().contains(newActivity.getString(R.string.ui_not_bound))
         )
-        ShadowToast.reset()
         ShadowDialog.reset()
 
         releaseImport.countDown()
@@ -199,7 +195,9 @@ class MainActivityLyricsImportLifecycleTest {
         assertTrue(newActivity.visibleTexts().contains("${SONG_A.title} - ${SONG_A.artist}"))
         assertTrue(oldActivity.isDestroyed)
         assertSame(oldRenderedPage, oldActivity.graph.uiHost.contentContainer?.getChildAt(0))
-        assertEquals(0, ShadowToast.shownToastCount())
+        assertNull(
+            newActivity.findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
+        )
         val latestDialog: Dialog? = ShadowDialog.getLatestDialog()
         assertNull(latestDialog)
     }

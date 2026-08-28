@@ -265,7 +265,6 @@
     <string name="ui_importing_lyrics">正在导入歌词…</string>
     <string name="ui_lrc_file_too_large">请选择小于 30 MB 的歌词文件</string>
     <string name="ui_loading">加载中…</string>
-    <string name="ui_saving">保存中…</string>
     <string name="ui_please_play_and_select_a_song_first">请先播放并选择歌曲</string>
     <string name="ui_preferred">优先显示</string>
     <string name="ui_prev_current_next">上 + 当前 + 下</string>
@@ -345,7 +344,7 @@
     <string name="ui_this_is_a_lyric_preview_translation">这是一行歌词预览</string>
     <string name="ui_word_by_word_overwrite_message">将替换逐字歌词，并重新生成普通歌词</string>
     <string name="ui_overwrite_plain_lyrics_msg">将替换当前普通歌词</string>
-    <string name="ui_toaster_mute">隐藏状态提示</string>
+    <string name="ui_status_popups_mute">隐藏状态提示</string>
     <string name="ui_translation_only">仅翻译</string>
     <string name="ui_unknown_artist">未知歌手</string>
     <string name="ui_unknown_size">未知大小</string>

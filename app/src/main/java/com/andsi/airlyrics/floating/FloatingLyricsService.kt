@@ -24,9 +24,15 @@ import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.ui.feedback.AirFeedback
+import com.andsi.airlyrics.ui.feedback.ToastAirFeedback
 
 open class FloatingLyricsService : Service() {
     internal lateinit var windowController: FloatingLyricsWindow
+    private val feedbackDelegate = lazy(LazyThreadSafetyMode.NONE) {
+        ToastAirFeedback(this)
+    }
+    internal val feedback: AirFeedback by feedbackDelegate
 
     internal val lyricsView
         get() = if (::windowController.isInitialized) windowController.textView else null
@@ -179,6 +185,7 @@ open class FloatingLyricsService : Service() {
     }
 
     override fun onDestroy() {
+        if (feedbackDelegate.isInitialized()) feedback.dismiss()
         stopLyricsSync()
         syncHandler.removeCallbacks(pauseAutoHideRunnable)
         syncHandler.removeCallbacks(mediaRestoreRunnable)

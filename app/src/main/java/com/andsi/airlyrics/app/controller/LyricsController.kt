@@ -23,7 +23,7 @@ import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.toSongIdentity
-import com.andsi.airlyrics.settings.AirToast
+import com.andsi.airlyrics.ui.feedback.AirFeedback
 
 internal fun interface LyricsOverwriteConfirmationRequester {
     fun requestConfirmation(request: PendingLyricsOverwrite)
@@ -36,6 +36,7 @@ internal class LyricsController(
     private val mediaControllerProvider: MediaControllerProvider,
     private val overwriteConfirmationRequester: LyricsOverwriteConfirmationRequester,
     private val lyricsChangedPublisher: LyricsChangedPublisher,
+    private val feedback: AirFeedback,
     private val lyricsImportGateway: LyricsImportGateway = StorageLyricsImportGateway(),
     private val onlineLyricsLookupGateway: OnlineLyricsLookupGateway = RepositoryOnlineLyricsLookupGateway
 ) {
@@ -72,7 +73,7 @@ internal class LyricsController(
             }
 
             taskRunner.runOnMainThread {
-                AirToast.showShort(context, R.string.ui_importing_lyrics)
+                feedback.showMessage(R.string.ui_importing_lyrics)
             }
 
             val result = if (importAsWordByWord) {
@@ -194,19 +195,19 @@ internal class LyricsController(
                 } else {
                     R.string.ui_plain_lrc_import_success
                 }
-                AirToast.showLong(context, messageRes)
+                feedback.showMessage(messageRes)
             }
             LyricsStorage.ImportLyricsResult.TooLarge -> {
-                AirToast.showLong(context, R.string.ui_lrc_file_too_large)
+                feedback.showError(R.string.ui_lrc_file_too_large)
             }
             is LyricsStorage.ImportLyricsResult.InvalidFormat -> {
                 showImportFormatError(result.invalidLineNumbers, importAsWordByWord)
             }
             LyricsStorage.ImportLyricsResult.PlainLyricsAlreadyExists -> {
-                AirToast.showLong(context, R.string.ui_word_by_word_blocked_by_plain_lrc)
+                feedback.showError(R.string.ui_word_by_word_blocked_by_plain_lrc)
             }
             LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists -> {
-                AirToast.showLong(context, R.string.ui_plain_lrc_blocked_by_word_by_word)
+                feedback.showError(R.string.ui_plain_lrc_blocked_by_word_by_word)
             }
             LyricsStorage.ImportLyricsResult.ReadFailed -> {
                 val messageRes = if (importAsWordByWord) {
@@ -214,13 +215,13 @@ internal class LyricsController(
                 } else {
                     R.string.ui_cannot_read_this_lyric_file
                 }
-                AirToast.showLong(context, messageRes)
+                feedback.showError(messageRes)
             }
             LyricsStorage.ImportLyricsResult.SaveFailed -> {
-                AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
+                feedback.showError(R.string.ui_lrc_import_save_failed)
             }
             LyricsStorage.ImportLyricsResult.SnapshotFailed -> {
-                AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
+                feedback.showError(R.string.ui_lrc_import_save_failed)
             }
             is LyricsStorage.ImportLyricsResult.RollbackFailed -> {
                 Log.e(
@@ -229,7 +230,7 @@ internal class LyricsController(
                         "(${result.originalFailureCause}); " +
                         "failed steps=${result.failedRollbackSteps}"
                 )
-                AirToast.showLong(context, R.string.ui_lrc_import_save_failed)
+                feedback.showError(R.string.ui_lrc_import_save_failed)
             }
         }
     }
@@ -266,7 +267,7 @@ internal class LyricsController(
                         LyricsStorage.DeleteMode.WORD_BY_WORD -> R.string.ui_word_by_word_lyrics_removed
                         LyricsStorage.DeleteMode.ALL -> R.string.ui_all_local_lyrics_removed
                     }
-                    AirToast.showLong(context, messageRes)
+                    feedback.showMessage(messageRes)
                     lyricsChangedPublisher.publishDeleted(media.toSongIdentity())
                 } else {
                     val messageRes = when (mode) {
@@ -274,7 +275,7 @@ internal class LyricsController(
                         LyricsStorage.DeleteMode.WORD_BY_WORD -> R.string.ui_no_word_by_word_lyrics_to_remove
                         LyricsStorage.DeleteMode.ALL -> R.string.ui_no_local_lyrics_to_remove
                     }
-                    AirToast.showShort(context, messageRes)
+                    feedback.showMessage(messageRes)
                 }
             }
         }
@@ -307,7 +308,7 @@ internal class LyricsController(
             taskRunner.runOnMainThread {
                 when (result) {
                     is LyricsStorage.DeleteLocalLyricsItemResult.Deleted -> {
-                        AirToast.showLong(context, R.string.ui_all_saved_lyrics_deleted)
+                        feedback.showMessage(R.string.ui_all_saved_lyrics_deleted)
                         val deletedTarget = result.target
                         val deletesCurrentWordByWordOnlyItem = currentLyricsInfo == null &&
                             deletedTarget != null &&
@@ -319,12 +320,12 @@ internal class LyricsController(
                     }
 
                     LyricsStorage.DeleteLocalLyricsItemResult.NotFound -> {
-                        AirToast.showShort(context, R.string.ui_lyrics_not_found)
+                        feedback.showMessage(R.string.ui_lyrics_not_found)
                         onCompleted(false)
                     }
 
                     LyricsStorage.DeleteLocalLyricsItemResult.Failed -> {
-                        AirToast.showLong(context, R.string.ui_delete_saved_lyrics_failed)
+                        feedback.showError(R.string.ui_delete_saved_lyrics_failed)
                         onCompleted(false)
                     }
                 }
@@ -339,16 +340,16 @@ internal class LyricsController(
             taskRunner.runOnMainThread {
                 when (result) {
                     LyricsStorage.DeleteAllSavedLyricsResult.DELETED -> {
-                        AirToast.showLong(context, R.string.ui_all_saved_lyrics_deleted)
+                        feedback.showMessage(R.string.ui_all_saved_lyrics_deleted)
                         lyricsChangedPublisher.publishDeleted()
                     }
 
                     LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE -> {
-                        AirToast.showShort(context, R.string.ui_no_saved_lyrics_to_delete)
+                        feedback.showMessage(R.string.ui_no_saved_lyrics_to_delete)
                     }
 
                     LyricsStorage.DeleteAllSavedLyricsResult.FAILED -> {
-                        AirToast.showLong(context, R.string.ui_delete_all_saved_lyrics_failed)
+                        feedback.showError(R.string.ui_delete_all_saved_lyrics_failed)
                         lyricsChangedPublisher.publishDeleted()
                     }
                 }
@@ -357,7 +358,7 @@ internal class LyricsController(
     }
 
     fun searchOnlineLyricsForCurrentMedia(media: CurrentMediaInfo) {
-        AirToast.showShort(context, R.string.ui_searching_online_again)
+        feedback.showMessage(R.string.ui_searching_online_again)
         taskRunner.runOnAppIo {
             val result = onlineLyricsLookupGateway.findAndSave(context, media)
             val foundLyrics = result.getOrNull()?.takeIf { it.plainLrc.isNotBlank() }
@@ -368,13 +369,12 @@ internal class LyricsController(
 
             taskRunner.runOnMainThread {
                 when {
-                    foundLyrics != null -> AirToast.showLong(context, R.string.ui_online_lyrics_saved)
-                    lookupError != null -> AirToast.showLong(
-                        context,
+                    foundLyrics != null -> feedback.showMessage(R.string.ui_online_lyrics_saved)
+                    lookupError != null -> feedback.showError(
                         context.localizedLyricsLookupMessage(lookupError)
                     )
-                    result.isFailure -> AirToast.showLong(context, R.string.ui_online_lyrics_search_failed)
-                    else -> AirToast.showLong(context, R.string.ui_lyrics_not_found)
+                    result.isFailure -> feedback.showError(R.string.ui_online_lyrics_search_failed)
+                    else -> feedback.showMessage(R.string.ui_lyrics_not_found)
                 }
             }
         }
@@ -395,6 +395,6 @@ internal class LyricsController(
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.ui_lyrics_save_folder), path))
 
-        AirToast.showLong(context, R.string.ui_lyrics_save_folder_copied)
+        feedback.showMessage(R.string.ui_lyrics_save_folder_copied)
     }
 }
