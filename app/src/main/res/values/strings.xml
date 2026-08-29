@@ -361,7 +361,6 @@ Word-by-word lyrics recommended format:
     <string name="ui_view_lrc_examples_hint">Plain and word-by-word examples</string>
     <string name="ui_vinyl_bubble">Vinyl</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
-    <string name="ui_waiting_for_media">Waiting for media</string>
     <string name="ui_waiting_for_media_message">Waiting for media…</string>
     <string name="ui_waiting_for_music_signal">Waiting for music</string>
     <string name="ui_whats_new">New in this version</string>

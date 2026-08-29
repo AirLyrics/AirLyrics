@@ -11,7 +11,6 @@ import com.andsi.airlyrics.app.contracts.MainServiceStarter
 import com.andsi.airlyrics.app.contracts.OverlayPermissionRequester
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.FloatingServiceCommand
-import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
@@ -29,34 +28,6 @@ internal class FloatingController(
     private val crossWindowFeedback: AirFeedback
 ) {
     private var overlayPermissionHintShown = false
-
-    fun handleWindowStateBroadcast(intent: Intent) {
-        val windowState = FloatingWindowStateBroadcast.readState(intent) ?: return
-
-        val previousVisible = state.quickFloatingVisible
-        val previousLocked = state.locked
-        val previousClickThrough = state.clickThrough
-        val previousOverlayPermissionGranted = state.overlayPermissionGranted
-        val visible = windowState.visible
-        val locked = windowState.locked
-        val clickThrough = windowState.clickThrough
-        state.locked = locked
-        state.clickThrough = clickThrough
-        val overlayPermissionGranted = updateOverlayPermissionGranted()
-        updateQuickFloatingActualVisible(visible)
-
-        val visibleStateChanged = previousVisible != visible
-        val permissionStateChanged = previousOverlayPermissionGranted != overlayPermissionGranted
-        val controlStateChanged = previousLocked != locked ||
-            previousClickThrough != clickThrough
-        if (permissionStateChanged) {
-            invalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
-        } else if (visibleStateChanged) {
-            invalidator.refreshFloatingChrome()
-        } else if (controlStateChanged) {
-            invalidator.refreshFloatingControls()
-        }
-    }
 
     fun reloadLyrics() {
         if (!state.quickFloatingVisible) return
@@ -106,16 +77,8 @@ internal class FloatingController(
 
     fun restoreVisibleWindowIfNeeded() {
         if (!QuickFloatingStore.isDesiredVisible(context)) return
-
-        if (!updateOverlayPermissionGranted()) {
-            invalidator.rebuildCurrentPage(PageRebuildReason.PERMISSION_CHANGED)
-            return
-        }
-
-        val sent = startFloatingService()
-        if (!sent) {
-            invalidator.rebuildCurrentPage(PageRebuildReason.FLOATING_STRUCTURE_CHANGED)
-        }
+        if (!updateOverlayPermissionGranted()) return
+        startFloatingService()
     }
 
     fun toggleFromNav() {

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Public facade for local lyric persistence.
@@ -13,8 +14,16 @@ import com.andsi.airlyrics.lyrics.WordByWordLine
  */
 object LyricsStorage {
     private val storageLock = Any()
+    private val contentRevision = AtomicLong(0L)
 
     internal fun <T> withStorageLock(block: () -> T): T = synchronized(storageLock) { block() }
+
+    /** Process-local signal used to reconcile visible UI after local lyrics mutations. */
+    internal fun currentRevision(): Long = contentRevision.get()
+
+    private fun markContentChanged() {
+        contentRevision.incrementAndGet()
+    }
 
     const val SOURCE_MANUAL_IMPORT = "manual_import"
     const val SOURCE_DOWNLOADED = "downloaded"
@@ -137,7 +146,11 @@ object LyricsStorage {
         context: Context,
         item: LocalLyricsItem,
         plainLrc: String
-    ): LocalLyricsUpdateResult = LocalLyricsEditor.updatePlainItemTextWithResult(context, item, plainLrc)
+    ): LocalLyricsUpdateResult {
+        return LocalLyricsEditor.updatePlainItemTextWithResult(context, item, plainLrc).also { result ->
+            if (result.saved) markContentChanged()
+        }
+    }
 
     fun validateWordByWordLyricsItemText(wordByWordLrc: String): LocalLyricsUpdateResult {
         return LocalLyricsEditor.validateWordByWordItemText(wordByWordLrc)
@@ -147,7 +160,12 @@ object LyricsStorage {
         context: Context,
         item: LocalLyricsItem,
         wordByWordLrc: String
-    ): LocalLyricsUpdateResult = LocalLyricsEditor.updateWordByWordItemTextWithResult(context, item, wordByWordLrc)
+    ): LocalLyricsUpdateResult {
+        return LocalLyricsEditor.updateWordByWordItemTextWithResult(context, item, wordByWordLrc)
+            .also { result ->
+                if (result.saved) markContentChanged()
+            }
+    }
 
     fun saveLyricsDirUri(context: Context, uri: Uri) = withStorageLock {
         LyricsStoragePaths.saveLyricsDirUri(context, uri)
@@ -185,7 +203,7 @@ object LyricsStorage {
         plainProvider: String = "local",
         overwrite: Boolean = true
     ): Boolean = withStorageLock {
-        PlainLyricsStorageOps.savePlainLyrics(
+        val saved = PlainLyricsStorageOps.savePlainLyrics(
             context = context,
             title = title,
             artist = artist,
@@ -196,6 +214,8 @@ object LyricsStorage {
             plainProvider = plainProvider,
             overwrite = overwrite
         )
+        if (saved) markContentChanged()
+        saved
     }
 
     fun importPlainLyricsFromUri(
@@ -233,7 +253,11 @@ object LyricsStorage {
             duration = duration,
             album = album,
             overwrite = overwrite
-        )
+        ).also { result ->
+            if (result is ImportLyricsResult.Saved || result is ImportLyricsResult.RollbackFailed) {
+                markContentChanged()
+            }
+        }
     }
 
     fun hasWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): Boolean = withStorageLock {
@@ -256,7 +280,7 @@ object LyricsStorage {
         overwrite: Boolean = true,
         metadataLines: List<String> = emptyList()
     ): Boolean = withStorageLock {
-        WordByWordLyricsStorageOps.saveWordByWordLyrics(
+        val saved = WordByWordLyricsStorageOps.saveWordByWordLyrics(
             context = context,
             title = title,
             artist = artist,
@@ -268,6 +292,8 @@ object LyricsStorage {
             overwrite = overwrite,
             metadataLines = metadataLines
         )
+        if (saved) markContentChanged()
+        saved
     }
 
     fun importWordByWordLyricsFromUriWithResult(
@@ -289,7 +315,11 @@ object LyricsStorage {
             overwrite = overwrite,
             managedLyricsIo = AndroidManagedLyricsIo,
             indexIo = AndroidLyricsIndexIo
-        )
+        ).also { result ->
+            if (result is ImportLyricsResult.Saved || result is ImportLyricsResult.RollbackFailed) {
+                markContentChanged()
+            }
+        }
     }
 
     internal fun importWordByWordLyricsFromUriWithResult(
@@ -313,7 +343,11 @@ object LyricsStorage {
             overwrite = overwrite,
             managedLyricsIo = managedLyricsIo,
             indexIo = indexIo
-        )
+        ).also { result ->
+            if (result is ImportLyricsResult.Saved || result is ImportLyricsResult.RollbackFailed) {
+                markContentChanged()
+            }
+        }
     }
 
     fun deleteLocalLyrics(
@@ -323,17 +357,23 @@ object LyricsStorage {
         duration: Long,
         mode: DeleteMode = DeleteMode.ALL
     ): Boolean = withStorageLock {
-        LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode)
+        val deleted = LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode)
+        if (deleted) markContentChanged()
+        deleted
     }
 
     fun deleteLocalLyricsItem(
         context: Context,
         item: LocalLyricsItem
     ): DeleteLocalLyricsItemResult = withStorageLock {
-        LocalLyricsDeleteOps.deleteLocalLyricsItem(context, item)
+        val result = LocalLyricsDeleteOps.deleteLocalLyricsItem(context, item)
+        if (result !is DeleteLocalLyricsItemResult.NotFound) markContentChanged()
+        result
     }
 
     fun deleteAllSavedLyrics(context: Context): DeleteAllSavedLyricsResult = withStorageLock {
-        LocalLyricsDeleteOps.deleteAllSavedLyrics(context)
+        val result = LocalLyricsDeleteOps.deleteAllSavedLyrics(context)
+        if (result != DeleteAllSavedLyricsResult.NOTHING_TO_DELETE) markContentChanged()
+        result
     }
 }

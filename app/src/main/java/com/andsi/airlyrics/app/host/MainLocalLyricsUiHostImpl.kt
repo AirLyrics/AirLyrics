@@ -306,17 +306,22 @@ private fun MainUiHost.showLocalLyricsEditorDialog(
                         if (isBusy) return@localLyricsDialogButton
                         val newText = editor.text.toString()
                         setBusyState(true)
+                        val expectedUiGeneration = currentUiGeneration()
                         runOnAppIo {
                             val result = if (isWordByWord) {
                                 LyricsStorage.updateWordByWordLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, storageItem, newText)
                             } else {
                                 LyricsStorage.updatePlainLyricsItemTextWithResult(this@showLocalLyricsEditorDialog, storageItem, newText)
                             }
-                            runOnMainThread {
+                            if (result.saved) {
+                                runOnMainThread {
+                                    uiActions.reloadFloatingLyrics()
+                                }
+                            }
+                            runOnStartedUi(expectedUiGeneration) {
                                 when {
                                     result.saved -> {
                                         editDialog?.dismiss()
-                                        uiActions.reloadFloatingLyrics()
                                         onLyricsChanged?.invoke(LocalLyricsUiChange.SAVED)
                                     }
                                     result.invalidLineNumbers.isNotEmpty() -> {

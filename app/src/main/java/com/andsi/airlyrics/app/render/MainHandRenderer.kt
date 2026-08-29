@@ -128,6 +128,7 @@ internal class MainHandRenderer(
         animateTabs: Boolean
     ) {
         val container = host.contentContainer ?: return
+        graph.beginPageRebuild()
         (container.getChildAt(0) as? ScrollView)?.let { scrollView ->
             state.pageScrollY[state.renderedPage] = scrollView.scrollY
         }

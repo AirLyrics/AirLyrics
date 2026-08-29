@@ -12,9 +12,10 @@ internal class LatestUiTaskRunner {
         deliver: (T) -> Unit
     ) {
         val taskGeneration = generation.incrementAndGet()
+        val uiGeneration = runtime.currentUiGeneration()
         runtime.runOnAppIo {
             val result = load()
-            runtime.runOnMainThread {
+            runtime.runOnStartedUi(uiGeneration) {
                 if (taskGeneration == generation.get()) {
                     deliver(result)
                 }

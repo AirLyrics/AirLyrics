@@ -14,9 +14,21 @@ class MainActivity : AppCompatActivity() {
         graph.onCreate(savedInstanceState)
     }
 
+    override fun onStart() {
+        super.onStart()
+        graph.onStart()
+    }
+
     override fun onResume() {
         super.onResume()
         graph.onResume()
+    }
+
+    override fun onStop() {
+        if (::graph.isInitialized) {
+            graph.onStop()
+        }
+        super.onStop()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

@@ -134,6 +134,9 @@ internal class MainActivityUiHost(
     override fun getPlaybackStateText(state: Int?): String = graph.mediaSourceController.getPlaybackStateText(state)
     override fun runOnAppIo(block: () -> Unit) = graph.runOnAppIo(block)
     override fun runOnMainThread(block: () -> Unit) = graph.runOnMainThread(block)
+    override fun currentUiGeneration(): Long = graph.currentUiGeneration()
+    override fun runOnStartedUi(expectedGeneration: Long, block: () -> Unit) =
+        graph.runOnStartedUi(expectedGeneration, block)
     override fun showMessage(messageRes: Int) = graph.feedback.showMessage(messageRes)
 
     override fun refreshMediaButton(): View = refreshMediaButtonImpl()

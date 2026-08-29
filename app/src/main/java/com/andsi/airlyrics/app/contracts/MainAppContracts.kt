@@ -36,6 +36,12 @@ internal interface MediaControllerProvider {
 internal interface MainTaskRunner {
     fun runOnAppIo(block: () -> Unit)
     fun runOnMainThread(block: () -> Unit)
+
+    fun currentUiGeneration(): Long = 0L
+
+    fun runOnStartedUi(expectedGeneration: Long, block: () -> Unit) {
+        runOnMainThread(block)
+    }
 }
 
 internal interface MainDialogHost {

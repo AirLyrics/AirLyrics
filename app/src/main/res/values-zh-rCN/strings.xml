@@ -361,7 +361,6 @@
     <string name="ui_view_lrc_examples_hint">普通与逐字歌词示例</string>
     <string name="ui_vinyl_bubble">黑胶</string>
     <string name="ui_waiting_for_current_song">等待当前歌曲</string>
-    <string name="ui_waiting_for_media">等待媒体信息</string>
     <string name="ui_waiting_for_media_message">等待媒体信息…</string>
     <string name="ui_waiting_for_music_signal">等待音乐中</string>
     <string name="ui_whats_new">当前版本更新</string>

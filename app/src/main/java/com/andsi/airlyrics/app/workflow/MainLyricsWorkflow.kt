@@ -160,6 +160,7 @@ internal class MainLyricsWorkflow(
             return
         }
 
+        val uiGeneration = graph.currentUiGeneration()
         graph.runOnAppIo {
             val localInfo = LyricsStorage.getLocalPlainLyricsInfo(
                 context = activity,
@@ -177,7 +178,7 @@ internal class MainLyricsWorkflow(
             val wordByWordImportEnabled = localInfo == null ||
                 localInfo.plainSource == LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
 
-            graph.runOnMainThread {
+            graph.runOnStartedUi(uiGeneration) {
                 var dialog: Dialog? = null
 
                 fun launchImport(asWordByWord: Boolean) {

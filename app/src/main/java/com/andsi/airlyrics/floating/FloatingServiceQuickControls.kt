@@ -32,6 +32,7 @@ internal fun FloatingLyricsService.broadcastWindowVisibility(visible: Boolean) {
         locked = FloatingLyricsStyleStore.isLocked(this),
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
     )
+    FloatingWindowRuntimeState.update(state)
     val intent = FloatingWindowStateBroadcast.windowVisibilityChangedIntent(this, state)
     sendBroadcast(intent)
 }
@@ -42,6 +43,7 @@ internal fun FloatingLyricsService.broadcastQuickControlState() {
         locked = FloatingLyricsStyleStore.isLocked(this),
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this)
     )
+    FloatingWindowRuntimeState.update(state)
     val intent = FloatingWindowStateBroadcast.quickControlChangedIntent(this, state)
     sendBroadcast(intent)
 }

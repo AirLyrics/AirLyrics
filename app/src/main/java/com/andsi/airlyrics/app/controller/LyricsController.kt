@@ -46,17 +46,18 @@ internal class LyricsController(
         overwrite: Boolean,
         importAsWordByWord: Boolean = false
     ) {
+        val uiGeneration = taskRunner.currentUiGeneration()
         taskRunner.runOnAppIo {
             val blockedImportResult = blockedImportResult(target, importAsWordByWord)
             if (blockedImportResult != null) {
-                taskRunner.runOnMainThread {
+                taskRunner.runOnStartedUi(uiGeneration) {
                     handleImportResult(blockedImportResult, importAsWordByWord)
                 }
                 return@runOnAppIo
             }
 
             if (!overwrite && hasLyricsForTarget(target, importAsWordByWord)) {
-                taskRunner.runOnMainThread {
+                taskRunner.runOnStartedUi(uiGeneration) {
                     overwriteConfirmationRequester.requestConfirmation(
                         PendingLyricsOverwrite(
                             uri = uri,
@@ -72,7 +73,7 @@ internal class LyricsController(
                 return@runOnAppIo
             }
 
-            taskRunner.runOnMainThread {
+            taskRunner.runOnStartedUi(uiGeneration) {
                 feedback.showMessage(R.string.ui_importing_lyrics)
             }
 
@@ -96,7 +97,7 @@ internal class LyricsController(
                 lyricsChangedPublisher.publish(target)
             }
 
-            taskRunner.runOnMainThread {
+            taskRunner.runOnStartedUi(uiGeneration) {
                 handleImportResult(result, importAsWordByWord)
             }
         }
@@ -251,6 +252,7 @@ internal class LyricsController(
     }
 
     fun deleteLyricsForCurrentMedia(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
+        val uiGeneration = taskRunner.currentUiGeneration()
         taskRunner.runOnAppIo {
             val deleted = LyricsStorage.deleteLocalLyrics(
                 context = context,
@@ -259,8 +261,11 @@ internal class LyricsController(
                 duration = media.durationMs,
                 mode = mode
             )
+            if (deleted) {
+                lyricsChangedPublisher.publishDeleted(media.toSongIdentity())
+            }
 
-            taskRunner.runOnMainThread {
+            taskRunner.runOnStartedUi(uiGeneration) {
                 if (deleted) {
                     val messageRes = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> R.string.ui_plain_lrc_removed_for_this_song
@@ -268,7 +273,6 @@ internal class LyricsController(
                         LyricsStorage.DeleteMode.ALL -> R.string.ui_all_local_lyrics_removed
                     }
                     feedback.showMessage(messageRes)
-                    lyricsChangedPublisher.publishDeleted(media.toSongIdentity())
                 } else {
                     val messageRes = when (mode) {
                         LyricsStorage.DeleteMode.PLAIN -> R.string.ui_no_plain_lrc_to_remove_for_this_song
@@ -285,6 +289,7 @@ internal class LyricsController(
         item: LyricsStorage.LocalLyricsItem,
         onCompleted: (Boolean) -> Unit
     ) {
+        val uiGeneration = taskRunner.currentUiGeneration()
         val currentMedia = getCurrentMediaInfo()
         val currentTarget = currentMedia?.toSongIdentity()
         taskRunner.runOnAppIo {
@@ -304,18 +309,22 @@ internal class LyricsController(
                 }
             } == true
             val result = LyricsStorage.deleteLocalLyricsItem(context, item)
+            if (result is LyricsStorage.DeleteLocalLyricsItemResult.Deleted) {
+                val deletedTarget = result.target
+                val deletesCurrentWordByWordOnlyItem = currentLyricsInfo == null &&
+                    deletedTarget != null &&
+                    currentTarget?.isStrongSameSong(deletedTarget) == true
+                if (currentTarget != null &&
+                    (deletesCurrentItem || deletesCurrentWordByWordOnlyItem)
+                ) {
+                    lyricsChangedPublisher.publishDeleted(currentTarget)
+                }
+            }
 
-            taskRunner.runOnMainThread {
+            taskRunner.runOnStartedUi(uiGeneration) {
                 when (result) {
                     is LyricsStorage.DeleteLocalLyricsItemResult.Deleted -> {
                         feedback.showMessage(R.string.ui_all_saved_lyrics_deleted)
-                        val deletedTarget = result.target
-                        val deletesCurrentWordByWordOnlyItem = currentLyricsInfo == null &&
-                            deletedTarget != null &&
-                            currentTarget?.isStrongSameSong(deletedTarget) == true
-                        if (currentTarget != null && (deletesCurrentItem || deletesCurrentWordByWordOnlyItem)) {
-                            lyricsChangedPublisher.publishDeleted(currentTarget)
-                        }
                         onCompleted(true)
                     }
 
@@ -334,14 +343,17 @@ internal class LyricsController(
     }
 
     fun deleteAllSavedLyrics() {
+        val uiGeneration = taskRunner.currentUiGeneration()
         taskRunner.runOnAppIo {
             val result = LyricsStorage.deleteAllSavedLyrics(context)
+            if (result != LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE) {
+                lyricsChangedPublisher.publishDeleted()
+            }
 
-            taskRunner.runOnMainThread {
+            taskRunner.runOnStartedUi(uiGeneration) {
                 when (result) {
                     LyricsStorage.DeleteAllSavedLyricsResult.DELETED -> {
                         feedback.showMessage(R.string.ui_all_saved_lyrics_deleted)
-                        lyricsChangedPublisher.publishDeleted()
                     }
 
                     LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE -> {
@@ -350,7 +362,6 @@ internal class LyricsController(
 
                     LyricsStorage.DeleteAllSavedLyricsResult.FAILED -> {
                         feedback.showError(R.string.ui_delete_all_saved_lyrics_failed)
-                        lyricsChangedPublisher.publishDeleted()
                     }
                 }
             }
@@ -359,6 +370,7 @@ internal class LyricsController(
 
     fun searchOnlineLyricsForCurrentMedia(media: CurrentMediaInfo) {
         feedback.showMessage(R.string.ui_searching_online_again)
+        val uiGeneration = taskRunner.currentUiGeneration()
         taskRunner.runOnAppIo {
             val result = onlineLyricsLookupGateway.findAndSave(context, media)
             val foundLyrics = result.getOrNull()?.takeIf { it.plainLrc.isNotBlank() }
@@ -367,7 +379,7 @@ internal class LyricsController(
                 lyricsChangedPublisher.publish(media.toSongIdentity())
             }
 
-            taskRunner.runOnMainThread {
+            taskRunner.runOnStartedUi(uiGeneration) {
                 when {
                     foundLyrics != null -> feedback.showMessage(R.string.ui_online_lyrics_saved)
                     lookupError != null -> feedback.showError(

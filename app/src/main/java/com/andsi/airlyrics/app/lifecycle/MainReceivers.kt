@@ -12,9 +12,8 @@ import com.andsi.airlyrics.media.CurrentMediaBroadcast
 /**
  * Owns main-screen broadcast receiver instances and their registration.
  *
- * The receivers are intentionally thin: they only validate the incoming Intent
- * and forward it to the graph/controller layer so MainActivity does not own
- * broadcast lifecycle plumbing anymore.
+ * MainGraph registers this group only while the activity is started. The receivers
+ * stay thin: they validate the incoming Intent and forward it to graph/controller code.
  */
 internal class MainReceivers(
     private val context: Context,
