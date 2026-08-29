@@ -12,9 +12,9 @@ import com.andsi.airlyrics.app.contracts.OverlayPermissionRequester
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.floating.FloatingServiceCommand
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
-import com.andsi.airlyrics.ui.feedback.AirFeedback
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 
 internal class FloatingController(

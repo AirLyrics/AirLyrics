@@ -79,16 +79,17 @@ Lyrics import
 app/              Composition root, lifecycle coordination, controllers, workflows, and UI adapters
 core/             Dependency-stable models, color helpers, and preference abstractions
 design/           Shared UI design tokens
+feedback/         Feature-independent transient-feedback contracts and Toast host
 media/            Media-session observation, current-media models, broadcasts, and source persistence
 lyrics/           Lookup, cancellation, providers, parsing, importing, formatting, and storage
 floating/         Foreground service, service commands, overlay control, and lyrics rendering
 settings/         Feature-specific settings persistence and status-popup policy
-ui/               Screens, feedback surfaces, components, navigation, themes, UI models, and async UI helpers
+ui/               Screens, Snackbar feedback, components, navigation, themes, UI models, and async UI helpers
 i18n/             Language selection, localized assets, and user-facing text formatters
 ```
 
 Transient feedback is surface-owned: the main Activity uses an anchored Snackbar host, while the
-floating Service uses a Toast host. Both read the same status-popup preference.
+floating Service uses a Toast host. Their composition roots supply the same status-popup policy.
 
 ## Package Boundaries
 
@@ -96,27 +97,30 @@ The current top-level Kotlin package dependencies are:
 
 ```text
 core      -> (none)
-design    -> (none)
+feedback  -> (none)
+design    -> core
 settings  -> core
 lyrics    -> core
 i18n      -> core, lyrics
 media     -> core, i18n
-ui        -> core, design, i18n
-floating  -> core, design, i18n, lyrics, media, settings
-app       -> core, design, floating, i18n, lyrics, media, settings, ui
+ui        -> core, design, feedback, i18n
+floating  -> core, design, feedback, i18n, lyrics, media, settings
+app       -> core, design, feedback, floating, i18n, lyrics, media, settings, ui
 ```
 
 Arrows mean “imports from”; generated `R` and platform libraries are omitted.
 
 The important boundary rules are:
 
-- `core/` and `design/` do not depend on feature packages.
+- `core/` and `feedback/` do not depend on other project packages; `design/` depends only on stable
+  `core/` models.
 - `lyrics/` and `media/` remain independent of each other and do not depend on `app/`, `floating/`,
   `settings/`, or `ui/`.
-- `ui/` does not import concrete media, lyrics, settings, or floating implementations. It receives
+- `ui/` does not import concrete media, lyrics, settings, or floating implementations. Feedback
+  visibility and palette policy are injected by `app/`; pages receive
   UI-facing data and actions through interfaces under `ui/model/`.
-- `floating/` may coordinate media, lyrics, and settings, but it does not depend on the main app
-  shell or UI pages.
+- `floating/` may coordinate media, lyrics and settings and use the feature-independent feedback
+  host, but it does not depend on the main app shell or UI pages.
 - `app/` is the composition layer that is allowed to connect all feature packages.
 
 `scripts/check_architecture_boundaries.sh` enforces these import restrictions in CI.

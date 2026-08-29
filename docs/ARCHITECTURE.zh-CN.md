@@ -76,16 +76,17 @@ Gradle 项目只包含一个 Android 模块 `:app`。`lyrics-core/` 是 Cargo cr
 app/              依赖组装、生命周期协调、控制器、工作流和 UI 适配器
 core/             依赖稳定的模型、颜色工具和偏好设置抽象
 design/           共享 UI 设计 token
+feedback/         不依赖功能包的临时反馈契约和 Toast host
 media/            媒体会话监听、当前媒体模型、广播和媒体来源持久化
 lyrics/           查询、取消、歌词来源、解析、导入、格式化和存储
 floating/         前台服务、服务命令、悬浮窗控制和歌词渲染
 settings/         各功能设置持久化和状态提示策略
-ui/               页面、反馈界面、组件、导航、主题、UI 模型和异步界面工具
+ui/               页面、Snackbar 反馈、组件、导航、主题、UI 模型和异步界面工具
 i18n/             语言选择、本地化 assets 和用户文案格式化
 ```
 
 临时反馈由交互界面负责：主 Activity 使用带锚点的 Snackbar，悬浮窗 Service 使用 Toast；
-两者读取同一个状态提示开关。
+各自的依赖组装入口向两者提供同一个状态提示策略。
 
 ## 包边界
 
@@ -93,25 +94,27 @@ i18n/             语言选择、本地化 assets 和用户文案格式化
 
 ```text
 core      -> （无）
-design    -> （无）
+feedback  -> （无）
+design    -> core
 settings  -> core
 lyrics    -> core
 i18n      -> core, lyrics
 media     -> core, i18n
-ui        -> core, design, i18n
-floating  -> core, design, i18n, lyrics, media, settings
-app       -> core, design, floating, i18n, lyrics, media, settings, ui
+ui        -> core, design, feedback, i18n
+floating  -> core, design, feedback, i18n, lyrics, media, settings
+app       -> core, design, feedback, floating, i18n, lyrics, media, settings, ui
 ```
 
 箭头表示“导入自”，生成的 `R` 类和平台库未列出。
 
 主要边界规则如下：
 
-- `core/` 和 `design/` 不依赖功能包。
+- `core/` 和 `feedback/` 不依赖其他项目包；`design/` 只依赖稳定的 `core/` 模型。
 - `lyrics/` 与 `media/` 互不依赖，也不依赖 `app/`、`floating/`、`settings/` 或 `ui/`。
-- `ui/` 不导入具体的媒体、歌词、设置或悬浮窗实现；页面通过 `ui/model/` 下的接口接收
-  面向界面的数据和操作。
-- `floating/` 可以协调媒体、歌词和设置，但不依赖主应用外壳或 UI 页面。
+- `ui/` 不导入具体的媒体、歌词、设置或悬浮窗实现；反馈显示策略和调色板由 `app/` 注入，
+  页面通过 `ui/model/` 下的接口接收面向界面的数据和操作。
+- `floating/` 可以协调媒体、歌词和设置并使用无功能依赖的反馈 host，但不依赖主应用外壳或
+  UI 页面。
 - `app/` 是允许连接所有功能包的依赖组装层。
 
 CI 通过 `scripts/check_architecture_boundaries.sh` 强制检查这些导入限制。

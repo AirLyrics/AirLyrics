@@ -1,14 +1,16 @@
-package com.andsi.airlyrics.ui.feedback
+package com.andsi.airlyrics.feedback
 
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.annotation.StringRes
-import com.andsi.airlyrics.settings.store.AppSettingsStore
 
-/** Toast feedback for interactions owned by a Service or another non-Activity surface. */
-internal class ToastAirFeedback(context: Context) : AirFeedback {
+/** Toast feedback whose visibility policy is supplied by the owning surface. */
+internal class ToastAirFeedback(
+    context: Context,
+    private val canShow: () -> Boolean
+) : AirFeedback {
     private val appContext = context.applicationContext
     private val mainHandler = Handler(Looper.getMainLooper())
     private var currentToast: Toast? = null
@@ -29,12 +31,6 @@ internal class ToastAirFeedback(context: Context) : AirFeedback {
         show(message, Toast.LENGTH_LONG)
     }
 
-    override fun showAction(
-        message: CharSequence,
-        actionLabel: CharSequence,
-        onAction: () -> Unit
-    ): Boolean = false
-
     override fun dismiss() {
         runOnMainThread {
             currentToast?.cancel()
@@ -43,10 +39,10 @@ internal class ToastAirFeedback(context: Context) : AirFeedback {
     }
 
     private fun show(message: CharSequence, duration: Int) {
-        if (AppSettingsStore.areStatusPopupsMuted(appContext)) return
+        if (!canShow()) return
 
         runOnMainThread {
-            if (AppSettingsStore.areStatusPopupsMuted(appContext)) return@runOnMainThread
+            if (!canShow()) return@runOnMainThread
             currentToast?.cancel()
             currentToast = Toast.makeText(appContext, message, duration).also(Toast::show)
         }

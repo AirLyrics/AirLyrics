@@ -29,6 +29,8 @@ import com.andsi.airlyrics.app.state.toPendingLyricsImport
 import com.andsi.airlyrics.app.state.toPendingLyricsOverwrite
 import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.feedback.AirFeedback
+import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.floating.FloatingWindowRuntimeState
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
@@ -36,21 +38,22 @@ import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
+import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
-import com.andsi.airlyrics.ui.feedback.AirFeedback
 import com.andsi.airlyrics.ui.feedback.SnackbarAirFeedback
-import com.andsi.airlyrics.ui.feedback.ToastAirFeedback
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
+import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import java.util.concurrent.Executors
 
 /** Main-screen composition root and lifecycle orchestrator. */
@@ -117,11 +120,24 @@ internal class MainGraph(
 
     val state: MainActivityState = MainActivityState()
     val viewRefs = MainActivityViewRefs()
-    private val toastFeedback: AirFeedback = ToastAirFeedback(activity)
+    private val canShowFeedback: () -> Boolean = {
+        !AppSettingsStore.areStatusPopupsMuted(activity)
+    }
+    private val toastFeedback: AirFeedback = ToastAirFeedback(
+        context = activity,
+        canShow = canShowFeedback
+    )
     val feedback: AirFeedback = SnackbarAirFeedback(
         activity = activity,
         anchorProvider = { viewRefs.feedbackAnchor },
-        fallback = toastFeedback
+        fallback = toastFeedback,
+        canShow = canShowFeedback,
+        paletteProvider = {
+            AirLyricsTheme.palette(
+                isDark = ThemeSettingsStore.isDark(activity),
+                accent = ThemeSettingsStore.getAccent(activity)
+            )
+        }
     )
     val crossWindowFeedback: AirFeedback
         get() = toastFeedback

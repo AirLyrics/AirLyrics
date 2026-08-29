@@ -14,27 +14,31 @@ SOURCE_ROOT = Path("app/src/main/java/com/andsi/airlyrics")
 RULES = {
     "core": {
         "path": SOURCE_ROOT / "core",
-        "forbidden": ["app", "design", "floating", "i18n", "lyrics", "media", "settings", "ui"],
+        "forbidden": ["app", "design", "feedback", "floating", "i18n", "lyrics", "media", "settings", "ui"],
     },
     "design": {
         "path": SOURCE_ROOT / "design",
-        "forbidden": ["app", "floating", "i18n", "lyrics", "media", "settings", "ui"],
+        "forbidden": ["app", "feedback", "floating", "i18n", "lyrics", "media", "settings", "ui"],
+    },
+    "feedback": {
+        "path": SOURCE_ROOT / "feedback",
+        "forbidden": ["app", "core", "design", "floating", "i18n", "lyrics", "media", "settings", "ui"],
     },
     "settings": {
         "path": SOURCE_ROOT / "settings",
-        "forbidden": ["app", "floating", "i18n", "lyrics", "media", "ui"],
+        "forbidden": ["app", "feedback", "floating", "i18n", "lyrics", "media", "ui"],
     },
     "lyrics": {
         "path": SOURCE_ROOT / "lyrics",
-        "forbidden": ["app", "floating", "media", "settings", "ui"],
+        "forbidden": ["app", "feedback", "floating", "media", "settings", "ui"],
     },
     "i18n": {
         "path": SOURCE_ROOT / "i18n",
-        "forbidden": ["app", "floating", "media", "settings", "ui"],
+        "forbidden": ["app", "feedback", "floating", "media", "settings", "ui"],
     },
     "media": {
         "path": SOURCE_ROOT / "media",
-        "forbidden": ["app", "floating", "lyrics", "settings", "ui"],
+        "forbidden": ["app", "feedback", "floating", "lyrics", "settings", "ui"],
     },
     "floating": {
         "path": SOURCE_ROOT / "floating",

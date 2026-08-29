@@ -17,6 +17,7 @@ import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.render.UiInvalidator
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.LyricsChange
 import com.andsi.airlyrics.lyrics.LyricsChangeKind
@@ -29,7 +30,6 @@ import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
-import com.andsi.airlyrics.ui.feedback.ToastAirFeedback
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import java.io.File
@@ -527,7 +527,7 @@ class LyricsControllerUiOutcomeTest {
                 mediaControllerProvider = mediaControllerProvider,
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsChangedPublisher = publisher,
-                feedback = ToastAirFeedback(activity),
+                feedback = toastFeedback(),
                 onlineLyricsLookupGateway = onlineGateway
             )
         } else {
@@ -539,10 +539,17 @@ class LyricsControllerUiOutcomeTest {
                 overwriteConfirmationRequester = unexpectedOverwriteRequester(),
                 lyricsImportGateway = gateway,
                 lyricsChangedPublisher = publisher,
-                feedback = ToastAirFeedback(activity),
+                feedback = toastFeedback(),
                 onlineLyricsLookupGateway = onlineGateway
             )
         }
+    }
+
+    private fun toastFeedback(): ToastAirFeedback {
+        return ToastAirFeedback(
+            context = activity,
+            canShow = { !AppSettingsStore.areStatusPopupsMuted(activity) }
+        )
     }
 
     private fun assertFailureHasNoSuccessSideEffects(

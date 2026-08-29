@@ -8,6 +8,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.app.contracts.MainDialogHost
 import com.andsi.airlyrics.app.contracts.MainTaskRunner
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
@@ -23,7 +24,6 @@ import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.toSongIdentity
-import com.andsi.airlyrics.ui.feedback.AirFeedback
 
 internal fun interface LyricsOverwriteConfirmationRequester {
     fun requestConfirmation(request: PendingLyricsOverwrite)

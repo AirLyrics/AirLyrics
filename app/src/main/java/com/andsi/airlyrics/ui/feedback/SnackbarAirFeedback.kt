@@ -4,11 +4,9 @@ import android.os.Looper
 import android.view.View
 import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.Lifecycle
-import com.andsi.airlyrics.settings.store.AppSettingsStore
-import com.andsi.airlyrics.settings.store.ThemeSettingsStore
-import com.andsi.airlyrics.ui.theme.AirLyricsTheme
+import com.andsi.airlyrics.feedback.AirFeedback
+import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.behavior.SwipeDismissBehavior
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
@@ -17,7 +15,9 @@ import com.google.android.material.snackbar.Snackbar
 internal class SnackbarAirFeedback(
     private val activity: AppCompatActivity,
     private val anchorProvider: () -> View?,
-    private val fallback: AirFeedback
+    private val fallback: AirFeedback,
+    private val canShow: () -> Boolean,
+    private val paletteProvider: () -> AirLyricsPalette
 ) : AirFeedback {
     private var currentSnackbar: Snackbar? = null
 
@@ -45,22 +45,6 @@ internal class SnackbarAirFeedback(
         )
     }
 
-    override fun showAction(
-        message: CharSequence,
-        actionLabel: CharSequence,
-        onAction: () -> Unit
-    ): Boolean {
-        if (Looper.myLooper() != Looper.getMainLooper()) return false
-        if (AppSettingsStore.areStatusPopupsMuted(activity)) return false
-        val anchor = availableAnchor() ?: return false
-
-        fallback.dismiss()
-        showSnackbar(anchor, message, Snackbar.LENGTH_LONG) {
-            setAction(actionLabel) { onAction() }
-        }
-        return true
-    }
-
     override fun dismiss() {
         runOnMainThread {
             currentSnackbar?.dismiss()
@@ -74,10 +58,10 @@ internal class SnackbarAirFeedback(
         duration: Int,
         fallbackAction: () -> Unit
     ) {
-        if (AppSettingsStore.areStatusPopupsMuted(activity)) return
+        if (!canShow()) return
 
         runOnMainThread {
-            if (AppSettingsStore.areStatusPopupsMuted(activity)) return@runOnMainThread
+            if (!canShow()) return@runOnMainThread
             if (activity.isDestroyed || activity.isFinishing) return@runOnMainThread
 
             val anchor = availableAnchor()
@@ -95,20 +79,16 @@ internal class SnackbarAirFeedback(
     private fun availableAnchor(): View? {
         if (activity.isDestroyed || activity.isFinishing) return null
         if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) return null
-        return anchorProvider()?.takeIf(ViewCompat::isAttachedToWindow)
+        return anchorProvider()?.takeIf { it.isAttachedToWindow }
     }
 
     private fun showSnackbar(
         anchor: View,
         message: CharSequence,
-        duration: Int,
-        configure: (Snackbar.() -> Unit)? = null
+        duration: Int
     ) {
         currentSnackbar?.dismiss()
-        val palette = AirLyricsTheme.palette(
-            isDark = ThemeSettingsStore.isDark(activity),
-            accent = ThemeSettingsStore.getAccent(activity)
-        )
+        val palette = paletteProvider()
         val snackbar = Snackbar.make(anchor, message, duration)
             .setAnchorView(anchor)
             .setBackgroundTint(palette.surfaceLight)
@@ -117,7 +97,6 @@ internal class SnackbarAirFeedback(
             .setBehavior(BaseTransientBottomBar.Behavior().apply {
                 setSwipeDirection(SwipeDismissBehavior.SWIPE_DIRECTION_ANY)
             })
-        configure?.invoke(snackbar)
         snackbar.addCallback(object : Snackbar.Callback() {
             override fun onDismissed(transientBottomBar: Snackbar, event: Int) {
                 if (currentSnackbar === transientBottomBar) {

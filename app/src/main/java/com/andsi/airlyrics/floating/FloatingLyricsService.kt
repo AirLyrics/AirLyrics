@@ -13,6 +13,8 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.feedback.AirFeedback
+import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
@@ -22,15 +24,17 @@ import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
-import com.andsi.airlyrics.ui.feedback.AirFeedback
-import com.andsi.airlyrics.ui.feedback.ToastAirFeedback
 
 open class FloatingLyricsService : Service() {
     internal lateinit var windowController: FloatingLyricsWindow
     private val feedbackDelegate = lazy(LazyThreadSafetyMode.NONE) {
-        ToastAirFeedback(this)
+        ToastAirFeedback(
+            context = this,
+            canShow = { !AppSettingsStore.areStatusPopupsMuted(this) }
+        )
     }
     internal val feedback: AirFeedback by feedbackDelegate
 
