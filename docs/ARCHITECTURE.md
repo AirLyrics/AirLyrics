@@ -65,7 +65,7 @@ Successful lyrics imports use a separate durable-change flow:
 
 ```text
 Lyrics import
-  -> MainLyricsWorkflow
+  -> MainViewModel (viewModelScope)
   -> LyricsController
   -> LyricsStorage
   -> LyricsChangedBroadcast
@@ -157,48 +157,38 @@ files.
 
 ## App Shell and UI Boundary
 
-`MainActivity` is a thin Android entry point. It creates `MainGraph` and forwards activity lifecycle
-and saved-state callbacks.
+`MainActivity` creates `MainGraph` and obtains `MainViewModel` through `viewModels`.
 
-`MainGraph` is the main-screen composition root and lifecycle coordinator. It assembles controllers,
-activity-result launchers, broadcast receivers, the UI host, the renderer, the lyrics workflow, and
-the app I/O executor. It also preserves navigation and pending lyrics-import state across activity
-recreation.
+`MainViewModel` owns `MainScreenState` and uses `SavedStateHandle` for navigation, search, and pending
+lyrics imports. Lyrics import, deletion, online lookup, directory validation, and font import run in
+`viewModelScope`. Permission requests, document pickers, and dialogs are sent to `MainGraph` as
+`MainUiEffect` values.
 
-Feature work is split as follows:
-
-```text
-controller/       Media-source, lyrics, and floating-feature orchestration
-contracts/        Small app-layer dependency interfaces
-host/             Adapters that implement UI host capabilities and MainUiActions
-lifecycle/        Activity-result launchers and receiver registration
-platform/         Android permission and navigation helpers
-render/           Main view construction, references, and targeted invalidation
-state/            Main-screen and pending-operation state
-workflow/         Multi-step lyrics import and directory-selection flows
-```
-
-The handwritten screens under `ui/pages/` depend on `MainUiHost` and other UI models rather than
-reading feature stores directly. `app/host/` converts media, lyrics, settings, and floating state
-into page data and maps `MainUiActions` back to controllers. `LatestUiTaskRunner` prevents older
-asynchronous page loads from overwriting newer UI state.
-
-Important files:
+`MainGraph` assembles controllers, activity-result launchers, broadcast receivers, the UI host, and
+the renderer. It updates the UI from ViewModel state and effects.
 
 ```text
-app/MainActivity.kt
-app/MainGraph.kt
-app/controller/MediaSourceController.kt
-app/controller/LyricsController.kt
-app/controller/FloatingController.kt
-app/workflow/MainLyricsWorkflow.kt
-app/lifecycle/MainLaunchers.kt
-app/lifecycle/MainReceivers.kt
-app/host/MainActivityUiHost.kt
-app/render/MainHandRenderer.kt
-ui/model/MainUiHost.kt
-ui/model/MainUiActions.kt
+MainUiActions -> MainViewModel / Controller
+MainViewModel -> MainScreenState -> MainGraph -> Renderer
+MainViewModel -> MainUiEffect    -> MainGraph -> Android UI
 ```
+
+Application-layer packages:
+
+```text
+controller/       Media, lyrics, and floating-window operations
+contracts/        Application-layer dependency interfaces
+host/             Page data and action adapters
+lifecycle/        Activity results and receiver registration
+platform/         Android permissions and navigation
+render/           Main view construction and updates
+state/            Pending-operation models
+viewmodel/        Main-screen state and one-off effects
+workflow/         Dialog and document-permission flows
+```
+
+Screens under `ui/pages/` read page data and invoke `MainUiActions` through `MainUiHost`.
+`app/host/` connects the screens to controllers and stores.
 
 ## Media Detection
 
@@ -220,9 +210,10 @@ lyrics import and deletion, and floating-service updates when several players ar
 
 ## Lyrics Lookup
 
-`LyricsRepository` is the unified lookup entry point. UI lyrics operations are coordinated by
-`LyricsController` and `MainLyricsWorkflow`; the floating service calls the repository when the
-selected media changes or lyrics are explicitly reloaded.
+`LyricsRepository` is the unified lookup entry point. `MainViewModel` dispatches main-screen lyrics
+operations, `LyricsController` performs storage and lookup, and `MainLyricsWorkflow` handles import
+choices and overwrite confirmation. The floating service calls the repository when the selected
+media changes or lyrics are manually reloaded.
 
 The repository receives a `LyricsSettings` value from its caller, so `lyrics/` does not depend on the
 settings storage implementation. The normal lookup order is:

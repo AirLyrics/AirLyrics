@@ -62,7 +62,7 @@ Gradle 项目只包含一个 Android 模块 `:app`。`lyrics-core/` 是 Cargo cr
 
 ```text
 歌词导入
-  -> MainLyricsWorkflow
+  -> MainViewModel（viewModelScope）
   -> LyricsController
   -> LyricsStorage
   -> LyricsChangedBroadcast
@@ -149,45 +149,37 @@ LyricsChangedBroadcast
 
 ## App 外壳与 UI 边界
 
-`MainActivity` 是较薄的 Android 入口，只创建 `MainGraph`，并转发生命周期与状态保存回调。
+`MainActivity` 创建 `MainGraph`，并通过 `viewModels` 获取 `MainViewModel`。
 
-`MainGraph` 是主界面的依赖组装入口和生命周期协调器。它组装控制器、Activity Result
-launcher、广播接收器、UI host、渲染器、歌词工作流和 App I/O executor，同时在 Activity
-重建时保存导航状态和待处理的歌词导入状态。
+`MainViewModel` 持有 `MainScreenState`，使用 `SavedStateHandle` 保存导航、搜索和待处理的歌词
+导入状态。歌词导入、删除、联网查询、目录校验和字体导入运行在 `viewModelScope` 中。权限请求、
+文件选择和对话框通过 `MainUiEffect` 交给 `MainGraph` 处理。
 
-具体职责拆分如下：
-
-```text
-controller/       媒体来源、歌词和悬浮功能协调
-contracts/        小型应用层依赖接口
-host/             UI host 能力和 MainUiActions 的适配器
-lifecycle/        Activity Result launcher 和广播注册
-platform/         Android 权限和导航辅助工具
-render/           主界面构建、View 引用和定向刷新
-state/            主界面状态和待处理操作状态
-workflow/         多步骤歌词导入和目录选择流程
-```
-
-`ui/pages/` 下的手写页面依赖 `MainUiHost` 等 UI 模型，不直接读取功能存储。
-`app/host/` 将媒体、歌词、设置和悬浮状态转换为页面数据，并把 `MainUiActions` 映射到控制器。
-`LatestUiTaskRunner` 会阻止较旧的异步页面加载覆盖较新的界面状态。
-
-重要文件：
+`MainGraph` 组装控制器、Activity Result launcher、广播接收器、UI host 和渲染器，并根据
+ViewModel 的状态与 effect 更新界面。
 
 ```text
-app/MainActivity.kt
-app/MainGraph.kt
-app/controller/MediaSourceController.kt
-app/controller/LyricsController.kt
-app/controller/FloatingController.kt
-app/workflow/MainLyricsWorkflow.kt
-app/lifecycle/MainLaunchers.kt
-app/lifecycle/MainReceivers.kt
-app/host/MainActivityUiHost.kt
-app/render/MainHandRenderer.kt
-ui/model/MainUiHost.kt
-ui/model/MainUiActions.kt
+MainUiActions -> MainViewModel / Controller
+MainViewModel -> MainScreenState -> MainGraph -> Renderer
+MainViewModel -> MainUiEffect    -> MainGraph -> Android UI
 ```
+
+应用层目录：
+
+```text
+controller/       媒体、歌词和悬浮窗操作
+contracts/        应用层依赖接口
+host/             页面数据与操作适配
+lifecycle/        Activity Result 和广播注册
+platform/         Android 权限与导航
+render/           主界面构建与刷新
+state/            待处理操作模型
+viewmodel/        主界面状态与一次性 effect
+workflow/         对话框与文档权限流程
+```
+
+`ui/pages/` 通过 `MainUiHost` 读取页面数据并调用 `MainUiActions`；`app/host/` 负责连接页面、
+控制器和存储。
 
 ## 媒体检测
 
@@ -207,8 +199,9 @@ controller。`CurrentMediaReader` 维护 Observer、主界面和悬浮服务共�
 
 ## 歌词查询
 
-`LyricsRepository` 是统一查询入口。界面歌词操作由 `LyricsController` 和
-`MainLyricsWorkflow` 协调；所选媒体变化或明确刷新歌词时，悬浮服务会调用该仓库。
+`LyricsRepository` 是统一查询入口。主界面的歌词操作由 `MainViewModel` 调度，
+`LyricsController` 执行存储和查询，`MainLyricsWorkflow` 负责导入选择与覆盖确认。
+所选媒体变化或手动刷新歌词时，悬浮服务会调用该仓库。
 
 调用方将 `LyricsSettings` 值传入仓库，因此 `lyrics/` 不依赖设置存储实现。常规查询顺序为：
 

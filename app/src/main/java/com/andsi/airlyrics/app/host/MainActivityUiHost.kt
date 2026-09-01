@@ -17,7 +17,6 @@ import androidx.core.view.WindowCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.platform.AppNightMode
-import com.andsi.airlyrics.app.platform.PermissionHelper
 import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
@@ -63,7 +62,6 @@ import com.andsi.airlyrics.ui.model.SavedLyricsUiState
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
 import com.andsi.airlyrics.ui.pages.floating.previewTextSizeSp
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
@@ -72,7 +70,7 @@ import kotlin.math.roundToInt
 /** Bridges handwritten main UI helpers to the UI-facing host boundary. */
 internal class MainActivityUiHost(
     private val graph: MainGraph
-) : MainUiHost(graph.activity, graph.state) {
+) : MainUiHost(graph.activity, { graph.state }) {
     private val viewRefs: MainActivityViewRefs
         get() = graph.viewRefs
 
@@ -103,15 +101,14 @@ internal class MainActivityUiHost(
         get() = graph.mediaRefreshHandler
 
     override fun rebuildCurrentPage(
-        reason: PageRebuildReason,
         animateContent: Boolean,
         animateTabs: Boolean
     ) {
-        graph.uiInvalidator.rebuildCurrentPage(reason, animateContent, animateTabs)
+        graph.uiInvalidator.rebuildCurrentPage(animateContent, animateTabs)
     }
 
-    override fun rebuildMainView(reason: PageRebuildReason) {
-        graph.uiInvalidator.recreateMainView(reason)
+    override fun rebuildMainView() {
+        graph.uiInvalidator.recreateMainView()
     }
 
     override fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -177,7 +174,7 @@ internal class MainActivityUiHost(
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
     override fun floatingCustomFontName(): String? = FloatingLyricsFontStore.customFontDisplayName(this)
     override fun hasFloatingCustomFont(): Boolean = FloatingLyricsFontStore.hasCustomFont(this)
-    override fun selectFloatingFontFile() = graph.launchers.selectFloatingFontFile()
+    override fun selectFloatingFontFile() = graph.viewModel.selectFloatingFontFile()
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)
     override fun setFloatingPreviewExpanded(expanded: Boolean) = FloatingLyricsStyleStore.setPreviewExpanded(this, expanded)
 
@@ -249,10 +246,25 @@ internal class MainActivityUiHost(
 
     override fun applyFloatingPreset(preset: String) = graph.floatingController.applyPreset(preset)
     override fun applyFloatingStyle(style: FloatingLyricsStyle) = graph.floatingController.applyStyle(style)
-    override fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean) = graph.floatingController.applyTextSize(textSizeSp, refreshPage)
-    override fun applyFloatingTextColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyTextColor(color, refreshPage)
-    override fun applyFloatingTextAlpha(alpha: Int, refreshPage: Boolean) = graph.floatingController.applyTextAlpha(alpha, refreshPage)
-    override fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean) = graph.floatingController.applyBackgroundColor(color, refreshPage)
+    override fun applyFloatingTextSize(textSizeSp: Float, refreshPage: Boolean) {
+        graph.floatingController.applyTextSize(textSizeSp)
+        if (refreshPage) graph.viewModel.notifyFloatingStructureChanged()
+    }
+
+    override fun applyFloatingTextColor(color: Int, refreshPage: Boolean) {
+        graph.floatingController.applyTextColor(color)
+        if (refreshPage) graph.viewModel.notifyFloatingStructureChanged()
+    }
+
+    override fun applyFloatingTextAlpha(alpha: Int, refreshPage: Boolean) {
+        graph.floatingController.applyTextAlpha(alpha)
+        if (refreshPage) graph.viewModel.notifyFloatingStructureChanged()
+    }
+
+    override fun applyFloatingBackgroundColor(color: Int, refreshPage: Boolean) {
+        graph.floatingController.applyBackgroundColor(color)
+        if (refreshPage) graph.viewModel.notifyFloatingStructureChanged()
+    }
     override fun applyFloatingBackgroundEnabled(enabled: Boolean) = graph.floatingController.applyBackgroundEnabled(enabled)
     override fun applyFloatingBackgroundAlpha(alpha: Int) = graph.floatingController.applyBackgroundAlpha(alpha)
     override fun applyFloatingGravity(gravity: Int) = graph.floatingController.applyGravity(gravity)
@@ -295,11 +307,11 @@ internal class MainActivityUiHost(
     override fun openUrl(url: String) = openUrlImpl(url)
     override fun refreshAfterLanguageChanged() = refreshAfterLanguageChangedImpl()
 
-    override fun hasNotificationPermission(): Boolean = PermissionHelper.hasPostNotificationsPermission(this)
-    override fun hasNotificationListenerAccess(): Boolean = PermissionHelper.hasNotificationListenerAccess(this)
+    override fun hasNotificationPermission(): Boolean = uiState.postNotificationsGranted
+    override fun hasNotificationListenerAccess(): Boolean = uiState.notificationListenerGranted
 
     override fun currentLyricsState(): CurrentLyricsUiState {
-        val media = graph.lyricsController.getCurrentMediaInfo()
+        val media = graph.viewModel.currentMediaInfo()
         val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(this, it.toSongIdentity()) } ?: 0L
         val localInfo = media?.let {
             LyricsStorage.getLocalPlainLyricsInfo(
@@ -332,7 +344,7 @@ internal class MainActivityUiHost(
     }
 
     override fun recentLyricsState(limit: Int): RecentLyricsUiState {
-        val media = graph.lyricsController.getCurrentMediaInfo()?.takeUnless { it.isEmpty }
+        val media = graph.viewModel.currentMediaInfo()?.takeUnless { it.isEmpty }
         return RecentLyricsUiState(
             currentItem = currentLocalLyricsItem(media),
             recentLyrics = LyricsStorage.listRecentLyrics(this, limit).map { toUiItem(it) },

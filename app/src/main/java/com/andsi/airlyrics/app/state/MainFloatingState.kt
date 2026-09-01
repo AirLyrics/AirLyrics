@@ -1,9 +1,16 @@
 package com.andsi.airlyrics.app.state
 
-/** Mutable floating-window state exposed to floating-window controllers. */
+/** Narrow state boundary used by floating-window coordination. */
 internal interface MainFloatingState {
-    var locked: Boolean
-    var clickThrough: Boolean
-    var quickFloatingVisible: Boolean
-    var overlayPermissionGranted: Boolean
+    val locked: Boolean
+    val clickThrough: Boolean
+    val quickFloatingVisible: Boolean
+    val overlayPermissionGranted: Boolean
+
+    fun updateFloatingState(
+        visible: Boolean? = null,
+        overlayGranted: Boolean? = null,
+        locked: Boolean? = null,
+        clickThrough: Boolean? = null
+    )
 }

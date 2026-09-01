@@ -1,7 +1,5 @@
 package com.andsi.airlyrics.app.render
 
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
-
 /**
  * Small boundary for UI refresh requests from controllers.
  *
@@ -11,7 +9,6 @@ import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 internal interface UiInvalidator {
     /** Recreates the current page tree. Use only when the visible structure changes. */
     fun rebuildCurrentPage(
-        reason: PageRebuildReason,
         animateContent: Boolean = true,
         animateTabs: Boolean = true
     )
@@ -28,5 +25,5 @@ internal interface UiInvalidator {
     /** Refreshes mounted lyrics-setting cards without replacing the current page tree. */
     fun refreshLyricsSettingsContent()
 
-    fun recreateMainView(reason: PageRebuildReason = PageRebuildReason.THEME_CHANGED)
+    fun recreateMainView()
 }

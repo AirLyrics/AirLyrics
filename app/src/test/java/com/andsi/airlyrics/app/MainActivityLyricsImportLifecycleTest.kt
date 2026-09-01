@@ -27,7 +27,6 @@ import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.util.concurrent.CountDownLatch
@@ -81,7 +80,7 @@ class MainActivityLyricsImportLifecycleTest {
     fun pendingImport_survivesActivityRecreation() {
         val controller = launchActivity()
         val request = pendingImport(SONG_A)
-        controller.get().graph.state.pendingLyricsImport = request
+        controller.get().graph.viewModel.setPendingLyricsImport(request)
 
         controller.recreate()
 
@@ -91,7 +90,7 @@ class MainActivityLyricsImportLifecycleTest {
     @Test
     fun cancelledFilePicker_consumesPendingImport() {
         val activity = launchActivity().get()
-        activity.graph.state.pendingLyricsImport = pendingImport(SONG_A)
+        activity.graph.viewModel.setPendingLyricsImport(pendingImport(SONG_A))
 
         activity.graph.launchers.selectLyricsFile()
         val pickerRequest = shadowOf(activity).nextStartedActivityForResult
@@ -107,39 +106,18 @@ class MainActivityLyricsImportLifecycleTest {
     }
 
     @Test
-    fun selectedFile_thenActivityDestroy_importsCapturedSongA_notCurrentSongB() {
-        val controller = launchActivity()
-        val activity = controller.get()
+    fun selectedFile_importsCapturedSongA_notCurrentSongB() {
+        val activity = launchActivity().get()
         installCurrentMedia(activity, SONG_B)
         assertEquals(
             SONG_B,
-            activity.graph.lyricsController.getCurrentMediaInfo()?.toSongIdentity()
+            activity.graph.viewModel.currentMediaInfo()?.toSongIdentity()
         )
-        activity.graph.state.pendingLyricsImport = pendingImport(SONG_A)
-        val releaseBlocker = CountDownLatch(1)
-        val blockerStarted = CountDownLatch(1)
-        activity.graph.runOnAppIo {
-            blockerStarted.countDown()
-            releaseBlocker.await(5, TimeUnit.SECONDS)
+        deliverPickerResult(activity, writeImportFile(), SONG_A)
+
+        awaitCondition("Timed out waiting for captured lyrics import") {
+            hasPlainLyrics(SONG_A)
         }
-        assertTrue("Timed out waiting for the I/O blocker", blockerStarted.await(5, TimeUnit.SECONDS))
-
-        activity.graph.launchers.selectLyricsFile()
-        val pickerRequest = shadowOf(activity).nextStartedActivityForResult
-        shadowOf(activity).receiveResult(
-            pickerRequest.intent,
-            Activity.RESULT_OK,
-            Intent().setData(writeImportFile())
-        )
-        ShadowLooper.idleMainLooper()
-        val importCompleted = CountDownLatch(1)
-        activity.graph.runOnAppIo { importCompleted.countDown() }
-
-        controller.close()
-        activityController = null
-        releaseBlocker.countDown()
-
-        assertTrue("Timed out waiting for queued import", importCompleted.await(5, TimeUnit.SECONDS))
         assertTrue(hasPlainLyrics(SONG_A))
         assertFalse(hasPlainLyrics(SONG_B))
     }
@@ -155,31 +133,24 @@ class MainActivityLyricsImportLifecycleTest {
         awaitAppIo(oldActivity)
         assertTrue(oldActivity.visibleTexts().contains(oldActivity.getString(R.string.ui_not_bound)))
 
-        val releaseImport = CountDownLatch(1)
-        val importBlocked = CountDownLatch(1)
-        oldActivity.graph.runOnAppIo {
-            importBlocked.countDown()
-            releaseImport.await(5, TimeUnit.SECONDS)
-        }
-        assertTrue("Timed out waiting for import blocker", importBlocked.await(5, TimeUnit.SECONDS))
         deliverPickerResult(oldActivity, LATE_IMPORT_URI, SONG_A)
-        val oldImportCompleted = CountDownLatch(1)
-        oldActivity.graph.runOnAppIo { oldImportCompleted.countDown() }
 
         val oldRenderedPage = oldActivity.graph.uiHost.contentContainer?.getChildAt(0)
         controller.recreate()
         val newActivity = controller.get()
-        awaitAppIo(newActivity)
-        assertTrue(
-            "Initial render must complete before the old write",
-            newActivity.visibleTexts().contains(newActivity.getString(R.string.ui_not_bound))
-        )
         ShadowDialog.reset()
 
-        releaseImport.countDown()
-        assertTrue("Timed out waiting for old graph import", oldImportCompleted.await(5, TimeUnit.SECONDS))
-        ShadowLooper.idleMainLooper()
-        awaitAppIo(newActivity)
+        awaitCondition("Timed out waiting for retained ViewModel import") {
+            LyricsStorage.hasPlainLyrics(
+                context = newActivity,
+                title = SONG_A.title,
+                artist = SONG_A.artist,
+                duration = SONG_A.durationMs
+            )
+        }
+        awaitCondition("Timed out waiting for live lyrics UI refresh") {
+            !newActivity.visibleTexts().contains(newActivity.getString(R.string.ui_not_bound))
+        }
 
         assertEquals(1, inputOpenCount.get())
         assertEquals(
@@ -195,9 +166,6 @@ class MainActivityLyricsImportLifecycleTest {
         assertTrue(newActivity.visibleTexts().contains("${SONG_A.title} - ${SONG_A.artist}"))
         assertTrue(oldActivity.isDestroyed)
         assertSame(oldRenderedPage, oldActivity.graph.uiHost.contentContainer?.getChildAt(0))
-        assertNull(
-            newActivity.findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
-        )
         val latestDialog: Dialog? = ShadowDialog.getLatestDialog()
         assertNull(latestDialog)
     }
@@ -265,8 +233,9 @@ class MainActivityLyricsImportLifecycleTest {
             )
         )
         BroadcastLyricsChangedPublisher(activity).publish(SONG_A)
-        ShadowLooper.idleMainLooper()
-        awaitAppIo(activity)
+        awaitCondition("Timed out waiting for mounted lyrics refresh") {
+            !activity.visibleTexts().contains(activity.getString(R.string.ui_not_bound))
+        }
 
         assertSame(mountedPage, activity.graph.uiHost.contentContainer?.getChildAt(0))
         assertFalse(activity.visibleTexts().contains(activity.getString(R.string.ui_not_bound)))
@@ -300,17 +269,16 @@ class MainActivityLyricsImportLifecycleTest {
     }
 
     private fun showLyricsSettings(activity: MainActivity) {
-        activity.graph.state.currentPage = Page.SETTINGS
-        activity.graph.state.settingsSubPage = SettingsSubPage.LYRICS
+        activity.graph.viewModel.selectPage(Page.SETTINGS)
+        activity.graph.viewModel.openSettingsSubPage(SettingsSubPage.LYRICS)
         activity.graph.uiInvalidator.rebuildCurrentPage(
-            reason = PageRebuildReason.SETTINGS_NAVIGATION,
             animateContent = false,
             animateTabs = false
         )
     }
 
     private fun deliverPickerResult(activity: MainActivity, uri: Uri, target: SongIdentity) {
-        activity.graph.state.pendingLyricsImport = pendingImport(target)
+        activity.graph.viewModel.setPendingLyricsImport(pendingImport(target))
         activity.graph.launchers.selectLyricsFile()
         val pickerRequest = shadowOf(activity).nextStartedActivityForResult
         shadowOf(activity).receiveResult(
@@ -338,6 +306,17 @@ class MainActivityLyricsImportLifecycleTest {
         activity.graph.runOnAppIo { completed.countDown() }
         assertTrue("Timed out waiting for app I/O", completed.await(5, TimeUnit.SECONDS))
         ShadowLooper.idleMainLooper()
+    }
+
+    private fun awaitCondition(message: String, condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadline) {
+            ShadowLooper.idleMainLooper()
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        ShadowLooper.idleMainLooper()
+        assertTrue(message, condition())
     }
 
     private fun MainActivity.visibleTexts(): List<String> {

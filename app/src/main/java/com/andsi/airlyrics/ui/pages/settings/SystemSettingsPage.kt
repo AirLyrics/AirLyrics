@@ -3,7 +3,6 @@ package com.andsi.airlyrics.ui.pages.settings
 import com.andsi.airlyrics.R
 
 import android.graphics.Typeface
-import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -32,7 +31,7 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
     container.addView(
         card(activity) {
             addView(bigText(activity, getString(R.string.ui_permissions)))
-            addView(settingRow(activity, getString(R.string.ui_overlay), getString(if (Settings.canDrawOverlays(activity)) R.string.ui_on else R.string.ui_off)))
+            addView(settingRow(activity, getString(R.string.ui_overlay), getString(if (uiState.overlayPermissionGranted) R.string.ui_on else R.string.ui_off)))
             addView(settingRow(activity, getString(R.string.ui_notify), getString(if (hasNotificationPermission()) R.string.ui_on else R.string.ui_off)))
             addView(settingRow(activity, getString(R.string.ui_notif_access), getString(if (hasNotificationListenerAccess()) R.string.ui_on else R.string.ui_off)))
         }

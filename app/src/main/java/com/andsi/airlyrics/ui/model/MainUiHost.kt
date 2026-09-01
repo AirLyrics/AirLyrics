@@ -13,7 +13,7 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
  */
 internal abstract class MainUiHost(
     val activity: AppCompatActivity,
-    val uiState: MainUiState
+    private val uiStateProvider: () -> MainUiState
 ) : ContextWrapper(activity),
     MainChromeHost,
     MainRuntimeHost,
@@ -24,26 +24,21 @@ internal abstract class MainUiHost(
     abstract val actions: MainUiActions
     val uiActions: MainUiActions
         get() = actions
+    val uiState: MainUiState
+        get() = uiStateProvider()
 
-    var currentPage: Page
+    val currentPage: Page
         get() = uiState.currentPage
-        set(value) { uiState.currentPage = value }
-    var settingsSubPage: SettingsSubPage
+    val settingsSubPage: SettingsSubPage
         get() = uiState.settingsSubPage
-        set(value) { uiState.settingsSubPage = value }
-    var savedLyricsSearchOpen: Boolean
+    val savedLyricsSearchOpen: Boolean
         get() = uiState.savedLyricsSearchOpen
-        set(value) { uiState.savedLyricsSearchOpen = value }
-    var savedLyricsSearchQuery: String
+    val savedLyricsSearchQuery: String
         get() = uiState.savedLyricsSearchQuery
-        set(value) { uiState.savedLyricsSearchQuery = value }
-    var quickFloatingVisible: Boolean
+    val quickFloatingVisible: Boolean
         get() = uiState.quickFloatingVisible
-        set(value) { uiState.quickFloatingVisible = value }
-    var overlayPermissionGranted: Boolean
+    val overlayPermissionGranted: Boolean
         get() = uiState.overlayPermissionGranted
-        set(value) { uiState.overlayPermissionGranted = value }
-    var mediaRefreshState: RefreshState
+    val mediaRefreshState: RefreshState
         get() = uiState.mediaRefreshState
-        set(value) { uiState.mediaRefreshState = value }
 }

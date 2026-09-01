@@ -78,7 +78,7 @@ class MainActivityLyricsOverwriteRecreationTest {
             uri = ORIGINAL_URI,
             target = SONG_A
         )
-        awaitAppIo(oldActivity)
+        awaitPendingOverwrite(oldActivity)
 
         val oldDialog = requireOverwriteDialog(oldActivity)
         val oldPositiveButton = requireDialogButton(oldDialog, oldActivity.getString(R.string.ui_overwrite))
@@ -103,8 +103,16 @@ class MainActivityLyricsOverwriteRecreationTest {
         assertEquals("The destroyed Activity must not submit its stale request", 0, inputOpenCount.get())
 
         requireDialogButton(restoredDialog, newActivity.getString(R.string.ui_overwrite)).performClick()
-        awaitAppIo(newActivity)
-        ShadowLooper.idleMainLooper(200, TimeUnit.MILLISECONDS)
+        awaitCondition("Timed out waiting for overwrite import") {
+            inputOpenCount.get() == 1 &&
+                newActivity.graph.state.pendingLyricsOverwrite == null &&
+                LyricsStorage.readPlainLyrics(
+                    context = newActivity,
+                    title = SONG_A.title,
+                    artist = SONG_A.artist,
+                    duration = SONG_A.durationMs
+                ) == "[00:10.00]new"
+        }
 
         assertEquals(1, inputOpenCount.get())
         assertNull(newActivity.graph.state.pendingLyricsOverwrite)
@@ -149,7 +157,7 @@ class MainActivityLyricsOverwriteRecreationTest {
             uri = ORIGINAL_URI,
             target = SONG_A
         )
-        awaitAppIo(activity)
+        awaitPendingOverwrite(activity)
 
         val dialog = requireOverwriteDialog(activity)
         requireDialogButton(dialog, activity.getString(R.string.ui_cancel)).performClick()
@@ -193,7 +201,7 @@ class MainActivityLyricsOverwriteRecreationTest {
             uri = ORIGINAL_URI,
             target = SONG_A
         )
-        awaitAppIo(activity)
+        awaitPendingOverwrite(activity)
         requireOverwriteDialog(activity)
 
         controller.recreate()
@@ -204,8 +212,16 @@ class MainActivityLyricsOverwriteRecreationTest {
             restoredDialog,
             restoredActivity.getString(R.string.ui_overwrite)
         ).performClick()
-        awaitAppIo(restoredActivity)
-        ShadowLooper.idleMainLooper(200, TimeUnit.MILLISECONDS)
+        awaitCondition("Timed out waiting for unreadable import outcome") {
+            inputOpenCount.get() == 1 &&
+                restoredActivity.graph.state.pendingLyricsOverwrite == null &&
+                restoredActivity
+                    .findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
+                    ?.text
+                    ?.toString() == restoredActivity.getString(
+                        R.string.ui_cannot_read_word_by_word_lyrics_file
+                    )
+        }
 
         assertEquals(1, inputOpenCount.get())
         assertNull(restoredActivity.graph.state.pendingLyricsOverwrite)
@@ -246,9 +262,8 @@ class MainActivityLyricsOverwriteRecreationTest {
         uri: Uri,
         target: SongIdentity
     ) {
-        activity.graph.state.pendingLyricsImport = PendingLyricsImport(
-            target,
-            LyricsImportType.WORD_BY_WORD
+        activity.graph.viewModel.setPendingLyricsImport(
+            PendingLyricsImport(target, LyricsImportType.WORD_BY_WORD)
         )
         activity.graph.launchers.selectLyricsFile()
         val pickerRequest = shadowOf(activity).nextStartedActivityForResult
@@ -273,6 +288,9 @@ class MainActivityLyricsOverwriteRecreationTest {
     }
 
     private fun requireOverwriteDialog(activity: MainActivity): Dialog {
+        awaitCondition("Expected overwrite confirmation dialog") {
+            ShadowDialog.getLatestDialog()?.isShowing == true
+        }
         val dialog = ShadowDialog.getLatestDialog()
         assertNotNull("Expected overwrite confirmation dialog", dialog)
         assertTrue(dialog!!.isShowing)
@@ -286,6 +304,23 @@ class MainActivityLyricsOverwriteRecreationTest {
         val button = dialog.window?.decorView?.findTextView(text)
         assertNotNull("Missing dialog button: $text", button)
         return button!!
+    }
+
+    private fun awaitPendingOverwrite(activity: MainActivity) {
+        awaitCondition("Timed out waiting for overwrite request") {
+            activity.graph.state.pendingLyricsOverwrite != null
+        }
+    }
+
+    private fun awaitCondition(message: String, condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadline) {
+            ShadowLooper.idleMainLooper()
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        ShadowLooper.idleMainLooper()
+        assertTrue(message, condition())
     }
 
     private fun registerLyricsInput(uri: Uri, openCount: AtomicInteger, word: String) {

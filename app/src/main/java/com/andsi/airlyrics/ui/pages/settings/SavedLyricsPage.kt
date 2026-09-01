@@ -141,7 +141,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
 
     val applySearchFilter = Runnable { renderSavedLyrics() }
     searchInput.doAfterTextChanged {
-        activity.savedLyricsSearchQuery = it?.toString().orEmpty()
+        activity.uiActions.updateSavedLyricsSearchQuery(it?.toString().orEmpty())
         listBody.removeCallbacks(applySearchFilter)
         listBody.postDelayed(applySearchFilter, SEARCH_FILTER_DELAY_MS)
     }
@@ -208,11 +208,11 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
 
     fun setSearchOpen(open: Boolean) {
         searchOpen = open
-        activity.savedLyricsSearchOpen = open
-        activity.savedLyricsSearchQuery = if (open) {
-            searchInput.text?.toString().orEmpty()
-        } else {
-            ""
+        activity.uiActions.setSavedLyricsSearchOpen(open)
+        if (open) {
+            activity.uiActions.updateSavedLyricsSearchQuery(
+                searchInput.text?.toString().orEmpty()
+            )
         }
         searchAction.contentDescription = getString(
             if (open) R.string.ui_close_search else R.string.ui_search

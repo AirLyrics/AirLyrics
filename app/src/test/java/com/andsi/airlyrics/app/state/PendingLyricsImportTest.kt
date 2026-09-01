@@ -58,21 +58,6 @@ class PendingLyricsImportTest {
     }
 
     @Test
-    fun consumePendingLyricsImport_returnsRequestOnlyOnce() {
-        val request = PendingLyricsImport(
-            target = SongIdentity("Song", "Artist", durationMs = 1L),
-            type = LyricsImportType.PLAIN
-        )
-        val state = MainActivityState().apply {
-            pendingLyricsImport = request
-        }
-
-        assertEquals(request, state.consumePendingLyricsImport())
-        assertNull(state.consumePendingLyricsImport())
-        assertNull(state.pendingLyricsImport)
-    }
-
-    @Test
     fun pendingOverwriteBundleRoundTrip_preservesUriTargetAndType() {
         val request = PendingLyricsOverwrite(
             uri = Uri.parse("content://lyrics/original-request.lrc"),

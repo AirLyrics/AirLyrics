@@ -7,27 +7,19 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.session.MediaController
 import android.media.session.PlaybackState
-import android.view.View
 import androidx.annotation.StringRes
 import com.andsi.airlyrics.app.contracts.FloatingSourceNotifier
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
-import com.andsi.airlyrics.app.contracts.MediaPageRefreshScheduler
-import com.andsi.airlyrics.app.contracts.MediaSourceSelectionRenderer
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
-import com.andsi.airlyrics.ui.components.playTinyPulse
 
 internal class MediaSourceController(
     private val context: Context,
-    private val mediaPageRefreshScheduler: MediaPageRefreshScheduler,
-    private val sourceSelectionRenderer: MediaSourceSelectionRenderer,
     private val floatingSourceNotifier: FloatingSourceNotifier
 ) : MediaControllerProvider {
-    fun handleMediaStatusBroadcast(intent: Intent) {
-        if (CurrentMediaBroadcast.isMediaStatusIntent(intent)) {
-            mediaPageRefreshScheduler.scheduleMediaPageRefresh()
-        }
+    fun isMediaStatusBroadcast(intent: Intent): Boolean {
+        return CurrentMediaBroadcast.isMediaStatusIntent(intent)
     }
 
     fun autoSelectSourceOnceIfNeeded() {
@@ -47,11 +39,9 @@ internal class MediaSourceController(
         return CurrentMediaReader.getActiveControllers(context)
     }
 
-    fun selectSource(packageName: String, sourceCard: View) {
+    fun selectSource(packageName: String) {
         MediaSourceStore.saveSelectedPackage(context, packageName)
         floatingSourceNotifier.notifySourceChangedIfVisible(packageName)
-        sourceSelectionRenderer.updateMediaSourceSelection(packageName)
-        playTinyPulse(sourceCard)
     }
 
     fun getAppName(packageName: String): String {

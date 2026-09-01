@@ -13,12 +13,12 @@ import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -115,6 +115,39 @@ class MainActivitySavedLyricsUiTest {
         assertTrue(restoredActivity.visibleTexts().contains(savedTitle))
     }
 
+    @Test
+    fun deletionFinishingAfterRecreation_doesNotCompleteANewerRequest() {
+        saveLyrics(1)
+        val controller = launchActivity()
+        val oldActivity = controller.get()
+        showSavedLyricsSettings(oldActivity)
+        awaitAppIo(oldActivity)
+        val staleItem = LyricsStorage.listAllLyrics(oldActivity).single()
+        val oldCallbackResults = mutableListOf<Boolean>()
+
+        oldActivity.graph.deleteSavedLyrics(staleItem, oldCallbackResults::add)
+        awaitBackgroundCondition {
+            LyricsStorage.listAllLyrics(context).isEmpty()
+        }
+
+        controller.recreate()
+        val restoredActivity = controller.get()
+        val newCallbackResults = mutableListOf<Boolean>()
+        restoredActivity.graph.deleteSavedLyrics(staleItem, newCallbackResults::add)
+        awaitCondition {
+            newCallbackResults.isNotEmpty()
+        }
+
+        assertTrue(oldActivity.isDestroyed)
+        assertTrue(oldCallbackResults.isEmpty())
+        assertEquals(listOf(false), newCallbackResults)
+        assertFalse(LyricsStorage.listAllLyrics(restoredActivity).contains(staleItem))
+        assertEquals(
+            LyricsStorage.currentRevision(),
+            restoredActivity.graph.state.foreground.lyricsRevision
+        )
+    }
+
     private fun launchActivity(): ActivityController<MainActivity> {
         return Robolectric.buildActivity(MainActivity::class.java)
             .setup()
@@ -130,10 +163,9 @@ class MainActivitySavedLyricsUiTest {
     }
 
     private fun showSettingsPage(activity: MainActivity, subPage: SettingsSubPage) {
-        activity.graph.state.currentPage = Page.SETTINGS
-        activity.graph.state.settingsSubPage = subPage
+        activity.graph.viewModel.selectPage(Page.SETTINGS)
+        activity.graph.viewModel.openSettingsSubPage(subPage)
         activity.graph.uiInvalidator.rebuildCurrentPage(
-            reason = PageRebuildReason.SETTINGS_NAVIGATION,
             animateContent = false,
             animateTabs = false
         )
@@ -160,6 +192,26 @@ class MainActivitySavedLyricsUiTest {
         activity.graph.runOnAppIo { completed.countDown() }
         assertTrue("Timed out waiting for app I/O", completed.await(5, TimeUnit.SECONDS))
         ShadowLooper.idleMainLooper()
+    }
+
+    private fun awaitBackgroundCondition(condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadline) {
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        assertTrue("Timed out waiting for background work", condition())
+    }
+
+    private fun awaitCondition(condition: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadline) {
+            ShadowLooper.idleMainLooper()
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        ShadowLooper.idleMainLooper()
+        assertTrue("Timed out waiting for UI work", condition())
     }
 
     private fun MainActivity.visibleTexts(): List<String> {

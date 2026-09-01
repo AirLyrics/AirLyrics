@@ -2,7 +2,6 @@ package com.andsi.airlyrics.app.host
 
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.provider.Settings
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -23,7 +22,6 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
 import com.andsi.airlyrics.ui.pages.settings.createSettingsAppearanceHeader
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -199,7 +197,7 @@ internal fun MainUiHost.changelogItemImpl(title: String, body: String): View {
 
 internal fun MainUiHost.permissionSummaryImpl(): String {
     val opened = listOf(
-        Settings.canDrawOverlays(this),
+        overlayPermissionGranted,
         hasNotificationPermission(),
         hasNotificationListenerAccess()
     ).count { it }
@@ -226,7 +224,7 @@ internal fun MainUiHost.refreshAfterLanguageChangedImpl() {
         ?.alpha(0f)
         ?.setDuration(AirUiTokens.Layout.FastFadeMs)
         ?.withEndAction {
-            rebuildMainView(PageRebuildReason.LANGUAGE_CHANGED)
+            rebuildMainView()
             contentContainer?.alpha = 0f
             contentContainer?.animate()
                 ?.alpha(1f)
@@ -236,7 +234,7 @@ internal fun MainUiHost.refreshAfterLanguageChangedImpl() {
         }
         ?.start()
         ?: run {
-            rebuildMainView(PageRebuildReason.LANGUAGE_CHANGED)
+            rebuildMainView()
         }
     uiActions.reloadFloatingLyrics()
 }

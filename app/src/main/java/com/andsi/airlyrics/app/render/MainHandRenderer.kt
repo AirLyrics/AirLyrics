@@ -12,7 +12,6 @@ import androidx.core.view.isNotEmpty
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.ui.components.animatePageEnter
 import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.createBottomTabs
 import com.andsi.airlyrics.ui.navigation.updateTabs
@@ -26,6 +25,10 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 internal class MainHandRenderer(
     private val graph: MainGraph
 ) : UiInvalidator {
+    private val pageScrollY: MutableMap<Page, Int> = mutableMapOf()
+    private var renderedPage: Page = Page.MEDIA
+    private var renderedSettingsSubPage = com.andsi.airlyrics.ui.navigation.SettingsSubPage.HOME
+
     private val host
         get() = graph.uiHost
     private val state
@@ -123,18 +126,17 @@ internal class MainHandRenderer(
     }
 
     override fun rebuildCurrentPage(
-        reason: PageRebuildReason,
         animateContent: Boolean,
         animateTabs: Boolean
     ) {
         val container = host.contentContainer ?: return
         graph.beginPageRebuild()
         (container.getChildAt(0) as? ScrollView)?.let { scrollView ->
-            state.pageScrollY[state.renderedPage] = scrollView.scrollY
+            pageScrollY[renderedPage] = scrollView.scrollY
         }
 
-        val oldPage = state.renderedPage
-        val oldSubPage = state.renderedSettingsSubPage
+        val oldPage = renderedPage
+        val oldSubPage = renderedSettingsSubPage
         val shouldAnimate = animateContent &&
             container.isNotEmpty() &&
             (state.currentPage != oldPage || state.settingsSubPage != oldSubPage)
@@ -163,12 +165,12 @@ internal class MainHandRenderer(
         ) {
             0
         } else {
-            state.pageScrollY[state.currentPage] ?: 0
+            pageScrollY[state.currentPage] ?: 0
         }
         container.addView(pageView)
         if (shouldAnimate) animatePageEnter(host, pageView, slideFromRight)
-        state.renderedPage = state.currentPage
-        state.renderedSettingsSubPage = state.settingsSubPage
+        renderedPage = state.currentPage
+        renderedSettingsSubPage = state.settingsSubPage
 
         (pageView as? ScrollView)?.let { scrollView ->
             scrollView.scrollTo(0, restoreY)
@@ -198,11 +200,11 @@ internal class MainHandRenderer(
         host.lyricsSettingsContentRefresh?.invoke()
     }
 
-    override fun recreateMainView(reason: PageRebuildReason) {
+    override fun recreateMainView() {
         graph.feedback.dismiss()
         graph.uiHost.applySystemBarsTheme()
         graph.activity.setContentView(createMainView())
         graph.uiHost.applySystemBarsTheme()
-        rebuildCurrentPage(reason)
+        rebuildCurrentPage()
     }
 }

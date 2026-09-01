@@ -7,7 +7,6 @@ import android.widget.TextView
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
-import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
 internal interface MainChromeHost {
@@ -21,12 +20,11 @@ internal interface MainChromeHost {
     val mediaRefreshHandler: Handler
 
     fun rebuildCurrentPage(
-        reason: PageRebuildReason,
         animateContent: Boolean = true,
         animateTabs: Boolean = true
     )
 
-    fun rebuildMainView(reason: PageRebuildReason = PageRebuildReason.THEME_CHANGED)
+    fun rebuildMainView()
     fun dp(value: Int): Int
     fun isDarkTheme(): Boolean
     fun themeAccent(): ThemeAccent

@@ -9,6 +9,9 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 internal data class MainUiActions(
     val selectPage: (Page) -> Unit,
     val openSettingsSubPage: (SettingsSubPage) -> Unit,
+    val setSavedLyricsSearchOpen: (Boolean) -> Unit,
+    val updateSavedLyricsSearchQuery: (String) -> Unit,
+    val setMediaRefreshState: (RefreshState) -> Unit,
     val toggleThemeMode: () -> Unit,
     val selectThemeAccent: (ThemeAccent) -> Unit,
     val toggleFloatingFromNav: () -> Unit,
