@@ -96,7 +96,7 @@ internal class MainGraph(
 
     val launchers: MainLaunchers = MainLaunchers(
         activity = activity,
-        onLyricsFileResult = { uri -> lyricsWorkflow.handleLyricsFileResult(uri) },
+        onLyricsFileResult = viewModel::handleLyricsFileResult,
         onFloatingFontFileResult = viewModel::importFloatingFont,
         onLyricsDirectorySelected = { uri -> lyricsWorkflow.handleLyricsDirectorySelected(uri) },
         onNotificationPermissionResult = ::handleNotificationPermissionResult

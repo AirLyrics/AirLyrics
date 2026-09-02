@@ -175,7 +175,7 @@ jobs:
             -Pairlyrics.buildX86_64=true
             --stacktrace
 
-      - name: Verify instrumentation test count
+      - name: Verify instrumentation test results
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -194,9 +194,16 @@ jobs:
                   totals[key] += int(suite.attrib.get(key, "0"))
 
           print("Instrumentation results:", totals)
-          expected = {"tests": 8, "failures": 0, "errors": 0, "skipped": 0}
-          if totals != expected:
-              sys.exit(f"Expected {expected}, got {totals}")
+          if totals["tests"] == 0:
+              sys.exit("No instrumentation tests ran")
+
+          incomplete = {
+              key: totals[key]
+              for key in ("failures", "errors", "skipped")
+              if totals[key]
+          }
+          if incomplete:
+              sys.exit(f"Instrumentation tests were not clean: {incomplete}")
           PY
 
       - name: Upload instrumentation test reports

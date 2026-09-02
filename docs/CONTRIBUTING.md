@@ -19,10 +19,15 @@ If available, images or videos can make the explanation easier to understand.
 
 ## Before submitting a PR
 
-Please run the basic checks before submitting a PR:
+With AGP 9.3.x, run Android lint with JDK 21. The project bytecode target remains JVM 17.
 
 ```bash
 ./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true
+```
+
+Use JDK 17 for the remaining checks:
+
+```bash
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
 ./scripts/check_architecture_boundaries.sh

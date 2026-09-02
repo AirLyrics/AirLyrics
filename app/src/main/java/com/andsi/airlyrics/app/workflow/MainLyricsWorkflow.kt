@@ -16,6 +16,7 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.localizedAssetText
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
+import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -73,10 +74,6 @@ internal class MainLyricsWorkflow(
                 if (!activity.isDestroyed) graph.viewModel.clearPendingLyricsOverwrite(request)
             }
         )
-    }
-
-    fun handleLyricsFileResult(uri: Uri?) {
-        graph.viewModel.handleLyricsFileResult(uri)
     }
 
     fun handleLyricsDirectorySelected(uri: Uri) {
@@ -152,26 +149,22 @@ internal class MainLyricsWorkflow(
 
             addView(importLyricsChoiceRow(
                 title = activity.getString(R.string.ui_plain_lyrics_lrc),
-                subtitle = activity.getString(
-                    if (plainImportEnabled) {
-                        R.string.ui_please_choose_a_plain_lrc_lyrics_file
-                    } else {
-                        R.string.ui_plain_lrc_blocked_by_word_by_word
-                    }
-                ),
+                subtitle = if (plainImportEnabled) {
+                    null
+                } else {
+                    activity.getString(R.string.ui_plain_lrc_blocked_by_word_by_word)
+                },
                 primary = true,
                 rowEnabled = plainImportEnabled
             ) { launchImport(LyricsImportType.PLAIN) })
 
             addView(importLyricsChoiceRow(
                 title = activity.getString(R.string.ui_word_by_word_lyrics_lrc_file),
-                subtitle = activity.getString(
-                    if (wordByWordImportEnabled) {
-                        R.string.ui_please_choose_a_word_by_word_lrc_file
-                    } else {
-                        R.string.ui_word_by_word_blocked_by_plain_lrc
-                    }
-                ),
+                subtitle = if (wordByWordImportEnabled) {
+                    null
+                } else {
+                    activity.getString(R.string.ui_word_by_word_blocked_by_plain_lrc)
+                },
                 primary = false,
                 rowEnabled = wordByWordImportEnabled
             ) { launchImport(LyricsImportType.WORD_BY_WORD) })
@@ -193,13 +186,15 @@ internal class MainLyricsWorkflow(
 
     private fun importLyricsChoiceRow(
         title: String,
-        subtitle: String,
+        subtitle: String?,
         primary: Boolean,
         rowEnabled: Boolean = true,
         onClick: () -> Unit
     ): TextView {
         return TextView(activity).apply {
-            text = activity.getString(R.string.ui_title_subtitle, title, subtitle)
+            text = subtitle?.let {
+                activity.getString(R.string.ui_title_subtitle, title, it)
+            } ?: title
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             val usePrimary = primary && rowEnabled
@@ -253,7 +248,4 @@ internal class MainLyricsWorkflow(
             )
         )
     }
-
-    private val SongIdentity.displayText: String
-        get() = if (artist.isBlank()) title else "$title - $artist"
 }

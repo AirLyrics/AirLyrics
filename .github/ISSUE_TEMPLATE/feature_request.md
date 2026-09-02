@@ -6,14 +6,6 @@ labels: enhancement
 assignees: ""
 ---
 
-## Description
+<!-- Check existing issues first. Keep this request focused on one feature. -->
 
-Describe the feature you would like to see.
-
-## Why is this useful?
-
-Explain what problem this feature solves or what experience it improves.
-
-## Suggested behavior
-
-If you already have an idea of how it should work, describe it here.
+<!-- Describe the feature, when it would be used, and how it should work. Add examples or mockups if useful. -->

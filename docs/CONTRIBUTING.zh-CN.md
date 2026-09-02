@@ -16,10 +16,15 @@ AirLyrics 目前处于稳定且积极维护状态，后续更新以维护为主�
 
 ## 提交 PR 前
 
-请在提交 PR 前尽量运行以下基础检查：
+AGP 9.3.x 下，请使用 JDK 21 运行 Android lint。项目字节码目标仍为 JVM 17。
 
 ```bash
 ./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true
+```
+
+其余检查请使用 JDK 17：
+
+```bash
 ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
 ./scripts/check_localization.sh
 ./scripts/check_architecture_boundaries.sh

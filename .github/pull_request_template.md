@@ -1,16 +1,9 @@
+<!-- See /docs/CONTRIBUTING.md before submitting. -->
+
 ## Summary
 
-Briefly describe what this PR changes.
+<!-- What changed and why? Add screenshots or recordings for visible changes if useful. -->
 
-## Type of change
+## Testing
 
-- [ ] Bug fix
-- [ ] New feature
-- [ ] UI change
-- [ ] Documentation update
-- [ ] Refactor
-- [ ] Other
-
-## Checklist
-
-- [ ] I have read the [contributing guide](/docs/CONTRIBUTING.md).
+<!-- What did you run or check? If not tested, say why. -->

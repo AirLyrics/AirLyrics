@@ -6,25 +6,19 @@ labels: bug
 assignees: ""
 ---
 
-## Description
+<!-- Check existing issues first. Keep this report focused on one problem. -->
 
-Describe the problem clearly.
+## Problem
+
+<!-- What happened, and what did you expect? -->
 
 ## Steps to reproduce
 
 1.
-2.
-3.
-
-## Expected behavior
-
-What did you expect to happen?
-
-## Actual behavior
-
-What actually happened?
 
 ## Environment
 
-- Android version:
 - AirLyrics version:
+- Android version:
+
+<!-- If relevant, add device/ROM, music app/media source, lyrics file/source, screenshots, recordings, or logs. Remove sensitive information. -->
