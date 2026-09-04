@@ -28,6 +28,7 @@ import com.andsi.airlyrics.app.viewmodel.MainScreenState
 import com.andsi.airlyrics.app.viewmodel.MainUiEffect
 import com.andsi.airlyrics.app.viewmodel.MainViewModel
 import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
+import com.andsi.airlyrics.app.workflow.MainDisplayScopeWorkflow
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.feedback.ToastAirFeedback
@@ -38,6 +39,7 @@ import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.store.AppSettingsStore
+import com.andsi.airlyrics.settings.store.DisplayScopeStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
@@ -58,7 +60,8 @@ internal class MainGraph(
     internal val viewModel: MainViewModel
 ) {
     private data class ForegroundChanges(
-        val overlayBecameGranted: Boolean = false
+        val overlayBecameGranted: Boolean = false,
+        val usageAccessChanged: Boolean = false
     )
 
     private data class UiRefreshPlan(
@@ -66,6 +69,7 @@ internal class MainGraph(
         val refreshTabs: Boolean = false,
         val refreshFloatingChrome: Boolean = false,
         val refreshFloatingControls: Boolean = false,
+        val refreshFloatingDisplayScope: Boolean = false,
         val refreshLyricsContent: Boolean = false
     )
 
@@ -123,6 +127,7 @@ internal class MainGraph(
     }
     val uiActions: MainUiActions by lazy { createMainUiActions() }
     val lyricsWorkflow: MainLyricsWorkflow by lazy { MainLyricsWorkflow(this) }
+    val displayScopeWorkflow: MainDisplayScopeWorkflow by lazy { MainDisplayScopeWorkflow(this) }
 
     /** Owns only the refresh-button feedback sequence exposed through MainUiHost. */
     val mediaRefreshHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
@@ -177,6 +182,9 @@ internal class MainGraph(
         val changes = syncForegroundState()
         if (changes.overlayBecameGranted) {
             restoreDesiredFloatingWindow()
+        }
+        if (changes.usageAccessChanged) {
+            floatingController.notifyDisplayScopeChanged()
         }
     }
 
@@ -304,6 +312,26 @@ internal class MainGraph(
         }
     }
 
+    fun toggleDisplayScope(): Boolean {
+        val enabled = !DisplayScopeStore.isEnabled(activity)
+        if (enabled && (!PermissionHelper.hasUsageStatsAccess(activity) ||
+                DisplayScopeStore.selectedPackages(activity).isEmpty())) {
+            return false
+        }
+        DisplayScopeStore.setEnabled(activity, enabled)
+        floatingController.notifyDisplayScopeChanged()
+        uiInvalidator.refreshFloatingDisplayScope()
+        return enabled
+    }
+
+    fun onDisplayScopeSelectionChanged() {
+        if (DisplayScopeStore.selectedPackages(activity).isEmpty()) {
+            DisplayScopeStore.setEnabled(activity, false)
+        }
+        floatingController.notifyDisplayScopeChanged()
+        uiInvalidator.refreshFloatingDisplayScope()
+    }
+
     private fun handleFloatingVisibilityOutcome(outcome: FloatingVisibilityOutcome) {
         when (outcome) {
             FloatingVisibilityOutcome.SUCCESS -> Unit
@@ -355,8 +383,10 @@ internal class MainGraph(
 
     private fun syncForegroundState(): ForegroundChanges {
         if (!canRenderUi()) return ForegroundChanges()
+        val usageAccessWasGranted = state.usageStatsGranted
         return ForegroundChanges(
-            overlayBecameGranted = viewModel.refreshForegroundState()
+            overlayBecameGranted = viewModel.refreshForegroundState(),
+            usageAccessChanged = usageAccessWasGranted != state.usageStatsGranted
         )
     }
 
@@ -380,6 +410,9 @@ internal class MainGraph(
         val notificationListenerChanged =
             previous.foreground.permissions.notificationListenerGranted !=
                 latest.foreground.permissions.notificationListenerGranted
+        val usageStatsChanged =
+            previous.foreground.permissions.usageStatsGranted !=
+                latest.foreground.permissions.usageStatsGranted
         val mediaChanged = previous.foreground.media != latest.foreground.media
         val lyricsChanged = previous.foreground.lyricsRevision != latest.foreground.lyricsRevision ||
             previous.lyricsChangeSequence != latest.lyricsChangeSequence
@@ -387,6 +420,8 @@ internal class MainGraph(
             previous.lyricsDirectoryRevision != latest.lyricsDirectoryRevision
         val floatingVisibilityChanged =
             previous.foreground.floating.visible != latest.foreground.floating.visible
+        val floatingDesiredVisibilityChanged =
+            previous.foreground.floating.desiredVisible != latest.foreground.floating.desiredVisible
         val floatingControlsChanged =
             previous.foreground.floating.locked != latest.foreground.floating.locked ||
                 previous.foreground.floating.clickThrough != latest.foreground.floating.clickThrough
@@ -396,7 +431,8 @@ internal class MainGraph(
             Page.FLOATING -> overlayPermissionChanged
             Page.SETTINGS -> latest.settingsSubPage == SettingsSubPage.HOME ||
                 latest.settingsSubPage == SettingsSubPage.SYSTEM
-        } && (overlayPermissionChanged || postNotificationsChanged || notificationListenerChanged)
+        } && (overlayPermissionChanged || postNotificationsChanged ||
+            notificationListenerChanged || usageStatsChanged)
 
         val rebuildReason = when {
             permissionRebuildRequired -> PageRebuildReason.PERMISSION_CHANGED
@@ -418,9 +454,12 @@ internal class MainGraph(
             (latest.settingsSubPage == SettingsSubPage.LYRICS ||
                 latest.settingsSubPage == SettingsSubPage.SAVED_LYRICS)
         return UiRefreshPlan(
-            refreshTabs = overlayPermissionChanged && !floatingVisibilityChanged,
-            refreshFloatingChrome = floatingVisibilityChanged,
+            refreshTabs = overlayPermissionChanged &&
+                !floatingVisibilityChanged && !floatingDesiredVisibilityChanged,
+            refreshFloatingChrome = floatingVisibilityChanged || floatingDesiredVisibilityChanged,
             refreshFloatingControls = floatingControlsChanged,
+            refreshFloatingDisplayScope =
+                latest.currentPage == Page.FLOATING && usageStatsChanged,
             refreshLyricsContent = lyricsPageMounted &&
                 (lyricsChanged ||
                     (mediaChanged && latest.settingsSubPage == SettingsSubPage.LYRICS))
@@ -459,6 +498,8 @@ internal class MainGraph(
             MainUiEffect.RequestNotificationPermission -> requestNotificationPermissionIfNeeded()
             MainUiEffect.OpenNotificationListenerSettings ->
                 activity.startActivity(Intent(ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            MainUiEffect.OpenUsageAccessSettings ->
+                PermissionHelper.openUsageAccessSettings(activity)
             MainUiEffect.SelectLyricsDirectory -> launchers.selectLyricsDirectory()
             MainUiEffect.SelectLyricsFile -> launchers.selectLyricsFile()
             MainUiEffect.SelectFloatingFontFile -> launchers.selectFloatingFontFile()
@@ -518,6 +559,9 @@ internal class MainGraph(
         }
         if (plan.refreshFloatingControls && !plan.refreshFloatingChrome) {
             uiInvalidator.refreshFloatingControls()
+        }
+        if (plan.refreshFloatingDisplayScope) {
+            uiInvalidator.refreshFloatingDisplayScope()
         }
         if (plan.refreshLyricsContent) {
             uiInvalidator.refreshLyricsSettingsContent()

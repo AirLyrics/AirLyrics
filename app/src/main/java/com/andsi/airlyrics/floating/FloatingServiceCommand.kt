@@ -17,6 +17,7 @@ internal sealed class FloatingServiceCommand {
     object ToggleClickThroughFromNotification : FloatingServiceCommand()
     object ToggleAdjustModeFromNotification : FloatingServiceCommand()
     object ApplyAutoHideWhenPaused : FloatingServiceCommand()
+    object ApplyDisplayScope : FloatingServiceCommand()
     object ApplyStyle : FloatingServiceCommand()
     object ReloadLyrics : FloatingServiceCommand()
     data class ApplyLyricsOffset(val offsetMs: Long) : FloatingServiceCommand()
@@ -52,6 +53,7 @@ internal sealed class FloatingServiceCommand {
             ToggleClickThroughFromNotification -> ACTION_NOTIFICATION_TOGGLE_CLICK_THROUGH
             ToggleAdjustModeFromNotification -> ACTION_NOTIFICATION_TOGGLE_ADJUST_MODE
             ApplyAutoHideWhenPaused -> ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED
+            ApplyDisplayScope -> ACTION_APPLY_DISPLAY_SCOPE
             ApplyStyle -> ACTION_APPLY_STYLE
             ReloadLyrics -> ACTION_RELOAD_LYRICS
             is ApplyLyricsOffset -> ACTION_APPLY_LYRICS_OFFSET
@@ -75,6 +77,8 @@ internal sealed class FloatingServiceCommand {
             "com.andsi.airlyrics.NOTIFICATION_TOGGLE_ADJUST_MODE"
         private const val ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED =
             "com.andsi.airlyrics.APPLY_AUTO_HIDE_WHEN_PAUSED"
+        private const val ACTION_APPLY_DISPLAY_SCOPE =
+            "com.andsi.airlyrics.APPLY_DISPLAY_SCOPE"
         private const val ACTION_APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
         private const val ACTION_RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
         private const val ACTION_APPLY_LYRICS_OFFSET = "com.andsi.airlyrics.APPLY_LYRICS_OFFSET"
@@ -98,6 +102,7 @@ internal sealed class FloatingServiceCommand {
                 ACTION_NOTIFICATION_TOGGLE_CLICK_THROUGH -> ToggleClickThroughFromNotification
                 ACTION_NOTIFICATION_TOGGLE_ADJUST_MODE -> ToggleAdjustModeFromNotification
                 ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED -> ApplyAutoHideWhenPaused
+                ACTION_APPLY_DISPLAY_SCOPE -> ApplyDisplayScope
                 ACTION_APPLY_STYLE -> ApplyStyle
                 ACTION_RELOAD_LYRICS -> ReloadLyrics
                 ACTION_APPLY_LYRICS_OFFSET -> ApplyLyricsOffset(

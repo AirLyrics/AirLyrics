@@ -19,14 +19,17 @@ AirLyrics asks for the following Android permissions only when they are needed f
 | Display over other apps | Shows the floating lyrics window above other apps                                    |
 | Notification access     | Detects current media playback information from local notifications / media sessions |
 | Notifications           | Keeps the foreground floating lyrics service visible to Android                      |
+| Usage access            | Checks whether apps selected in Display scope are visible (Android 10+)               |
 | Internet access         | Searches lyrics online when the user uses online lyrics search                       |
 | File picker             | Lets the user import local lyrics files                                              |
 
 Notification access is used locally on the device to detect media playback metadata such as the playing app, title, artist, album, playback state, and available media controls. AirLyrics does not upload notification content.
 
+Usage access is optional and used locally only for Display scope. AirLyrics does not read app content or upload usage data.
+
 ## Local data
 
-AirLyrics may store app settings, selected media source information, local lyrics records, cached lyrics, and recent lyrics download records on the device.
+AirLyrics may store app settings, selected media source information, Display scope app selections, local lyrics records, cached lyrics, and recent lyrics download records on the device.
 
 This data is used only for app functionality and remains on the user's device unless the user exports, shares, backs up, or otherwise transfers it using system features or third-party tools.
 

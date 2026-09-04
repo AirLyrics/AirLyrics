@@ -3,6 +3,7 @@ package com.andsi.airlyrics.floating
 import android.app.NotificationManager
 import androidx.annotation.StringRes
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
 internal fun FloatingLyricsService.refreshQuickControls(feedback: String? = null) {
     val notification = FloatingServiceNotification.create(this, currentQuickControlState(feedback))
@@ -16,8 +17,10 @@ internal fun FloatingLyricsService.currentQuickControlState(
 ): FloatingServiceNotification.QuickControlState {
     return FloatingServiceNotification.QuickControlState(
         visible = isWindowControllerReady() && windowController.isVisible,
+        desiredVisible = QuickFloatingStore.isDesiredVisible(this),
         locked = FloatingLyricsStyleStore.isLocked(this),
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this),
+        displayScopeBlockReason = displayScopeBlockReason,
         feedback = feedback
     )
 }

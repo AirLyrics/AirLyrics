@@ -11,8 +11,10 @@ internal interface MainUiState {
     val locked: Boolean
     val clickThrough: Boolean
     val quickFloatingVisible: Boolean
+    val quickFloatingDesiredVisible: Boolean
     val overlayPermissionGranted: Boolean
     val postNotificationsGranted: Boolean
     val notificationListenerGranted: Boolean
+    val usageStatsGranted: Boolean
     val mediaRefreshState: RefreshState
 }

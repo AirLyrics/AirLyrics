@@ -39,6 +39,7 @@ class FloatingServiceCommandTest {
             FloatingServiceCommand.ToggleClickThroughFromNotification,
             FloatingServiceCommand.ToggleAdjustModeFromNotification,
             FloatingServiceCommand.ApplyAutoHideWhenPaused,
+            FloatingServiceCommand.ApplyDisplayScope,
             FloatingServiceCommand.ApplyStyle,
             FloatingServiceCommand.ReloadLyrics
         )

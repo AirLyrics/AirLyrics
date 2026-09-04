@@ -35,8 +35,8 @@ internal abstract class MainUiHost(
         get() = uiState.savedLyricsSearchOpen
     val savedLyricsSearchQuery: String
         get() = uiState.savedLyricsSearchQuery
-    val quickFloatingVisible: Boolean
-        get() = uiState.quickFloatingVisible
+    val quickFloatingDesiredVisible: Boolean
+        get() = uiState.quickFloatingDesiredVisible
     val overlayPermissionGranted: Boolean
         get() = uiState.overlayPermissionGranted
     val mediaRefreshState: RefreshState

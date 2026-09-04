@@ -53,11 +53,13 @@ internal class FloatingPageScope(
     internal var activeBubble: LinearLayout? = null
     internal var selectedTileView: View? = null
     internal var activePanelResetStateUpdater: (() -> Unit)? = null
+    internal var activeDisplayScopePanelRefresh: (() -> Unit)? = null
     internal val pageRefs = FloatingPageRefs()
     internal var previewExpanded = host.isFloatingPreviewExpanded()
 
     init {
         host.floatingPageRefs = pageRefs
+        pageRefs.refreshDisplayScopeControls = ::refreshDisplayScopeControls
     }
 
     internal fun createView(): View = with(host) {
@@ -268,12 +270,14 @@ internal class FloatingPageScope(
         title: String,
         subtitle: String,
         iconRes: Int,
+        enabled: Boolean = true,
         onClick: (View) -> Unit
     ): FloatingSettingTile {
         return FloatingSettingTile(
             title = title,
             subtitle = subtitle,
             iconRes = iconRes,
+            enabled = enabled,
             onClick = onClick,
             onSubtitleViewCreated = { subtitleView ->
                 pageRefs.registerTileSubtitle(title, subtitleView)
@@ -304,7 +308,16 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), AirColorUtils.colorSummary(latestStyle.wordByWordHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_auto_hide_when_paused), onOff(host.autoHideWhenPausedEnabled()))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_display_scope), host.displayScopeSummary())
         updateActivePanelResetState()
+    }
+
+    private fun refreshDisplayScopeControls() {
+        updateFloatingTileSubtitle(
+            host.getString(R.string.ui_display_scope),
+            host.displayScopeSummary()
+        )
+        activeDisplayScopePanelRefresh?.invoke()
     }
 
     private fun updateFloatingTileSubtitle(title: String, subtitle: String) {

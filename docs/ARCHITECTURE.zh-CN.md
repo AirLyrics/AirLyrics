@@ -263,6 +263,10 @@ JSON 结果。Kotlin 将 JSON 映射为 `LyricsProviderResult` 或有类型的
 开启自动隐藏/显示后，歌曲暂停会暂时移除窗口，但不会清除用户的“期望显示”设置。
 所选媒体观察仍会继续，因此恢复播放时可以重新显示窗口。
 
+Android 10+ 的可选“显示范围”功能通过 `UsageEvents` 重建可见 Activity：Activity 在 resumed
+或 paused 后保持可见，直到 stopped。任一所选包名可见时，`DisplayScopePolicy` 允许显示窗口；
+使用情况访问被撤销时会收敛为隐藏，但服务保留“期望显示”，以便所选应用出现后自动恢复。
+
 ## 设置
 
 各功能设置通过 `settings/store/` 下的专用 store 读写：
@@ -270,6 +274,7 @@ JSON 结果。Kotlin 将 JSON 映射为 `LyricsProviderResult` 或有类型的
 ```text
 AppSettingsStore             全局 App 和状态提示行为
 FloatingLyricsStyleStore     悬浮窗样式、行为、位置和预览状态
+DisplayScopeStore            可选应用白名单与启用状态
 LyricsOffsetStore            按歌曲保存的时间偏移
 LyricsSettingsStore          歌词查询和显示偏好
 QuickFloatingStore           持久化的悬浮窗期望显示状态

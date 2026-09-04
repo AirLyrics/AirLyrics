@@ -8,6 +8,7 @@ import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.horizontalButtons
 import com.andsi.airlyrics.ui.components.settingRow
+import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
@@ -73,6 +74,72 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                         addView(autoHideButton)
                     }
                 }
+            ),
+            trackedFloatingTile(
+                title = getString(R.string.ui_display_scope),
+                subtitle = displayScopeSummary(),
+                iconRes = R.drawable.ic_air_visibility,
+                enabled = displayScopeSupported(),
+                onClick = { tile ->
+                    activeDisplayScopePanelRefresh = openPanel(
+                        tile,
+                        getString(R.string.ui_display_scope),
+                        ""
+                    ) {
+                        val usageAccessGranted = hasUsageStatsAccess()
+                        addView(
+                            settingRow(
+                                host,
+                                getString(R.string.ui_choose_apps),
+                                resources.getQuantityString(
+                                    R.plurals.ui_selected_apps_count,
+                                    displayScopeSelectedCount(),
+                                    displayScopeSelectedCount()
+                                )
+                            )
+                        )
+                        addView(
+                            settingRow(
+                                host,
+                                getString(R.string.ui_usage_access),
+                                getString(if (usageAccessGranted) R.string.ui_on else R.string.ui_off)
+                            )
+                        )
+
+                        if (!usageAccessGranted) {
+                            addView(smallHint(host, getString(R.string.ui_display_scope_usage_hint)))
+                            addView(actionButton(host, getString(R.string.ui_grant_usage_access)) {
+                                uiActions.openUsageAccessSettings()
+                            })
+                        }
+
+                        if (usageAccessGranted) {
+                            addView(actionButton(host, getString(R.string.ui_choose_apps)) {
+                                uiActions.chooseDisplayScopeApps()
+                            })
+                        }
+
+                        val canToggle = displayScopeEnabled() ||
+                            (usageAccessGranted && displayScopeSelectedCount() > 0)
+                        addView(
+                            actionButton(
+                                host,
+                                getString(
+                                    when {
+                                        displayScopeEnabled() -> R.string.ui_disable_display_scope
+                                        displayScopeSelectedCount() == 0 -> R.string.ui_select_apps_first
+                                        else -> R.string.ui_enable_display_scope
+                                    }
+                                )
+                            ) {
+                                uiActions.toggleDisplayScope()
+                            }.apply {
+                                isEnabled = canToggle
+                                alpha = if (canToggle) 1f else 0.48f
+                            }
+                        )
+                    }
+                }
             )
         )
     )
@@ -101,6 +168,7 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
             addView(settingRow(host, getString(R.string.ui_locked), onOff(uiState.locked)))
             addView(settingRow(host, getString(R.string.ui_click_through), onOff(uiState.clickThrough)))
             addView(settingRow(host, getString(R.string.ui_auto_hide_when_paused), autoHideWhenPausedSubtitle()))
+            addView(settingRow(host, getString(R.string.ui_display_scope), host.displayScopeSummary()))
         }
     }
     list.addView(summaryButton)

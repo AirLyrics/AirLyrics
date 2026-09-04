@@ -120,7 +120,7 @@ private fun FloatingLyricsService.restoreAutoHiddenLyrics() {
     restoreVisibleLyricsIfDesired()
 }
 
-private fun FloatingLyricsService.restoreVisibleLyricsIfDesired() {
+internal fun FloatingLyricsService.restoreVisibleLyricsIfDesired() {
     cancelPendingPauseAutoHide()
     autoHiddenForPause = false
     if (!QuickFloatingStore.isDesiredVisible(this)) {

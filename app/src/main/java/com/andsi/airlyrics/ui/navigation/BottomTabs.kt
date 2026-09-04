@@ -142,7 +142,7 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         val selected = page == currentPage
         val quickControlSelected = page == Page.FLOATING && selected
         val targetTextRes = if (quickControlSelected) {
-            quickFloatingTabLabelRes(quickFloatingVisible, overlayPermissionGranted)
+            quickFloatingTabLabelRes(quickFloatingDesiredVisible, overlayPermissionGranted)
         } else {
             when (page) {
                 Page.MEDIA -> R.string.ui_media
@@ -152,7 +152,7 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         }
         val targetText = getString(targetTextRes)
         val targetIconRes = if (quickControlSelected) {
-            quickFloatingTabIconRes(quickFloatingVisible, overlayPermissionGranted)
+            quickFloatingTabIconRes(quickFloatingDesiredVisible, overlayPermissionGranted)
         } else {
             null
         }

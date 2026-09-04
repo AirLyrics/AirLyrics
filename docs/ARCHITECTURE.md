@@ -287,6 +287,11 @@ When auto hide/show is enabled, a paused track temporarily removes the window wi
 user's desired-visible setting. Selected-media observation continues so playback can restore the
 window when it resumes.
 
+On Android 10+, the optional Display scope filter reconstructs visible activities from
+`UsageEvents`: resumed and paused activities remain visible until stopped. `DisplayScopePolicy`
+allows the window when any selected package is visible. Missing usage access fails closed, while the
+service preserves desired visibility so a matching app can restore the window automatically.
+
 ## Settings
 
 Feature settings are read and written through dedicated stores under `settings/store/`:
@@ -294,6 +299,7 @@ Feature settings are read and written through dedicated stores under `settings/s
 ```text
 AppSettingsStore             Global app and status-popup behavior
 FloatingLyricsStyleStore     Overlay appearance, behavior, position, and preview state
+DisplayScopeStore            Optional app allowlist and enabled state
 LyricsOffsetStore            Per-song timing offsets
 LyricsSettingsStore          Lookup and lyrics-display preferences
 QuickFloatingStore           Persisted desired overlay visibility

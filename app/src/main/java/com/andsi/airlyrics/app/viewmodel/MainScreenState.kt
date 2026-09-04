@@ -10,11 +10,13 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 internal data class PermissionUiSnapshot(
     val overlayGranted: Boolean = false,
     val postNotificationsGranted: Boolean = false,
-    val notificationListenerGranted: Boolean = false
+    val notificationListenerGranted: Boolean = false,
+    val usageStatsGranted: Boolean = false
 )
 
 internal data class FloatingUiSnapshot(
     val visible: Boolean = false,
+    val desiredVisible: Boolean = false,
     val locked: Boolean = false,
     val clickThrough: Boolean = false
 )
@@ -61,6 +63,9 @@ internal data class MainScreenState(
     override val quickFloatingVisible: Boolean
         get() = foreground.floating.visible
 
+    override val quickFloatingDesiredVisible: Boolean
+        get() = foreground.floating.desiredVisible
+
     override val overlayPermissionGranted: Boolean
         get() = foreground.permissions.overlayGranted
 
@@ -69,4 +74,7 @@ internal data class MainScreenState(
 
     override val notificationListenerGranted: Boolean
         get() = foreground.permissions.notificationListenerGranted
+
+    override val usageStatsGranted: Boolean
+        get() = foreground.permissions.usageStatsGranted
 }

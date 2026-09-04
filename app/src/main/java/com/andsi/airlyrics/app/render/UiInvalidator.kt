@@ -22,6 +22,9 @@ internal interface UiInvalidator {
     /** Updates lock/click-through labels inside the current Floating page, if it is mounted. */
     fun refreshFloatingControls()
 
+    /** Refreshes display-scope status and its open panel without replacing the Floating page. */
+    fun refreshFloatingDisplayScope()
+
     /** Refreshes mounted lyrics-setting cards without replacing the current page tree. */
     fun refreshLyricsSettingsContent()
 

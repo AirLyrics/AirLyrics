@@ -37,6 +37,11 @@ internal interface FloatingUiHost {
     fun floatingLockButtonText(): String
     fun floatingClickThroughButtonText(): String
     fun autoHideWhenPausedEnabled(): Boolean
+    fun displayScopeSupported(): Boolean
+    fun displayScopeEnabled(): Boolean
+    fun displayScopeSelectedCount(): Int
+    fun displayScopeSummary(): String
+    fun hasUsageStatsAccess(): Boolean
     fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView
     fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle)
     fun applyFloatingPreset(preset: String)

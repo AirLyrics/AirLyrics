@@ -26,6 +26,7 @@ import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.displayscope.DisplayScopeCapability
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
 import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
@@ -37,6 +38,7 @@ import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
+import com.andsi.airlyrics.settings.store.DisplayScopeStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
@@ -198,6 +200,28 @@ internal class MainActivityUiHost(
 
     override fun autoHideWhenPausedEnabled(): Boolean {
         return FloatingLyricsStyleStore.isAutoHideWhenPaused(this)
+    }
+
+    override fun displayScopeSupported(): Boolean = DisplayScopeCapability.isSupported()
+
+    override fun displayScopeEnabled(): Boolean = DisplayScopeStore.isEnabled(this)
+
+    override fun displayScopeSelectedCount(): Int {
+        return DisplayScopeStore.selectedPackages(this).size
+    }
+
+    override fun hasUsageStatsAccess(): Boolean = uiState.usageStatsGranted
+
+    override fun displayScopeSummary(): String {
+        if (!displayScopeSupported()) return getString(R.string.ui_android_10_required)
+        if (!displayScopeEnabled()) return getString(R.string.ui_off)
+        if (!hasUsageStatsAccess()) return getString(R.string.ui_usage_access_required)
+        val selectedCount = displayScopeSelectedCount()
+        return resources.getQuantityString(
+            R.plurals.ui_selected_apps_count,
+            selectedCount,
+            selectedCount
+        )
     }
 
     override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {

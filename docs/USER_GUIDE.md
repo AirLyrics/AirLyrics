@@ -39,6 +39,8 @@ Appearance, lyrics display, animation, behavior, and window position are saved a
 - **Display control** provides show/hide, drag lock, and click-through controls. Notification
   **Adjustment mode** makes the window draggable and touchable again.
 - **Auto hide/show** hides the window while playback is paused and restores it when playback resumes.
+- **Display scope** (Android 10+) limits the window to selected visible apps. Choose apps, grant
+  usage access, then enable it. Split-screen, freeform, and picture-in-picture count as visible.
 - **Lyrics offset** is saved per song and does not modify the original lyrics files.
 - **Word-by-word lyrics** use local imports. When enabled and available, **Highlight color** marks
   the elapsed part of the current line.
@@ -67,6 +69,8 @@ See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC examples.
 - **Overlay** allows AirLyrics to draw the floating window over other apps.
 - **Notif. access** allows AirLyrics to detect local media playback.
 - **Notify** displays foreground-service controls; it is separate from notification access.
+- **Usage access** is optional and only checks whether apps selected in **Display scope** are
+  visible. AirLyrics does not read or upload app content.
 - **Language** selects system, English, or Simplified Chinese mode.
 - **Hide status pop-ups** hides AirLyrics Snackbar and Toast messages.
 
@@ -74,5 +78,8 @@ See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC examples.
 
 **The floating window does not appear:** confirm the selected player and overlay permission, then
 open **Floating** and tap **Show** in the bottom bar. Permission alone does not show the window.
+
+**Display scope is waiting:** open a selected app, or check usage access. Disabling **Display
+scope** restores the normal all-app behavior.
 
 For other known problems, search [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues).

@@ -16,8 +16,8 @@ internal fun FloatingPageScope.openPanel(
     subtitle: String,
     reset: FloatingPanelReset? = null,
     content: LinearLayout.() -> Unit
-) {
-    val overlay = focusOverlay ?: return
+): (() -> Unit)? {
+    val overlay = focusOverlay ?: return null
     selectedTileView = anchor
 
     anchor.animate()
@@ -103,6 +103,7 @@ internal fun FloatingPageScope.openPanel(
             .setInterpolator(OvershootInterpolator(FloatingPageTokens.PANEL_OPEN_OVERSHOOT_TENSION))
             .start()
     }
+    return ::rebuildContentIfOpen
 }
 
 internal fun FloatingPageScope.installBackHandler() {
@@ -142,6 +143,7 @@ private fun FloatingPageScope.closePanel() {
 
 private fun FloatingPageScope.clearContentFocus() {
     activePanelResetStateUpdater = null
+    activeDisplayScopePanelRefresh = null
     selectedTileView?.animate()
         ?.scaleX(1f)
         ?.scaleY(1f)

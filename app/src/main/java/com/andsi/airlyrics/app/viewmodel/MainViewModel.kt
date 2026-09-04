@@ -73,6 +73,9 @@ internal class MainViewModel(
     override val quickFloatingVisible: Boolean
         get() = _uiState.value.quickFloatingVisible
 
+    override val quickFloatingDesiredVisible: Boolean
+        get() = _uiState.value.quickFloatingDesiredVisible
+
     override val overlayPermissionGranted: Boolean
         get() = _uiState.value.overlayPermissionGranted
 
@@ -135,6 +138,10 @@ internal class MainViewModel(
 
     fun openNotificationListenerSettings() {
         uiEffectChannel.trySend(MainUiEffect.OpenNotificationListenerSettings)
+    }
+
+    fun openUsageAccessSettings() {
+        uiEffectChannel.trySend(MainUiEffect.OpenUsageAccessSettings)
     }
 
     fun selectLyricsDirectory() {
@@ -368,6 +375,7 @@ internal class MainViewModel(
 
     override fun updateFloatingState(
         visible: Boolean?,
+        desiredVisible: Boolean?,
         overlayGranted: Boolean?,
         locked: Boolean?,
         clickThrough: Boolean?
@@ -382,6 +390,7 @@ internal class MainViewModel(
                     ),
                     floating = floating.copy(
                         visible = visible ?: floating.visible,
+                        desiredVisible = desiredVisible ?: floating.desiredVisible,
                         locked = locked ?: floating.locked,
                         clickThrough = clickThrough ?: floating.clickThrough
                     )

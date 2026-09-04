@@ -13,6 +13,8 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.displayscope.DisplayScopeBlockReason
+import com.andsi.airlyrics.displayscope.DisplayScopeMonitor
 import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
@@ -89,6 +91,11 @@ open class FloatingLyricsService : Service() {
     internal var activeLyricsLookupRequestKey: LyricsLookupRequestKey? = null
     internal var selectedSourcePackage: String? = null
     internal var autoHiddenForPause = false
+    internal var autoHiddenForDisplayScope = false
+    internal var displayScopeBlockReason: DisplayScopeBlockReason? = null
+    internal var displayScopeVisiblePackages: Set<String> = emptySet()
+    internal var displayScopeUsageAccessGranted = false
+    internal var displayScopeMonitor: DisplayScopeMonitor? = null
     internal var pauseAutoHideSuppressedByUser = false
     internal var mediaRestoreAttempt = 0
     internal val mediaSnapshotGate = MediaSnapshotGate()
@@ -143,6 +150,7 @@ open class FloatingLyricsService : Service() {
         super.onCreate()
 
         selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
+        displayScopeMonitor = DisplayScopeMonitor(this, ::applyDisplayScopeSnapshot)
         windowController = FloatingLyricsWindow(this) { visible ->
             if (!visible) {
                 syncHandler.removeCallbacks(mediaRestoreRunnable)
@@ -194,6 +202,8 @@ open class FloatingLyricsService : Service() {
         syncHandler.removeCallbacks(pauseAutoHideRunnable)
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         stopSelectedMediaObservation()
+        displayScopeMonitor?.close()
+        displayScopeMonitor = null
         activeLyricsLookupRequestKey = null
         lyricsLookupRunner.shutdown()
         runCatching { unregisterReceiver(mediaReceiver) }

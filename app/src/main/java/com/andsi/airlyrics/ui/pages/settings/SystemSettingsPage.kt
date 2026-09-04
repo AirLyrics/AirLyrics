@@ -6,6 +6,7 @@ import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
@@ -34,6 +35,17 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
             addView(settingRow(activity, getString(R.string.ui_overlay), getString(if (uiState.overlayPermissionGranted) R.string.ui_on else R.string.ui_off)))
             addView(settingRow(activity, getString(R.string.ui_notify), getString(if (hasNotificationPermission()) R.string.ui_on else R.string.ui_off)))
             addView(settingRow(activity, getString(R.string.ui_notif_access), getString(if (hasNotificationListenerAccess()) R.string.ui_on else R.string.ui_off)))
+            addView(
+                settingRow(
+                    activity,
+                    getString(R.string.ui_usage_access),
+                    if (displayScopeSupported()) {
+                        getString(if (hasUsageStatsAccess()) R.string.ui_on else R.string.ui_off)
+                    } else {
+                        getString(R.string.ui_android_10_required)
+                    }
+                )
+            )
         }
     )
 
@@ -44,13 +56,112 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
                 getString(R.string.ui_overlay) to { uiActions.requestOverlayPermission() },
                 getString(R.string.ui_notify) to { uiActions.requestNotificationPermission() }
             ))
-            addView(actionButton(activity, getString(R.string.ui_open_access_settings)) {
-                uiActions.openNotificationListenerSettings()
-            })
+            addView(
+                specialPermissionShortcut(
+                    activity = activity,
+                    title = getString(R.string.ui_notif_access),
+                    purpose = getString(R.string.ui_notif_access_usage_hint),
+                    onOpenSettings = uiActions.openNotificationListenerSettings
+                )
+            )
+            addView(
+                specialPermissionShortcut(
+                    activity = activity,
+                    title = getString(R.string.ui_usage_access),
+                    purpose = getString(R.string.ui_display_scope_usage_hint),
+                    settingsEnabled = displayScopeSupported(),
+                    onOpenSettings = uiActions.openUsageAccessSettings
+                )
+            )
         }
     )
 
     return scroll(activity, container)
+}
+
+private fun specialPermissionShortcut(
+    activity: MainUiHost,
+    title: String,
+    purpose: String,
+    settingsEnabled: Boolean = true,
+    onOpenSettings: () -> Unit
+): View = with(activity) {
+    return LinearLayout(this).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            setMargins(0, dp(AirUiTokens.Space.Lg), 0, 0)
+        }
+
+        addView(TextView(activity).apply {
+            text = title
+            gravity = Gravity.CENTER
+            textSize = AirUiTokens.TextSize.Button
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorOnAccent)
+            setPadding(
+                dp(AirUiTokens.Space.ButtonH),
+                dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+                dp(AirUiTokens.Space.ButtonH),
+                dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs)
+            )
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f
+            )
+            background = GradientDrawable().apply {
+                cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
+                setColor(colorAccent)
+            }
+            isEnabled = settingsEnabled
+            alpha = if (settingsEnabled) 1f else 0.48f
+            enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
+            setOnClickListener {
+                onOpenSettings()
+                playTinyPulse(this)
+            }
+        })
+
+        addView(FrameLayout(activity).apply {
+            contentDescription = getString(R.string.ui_permission_purpose, title)
+            isClickable = true
+            isFocusable = true
+            layoutParams = LinearLayout.LayoutParams(
+                dp(AirUiTokens.Layout.IconTouchSize),
+                dp(AirUiTokens.Layout.IconTouchSize)
+            ).apply {
+                setMargins(dp(AirUiTokens.Space.Sm), 0, 0, 0)
+            }
+            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+            setOnClickListener {
+                showAirInfoDialog(title = title, message = purpose)
+                playTinyPulse(this)
+            }
+
+            addView(TextView(activity).apply {
+                text = "?"
+                gravity = Gravity.CENTER
+                textSize = AirUiTokens.TextSize.Button
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorAccent)
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.OVAL
+                    setColor(colorSurfaceLight)
+                    setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+                }
+                layoutParams = FrameLayout.LayoutParams(
+                    dp(AirUiTokens.Layout.IconTouchSize - AirUiTokens.Space.Xl),
+                    dp(AirUiTokens.Layout.IconTouchSize - AirUiTokens.Space.Xl),
+                    Gravity.CENTER
+                )
+            })
+        })
+    }
 }
 
 private fun statusPopupsMuteCard(activity: MainUiHost): View = with(activity) statusPopupsMuteCard@ {

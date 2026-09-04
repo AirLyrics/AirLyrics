@@ -118,8 +118,12 @@ internal fun MainUiHost.floatingTileImpl(item: FloatingSettingTile): LinearLayou
             })
         }
 
-        enableSoftPressFeedback(AirUiTokens.Motion.FloatingTilePressScale)
-        setOnClickListener { item.onClick(this) }
+        isEnabled = item.enabled
+        alpha = if (item.enabled) 1f else 0.48f
+        if (item.enabled) {
+            enableSoftPressFeedback(AirUiTokens.Motion.FloatingTilePressScale)
+            setOnClickListener { item.onClick(this) }
+        }
     }
 }
 

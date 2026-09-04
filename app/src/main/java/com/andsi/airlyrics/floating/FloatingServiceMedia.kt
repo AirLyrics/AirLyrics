@@ -15,7 +15,8 @@ import com.andsi.airlyrics.settings.store.QuickFloatingStore
 internal fun FloatingLyricsService.shouldObserveSelectedMedia(): Boolean {
     return isWindowControllerReady() &&
         (windowController.isVisible ||
-            (autoHiddenForPause && QuickFloatingStore.isDesiredVisible(this))) &&
+            ((autoHiddenForPause || autoHiddenForDisplayScope) &&
+                QuickFloatingStore.isDesiredVisible(this))) &&
         !selectedSourcePackage.isNullOrBlank()
 }
 

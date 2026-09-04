@@ -25,13 +25,13 @@ internal class FloatingController(
     private val appContext = context.applicationContext
 
     fun reloadLyrics() {
-        if (state.quickFloatingVisible) {
+        if (state.quickFloatingDesiredVisible) {
             sendFloatingCommand(FloatingServiceCommand.ReloadLyrics)
         }
     }
 
     fun applyLyricsOffset(offsetMs: Long) {
-        if (state.quickFloatingVisible) {
+        if (state.quickFloatingDesiredVisible) {
             sendFloatingCommand(FloatingServiceCommand.ApplyLyricsOffset(offsetMs))
         }
     }
@@ -45,7 +45,6 @@ internal class FloatingController(
         if (!sendFloatingCommand(FloatingServiceCommand.Show)) {
             return FloatingVisibilityOutcome.COMMAND_FAILED
         }
-        updateQuickFloatingActualVisible(true)
         return FloatingVisibilityOutcome.SUCCESS
     }
 
@@ -65,11 +64,14 @@ internal class FloatingController(
     }
 
     fun toggleLyrics(): FloatingVisibilityOutcome {
+        if (state.quickFloatingDesiredVisible) {
+            return hideLyrics()
+        }
         if (!updateOverlayPermissionGranted()) {
             setDesiredVisible(true)
             return FloatingVisibilityOutcome.PERMISSION_REQUIRED
         }
-        return if (state.quickFloatingVisible) hideLyrics() else showLyrics()
+        return showLyrics()
     }
 
     fun updateQuickFloatingActualVisible(visible: Boolean) {
@@ -84,6 +86,13 @@ internal class FloatingController(
 
     private fun setDesiredVisible(visible: Boolean) {
         QuickFloatingStore.setDesiredVisible(appContext, visible)
+        state.updateFloatingState(desiredVisible = visible)
+    }
+
+    fun notifyDisplayScopeChanged() {
+        if (QuickFloatingStore.isDesiredVisible(appContext)) {
+            sendFloatingCommand(FloatingServiceCommand.ApplyDisplayScope)
+        }
     }
 
     fun toggleLock(): Boolean {
@@ -234,7 +243,7 @@ internal class FloatingController(
     }
 
     fun notifySourceChangedIfVisible(packageName: String?) {
-        if (state.quickFloatingVisible) {
+        if (state.quickFloatingDesiredVisible) {
             sendFloatingCommand(FloatingServiceCommand.SelectMediaSource(packageName))
         }
     }

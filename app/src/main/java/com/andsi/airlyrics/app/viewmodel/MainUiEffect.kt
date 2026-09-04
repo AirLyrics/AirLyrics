@@ -9,6 +9,7 @@ internal sealed interface MainUiEffect {
     data object RequestOverlayPermission : MainUiEffect
     data object RequestNotificationPermission : MainUiEffect
     data object OpenNotificationListenerSettings : MainUiEffect
+    data object OpenUsageAccessSettings : MainUiEffect
     data object SelectLyricsDirectory : MainUiEffect
     data object SelectLyricsFile : MainUiEffect
     data object SelectFloatingFontFile : MainUiEffect

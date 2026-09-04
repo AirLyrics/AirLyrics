@@ -23,6 +23,10 @@ internal class PreferenceStore internal constructor(
         return preferences.getString(key, defaultValue)
     }
 
+    fun getStringSet(key: String, defaultValue: Set<String> = emptySet()): Set<String> {
+        return preferences.getStringSet(key, defaultValue)?.toSet() ?: defaultValue
+    }
+
     fun getBoolean(key: String, defaultValue: Boolean): Boolean {
         return preferences.getBoolean(key, defaultValue)
     }
@@ -46,6 +50,12 @@ internal class PreferenceStore internal constructor(
             } else {
                 putString(key, value)
             }
+        }
+    }
+
+    fun setStringSet(key: String, value: Set<String>, commit: Boolean = false) {
+        edit(commit = commit) {
+            putStringSet(key, value.toSet())
         }
     }
 

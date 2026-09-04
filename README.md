@@ -151,6 +151,7 @@ AirLyrics uses these Android permissions and system access points:
 | Display over other apps | Shows the floating lyrics window                  |
 | Notification access     | Detects current media playback                    |
 | Notifications           | Shows foreground-service controls                 |
+| Usage access            | Limits floating lyrics to selected visible apps (optional, Android 10+) |
 | Internet access         | Searches lyrics online                            |
 | File picker             | Imports local lyrics files and selects a save folder |
 

@@ -131,9 +131,7 @@ internal class MainHandRenderer(
     ) {
         val container = host.contentContainer ?: return
         graph.beginPageRebuild()
-        (container.getChildAt(0) as? ScrollView)?.let { scrollView ->
-            pageScrollY[renderedPage] = scrollView.scrollY
-        }
+        rememberRenderedPageScroll(container)
 
         val oldPage = renderedPage
         val oldSubPage = renderedSettingsSubPage
@@ -172,7 +170,7 @@ internal class MainHandRenderer(
         renderedPage = state.currentPage
         renderedSettingsSubPage = state.settingsSubPage
 
-        (pageView as? ScrollView)?.let { scrollView ->
+        pageView.findPageScrollView()?.let { scrollView ->
             scrollView.scrollTo(0, restoreY)
             scrollView.post {
                 scrollView.scrollTo(0, restoreY)
@@ -196,15 +194,35 @@ internal class MainHandRenderer(
         refs.clickThroughButton?.text = host.floatingClickThroughButtonText()
     }
 
+    override fun refreshFloatingDisplayScope() {
+        graph.viewRefs.floatingPageRefs?.refreshDisplayScopeControls?.invoke()
+    }
+
     override fun refreshLyricsSettingsContent() {
         host.lyricsSettingsContentRefresh?.invoke()
     }
 
     override fun recreateMainView() {
+        rememberRenderedPageScroll(host.contentContainer)
         graph.feedback.dismiss()
         graph.uiHost.applySystemBarsTheme()
         graph.activity.setContentView(createMainView())
         graph.uiHost.applySystemBarsTheme()
         rebuildCurrentPage()
+    }
+
+    private fun rememberRenderedPageScroll(container: FrameLayout?) {
+        container?.getChildAt(0)?.findPageScrollView()?.let { scrollView ->
+            pageScrollY[renderedPage] = scrollView.scrollY
+        }
+    }
+
+    private fun View.findPageScrollView(): ScrollView? {
+        if (this is ScrollView) return this
+        if (this !is ViewGroup) return null
+        for (index in 0 until childCount) {
+            getChildAt(index).findPageScrollView()?.let { return it }
+        }
+        return null
     }
 }

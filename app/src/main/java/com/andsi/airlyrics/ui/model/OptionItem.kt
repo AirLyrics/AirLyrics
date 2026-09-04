@@ -20,6 +20,7 @@ internal data class FloatingSettingTile(
     val title: String,
     val subtitle: String,
     val iconRes: Int,
+    val enabled: Boolean = true,
     val onClick: (View) -> Unit,
     val onSubtitleViewCreated: ((TextView) -> Unit)? = null
 )

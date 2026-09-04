@@ -9,6 +9,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
 /** Reads platform and persisted sources into a stable main-screen snapshot. */
 internal class MainForegroundStateReader(
@@ -23,10 +24,12 @@ internal class MainForegroundStateReader(
                 postNotificationsGranted =
                     PermissionHelper.hasPostNotificationsPermission(appContext),
                 notificationListenerGranted =
-                    PermissionHelper.hasNotificationListenerAccess(appContext)
+                    PermissionHelper.hasNotificationListenerAccess(appContext),
+                usageStatsGranted = PermissionHelper.hasUsageStatsAccess(appContext)
             ),
             floating = FloatingUiSnapshot(
                 visible = FloatingWindowRuntimeState.snapshot()?.visible ?: false,
+                desiredVisible = QuickFloatingStore.isDesiredVisible(appContext),
                 locked = FloatingLyricsStyleStore.isLocked(appContext),
                 clickThrough = FloatingLyricsStyleStore.isClickThrough(appContext)
             ),

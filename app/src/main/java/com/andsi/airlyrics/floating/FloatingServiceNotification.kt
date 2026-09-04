@@ -9,6 +9,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.theme.ThemeAccentPalettes
+import com.andsi.airlyrics.displayscope.DisplayScopeBlockReason
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 
 /**
@@ -17,7 +18,7 @@ import com.andsi.airlyrics.settings.store.ThemeSettingsStore
  * The notification doubles as the always-available remote control for the floating
  * window, so users can unlock / move / restore click-through without opening the app.
  */
-object FloatingServiceNotification {
+internal object FloatingServiceNotification {
     const val NOTIFICATION_ID = 1
 
     private const val CHANNEL_ID = "floating_lyrics"
@@ -25,8 +26,10 @@ object FloatingServiceNotification {
 
     data class QuickControlState(
         val visible: Boolean,
+        val desiredVisible: Boolean = visible,
         val locked: Boolean,
         val clickThrough: Boolean,
+        val displayScopeBlockReason: DisplayScopeBlockReason? = null,
         val feedback: String? = null
     )
 
@@ -51,7 +54,7 @@ object FloatingServiceNotification {
             .addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_air_visibility,
-                    context.getText(if (state.visible) R.string.ui_shown else R.string.ui_hidden),
+                    context.getText(if (state.desiredVisible) R.string.ui_hide else R.string.ui_show),
                     serviceActionIntent(context, FloatingServiceCommand.ToggleVisibleFromNotification, 1001)
                 ).build()
             )
@@ -106,7 +109,14 @@ object FloatingServiceNotification {
     }
 
     private fun QuickControlState.summary(context: Context): String {
-        val visibleText = context.getString(if (visible) R.string.ui_shown else R.string.ui_hidden)
+        val visibleText = when {
+            visible -> context.getString(R.string.ui_shown)
+            desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.USAGE_ACCESS_REQUIRED ->
+                context.getString(R.string.ui_usage_access_required)
+            desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.WAITING_FOR_SELECTED_APP ->
+                context.getString(R.string.ui_waiting_for_selected_app)
+            else -> context.getString(R.string.ui_hidden)
+        }
         return "$visibleText · ${windowModeText(context)}"
     }
 

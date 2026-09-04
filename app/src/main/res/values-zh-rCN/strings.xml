@@ -17,7 +17,6 @@
     <string name="lyrics_offset_advance">歌词提前 %1$s</string>
     <string name="lyrics_offset_delay">歌词延后 %1$s</string>
     <string name="lyrics_plain_format_invalid_lines">格式错误：第 %1$s%2$s 行\n\n歌词行以 [00:12.34] 开头</string>
-    <string name="permissions_summary">基础权限已开启：%1$d / %2$d</string>
     <string name="provider_local_plain_lyrics">本地歌词</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_plain_lyrics">网易云歌词</string>
@@ -31,6 +30,7 @@
     <string name="ui_airlyrics_floating_lyrics">AirLyrics 悬浮歌词</string>
     <string name="ui_alignment">对齐</string>
     <string name="ui_all_local_lyrics_removed">当前歌曲的本地歌词已全部移除</string>
+    <string name="ui_android_10_required">需要 Android 10+</string>
     <string name="ui_animation">动画效果</string>
     <string name="ui_all_saved_lyrics_deleted">已删除</string>
     <string name="ui_appearance">外观</string>
@@ -66,6 +66,7 @@
     <string name="ui_choose_import_type">选择导入类型</string>
     <string name="ui_choose_accent_color">选择强调色</string>
     <string name="ui_choose_lyrics_save_folder">选择歌词保存目录</string>
+    <string name="ui_choose_apps">选择应用</string>
     <string name="ui_choose_the_player_airlyrics_follows">选择要跟随的播放器</string>
     <string name="ui_clean_letters">纯净</string>
     <string name="ui_click_through">穿透</string>
@@ -101,6 +102,10 @@
     <string name="ui_delete_saved_lyrics_failed">无法删除歌词，请检查目录权限</string>
     <string name="ui_remove_word_by_word_lyrics_message">由此生成的普通歌词也会一并移除</string>
     <string name="ui_display_control">显示控制</string>
+    <string name="ui_display_scope">显示范围</string>
+    <string name="ui_display_scope_usage_hint">“使用情况访问”仅用于判断所选应用是否可见，不会读取或上传应用内容。</string>
+    <string name="ui_disable_display_scope">关闭</string>
+    <string name="ui_enable_display_scope">启用</string>
     <string name="ui_drag_lock_off">拖动锁定：已关闭</string>
     <string name="ui_drag_lock_on">拖动锁定：已开启</string>
     <string name="ui_draggable">可拖动</string>
@@ -208,12 +213,14 @@
     <string name="ui_no_playback_state">暂无播放状态</string>
     <string name="ui_recent_lyrics_empty_hint">暂无已保存歌词</string>
     <string name="ui_no_song_for_lyrics_binding">当前没有歌曲在播放</string>
+    <string name="ui_no_apps_found">未找到应用</string>
     <string name="ui_no_translation_for_this_lyric">暂无翻译</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">请至少添加一行：[00:12.34]&lt;00:12.34&gt;歌词</string>
     <string name="ui_plain_lrc_no_valid_line_error">请至少添加一行：[00:12.34]歌词</string>
     <string name="ui_not_bound">未绑定</string>
     <string name="ui_not_imported">未导入</string>
     <string name="ui_notif_access">通知访问权限</string>
+    <string name="ui_notif_access_usage_hint">“通知访问权限”仅用于在本机识别当前播放的媒体信息，不会上传通知内容。</string>
     <string name="ui_notification_permission_enabled">通知权限已开启</string>
     <string name="ui_notif_permission_off_warning">通知权限未开启，服务通知可能被隐藏</string>
     <string name="ui_notify">通知</string>
@@ -226,13 +233,14 @@
     <string name="ui_online_lyrics_saved">歌词已保存</string>
     <string name="ui_online_lyrics_search_failed">联网搜索失败</string>
     <string name="ui_opacity">不透明度</string>
-    <string name="ui_open_access_settings">打开通知访问设置</string>
+    <string name="ui_grant_usage_access">授予使用情况访问权限</string>
     <string name="ui_orange">橙</string>
     <string name="ui_original_only">仅原文</string>
     <string name="ui_original_translation">原文 + 翻译</string>
     <string name="ui_overlay">悬浮窗权限</string>
     <string name="ui_overlay_and_notification_permissions">权限与语言</string>
     <string name="ui_overlay_permission_required">需要悬浮窗权限</string>
+    <string name="ui_permission_purpose">了解%1$s用途</string>
     <string name="ui_permit">授权</string>
     <string name="ui_overwrite">覆盖</string>
     <string name="ui_overwrite_local_word_by_word_lyrics">覆盖本地逐字歌词？</string>
@@ -240,6 +248,8 @@
     <string name="ui_parsed_lyrics_are_empty">未解析到有效歌词</string>
     <string name="ui_paused">暂停中</string>
     <string name="ui_permissions">权限状态</string>
+    <string name="ui_basic_features_ready">基本功能已就绪</string>
+    <string name="ui_setup_required">需要完成设置</string>
     <string name="ui_pink">粉</string>
     <string name="ui_plain">普通</string>
     <string name="ui_plain_lrc_import_success">普通歌词已导入</string>
@@ -335,6 +345,16 @@
     <string name="ui_switch_to_dark_mode">切换到深色模式</string>
     <string name="ui_switch_to_light_mode">切换到浅色模式</string>
     <string name="ui_system">系统</string>
+    <string name="ui_search_apps">搜索应用</string>
+    <string name="ui_save">保存</string>
+    <string name="ui_select_all">全选</string>
+    <string name="ui_deselect_all">取消全选</string>
+    <string name="ui_select_apps_first">请先选择应用</string>
+    <string name="ui_jump_to_top">跳到顶部</string>
+    <string name="ui_jump_to_bottom">跳到底部</string>
+    <plurals name="ui_selected_apps_count">
+        <item quantity="other">已选 %1$d 个应用</item>
+    </plurals>
     <string name="ui_tap_to_preview_or_edit">点击条目预览或编辑</string>
     <string name="ui_text">文字</string>
     <string name="ui_text_alignment">文字对齐</string>
@@ -361,6 +381,9 @@
     <string name="ui_view_lrc_examples_hint">普通与逐字歌词示例</string>
     <string name="ui_vinyl_bubble">黑胶</string>
     <string name="ui_waiting_for_current_song">等待当前歌曲</string>
+    <string name="ui_waiting_for_selected_app">等待所选应用</string>
+    <string name="ui_usage_access">使用情况访问</string>
+    <string name="ui_usage_access_required">需要使用情况访问</string>
     <string name="ui_waiting_for_media_message">等待媒体信息…</string>
     <string name="ui_waiting_for_music_signal">等待音乐中</string>
     <string name="ui_whats_new">当前版本更新</string>

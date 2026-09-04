@@ -17,7 +17,6 @@
     <string name="lyrics_offset_advance">Lyrics advance %1$s</string>
     <string name="lyrics_offset_delay">Lyrics delay %1$s</string>
     <string name="lyrics_plain_format_invalid_lines">Invalid lines: %1$s%2$s\n\nStart lyric lines with [00:12.34]</string>
-    <string name="permissions_summary">Basic permissions enabled: %1$d / %2$d</string>
     <string name="provider_local_plain_lyrics">Local lyrics</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_plain_lyrics">NetEase Lyrics</string>
@@ -31,6 +30,7 @@
     <string name="ui_airlyrics_floating_lyrics">AirLyrics Floating Lyrics</string>
     <string name="ui_alignment">Alignment</string>
     <string name="ui_all_local_lyrics_removed">All local lyrics removed for this song</string>
+    <string name="ui_android_10_required">Requires Android 10+</string>
     <string name="ui_animation">Animation</string>
     <string name="ui_all_saved_lyrics_deleted">Deleted</string>
     <string name="ui_appearance">Appearance</string>
@@ -66,6 +66,7 @@
     <string name="ui_choose_import_type">Choose import type</string>
     <string name="ui_choose_accent_color">Choose accent color</string>
     <string name="ui_choose_lyrics_save_folder">Choose lyrics save folder</string>
+    <string name="ui_choose_apps">Choose apps</string>
     <string name="ui_choose_the_player_airlyrics_follows">Choose a player to follow</string>
     <string name="ui_clean_letters">Clean</string>
     <string name="ui_click_through">Click-through</string>
@@ -101,6 +102,10 @@
     <string name="ui_delete_saved_lyrics_failed">Couldn’t delete lyrics; check folder access</string>
     <string name="ui_remove_word_by_word_lyrics_message">Also removes generated plain lyrics</string>
     <string name="ui_display_control">Display control</string>
+    <string name="ui_display_scope">Display scope</string>
+    <string name="ui_display_scope_usage_hint">“Usage access” only checks whether selected apps are visible. It does not read or upload app content.</string>
+    <string name="ui_disable_display_scope">Disable</string>
+    <string name="ui_enable_display_scope">Enable</string>
     <string name="ui_drag_lock_off">Drag lock: Off</string>
     <string name="ui_drag_lock_on">Drag lock: On</string>
     <string name="ui_draggable">Draggable</string>
@@ -208,12 +213,14 @@
     <string name="ui_no_playback_state">No playback state</string>
     <string name="ui_recent_lyrics_empty_hint">No saved lyrics yet</string>
     <string name="ui_no_song_for_lyrics_binding">No song is playing</string>
+    <string name="ui_no_apps_found">No apps found</string>
     <string name="ui_no_translation_for_this_lyric">No translation for this lyric</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">Add at least one line: [00:12.34]&lt;00:12.34&gt;lyric</string>
     <string name="ui_plain_lrc_no_valid_line_error">Add at least one line: [00:12.34]lyric</string>
     <string name="ui_not_bound">Not bound</string>
     <string name="ui_not_imported">Not imported</string>
     <string name="ui_notif_access">Notification access</string>
+    <string name="ui_notif_access_usage_hint">“Notification access” identifies current media information on this device. Notification content is not uploaded.</string>
     <string name="ui_notification_permission_enabled">Notification permission enabled</string>
     <string name="ui_notif_permission_off_warning">Notification permission is off; the service notification may be hidden</string>
     <string name="ui_notify">Notifications</string>
@@ -226,13 +233,14 @@
     <string name="ui_online_lyrics_saved">Lyrics saved</string>
     <string name="ui_online_lyrics_search_failed">Online search failed</string>
     <string name="ui_opacity">Opacity</string>
-    <string name="ui_open_access_settings">Open access settings</string>
+    <string name="ui_grant_usage_access">Grant usage access</string>
     <string name="ui_orange">Orange</string>
     <string name="ui_original_only">Original only</string>
     <string name="ui_original_translation">Original + translation</string>
     <string name="ui_overlay">Overlay</string>
     <string name="ui_overlay_and_notification_permissions">Permissions and language</string>
     <string name="ui_overlay_permission_required">Overlay permission required</string>
+    <string name="ui_permission_purpose">About %1$s</string>
     <string name="ui_permit">Permit</string>
     <string name="ui_overwrite">Overwrite</string>
     <string name="ui_overwrite_local_word_by_word_lyrics">Overwrite local word-by-word lyrics?</string>
@@ -240,6 +248,8 @@
     <string name="ui_parsed_lyrics_are_empty">No valid lyrics parsed</string>
     <string name="ui_paused">Paused</string>
     <string name="ui_permissions">Permissions</string>
+    <string name="ui_basic_features_ready">Basic features ready</string>
+    <string name="ui_setup_required">Setup required</string>
     <string name="ui_pink">Pink</string>
     <string name="ui_plain">Plain</string>
     <string name="ui_plain_lrc_import_success">Plain lyrics imported</string>
@@ -335,6 +345,17 @@ Word-by-word lyrics recommended format:
     <string name="ui_switch_to_dark_mode">Switch to dark mode</string>
     <string name="ui_switch_to_light_mode">Switch to light mode</string>
     <string name="ui_system">System</string>
+    <string name="ui_search_apps">Search apps</string>
+    <string name="ui_save">Save</string>
+    <string name="ui_select_all">Select all</string>
+    <string name="ui_deselect_all">Deselect all</string>
+    <string name="ui_select_apps_first">Select apps first</string>
+    <string name="ui_jump_to_top">Jump to top</string>
+    <string name="ui_jump_to_bottom">Jump to bottom</string>
+    <plurals name="ui_selected_apps_count">
+        <item quantity="one">%1$d app selected</item>
+        <item quantity="other">%1$d apps selected</item>
+    </plurals>
     <string name="ui_tap_to_preview_or_edit">Tap item to preview/edit</string>
     <string name="ui_text">Text</string>
     <string name="ui_text_alignment">Text alignment</string>
@@ -361,6 +382,9 @@ Word-by-word lyrics recommended format:
     <string name="ui_view_lrc_examples_hint">Plain and word-by-word examples</string>
     <string name="ui_vinyl_bubble">Vinyl</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
+    <string name="ui_waiting_for_selected_app">Waiting for selected app</string>
+    <string name="ui_usage_access">Usage access</string>
+    <string name="ui_usage_access_required">Usage access required</string>
     <string name="ui_waiting_for_media_message">Waiting for media…</string>
     <string name="ui_waiting_for_music_signal">Waiting for music</string>
     <string name="ui_whats_new">New in this version</string>

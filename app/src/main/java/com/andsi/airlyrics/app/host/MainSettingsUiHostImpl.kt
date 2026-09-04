@@ -196,12 +196,13 @@ internal fun MainUiHost.changelogItemImpl(title: String, body: String): View {
 }
 
 internal fun MainUiHost.permissionSummaryImpl(): String {
-    val opened = listOf(
-        overlayPermissionGranted,
-        hasNotificationPermission(),
-        hasNotificationListenerAccess()
-    ).count { it }
-    return getString(R.string.permissions_summary, opened, 3)
+    return getString(
+        if (overlayPermissionGranted && hasNotificationListenerAccess()) {
+            R.string.ui_basic_features_ready
+        } else {
+            R.string.ui_setup_required
+        }
+    )
 }
 
 internal fun MainUiHost.getAppVersionNameImpl(): String {

@@ -44,12 +44,13 @@ class FloatingControllerTest {
         assertEquals(FloatingVisibilityOutcome.PERMISSION_REQUIRED, outcome)
         assertFalse(state.overlayPermissionGranted)
         assertFalse(state.quickFloatingVisible)
+        assertTrue(state.quickFloatingDesiredVisible)
         assertTrue(QuickFloatingStore.isDesiredVisible(context))
         assertTrue(commands.isEmpty())
     }
 
     @Test
-    fun showWithPermission_updatesActualStateAfterCommandSucceeds() {
+    fun showWithPermission_waitsForServiceToReportActualState() {
         ShadowSettings.setCanDrawOverlays(true)
         val state = FakeFloatingState()
         val commands = mutableListOf<Intent>()
@@ -59,7 +60,8 @@ class FloatingControllerTest {
 
         assertEquals(FloatingVisibilityOutcome.SUCCESS, outcome)
         assertTrue(state.overlayPermissionGranted)
-        assertTrue(state.quickFloatingVisible)
+        assertFalse(state.quickFloatingVisible)
+        assertTrue(state.quickFloatingDesiredVisible)
         assertEquals(
             FloatingServiceCommand.Show,
             FloatingServiceCommand.fromIntent(commands.single())
@@ -100,6 +102,28 @@ class FloatingControllerTest {
         assertTrue(commands.isEmpty())
     }
 
+    @Test
+    fun toggleCanClearDesiredVisibilityWhileTemporarilyHidden() {
+        val state = FakeFloatingState(
+            quickFloatingVisible = false,
+            quickFloatingDesiredVisible = true,
+            overlayPermissionGranted = true
+        )
+        QuickFloatingStore.setDesiredVisible(context, true)
+        val commands = mutableListOf<Intent>()
+        val controller = controller(state, commands)
+
+        val outcome = controller.toggleLyrics()
+
+        assertEquals(FloatingVisibilityOutcome.SUCCESS, outcome)
+        assertFalse(state.quickFloatingDesiredVisible)
+        assertFalse(QuickFloatingStore.isDesiredVisible(context))
+        assertEquals(
+            FloatingServiceCommand.Hide,
+            FloatingServiceCommand.fromIntent(commands.single())
+        )
+    }
+
     private fun controller(
         state: FakeFloatingState,
         commands: MutableList<Intent>
@@ -118,15 +142,18 @@ class FloatingControllerTest {
         override var locked: Boolean = false,
         override var clickThrough: Boolean = false,
         override var quickFloatingVisible: Boolean = false,
+        override var quickFloatingDesiredVisible: Boolean = false,
         override var overlayPermissionGranted: Boolean = false
     ) : MainFloatingState {
         override fun updateFloatingState(
             visible: Boolean?,
+            desiredVisible: Boolean?,
             overlayGranted: Boolean?,
             locked: Boolean?,
             clickThrough: Boolean?
         ) {
             visible?.let { quickFloatingVisible = it }
+            desiredVisible?.let { quickFloatingDesiredVisible = it }
             overlayGranted?.let { overlayPermissionGranted = it }
             locked?.let { this.locked = it }
             clickThrough?.let { this.clickThrough = it }

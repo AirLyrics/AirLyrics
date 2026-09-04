@@ -113,6 +113,7 @@ internal fun MainUiHost.showAirDialog(
     negativeText: String? = null,
     headerAction: (LinearLayout.() -> Unit)? = null,
     body: (LinearLayout.() -> Unit)? = null,
+    useOuterScroll: Boolean = true,
     onNegative: () -> Unit = {},
     onPositive: () -> Unit = {}
 ): Dialog {
@@ -186,18 +187,30 @@ internal fun MainUiHost.showAirDialog(
         }
     }
 
-    val outer = ScrollView(this).apply {
-        isFillViewport = false
+    val animatedContent: View = if (useOuterScroll) {
+        ScrollView(this).apply {
+            isFillViewport = false
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+            addView(panel)
+        }
+    } else {
+        panel.apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER
+            )
+        }
+    }
+    animatedContent.apply {
         alpha = 0f
         scaleX = DIALOG_ENTER_START_SCALE
         scaleY = DIALOG_ENTER_START_SCALE
         translationY = dp(DIALOG_ENTER_TRANSLATION_Y_DP).toFloat()
-        layoutParams = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            Gravity.CENTER
-        )
-        addView(panel)
     }
 
     val rootPadding = dp(AirUiTokens.Space.CardH)
@@ -216,11 +229,11 @@ internal fun MainUiHost.showAirDialog(
             )
             insets
         }
-        addView(outer)
+        addView(animatedContent)
     }
 
     dialog.window?.applyAirDialogSystemBars(host)
-    dialog.animatedContent = outer
+    dialog.animatedContent = animatedContent
     dialog.setContentView(root)
     dialog.setOnCancelListener { onNegative() }
     dialog.setOnShowListener {
@@ -232,7 +245,7 @@ internal fun MainUiHost.showAirDialog(
         }
         root.post {
             ViewCompat.requestApplyInsets(root)
-            outer.animate()
+            animatedContent.animate()
                 .alpha(1f)
                 .scaleX(1f)
                 .scaleY(1f)
