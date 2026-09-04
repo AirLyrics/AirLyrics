@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK for Android lint
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -45,7 +45,7 @@ jobs:
         run: ./gradlew :app:lintDebug -Pairlyrics.skipRustBuild=true --stacktrace
 
       - name: Set up JDK for tests and builds
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
@@ -90,7 +90,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '17'
