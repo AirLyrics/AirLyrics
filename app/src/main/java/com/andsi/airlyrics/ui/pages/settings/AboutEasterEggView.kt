@@ -186,6 +186,7 @@ private class VerticalMessageSegment(
     private val colors: List<Int>
 ) : LinearLayout(activity) {
     private val charViews = mutableListOf<TextView>()
+    private val floatingAnimators = mutableListOf<ObjectAnimator>()
     private var revealed = false
 
     init {
@@ -234,9 +235,20 @@ private class VerticalMessageSegment(
         }
     }
 
+    override fun onDetachedFromWindow() {
+        charViews.forEach { textView ->
+            textView.animate().setListener(null)
+            textView.animate().cancel()
+        }
+        floatingAnimators.forEach(Animator::cancel)
+        floatingAnimators.clear()
+        super.onDetachedFromWindow()
+    }
+
     private fun startFloatingJitter(view: TextView, index: Int) {
+        if (!isAttachedToWindow) return
         val direction = if (index % 2 == 0) 1f else -1f
-        ObjectAnimator.ofFloat(view, TRANSLATION_Y, 0f, 0f - AboutTokens.SEGMENT_JITTER_DISTANCE * direction, 0f).apply {
+        floatingAnimators += ObjectAnimator.ofFloat(view, TRANSLATION_Y, 0f, 0f - AboutTokens.SEGMENT_JITTER_DISTANCE * direction, 0f).apply {
             duration = AboutTokens.SEGMENT_JITTER_BASE_MS + index * AboutTokens.SEGMENT_JITTER_STEP_MS
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.RESTART
@@ -244,7 +256,7 @@ private class VerticalMessageSegment(
             startDelay = index * AboutTokens.SEGMENT_JITTER_DELAY_STEP_MS
             start()
         }
-        ObjectAnimator.ofFloat(view, ROTATION, view.rotation, view.rotation + AboutTokens.SEGMENT_ROTATE_DISTANCE * direction, view.rotation).apply {
+        floatingAnimators += ObjectAnimator.ofFloat(view, ROTATION, view.rotation, view.rotation + AboutTokens.SEGMENT_ROTATE_DISTANCE * direction, view.rotation).apply {
             duration = AboutTokens.SEGMENT_ROTATE_BASE_MS + index * AboutTokens.SEGMENT_ROTATE_STEP_MS
             repeatCount = ValueAnimator.INFINITE
             repeatMode = ValueAnimator.RESTART
