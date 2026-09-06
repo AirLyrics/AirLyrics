@@ -3,12 +3,16 @@ package com.andsi.airlyrics.displayscope
 import android.app.KeyguardManager
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.app.platform.PermissionHelper
 
 internal data class DisplayScopeVisibilitySnapshot(
@@ -73,6 +77,12 @@ internal class DisplayScopeMonitor(
     context: Context,
     private val onSnapshot: (DisplayScopeVisibilitySnapshot) -> Unit
 ) {
+    private inner class PollTask(val expectedGeneration: Int) : Runnable {
+        override fun run() {
+            poll(this)
+        }
+    }
+
     private val appContext = context.applicationContext ?: context
     private val usageStatsManager = appContext.getSystemService(UsageStatsManager::class.java)
     private val powerManager = appContext.getSystemService(PowerManager::class.java)
@@ -81,6 +91,18 @@ internal class DisplayScopeMonitor(
     private val workerThread = HandlerThread("AirLyrics-DisplayScope").apply { start() }
     private val workerHandler = Handler(workerThread.looper)
     private val tracker = VisibleActivityTracker()
+    private val displayStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF,
+                Intent.ACTION_SCREEN_ON,
+                Intent.ACTION_USER_PRESENT -> {
+                    val task = activePollTask ?: return
+                    workerHandler.post { handleDisplayAvailabilityChanged(task) }
+                }
+            }
+        }
+    }
 
     @Volatile
     private var running = false
@@ -88,22 +110,39 @@ internal class DisplayScopeMonitor(
     @Volatile
     private var generation = 0
 
+    @Volatile
+    private var activePollTask: PollTask? = null
+
+    private var displayStateReceiverRegistered = false
+    private var pausedForUnavailableDisplay = false
     private var lastQueryEndMs = 0L
 
     fun start() {
         if (running) return
         running = true
         val currentGeneration = ++generation
+        val task = PollTask(currentGeneration)
+        activePollTask = task
+        registerDisplayStateReceiver()
         workerHandler.post {
+            if (!isActive(task)) return@post
             tracker.clear()
             lastQueryEndMs = 0L
-            poll(currentGeneration)
+            pausedForUnavailableDisplay = false
+            poll(task)
         }
     }
 
     fun stop() {
         running = false
         generation += 1
+        val task = activePollTask
+        activePollTask = null
+        unregisterDisplayStateReceiver()
+        if (task != null) {
+            workerHandler.removeCallbacks(task)
+            workerHandler.post { workerHandler.removeCallbacks(task) }
+        }
     }
 
     fun close() {
@@ -112,8 +151,13 @@ internal class DisplayScopeMonitor(
         workerThread.quitSafely()
     }
 
-    private fun poll(expectedGeneration: Int) {
-        if (!running || generation != expectedGeneration) return
+    private fun poll(task: PollTask) {
+        if (!isActive(task)) return
+        if (!isDisplayAvailable()) {
+            pauseForUnavailableDisplay(task)
+            return
+        }
+        pausedForUnavailableDisplay = false
 
         val now = System.currentTimeMillis()
         val hasAccess = PermissionHelper.hasUsageStatsAccess(appContext)
@@ -137,21 +181,82 @@ internal class DisplayScopeMonitor(
                 tracker.clear()
                 lastQueryEndMs = 0L
                 DisplayScopeVisibilitySnapshot(false, emptySet())
-            } else if (!powerManager.isInteractive || keyguardManager.isKeyguardLocked) {
-                tracker.clear()
-                DisplayScopeVisibilitySnapshot(true, emptySet())
             } else {
                 DisplayScopeVisibilitySnapshot(true, tracker.visiblePackages())
             }
         }
 
-        mainHandler.post {
-            if (running && generation == expectedGeneration) onSnapshot(snapshot)
+        if (!isDisplayAvailable()) {
+            pauseForUnavailableDisplay(task)
+            return
         }
-        workerHandler.postDelayed(
-            { poll(expectedGeneration) },
-            POLL_INTERVAL_MS
+
+        publishSnapshot(task, snapshot)
+        if (!isActive(task)) return
+        workerHandler.postDelayed(task, POLL_INTERVAL_MS)
+    }
+
+    private fun handleDisplayAvailabilityChanged(task: PollTask) {
+        if (!isActive(task)) return
+        if (!isDisplayAvailable()) {
+            pauseForUnavailableDisplay(task)
+        } else if (pausedForUnavailableDisplay) {
+            pausedForUnavailableDisplay = false
+            workerHandler.removeCallbacks(task)
+            poll(task)
+        }
+    }
+
+    private fun pauseForUnavailableDisplay(task: PollTask) {
+        workerHandler.removeCallbacks(task)
+        if (!isActive(task) || pausedForUnavailableDisplay) return
+
+        pausedForUnavailableDisplay = true
+        tracker.clear()
+        lastQueryEndMs = System.currentTimeMillis()
+        val snapshot = DisplayScopeVisibilitySnapshot(
+            usageAccessGranted = PermissionHelper.hasUsageStatsAccess(appContext),
+            visiblePackages = emptySet()
         )
+        publishSnapshot(task, snapshot)
+    }
+
+    private fun publishSnapshot(task: PollTask, snapshot: DisplayScopeVisibilitySnapshot) {
+        mainHandler.post {
+            if (isActive(task)) onSnapshot(snapshot)
+        }
+    }
+
+    private fun isActive(task: PollTask): Boolean {
+        return running &&
+            generation == task.expectedGeneration &&
+            activePollTask === task
+    }
+
+    private fun isDisplayAvailable(): Boolean {
+        return powerManager.isInteractive && !keyguardManager.isKeyguardLocked
+    }
+
+    private fun registerDisplayStateReceiver() {
+        if (displayStateReceiverRegistered) return
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        ContextCompat.registerReceiver(
+            appContext,
+            displayStateReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        displayStateReceiverRegistered = true
+    }
+
+    private fun unregisterDisplayStateReceiver() {
+        if (!displayStateReceiverRegistered) return
+        runCatching { appContext.unregisterReceiver(displayStateReceiver) }
+        displayStateReceiverRegistered = false
     }
 
     private fun readEvents(beginTimeMs: Long, endTimeMs: Long) {
