@@ -236,7 +236,9 @@ internal class MainGraph(
     internal fun beginPageRebuild() {
         uiGeneration += 1L
         mediaRefreshHandler.removeCallbacksAndMessages(null)
-        viewModel.setMediaRefreshState(RefreshState.IDLE)
+        if (state.mediaRefreshState == RefreshState.REFRESHING) {
+            viewModel.setMediaRefreshState(RefreshState.IDLE)
+        }
     }
 
     fun onDestroy() {
