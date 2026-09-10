@@ -1,11 +1,12 @@
-v1.2.4 - 2026-08-26
+v1.2.5 - 2026-09-10
 
 Added
-- Browse, search, edit, and delete saved lyrics.
+- Limit floating lyrics to selected apps with Display scope on Android 10 and later.
+- Import line-timed and word-timed TTML lyrics, including common Apple Music and AMLL variants.
 
 Improved
-- Lyrics timing offsets now support up to five minutes.
+- Permission settings now show clearer status, purpose, and actions.
+- AirLyrics follows the system light or dark theme until you choose one.
 
 Fixed
-- Spaces are preserved when editing word-by-word lyrics.
-- Text in floating lyrics settings no longer clips at larger font sizes.
+- Display scope status is more reliable, refresh results stay visible, and locked devices do less background work.

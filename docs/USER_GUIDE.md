@@ -87,5 +87,6 @@ open **Floating** and tap **Show** in the bottom bar. Permission alone does not 
 
 **The notification says “Display blocked”:** open a selected app, resume playback, or check overlay
 and usage access. If Display scope is the cause, disabling it restores the normal all-app behavior.
+If Display scope is unreliable, set AirLyrics battery usage to **Unrestricted** in Android settings.
 
 For other known problems, search [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues).

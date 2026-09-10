@@ -1,0 +1,6 @@
+v1.2.5
+• Show floating lyrics only while selected apps are visible on Android 10 and later.
+• Import line-timed and word-timed TTML lyrics, including common Apple Music and AMLL variants.
+• See clearer permission status, purpose, and actions.
+• Follow the system light or dark theme until you choose one.
+• Make Display scope status more reliable, keep refresh results visible, and reduce background work while locked.
