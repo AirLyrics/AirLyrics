@@ -9,7 +9,6 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.theme.ThemeAccentPalettes
-import com.andsi.airlyrics.displayscope.DisplayScopeBlockReason
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 
 /**
@@ -24,19 +23,26 @@ internal object FloatingServiceNotification {
     private const val CHANNEL_ID = "floating_lyrics"
     private const val CHANNEL_NAME = "Floating Lyrics"
 
+    private enum class DisplayState {
+        SHOWN,
+        HIDDEN,
+        BLOCKED
+    }
+
     data class QuickControlState(
         val visible: Boolean,
         val desiredVisible: Boolean = visible,
         val locked: Boolean,
         val clickThrough: Boolean,
-        val displayScopeBlockReason: DisplayScopeBlockReason? = null,
         val feedback: String? = null
     )
 
     fun create(context: Context, state: QuickControlState): Notification {
         ensureChannel(context)
 
-        val contentText = state.feedback?.let { "${state.summary(context)} · $it" } ?: state.summary(context)
+        val displayState = state.displayState()
+        val summary = state.summary(context, displayState)
+        val contentText = state.feedback?.let { "$summary · $it" } ?: summary
         val accentColor = ThemeAccentPalettes.resolve(
             accent = ThemeSettingsStore.getAccent(context),
             isDark = ThemeSettingsStore.isDark(context)
@@ -51,20 +57,43 @@ internal object FloatingServiceNotification {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setColor(accentColor)
             .setColorized(false)
-            .addAction(
+
+        when (displayState) {
+            DisplayState.SHOWN -> {
+                builder.addAction(
+                    NotificationCompat.Action.Builder(
+                        R.drawable.ic_air_visibility,
+                        context.getText(R.string.ui_hide),
+                        serviceActionIntent(
+                            context,
+                            FloatingServiceCommand.ToggleVisibleFromNotification,
+                            1001
+                        )
+                    ).build()
+                )
+                builder.addAction(
+                    NotificationCompat.Action.Builder(
+                        R.drawable.ic_air_open_with,
+                        context.getText(R.string.ui_adjustment_mode),
+                        serviceActionIntent(
+                            context,
+                            FloatingServiceCommand.ToggleAdjustModeFromNotification,
+                            1002
+                        )
+                    ).build()
+                )
+            }
+
+            DisplayState.HIDDEN -> builder.addAction(
                 NotificationCompat.Action.Builder(
                     R.drawable.ic_air_visibility,
-                    context.getText(if (state.desiredVisible) R.string.ui_hide else R.string.ui_show),
+                    context.getText(R.string.ui_show),
                     serviceActionIntent(context, FloatingServiceCommand.ToggleVisibleFromNotification, 1001)
                 ).build()
             )
-            .addAction(
-                NotificationCompat.Action.Builder(
-                    R.drawable.ic_air_open_with,
-                    context.getText(R.string.ui_adjustment_mode),
-                    serviceActionIntent(context, FloatingServiceCommand.ToggleAdjustModeFromNotification, 1002)
-                ).build()
-            )
+
+            DisplayState.BLOCKED -> Unit
+        }
 
         openAppIntent(context)?.let { builder.setContentIntent(it) }
 
@@ -108,18 +137,25 @@ internal object FloatingServiceNotification {
         )
     }
 
-    private fun QuickControlState.summary(context: Context): String {
-        val visibleText = when {
-            visible -> context.getString(R.string.ui_shown)
-            desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.USAGE_ACCESS_REQUIRED ->
-                context.getString(R.string.ui_usage_access_required)
-            desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.CHECKING_SELECTED_APPS ->
-                context.getString(R.string.ui_checking_selected_apps)
-            desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.WAITING_FOR_SELECTED_APP ->
-                context.getString(R.string.ui_waiting_for_selected_app)
-            else -> context.getString(R.string.ui_hidden)
+    private fun QuickControlState.displayState(): DisplayState {
+        return when {
+            visible -> DisplayState.SHOWN
+            desiredVisible -> DisplayState.BLOCKED
+            else -> DisplayState.HIDDEN
         }
-        return "$visibleText · ${windowModeText(context)}"
+    }
+
+    private fun QuickControlState.summary(context: Context, displayState: DisplayState): String {
+        val statusText = when (displayState) {
+            DisplayState.SHOWN -> context.getString(R.string.ui_shown)
+            DisplayState.HIDDEN -> context.getString(R.string.ui_hidden)
+            DisplayState.BLOCKED -> context.getString(R.string.ui_display_blocked)
+        }
+        return if (displayState == DisplayState.SHOWN) {
+            "$statusText · ${windowModeText(context)}"
+        } else {
+            statusText
+        }
     }
 
     private fun QuickControlState.windowModeText(context: Context): CharSequence {

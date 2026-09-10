@@ -64,7 +64,7 @@ class FloatingLyricsServiceDisplayScopeTest {
         assertFalse(service.windowController.isVisible)
         assertTrue(QuickFloatingStore.isDesiredVisible(service))
         assertEquals(DisplayScopeBlockReason.USAGE_ACCESS_REQUIRED, service.displayScopeBlockReason)
-        assertLatestNotificationStartsWith(service, R.string.ui_usage_access_required)
+        assertLatestNotificationStartsWith(service, R.string.ui_display_blocked)
 
         FloatingLyricsStyleStore.setAutoHideWhenPaused(service, true)
         service.autoHiddenForPause = true
@@ -98,7 +98,7 @@ class FloatingLyricsServiceDisplayScopeTest {
     }
 
     @Test
-    fun startupReportsCheckingUntilSelectedAppVisibilityIsKnown() {
+    fun startupReportsBlockedUntilSelectedAppBecomesVisible() {
         setUsageAccess(granted = true)
         DisplayScopeStore.setSelectedPackages(application, setOf("player.app"))
         DisplayScopeStore.setEnabled(application, true)
@@ -117,7 +117,7 @@ class FloatingLyricsServiceDisplayScopeTest {
         assertNotificationStartsWith(
             service,
             shadowOf(service).lastForegroundNotification,
-            R.string.ui_checking_selected_apps
+            R.string.ui_display_blocked
         )
 
         service.onStartCommand(FloatingServiceCommand.Restore.toIntent(service), 0, 1)
@@ -128,7 +128,7 @@ class FloatingLyricsServiceDisplayScopeTest {
             DisplayScopeBlockReason.CHECKING_SELECTED_APPS,
             service.displayScopeBlockReason
         )
-        assertLatestNotificationStartsWith(service, R.string.ui_checking_selected_apps)
+        assertLatestNotificationStartsWith(service, R.string.ui_display_blocked)
 
         service.applyDisplayScopeSnapshot(
             DisplayScopeVisibilitySnapshot(
@@ -155,7 +155,7 @@ class FloatingLyricsServiceDisplayScopeTest {
             DisplayScopeBlockReason.WAITING_FOR_SELECTED_APP,
             service.displayScopeBlockReason
         )
-        assertLatestNotificationStartsWith(service, R.string.ui_waiting_for_selected_app)
+        assertLatestNotificationStartsWith(service, R.string.ui_display_blocked)
 
         service.applyDisplayScopeSnapshot(
             DisplayScopeVisibilitySnapshot(

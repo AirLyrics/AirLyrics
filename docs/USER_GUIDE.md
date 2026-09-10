@@ -36,11 +36,17 @@ If no player appears, start playback, confirm that notification access is enable
 
 Appearance, lyrics display, animation, behavior, and window position are saved automatically.
 
-- **Display control** provides show/hide, drag lock, and click-through controls. Notification
-  **Adjustment mode** makes the window draggable and touchable again.
+- **Display control** provides show/hide, drag lock, and click-through controls. While the window is
+  shown, notification **Adjustment mode** makes it draggable and touchable again.
 - **Auto hide/show** hides the window while playback is paused and restores it when playback resumes.
 - **Display scope** (Android 10+) limits the window to selected visible apps. Choose apps, grant
   usage access, then enable it. Split-screen, freeform, and picture-in-picture count as visible.
+- The notification uses three display states: **Shown**, **Hidden**, and **Display blocked**. Blocked
+  means floating lyrics remain enabled, but current conditions prevent display. Common causes include
+  the current app being outside Display scope, missing overlay or usage access, paused playback with
+  auto hide enabled, or the screen being off or locked.
+  The window returns automatically when the condition clears. While blocked, tap the notification to
+  open AirLyrics; display and adjustment actions are unavailable.
 - **Lyrics offset** is saved per song and does not modify the original lyrics files.
 - **Word-by-word lyrics** use local imports. When enabled and available, **Highlight color** marks
   the elapsed part of the current line.
@@ -79,7 +85,7 @@ See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC and TTML examples.
 **The floating window does not appear:** confirm the selected player and overlay permission, then
 open **Floating** and tap **Show** in the bottom bar. Permission alone does not show the window.
 
-**Display scope is waiting:** open a selected app, or check usage access. Disabling **Display
-scope** restores the normal all-app behavior.
+**The notification says “Display blocked”:** open a selected app, resume playback, or check overlay
+and usage access. If Display scope is the cause, disabling it restores the normal all-app behavior.
 
 For other known problems, search [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues).

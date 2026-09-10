@@ -102,6 +102,7 @@
     <string name="ui_delete_saved_lyrics_action">Delete saved lyrics for “%1$s”</string>
     <string name="ui_delete_saved_lyrics_failed">Couldn’t delete lyrics; check folder access</string>
     <string name="ui_remove_word_by_word_lyrics_message">Also removes generated plain lyrics</string>
+    <string name="ui_display_blocked">Display blocked</string>
     <string name="ui_display_control">Display control</string>
     <string name="ui_display_scope">Display scope</string>
     <string name="ui_display_scope_usage_hint">“Usage access” only checks whether selected apps are visible. It does not read or upload app content.</string>
@@ -392,8 +393,6 @@ Word-timed TTML:
     <string name="ui_view_lrc_examples_hint">LRC and TTML examples</string>
     <string name="ui_vinyl_bubble">Vinyl</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
-    <string name="ui_checking_selected_apps">Checking selected apps…</string>
-    <string name="ui_waiting_for_selected_app">Waiting for selected app</string>
     <string name="ui_usage_access">Usage access</string>
     <string name="ui_usage_access_required">Usage access required</string>
     <string name="ui_waiting_for_media_message">Waiting for media…</string>

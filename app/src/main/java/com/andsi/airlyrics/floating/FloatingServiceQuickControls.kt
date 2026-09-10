@@ -20,7 +20,6 @@ internal fun FloatingLyricsService.currentQuickControlState(
         desiredVisible = QuickFloatingStore.isDesiredVisible(this),
         locked = FloatingLyricsStyleStore.isLocked(this),
         clickThrough = FloatingLyricsStyleStore.isClickThrough(this),
-        displayScopeBlockReason = displayScopeBlockReason,
         feedback = feedback
     )
 }
