@@ -226,10 +226,12 @@
     <string name="ui_not_bound">Not bound</string>
     <string name="ui_not_imported">Not imported</string>
     <string name="ui_notif_access">Notification access</string>
-    <string name="ui_notif_access_usage_hint">“Notification access” identifies current media information on this device. Notification content is not uploaded.</string>
+    <string name="ui_notif_access_description">Detect playing media</string>
     <string name="ui_notification_permission_enabled">Notification permission enabled</string>
     <string name="ui_notif_permission_off_warning">Notification permission is off; the service notification may be hidden</string>
     <string name="ui_notify">Notifications</string>
+    <string name="ui_notifications_description">Show notification controls</string>
+    <string name="ui_notifications_usage_hint">Shows the floating lyrics notification and controls. It is separate from notification access; floating lyrics can still run when it is off.</string>
     <string name="ui_now_playing">Now playing</string>
     <string name="ui_off">Off</string>
     <string name="ui_ok">OK</string>
@@ -245,7 +247,9 @@
     <string name="ui_original_translation">Original + translation</string>
     <string name="ui_overlay">Overlay</string>
     <string name="ui_overlay_and_notification_permissions">Permissions and language</string>
+    <string name="ui_overlay_description">Display lyrics over other apps</string>
     <string name="ui_overlay_permission_required">Overlay permission required</string>
+    <string name="ui_permission_entry_description">%1$s. %2$s. %3$s</string>
     <string name="ui_permission_purpose">About %1$s</string>
     <string name="ui_permit">Permit</string>
     <string name="ui_overwrite">Overwrite</string>
@@ -254,6 +258,7 @@
     <string name="ui_parsed_lyrics_are_empty">No valid lyrics parsed</string>
     <string name="ui_paused">Paused</string>
     <string name="ui_permissions">Permissions</string>
+    <string name="ui_optional_permissions">Optional</string>
     <string name="ui_basic_features_ready">Basic features ready</string>
     <string name="ui_setup_required">Setup required</string>
     <string name="ui_pink">Pink</string>
@@ -337,7 +342,6 @@ Word-timed TTML:
     <string name="ui_shadow">Shadow</string>
     <string name="ui_shadow_radius">Shadow radius</string>
     <string name="ui_shadow_stroke">Shadow stroke</string>
-    <string name="ui_shortcuts">Shortcuts</string>
     <string name="ui_show">Show</string>
     <string name="ui_shown">Shown</string>
     <string name="ui_size">Size</string>
@@ -394,6 +398,7 @@ Word-timed TTML:
     <string name="ui_vinyl_bubble">Vinyl</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
     <string name="ui_usage_access">Usage access</string>
+    <string name="ui_usage_access_description">Detect foreground apps</string>
     <string name="ui_usage_access_required">Usage access required</string>
     <string name="ui_waiting_for_media_message">Waiting for media…</string>
     <string name="ui_waiting_for_music_signal">Waiting for music</string>

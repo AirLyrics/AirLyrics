@@ -226,10 +226,12 @@
     <string name="ui_not_bound">未绑定</string>
     <string name="ui_not_imported">未导入</string>
     <string name="ui_notif_access">通知访问权限</string>
-    <string name="ui_notif_access_usage_hint">“通知访问权限”仅用于在本机识别当前播放的媒体信息，不会上传通知内容。</string>
+    <string name="ui_notif_access_description">识别正在播放的媒体</string>
     <string name="ui_notification_permission_enabled">通知权限已开启</string>
     <string name="ui_notif_permission_off_warning">通知权限未开启，服务通知可能被隐藏</string>
     <string name="ui_notify">通知</string>
+    <string name="ui_notifications_description">显示通知栏控制</string>
+    <string name="ui_notifications_usage_hint">用于显示悬浮歌词通知与控制入口，与通知访问权限不同；关闭后悬浮歌词仍可运行。</string>
     <string name="ui_now_playing">正在播放</string>
     <string name="ui_off">关闭</string>
     <string name="ui_ok">知道了</string>
@@ -245,7 +247,9 @@
     <string name="ui_original_translation">原文 + 翻译</string>
     <string name="ui_overlay">悬浮窗权限</string>
     <string name="ui_overlay_and_notification_permissions">权限与语言</string>
+    <string name="ui_overlay_description">在其他应用上层显示歌词</string>
     <string name="ui_overlay_permission_required">需要悬浮窗权限</string>
+    <string name="ui_permission_entry_description">%1$s，%2$s，%3$s</string>
     <string name="ui_permission_purpose">了解%1$s用途</string>
     <string name="ui_permit">授权</string>
     <string name="ui_overwrite">覆盖</string>
@@ -253,7 +257,8 @@
     <string name="ui_overwrite_plain_lyrics">覆盖普通歌词？</string>
     <string name="ui_parsed_lyrics_are_empty">未解析到有效歌词</string>
     <string name="ui_paused">暂停中</string>
-    <string name="ui_permissions">权限状态</string>
+    <string name="ui_permissions">权限</string>
+    <string name="ui_optional_permissions">可选权限</string>
     <string name="ui_basic_features_ready">基本功能已就绪</string>
     <string name="ui_setup_required">需要完成设置</string>
     <string name="ui_pink">粉</string>
@@ -337,7 +342,6 @@
     <string name="ui_shadow">阴影</string>
     <string name="ui_shadow_radius">阴影半径</string>
     <string name="ui_shadow_stroke">阴影描边</string>
-    <string name="ui_shortcuts">快捷入口</string>
     <string name="ui_show">显示</string>
     <string name="ui_shown">已显示</string>
     <string name="ui_size">大小</string>
@@ -393,6 +397,7 @@
     <string name="ui_vinyl_bubble">黑胶</string>
     <string name="ui_waiting_for_current_song">等待当前歌曲</string>
     <string name="ui_usage_access">使用情况访问</string>
+    <string name="ui_usage_access_description">识别前台应用</string>
     <string name="ui_usage_access_required">需要使用情况访问</string>
     <string name="ui_waiting_for_media_message">等待媒体信息…</string>
     <string name="ui_waiting_for_music_signal">等待音乐中</string>

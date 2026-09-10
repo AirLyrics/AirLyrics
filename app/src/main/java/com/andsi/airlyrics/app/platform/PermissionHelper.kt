@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.net.toUri
 import com.andsi.airlyrics.displayscope.DisplayScopeCapability
 
@@ -18,9 +19,10 @@ internal object PermissionHelper {
         activity.startActivity(intent)
     }
 
+    /** Whether this app can currently display notifications, across Android versions. */
     fun hasPostNotificationsPermission(context: Context): Boolean {
-        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        return !needsPostNotificationsPermission(context) &&
+            NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 
     fun hasNotificationListenerAccess(context: Context): Boolean {
@@ -53,12 +55,17 @@ internal object PermissionHelper {
         activity: AppCompatActivity,
         requestPermission: (String) -> Unit
     ) {
-        if (hasPostNotificationsPermission(activity)) {
+        if (needsPostNotificationsPermission(activity)) {
+            requestPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+        } else {
             openAppNotificationSettings(activity)
-            return
         }
+    }
 
-        requestPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+    private fun needsPostNotificationsPermission(context: Context): Boolean {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+                PackageManager.PERMISSION_GRANTED
     }
 
     private fun openAppNotificationSettings(activity: AppCompatActivity) {
