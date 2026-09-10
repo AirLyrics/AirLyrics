@@ -23,7 +23,7 @@ import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.showAirConfirmDialog
-import com.andsi.airlyrics.ui.components.showAirInfoDialog
+import com.andsi.airlyrics.ui.components.showLyricsFormatGuideDialog
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -240,12 +240,18 @@ internal class MainLyricsWorkflow(
     }
 
     private fun showLyricsFormatGuideDialog() {
-        uiHost.showAirInfoDialog(
-            title = activity.getString(R.string.ui_lyrics_format_guide),
-            message = activity.localizedAssetText(
-                baseName = "help/lyrics_format",
-                fallback = activity.getString(R.string.ui_lyrics_format_guide_body)
-            )
+        val lrcGuide = activity.localizedAssetText(
+            baseName = "help/lyrics_format",
+            fallback = activity.getString(R.string.ui_lyrics_format_lrc_guide_body)
+        )
+        val ttmlGuide = activity.localizedAssetText(
+            baseName = "help/lyrics_format_ttml",
+            fallback = activity.getString(R.string.ui_lyrics_format_ttml_guide_body)
+        )
+
+        uiHost.showLyricsFormatGuideDialog(
+            lrcGuide = lrcGuide,
+            ttmlGuide = ttmlGuide
         )
     }
 }

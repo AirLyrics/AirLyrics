@@ -3,7 +3,9 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.net.Uri
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.parser.LrcParser
+import com.andsi.airlyrics.lyrics.importer.LyricsFormatDetector
+import com.andsi.airlyrics.lyrics.importer.LyricsImportParsers
+import com.andsi.airlyrics.lyrics.importer.LyricsTextParseResult
 
 internal object PlainLyricsStorageOps {
     fun getLocalPlainLyricsInfo(
@@ -109,19 +111,20 @@ internal object PlainLyricsStorageOps {
             return LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
         }
 
-        val plainImportLrc = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
+        val plainImportText = when (val result = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
             is LyricsFileStore.ReadTextResult.Success -> result.text
             LyricsFileStore.ReadTextResult.TooLarge -> return LyricsStorage.ImportLyricsResult.TooLarge
             LyricsFileStore.ReadTextResult.Failed -> return LyricsStorage.ImportLyricsResult.ReadFailed
         }
-
-        val validation = LrcParser.validateForStorage(plainImportLrc)
-        if (!validation.isValid) {
-            return LyricsStorage.ImportLyricsResult.InvalidFormat(validation.invalidLineNumbers)
+        val format = LyricsFormatDetector.detect(context, uri, plainImportText)
+        val normalizedPlainLrc = when (
+            val result = LyricsImportParsers.parsePlain(format, plainImportText)
+        ) {
+            is LyricsTextParseResult.Success -> result.value
+            is LyricsTextParseResult.InvalidFormat -> {
+                return LyricsStorage.ImportLyricsResult.InvalidFormat(result.invalidLineNumbers)
+            }
         }
-
-        val normalizedPlainLrc = LrcParser.normalizeForStorage(plainImportLrc)
-        if (normalizedPlainLrc.isBlank()) return LyricsStorage.ImportLyricsResult.InvalidFormat()
 
         return LyricsStorage.withStorageLock {
             if (WordByWordLyricsStorageOps.hasWordByWordLyrics(context, title, artist, duration)) {

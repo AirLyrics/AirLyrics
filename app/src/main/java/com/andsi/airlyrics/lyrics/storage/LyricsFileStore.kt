@@ -87,6 +87,21 @@ internal object LyricsFileStore {
 
         if (bytes.isEmpty()) return ReadTextResult.Success("")
 
+        if (
+            bytes.size >= 3 &&
+            bytes[0] == 0xEF.toByte() &&
+            bytes[1] == 0xBB.toByte() &&
+            bytes[2] == 0xBF.toByte()
+        ) {
+            return ReadTextResult.Success(bytes.copyOfRange(3, bytes.size).toString(Charsets.UTF_8))
+        }
+        if (bytes.size >= 2 && bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte()) {
+            return ReadTextResult.Success(bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16LE))
+        }
+        if (bytes.size >= 2 && bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte()) {
+            return ReadTextResult.Success(bytes.copyOfRange(2, bytes.size).toString(Charsets.UTF_16BE))
+        }
+
         val utf8 = bytes.toString(Charsets.UTF_8)
         if ('\uFFFD' !in utf8) return ReadTextResult.Success(utf8)
 

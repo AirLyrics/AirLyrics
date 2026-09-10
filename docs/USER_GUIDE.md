@@ -62,7 +62,7 @@ Plain and word-by-word lyrics cannot be imported as two independently managed ve
 song. Remove existing plain lyrics before importing word-by-word lyrics. AirLyrics then generates a
 plain LRC fallback and keeps it synchronized when the word-by-word lyrics are edited or removed.
 
-See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC examples.
+See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC and TTML examples.
 
 ## System Settings
 

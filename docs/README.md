@@ -8,7 +8,7 @@ This directory contains project documentation for AirLyrics.
 |-----------------------------------|----------------------------------------------------------------|
 | [User Guide](USER_GUIDE.md)       | Project usage guide                                            |
 | [Privacy Policy](../PRIVACY.md)   | Permissions, local data and online lyrics search privacy notes |
-| [Lyrics Format](LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format        |
+| [Lyrics Format](LYRICS_FORMAT.md) | Local LRC and TTML import formats                              |
 | [Contributing](CONTRIBUTING.md)   | Development environment, PR workflow and contribution rules    |
 | [Architecture](ARCHITECTURE.md)   | Module layout and runtime flow                                 |
 

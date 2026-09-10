@@ -62,7 +62,7 @@ For detailed setup and troubleshooting, see the [User Guide](docs/USER_GUIDE.md)
 ## Features
 
 - Detects current media playback and shows synced lyrics over other apps
-- Searches lyrics online and imports local LRC files
+- Searches lyrics online and imports local LRC or TTML files
 - Supports original, translated, and locally imported word-by-word lyrics
 - Customizable floating window styles and animations
 - Saves lyrics offsets for each song
@@ -168,7 +168,7 @@ Project documentation is in the docs directory.
 | [Documentation Home](docs/README.md)   | English documentation index                                    |
 | [Privacy Policy](PRIVACY.md)           | Permissions, local data and online lyrics search privacy notes |
 | [User Guide](docs/USER_GUIDE.md)       | Project usage guide                                            |
-| [Lyrics Format](docs/LYRICS_FORMAT.md) | Local import, normal LRC and word-by-word lyrics format        |
+| [Lyrics Format](docs/LYRICS_FORMAT.md) | Local LRC and TTML import formats                              |
 | [Contributing](docs/CONTRIBUTING.md)   | Development environment, PR workflow and code locations        |
 | [Architecture](docs/ARCHITECTURE.md)   | Module layout and runtime flow                                 |
 

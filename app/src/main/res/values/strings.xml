@@ -17,6 +17,7 @@
     <string name="lyrics_offset_advance">Lyrics advance %1$s</string>
     <string name="lyrics_offset_delay">Lyrics delay %1$s</string>
     <string name="lyrics_plain_format_invalid_lines">Invalid lines: %1$s%2$s\n\nStart lyric lines with [00:12.34]</string>
+    <string name="lyrics_import_format_invalid_lines">Invalid format near lines %1$s%2$s\n\nCheck the LRC or TTML format</string>
     <string name="provider_local_plain_lyrics">Local lyrics</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_plain_lyrics">NetEase Lyrics</string>
@@ -116,7 +117,7 @@
     <string name="ui_word_by_word_color">Word color</string>
     <string name="ui_word_by_word_lyrics">Word-by-word lyrics</string>
     <string name="ui_word_by_word_lyrics_import_success">Word-by-word lyrics imported</string>
-    <string name="ui_word_by_word_lyrics_lrc_file">Word-by-word lyrics (.lrc)</string>
+    <string name="ui_word_by_word_lyrics_lrc_file">Word-by-word lyrics (.lrc / .ttml)</string>
     <string name="ui_word_by_word_lyrics_local_only">Available from local imports only</string>
     <string name="ui_word_by_word_lyrics_format_hint">Line time [00:12.34] · word time &lt;00:12.34&gt;</string>
     <string name="ui_word_by_word_blocked_by_plain_lrc">Remove plain lyrics first</string>
@@ -179,6 +180,8 @@
     <string name="ui_lyrics">Lyrics</string>
     <string name="ui_lyrics_display">Lyrics display</string>
     <string name="ui_lyrics_format_guide">Lyrics format guide</string>
+    <string name="ui_lyrics_format_lrc_tab">LRC</string>
+    <string name="ui_lyrics_format_ttml_tab">TTML</string>
     <string name="ui_lyrics_import_failed">Lyrics import failed</string>
     <string name="ui_lyrics_import_empty_error">Imported lyrics are empty</string>
     <string name="ui_lyrics_not_found">Lyrics not found</string>
@@ -217,6 +220,8 @@
     <string name="ui_no_translation_for_this_lyric">No translation for this lyric</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">Add at least one line: [00:12.34]&lt;00:12.34&gt;lyric</string>
     <string name="ui_plain_lrc_no_valid_line_error">Add at least one line: [00:12.34]lyric</string>
+    <string name="ui_import_no_valid_plain_lyrics">No valid plain lyrics found; check the LRC or TTML format</string>
+    <string name="ui_import_no_valid_word_by_word_lyrics">No valid word-by-word lyrics found; check the LRC or TTML format</string>
     <string name="ui_not_bound">Not bound</string>
     <string name="ui_not_imported">Not imported</string>
     <string name="ui_notif_access">Notification access</string>
@@ -253,23 +258,28 @@
     <string name="ui_pink">Pink</string>
     <string name="ui_plain">Plain</string>
     <string name="ui_plain_lrc_import_success">Plain lyrics imported</string>
-    <string name="ui_plain_lrc_removed_for_this_song">Plain LRC removed for this song</string>
+    <string name="ui_plain_lrc_removed_for_this_song">Plain lyrics removed for this song</string>
     <string name="ui_plain_lyrics">Plain lyrics</string>
-    <string name="ui_plain_lyrics_lrc">Plain lyrics (.lrc)</string>
-    <string name="ui_lyrics_format_guide_body">Plain LRC recommended format:
+    <string name="ui_plain_lyrics_lrc">Plain lyrics (.lrc / .ttml)</string>
+    <string name="ui_lyrics_format_lrc_guide_body">Plain LRC:
 [00:12.34]Original lyric / Translation
 [00:12.34]Original lyric
 [00:12.34]Translation
 
-Word-by-word lyrics recommended format:
+Word-by-word LRC:
 [00:12.34]&lt;00:12.34&gt;T&lt;00:12.50&gt;ext
 [00:12.34]Translation</string>
+    <string name="ui_lyrics_format_ttml_guide_body">Line-timed TTML:
+&lt;p begin="00:12.340" end="00:15.600"&gt;Lyrics&lt;/p&gt;
+
+Word-timed TTML:
+&lt;p begin="00:15.600" end="00:18.000"&gt;&lt;span begin="00:15.600" end="00:18.000"&gt;Lyrics&lt;/span&gt;&lt;/p&gt;</string>
     <string name="ui_manage_lyrics_select_player_hint">Play a song, then select a player to follow in Media</string>
     <string name="ui_media_streams_empty_hint">No active media detected</string>
     <string name="ui_playback_error">Playback error</string>
     <string name="ui_playing">Playing</string>
-    <string name="ui_please_choose_a_plain_lrc_lyrics_file">Choose a plain lyrics .lrc file</string>
-    <string name="ui_please_choose_a_word_by_word_lrc_file">Choose a word-by-word lyrics .lrc file</string>
+    <string name="ui_please_choose_a_plain_lrc_lyrics_file">Choose a plain lyrics .lrc or .ttml file</string>
+    <string name="ui_please_choose_a_word_by_word_lrc_file">Choose a word-by-word lyrics .lrc or .ttml file</string>
     <string name="ui_enable_overlay_permission_first">Enable overlay permission first</string>
     <string name="ui_select_song_before_importing">Play and select a song first</string>
     <string name="ui_importing_lyrics">Importing lyrics…</string>
@@ -379,7 +389,7 @@ Word-by-word lyrics recommended format:
     <string name="ui_version_project_link_and_changelog">Source code and changelog</string>
     <string name="ui_vertical_padding">Vertical padding</string>
     <string name="ui_view_current_setup">View current setup</string>
-    <string name="ui_view_lrc_examples_hint">Plain and word-by-word examples</string>
+    <string name="ui_view_lrc_examples_hint">LRC and TTML examples</string>
     <string name="ui_vinyl_bubble">Vinyl</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
     <string name="ui_waiting_for_selected_app">Waiting for selected app</string>

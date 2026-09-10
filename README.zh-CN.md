@@ -61,7 +61,7 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
 ## 功能特性
 
 - 自动检测当前播放媒体，并在其他应用上方显示同步歌词
-- 支持联网搜索和本地 LRC 导入
+- 支持联网搜索和本地 LRC、TTML 导入
 - 支持原文、翻译和本地导入的逐字歌词
 - 支持自定义悬浮窗样式和动画
 - 按歌曲保存歌词偏移
@@ -167,7 +167,7 @@ AirLyrics 会用到以下 Android 权限和系统访问入口：
 | [文档首页](docs/README.zh-CN.md)        | 中文文档索引              |
 | [隐私政策](PRIVACY.zh-CN.md)            | 权限、本地数据与联网歌词搜索说明    |
 | [使用说明书](docs/USER_GUIDE.zh-CN.md)   | 项目使用说明              |
-| [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地导入、普通 LRC 与逐字歌词格式 |
+| [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地 LRC 与 TTML 导入格式 |
 | [贡献指南](docs/CONTRIBUTING.zh-CN.md)  | 开发环境、提交流程与代码位置      |
 | [项目架构](docs/ARCHITECTURE.zh-CN.md)  | 模块划分与运行流程           |
 

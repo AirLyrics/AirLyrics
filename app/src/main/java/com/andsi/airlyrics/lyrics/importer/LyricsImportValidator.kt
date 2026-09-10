@@ -8,18 +8,13 @@ internal object LyricsImportValidator {
     private const val MAX_IMPORT_LYRICS_BYTES = 30L * 1024L * 1024L
 
     fun isLikelyLyricsDocument(context: Context, uri: Uri): Boolean {
-        val fileName = getDocumentDisplayName(context, uri).lowercase()
-        val path = uri.lastPathSegment.orEmpty().lowercase()
-        val mimeType = context.contentResolver.getType(uri).orEmpty().lowercase()
+        val fileName = getDocumentDisplayName(context, uri)
+        val path = uri.lastPathSegment
+        val mimeType = context.contentResolver.getType(uri)
 
-        return fileName.endsWith(".lrc") ||
-            path.endsWith(".lrc") ||
-            path.contains(".lrc") ||
-            mimeType.isBlank() ||
-            mimeType.startsWith("text/") ||
-            mimeType == "application/x-lrc" ||
-            mimeType == "application/lrc" ||
-            mimeType == "application/octet-stream"
+        return LyricsFormatCatalog.formatFromFileName(fileName) != null ||
+            LyricsFormatCatalog.containsSupportedExtension(path) ||
+            LyricsFormatCatalog.isPotentialLyricsMimeType(mimeType)
     }
 
     fun isLyricsDocumentTooLarge(context: Context, uri: Uri): Boolean {

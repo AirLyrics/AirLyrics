@@ -2,8 +2,8 @@
 
 [English](LYRICS_FORMAT.md) · [简体中文](LYRICS_FORMAT.zh-CN.md)
 
-AirLyrics supports local `.lrc` file import. Use local import when online lyrics are missing,
-inaccurate or out of sync.
+AirLyrics supports local `.lrc` and `.ttml` file import. Use local import when online lyrics are
+missing, inaccurate or out of sync.
 
 ## Normal LRC
 
@@ -104,7 +104,54 @@ After word-by-word lyrics are imported, the normal LRC is stored as an automatic
 fallback. Edit the word-by-word lyrics only; saving them regenerates the normal LRC. If you remove
 word-by-word lyrics, the generated normal LRC is removed with them.
 
-## Supported variants
+## TTML
+
+AirLyrics imports the TTML subset below, including common timing and translation fields used by
+Apple Music and AMLL files.
+
+Line-timed TTML puts timing on each `<p>`:
+
+```xml
+<tt xmlns="http://www.w3.org/ns/ttml">
+  <body>
+    <div>
+      <p begin="00:12.340" end="00:15.600">This is a lyric line</p>
+      <p begin="00:15.600" dur="2.400s">This is the next line</p>
+    </div>
+  </body>
+</tt>
+```
+
+Word-timed TTML also puts timing on lyric `<span>` elements:
+
+```xml
+<tt xmlns="http://www.w3.org/ns/ttml">
+  <body>
+    <div>
+      <p begin="00:12.340" end="00:15.600"><span begin="00:12.340" end="00:12.600">I </span><span begin="00:12.600" end="00:13.100">love </span><span begin="00:13.100" end="00:15.600">you</span></p>
+    </div>
+  </body>
+</tt>
+```
+
+TTML timing accepts clock times such as `00:12.340` and `00:00:12.340`, or offset times such as
+`12.34s`. Use `end` for the end time or `dur` for the duration.
+
+Supported translations include inline elements with the `x-translation` role and Apple Music head
+translations linked to lyric lines by `itunes:key`. Styling and advanced multi-voice presentation
+data are not preserved.
+
+The import option controls the result:
+
+- **Plain lyrics** accepts line- or word-timed TTML. Word spans are flattened to line text.
+- **Word-by-word lyrics** requires valid timed spans. A line-timed TTML without word timing fails
+  format validation.
+
+Plain TTML is normalized and stored as managed LRC. Word-timed TTML is stored as internal
+word-by-word data with a generated normal LRC fallback. Imported lyrics are edited in their
+normalized form; the source TTML file is not modified.
+
+## Supported LRC variants
 
 The parser supports these common variants:
 
@@ -132,6 +179,7 @@ When creating lyrics manually, watch out for:
 - Multiple unrelated songs mixed in one file.
 - A song version or duration that does not match.
 - Importing a normal LRC file as word-by-word lyrics.
+- Importing line-timed TTML as word-by-word lyrics.
 - Importing word-by-word lyrics while existing normal lyrics are still bound to the song. Remove the
   normal lyrics first.
 - Editing the generated normal LRC separately after importing word-by-word lyrics. Edit the

@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import java.io.File
 import java.util.Locale
 import org.junit.After
@@ -133,6 +135,67 @@ class LyricsStorageImportValidationTest {
                 300_000L
             )
         )
+    }
+
+    @Test
+    fun importPlainLyrics_convertsLineTimedTtmlToNormalizedLrc() {
+        val result = LyricsStorage.importPlainLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile("plain-line-timed.ttml", LINE_TIMED_TTML),
+            title = "Plain Line TTML",
+            artist = "AndSi",
+            duration = 6_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+        assertEquals(
+            "[00:01.20]First line / 第一行\n[00:03.50]Second line",
+            LyricsStorage.readPlainLyrics(context, "Plain Line TTML", "AndSi", 6_000L)
+        )
+    }
+
+    @Test
+    fun importPlainLyrics_flattensWordTimedTtmlWithoutSavingWordTiming() {
+        val result = LyricsStorage.importPlainLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile("plain-word-timed.ttml", WORD_TIMED_TTML),
+            title = "Plain Word TTML",
+            artist = "AndSi",
+            duration = 13_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+        assertEquals(
+            "[00:10.00]hello world / 你好，世界",
+            LyricsStorage.readPlainLyrics(context, "Plain Word TTML", "AndSi", 13_000L)
+        )
+        assertFalse(LyricsStorage.hasWordByWordLyrics(context, "Plain Word TTML", "AndSi", 13_000L))
+        assertTrue(LyricsStorage.readWordByWordLyrics(context, "Plain Word TTML", "AndSi", 13_000L).isEmpty())
+    }
+
+    @Test
+    fun importPlainLyrics_decodesUtf16TtmlWithBom() {
+        val encodings = listOf(
+            "LE" to (byteArrayOf(0xFF.toByte(), 0xFE.toByte()) + LINE_TIMED_TTML.toByteArray(Charsets.UTF_16LE)),
+            "BE" to (byteArrayOf(0xFE.toByte(), 0xFF.toByte()) + LINE_TIMED_TTML.toByteArray(Charsets.UTF_16BE))
+        )
+
+        encodings.forEachIndexed { index, (label, bytes) ->
+            val title = "Plain UTF-16 $label TTML"
+            val result = LyricsStorage.importPlainLyricsFromUriWithResult(
+                context = context,
+                uri = writeImportBytes("plain-utf16-${label.lowercase()}.ttml", bytes),
+                title = title,
+                artist = "AndSi",
+                duration = 7_000L + index
+            )
+
+            assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+            assertEquals(
+                "[00:01.20]First line / 第一行\n[00:03.50]Second line",
+                LyricsStorage.readPlainLyrics(context, title, "AndSi", 7_000L + index)
+            )
+        }
     }
 
     @Test
@@ -383,6 +446,117 @@ class LyricsStorageImportValidationTest {
                 item = item,
                 target = LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
             )
+        )
+    }
+
+    @Test
+    fun importWordByWordLyrics_convertsWordTimedTtmlAndGeneratesPlainFallback() {
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile("word-by-word.ttml", WORD_TIMED_TTML),
+            title = "Word TTML",
+            artist = "AndSi",
+            duration = 13_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+        assertEquals(
+            listOf(
+                WordByWordLine(
+                    startMs = 10_000L,
+                    endMs = 12_000L,
+                    text = "hello world",
+                    segments = listOf(
+                        WordByWordSegment("he", 10_000L, 10_300L),
+                        WordByWordSegment("llo ", 10_300L, 10_600L),
+                        WordByWordSegment("world", 10_600L, 12_000L)
+                    )
+                )
+            ),
+            LyricsStorage.readWordByWordLyrics(context, "Word TTML", "AndSi", 13_000L)
+        )
+        assertEquals(
+            "[00:10.00]hello world / 你好，世界",
+            LyricsStorage.readPlainLyrics(context, "Word TTML", "AndSi", 13_000L)
+        )
+
+        val entry = requireNotNull(LyricsIndexStore.find(context, "Word TTML", "AndSi", 13_000L))
+        assertEquals(LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK, entry.plainSource)
+        assertTrue(entry.plainFile.endsWith(".lrc"))
+        assertTrue(entry.wordByWordFile.endsWith(".karaoke.json"))
+
+        val item = LyricsStorage.listRecentLyrics(context).single { it.title == "Word TTML" }
+        assertEquals(
+            "[00:10.00]<00:10.00>he<00:10.30>llo <00:10.60>world",
+            LyricsStorage.readLocalLyricsItemText(
+                context,
+                item,
+                LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
+            )
+        )
+    }
+
+    @Test
+    fun importWordByWordLyrics_rejectsLineTimedTtmlWithoutWritingLyrics() {
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile("line-only-word-import.ttml", LINE_TIMED_TTML),
+            title = "Line TTML As Word",
+            artist = "AndSi",
+            duration = 6_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.InvalidFormat)
+        assertEquals(null, LyricsIndexStore.find(context, "Line TTML As Word", "AndSi", 6_000L))
+        assertFalse(LyricsStorage.hasPlainLyrics(context, "Line TTML As Word", "AndSi", 6_000L))
+        assertFalse(LyricsStorage.hasWordByWordLyrics(context, "Line TTML As Word", "AndSi", 6_000L))
+    }
+
+    @Test
+    fun importWordByWordLyrics_rejectsMixedTtmlWithoutDroppingLineTimedLyrics() {
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile("mixed-word-import.ttml", MIXED_TIMING_TTML),
+            title = "Mixed TTML As Word",
+            artist = "AndSi",
+            duration = 6_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.InvalidFormat)
+        assertEquals(null, LyricsIndexStore.find(context, "Mixed TTML As Word", "AndSi", 6_000L))
+        assertFalse(LyricsStorage.hasPlainLyrics(context, "Mixed TTML As Word", "AndSi", 6_000L))
+        assertFalse(LyricsStorage.hasWordByWordLyrics(context, "Mixed TTML As Word", "AndSi", 6_000L))
+    }
+
+    @Test
+    fun importWordByWordLyrics_keepsInternalJsonCompatibilityBeforeFormatDetection() {
+        val expected = listOf(
+            WordByWordLine(
+                startMs = 5_000L,
+                endMs = 6_000L,
+                text = "json",
+                segments = listOf(WordByWordSegment("json", 5_000L, 6_000L))
+            )
+        )
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
+            context = context,
+            uri = writeImportFile(
+                "word-document.karaoke.json",
+                WordByWordLyricsJsonCodec.wordByWordLinesToJson(expected)
+            ),
+            title = "Word JSON Compatibility",
+            artist = "AndSi",
+            duration = 6_000L
+        )
+
+        assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+        assertEquals(
+            expected,
+            LyricsStorage.readWordByWordLyrics(context, "Word JSON Compatibility", "AndSi", 6_000L)
+        )
+        assertEquals(
+            "[00:05.00]json",
+            LyricsStorage.readPlainLyrics(context, "Word JSON Compatibility", "AndSi", 6_000L)
         )
     }
 
@@ -675,6 +849,12 @@ class LyricsStorageImportValidationTest {
         return Uri.fromFile(file)
     }
 
+    private fun writeImportBytes(name: String, bytes: ByteArray): Uri {
+        val file = File(context.cacheDir, name)
+        file.writeBytes(bytes)
+        return Uri.fromFile(file)
+    }
+
     private fun resetStorage() {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
@@ -683,5 +863,44 @@ class LyricsStorageImportValidationTest {
 
         val base = context.getExternalFilesDir(null) ?: context.filesDir
         File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
+    }
+
+    private companion object {
+        val LINE_TIMED_TTML =
+            """
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+                xmlns:itunes="http://itunes.apple.com/lyric-ttml-extensions"
+                itunes:timing="Line">
+                <body>
+                    <div>
+                        <p begin="1.2s" end="3.5s">First <span>line</span><span ttm:role="x-translation">第一行</span></p>
+                        <p begin="3.5s" dur="1.5s">Second line</p>
+                    </div>
+                </body>
+            </tt>
+            """.trimIndent()
+
+        val WORD_TIMED_TTML =
+            """
+            <tt xmlns="http://www.w3.org/ns/ttml"
+                xmlns:ttm="http://www.w3.org/ns/ttml#metadata"
+                xmlns:itunes="http://itunes.apple.com/lyric-ttml-extensions"
+                itunes:timing="Word">
+                <body>
+                    <p begin="10s" end="12s"><span begin="10s" end="10.3s">he</span><span begin="10.3s" end="10.6s">llo </span><span begin="10.6s" end="12s">world</span><span ttm:role="x-translation">你好，世界</span></p>
+                </body>
+            </tt>
+            """.trimIndent()
+
+        val MIXED_TIMING_TTML =
+            """
+            <tt xmlns="http://www.w3.org/ns/ttml">
+                <body>
+                    <p begin="1s" end="2s"><span begin="1s" end="2s">word timed</span></p>
+                    <p begin="2s" end="3s">line timed</p>
+                </body>
+            </tt>
+            """.trimIndent()
     }
 }

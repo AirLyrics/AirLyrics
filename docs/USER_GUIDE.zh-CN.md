@@ -56,7 +56,7 @@ AirLyrics 只会在 App 启动时尝试自动选择。授予通知访问权限�
 同一首歌不能同时导入两份独立维护的普通歌词和逐字歌词。导入逐字歌词前，请先移除已有普通歌词。
 导入后 AirLyrics 会生成普通 LRC，并在修改或移除逐字歌词时保持同步。
 
-支持的 LRC 示例见[歌词格式说明](LYRICS_FORMAT.zh-CN.md)。
+支持的 LRC 与 TTML 示例见[歌词格式说明](LYRICS_FORMAT.zh-CN.md)。
 
 ## 系统设置
 

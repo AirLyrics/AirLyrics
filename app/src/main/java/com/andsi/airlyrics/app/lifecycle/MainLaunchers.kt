@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.lifecycle
 import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.andsi.airlyrics.lyrics.importer.LyricsFormatCatalog
 
 /**
  * Owns ActivityResult launchers for MainActivity.
@@ -17,15 +18,7 @@ internal class MainLaunchers(
     private val onLyricsDirectorySelected: (Uri) -> Unit,
     private val onNotificationPermissionResult: (Boolean) -> Unit
 ) {
-    private val lyricsDocumentMimeTypes = arrayOf(
-        "*/*",
-        "application/x-lrc",
-        "application/lrc",
-        "text/lrc",
-        "text/plain",
-        "text/*",
-        "application/octet-stream"
-    )
+    private val lyricsDocumentMimeTypes = LyricsFormatCatalog.pickerMimeTypes()
 
     private val lyricsFileLauncher =
         activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->

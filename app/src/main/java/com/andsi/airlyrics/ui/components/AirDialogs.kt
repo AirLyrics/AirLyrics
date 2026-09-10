@@ -107,7 +107,7 @@ internal fun MainUiHost.showAirConfirmDialog(
 
 @Suppress("DEPRECATION")
 internal fun MainUiHost.showAirDialog(
-    title: String,
+    title: String?,
     message: String? = null,
     positiveText: String? = DEFAULT_POSITIVE_TEXT,
     negativeText: String? = null,
@@ -130,26 +130,28 @@ internal fun MainUiHost.showAirDialog(
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
 
-        addView(LinearLayout(this@showAirDialog).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
+        if (!title.isNullOrBlank() || headerAction != null) {
+            addView(LinearLayout(this@showAirDialog).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
 
-            addView(TextView(this@showAirDialog).apply {
-                text = title
-                textSize = AirUiTokens.TextSize.DialogTitle
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorTextStrong)
-                maxLines = 2
-                ellipsize = TextUtils.TruncateAt.END
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
+                addView(TextView(this@showAirDialog).apply {
+                    text = title.orEmpty()
+                    textSize = AirUiTokens.TextSize.DialogTitle
+                    typeface = Typeface.DEFAULT_BOLD
+                    setTextColor(colorTextStrong)
+                    maxLines = 2
+                    ellipsize = TextUtils.TruncateAt.END
+                    layoutParams = LinearLayout.LayoutParams(
+                        0,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        1f
+                    )
+                })
+
+                headerAction?.invoke(this)
             })
-
-            headerAction?.invoke(this)
-        })
+        }
 
         if (!message.isNullOrBlank()) {
             addView(TextView(this@showAirDialog).apply {

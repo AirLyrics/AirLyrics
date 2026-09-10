@@ -35,8 +35,8 @@ import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.floating.FloatingWindowRuntimeState
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
-import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
-import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
+import com.andsi.airlyrics.lyrics.importer.plainLyricsImportFormatErrorMessage
+import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsImportFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
@@ -514,9 +514,9 @@ internal class MainGraph(
             }
             is MainUiEffect.ShowImportFormatError -> {
                 val message = if (effect.wordByWord) {
-                    activity.wordByWordLyricsFormatErrorMessage(effect.invalidLineNumbers)
+                    activity.wordByWordLyricsImportFormatErrorMessage(effect.invalidLineNumbers)
                 } else {
-                    activity.plainLyricsFormatErrorMessage(effect.invalidLineNumbers)
+                    activity.plainLyricsImportFormatErrorMessage(effect.invalidLineNumbers)
                 }
                 uiHost.showAirInfoDialog(
                     title = activity.getString(R.string.ui_invalid_format),

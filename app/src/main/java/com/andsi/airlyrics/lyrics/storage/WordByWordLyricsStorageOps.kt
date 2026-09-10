@@ -2,11 +2,14 @@ package com.andsi.airlyrics.lyrics.storage
 
 import android.content.Context
 import android.net.Uri
-import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.importer.LyricsFormatDetector
+import com.andsi.airlyrics.lyrics.importer.LyricsImportParsers
+import com.andsi.airlyrics.lyrics.importer.LyricsTextParseResult
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.parser.ParsedWordByWordLyrics
+import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
 
 internal object WordByWordLyricsStorageOps {
     fun hasWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): Boolean {
@@ -94,11 +97,13 @@ internal object WordByWordLyricsStorageOps {
         val parsedWordByWordLyrics = if (document.wordByWordLines.isNotEmpty()) {
             document.toParsedWordByWordLyrics()
         } else {
-            val validation = WordByWordLrcParser.validateForStorage(wordByWordImportText)
-            if (!validation.isValid) {
-                return LyricsStorage.ImportLyricsResult.InvalidFormat(validation.invalidLineNumbers)
+            val format = LyricsFormatDetector.detect(context, uri, wordByWordImportText)
+            when (val result = LyricsImportParsers.parseWordByWord(format, wordByWordImportText)) {
+                is LyricsTextParseResult.Success -> result.value
+                is LyricsTextParseResult.InvalidFormat -> {
+                    return LyricsStorage.ImportLyricsResult.InvalidFormat(result.invalidLineNumbers)
+                }
             }
-            WordByWordLrcParser.parseImport(wordByWordImportText)
         }
         val wordByWordLines = parsedWordByWordLyrics.wordByWordLines
         if (wordByWordLines.isEmpty()) return LyricsStorage.ImportLyricsResult.InvalidFormat()

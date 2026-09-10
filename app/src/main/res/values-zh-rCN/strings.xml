@@ -17,6 +17,7 @@
     <string name="lyrics_offset_advance">歌词提前 %1$s</string>
     <string name="lyrics_offset_delay">歌词延后 %1$s</string>
     <string name="lyrics_plain_format_invalid_lines">格式错误：第 %1$s%2$s 行\n\n歌词行以 [00:12.34] 开头</string>
+    <string name="lyrics_import_format_invalid_lines">第 %1$s%2$s 行附近格式错误\n\n请检查 LRC 或 TTML 格式</string>
     <string name="provider_local_plain_lyrics">本地歌词</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_plain_lyrics">网易云歌词</string>
@@ -116,7 +117,7 @@
     <string name="ui_word_by_word_color">逐字高亮颜色</string>
     <string name="ui_word_by_word_lyrics">逐字歌词</string>
     <string name="ui_word_by_word_lyrics_import_success">逐字歌词已导入</string>
-    <string name="ui_word_by_word_lyrics_lrc_file">逐字歌词（.lrc）</string>
+    <string name="ui_word_by_word_lyrics_lrc_file">逐字歌词（.lrc / .ttml）</string>
     <string name="ui_word_by_word_lyrics_local_only">仅支持本地导入</string>
     <string name="ui_word_by_word_lyrics_format_hint">行时间 [00:12.34] · 字词时间 &lt;00:12.34&gt;</string>
     <string name="ui_word_by_word_blocked_by_plain_lrc">请先移除普通歌词</string>
@@ -179,6 +180,8 @@
     <string name="ui_lyrics">歌词</string>
     <string name="ui_lyrics_display">歌词显示</string>
     <string name="ui_lyrics_format_guide">歌词格式说明</string>
+    <string name="ui_lyrics_format_lrc_tab">LRC</string>
+    <string name="ui_lyrics_format_ttml_tab">TTML</string>
     <string name="ui_lyrics_import_failed">导入歌词失败</string>
     <string name="ui_lyrics_import_empty_error">导入的歌词为空</string>
     <string name="ui_lyrics_not_found">未找到歌词</string>
@@ -217,6 +220,8 @@
     <string name="ui_no_translation_for_this_lyric">暂无翻译</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">请至少添加一行：[00:12.34]&lt;00:12.34&gt;歌词</string>
     <string name="ui_plain_lrc_no_valid_line_error">请至少添加一行：[00:12.34]歌词</string>
+    <string name="ui_import_no_valid_plain_lyrics">未找到有效的普通歌词，请检查 LRC 或 TTML 格式</string>
+    <string name="ui_import_no_valid_word_by_word_lyrics">未找到有效的逐字歌词，请检查 LRC 或 TTML 格式</string>
     <string name="ui_not_bound">未绑定</string>
     <string name="ui_not_imported">未导入</string>
     <string name="ui_notif_access">通知访问权限</string>
@@ -255,21 +260,26 @@
     <string name="ui_plain_lrc_import_success">普通歌词已导入</string>
     <string name="ui_plain_lrc_removed_for_this_song">普通歌词已移除</string>
     <string name="ui_plain_lyrics">普通歌词</string>
-    <string name="ui_plain_lyrics_lrc">普通歌词（.lrc）</string>
-    <string name="ui_lyrics_format_guide_body">普通歌词推荐格式：
+    <string name="ui_plain_lyrics_lrc">普通歌词（.lrc / .ttml）</string>
+    <string name="ui_lyrics_format_lrc_guide_body">普通 LRC：
 [00:12.34]原文歌词 / 翻译歌词
 [00:12.34]原文歌词
 [00:12.34]翻译歌词
 
-逐字歌词推荐格式：
+逐字 LRC：
 [00:12.34]&lt;00:12.34&gt;这&lt;00:12.50&gt;是&lt;00:12.70&gt;逐字歌词
 [00:12.34]翻译歌词</string>
+    <string name="ui_lyrics_format_ttml_guide_body">逐行 TTML：
+&lt;p begin="00:12.340" end="00:15.600"&gt;歌词&lt;/p&gt;
+
+逐字 TTML：
+&lt;p begin="00:15.600" end="00:18.000"&gt;&lt;span begin="00:15.600" end="00:18.000"&gt;歌词&lt;/span&gt;&lt;/p&gt;</string>
     <string name="ui_manage_lyrics_select_player_hint">播放歌曲，并在“媒体”中选择目标播放器</string>
     <string name="ui_media_streams_empty_hint">未检查到活跃媒体</string>
     <string name="ui_playback_error">播放异常</string>
     <string name="ui_playing">播放中</string>
-    <string name="ui_please_choose_a_plain_lrc_lyrics_file">选择普通歌词 .lrc 文件</string>
-    <string name="ui_please_choose_a_word_by_word_lrc_file">选择逐字歌词 .lrc 文件</string>
+    <string name="ui_please_choose_a_plain_lrc_lyrics_file">请选择普通歌词 .lrc 或 .ttml 文件</string>
+    <string name="ui_please_choose_a_word_by_word_lrc_file">请选择逐字歌词 .lrc 或 .ttml 文件</string>
     <string name="ui_enable_overlay_permission_first">请先开启悬浮窗权限</string>
     <string name="ui_select_song_before_importing">请先播放并选择歌曲</string>
     <string name="ui_importing_lyrics">正在导入歌词…</string>
@@ -378,7 +388,7 @@
     <string name="ui_version_project_link_and_changelog">源代码与更新日志</string>
     <string name="ui_vertical_padding">上下内边距</string>
     <string name="ui_view_current_setup">查看当前配置</string>
-    <string name="ui_view_lrc_examples_hint">普通与逐字歌词示例</string>
+    <string name="ui_view_lrc_examples_hint">LRC 与 TTML 示例</string>
     <string name="ui_vinyl_bubble">黑胶</string>
     <string name="ui_waiting_for_current_song">等待当前歌曲</string>
     <string name="ui_waiting_for_selected_app">等待所选应用</string>
