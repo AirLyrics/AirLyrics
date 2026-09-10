@@ -392,6 +392,7 @@ Word-timed TTML:
     <string name="ui_view_lrc_examples_hint">LRC and TTML examples</string>
     <string name="ui_vinyl_bubble">Vinyl</string>
     <string name="ui_waiting_for_current_song">Waiting for current song</string>
+    <string name="ui_checking_selected_apps">Checking selected apps…</string>
     <string name="ui_waiting_for_selected_app">Waiting for selected app</string>
     <string name="ui_usage_access">Usage access</string>
     <string name="ui_usage_access_required">Usage access required</string>

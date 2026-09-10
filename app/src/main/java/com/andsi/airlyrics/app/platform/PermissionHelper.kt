@@ -1,14 +1,13 @@
 package com.andsi.airlyrics.app.platform
 
-import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Process
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import com.andsi.airlyrics.displayscope.DisplayScopeCapability
 
 internal object PermissionHelper {
     fun requestOverlayPermission(activity: AppCompatActivity) {
@@ -35,15 +34,8 @@ internal object PermissionHelper {
         }
     }
 
-    @Suppress("DEPRECATION")
     fun hasUsageStatsAccess(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
-        val appOps = context.getSystemService(AppOpsManager::class.java)
-        return appOps.unsafeCheckOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName
-        ) == AppOpsManager.MODE_ALLOWED
+        return DisplayScopeCapability.hasUsageAccess(context)
     }
 
     fun openUsageAccessSettings(activity: AppCompatActivity) {

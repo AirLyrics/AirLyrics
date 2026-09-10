@@ -18,7 +18,9 @@ internal fun FloatingLyricsService.applyDisplayScopeSetting() {
     }
 
     if (!displayScopeFilterEnabled()) {
-        val needsRestore = autoHiddenForDisplayScope
+        val needsRestore = autoHiddenForDisplayScope ||
+            (!autoHiddenForPause &&
+                (!isWindowControllerReady() || !windowController.isVisible))
         stopDisplayScopeObservation()
         autoHiddenForDisplayScope = false
         displayScopeBlockReason = null
@@ -48,6 +50,7 @@ internal fun FloatingLyricsService.applyDisplayScopeSnapshot(
 ) {
     displayScopeUsageAccessGranted = snapshot.usageAccessGranted
     displayScopeVisiblePackages = snapshot.visiblePackages
+    displayScopeVisibilitySnapshotAvailable = snapshot.visibilitySnapshotAvailable
 
     if (!QuickFloatingStore.isDesiredVisible(this) || !displayScopeFilterEnabled()) {
         applyDisplayScopeSetting()
@@ -65,9 +68,11 @@ internal fun FloatingLyricsService.applyDisplayScopeSnapshot(
 }
 
 internal fun FloatingLyricsService.isDisplayScopeBlockingWindow(): Boolean {
+    syncDisplayScopeUsageAccess()
     val decision = DisplayScopePolicy.decide(
         enabled = displayScopeFilterEnabled(),
         usageAccessGranted = displayScopeUsageAccessGranted,
+        visibilitySnapshotAvailable = displayScopeVisibilitySnapshotAvailable,
         selectedPackages = DisplayScopeStore.selectedPackages(this),
         visiblePackages = displayScopeVisiblePackages
     )
@@ -77,13 +82,29 @@ internal fun FloatingLyricsService.isDisplayScopeBlockingWindow(): Boolean {
 
 internal fun FloatingLyricsService.startDisplayScopeObservation() {
     if (!displayScopeFilterEnabled() || !QuickFloatingStore.isDesiredVisible(this)) return
+    if (displayScopeObservationActive) return
+
+    displayScopeObservationActive = true
+    resetDisplayScopeVisibilitySnapshot()
     displayScopeMonitor?.start()
 }
 
 internal fun FloatingLyricsService.stopDisplayScopeObservation() {
     displayScopeMonitor?.stop()
+    displayScopeObservationActive = false
     displayScopeVisiblePackages = emptySet()
     displayScopeUsageAccessGranted = false
+    displayScopeVisibilitySnapshotAvailable = false
+}
+
+internal fun FloatingLyricsService.prepareDisplayScopeStateForServiceStart() {
+    if (!QuickFloatingStore.isDesiredVisible(this) || !displayScopeFilterEnabled()) {
+        displayScopeBlockReason = null
+        return
+    }
+
+    resetDisplayScopeVisibilitySnapshot()
+    isDisplayScopeBlockingWindow()
 }
 
 internal fun FloatingLyricsService.hideLyricsForDisplayScope(
@@ -129,4 +150,21 @@ private fun FloatingLyricsService.restoreAfterDisplayScopeAllows() {
 
 private fun FloatingLyricsService.displayScopeFilterEnabled(): Boolean {
     return DisplayScopeCapability.isSupported() && DisplayScopeStore.isEnabled(this)
+}
+
+private fun FloatingLyricsService.resetDisplayScopeVisibilitySnapshot() {
+    displayScopeVisiblePackages = emptySet()
+    displayScopeVisibilitySnapshotAvailable = false
+    displayScopeUsageAccessGranted = DisplayScopeCapability.hasUsageAccess(this)
+}
+
+private fun FloatingLyricsService.syncDisplayScopeUsageAccess() {
+    if (!displayScopeFilterEnabled()) return
+
+    val granted = DisplayScopeCapability.hasUsageAccess(this)
+    if (granted == displayScopeUsageAccessGranted) return
+
+    displayScopeUsageAccessGranted = granted
+    displayScopeVisiblePackages = emptySet()
+    displayScopeVisibilitySnapshotAvailable = false
 }

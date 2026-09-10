@@ -113,6 +113,8 @@ internal object FloatingServiceNotification {
             visible -> context.getString(R.string.ui_shown)
             desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.USAGE_ACCESS_REQUIRED ->
                 context.getString(R.string.ui_usage_access_required)
+            desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.CHECKING_SELECTED_APPS ->
+                context.getString(R.string.ui_checking_selected_apps)
             desiredVisible && displayScopeBlockReason == DisplayScopeBlockReason.WAITING_FOR_SELECTED_APP ->
                 context.getString(R.string.ui_waiting_for_selected_app)
             else -> context.getString(R.string.ui_hidden)

@@ -13,11 +13,11 @@ import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
-import com.andsi.airlyrics.app.platform.PermissionHelper
 
 internal data class DisplayScopeVisibilitySnapshot(
     val usageAccessGranted: Boolean,
-    val visiblePackages: Set<String>
+    val visiblePackages: Set<String>,
+    val visibilitySnapshotAvailable: Boolean = true
 )
 
 internal data class DisplayScopeUsageEvent(
@@ -160,7 +160,7 @@ internal class DisplayScopeMonitor(
         pausedForUnavailableDisplay = false
 
         val now = System.currentTimeMillis()
-        val hasAccess = PermissionHelper.hasUsageStatsAccess(appContext)
+        val hasAccess = DisplayScopeCapability.hasUsageAccess(appContext)
         val snapshot = if (!hasAccess) {
             tracker.clear()
             lastQueryEndMs = 0L
@@ -180,7 +180,11 @@ internal class DisplayScopeMonitor(
             if (!eventsRead) {
                 tracker.clear()
                 lastQueryEndMs = 0L
-                DisplayScopeVisibilitySnapshot(false, emptySet())
+                DisplayScopeVisibilitySnapshot(
+                    usageAccessGranted = DisplayScopeCapability.hasUsageAccess(appContext),
+                    visiblePackages = emptySet(),
+                    visibilitySnapshotAvailable = false
+                )
             } else {
                 DisplayScopeVisibilitySnapshot(true, tracker.visiblePackages())
             }
@@ -215,7 +219,7 @@ internal class DisplayScopeMonitor(
         tracker.clear()
         lastQueryEndMs = System.currentTimeMillis()
         val snapshot = DisplayScopeVisibilitySnapshot(
-            usageAccessGranted = PermissionHelper.hasUsageStatsAccess(appContext),
+            usageAccessGranted = DisplayScopeCapability.hasUsageAccess(appContext),
             visiblePackages = emptySet()
         )
         publishSnapshot(task, snapshot)

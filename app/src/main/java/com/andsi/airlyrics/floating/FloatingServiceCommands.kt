@@ -56,12 +56,11 @@ internal fun FloatingLyricsService.showLyrics(updateDesiredVisible: Boolean = tr
         QuickFloatingStore.setDesiredVisible(this, true)
         suppressAutoHideForCurrentPauseIfNeeded()
     }
+    startDisplayScopeObservation()
     if (isDisplayScopeBlockingWindow()) {
-        startDisplayScopeObservation()
         hideLyricsForDisplayScope()
         return false
     }
-    startDisplayScopeObservation()
     val shown = runCatching { windowController.show() }.getOrElse {
         windowController.hide()
         false

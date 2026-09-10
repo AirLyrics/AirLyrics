@@ -391,6 +391,7 @@
     <string name="ui_view_lrc_examples_hint">LRC 与 TTML 示例</string>
     <string name="ui_vinyl_bubble">黑胶</string>
     <string name="ui_waiting_for_current_song">等待当前歌曲</string>
+    <string name="ui_checking_selected_apps">正在检查所选应用…</string>
     <string name="ui_waiting_for_selected_app">等待所选应用</string>
     <string name="ui_usage_access">使用情况访问</string>
     <string name="ui_usage_access_required">需要使用情况访问</string>

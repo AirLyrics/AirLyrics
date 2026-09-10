@@ -95,6 +95,8 @@ open class FloatingLyricsService : Service() {
     internal var displayScopeBlockReason: DisplayScopeBlockReason? = null
     internal var displayScopeVisiblePackages: Set<String> = emptySet()
     internal var displayScopeUsageAccessGranted = false
+    internal var displayScopeVisibilitySnapshotAvailable = false
+    internal var displayScopeObservationActive = false
     internal var displayScopeMonitor: DisplayScopeMonitor? = null
     internal var pauseAutoHideSuppressedByUser = false
     internal var mediaRestoreAttempt = 0
@@ -161,6 +163,7 @@ open class FloatingLyricsService : Service() {
             broadcastWindowVisibility(visible)
         }
 
+        prepareDisplayScopeStateForServiceStart()
         startForeground(FloatingServiceNotification.NOTIFICATION_ID, FloatingServiceNotification.create(this, currentQuickControlState()))
         registerMediaReceiver()
         registerLyricsChangedReceiver()

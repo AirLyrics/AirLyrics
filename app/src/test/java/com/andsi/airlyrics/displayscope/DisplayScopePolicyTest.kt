@@ -13,6 +13,7 @@ class DisplayScopePolicyTest {
         val decision = DisplayScopePolicy.decide(
             enabled = false,
             usageAccessGranted = false,
+            visibilitySnapshotAvailable = false,
             selectedPackages = emptySet(),
             visiblePackages = emptySet()
         )
@@ -26,6 +27,7 @@ class DisplayScopePolicyTest {
         val decision = DisplayScopePolicy.decide(
             enabled = true,
             usageAccessGranted = false,
+            visibilitySnapshotAvailable = false,
             selectedPackages = setOf("player.app"),
             visiblePackages = setOf("player.app")
         )
@@ -35,15 +37,44 @@ class DisplayScopePolicyTest {
     }
 
     @Test
+    fun enabledFilterWaitsForFirstVisibilitySnapshot() {
+        val decision = DisplayScopePolicy.decide(
+            enabled = true,
+            usageAccessGranted = true,
+            visibilitySnapshotAvailable = false,
+            selectedPackages = setOf("player.app"),
+            visiblePackages = emptySet()
+        )
+
+        assertFalse(decision.allowsDisplay)
+        assertEquals(DisplayScopeBlockReason.CHECKING_SELECTED_APPS, decision.blockReason)
+    }
+
+    @Test
     fun anyVisibleSelectedAppAllowsDisplay() {
         val decision = DisplayScopePolicy.decide(
             enabled = true,
             usageAccessGranted = true,
+            visibilitySnapshotAvailable = true,
             selectedPackages = setOf("lyrics.app", "player.app"),
             visiblePackages = setOf("launcher.app", "player.app")
         )
 
         assertTrue(decision.allowsDisplay)
+    }
+
+    @Test
+    fun knownVisibilityWithoutSelectedAppWaitsForSelectionMatch() {
+        val decision = DisplayScopePolicy.decide(
+            enabled = true,
+            usageAccessGranted = true,
+            visibilitySnapshotAvailable = true,
+            selectedPackages = setOf("player.app"),
+            visiblePackages = setOf("launcher.app")
+        )
+
+        assertFalse(decision.allowsDisplay)
+        assertEquals(DisplayScopeBlockReason.WAITING_FOR_SELECTED_APP, decision.blockReason)
     }
 
     @Test

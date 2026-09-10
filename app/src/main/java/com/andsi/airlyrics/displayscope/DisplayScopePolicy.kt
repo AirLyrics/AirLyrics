@@ -2,6 +2,7 @@ package com.andsi.airlyrics.displayscope
 
 internal enum class DisplayScopeBlockReason {
     USAGE_ACCESS_REQUIRED,
+    CHECKING_SELECTED_APPS,
     WAITING_FOR_SELECTED_APP
 }
 
@@ -14,6 +15,7 @@ internal object DisplayScopePolicy {
     fun decide(
         enabled: Boolean,
         usageAccessGranted: Boolean,
+        visibilitySnapshotAvailable: Boolean,
         selectedPackages: Set<String>,
         visiblePackages: Set<String>
     ): DisplayScopeDecision {
@@ -22,6 +24,12 @@ internal object DisplayScopePolicy {
             return DisplayScopeDecision(
                 allowsDisplay = false,
                 blockReason = DisplayScopeBlockReason.USAGE_ACCESS_REQUIRED
+            )
+        }
+        if (!visibilitySnapshotAvailable) {
+            return DisplayScopeDecision(
+                allowsDisplay = false,
+                blockReason = DisplayScopeBlockReason.CHECKING_SELECTED_APPS
             )
         }
         val selectedAppVisible = selectedPackages.any(visiblePackages::contains)
