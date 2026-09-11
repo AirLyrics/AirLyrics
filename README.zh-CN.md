@@ -6,20 +6,20 @@
 
 # AirLyrics
 
-一个轻量的 Android 悬浮歌词软件，可以自动检测当前播放媒体，并在可自定义的悬浮窗中显示同步歌词。
+一个轻量的 Android 悬浮歌词应用。跟随当前播放的歌曲显示同步歌词，支持调整悬浮窗外观和导入本地歌词。
 
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 <br />
 
 [下载](https://github.com/AirLyrics/AirLyrics/releases) · [文档](docs/README.zh-CN.md) ·
-[隐私](PRIVACY.zh-CN.md) · [反馈问题](https://github.com/AirLyrics/AirLyrics/issues)
+[隐私政策](PRIVACY.zh-CN.md) · [建议与反馈](https://github.com/AirLyrics/AirLyrics/issues)
 
 <br />
 
-[![Platform](https://img.shields.io/badge/platform-Android-brightgreen?style=flat-square)]()
-[![Kotlin](https://img.shields.io/badge/Kotlin-Android-blueviolet?style=flat-square)]()
-[![Rust](https://img.shields.io/badge/Rust-lyrics--core-orange?style=flat-square)]()
+![Platform](https://img.shields.io/badge/platform-Android-brightgreen?style=flat-square)
+![Kotlin](https://img.shields.io/badge/Kotlin-Android-blueviolet?style=flat-square)
+![Rust](https://img.shields.io/badge/Rust-lyrics--core-orange?style=flat-square)
 [![Release](https://img.shields.io/github/v/release/AirLyrics/AirLyrics?style=flat-square)](https://github.com/AirLyrics/AirLyrics/releases)
 
 </div>
@@ -36,14 +36,12 @@
 
 ---
 
-## 状态
+## 项目状态
 
-AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
+AirLyrics 目前已可用于日常听歌，仍在持续维护和改进。
 
-当前版本已经适合作为日常悬浮歌词工具使用。后续更新会主要集中在 bug 修复、兼容性改进、文档更新，
-以及处理 issue 或 pull request。
-
-应用兼容性仍可能受到 Android 版本、设备厂商和音乐应用的影响。
+不同 Android 版本、设备厂商和音乐应用可能存在兼容性差异。
+如果遇到问题，或有想要的功能，非常欢迎提交 [Issue](https://github.com/AirLyrics/AirLyrics/issues)。
 
 ---
 
@@ -51,21 +49,24 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
 
 1. 安装 AirLyrics（需要 Android 8.0 或更高版本）。
 2. 授予必要权限。
-3. 手动选择当前播放的媒体源。
-4. 打开 **悬浮窗** 页面，然后点击底栏的 **显示**。
+3. 播放音乐，并在 AirLyrics 中手动选择对应的媒体源。
+4. 打开 **悬浮窗** 页面，点击底栏的 **显示**。
 
-详细设置和问题排查请参阅[使用说明书](docs/USER_GUIDE.zh-CN.md)。
+更多设置和常见问题见[使用说明书](docs/USER_GUIDE.zh-CN.md)。
 
 ---
 
-## 功能特性
+## 功能一览
 
-- 自动检测当前播放媒体，并在其他应用上方显示同步歌词
-- 支持联网搜索和本地 LRC、TTML 导入
-- 支持原文、翻译和本地导入的逐字歌词
-- 支持自定义悬浮窗样式和动画
-- 按歌曲保存歌词偏移
-- 支持浅色和深色主题
+- **歌词搜索与导入**：跟随所选播放器切换歌曲，通过网易云音乐或 Musixmatch 搜索歌词；
+  也可导入本地 LRC 和 TTML，兼容 Apple Music 与 AMLL 常见的时间和翻译字段，
+  支持原文、翻译和逐字高亮。
+- **悬浮窗外观**：调整字体、字重、颜色、透明度、窗口样式和切换动画，
+  修改时可实时预览，也支持导入字体。
+- **主题**：支持浅色、深色和跟随系统，可选择不同的强调色。
+- **显示控制**：支持暂停时自动隐藏、锁定窗口、点击穿透和通知栏控制，
+  也可设置为仅在所选应用中显示。
+- **歌词管理**：按歌曲保存时间偏移，浏览、搜索、编辑和删除本地歌词。
 
 ---
 
@@ -143,33 +144,31 @@ AirLyrics 目前处于稳定维护阶段，并仍会持续维护。
 
 ## 权限说明
 
-AirLyrics 会用到以下 Android 权限和系统访问入口：
+AirLyrics 使用以下权限或系统功能：
 
-| 权限 / 访问    | 用途                 |
-|------------|--------------------|
-| 显示在其他应用上层 | 显示悬浮歌词窗口          |
-| 通知访问权限     | 检测当前播放媒体信息        |
-| 通知权限       | 显示前台服务控制入口         |
-| 使用情况访问     | 仅在所选应用可见时显示悬浮歌词（可选，Android 10+） |
-| 网络访问       | 联网搜索歌词             |
-| 文件选择器      | 导入本地歌词和选择歌词保存目录   |
+| 权限 / 系统功能 | 用途 |
+| --- | --- |
+| 显示在其他应用上层 | 显示悬浮歌词窗口 |
+| 通知访问权限 | 获取当前播放的媒体信息 |
+| 通知权限 | 显示前台服务通知及控制按钮 |
+| 使用情况访问 | 判断所选应用是否可见，用于控制悬浮歌词的显示（可选，Android 10+） |
+| 网络访问 | 在线搜索歌词 |
+| 文件选择器 | 导入本地歌词、选择歌词保存目录 |
 
-权限、本地数据与联网歌词搜索的说明见 [隐私政策](PRIVACY.zh-CN.md)。
+有关权限、数据存储和联网搜索的详细说明，见[隐私政策](PRIVACY.zh-CN.md)。
 
 ---
 
 ## 文档
 
-项目文档见 docs 目录。
-
-| 文档                                  | 说明                  |
-|-------------------------------------|---------------------|
-| [文档首页](docs/README.zh-CN.md)        | 中文文档索引              |
-| [隐私政策](PRIVACY.zh-CN.md)            | 权限、本地数据与联网歌词搜索说明    |
-| [使用说明书](docs/USER_GUIDE.zh-CN.md)   | 项目使用说明              |
-| [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地 LRC 与 TTML 导入格式 |
-| [贡献指南](docs/CONTRIBUTING.zh-CN.md)  | 开发环境、提交流程与代码位置      |
-| [项目架构](docs/ARCHITECTURE.zh-CN.md)  | 模块划分与运行流程           |
+| 文档 | 内容 |
+| --- | --- |
+| [文档首页](docs/README.zh-CN.md) | 中文文档索引 |
+| [隐私政策](PRIVACY.zh-CN.md) | 权限、数据存储与联网搜索 |
+| [使用说明书](docs/USER_GUIDE.zh-CN.md) | 使用方法与常见问题 |
+| [歌词格式](docs/LYRICS_FORMAT.zh-CN.md) | 本地 LRC 与 TTML 导入说明 |
+| [贡献指南](docs/CONTRIBUTING.zh-CN.md) | 开发环境、提交流程与代码位置 |
+| [项目架构](docs/ARCHITECTURE.zh-CN.md) | 模块划分与运行流程 |
 
 ---
 
@@ -179,15 +178,15 @@ AirLyrics 会用到以下 Android 权限和系统访问入口：
 
 - JDK 17
 - Android SDK
-- Android NDK `26.3.11579264` 必需
-- Rust stable via `rustup`
+- Android NDK `26.3.11579264`
+- Rust stable（通过 `rustup` 安装）
 - `cargo-ndk`
-- Rust Android target：
-  - 默认 `arm64-v8a` 构建需要 `aarch64-linux-android`
-- 可选 Rust Android target：
-  - 仅在使用 `-Pairlyrics.buildX86_64=true` 构建时需要 `x86_64-linux-android`
+- Rust Android 编译目标：
+  - 默认构建 `arm64-v8a`，需要安装 `aarch64-linux-android`。
+  - 使用 `-Pairlyrics.buildX86_64=true` 构建时，还需安装 `x86_64-linux-android`。
 
-构建 SDK 相关配置时，推荐使用 Android Studio。
+推荐通过 Android Studio 安装和配置 Android SDK、NDK。
+开发环境的详细配置见[贡献指南](docs/CONTRIBUTING.zh-CN.md)。
 
 ### 克隆仓库
 
@@ -196,34 +195,29 @@ git clone https://github.com/AirLyrics/AirLyrics.git
 cd AirLyrics
 ```
 
-### 构建
+### 构建 Debug APK
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-APK 会生成在：
+构建完成后，APK 位于：
 
 ```txt
 app/build/outputs/apk/debug/
 ```
 
-
 ---
 
-## 贡献
+## 反馈与贡献
 
-欢迎您提交贡献。AirLyrics 目前处于稳定维护阶段，因此更推荐小而明确的改动。
+欢迎通过 [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues) 反馈问题或提出建议。
+反馈 Bug 时，请尽量附上设备型号、Android 版本、使用的音乐应用和复现步骤，方便排查。
+有图片或者视频也很好。
 
-适合贡献的方向：
+想参与开发，可以先阅读[贡献指南](docs/CONTRIBUTING.zh-CN.md)。
 
-- Bug 反馈
-- 兼容性测试
-- 翻译改进
-- 文档改进
-- UI 文案润色
-
-贡献说明：[CONTRIBUTING.zh-CN.md](docs/CONTRIBUTING.zh-CN.md)。
+真的感谢所有提供反馈和参与贡献的人。
 
 ---
 
@@ -235,6 +229,4 @@ app/build/outputs/apk/debug/
 
 ## 许可证
 
-AirLyrics 使用 MIT License 授权。
-
-见 [LICENSE](LICENSE)。
+本项目采用 [MIT License](LICENSE)。

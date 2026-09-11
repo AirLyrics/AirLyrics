@@ -281,17 +281,17 @@
 逐字 TTML：
 &lt;p begin="00:15.600" end="00:18.000"&gt;&lt;span begin="00:15.600" end="00:18.000"&gt;歌词&lt;/span&gt;&lt;/p&gt;</string>
     <string name="ui_manage_lyrics_select_player_hint">播放歌曲，并在“媒体”中选择目标播放器</string>
-    <string name="ui_media_streams_empty_hint">未检查到活跃媒体</string>
+    <string name="ui_media_streams_empty_hint">未检测到活跃媒体</string>
     <string name="ui_playback_error">播放异常</string>
     <string name="ui_playing">播放中</string>
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">请选择普通歌词 .lrc 或 .ttml 文件</string>
     <string name="ui_please_choose_a_word_by_word_lrc_file">请选择逐字歌词 .lrc 或 .ttml 文件</string>
     <string name="ui_enable_overlay_permission_first">请先开启悬浮窗权限</string>
-    <string name="ui_select_song_before_importing">请先播放并选择歌曲</string>
+    <string name="ui_select_song_before_importing">请先播放歌曲并选择播放器</string>
     <string name="ui_importing_lyrics">正在导入歌词…</string>
     <string name="ui_lrc_file_too_large">请选择小于 30 MB 的歌词文件</string>
     <string name="ui_loading">加载中…</string>
-    <string name="ui_please_play_and_select_a_song_first">请先播放并选择歌曲</string>
+    <string name="ui_please_play_and_select_a_song_first">请先播放歌曲并选择播放器</string>
     <string name="ui_preferred">优先显示</string>
     <string name="ui_prev_current_next">上 + 当前 + 下</string>
     <string name="ui_previous_current">上一句 + 当前句</string>

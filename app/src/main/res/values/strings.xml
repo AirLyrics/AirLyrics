@@ -14,8 +14,8 @@
     <string name="lyrics_lookup_parse_failed">%1$s lyrics parse failed</string>
     <string name="lyrics_lookup_rate_limited">%1$s is rate limited; try again later</string>
     <string name="lyrics_lookup_restricted">%1$s lyrics are restricted</string>
-    <string name="lyrics_offset_advance">Lyrics advance %1$s</string>
-    <string name="lyrics_offset_delay">Lyrics delay %1$s</string>
+    <string name="lyrics_offset_advance">Lyrics advanced by %1$s</string>
+    <string name="lyrics_offset_delay">Lyrics delayed by %1$s</string>
     <string name="lyrics_plain_format_invalid_lines">Invalid lines: %1$s%2$s\n\nStart lyric lines with [00:12.34]</string>
     <string name="lyrics_import_format_invalid_lines">Invalid format near lines %1$s%2$s\n\nCheck the LRC or TTML format</string>
     <string name="provider_local_plain_lyrics">Local lyrics</string>
@@ -287,11 +287,11 @@ Word-timed TTML:
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">Choose a plain lyrics .lrc or .ttml file</string>
     <string name="ui_please_choose_a_word_by_word_lrc_file">Choose a word-by-word lyrics .lrc or .ttml file</string>
     <string name="ui_enable_overlay_permission_first">Enable overlay permission first</string>
-    <string name="ui_select_song_before_importing">Play and select a song first</string>
+    <string name="ui_select_song_before_importing">Play a song and select its player first</string>
     <string name="ui_importing_lyrics">Importing lyrics…</string>
     <string name="ui_lrc_file_too_large">Choose a lyrics file under 30 MB</string>
     <string name="ui_loading">Loading…</string>
-    <string name="ui_please_play_and_select_a_song_first">Play and select a song first</string>
+    <string name="ui_please_play_and_select_a_song_first">Play a song and select its player first</string>
     <string name="ui_preferred">Preferred</string>
     <string name="ui_prev_current_next">Prev + current + next</string>
     <string name="ui_previous_current">Previous + current</string>
@@ -314,8 +314,8 @@ Word-timed TTML:
     <string name="ui_remove_downloaded_lrc">Remove downloaded lyrics</string>
     <string name="ui_remove_word_by_word_lyrics">Remove word-by-word lyrics</string>
     <string name="ui_remove_word_by_word_lyrics_confirm">Remove word-by-word lyrics?</string>
-    <string name="ui_remove_plain_lrc">Remove plain LRC</string>
-    <string name="ui_remove_plain_lrc_confirm">Remove Plain LRC?</string>
+    <string name="ui_remove_plain_lrc">Remove plain lyrics</string>
+    <string name="ui_remove_plain_lrc_confirm">Remove plain lyrics?</string>
     <string name="ui_no_saved_lyrics_to_delete">No saved lyrics</string>
     <string name="ui_reset_current_song_offset">Reset current song offset</string>
     <string name="ui_rewinding">Rewinding</string>
@@ -335,7 +335,7 @@ Word-timed TTML:
     <string name="ui_search_online_replace_cache_msg">Saves the result as plain lyrics, replacing any local copy</string>
     <string name="ui_search_online_again_confirm">Search online?</string>
     <string name="ui_search_strategy">Search strategy</string>
-    <string name="ui_searching_lyrics">Searching lyrics</string>
+    <string name="ui_searching_lyrics">Searching for lyrics</string>
     <string name="ui_searching_online_again">Searching online…</string>
     <string name="ui_settings">Settings</string>
     <string name="ui_settings_back_label">Settings</string>

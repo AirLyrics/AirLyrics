@@ -2,112 +2,63 @@
 
 [English](LYRICS_FORMAT.md) · [简体中文](LYRICS_FORMAT.zh-CN.md)
 
-AirLyrics supports local `.lrc` and `.ttml` file import. Use local import when online lyrics are
-missing, inaccurate or out of sync.
+AirLyrics supports local imports of `.lrc` and `.ttml` files.
 
-## Normal LRC
+## Plain LRC
 
-Normal LRC is used to display lyrics line by line.
-
-Preferred format:
+Use one timestamp per line:
 
 ```lrc
 [00:12.34]This is a lyric line
 [00:15.60]This is the next lyric line
 ```
 
-Format:
+The timestamp format is `[mm:ss.xx]`, where `mm`, `ss`, and `xx` represent minutes, seconds, and
+centiseconds.
 
-```text
-[mm:ss.xx]lyric text
-```
+## Translated Lyrics
 
-Notes:
-
-- `mm` means minutes.
-- `ss` means seconds.
-- `xx` means centiseconds.
-- When editing lyrics manually, put one main timestamp and one lyric sentence on each line.
-
-## Translated lyrics
-
-When translation lines are available, AirLyrics can display original lyrics and translated lyrics.
-
-Preferred local format:
+Original and translated lyrics can share one line, separated by ` / `:
 
 ```lrc
 [00:12.34]大好きだって 大切だって / I love you, I love you
 ```
 
-AirLyrics also supports original and translated lines written under the same timestamp when
-importing or saving normal LRC:
+They can also be written on separate lines with the same timestamp:
 
 ```lrc
 [00:12.34]大好きだって 大切だって
 [00:12.34]I love you, I love you
 ```
 
-During import, this will be normalized to:
-
-```lrc
-[00:12.34]大好きだって 大切だって / I love you, I love you
-```
-
-If several translation lines share the same timestamp, the first line is treated as the original
-lyric. Later different lines are kept as translations.
-
-The actual display depends on the lyrics content mode:
-
-- Original + translation
-- Original only
-- Translation only
+During import, the first line is treated as the original lyric and later unique lines as
+translations. AirLyrics converts them to the single-line form automatically.
 
 ## Word-by-word LRC
 
-Word-by-word lyrics are mainly supported through local import. They contain a line timestamp and
-inline word timestamps.
-
-Preferred format:
+Word-by-word lyrics are available only through local import. Each original lyric line must include
+both a line timestamp and word timestamps:
 
 ```lrc
 [00:12.34]<00:12.34>I <00:12.60>love <00:12.95>you
 ```
 
-Format:
-
-```text
-[line start]<word start>word<word start>word
-```
-
-The line timestamp decides when the line appears. Inline timestamps decide word highlight timing.
-
-Word-by-word imports may also include translation lines under the same line timestamp:
+A translation uses the same line timestamp as the original lyric and does not need word timestamps:
 
 ```lrc
 [00:12.34]<00:12.34>大<00:12.60>好き<00:12.95>だって
 [00:12.34]I love you, I love you
 ```
 
-When the song does not already have normal lyrics, AirLyrics automatically generates normal LRC from
-the word-by-word lyrics. If same-timestamp translation lines are present, the generated normal LRC
-includes them:
-
-```lrc
-[00:12.34]大好きだって / I love you, I love you
-```
-
-When the song already has normal lyrics, AirLyrics does not allow importing word-by-word lyrics.
-Remove the existing normal lyrics first, then import the word-by-word lyrics. This avoids keeping two
-independently editable lyric versions for the same song.
-
-After word-by-word lyrics are imported, the normal LRC is stored as an automatically generated
-fallback. Edit the word-by-word lyrics only; saving them regenerates the normal LRC. If you remove
-word-by-word lyrics, the generated normal LRC is removed with them.
+Plain and word-by-word lyrics for the same song cannot be stored as independently managed versions.
+Remove existing lyrics before importing the other type. After importing word-by-word lyrics,
+AirLyrics automatically generates and synchronizes a plain LRC; edit or remove the word-by-word
+lyrics instead of the generated file.
 
 ## TTML
 
-AirLyrics imports the TTML subset below, including common timing and translation fields used by
-Apple Music and AMLL files.
+AirLyrics supports a subset of TTML, including some timing and translation fields commonly used by
+Apple Music and AMLL.
 
 Line-timed TTML puts timing on each `<p>`:
 
@@ -138,22 +89,21 @@ TTML timing accepts clock times such as `00:12.340` and `00:00:12.340`, or offse
 `12.34s`. Use `end` for the end time or `dur` for the duration.
 
 Supported translations include inline elements with the `x-translation` role and Apple Music head
-translations linked to lyric lines by `itunes:key`. Styling and advanced multi-voice presentation
-data are not preserved.
+translations linked to lyric lines by `itunes:key`.
 
 The import option controls the result:
 
-- **Plain lyrics** accepts line- or word-timed TTML. Word spans are flattened to line text.
-- **Word-by-word lyrics** requires valid timed spans. A line-timed TTML without word timing fails
-  format validation.
+- The **Plain lyrics** option accepts line- or word-timed TTML and flattens word timing to line
+  timing.
+- The **Word-by-word lyrics** option requires timed `<span>` elements on every valid lyric line.
+  Line-timed or mixed-timing TTML cannot be imported as word-by-word lyrics.
 
-Plain TTML is normalized and stored as managed LRC. Word-timed TTML is stored as internal
-word-by-word data with a generated normal LRC fallback. Imported lyrics are edited in their
-normalized form; the source TTML file is not modified.
+After import, TTML is converted to editable lyrics without modifying the source file. Styling and
+complex multi-voice presentation data are not preserved.
 
-## Supported LRC variants
+## Compatible LRC Variants
 
-The parser supports these common variants:
+These common variants are also supported:
 
 ```lrc
 [00:12.34]Lyric
@@ -162,25 +112,10 @@ The parser supports these common variants:
 [00:12.34][00:15.60]Repeated lyric
 ```
 
-It also tries to recover compact exports from some tools:
+AirLyrics also attempts to parse compact formats exported by some tools:
 
 ```lrc
 [00:00:58]Line A[00:01:20]Line B[00:02:18]Line C
 ```
 
-However, this compact format is not recommended for manual maintenance.
-
-## Not recommended
-
-When creating lyrics manually, watch out for:
-
-- Plain text without timestamps.
-- Very long lines without natural spaces.
-- Multiple unrelated songs mixed in one file.
-- A song version or duration that does not match.
-- Importing a normal LRC file as word-by-word lyrics.
-- Importing line-timed TTML as word-by-word lyrics.
-- Importing word-by-word lyrics while existing normal lyrics are still bound to the song. Remove the
-  normal lyrics first.
-- Editing the generated normal LRC separately after importing word-by-word lyrics. Edit the
-  word-by-word lyrics instead.
+This format is supported for compatibility only and should not be edited manually.

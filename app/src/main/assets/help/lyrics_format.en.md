@@ -15,4 +15,3 @@ The translation uses the same line timestamp as the original:
 [00:12.34]<00:12.34>Ly<00:12.50>rics
 [00:12.34]Translation
 
-Remove existing plain lyrics before importing word-by-word lyrics. Plain lyrics will be generated automatically and kept in sync.
