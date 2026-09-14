@@ -6,7 +6,6 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 
 import android.view.View
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -56,7 +55,7 @@ internal fun MainUiHost.refreshMediaButtonImpl(): View {
             when (mediaRefreshState) {
                 RefreshState.IDLE -> colorOnAccent
                 RefreshState.REFRESHING -> colorText
-                RefreshState.DONE -> Color.WHITE
+                RefreshState.DONE -> colorOnAccent
             }
         )
 

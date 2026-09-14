@@ -399,7 +399,6 @@ internal class FloatingPageScope(
 
     private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {
         previewHandle?.updateLineMode?.invoke(lineDisplayMode())
-        previewHandle?.updateStyle?.invoke(latestStyle)
         previewHandle?.lyricTextView?.apply {
             text = if (wordByWordLyricsEnabled()) {
                 wordByWordPreviewText(latestStyle)

@@ -7,21 +7,19 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.softLayoutTransition
-import kotlin.math.roundToInt
+import com.andsi.airlyrics.ui.theme.colorTextMuted
 
 internal data class FloatingPreviewCardHandle(
     val cardView: View,
     val lyricTextView: TextView,
     val bodyView: View,
     val updateLineMode: (LyricsLineDisplayMode) -> Unit,
-    val updateStyle: (FloatingLyricsStyle) -> Unit,
     val updateFold: (Boolean) -> Unit
 )
 
@@ -73,6 +71,7 @@ internal fun MainUiHost.createFloatingPreviewCard(
             textSize = FloatingPageTokens.PREVIEW_TOGGLE_TEXT_SP
             typeface = Typeface.DEFAULT
             gravity = Gravity.CENTER
+            setTextColor(colorTextMuted)
             background = null
             layoutParams = LinearLayout.LayoutParams(
                 dp(FloatingPageTokens.PREVIEW_TOGGLE_SIZE_DP),
@@ -92,10 +91,6 @@ internal fun MainUiHost.createFloatingPreviewCard(
             lyricView.maxLines = previewMaxLines(mode)
             lyricView.requestLayout()
         },
-        updateStyle = { previewStyle ->
-            val toggleAlpha = (255 * FloatingPageTokens.PREVIEW_TOGGLE_ALPHA).roundToInt()
-            toggleView.setTextColor(AirColorUtils.withAlpha(previewStyle.textColor, toggleAlpha))
-        },
         updateFold = { expanded ->
             lyricView.visibility = if (expanded) View.VISIBLE else View.GONE
             toggleView.text = if (expanded) "⌃" else "⌄"
@@ -105,7 +100,6 @@ internal fun MainUiHost.createFloatingPreviewCard(
             card.requestLayout()
         }
     )
-    handle.updateStyle(style())
     handle.updateFold(isExpanded())
     return handle
 }

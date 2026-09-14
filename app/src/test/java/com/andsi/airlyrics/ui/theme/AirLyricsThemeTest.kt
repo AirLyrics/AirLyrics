@@ -64,4 +64,17 @@ class AirLyricsThemeTest {
             }
         }
     }
+
+    @Test
+    fun accentForegroundsAlsoContrastWithSoftAccentSurfaces() {
+        listOf(false, true).forEach { isDark ->
+            ThemeAccent.entries.forEach { accent ->
+                val palette = AirLyricsTheme.palette(isDark, accent)
+                assertTrue(
+                    "$accent soft foreground contrast was below 4.5 in isDark=$isDark",
+                    ColorUtils.calculateContrast(palette.onAccent, palette.accentSoft) >= 4.5
+                )
+            }
+        }
+    }
 }
