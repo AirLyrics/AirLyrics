@@ -33,8 +33,7 @@ class MainActivityLyricsFormatGuideTest {
 
     @Test
     fun formatGuide_showsLrcAndTtmlOnSeparatePages() {
-        val controller = Robolectric.buildActivity(MainActivity::class.java).setup()
-        try {
+        Robolectric.buildActivity(MainActivity::class.java).setup().use { controller ->
             val activity = controller.get()
             activity.graph.lyricsWorkflow.showImportLyricsDialog(
                 target = SONG,
@@ -83,8 +82,6 @@ class MainActivityLyricsFormatGuideTest {
             assertTrue(ttmlTab.isSelected)
             assertFalse(guideDialog.allText().contains("[00:12.34]<00:12.34>"))
             assertTrue(guideDialog.allText().contains("<p begin=\"00:12.340\""))
-        } finally {
-            controller.close()
         }
     }
 

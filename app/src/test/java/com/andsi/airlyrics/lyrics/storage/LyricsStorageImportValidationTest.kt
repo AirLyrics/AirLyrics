@@ -368,12 +368,12 @@ class LyricsStorageImportValidationTest {
     @Test
     fun listRecentLyrics_reportsStoredSizeForWordByWordOnlyItem() {
         val wordByWordLines = listOf(
-            com.andsi.airlyrics.lyrics.WordByWordLine(
+            WordByWordLine(
                 startMs = 1_000L,
                 endMs = 2_000L,
                 text = "lyrics",
                 segments = listOf(
-                    com.andsi.airlyrics.lyrics.WordByWordSegment("lyrics", 1_000L, 2_000L)
+                    WordByWordSegment("lyrics", 1_000L, 2_000L)
                 )
             )
         )
@@ -790,12 +790,12 @@ class LyricsStorageImportValidationTest {
     @Test
     fun updateWordByWordLyrics_replacesPlainLyricsWithGeneratedFallback() {
         val wordByWordLines = listOf(
-            com.andsi.airlyrics.lyrics.WordByWordLine(
+            WordByWordLine(
                 startMs = 10_000L,
                 endMs = 11_000L,
                 text = "karaoke",
                 segments = listOf(
-                    com.andsi.airlyrics.lyrics.WordByWordSegment("karaoke", 10_000L, 11_000L)
+                    WordByWordSegment("karaoke", 10_000L, 11_000L)
                 )
             )
         )

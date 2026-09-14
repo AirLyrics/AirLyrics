@@ -112,7 +112,7 @@ class MainActivitySystemSettingsUiTest {
             requireNotNull(root.findView { it.contentDescription == description })
         }
         assertTrue(helpButtons.all { it.isClickable && it.isFocusable })
-        assertEquals(2, root.findTextViews("?").size)
+        assertEquals(2, root.descendantTexts().count { it == "?" })
 
         helpButtons.first().performClick()
         ShadowLooper.idleMainLooper()
@@ -209,24 +209,10 @@ class MainActivitySystemSettingsUiTest {
         return findView { it is TextView && it.text.toString() == text } as? TextView
     }
 
-    private fun View.findTextViews(text: String): List<TextView> {
-        val matches = mutableListOf<TextView>()
-        visitDescendants { view ->
-            if (view is TextView && view.text.toString() == text) matches += view
-        }
-        return matches
-    }
-
     private fun View.findView(predicate: (View) -> Boolean): View? {
         if (predicate(this)) return this
         if (this !is ViewGroup) return null
         return (0 until childCount).firstNotNullOfOrNull { getChildAt(it).findView(predicate) }
-    }
-
-    private fun View.visitDescendants(block: (View) -> Unit) {
-        block(this)
-        if (this !is ViewGroup) return
-        for (index in 0 until childCount) getChildAt(index).visitDescendants(block)
     }
 
     private fun View.clickableAncestor(): View? {

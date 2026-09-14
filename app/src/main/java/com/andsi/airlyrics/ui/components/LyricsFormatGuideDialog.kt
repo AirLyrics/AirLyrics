@@ -48,7 +48,7 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
             super.onMeasure(
                 widthMeasureSpec,
-                View.MeasureSpec.makeMeasureSpec(maxPageHeight, View.MeasureSpec.AT_MOST)
+                MeasureSpec.makeMeasureSpec(maxPageHeight, MeasureSpec.AT_MOST)
             )
         }
     }.apply {

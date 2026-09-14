@@ -61,9 +61,9 @@ internal object TtmlParser {
             }
             val handler = TtmlContentHandler()
             val xmlReader = factory.newSAXParser().xmlReader.apply {
-                setFeatureIfSupported(EXTERNAL_GENERAL_ENTITIES_FEATURE, false)
-                setFeatureIfSupported(EXTERNAL_PARAMETER_ENTITIES_FEATURE, false)
-                setFeatureIfSupported(LOAD_EXTERNAL_DTD_FEATURE, false)
+                disableFeatureIfSupported(EXTERNAL_GENERAL_ENTITIES_FEATURE)
+                disableFeatureIfSupported(EXTERNAL_PARAMETER_ENTITIES_FEATURE)
+                disableFeatureIfSupported(LOAD_EXTERNAL_DTD_FEATURE)
                 entityResolver = handler
                 contentHandler = handler
                 errorHandler = handler
@@ -228,21 +228,23 @@ private class TtmlContentHandler : DefaultHandler() {
         }
 
         if (name == "span" || name == "rt") {
-            when {
-                role == "x-bg" -> {
+            when (role) {
+                "x-bg" -> {
                     backgroundDepth++
                     frame.startsBackground = true
                 }
-                role == "x-roman" -> {
+                "x-roman" -> {
                     romanizationDepth++
                     frame.startsRomanization = true
                 }
-                role == "x-translation" && currentLine != null && backgroundDepth == 0 -> {
-                    if (inlineTranslationDepth == 0) {
-                        currentInlineTranslation = StringBuilder()
+                "x-translation" -> {
+                    if (currentLine != null && backgroundDepth == 0) {
+                        if (inlineTranslationDepth == 0) {
+                            currentInlineTranslation = StringBuilder()
+                        }
+                        inlineTranslationDepth++
+                        frame.startsInlineTranslation = true
                     }
-                    inlineTranslationDepth++
-                    frame.startsInlineTranslation = true
                 }
             }
 
@@ -576,8 +578,8 @@ private fun SAXParserFactory.setFeatureIfSupported(feature: String, enabled: Boo
     runCatching { setFeature(feature, enabled) }
 }
 
-private fun org.xml.sax.XMLReader.setFeatureIfSupported(feature: String, enabled: Boolean) {
-    runCatching { setFeature(feature, enabled) }
+private fun org.xml.sax.XMLReader.disableFeatureIfSupported(feature: String) {
+    runCatching { setFeature(feature, false) }
 }
 
 private fun Attributes.attributeValue(localName: String): String? {
