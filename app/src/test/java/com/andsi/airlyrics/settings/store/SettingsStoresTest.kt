@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
@@ -400,8 +401,31 @@ class SettingsStoresTest {
         LanguageSettingsStore.setMode(context, LanguageSettingsStore.MODE_EN)
         assertEquals(LanguageSettingsStore.MODE_EN, LanguageSettingsStore.getMode(context))
 
+        LanguageSettingsStore.setMode(context, LanguageSettingsStore.MODE_ZH_TW)
+        assertEquals(LanguageSettingsStore.MODE_ZH_TW, LanguageSettingsStore.getMode(context))
+
         LanguageSettingsStore.setMode(context, "other")
         assertEquals(LanguageSettingsStore.MODE_SYSTEM, LanguageSettingsStore.getMode(context))
+    }
+
+    @Test
+    fun languageSettingsStore_distinguishesSimplifiedAndTraditionalChineseLocales() {
+        assertEquals(
+            R.string.ui_chinese_simplified,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-CN"))
+        )
+        assertEquals(
+            R.string.ui_chinese_traditional,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-TW"))
+        )
+        assertEquals(
+            R.string.ui_chinese_traditional,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-Hant"))
+        )
+        assertEquals(
+            R.string.ui_chinese_traditional,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-HK"))
+        )
     }
 
     private fun clearPrefs() {

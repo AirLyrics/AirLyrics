@@ -406,6 +406,10 @@ internal class MainActivityUiHost(
                     title = getString(R.string.ui_chinese_simplified)
                 ),
                 LanguageOptionUiItem(
+                    mode = LanguageSettingsStore.MODE_ZH_TW,
+                    title = getString(R.string.ui_chinese_traditional)
+                ),
+                LanguageOptionUiItem(
                     mode = LanguageSettingsStore.MODE_EN,
                     title = getString(R.string.ui_english)
                 )
