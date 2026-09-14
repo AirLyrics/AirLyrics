@@ -329,7 +329,8 @@ internal class MainActivityUiHost(
     override fun permissionSummary(): String = permissionSummaryImpl()
     override fun getAppVersionName(): String = getAppVersionNameImpl()
     override fun openUrl(url: String) = openUrlImpl(url)
-    override fun refreshAfterLanguageChanged() = refreshAfterLanguageChangedImpl()
+    override fun reloadFloatingLyricsAfterLanguageChanged() =
+        reloadFloatingLyricsAfterLanguageChangedImpl()
 
     override fun hasNotificationPermission(): Boolean = uiState.postNotificationsGranted
     override fun hasNotificationListenerAccess(): Boolean = uiState.notificationListenerGranted

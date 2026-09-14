@@ -70,7 +70,13 @@ private class AirAnimatedDialog(
             .setDuration(DIALOG_EXIT_MS)
             .setInterpolator(AccelerateInterpolator())
             .withLayer()
-            .withEndAction { super.dismiss() }
+            .withEndAction {
+                // Activity recreation can detach the window while this animation
+                // is running. Android has already removed the dialog in that case.
+                if (window?.decorView?.isAttachedToWindow == true) {
+                    super.dismiss()
+                }
+            }
             .start()
     }
 }
