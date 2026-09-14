@@ -116,4 +116,28 @@ class SimpleSettingsStoresTest : SettingsStoreTestBase() {
         )
     }
 
+    @Test
+    fun languageSettingsStore_mapsSystemLanguageTagsToSupportedModes() {
+        assertEquals(
+            LanguageSettingsStore.MODE_SYSTEM,
+            LanguageSettingsStore.modeFromLanguageTags("")
+        )
+        assertEquals(
+            LanguageSettingsStore.MODE_EN,
+            LanguageSettingsStore.modeFromLanguageTags("en-US")
+        )
+        assertEquals(
+            LanguageSettingsStore.MODE_ZH_CN,
+            LanguageSettingsStore.modeFromLanguageTags("zh-Hans-CN")
+        )
+        assertEquals(
+            LanguageSettingsStore.MODE_ZH_TW,
+            LanguageSettingsStore.modeFromLanguageTags("zh-Hant-TW")
+        )
+        assertEquals(
+            LanguageSettingsStore.MODE_ZH_TW,
+            LanguageSettingsStore.modeFromLanguageTags("zh-HK")
+        )
+    }
+
 }

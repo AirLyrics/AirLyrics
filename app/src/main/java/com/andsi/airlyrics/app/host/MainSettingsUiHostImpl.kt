@@ -5,7 +5,6 @@ import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -219,23 +218,6 @@ internal fun MainUiHost.openUrlImpl(url: String) {
 }
 
 
-internal fun MainUiHost.refreshAfterLanguageChangedImpl() {
-    val oldContainer = contentContainer
-    oldContainer?.animate()
-        ?.alpha(0f)
-        ?.setDuration(AirUiTokens.Layout.FastFadeMs)
-        ?.withEndAction {
-            rebuildMainView()
-            contentContainer?.alpha = 0f
-            contentContainer?.animate()
-                ?.alpha(1f)
-                ?.setDuration(AirUiTokens.Layout.RestoreFadeMs)
-                ?.setInterpolator(DecelerateInterpolator())
-                ?.start()
-        }
-        ?.start()
-        ?: run {
-            rebuildMainView()
-        }
+internal fun MainUiHost.reloadFloatingLyricsAfterLanguageChangedImpl() {
     uiActions.reloadFloatingLyrics()
 }
