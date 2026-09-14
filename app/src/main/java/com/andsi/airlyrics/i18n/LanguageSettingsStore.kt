@@ -12,6 +12,7 @@ import java.util.Locale
 object LanguageSettingsStore {
     const val MODE_SYSTEM = "system"
     const val MODE_ZH_CN = "zh-CN"
+    const val MODE_ZH_TW = "zh-TW"
     const val MODE_EN = "en"
 
     private const val PREFS = "airlyrics_language_settings"
@@ -21,14 +22,14 @@ object LanguageSettingsStore {
 
     fun getMode(context: Context): String {
         return when (val stored = store(context).getString(KEY_MODE, MODE_SYSTEM)) {
-            MODE_ZH_CN, MODE_EN -> stored
+            MODE_ZH_CN, MODE_ZH_TW, MODE_EN -> stored
             else -> MODE_SYSTEM
         }
     }
 
     fun setMode(context: Context, mode: String) {
         val normalized = when (mode) {
-            MODE_ZH_CN, MODE_EN -> mode
+            MODE_ZH_CN, MODE_ZH_TW, MODE_EN -> mode
             else -> MODE_SYSTEM
         }
         store(context).setString(KEY_MODE, normalized)
@@ -39,6 +40,7 @@ object LanguageSettingsStore {
     fun applyAppLocale(context: Context) {
         val tags = when (getMode(context)) {
             MODE_ZH_CN -> MODE_ZH_CN
+            MODE_ZH_TW -> MODE_ZH_TW
             MODE_EN -> MODE_EN
             else -> ""
         }
@@ -60,17 +62,29 @@ object LanguageSettingsStore {
     fun currentDisplayName(context: Context): String {
         val mode = getMode(context)
         if (mode != MODE_SYSTEM) {
-            val languageRes = if (mode == MODE_ZH_CN) R.string.ui_chinese_simplified else R.string.ui_english
+            val languageRes = when (mode) {
+                MODE_ZH_CN -> R.string.ui_chinese_simplified
+                MODE_ZH_TW -> R.string.ui_chinese_traditional
+                else -> R.string.ui_english
+            }
             return context.getString(languageRes)
         }
 
-        val languageRes = if (isSystemChinese()) R.string.ui_chinese_simplified else R.string.ui_english
+        val systemLocale = Resources.getSystem().configuration.locales.get(0)
+        val languageRes = languageNameRes(systemLocale)
         val languageName = context.getString(languageRes)
         return context.getString(R.string.ui_follow_system) + " · " + languageName
     }
 
-    private fun isSystemChinese(): Boolean {
-        val locale = Resources.getSystem().configuration.locales.get(0)
-        return locale.language.equals(Locale.CHINESE.language, ignoreCase = true)
+    internal fun languageNameRes(locale: Locale): Int {
+        if (!locale.isChineseLanguage()) {
+            return R.string.ui_english
+        }
+
+        return if (locale.usesTraditionalChinese()) {
+            R.string.ui_chinese_traditional
+        } else {
+            R.string.ui_chinese_simplified
+        }
     }
 }

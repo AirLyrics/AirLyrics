@@ -16,11 +16,18 @@ internal fun Context.localizedAssetText(
 ): String {
     val tag = resources.configuration.locales[0]?.toLanguageTag()
         ?: Locale.getDefault().toLanguageTag()
+    val locale = Locale.forLanguageTag(tag)
+    val chineseFallbackTag = if (locale.isChineseLanguage()) {
+        if (locale.usesTraditionalChinese()) "zh-TW" else "zh-CN"
+    } else {
+        null
+    }
     val candidates = listOf(
         "$baseName.$tag.$extension",
+        chineseFallbackTag?.let { "$baseName.$it.$extension" },
         "$baseName.${tag.substringBefore('-')}.$extension",
         "$baseName.en.$extension"
-    ).distinct()
+    ).filterNotNull().distinct()
 
     for (candidate in candidates) {
         val text = runCatching {

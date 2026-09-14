@@ -67,6 +67,7 @@
     <string name="ui_view_full_changelog">完整更新日志</string>
     <string name="ui_check_format">检查格式</string>
     <string name="ui_chinese_simplified">简体中文</string>
+    <string name="ui_chinese_traditional">繁體中文</string>
     <string name="ui_choose_import_type">选择导入类型</string>
     <string name="ui_choose_accent_color">选择强调色</string>
     <string name="ui_choose_lyrics_save_folder">选择歌词保存目录</string>

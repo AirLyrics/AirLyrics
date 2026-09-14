@@ -1,8 +1,10 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -87,8 +89,31 @@ class SimpleSettingsStoresTest : SettingsStoreTestBase() {
         LanguageSettingsStore.setMode(context, LanguageSettingsStore.MODE_EN)
         assertEquals(LanguageSettingsStore.MODE_EN, LanguageSettingsStore.getMode(context))
 
+        LanguageSettingsStore.setMode(context, LanguageSettingsStore.MODE_ZH_TW)
+        assertEquals(LanguageSettingsStore.MODE_ZH_TW, LanguageSettingsStore.getMode(context))
+
         LanguageSettingsStore.setMode(context, "other")
         assertEquals(LanguageSettingsStore.MODE_SYSTEM, LanguageSettingsStore.getMode(context))
+    }
+
+    @Test
+    fun languageSettingsStore_distinguishesSimplifiedAndTraditionalChineseLocales() {
+        assertEquals(
+            R.string.ui_chinese_simplified,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-CN"))
+        )
+        assertEquals(
+            R.string.ui_chinese_traditional,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-TW"))
+        )
+        assertEquals(
+            R.string.ui_chinese_traditional,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-Hant"))
+        )
+        assertEquals(
+            R.string.ui_chinese_traditional,
+            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-HK"))
+        )
     }
 
 }

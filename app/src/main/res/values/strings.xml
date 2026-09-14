@@ -67,6 +67,7 @@
     <string name="ui_view_full_changelog">Full changelog</string>
     <string name="ui_check_format">Check format</string>
     <string name="ui_chinese_simplified">简体中文</string>
+    <string name="ui_chinese_traditional">繁體中文</string>
     <string name="ui_choose_import_type">Choose import type</string>
     <string name="ui_choose_accent_color">Choose accent color</string>
     <string name="ui_choose_lyrics_save_folder">Choose lyrics save folder</string>
