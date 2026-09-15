@@ -31,6 +31,7 @@ NUMERIC_KEY_ALLOWLIST = {
 # lyric so the translated line remains visually distinct.
 DEFAULT_RESOURCE_CJK_ALLOWLIST = {
     'ui_chinese_simplified',
+    'ui_chinese_traditional',
     'ui_next_lyric_preview',
     'ui_previous_lyric_preview',
     'ui_this_is_a_lyric_preview',
@@ -69,6 +70,7 @@ print('Checking Android string resources...')
 resource_paths = [
     Path('app/src/main/res/values/strings.xml'),
     Path('app/src/main/res/values-zh-rCN/strings.xml'),
+    Path('app/src/main/res/values-zh-rTW/strings.xml'),
 ]
 resources: dict[str, dict[str, str]] = {}
 for path in resource_paths:

@@ -28,7 +28,7 @@ internal interface SettingsUiHost {
     fun permissionSummary(): String
     fun getAppVersionName(): String
     fun openUrl(url: String)
-    fun refreshAfterLanguageChanged()
+    fun reloadFloatingLyricsAfterLanguageChanged()
 
     fun hasNotificationPermission(): Boolean
     fun hasNotificationListenerAccess(): Boolean
