@@ -262,45 +262,37 @@ class LrcParserTest {
     }
 
     @Test
-    fun normalizeForStorage_mergesSameTimestampLinesAsTranslation() {
-        val normalized = LrcParser.normalizeForStorage(
-            """
-            [00:10.00]君の背中
-            [00:10.00]你的背影
-            [00:20.00]次の原文
-            [00:20.00]下一句翻译
-            """.trimIndent()
+    fun normalizeForStorage_mergesSameTimestampVariantsAsTranslation() {
+        val cases = listOf(
+            Triple(
+                "multiple timestamps",
+                """
+                [00:10.00]君の背中
+                [00:10.00]你的背影
+                [00:20.00]次の原文
+                [00:20.00]下一句翻译
+                """.trimIndent(),
+                "[00:10.00]君の背中 / 你的背影\n[00:20.00]次の原文 / 下一句翻译"
+            ),
+            Triple(
+                "unsorted input",
+                """
+                [00:20.00]次の原文
+                [00:10.00]君の背中
+                [00:10.00]你的背影
+                """.trimIndent(),
+                "[00:10.00]君の背中 / 你的背影\n[00:20.00]次の原文"
+            ),
+            Triple(
+                "compact export",
+                "[00:10.00]君の背中[00:10.00]你的背影",
+                "[00:10.00]君の背中 / 你的背影"
+            )
         )
 
-        assertEquals(
-            "[00:10.00]君の背中 / 你的背影\n[00:20.00]次の原文 / 下一句翻译",
-            normalized
-        )
-    }
-
-    @Test
-    fun normalizeForStorage_mergesSameTimestampLinesAfterSortingInput() {
-        val normalized = LrcParser.normalizeForStorage(
-            """
-            [00:20.00]次の原文
-            [00:10.00]君の背中
-            [00:10.00]你的背影
-            """.trimIndent()
-        )
-
-        assertEquals(
-            "[00:10.00]君の背中 / 你的背影\n[00:20.00]次の原文",
-            normalized
-        )
-    }
-
-    @Test
-    fun normalizeForStorage_mergesCompactSameTimestampSegmentsAsTranslation() {
-        val normalized = LrcParser.normalizeForStorage(
-            "[00:10.00]君の背中[00:10.00]你的背影"
-        )
-
-        assertEquals("[00:10.00]君の背中 / 你的背影", normalized)
+        cases.forEach { (name, input, expected) ->
+            assertEquals(name, expected, LrcParser.normalizeForStorage(input))
+        }
     }
 
     @Test

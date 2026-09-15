@@ -28,7 +28,6 @@ class LyricsChangedBroadcastTest {
 
         assertEquals(context.packageName, intent?.`package`)
         assertEquals(LyricsChange.updated(target), LyricsChangedBroadcast.readChange(intent))
-        assertEquals(target, LyricsChangedBroadcast.readTarget(intent))
         assertTrue(LyricsChangedBroadcast.lyricsChangedFilter().hasAction(intent?.action))
     }
 
@@ -52,11 +51,10 @@ class LyricsChangedBroadcastTest {
 
         assertEquals(LyricsChange.deleted(target), LyricsChangedBroadcast.readChange(targetedIntent))
         assertEquals(LyricsChange.deleted(), LyricsChangedBroadcast.readChange(globalIntent))
-        assertNull(LyricsChangedBroadcast.readTarget(globalIntent))
     }
 
     @Test
-    fun readTarget_rejectsWrongActionMalformedPayloadAndEmptyTarget() {
+    fun readChange_rejectsWrongActionMalformedPayloadAndEmptyTarget() {
         val validTarget = SongIdentity(
             title = "Valid Song",
             artist = "Artist",
@@ -74,10 +72,10 @@ class LyricsChangedBroadcastTest {
             validTarget.copy(title = " ")
         )
 
-        assertNull(LyricsChangedBroadcast.readTarget(wrongAction))
-        assertNull(LyricsChangedBroadcast.readTarget(missingDuration))
+        assertNull(LyricsChangedBroadcast.readChange(wrongAction))
+        assertNull(LyricsChangedBroadcast.readChange(missingDuration))
         assertNull(LyricsChangedBroadcast.readChange(invalidKind))
         assertNull(blankTitle)
-        assertNull(LyricsChangedBroadcast.readTarget(null))
+        assertNull(LyricsChangedBroadcast.readChange(null))
     }
 }

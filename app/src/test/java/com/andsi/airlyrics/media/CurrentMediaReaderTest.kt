@@ -10,44 +10,56 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class CurrentMediaReaderTest {
     @Test
-    fun estimatedPositionMs_returnsZeroWhenStateIsMissing() {
-        assertEquals(0L, CurrentMediaReader.estimatedPositionMs(null, elapsedRealtimeMs = 10_000L))
-    }
-
-    @Test
-    fun estimatedPositionMs_doesNotAdvancePausedState() {
-        val state = playbackState(
-            state = PlaybackState.STATE_PAUSED,
-            positionMs = 62_000L,
-            speed = 0f,
-            updateTimeMs = 5_000L
+    fun estimatedPositionMs_handlesPlaybackStatesAndSpeed() {
+        val cases = listOf(
+            PositionCase(
+                name = "missing state",
+                state = null,
+                elapsedRealtimeMs = 10_000L,
+                expectedPositionMs = 0L
+            ),
+            PositionCase(
+                name = "paused state",
+                state = playbackState(
+                    state = PlaybackState.STATE_PAUSED,
+                    positionMs = 62_000L,
+                    speed = 0f,
+                    updateTimeMs = 5_000L
+                ),
+                elapsedRealtimeMs = 12_000L,
+                expectedPositionMs = 62_000L
+            ),
+            PositionCase(
+                name = "playing at normal speed",
+                state = playbackState(
+                    state = PlaybackState.STATE_PLAYING,
+                    positionMs = 62_000L,
+                    speed = 1f,
+                    updateTimeMs = 5_000L
+                ),
+                elapsedRealtimeMs = 12_000L,
+                expectedPositionMs = 69_000L
+            ),
+            PositionCase(
+                name = "playing at 1.5x speed",
+                state = playbackState(
+                    state = PlaybackState.STATE_PLAYING,
+                    positionMs = 10_000L,
+                    speed = 1.5f,
+                    updateTimeMs = 2_000L
+                ),
+                elapsedRealtimeMs = 6_000L,
+                expectedPositionMs = 16_000L
+            )
         )
 
-        assertEquals(62_000L, CurrentMediaReader.estimatedPositionMs(state, elapsedRealtimeMs = 12_000L))
-    }
-
-    @Test
-    fun estimatedPositionMs_advancesPlayingStateFromLastUpdateTime() {
-        val state = playbackState(
-            state = PlaybackState.STATE_PLAYING,
-            positionMs = 62_000L,
-            speed = 1f,
-            updateTimeMs = 5_000L
-        )
-
-        assertEquals(69_000L, CurrentMediaReader.estimatedPositionMs(state, elapsedRealtimeMs = 12_000L))
-    }
-
-    @Test
-    fun estimatedPositionMs_appliesPlaybackSpeed() {
-        val state = playbackState(
-            state = PlaybackState.STATE_PLAYING,
-            positionMs = 10_000L,
-            speed = 1.5f,
-            updateTimeMs = 2_000L
-        )
-
-        assertEquals(16_000L, CurrentMediaReader.estimatedPositionMs(state, elapsedRealtimeMs = 6_000L))
+        cases.forEach { case ->
+            assertEquals(
+                case.name,
+                case.expectedPositionMs,
+                CurrentMediaReader.estimatedPositionMs(case.state, case.elapsedRealtimeMs)
+            )
+        }
     }
 
     @Test
@@ -164,6 +176,13 @@ class CurrentMediaReaderTest {
             .setState(state, positionMs, speed, updateTimeMs)
             .build()
     }
+
+    private data class PositionCase(
+        val name: String,
+        val state: PlaybackState?,
+        val elapsedRealtimeMs: Long,
+        val expectedPositionMs: Long
+    )
 
     private fun candidate(
         value: String,

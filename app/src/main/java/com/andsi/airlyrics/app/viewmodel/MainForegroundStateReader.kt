@@ -12,12 +12,16 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
 /** Reads platform and persisted sources into a stable main-screen snapshot. */
+internal fun interface ForegroundSnapshotReader {
+    fun read(): ForegroundUiSnapshot
+}
+
 internal class MainForegroundStateReader(
     context: Context
-) {
+) : ForegroundSnapshotReader {
     private val appContext = context.applicationContext
 
-    fun read(): ForegroundUiSnapshot {
+    override fun read(): ForegroundUiSnapshot {
         return ForegroundUiSnapshot(
             permissions = PermissionUiSnapshot(
                 overlayGranted = Settings.canDrawOverlays(appContext),

@@ -14,11 +14,15 @@ internal sealed interface FloatingFontImportOutcome {
     data object ReadFailed : FloatingFontImportOutcome
 }
 
+internal fun interface FloatingFontImportOperation {
+    fun import(uri: Uri): FloatingFontImportOutcome
+}
+
 /** Blocking custom-font import. The ViewModel owns dispatching and presentation outcomes. */
-internal class FloatingFontImporter(context: Context) {
+internal class FloatingFontImporter(context: Context) : FloatingFontImportOperation {
     private val appContext = context.applicationContext
 
-    fun import(uri: Uri): FloatingFontImportOutcome {
+    override fun import(uri: Uri): FloatingFontImportOutcome {
         return when (val result = FloatingLyricsFontStore.importFont(appContext, uri)) {
             is FloatingLyricsFontStore.ImportResult.Success -> {
                 FloatingLyricsStyleStore.setFontFamily(

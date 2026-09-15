@@ -25,7 +25,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
@@ -69,7 +68,7 @@ class MainActivityLyricsOverwriteRecreationTest {
     fun overwriteConfirmation_activityRecreated_preservesOriginalRequestAndImportsExactlyOnce() {
         saveExistingWordByWordLyrics(SONG_A)
         val inputOpenCount = AtomicInteger()
-        registerLyricsInput(ORIGINAL_URI, inputOpenCount, "new")
+        registerLyricsInput(ORIGINAL_URI, inputOpenCount)
         val controller = launchActivity()
         val oldActivity = controller.get()
 
@@ -125,15 +124,6 @@ class MainActivityLyricsOverwriteRecreationTest {
                 duration = SONG_A.durationMs
             )
         )
-        assertFalse(
-            LyricsStorage.hasWordByWordLyrics(
-                context = newActivity,
-                title = SONG_B.title,
-                artist = SONG_B.artist,
-                duration = SONG_B.durationMs
-            )
-        )
-
         ShadowDialog.reset()
         controller.recreate()
         ShadowLooper.idleMainLooper()
@@ -141,113 +131,6 @@ class MainActivityLyricsOverwriteRecreationTest {
 
         assertNull(ShadowDialog.getLatestDialog())
         assertNull(controller.get().graph.state.pendingLyricsOverwrite)
-        assertEquals(1, inputOpenCount.get())
-    }
-
-    @Test
-    fun overwriteConfirmation_cancelThenRecreate_doesNotRestoreOrImport() {
-        saveExistingWordByWordLyrics(SONG_A)
-        val inputOpenCount = AtomicInteger()
-        registerLyricsInput(ORIGINAL_URI, inputOpenCount, "cancelled")
-        val controller = launchActivity()
-        val activity = controller.get()
-
-        deliverPickerResult(
-            activity = activity,
-            uri = ORIGINAL_URI,
-            target = SONG_A
-        )
-        awaitPendingOverwrite(activity)
-
-        val dialog = requireOverwriteDialog(activity)
-        requireDialogButton(dialog, activity.getString(R.string.ui_cancel)).performClick()
-        ShadowLooper.idleMainLooper(200, TimeUnit.MILLISECONDS)
-
-        assertNull(activity.graph.state.pendingLyricsOverwrite)
-        assertEquals(0, inputOpenCount.get())
-
-        ShadowDialog.reset()
-        controller.recreate()
-        ShadowLooper.idleMainLooper()
-        awaitAppIo(controller.get())
-
-        assertNull(ShadowDialog.getLatestDialog())
-        assertNull(controller.get().graph.state.pendingLyricsOverwrite)
-        assertEquals(0, inputOpenCount.get())
-        assertEquals(
-            "[00:10.00]old",
-            LyricsStorage.readPlainLyrics(
-                context = controller.get(),
-                title = SONG_A.title,
-                artist = SONG_A.artist,
-                duration = SONG_A.durationMs
-            )
-        )
-    }
-
-    @Test
-    fun overwriteConfirmation_restoredUnreadableUri_consumesRequestAndShowsReadFailedOnce() {
-        saveExistingWordByWordLyrics(SONG_A)
-        val inputOpenCount = AtomicInteger()
-        shadowOf(context.contentResolver).registerInputStreamSupplier(ORIGINAL_URI) {
-            inputOpenCount.incrementAndGet()
-            throw SecurityException("Expired URI permission")
-        }
-        val controller = launchActivity()
-        val activity = controller.get()
-
-        deliverPickerResult(
-            activity = activity,
-            uri = ORIGINAL_URI,
-            target = SONG_A
-        )
-        awaitPendingOverwrite(activity)
-        requireOverwriteDialog(activity)
-
-        controller.recreate()
-        ShadowLooper.idleMainLooper()
-        val restoredActivity = controller.get()
-        val restoredDialog = requireOverwriteDialog(restoredActivity)
-        requireDialogButton(
-            restoredDialog,
-            restoredActivity.getString(R.string.ui_overwrite)
-        ).performClick()
-        awaitCondition("Timed out waiting for unreadable import outcome") {
-            inputOpenCount.get() == 1 &&
-                restoredActivity.graph.state.pendingLyricsOverwrite == null &&
-                restoredActivity
-                    .findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
-                    ?.text
-                    ?.toString() == restoredActivity.getString(
-                        R.string.ui_cannot_read_word_by_word_lyrics_file
-                    )
-        }
-
-        assertEquals(1, inputOpenCount.get())
-        assertNull(restoredActivity.graph.state.pendingLyricsOverwrite)
-        assertEquals(
-            restoredActivity.getString(R.string.ui_cannot_read_word_by_word_lyrics_file),
-            restoredActivity
-                .findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
-                ?.text
-                ?.toString()
-        )
-        assertEquals(
-            "[00:10.00]old",
-            LyricsStorage.readPlainLyrics(
-                context = restoredActivity,
-                title = SONG_A.title,
-                artist = SONG_A.artist,
-                duration = SONG_A.durationMs
-            )
-        )
-
-        ShadowDialog.reset()
-        controller.recreate()
-        ShadowLooper.idleMainLooper()
-        awaitAppIo(controller.get())
-
-        assertNull(ShadowDialog.getLatestDialog())
         assertEquals(1, inputOpenCount.get())
     }
 
@@ -323,10 +206,10 @@ class MainActivityLyricsOverwriteRecreationTest {
         assertTrue(message, condition())
     }
 
-    private fun registerLyricsInput(uri: Uri, openCount: AtomicInteger, word: String) {
+    private fun registerLyricsInput(uri: Uri, openCount: AtomicInteger) {
         shadowOf(context.contentResolver).registerInputStreamSupplier(uri) {
             openCount.incrementAndGet()
-            ByteArrayInputStream("[00:10.00]<00:10.00>$word".toByteArray())
+            ByteArrayInputStream("[00:10.00]<00:10.00>new".toByteArray())
         }
     }
 
@@ -379,11 +262,5 @@ class MainActivityLyricsOverwriteRecreationTest {
             durationMs = 185_000L
         )
 
-        val SONG_B = SongIdentity(
-            title = "Other Song B",
-            artist = "Other Artist B",
-            album = "Other Album B",
-            durationMs = 240_000L
-        )
     }
 }

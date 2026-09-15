@@ -14,10 +14,12 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.controller.CurrentLyricsDeleteOutcome
 import com.andsi.airlyrics.app.controller.FloatingFontImportOutcome
+import com.andsi.airlyrics.app.controller.FloatingFontImportOperation
 import com.andsi.airlyrics.app.controller.FloatingFontImporter
 import com.andsi.airlyrics.app.controller.LyricsController
 import com.andsi.airlyrics.app.controller.LyricsDocumentValidation
 import com.andsi.airlyrics.app.controller.LyricsImportOutcome
+import com.andsi.airlyrics.app.controller.LyricsOperations
 import com.andsi.airlyrics.app.controller.OnlineLyricsSearchOutcome
 import com.andsi.airlyrics.app.state.MainFloatingState
 import com.andsi.airlyrics.app.state.LyricsImportType
@@ -38,6 +40,7 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -53,9 +56,10 @@ import kotlinx.coroutines.withContext
 /** Owns main-screen state and state transitions; Android UI work remains in MainGraph. */
 internal class MainViewModel(
     private val savedStateHandle: SavedStateHandle,
-    private val lyricsController: LyricsController,
-    private val foregroundStateReader: MainForegroundStateReader,
-    private val floatingFontImporter: FloatingFontImporter
+    private val lyricsController: LyricsOperations,
+    private val foregroundStateReader: ForegroundSnapshotReader,
+    private val floatingFontImporter: FloatingFontImportOperation,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel(), MainFloatingState {
     private val _uiState = MutableStateFlow(restoredState())
     val uiState: StateFlow<MainScreenState> = _uiState.asStateFlow()
@@ -158,7 +162,7 @@ internal class MainViewModel(
 
     fun setLyricsDirectory(uri: Uri) {
         viewModelScope.launch {
-            val saved = withContext(Dispatchers.IO) {
+            val saved = withContext(ioDispatcher) {
                 lyricsController.setLyricsDirectory(uri)
             }
             if (!saved) {
@@ -176,7 +180,7 @@ internal class MainViewModel(
         uri ?: return
         showMessage(R.string.ui_importing_font)
         viewModelScope.launch {
-            when (val outcome = withContext(Dispatchers.IO) {
+            when (val outcome = withContext(ioDispatcher) {
                 floatingFontImporter.import(uri)
             }) {
                 is FloatingFontImportOutcome.Success -> {
@@ -204,7 +208,7 @@ internal class MainViewModel(
         }
         val target = media.toSongIdentity()
         viewModelScope.launch {
-            val availability = withContext(Dispatchers.IO) {
+            val availability = withContext(ioDispatcher) {
                 lyricsController.importAvailability(target)
             }
             uiEffectChannel.trySend(
@@ -231,7 +235,7 @@ internal class MainViewModel(
         }
 
         viewModelScope.launch {
-            when (withContext(Dispatchers.IO) {
+            when (withContext(ioDispatcher) {
                 lyricsController.validatePickedDocument(uri)
             }) {
                 LyricsDocumentValidation.UnsupportedFormat -> {
@@ -280,7 +284,7 @@ internal class MainViewModel(
         }
         showMessage(R.string.ui_searching_online_again)
         viewModelScope.launch {
-            when (val outcome = withContext(Dispatchers.IO) {
+            when (val outcome = withContext(ioDispatcher) {
                 lyricsController.searchOnlineLyricsForCurrentMedia(media)
             }) {
                 OnlineLyricsSearchOutcome.Saved ->
@@ -298,7 +302,7 @@ internal class MainViewModel(
     fun deleteLyricsForCurrentMedia(mode: LyricsStorage.DeleteMode) {
         val media = lyricsController.getCurrentMediaInfo() ?: return
         viewModelScope.launch {
-            val outcome = withContext(Dispatchers.IO) {
+            val outcome = withContext(ioDispatcher) {
                 lyricsController.deleteLyricsForCurrentMedia(media, mode)
             }
             showCurrentLyricsDeleteMessage(outcome)
@@ -308,7 +312,7 @@ internal class MainViewModel(
     fun deleteSavedLyricsItem(item: LyricsStorage.LocalLyricsItem): Long {
         val requestId = nextSavedLyricsDeletionRequestId.incrementAndGet()
         viewModelScope.launch {
-            val result = withContext(Dispatchers.IO) {
+            val result = withContext(ioDispatcher) {
                 lyricsController.deleteSavedLyricsItem(item)
             }
             notifyLyricsChanged(LyricsStorage.currentRevision())
@@ -335,7 +339,7 @@ internal class MainViewModel(
 
     fun deleteAllSavedLyrics() {
         viewModelScope.launch {
-            when (withContext(Dispatchers.IO) { lyricsController.deleteAllSavedLyrics() }) {
+            when (withContext(ioDispatcher) { lyricsController.deleteAllSavedLyrics() }) {
                 LyricsStorage.DeleteAllSavedLyricsResult.DELETED ->
                     showMessage(R.string.ui_all_saved_lyrics_deleted)
                 LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE ->
@@ -456,7 +460,7 @@ internal class MainViewModel(
         overwrite: Boolean,
         importAsWordByWord: Boolean
     ) {
-        when (val outcome = withContext(Dispatchers.IO) {
+        when (val outcome = withContext(ioDispatcher) {
             lyricsController.importLyricsForTarget(
                 uri = uri,
                 target = target,

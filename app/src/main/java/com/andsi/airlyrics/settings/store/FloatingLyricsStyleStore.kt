@@ -232,10 +232,6 @@ object FloatingLyricsStyleStore {
         prefs(context).setString(KEY_FONT_FAMILY, fontFamily.key)
     }
 
-    fun setFontWeight(context: Context, fontWeight: Int) {
-        prefs(context).setInt(KEY_FONT_WEIGHT, FloatingLyricsFontWeight.normalize(fontWeight))
-    }
-
     fun setShadowColor(context: Context, color: Int) {
         prefs(context).setInt(KEY_SHADOW_COLOR, color)
     }

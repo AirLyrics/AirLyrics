@@ -1,30 +1,96 @@
 package com.andsi.airlyrics.lyrics.storage
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.core.model.SongIdentity
 import java.io.File
+import java.util.Locale
 import org.json.JSONArray
-import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class LyricsIndexCompatibilityContractTest {
-    private lateinit var context: Context
+class LyricsStorageCompatibilityTest : LyricsStorageTestBase() {
+    @Test
+    fun readPlainLyrics_usesLegacyIndexPathAfterStorageKeyBecomesRootStable() {
+        val plainLrc = "[00:01.00]legacy locale path"
+        val identity = SongIdentity(
+            title = "INDIGO",
+            artist = "ARTIST",
+            durationMs = 180_900L
+        )
+        val legacyKey = "2c38d002d54afdbf7ca9281fe90d7ae261cff2be"
+        val legacyFileName = "2c38d002d54afdbf.lrc"
+        val legacyRelativePath = "lyrics/$legacyFileName"
 
-    @Before
-    fun setUp() {
-        context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        assertEquals(
+            "a11e82c8fbfbe4a976ab8e497d003f8728ab3e98",
+            identity.storageKey()
+        )
+        assertFalse(identity.storageKey() == legacyKey)
+        assertTrue(LyricsFileStore.writeManagedLyrics(context, legacyFileName, plainLrc))
+        assertTrue(
+            LyricsIndexStore.write(
+                context,
+                listOf(
+                    LyricsIndexEntry(
+                        key = legacyKey,
+                        title = identity.title,
+                        artist = identity.artist,
+                        album = "",
+                        durationMs = identity.durationMs,
+                        plainFile = legacyRelativePath,
+                        plainSource = LyricsStorage.SOURCE_DOWNLOADED,
+                        plainProvider = "legacy-locale-test",
+                        createdAt = 1L,
+                        updatedAt = 2L
+                    )
+                )
+            )
+        )
+
+        assertEquals(
+            plainLrc,
+            LyricsStorage.readPlainLyrics(
+                context,
+                identity.title,
+                identity.artist,
+                identity.durationMs
+            )
+        )
     }
 
-    @After
-    fun tearDown() {
-        resetStorage()
+    @Test
+    fun readPlainLyrics_matchesStoredIdentityCaseUnderTurkishLocale() {
+        val originalLocale = Locale.getDefault()
+        val plainLrc = "[00:01.00]locale-independent match"
+
+        try {
+            Locale.setDefault(Locale.forLanguageTag("tr-TR"))
+            assertTrue(
+                LyricsStorage.savePlainLyrics(
+                    context = context,
+                    title = "INDIGO",
+                    artist = "ARTIST",
+                    duration = 180_000L,
+                    plainLrc = plainLrc
+                )
+            )
+
+            assertEquals(
+                plainLrc,
+                LyricsStorage.readPlainLyrics(
+                    context = context,
+                    title = "indigo",
+                    artist = "artist",
+                    duration = 180_000L
+                )
+            )
+        } finally {
+            Locale.setDefault(originalLocale)
+        }
     }
 
     @Test
@@ -93,13 +159,4 @@ class LyricsIndexCompatibilityContractTest {
 
     private fun indexFile(): File =
         File(LyricsStoragePaths.fallbackLyricsDir(context), INDEX_FILE_NAME)
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
-        File(baseDir, FALLBACK_LYRICS_DIR).deleteRecursively()
-    }
 }

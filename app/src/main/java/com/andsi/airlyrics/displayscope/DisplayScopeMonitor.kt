@@ -90,7 +90,12 @@ internal class DisplayScopeMonitor(
     private val mainHandler = Handler(Looper.getMainLooper())
     private val workerThread = HandlerThread("AirLyrics-DisplayScope").apply { start() }
     private val workerHandler = Handler(workerThread.looper)
-    private val tracker = VisibleActivityTracker()
+    private val snapshotReader = DisplayScopeSnapshotReader(
+        hasUsageAccess = { DisplayScopeCapability.hasUsageAccess(appContext) },
+        currentTimeMillis = System::currentTimeMillis,
+        elapsedRealtimeMillis = SystemClock::elapsedRealtime,
+        readEvents = ::readEvents
+    )
     private val displayStateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -115,7 +120,6 @@ internal class DisplayScopeMonitor(
 
     private var displayStateReceiverRegistered = false
     private var pausedForUnavailableDisplay = false
-    private var lastQueryEndMs = 0L
 
     fun start() {
         if (running) return
@@ -126,8 +130,7 @@ internal class DisplayScopeMonitor(
         registerDisplayStateReceiver()
         workerHandler.post {
             if (!isActive(task)) return@post
-            tracker.clear()
-            lastQueryEndMs = 0L
+            snapshotReader.reset()
             pausedForUnavailableDisplay = false
             poll(task)
         }
@@ -159,36 +162,7 @@ internal class DisplayScopeMonitor(
         }
         pausedForUnavailableDisplay = false
 
-        val now = System.currentTimeMillis()
-        val hasAccess = DisplayScopeCapability.hasUsageAccess(appContext)
-        val snapshot = if (!hasAccess) {
-            tracker.clear()
-            lastQueryEndMs = 0L
-            DisplayScopeVisibilitySnapshot(false, emptySet())
-        } else {
-            val queryStart = if (lastQueryEndMs == 0L) {
-                val timeSinceBoot = SystemClock.elapsedRealtime().coerceAtMost(INITIAL_LOOKBACK_MS)
-                now - timeSinceBoot
-            } else {
-                (lastQueryEndMs - EVENT_QUERY_OVERLAP_MS).coerceAtLeast(0L)
-            }
-            val eventsRead = runCatching {
-                readEvents(queryStart, now)
-            }.isSuccess
-            lastQueryEndMs = now
-
-            if (!eventsRead) {
-                tracker.clear()
-                lastQueryEndMs = 0L
-                DisplayScopeVisibilitySnapshot(
-                    usageAccessGranted = DisplayScopeCapability.hasUsageAccess(appContext),
-                    visiblePackages = emptySet(),
-                    visibilitySnapshotAvailable = false
-                )
-            } else {
-                DisplayScopeVisibilitySnapshot(true, tracker.visiblePackages())
-            }
-        }
+        val snapshot = snapshotReader.readSnapshot()
 
         if (!isDisplayAvailable()) {
             pauseForUnavailableDisplay(task)
@@ -216,12 +190,7 @@ internal class DisplayScopeMonitor(
         if (!isActive(task) || pausedForUnavailableDisplay) return
 
         pausedForUnavailableDisplay = true
-        tracker.clear()
-        lastQueryEndMs = System.currentTimeMillis()
-        val snapshot = DisplayScopeVisibilitySnapshot(
-            usageAccessGranted = DisplayScopeCapability.hasUsageAccess(appContext),
-            visiblePackages = emptySet()
-        )
+        val snapshot = snapshotReader.displayUnavailableSnapshot()
         publishSnapshot(task, snapshot)
     }
 
@@ -263,12 +232,16 @@ internal class DisplayScopeMonitor(
         displayStateReceiverRegistered = false
     }
 
-    private fun readEvents(beginTimeMs: Long, endTimeMs: Long) {
+    private fun readEvents(
+        beginTimeMs: Long,
+        endTimeMs: Long,
+        accept: (DisplayScopeUsageEvent) -> Unit
+    ) {
         val events = usageStatsManager.queryEvents(beginTimeMs, endTimeMs)
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            tracker.accept(
+            accept(
                 DisplayScopeUsageEvent(
                     type = event.eventType,
                     packageName = event.packageName,
@@ -280,7 +253,5 @@ internal class DisplayScopeMonitor(
 
     private companion object {
         const val POLL_INTERVAL_MS = 750L
-        const val EVENT_QUERY_OVERLAP_MS = 1_000L
-        const val INITIAL_LOOKBACK_MS = 24L * 60L * 60L * 1_000L
     }
 }

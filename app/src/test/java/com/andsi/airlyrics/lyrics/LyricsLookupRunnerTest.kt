@@ -195,7 +195,10 @@ class LyricsLookupRunnerTest {
                 }
             }
 
-            latestSubmissionReturned.await(2, TimeUnit.SECONDS)
+            assertTrue(
+                "Latest submission must return while the stale submission is still gated",
+                latestSubmissionReturned.await(2, TimeUnit.SECONDS)
+            )
             productionExecutor.releaseGatedSubmission()
 
             val staleHandle = staleSubmission.get(2, TimeUnit.SECONDS)

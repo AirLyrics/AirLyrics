@@ -39,14 +39,6 @@ object LyricsSettingsStore {
         }
     }
 
-    fun setPlainLyricsSource(context: Context, plainLyricsSource: String) {
-        setPlainLyricsSearchSource(
-            context,
-            PlainLyricsSearchSource.fromKeyOrNull(plainLyricsSource) ?: PlainLyricsSearchSource.LOCAL_ONLY
-        )
-    }
-
-
     fun isAutoSearchOnlineEnabled(context: Context): Boolean {
         val persistedSourceKey = store(context).getString(KEY_PLAIN_LYRICS_SOURCE)
         val persistedSource = PlainLyricsSearchSource.fromKeyOrNull(persistedSourceKey)

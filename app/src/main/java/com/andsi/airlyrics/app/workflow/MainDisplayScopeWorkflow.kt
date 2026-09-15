@@ -35,19 +35,11 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import java.util.Locale
 
 /** Owns app discovery and selection for the optional display-scope allowlist. */
 internal class MainDisplayScopeWorkflow(
     private val graph: MainGraph
 ) {
-    private data class AppChoice(
-        val packageName: String,
-        val label: String,
-        val icon: Drawable?,
-        val searchText: String
-    )
-
     private data class AppChoiceRowViews(
         val icon: ImageView,
         val label: TextView,
@@ -58,16 +50,15 @@ internal class MainDisplayScopeWorkflow(
     private inner class AppPickerSession(
         private val dialog: Dialog,
         private val adapter: AppChoiceAdapter,
-        private val selectedPackages: MutableSet<String>,
         private val emptyView: TextView
     ) {
-        fun showChoices(choices: List<AppChoice>, pruneMissingSelections: Boolean) {
+        fun showChoices(
+            choices: List<DisplayScopeAppChoice>,
+            pruneMissingSelections: Boolean
+        ) {
             if (!dialog.isShowing) return
-            if (pruneMissingSelections) {
-                selectedPackages.retainAll(choices.mapTo(hashSetOf(), AppChoice::packageName))
-            }
             emptyView.setText(R.string.ui_no_apps_found)
-            adapter.submitChoices(choices)
+            adapter.submitChoices(choices, pruneMissingSelections)
         }
     }
 
@@ -198,7 +189,7 @@ internal class MainDisplayScopeWorkflow(
     }
 
     @Volatile
-    private var cachedChoices: List<AppChoice>? = null
+    private var cachedChoices: List<DisplayScopeAppChoice>? = null
 
     @Volatile
     private var loadingChoices = false
@@ -230,7 +221,7 @@ internal class MainDisplayScopeWorkflow(
     }
 
     @Suppress("DEPRECATION")
-    private fun loadChoices(): List<AppChoice> {
+    private fun loadChoices(): List<DisplayScopeAppChoice> {
         val packageManager = graph.activity.packageManager
         val intents = listOf(
             Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
@@ -249,23 +240,24 @@ internal class MainDisplayScopeWorkflow(
                 val label = resolveInfo.loadLabel(packageManager).toString().trim()
                     .takeIf(String::isNotBlank)
                     ?: packageName
-                AppChoice(
+                DisplayScopeAppChoice(
                     packageName = packageName,
                     label = label,
-                    icon = runCatching { resolveInfo.loadIcon(packageManager) }.getOrNull(),
-                    searchText = "$label\n$packageName".lowercase(Locale.ROOT)
+                    icon = runCatching { resolveInfo.loadIcon(packageManager) }.getOrNull()
                 )
             }
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, AppChoice::label))
+            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, DisplayScopeAppChoice::label))
             .toList()
     }
 
     private fun showAppPickerDialog(
-        choices: List<AppChoice>,
+        choices: List<DisplayScopeAppChoice>,
         loading: Boolean = false
     ): AppPickerSession = with(graph.uiHost) {
         val selected = DisplayScopeStore.selectedPackages(this).toMutableSet().apply {
-            if (!loading) retainAll(choices.mapTo(hashSetOf(), AppChoice::packageName))
+            if (!loading) {
+                retainAll(choices.mapTo(hashSetOf(), DisplayScopeAppChoice::packageName))
+            }
         }
         val adapter = AppChoiceAdapter(choices, selected)
         lateinit var empty: TextView
@@ -387,7 +379,7 @@ internal class MainDisplayScopeWorkflow(
                 graph.onDisplayScopeSelectionChanged()
             }
         )
-        AppPickerSession(dialog, adapter, selected, empty)
+        AppPickerSession(dialog, adapter, empty)
     }
 
     private fun updateSelectAllButton(
@@ -464,68 +456,59 @@ internal class MainDisplayScopeWorkflow(
     }
 
     private inner class AppChoiceAdapter(
-        private var choices: List<AppChoice>,
-        private val selectedPackages: MutableSet<String>
+        choices: List<DisplayScopeAppChoice>,
+        selectedPackages: MutableSet<String>
     ) : BaseAdapter() {
         var onSelectionStateChanged: (() -> Unit)? = null
 
-        private var normalizedQuery = ""
-        private var visibleChoices = choices
+        private val selection = DisplayScopeAppSelection(choices, selectedPackages)
 
-        override fun getCount(): Int = visibleChoices.size
+        override fun getCount(): Int = selection.visibleChoices.size
 
-        override fun getItem(position: Int): AppChoice = visibleChoices[position]
+        override fun getItem(position: Int): DisplayScopeAppChoice = selection.visibleChoices[position]
 
         override fun getItemId(position: Int): Long = getItem(position).packageName.hashCode().toLong()
 
         override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
             val row = convertView as? LinearLayout ?: createAppChoiceRow()
+            val choice = getItem(position)
             bindAppChoiceRow(
                 row = row,
-                choice = getItem(position),
-                selectedPackages = selectedPackages,
+                choice = choice,
+                selected = selection.isSelected(choice.packageName),
+                onSelectedChanged = { selected ->
+                    selection.setSelected(choice.packageName, selected)
+                },
                 onSelectionStateChanged = ::notifySelectionStateChanged
             )
             return row
         }
 
         fun filter(query: String) {
-            normalizedQuery = query.trim().lowercase(Locale.ROOT)
-            applyFilter()
+            selection.filter(query)
+            notifyDataSetChanged()
         }
 
-        fun submitChoices(choices: List<AppChoice>) {
-            this.choices = choices
-            applyFilter()
+        fun submitChoices(
+            choices: List<DisplayScopeAppChoice>,
+            pruneMissingSelections: Boolean
+        ) {
+            selection.submitChoices(choices, pruneMissingSelections)
+            notifyDataSetChanged()
             notifySelectionStateChanged()
         }
 
-        fun hasChoices(): Boolean = choices.isNotEmpty()
+        fun hasChoices(): Boolean = selection.hasChoices()
 
-        fun areAllChoicesSelected(): Boolean {
-            return choices.isNotEmpty() && choices.all { it.packageName in selectedPackages }
-        }
+        fun areAllChoicesSelected(): Boolean = selection.areAllChoicesSelected()
 
         fun toggleAll() {
-            if (areAllChoicesSelected()) {
-                selectedPackages.clear()
-            } else {
-                selectedPackages.addAll(choices.map(AppChoice::packageName))
-            }
+            selection.toggleAll()
             notifyDataSetChanged()
             notifySelectionStateChanged()
         }
 
         private fun notifySelectionStateChanged() = onSelectionStateChanged?.invoke()
-
-        private fun applyFilter() {
-            visibleChoices = if (normalizedQuery.isEmpty()) {
-                choices
-            } else {
-                choices.filter { it.searchText.contains(normalizedQuery) }
-            }
-            notifyDataSetChanged()
-        }
     }
 
     private fun createAppChoiceRow(): LinearLayout = with(graph.uiHost) {
@@ -574,8 +557,9 @@ internal class MainDisplayScopeWorkflow(
 
     private fun bindAppChoiceRow(
         row: LinearLayout,
-        choice: AppChoice,
-        selectedPackages: MutableSet<String>,
+        choice: DisplayScopeAppChoice,
+        selected: Boolean,
+        onSelectedChanged: (Boolean) -> Unit,
         onSelectionStateChanged: () -> Unit
     ) {
         val views = row.tag as AppChoiceRowViews
@@ -583,14 +567,10 @@ internal class MainDisplayScopeWorkflow(
         views.label.text = choice.label
         views.packageName.text = choice.packageName
         views.toggle.setOnCheckedChangeListener(null)
-        views.toggle.isChecked = choice.packageName in selectedPackages
+        views.toggle.isChecked = selected
         views.toggle.contentDescription = choice.label
         views.toggle.setOnCheckedChangeListener { _, checked ->
-            if (checked) {
-                selectedPackages += choice.packageName
-            } else {
-                selectedPackages -= choice.packageName
-            }
+            onSelectedChanged(checked)
             onSelectionStateChanged()
         }
         row.setOnClickListener { views.toggle.toggle() }

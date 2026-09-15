@@ -36,28 +36,26 @@ class PlainLyricsDisplayFormatterTest {
     }
 
     @Test
-    fun format_originalWithTranslationRendersCurrentLineInDisplayOrder() {
-        val rendered = PlainLyricsDisplayFormatter.format(
-            plainLines = plainLines,
-            currentIndex = 1,
-            contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
-            lineMode = LyricsLineDisplayMode.CURRENT_ONLY
+    fun format_contentModesRenderCurrentLineAndTranslationFallback() {
+        assertEquals(
+            "second\n第二句",
+            PlainLyricsDisplayFormatter.format(
+                plainLines = plainLines,
+                currentIndex = 1,
+                contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
+                lineMode = LyricsLineDisplayMode.CURRENT_ONLY
+            )
         )
-
-        assertEquals("second\n第二句", rendered)
-    }
-
-    @Test
-    fun format_translationOnlyUsesFallbackWhenSelectedLinesHaveNoTranslation() {
-        val rendered = PlainLyricsDisplayFormatter.format(
-            plainLines = plainLines,
-            currentIndex = 2,
-            contentMode = LyricsContentDisplayMode.TRANSLATION_ONLY,
-            lineMode = LyricsLineDisplayMode.CURRENT_ONLY,
-            noTranslationText = "暂无翻译"
+        assertEquals(
+            "暂无翻译",
+            PlainLyricsDisplayFormatter.format(
+                plainLines = plainLines,
+                currentIndex = 2,
+                contentMode = LyricsContentDisplayMode.TRANSLATION_ONLY,
+                lineMode = LyricsLineDisplayMode.CURRENT_ONLY,
+                noTranslationText = "暂无翻译"
+            )
         )
-
-        assertEquals("暂无翻译", rendered)
     }
 
     @Test
@@ -80,7 +78,7 @@ class PlainLyricsDisplayFormatterTest {
     }
 
     @Test
-    fun format_previousCurrentNextPreservesOrderAndSkipsOutOfBoundsIndexes() {
+    fun format_lineModesPreserveNeighborOrderAndSkipOutOfBoundsIndexes() {
         val middleRendered = PlainLyricsDisplayFormatter.format(
             plainLines = plainLines,
             currentIndex = 1,
@@ -99,21 +97,16 @@ class PlainLyricsDisplayFormatterTest {
             contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
             lineMode = LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT
         )
-
-        assertEquals("first\nsecond\nthird", middleRendered)
-        assertEquals("first\nsecond", firstRendered)
-        assertEquals("second\nthird", lastRendered)
-    }
-
-    @Test
-    fun format_previousAndCurrentPreservesNeighborOrder() {
-        val rendered = PlainLyricsDisplayFormatter.format(
+        val previousAndCurrentRendered = PlainLyricsDisplayFormatter.format(
             plainLines = plainLines,
             currentIndex = 1,
             contentMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
             lineMode = LyricsLineDisplayMode.PREVIOUS_AND_CURRENT
         )
 
-        assertEquals("first\nsecond", rendered)
+        assertEquals("first\nsecond\nthird", middleRendered)
+        assertEquals("first\nsecond", firstRendered)
+        assertEquals("second\nthird", lastRendered)
+        assertEquals("first\nsecond", previousAndCurrentRendered)
     }
 }

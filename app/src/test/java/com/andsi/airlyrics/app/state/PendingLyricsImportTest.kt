@@ -12,23 +12,57 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class PendingLyricsImportTest {
     @Test
-    fun wordByWordBundle_writesCompatibilityTypeValue() {
-        val request = PendingLyricsImport(
-            target = SongIdentity(
-                title = "Original song",
-                artist = "Original artist",
-                album = "Original album",
-                durationMs = 185_000L
-            ),
-            type = LyricsImportType.WORD_BY_WORD
+    fun pendingImportBundle_preservesSchemaAndRejectsMalformedPayloads() {
+        val bundle = pendingImport().toBundle()
+
+        assertEquals(1, bundle.getInt("version"))
+        assertEquals("Original song", bundle.getString("title"))
+        assertEquals("Original artist", bundle.getString("artist"))
+        assertEquals("Original album", bundle.getString("album"))
+        assertEquals(185_000L, bundle.getLong("duration_ms"))
+        assertEquals("WORD_BY_WORD", bundle.getString("type"))
+        assertEquals(pendingImport(), persistedImportBundle().toPendingLyricsImport())
+
+        val malformedBundles = listOf(
+            Bundle(),
+            Bundle(persistedImportBundle()).apply { putInt("version", 2) },
+            Bundle(persistedImportBundle()).apply { putString("title", "  ") },
+            Bundle(persistedImportBundle()).apply { putString("type", "UNKNOWN") }
         )
 
-        assertEquals("WORD_BY_WORD", request.toBundle().getString("type"))
+        malformedBundles.forEachIndexed { index, malformed ->
+            assertNull("malformed import bundle #$index", malformed.toPendingLyricsImport())
+        }
     }
 
     @Test
-    fun wordByWordBundle_restoresCompatibilityTypeValue() {
-        val expected = PendingLyricsImport(
+    fun pendingOverwriteBundle_preservesSchemaAndRejectsMalformedPayloads() {
+        val bundle = pendingOverwrite().toBundle()
+
+        assertEquals(1, bundle.getInt("version"))
+        assertEquals("content://lyrics/original-request.lrc", bundle.getString("uri"))
+        assertEquals("Original overwrite song", bundle.getString("title"))
+        assertEquals("Original overwrite artist", bundle.getString("artist"))
+        assertEquals("Original overwrite album", bundle.getString("album"))
+        assertEquals(245_000L, bundle.getLong("duration_ms"))
+        assertEquals("WORD_BY_WORD", bundle.getString("type"))
+        assertEquals(pendingOverwrite(), persistedOverwriteBundle().toPendingLyricsOverwrite())
+
+        val malformedBundles = listOf(
+            Bundle(),
+            Bundle(persistedOverwriteBundle()).apply { putInt("version", 2) },
+            Bundle(persistedOverwriteBundle()).apply { putString("uri", "") },
+            Bundle(persistedOverwriteBundle()).apply { putString("title", "") },
+            Bundle(persistedOverwriteBundle()).apply { putString("type", "UNKNOWN") }
+        )
+
+        malformedBundles.forEachIndexed { index, malformed ->
+            assertNull("malformed overwrite bundle #$index", malformed.toPendingLyricsOverwrite())
+        }
+    }
+
+    private fun pendingImport(): PendingLyricsImport {
+        return PendingLyricsImport(
             target = SongIdentity(
                 title = "Original song",
                 artist = "Original artist",
@@ -37,29 +71,21 @@ class PendingLyricsImportTest {
             ),
             type = LyricsImportType.WORD_BY_WORD
         )
-        val persistedBundle = expected.toBundle().apply {
+    }
+
+    private fun persistedImportBundle(): Bundle {
+        return Bundle().apply {
+            putInt("version", 1)
+            putString("title", "Original song")
+            putString("artist", "Original artist")
+            putString("album", "Original album")
+            putLong("duration_ms", 185_000L)
             putString("type", "WORD_BY_WORD")
         }
-
-        assertEquals(expected, persistedBundle.toPendingLyricsImport())
     }
 
-    @Test
-    fun malformedBundle_doesNotRestoreRequest() {
-        assertNull(Bundle().toPendingLyricsImport())
-        assertNull(
-            PendingLyricsImport(
-                target = SongIdentity("Song", "Artist", durationMs = 1L),
-                type = LyricsImportType.PLAIN
-            ).toBundle().apply {
-                putString("type", "UNKNOWN")
-            }.toPendingLyricsImport()
-        )
-    }
-
-    @Test
-    fun pendingOverwriteBundleRoundTrip_preservesUriTargetAndType() {
-        val request = PendingLyricsOverwrite(
+    private fun pendingOverwrite(): PendingLyricsOverwrite {
+        return PendingLyricsOverwrite(
             uri = Uri.parse("content://lyrics/original-request.lrc"),
             target = SongIdentity(
                 title = "Original overwrite song",
@@ -69,7 +95,17 @@ class PendingLyricsImportTest {
             ),
             type = LyricsImportType.WORD_BY_WORD
         )
+    }
 
-        assertEquals(request, request.toBundle().toPendingLyricsOverwrite())
+    private fun persistedOverwriteBundle(): Bundle {
+        return Bundle().apply {
+            putInt("version", 1)
+            putString("uri", "content://lyrics/original-request.lrc")
+            putString("title", "Original overwrite song")
+            putString("artist", "Original overwrite artist")
+            putString("album", "Original overwrite album")
+            putLong("duration_ms", 245_000L)
+            putString("type", "WORD_BY_WORD")
+        }
     }
 }

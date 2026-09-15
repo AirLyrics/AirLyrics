@@ -58,8 +58,8 @@ internal class LyricsController(
     private val lyricsImportGateway: LyricsImportGateway = StorageLyricsImportGateway(),
     private val onlineLyricsLookupGateway: OnlineLyricsLookupGateway =
         RepositoryOnlineLyricsLookupGateway
-) {
-    fun validatePickedDocument(
+) : LyricsOperations {
+    override fun validatePickedDocument(
         uri: Uri
     ): LyricsDocumentValidation {
         if (!LyricsImportValidator.isLikelyLyricsDocument(context, uri)) {
@@ -71,7 +71,7 @@ internal class LyricsController(
         return LyricsDocumentValidation.Valid
     }
 
-    fun importAvailability(target: SongIdentity): LyricsImportAvailability {
+    override fun importAvailability(target: SongIdentity): LyricsImportAvailability {
         val localInfo = LyricsStorage.getLocalPlainLyricsInfo(
             context = context,
             title = target.title,
@@ -91,11 +91,11 @@ internal class LyricsController(
         )
     }
 
-    fun importLyricsForTarget(
+    override fun importLyricsForTarget(
         uri: Uri,
         target: SongIdentity,
         overwrite: Boolean,
-        importAsWordByWord: Boolean = false
+        importAsWordByWord: Boolean
     ): LyricsImportOutcome {
         val blockedImportResult = blockedImportResult(target, importAsWordByWord)
         if (blockedImportResult != null) {
@@ -146,7 +146,7 @@ internal class LyricsController(
         return LyricsImportOutcome.Finished(result, importAsWordByWord)
     }
 
-    fun deleteLyricsForCurrentMedia(
+    override fun deleteLyricsForCurrentMedia(
         media: CurrentMediaInfo,
         mode: LyricsStorage.DeleteMode
     ): CurrentLyricsDeleteOutcome {
@@ -163,7 +163,7 @@ internal class LyricsController(
         return CurrentLyricsDeleteOutcome(deleted = deleted, mode = mode)
     }
 
-    fun deleteSavedLyricsItem(
+    override fun deleteSavedLyricsItem(
         item: LyricsStorage.LocalLyricsItem
     ): LyricsStorage.DeleteLocalLyricsItemResult {
         val currentMedia = getCurrentMediaInfo()
@@ -198,7 +198,7 @@ internal class LyricsController(
         return result
     }
 
-    fun deleteAllSavedLyrics(): LyricsStorage.DeleteAllSavedLyricsResult {
+    override fun deleteAllSavedLyrics(): LyricsStorage.DeleteAllSavedLyricsResult {
         val result = LyricsStorage.deleteAllSavedLyrics(context)
         if (result != LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE) {
             lyricsChangedPublisher.publishDeleted()
@@ -206,7 +206,7 @@ internal class LyricsController(
         return result
     }
 
-    fun searchOnlineLyricsForCurrentMedia(
+    override fun searchOnlineLyricsForCurrentMedia(
         media: CurrentMediaInfo
     ): OnlineLyricsSearchOutcome {
         val result = onlineLyricsLookupGateway.findAndSave(context, media)
@@ -223,7 +223,7 @@ internal class LyricsController(
         }
     }
 
-    fun getCurrentMediaInfo(): CurrentMediaInfo? {
+    override fun getCurrentMediaInfo(): CurrentMediaInfo? {
         val selectedPackage = MediaSourceStore.getSelectedPackage(context)
         val selectedController = CurrentMediaReader.selectedController(
             controllers = mediaControllerProvider.getActiveControllers(),
@@ -232,9 +232,9 @@ internal class LyricsController(
         return selectedController?.let(CurrentMediaReader::currentMediaFromController)
     }
 
-    fun lyricsDirectoryPath(): String = LyricsStorage.getLyricsDirRawPath(context)
+    override fun lyricsDirectoryPath(): String = LyricsStorage.getLyricsDirRawPath(context)
 
-    fun setLyricsDirectory(uri: Uri): Boolean {
+    override fun setLyricsDirectory(uri: Uri): Boolean {
         if (!LyricsStorage.validateLyricsDir(context, uri)) return false
         LyricsStorage.saveLyricsDirUri(context, uri)
         return true

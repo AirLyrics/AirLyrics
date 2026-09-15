@@ -1,78 +1,19 @@
 package com.andsi.airlyrics.lyrics.storage
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import java.io.File
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-class LyricsStorageDeleteItemTest {
-    private lateinit var context: Context
-
-    @Before
-    fun setUp() {
-        context = ApplicationProvider.getApplicationContext()
-        resetStorage()
-    }
-
-    @After
-    fun tearDown() {
-        resetStorage()
-    }
-
-    @Test
-    fun listAllLyrics_returnsEveryItem_whileRecentLyricsKeepsEightAndExposesIdentity() {
-        repeat(10) { index ->
-            assertTrue(
-                LyricsStorage.savePlainLyrics(
-                    context = context,
-                    title = "Song $index",
-                    artist = "Artist $index",
-                    duration = 180_000L + index * 1_000L,
-                    plainLrc = "[00:01.00]line $index",
-                    album = "Album $index",
-                    plainSource = LyricsStorage.SOURCE_MANUAL_IMPORT,
-                    plainProvider = "provider-$index"
-                )
-            )
-        }
-
-        val allLyrics = LyricsStorage.listAllLyrics(context)
-        val recentLyrics = LyricsStorage.listRecentLyrics(context)
-
-        assertEquals(10, allLyrics.size)
-        assertEquals(8, recentLyrics.size)
-        assertEquals(allLyrics.take(8).map { it.indexKey }, recentLyrics.map { it.indexKey })
-
-        val item = allLyrics.single { it.title == "Song 4" }
-        assertEquals("Artist 4", item.artist)
-        assertEquals("Album 4", item.album)
-        assertEquals(184_000L, item.durationMs)
-        assertEquals(
-            SongIdentity(
-                title = "Song 4",
-                artist = "Artist 4",
-                album = "Album 4",
-                durationMs = 184_000L
-            ).storageKey(),
-            item.indexKey
-        )
-        assertEquals(LyricsStorage.SOURCE_MANUAL_IMPORT, item.source)
-        assertEquals("provider-4", item.provider)
-        assertTrue(item.hasPlainLyrics)
-        assertFalse(item.hasWordByWordLyrics)
-        assertTrue(item.canDelete)
-    }
-
+class LyricsStorageDeletionTest : LyricsStorageTestBase() {
     @Test
     fun deleteLocalLyricsItem_usesExactIndexKeyAndDeletesBothFormatsOnlyForSelectedSong() {
         val selectedIdentity = SongIdentity(
@@ -167,6 +108,70 @@ class LyricsStorageDeleteItemTest {
         assertTrue(rootLyrics.exists())
     }
 
+    @Test
+    fun deleteAllSavedLyrics_removesManagedOrphanAndLegacyLyrics_butPreservesOtherFiles() {
+        assertTrue(
+            LyricsStorage.savePlainLyrics(
+                context = context,
+                title = "Plain song",
+                artist = "AirLyrics",
+                duration = 180_000L,
+                plainLrc = "[00:01.00]plain"
+            )
+        )
+        assertTrue(
+            LyricsStorage.saveWordByWordLyrics(
+                context = context,
+                title = "Word song",
+                artist = "AirLyrics",
+                duration = 200_000L,
+                wordByWordLines = listOf(
+                    WordByWordLine(
+                        startMs = 1_000L,
+                        endMs = 2_000L,
+                        text = "word",
+                        segments = listOf(WordByWordSegment("word", 1_000L, 2_000L))
+                    )
+                )
+            )
+        )
+
+        val root = LyricsStoragePaths.fallbackLyricsDir(context)
+        val managedDir = LyricsStoragePaths.fallbackManagedLyricsDir(context)
+        val legacyLyrics = File(
+            root,
+            LyricsFileNaming.legacyPlainFileName("Legacy song", "AirLyrics", 220_000L)
+        ).apply { writeText("[00:01.00]legacy") }
+        val orphanManagedLyrics = File(managedDir, "orphan.lrc").apply {
+            writeText("[00:01.00]orphan")
+        }
+        val unrelatedRootLyrics = File(root, "personal-reference.lrc").apply {
+            writeText("[00:01.00]keep")
+        }
+        val unrelatedManagedFile = File(managedDir, "notes.txt").apply {
+            writeText("keep")
+        }
+
+        assertEquals(
+            LyricsStorage.DeleteAllSavedLyricsResult.DELETED,
+            LyricsStorage.deleteAllSavedLyrics(context)
+        )
+
+        assertTrue(LyricsIndexStore.read(context).isEmpty())
+        assertFalse(legacyLyrics.exists())
+        assertFalse(orphanManagedLyrics.exists())
+        assertFalse(managedDir.listFiles().orEmpty().any { file ->
+            LyricsFileNaming.isPlainLyricsFile(file.name) ||
+                LyricsFileNaming.isWordByWordLyricsFile(file.name)
+        })
+        assertTrue(unrelatedRootLyrics.exists())
+        assertTrue(unrelatedManagedFile.exists())
+        assertEquals(
+            LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE,
+            LyricsStorage.deleteAllSavedLyrics(context)
+        )
+    }
+
     private fun createIndexedLyricsEntry(
         identity: SongIdentity,
         updatedAt: Long
@@ -203,12 +208,4 @@ class LyricsStorageDeleteItemTest {
         )
     }
 
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
-    }
 }

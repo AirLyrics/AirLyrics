@@ -39,36 +39,34 @@ class LyricsFormatDetectorTest {
     }
 
     @Test
-    fun detect_displayNameExtensionIsAuthoritative() {
-        provider.displayName = "LYRICS.LRC"
-        provider.mimeType = "application/ttml+xml"
-
-        assertEquals(
-            LyricsDocumentFormat.LRC,
-            detect(path = "lyrics.ttml", content = "<?xml version=\"1.0\"?><tt/>")
+    fun detect_usesRecognizedMetadataInPriorityOrder() {
+        val cases = listOf(
+            DetectionCase(
+                name = "display-name extension is authoritative",
+                displayName = "LYRICS.LRC",
+                mimeType = "application/ttml+xml",
+                path = "lyrics.ttml",
+                content = "<?xml version=\"1.0\"?><tt/>",
+                expected = LyricsDocumentFormat.LRC
+            ),
+            DetectionCase(
+                name = "recognized path extension wins when display name is unclear",
+                displayName = "downloaded-file",
+                mimeType = "text/plain",
+                path = "folder/lyrics.TTML",
+                content = "[00:01.00]line",
+                expected = LyricsDocumentFormat.TTML
+            ),
+            DetectionCase(
+                name = "TTML MIME type wins when names are unclear",
+                displayName = "lyrics.data",
+                mimeType = "application/ttml+xml",
+                content = "[00:01.00]line",
+                expected = LyricsDocumentFormat.TTML
+            )
         )
-    }
 
-    @Test
-    fun detect_usesRecognizedPathExtensionWhenDisplayNameIsUnclear() {
-        provider.displayName = "downloaded-file"
-        provider.mimeType = "text/plain"
-
-        assertEquals(
-            LyricsDocumentFormat.TTML,
-            detect(path = "folder/lyrics.TTML", content = "[00:01.00]line")
-        )
-    }
-
-    @Test
-    fun detect_recognizesTtmlMimeType() {
-        provider.displayName = "lyrics.data"
-        provider.mimeType = "application/ttml+xml"
-
-        assertEquals(
-            LyricsDocumentFormat.TTML,
-            detect(content = "[00:01.00]line")
-        )
+        cases.forEach(::assertDetected)
     }
 
     @Test
@@ -114,36 +112,32 @@ class LyricsFormatDetectorTest {
     }
 
     @Test
-    fun detect_recognizesTtmlRootAfterXmlDeclarationWhenMetadataIsUnclear() {
-        provider.displayName = "lyrics.data"
-        provider.mimeType = "application/octet-stream"
-
-        assertEquals(
-            LyricsDocumentFormat.TTML,
-            detect(content = "\uFEFF  \n\t<?xml version=\"1.0\"?><tt/>")
+    fun detect_recognizesTtmlRootsAfterSupportedPrefixes() {
+        val cases = listOf(
+            DetectionCase(
+                name = "XML declaration",
+                displayName = "lyrics.data",
+                mimeType = "application/octet-stream",
+                content = "\uFEFF  \n\t<?xml version=\"1.0\"?><tt/>",
+                expected = LyricsDocumentFormat.TTML
+            ),
+            DetectionCase(
+                name = "BOM and whitespace",
+                displayName = null,
+                mimeType = null,
+                content = "\n\uFEFF <tt xmlns=\"http://www.w3.org/ns/ttml\">",
+                expected = LyricsDocumentFormat.TTML
+            ),
+            DetectionCase(
+                name = "leading XML comment",
+                displayName = "lyrics.data",
+                mimeType = "text/plain",
+                content = "\uFEFF  <!-- exported lyrics -->\n<tt><body/></tt>",
+                expected = LyricsDocumentFormat.TTML
+            )
         )
-    }
 
-    @Test
-    fun detect_usesTtRootContentSignatureWhenMetadataIsUnclear() {
-        provider.displayName = null
-        provider.mimeType = null
-
-        assertEquals(
-            LyricsDocumentFormat.TTML,
-            detect(content = "\n\uFEFF <tt xmlns=\"http://www.w3.org/ns/ttml\">")
-        )
-    }
-
-    @Test
-    fun detect_recognizesTtmlWithLeadingXmlComment() {
-        provider.displayName = "lyrics.data"
-        provider.mimeType = "text/plain"
-
-        assertEquals(
-            LyricsDocumentFormat.TTML,
-            detect(content = "\uFEFF  <!-- exported lyrics -->\n<tt><body/></tt>")
-        )
+        cases.forEach(::assertDetected)
     }
 
     @Test
@@ -205,6 +199,25 @@ class LyricsFormatDetectorTest {
         context = context,
         uri = Uri.parse("content://$TEST_AUTHORITY/$path"),
         content = content
+    )
+
+    private fun assertDetected(case: DetectionCase) {
+        provider.displayName = case.displayName
+        provider.mimeType = case.mimeType
+        assertEquals(
+            case.name,
+            case.expected,
+            detect(path = case.path, content = case.content)
+        )
+    }
+
+    private data class DetectionCase(
+        val name: String,
+        val displayName: String?,
+        val mimeType: String?,
+        val path: String = "lyrics.unknown",
+        val content: String,
+        val expected: LyricsDocumentFormat
     )
 
     private class MetadataProvider : ContentProvider() {

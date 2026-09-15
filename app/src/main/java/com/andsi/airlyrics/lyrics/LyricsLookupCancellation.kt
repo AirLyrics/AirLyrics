@@ -138,7 +138,6 @@ class LyricsLookupRunner(
     private val callbackDispatcher: LyricsLookupCallbackDispatcher = mainThreadDispatcher(),
     private val executor: ExecutorService = createLyricsLookupExecutor(threadNamePrefix)
 ) {
-    private val admissionLock = Any()
     private val lock = Any()
     private var nextGeneration = 0L
     private var activeToken: LyricsLookupCancellationToken? = null
@@ -150,66 +149,69 @@ class LyricsLookupRunner(
         lookup: (LyricsLookupCancellationToken) -> Result<T>,
         callback: (requestKey: String, result: Result<T>) -> Unit
     ): LyricsLookupHandle {
-        var rejectedDelivery: (() -> Unit)? = null
-        val handle = synchronized(admissionLock) {
-            val token = synchronized(lock) {
-                LyricsLookupCancellationToken(
-                    requestKey = requestKey,
-                    generation = ++nextGeneration
-                )
-            }
-            val task = FutureTask lookupWorker@{
-                val result = runCatching {
-                    token.throwIfCancellationRequested()
-                    val lookupResult = lookup(token)
-                    token.throwIfCancellationRequested()
+        val token = synchronized(lock) {
+            LyricsLookupCancellationToken(
+                requestKey = requestKey,
+                generation = ++nextGeneration
+            )
+        }
+        val task = FutureTask lookupWorker@{
+            val result = runCatching {
+                token.throwIfCancellationRequested()
+                val lookupResult = lookup(token)
+                token.throwIfCancellationRequested()
 
-                    val lookupError = lookupResult.exceptionOrNull()
-                    if (lookupError is CancellationException) {
-                        throw lookupError
-                    }
-                    lookupResult
-                }.getOrElse { throwable ->
-                    if (throwable is CancellationException) {
-                        return@lookupWorker
-                    }
-                    Result.failure(throwable)
+                val lookupError = lookupResult.exceptionOrNull()
+                if (lookupError is CancellationException) {
+                    throw lookupError
                 }
-
-                callbackDispatcher.dispatch {
-                    if (!isStillActive(token)) return@dispatch
-                    clearIfActive(token)
-                    callback(token.requestKey, result)
+                lookupResult
+            }.getOrElse { throwable ->
+                if (throwable is CancellationException) {
+                    return@lookupWorker
                 }
-            }
-            val submittedHandle = LyricsLookupHandle(token, task)
-
-            val shouldExecute = synchronized(lock) {
-                if (closed) {
-                    false
-                } else {
-                    cancelActiveLocked()
-                    activeToken = token
-                    activeHandle = submittedHandle
-                    true
-                }
-            }
-            if (!shouldExecute) {
-                submittedHandle.cancel()
-                return@synchronized submittedHandle
+                Result.failure(throwable)
             }
 
+            callbackDispatcher.dispatch {
+                if (!claimActive(token)) return@dispatch
+                callback(token.requestKey, result)
+            }
+        }
+        val submittedHandle = LyricsLookupHandle(token, task)
+
+        val shouldExecute = synchronized(lock) {
+            if (closed || token.generation != nextGeneration) {
+                false
+            } else {
+                cancelActiveLocked()
+                activeToken = token
+                activeHandle = submittedHandle
+                true
+            }
+        }
+        if (!shouldExecute) {
+            submittedHandle.cancel()
+            return submittedHandle
+        }
+
+        var rejectedExecution: RejectedExecutionException? = null
+        while (true) {
             try {
                 executor.execute(task)
+                break
             } catch (rejected: RejectedExecutionException) {
-                task.cancel(false)
-                rejectedDelivery = {
-                    callbackDispatcher.dispatch {
-                        if (!isStillActive(token)) return@dispatch
-                        clearIfActive(token)
-                        callback(token.requestKey, Result.failure(rejected))
-                    }
+                val removedStaleTask = synchronized(lock) {
+                    activeToken === token &&
+                        !closed &&
+                        !executor.isShutdown &&
+                        cancelQueuedTasksLocked() > 0
                 }
+                if (removedStaleTask) continue
+
+                task.cancel(false)
+                rejectedExecution = rejected
+                break
             } catch (failure: RuntimeException) {
                 synchronized(lock) {
                     if (activeToken === token) {
@@ -220,10 +222,18 @@ class LyricsLookupRunner(
                 submittedHandle.cancel()
                 throw failure
             }
-            submittedHandle
         }
-        rejectedDelivery?.invoke()
-        return handle
+
+        if (token.isCancellationRequested) {
+            (executor as? ThreadPoolExecutor)?.remove(task)
+        }
+        rejectedExecution?.let { rejected ->
+            callbackDispatcher.dispatch {
+                if (!claimActive(token)) return@dispatch
+                callback(token.requestKey, Result.failure(rejected))
+            }
+        }
+        return submittedHandle
     }
 
     fun cancelActive() {
@@ -233,15 +243,13 @@ class LyricsLookupRunner(
     }
 
     fun shutdown() {
-        val shouldShutdown = synchronized(admissionLock) {
-            synchronized(lock) {
-                if (closed) {
-                    false
-                } else {
-                    closed = true
-                    cancelActiveLocked()
-                    true
-                }
+        val shouldShutdown = synchronized(lock) {
+            if (closed) {
+                false
+            } else {
+                closed = true
+                cancelActiveLocked()
+                true
             }
         }
         if (!shouldShutdown) return
@@ -258,25 +266,28 @@ class LyricsLookupRunner(
         activeToken = null
         activeHandle = null
 
-        // Cancel queued stale lookups so every submitted Future reaches a terminal state.
-        val queue = (executor as? ThreadPoolExecutor)?.queue ?: return
+        cancelQueuedTasksLocked()
+    }
+
+    private fun cancelQueuedTasksLocked(): Int {
+        val queue = (executor as? ThreadPoolExecutor)?.queue ?: return 0
+        var canceledCount = 0
         while (true) {
             val queued = queue.poll() ?: break
             (queued as? Future<*>)?.cancel(true)
+            canceledCount += 1
         }
+        return canceledCount
     }
 
-    private fun isStillActive(token: LyricsLookupCancellationToken): Boolean {
-        synchronized(lock) {
-            return activeToken === token && !token.isCancellationRequested
-        }
-    }
-
-    private fun clearIfActive(token: LyricsLookupCancellationToken) {
-        synchronized(lock) {
-            if (activeToken === token) {
+    private fun claimActive(token: LyricsLookupCancellationToken): Boolean {
+        return synchronized(lock) {
+            if (activeToken !== token || token.isCancellationRequested) {
+                false
+            } else {
                 activeToken = null
                 activeHandle = null
+                true
             }
         }
     }

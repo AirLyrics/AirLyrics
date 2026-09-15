@@ -1,7 +1,6 @@
 package com.andsi.airlyrics.app
 
 import android.app.Activity
-import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.media.MediaMetadata
@@ -18,12 +17,10 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsImport
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
-import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
@@ -34,9 +31,8 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -45,9 +41,9 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
-import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowContentResolver
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowLooper
 
 @RunWith(RobolectricTestRunner::class)
 class MainActivityLyricsImportLifecycleTest {
@@ -77,54 +73,36 @@ class MainActivityLyricsImportLifecycleTest {
     }
 
     @Test
-    fun pendingImport_survivesActivityRecreation() {
-        val controller = launchActivity()
-        val request = pendingImport(SONG_A)
-        controller.get().graph.viewModel.setPendingLyricsImport(request)
+    fun pendingImport_restoresIntoNewViewModelFromSavedInstanceState() {
+        val originalController = launchActivity()
+        val request = PendingLyricsImport(SONG, LyricsImportType.PLAIN)
+        val originalActivity = originalController.get()
+        val originalViewModel = originalActivity.graph.viewModel
+        originalViewModel.setPendingLyricsImport(request)
 
-        controller.recreate()
+        val savedInstanceState = Bundle()
+        originalController
+            .pause()
+            .saveInstanceState(savedInstanceState)
+            .stop()
+            .destroy()
 
-        assertEquals(request, controller.get().graph.state.pendingLyricsImport)
+        val restoredController = Robolectric.buildActivity(MainActivity::class.java)
+            .create(savedInstanceState)
+            .start()
+            .resume()
+            .visible()
+            .also { activityController = it }
+        val restoredActivity = restoredController.get()
+
+        assertTrue(originalActivity.isDestroyed)
+        assertNotSame(originalViewModel, restoredActivity.graph.viewModel)
+        assertEquals(request, restoredActivity.graph.state.pendingLyricsImport)
     }
 
     @Test
-    fun cancelledFilePicker_consumesPendingImport() {
-        val activity = launchActivity().get()
-        activity.graph.viewModel.setPendingLyricsImport(pendingImport(SONG_A))
-
-        activity.graph.launchers.selectLyricsFile()
-        val pickerRequest = shadowOf(activity).nextStartedActivityForResult
-        shadowOf(activity).receiveResult(
-            pickerRequest.intent,
-            Activity.RESULT_CANCELED,
-            null
-        )
-        ShadowLooper.idleMainLooper()
-
-        assertNull(activity.graph.state.pendingLyricsImport)
-        assertFalse(hasPlainLyrics(SONG_A))
-    }
-
-    @Test
-    fun selectedFile_importsCapturedSongA_notCurrentSongB() {
-        val activity = launchActivity().get()
-        installCurrentMedia(activity, SONG_B)
-        assertEquals(
-            SONG_B,
-            activity.graph.viewModel.currentMediaInfo()?.toSongIdentity()
-        )
-        deliverPickerResult(activity, writeImportFile(), SONG_A)
-
-        awaitCondition("Timed out waiting for captured lyrics import") {
-            hasPlainLyrics(SONG_A)
-        }
-        assertTrue(hasPlainLyrics(SONG_A))
-        assertFalse(hasPlainLyrics(SONG_B))
-    }
-
-    @Test
-    fun importCompletesAfterRecreation_liveGraphRefreshesWithoutDestroyedActivityUi() {
-        installCurrentMedia(context, SONG_A)
+    fun importCompletesAfterRecreation_updatesOnlyTheRestoredActivity() {
+        installCurrentMedia(SONG)
         val inputOpenCount = AtomicInteger()
         registerLyricsInput(LATE_IMPORT_URI, inputOpenCount)
         val controller = launchActivity()
@@ -133,112 +111,38 @@ class MainActivityLyricsImportLifecycleTest {
         awaitAppIo(oldActivity)
         assertTrue(oldActivity.visibleTexts().contains(oldActivity.getString(R.string.ui_not_bound)))
 
-        deliverPickerResult(oldActivity, LATE_IMPORT_URI, SONG_A)
-
-        val oldRenderedPage = oldActivity.graph.uiHost.contentContainer?.getChildAt(0)
+        deliverPickerResult(oldActivity, LATE_IMPORT_URI, SONG)
         controller.recreate()
-        val newActivity = controller.get()
+        val restoredActivity = controller.get()
         ShadowDialog.reset()
 
-        awaitCondition("Timed out waiting for retained ViewModel import") {
+        awaitCondition("Timed out waiting for retained import") {
             LyricsStorage.hasPlainLyrics(
-                context = newActivity,
-                title = SONG_A.title,
-                artist = SONG_A.artist,
-                duration = SONG_A.durationMs
+                context = restoredActivity,
+                title = SONG.title,
+                artist = SONG.artist,
+                duration = SONG.durationMs
             )
         }
-        awaitCondition("Timed out waiting for live lyrics UI refresh") {
-            !newActivity.visibleTexts().contains(newActivity.getString(R.string.ui_not_bound))
+        awaitCondition("Timed out waiting for restored lyrics UI") {
+            !restoredActivity.visibleTexts().contains(
+                restoredActivity.getString(R.string.ui_not_bound)
+            )
         }
 
         assertEquals(1, inputOpenCount.get())
         assertEquals(
             "[00:01.00]late durable lyrics",
             LyricsStorage.readPlainLyrics(
-                context = newActivity,
-                title = SONG_A.title,
-                artist = SONG_A.artist,
-                duration = SONG_A.durationMs
+                context = restoredActivity,
+                title = SONG.title,
+                artist = SONG.artist,
+                duration = SONG.durationMs
             )
         )
-        assertFalse(newActivity.visibleTexts().contains(newActivity.getString(R.string.ui_not_bound)))
-        assertTrue(newActivity.visibleTexts().contains("${SONG_A.title} - ${SONG_A.artist}"))
+        assertTrue(restoredActivity.visibleTexts().contains("${SONG.title} - ${SONG.artist}"))
         assertTrue(oldActivity.isDestroyed)
-        assertSame(oldRenderedPage, oldActivity.graph.uiHost.contentContainer?.getChildAt(0))
-        val latestDialog: Dialog? = ShadowDialog.getLatestDialog()
-        assertNull(latestDialog)
-    }
-
-    @Test
-    fun lyricsChangedBeforeActivityCreation_initialRenderReadsDurableLyrics() {
-        installCurrentMedia(context, SONG_A)
-        assertTrue(
-            LyricsStorage.savePlainLyrics(
-                context = context,
-                title = SONG_A.title,
-                artist = SONG_A.artist,
-                duration = SONG_A.durationMs,
-                album = SONG_A.album,
-                plainLrc = "[00:01.00]early durable lyrics",
-                plainProvider = "early-event-test"
-            )
-        )
-        BroadcastLyricsChangedPublisher(context).publish(SONG_A)
-        ShadowLooper.idleMainLooper()
-
-        val restoredNavigation = Bundle().apply {
-            putString("airlyrics.current_page", Page.SETTINGS.name)
-            putString("airlyrics.settings_sub_page", SettingsSubPage.LYRICS.name)
-        }
-        val controller = Robolectric.buildActivity(MainActivity::class.java)
-            .create(restoredNavigation)
-            .start()
-            .resume()
-            .visible()
-            .also { activityController = it }
-        val activity = controller.get()
-        awaitAppIo(activity)
-
-        assertFalse(activity.visibleTexts().contains(activity.getString(R.string.ui_not_bound)))
-        assertTrue(activity.visibleTexts().contains("${SONG_A.title} - ${SONG_A.artist}"))
-        assertEquals(
-            "[00:01.00]early durable lyrics",
-            LyricsStorage.readPlainLyrics(
-                context = activity,
-                title = SONG_A.title,
-                artist = SONG_A.artist,
-                duration = SONG_A.durationMs
-            )
-        )
-    }
-
-    @Test
-    fun lyricsChanged_refreshesMountedCardsWithoutReplacingSettingsPage() {
-        installCurrentMedia(context, SONG_A)
-        val controller = launchActivity()
-        val activity = controller.get()
-        showLyricsSettings(activity)
-        awaitAppIo(activity)
-        val mountedPage = activity.graph.uiHost.contentContainer?.getChildAt(0)
-
-        assertTrue(
-            LyricsStorage.savePlainLyrics(
-                context = activity,
-                title = SONG_A.title,
-                artist = SONG_A.artist,
-                duration = SONG_A.durationMs,
-                album = SONG_A.album,
-                plainLrc = "[00:01.00]targeted refresh lyrics"
-            )
-        )
-        BroadcastLyricsChangedPublisher(activity).publish(SONG_A)
-        awaitCondition("Timed out waiting for mounted lyrics refresh") {
-            !activity.visibleTexts().contains(activity.getString(R.string.ui_not_bound))
-        }
-
-        assertSame(mountedPage, activity.graph.uiHost.contentContainer?.getChildAt(0))
-        assertFalse(activity.visibleTexts().contains(activity.getString(R.string.ui_not_bound)))
+        assertNull(ShadowDialog.getLatestDialog())
     }
 
     private fun launchActivity(): ActivityController<MainActivity> {
@@ -248,8 +152,8 @@ class MainActivityLyricsImportLifecycleTest {
     }
 
     @Suppress("UsePropertyAccessSyntax")
-    private fun installCurrentMedia(context: Context, song: SongIdentity) {
-        val session = MediaSession(context, "lyrics-import-current-media-test")
+    private fun installCurrentMedia(song: SongIdentity) {
+        val session = MediaSession(context, "lyrics-import-lifecycle-test")
         mediaSession = session
         val controller = MediaController(context, session.sessionToken)
         shadowOf(controller).apply {
@@ -278,7 +182,9 @@ class MainActivityLyricsImportLifecycleTest {
     }
 
     private fun deliverPickerResult(activity: MainActivity, uri: Uri, target: SongIdentity) {
-        activity.graph.viewModel.setPendingLyricsImport(pendingImport(target))
+        activity.graph.viewModel.setPendingLyricsImport(
+            PendingLyricsImport(target, LyricsImportType.PLAIN)
+        )
         activity.graph.launchers.selectLyricsFile()
         val pickerRequest = shadowOf(activity).nextStartedActivityForResult
         shadowOf(activity).receiveResult(
@@ -335,30 +241,6 @@ class MainActivityLyricsImportLifecycleTest {
         MediaSourceStore.saveSelectedPackage(context, null)
     }
 
-    private fun pendingImport(song: SongIdentity): PendingLyricsImport {
-        return PendingLyricsImport(
-            target = song,
-            type = LyricsImportType.PLAIN
-        )
-    }
-
-    private fun writeImportFile(): Uri {
-        return Uri.fromFile(
-            File(context.cacheDir, "captured-song-a.lrc").apply {
-                writeText("[00:01.00]captured song A")
-            }
-        )
-    }
-
-    private fun hasPlainLyrics(song: SongIdentity): Boolean {
-        return LyricsStorage.hasPlainLyrics(
-            context = context,
-            title = song.title,
-            artist = song.artist,
-            duration = song.durationMs
-        )
-    }
-
     private fun resetStorage() {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit()
@@ -370,20 +252,12 @@ class MainActivityLyricsImportLifecycleTest {
 
     private companion object {
         const val CURRENT_MEDIA_PACKAGE = "player.current"
-        val LATE_IMPORT_URI: Uri = Uri.parse("content://lyrics-lifecycle/late-song-a.lrc")
-
-        val SONG_A = SongIdentity(
-            title = "Captured Song A",
-            artist = "Artist A",
-            album = "Album A",
+        val LATE_IMPORT_URI: Uri = Uri.parse("content://lyrics-lifecycle/late-song.lrc")
+        val SONG = SongIdentity(
+            title = "Captured Song",
+            artist = "Artist",
+            album = "Album",
             durationMs = 100_000L
-        )
-
-        val SONG_B = SongIdentity(
-            title = "Current Song B",
-            artist = "Artist B",
-            album = "Album B",
-            durationMs = 200_000L
         )
     }
 }

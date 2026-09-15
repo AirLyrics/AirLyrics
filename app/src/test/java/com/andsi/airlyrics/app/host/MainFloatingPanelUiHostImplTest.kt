@@ -65,6 +65,7 @@ class MainFloatingPanelUiHostImplTest {
         assertEquals(firstTile.measuredHeight, secondTile.measuredHeight)
         assertTrue(firstTile.measuredHeight > minimumHeight)
         assertTrue(thirdTile.measuredHeight > minimumHeight)
+        assertEquals(3, subtitles.size)
 
         subtitles.forEach { subtitle ->
             val tile = subtitle.parent as LinearLayout

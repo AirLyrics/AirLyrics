@@ -103,8 +103,6 @@ internal object LyricsChangedBroadcast {
         } ?: return null
         return LyricsChange(target = target, kind = kind)
     }
-
-    fun readTarget(intent: Intent?): SongIdentity? = readChange(intent)?.target
 }
 
 internal fun interface LyricsChangedPublisher {

@@ -115,17 +115,6 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
-    fun legacyStringSetterHandlesUnknownSourceAsAutomaticOffWithDefaultManualProvider() {
-        LyricsSettingsStore.setPlainLyricsSource(context, "unknown-provider")
-
-        assertEquals(
-            PlainLyricsSearchSource.NETEASE,
-            LyricsSettingsStore.getPlainLyricsSearchSource(context)
-        )
-        assertFalse(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
-    }
-
-    @Test
     fun getPlainLyricsSearchSource_handlesPersistedUnknownSourceAsAutomaticOffWithDefaultManualProvider() {
         context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
             .putString("lyrics_source", "unknown-provider")
