@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 mod lrc;
+mod lrclib;
 mod musixmatch;
 #[cfg(test)]
 mod native_result_contract_tests;
@@ -97,6 +98,50 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
             )
         }),
         Err(err) => fallback_error("musixmatch-rust", classify_error(&err), &err),
+    };
+
+    env.new_string(json)
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LrclibLyricsNative_fetchBestLyricsJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+    lookup_id: jni::sys::jlong,
+) -> jstring {
+    let title = jstring_to_string(&mut env, title);
+    let artist = jstring_to_string(&mut env, artist);
+    let album = jstring_to_string(&mut env, album);
+    let duration_ms = if duration_ms > 0 {
+        Some(duration_ms as u64)
+    } else {
+        None
+    };
+
+    let result = std::panic::catch_unwind(|| {
+        lrclib::fetch_best_lyrics(&title, &artist, &album, duration_ms, lookup_id)
+    })
+    .unwrap_or_else(|_| {
+        Err(lrclib::LrclibError::native(
+            "native panic while fetching LRCLIB lyrics",
+        ))
+    });
+
+    let json = match result {
+        Ok(value) => serde_json::to_string(&value).unwrap_or_else(|_| {
+            fallback_error(
+                "lrclib-rust",
+                "SerializeError",
+                "failed to serialize native result",
+            )
+        }),
+        Err(err) => fallback_error("lrclib-rust", err.error_type(), err.message()),
     };
 
     env.new_string(json)

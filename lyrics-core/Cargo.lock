@@ -37,6 +37,7 @@ dependencies = [
  "ncmapi2",
  "openssl",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "tokio",
