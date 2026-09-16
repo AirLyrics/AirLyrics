@@ -54,6 +54,17 @@ If no player appears, start playing music, check that notification access is ena
 Manage lyrics in **Settings > Lyrics**. AirLyrics always looks for lyrics in this order:
 manual import > local cache > online search.
 
+### Online Lyrics Sources
+
+AirLyrics currently queries one source selected under **Lyrics source**. Each source tries the full
+track information first, then broadens the query and checks other related candidates if the first
+one has no synchronized lyrics. Only lyrics with a valid timeline are used; to improve the hit rate,
+the returned version, artist tags, or duration may not exactly match the current track.
+
+- **NetEase Lyrics**: searches by keywords and tries candidates in relevance order.
+- **Musixmatch**: uses exact matching, general search, and broader matching in sequence.
+- **LRCLIB**: starts with an exact metadata lookup, then searches by title and artist or title alone.
+
 - Use **Current song lyrics** to import or remove lyrics. **Search online** skips the current
   plain lyrics cache.
 - Open lyrics from **Recent local lyrics** to check their format, make changes, and save.
