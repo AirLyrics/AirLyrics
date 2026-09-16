@@ -184,7 +184,7 @@ class LyricsRepositoryPersistenceTest {
 
     private fun onlineAutoSaveSettings(): LyricsSettings {
         return LyricsSettings(
-            plainLyricsSearchSource = PlainLyricsSearchSource.NETEASE,
+            plainLyricsSearchSources = listOf(PlainLyricsSearchSource.NETEASE),
             autoSearchOnline = true,
             autoSaveLocal = true,
             contentDisplayMode = LyricsContentDisplayMode.default,

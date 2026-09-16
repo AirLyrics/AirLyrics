@@ -53,7 +53,7 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             enabled
         },
         selectPlainLyricsSource = { plainLyricsSearchSource ->
-            LyricsSettingsStore.setPlainLyricsSearchSource(activity, plainLyricsSearchSource)
+            LyricsSettingsStore.setPlainLyricsSearchSources(activity, listOf(plainLyricsSearchSource))
             floatingController.reloadLyrics()
         },
         openUrl = uiHost::openUrl,

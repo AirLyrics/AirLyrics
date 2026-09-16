@@ -111,14 +111,12 @@ internal class LyricsRepositoryEngine(
             }
 
             cancellationToken?.throwIfCancellationRequested()
-            if (settings.plainLyricsSearchSource == PlainLyricsSearchSource.LOCAL_ONLY) {
-                return@runCatching null
-            }
             if (!ignoreAutoSearchSetting && !settings.autoSearchOnline) {
                 return@runCatching null
             }
 
-            val provider = onlinePlainLyricsProviders[settings.plainLyricsSearchSource] ?: return@runCatching null
+            val source = settings.plainLyricsSearchSources.firstOrNull() ?: return@runCatching null
+            val provider = onlinePlainLyricsProviders[source] ?: return@runCatching null
 
             cancellationToken?.throwIfCancellationRequested()
             val onlinePlainLyricsResult = provider.fetch(request).getOrElse { error ->

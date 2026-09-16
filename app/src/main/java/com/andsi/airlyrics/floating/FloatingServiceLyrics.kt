@@ -156,7 +156,7 @@ internal fun FloatingLyricsService.notFoundText(media: CurrentMediaInfo): String
         "${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
     } else {
         val plainLyricsSourceTitle =
-            localizedPlainLyricsSourceTitle(LyricsSettingsStore.getPlainLyricsSearchSource(this))
+            localizedPlainLyricsSourceTitle(LyricsSettingsStore.getPlainLyricsSearchSources(this).first())
         "${media.displayText}\n${getString(R.string.ui_source)}$plainLyricsSourceTitle\n${getString(R.string.ui_lyrics_not_found)}"
     }
 }

@@ -10,7 +10,10 @@ import com.andsi.airlyrics.core.prefs.prefs
 
 object LyricsSettingsStore {
     private const val PREFS_NAME = "lyrics_settings"
+    private const val KEY_PLAIN_LYRICS_SOURCE_ORDER = "lyrics_source_order"
+    // Legacy single-source key. Keep it as a migration input and downgrade-compatible first source.
     private const val KEY_PLAIN_LYRICS_SOURCE = "lyrics_source"
+    private const val PLAIN_LYRICS_SOURCE_SEPARATOR = ","
     private const val KEY_AUTO_SEARCH_ONLINE = "auto_search_online"
     private const val KEY_AUTO_SAVE_LOCAL = "auto_save_local"
     private const val KEY_CONTENT_DISPLAY_MODE = "content_display_mode"
@@ -21,40 +24,71 @@ object LyricsSettingsStore {
 
     private fun store(context: Context) = prefs(context, PREFS_NAME)
 
-    fun getPlainLyricsSearchSource(context: Context): PlainLyricsSearchSource {
-        val value = store(context).getString(KEY_PLAIN_LYRICS_SOURCE)
-        val persisted = PlainLyricsSearchSource.fromKeyOrNull(value)
-        return persisted?.takeIf { it in PlainLyricsSearchSource.onlineSources }
-            ?: PlainLyricsSearchSource.default
+    fun getPlainLyricsSearchSources(context: Context): List<PlainLyricsSearchSource> {
+        val preferences = store(context)
+        deserializePlainLyricsSearchSources(
+            preferences.getString(KEY_PLAIN_LYRICS_SOURCE_ORDER)
+        ).takeIf { it.isNotEmpty() }?.let { return it }
+
+        val legacySource = PlainLyricsSearchSource.fromKeyOrNull(
+            preferences.getString(KEY_PLAIN_LYRICS_SOURCE)
+        )
+        return legacySource
+            ?.takeIf { it in PlainLyricsSearchSource.onlineSources }
+            ?.let(::listOf)
+            ?: listOf(PlainLyricsSearchSource.default)
     }
 
-    fun setPlainLyricsSearchSource(context: Context, plainLyricsSearchSource: PlainLyricsSearchSource) {
-        if (plainLyricsSearchSource == PlainLyricsSearchSource.LOCAL_ONLY) {
-            store(context).edit {
-                putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.default.key)
-                putBoolean(KEY_AUTO_SEARCH_ONLINE, false)
-            }
-        } else {
-            store(context).setString(KEY_PLAIN_LYRICS_SOURCE, plainLyricsSearchSource.key)
+    fun setPlainLyricsSearchSources(
+        context: Context,
+        plainLyricsSearchSources: List<PlainLyricsSearchSource>
+    ) {
+        val normalizedSources = plainLyricsSearchSources
+            .filter { it in PlainLyricsSearchSource.onlineSources }
+            .distinct()
+        require(normalizedSources.isNotEmpty()) { "At least one online lyrics source is required" }
+
+        store(context).edit {
+            putString(
+                KEY_PLAIN_LYRICS_SOURCE_ORDER,
+                normalizedSources.joinToString(PLAIN_LYRICS_SOURCE_SEPARATOR) { it.key }
+            )
+            putString(KEY_PLAIN_LYRICS_SOURCE, normalizedSources.first().key)
         }
     }
 
     fun isAutoSearchOnlineEnabled(context: Context): Boolean {
-        val persistedSourceKey = store(context).getString(KEY_PLAIN_LYRICS_SOURCE)
+        val preferences = store(context)
+        val persistedSources = deserializePlainLyricsSearchSources(
+            preferences.getString(KEY_PLAIN_LYRICS_SOURCE_ORDER)
+        )
+        if (persistedSources.isNotEmpty()) {
+            return preferences.getBoolean(KEY_AUTO_SEARCH_ONLINE, true)
+        }
+
+        val persistedSourceKey = preferences.getString(KEY_PLAIN_LYRICS_SOURCE)
         val persistedSource = PlainLyricsSearchSource.fromKeyOrNull(persistedSourceKey)
         if (persistedSourceKey != null && persistedSource !in PlainLyricsSearchSource.onlineSources) {
             return false
         }
-        return store(context).getBoolean(KEY_AUTO_SEARCH_ONLINE, true)
+        return preferences.getBoolean(KEY_AUTO_SEARCH_ONLINE, true)
     }
 
     fun setAutoSearchOnlineEnabled(context: Context, enabled: Boolean) {
-        val persistedSource = PlainLyricsSearchSource.fromKeyOrNull(
-            store(context).getString(KEY_PLAIN_LYRICS_SOURCE)
+        val preferences = store(context)
+        val persistedSources = deserializePlainLyricsSearchSources(
+            preferences.getString(KEY_PLAIN_LYRICS_SOURCE_ORDER)
         )
-        store(context).edit {
+        val legacySource = PlainLyricsSearchSource.fromKeyOrNull(
+            preferences.getString(KEY_PLAIN_LYRICS_SOURCE)
+        )
+        val hasPersistedOnlineSource = persistedSources.isNotEmpty() ||
+            legacySource in PlainLyricsSearchSource.onlineSources
+
+        preferences.edit {
             putBoolean(KEY_AUTO_SEARCH_ONLINE, enabled)
-            if (enabled && persistedSource !in PlainLyricsSearchSource.onlineSources) {
+            if (enabled && !hasPersistedOnlineSource) {
+                putString(KEY_PLAIN_LYRICS_SOURCE_ORDER, PlainLyricsSearchSource.default.key)
                 putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.default.key)
             }
         }
@@ -109,7 +143,7 @@ object LyricsSettingsStore {
 
     fun getSettings(context: Context): LyricsSettings {
         return LyricsSettings(
-            plainLyricsSearchSource = getPlainLyricsSearchSource(context),
+            plainLyricsSearchSources = getPlainLyricsSearchSources(context),
             autoSearchOnline = isAutoSearchOnlineEnabled(context),
             autoSaveLocal = isAutoSaveLocalEnabled(context),
             contentDisplayMode = getContentDisplayMode(context),
@@ -117,5 +151,15 @@ object LyricsSettingsStore {
             switchAnimationMode = getSwitchAnimationMode(context),
             wordByWordLyricsEnabled = isWordByWordLyricsEnabled(context)
         )
+    }
+
+    private fun deserializePlainLyricsSearchSources(value: String?): List<PlainLyricsSearchSource> {
+        return value
+            ?.split(PLAIN_LYRICS_SOURCE_SEPARATOR)
+            .orEmpty()
+            .map { it.trim() }
+            .mapNotNull(PlainLyricsSearchSource::fromKeyOrNull)
+            .filter { it in PlainLyricsSearchSource.onlineSources }
+            .distinct()
     }
 }

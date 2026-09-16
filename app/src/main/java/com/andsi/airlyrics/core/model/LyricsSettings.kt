@@ -2,7 +2,8 @@ package com.andsi.airlyrics.core.model
 
 /** User-facing lyrics lookup and display configuration. */
 data class LyricsSettings(
-    val plainLyricsSearchSource: PlainLyricsSearchSource,
+    /** Selected online lookup sources in priority order. */
+    val plainLyricsSearchSources: List<PlainLyricsSearchSource>,
     val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean,
     val contentDisplayMode: LyricsContentDisplayMode = LyricsContentDisplayMode.default,
@@ -11,7 +12,7 @@ data class LyricsSettings(
     val wordByWordLyricsEnabled: Boolean = false
 )
 
-/** The user's selected online lookup source. Local lyrics are always checked first. */
+/** An online lookup source. Local lyrics are always checked first. */
 enum class PlainLyricsSearchSource(val key: String) {
     /** Persisted compatibility value. New UI models local-only behavior with [LyricsSettings.autoSearchOnline]. */
     LOCAL_ONLY("local_only"),

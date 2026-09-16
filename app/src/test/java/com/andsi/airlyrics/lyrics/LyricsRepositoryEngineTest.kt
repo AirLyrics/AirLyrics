@@ -40,14 +40,11 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun findLyrics_localOnlyDoesNotCallOnlineProvider() {
+    fun findLyrics_emptySourceOrderDoesNotCallOnlineProvider() {
         val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
             online = online,
-            settings = settings(
-                plainLyricsSearchSource = PlainLyricsSearchSource.LOCAL_ONLY,
-                autoSearchOnline = false
-            )
+            settings = settings(plainLyricsSearchSources = emptyList())
         )
 
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
@@ -71,11 +68,16 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun findLyrics_doesNotFallbackWhenSelectedOnlineProviderIsMissing() {
+    fun findLyrics_onlyUsesFirstConfiguredOnlineProvider() {
         val netease = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
             online = netease,
-            settings = settings(plainLyricsSearchSource = PlainLyricsSearchSource.MUSIXMATCH)
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.MUSIXMATCH,
+                    PlainLyricsSearchSource.NETEASE
+                )
+            )
         )
 
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
@@ -235,13 +237,14 @@ class LyricsRepositoryEngineTest {
     }
 
     private fun settings(
-        plainLyricsSearchSource: PlainLyricsSearchSource = PlainLyricsSearchSource.NETEASE,
+        plainLyricsSearchSources: List<PlainLyricsSearchSource> =
+            listOf(PlainLyricsSearchSource.NETEASE),
         autoSearchOnline: Boolean = true,
         autoSaveLocal: Boolean = true,
         wordByWordLyricsEnabled: Boolean = false
     ): LyricsSettings {
         return LyricsSettings(
-            plainLyricsSearchSource = plainLyricsSearchSource,
+            plainLyricsSearchSources = plainLyricsSearchSources,
             autoSearchOnline = autoSearchOnline,
             autoSaveLocal = autoSaveLocal,
             contentDisplayMode = LyricsContentDisplayMode.default,

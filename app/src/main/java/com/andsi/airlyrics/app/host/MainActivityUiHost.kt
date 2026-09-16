@@ -384,7 +384,7 @@ internal class MainActivityUiHost(
 
     override fun lyricsSettingsState(): LyricsSettingsUiState {
         return LyricsSettingsUiState(
-            selectedPlainLyricsSource = LyricsSettingsStore.getPlainLyricsSearchSource(this),
+            selectedPlainLyricsSource = LyricsSettingsStore.getPlainLyricsSearchSources(this).first(),
             plainLyricsSourceOptions = PlainLyricsSearchSource.onlineSources,
             autoSearchOnline = LyricsSettingsStore.isAutoSearchOnlineEnabled(this),
             autoSaveLocal = LyricsSettingsStore.isAutoSaveLocalEnabled(this),
