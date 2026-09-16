@@ -68,6 +68,18 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
+    fun lrclibSourceIsAvailableAndRoundTrips() {
+        assertTrue(PlainLyricsSearchSource.LRCLIB in PlainLyricsSearchSource.onlineSources)
+
+        LyricsSettingsStore.setPlainLyricsSearchSource(context, PlainLyricsSearchSource.LRCLIB)
+
+        assertEquals(
+            PlainLyricsSearchSource.LRCLIB,
+            LyricsSettingsStore.getPlainLyricsSearchSource(context)
+        )
+    }
+
+    @Test
     fun enablingAutomaticSearchMigratesPersistedLegacyLocalOnlySource() {
         context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
             .putString("lyrics_source", PlainLyricsSearchSource.LOCAL_ONLY.key)

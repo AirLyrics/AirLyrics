@@ -26,6 +26,8 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 plainLyricsResult = canceledBeforeStart,
                 expectedSource = "netease-rust",
                 expectedMessage = "lookup canceled",
+                expectedErrorTypeName = "NativeError",
+                expectedErrorType = LyricsLookupErrorType.NativeError,
             )
 
             LyricsNativeCancellation.cancelLookup(MARKER_CONSUMPTION_LOOKUP_ID)
@@ -34,12 +36,16 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 plainLyricsResult = markerPending,
                 expectedSource = "netease-rust",
                 expectedMessage = "lookup canceled",
+                expectedErrorTypeName = "NativeError",
+                expectedErrorType = LyricsLookupErrorType.NativeError,
             )
             val consumedCancellation = fetchNeteasePlainLyricsValidation(MARKER_CONSUMPTION_LOOKUP_ID)
             assertNativePlainLyricsError(
                 plainLyricsResult = consumedCancellation,
                 expectedSource = "netease-rust",
                 expectedMessage = "empty title",
+                expectedErrorTypeName = "NotFound",
+                expectedErrorType = LyricsLookupErrorType.NotFound,
             )
 
             LyricsNativeCancellation.cancelLookup(EXPLICIT_CLEAR_LOOKUP_ID)
@@ -49,13 +55,26 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 plainLyricsResult = explicitlyClearedCancellation,
                 expectedSource = "netease-rust",
                 expectedMessage = "empty title",
+                expectedErrorTypeName = "NotFound",
+                expectedErrorType = LyricsLookupErrorType.NotFound,
             )
 
             val musixmatchValidation = fetchMusixmatchPlainLyricsValidation()
             assertNativePlainLyricsError(
                 plainLyricsResult = musixmatchValidation,
                 expectedSource = "musixmatch-rust",
-                expectedMessage = "empty title",
+                expectedMessage = "musixmatch content not found: empty title",
+                expectedErrorTypeName = "NotFound",
+                expectedErrorType = LyricsLookupErrorType.NotFound,
+            )
+
+            val lrclibValidation = fetchLrclibPlainLyricsValidation()
+            assertNativePlainLyricsError(
+                plainLyricsResult = lrclibValidation,
+                expectedSource = "lrclib-rust",
+                expectedMessage = "LRCLIB lookup requires a title",
+                expectedErrorTypeName = "NotFound",
+                expectedErrorType = LyricsLookupErrorType.NotFound,
             )
         } catch (failure: Throwable) {
             failures += failure
@@ -96,6 +115,19 @@ class NativeLyricsJniSmokeInstrumentedTest {
         )
     }
 
+    private fun fetchLrclibPlainLyricsValidation(): NativePlainLyricsJsonResult {
+        return parseNativePlainLyricsResult(
+            LrclibLyricsNative.fetchBestLyricsJson(
+                title = "",
+                artist = "",
+                album = "",
+                durationMs = 0L,
+                lookupId = LRCLIB_VALIDATION_LOOKUP_ID,
+            ),
+            defaultSource = "lrclib-rust",
+        )
+    }
+
     private fun parseNativePlainLyricsResult(
         jsonText: String,
         defaultSource: String,
@@ -114,11 +146,13 @@ class NativeLyricsJniSmokeInstrumentedTest {
         plainLyricsResult: NativePlainLyricsJsonResult,
         expectedSource: String,
         expectedMessage: String,
+        expectedErrorTypeName: String = "Unknown",
+        expectedErrorType: LyricsLookupErrorType = LyricsLookupErrorType.Unknown,
     ) {
         assertFalse(plainLyricsResult.ok)
         assertEquals(expectedSource, plainLyricsResult.plainSource)
-        assertEquals("Unknown", plainLyricsResult.errorTypeName)
-        assertEquals(LyricsLookupErrorType.Unknown, plainLyricsResult.errorType)
+        assertEquals(expectedErrorTypeName, plainLyricsResult.errorTypeName)
+        assertEquals(expectedErrorType, plainLyricsResult.errorType)
         assertEquals(expectedMessage, plainLyricsResult.errorMessage)
     }
 
@@ -127,6 +161,7 @@ class NativeLyricsJniSmokeInstrumentedTest {
         const val MARKER_CONSUMPTION_LOOKUP_ID = Long.MAX_VALUE - 102L
         const val EXPLICIT_CLEAR_LOOKUP_ID = Long.MAX_VALUE - 103L
         const val MUSIXMATCH_VALIDATION_LOOKUP_ID = Long.MAX_VALUE - 104L
+        const val LRCLIB_VALIDATION_LOOKUP_ID = Long.MAX_VALUE - 105L
 
         val TEST_LOOKUP_IDS =
             listOf(
@@ -134,6 +169,7 @@ class NativeLyricsJniSmokeInstrumentedTest {
                 MARKER_CONSUMPTION_LOOKUP_ID,
                 EXPLICIT_CLEAR_LOOKUP_ID,
                 MUSIXMATCH_VALIDATION_LOOKUP_ID,
+                LRCLIB_VALIDATION_LOOKUP_ID,
             )
     }
 }

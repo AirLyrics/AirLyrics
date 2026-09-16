@@ -17,6 +17,7 @@ regex = "1"
 openssl = { version = "0.10", features = ["vendored"] }
 musixmatch-inofficial = "0.4.0"
 reqwest = { version = "0.12", features = ["json"] }
+unicode-normalization = "0.1"
 
 [profile.release]
 lto = "thin"

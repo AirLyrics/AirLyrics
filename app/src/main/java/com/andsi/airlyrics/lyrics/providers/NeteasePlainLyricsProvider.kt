@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics.providers
 
+import android.util.Log
+import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
@@ -42,6 +44,14 @@ object NeteasePlainLyricsProvider : PlainLyricsProvider {
     ): Result<NeteasePlainLyricsResult?> {
         return runCatching {
             cancellationToken?.throwIfCancellationRequested()
+            if (BuildConfig.DEBUG) {
+                Log.d(
+                    "AirLyricsLyrics",
+                    "source=netease stage=lookup_input title=${title.debugLogValue()} " +
+                        "artist=${artist.debugLogValue()} album=${album.debugLogValue()} " +
+                        "durationMs=$durationMs",
+                )
+            }
             val jsonText = withNativeLyricsCancellation(
                 token = cancellationToken
             ) { lookupId ->
@@ -123,3 +133,6 @@ object NeteasePlainLyricsProvider : PlainLyricsProvider {
         }
     }
 }
+
+private fun String.debugLogValue(): String =
+    replace(Regex("[\\r\\n\\t]+"), " ").trim().take(200)

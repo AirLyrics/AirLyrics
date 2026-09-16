@@ -19,6 +19,7 @@
     <string name="lyrics_plain_format_invalid_lines">Invalid lines: %1$s%2$s\n\nStart lyric lines with [00:12.34]</string>
     <string name="lyrics_import_format_invalid_lines">Invalid format near lines %1$s%2$s\n\nCheck the LRC or TTML format</string>
     <string name="provider_local_plain_lyrics">Local lyrics</string>
+    <string name="provider_lrclib">LRCLIB</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_plain_lyrics">NetEase Lyrics</string>
     <string name="settings_current_value">Current: %1$s</string>

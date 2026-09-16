@@ -18,6 +18,7 @@ internal fun plainLyricsSourceTitleRes(plainLyricsSearchSource: PlainLyricsSearc
         PlainLyricsSearchSource.LOCAL_ONLY -> R.string.ui_local_only
         PlainLyricsSearchSource.NETEASE -> R.string.ui_netease_cloud_music
         PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch
+        PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
     }
 
 internal fun Context.localizedLyricsContentModeTitle(mode: LyricsContentDisplayMode): String =

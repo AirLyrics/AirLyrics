@@ -19,6 +19,7 @@
     <string name="lyrics_plain_format_invalid_lines">格式错误：第 %1$s%2$s 行\n\n歌词行以 [00:12.34] 开头</string>
     <string name="lyrics_import_format_invalid_lines">第 %1$s%2$s 行附近格式错误\n\n请检查 LRC 或 TTML 格式</string>
     <string name="provider_local_plain_lyrics">本地歌词</string>
+    <string name="provider_lrclib">LRCLIB</string>
     <string name="provider_musixmatch">Musixmatch</string>
     <string name="provider_netease_plain_lyrics">网易云歌词</string>
     <string name="settings_current_value">当前：%1$s</string>

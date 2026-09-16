@@ -5,6 +5,7 @@ import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.providers.LocalPlainLyricsProvider
+import com.andsi.airlyrics.lyrics.providers.LrclibPlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.MusixmatchPlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.NeteasePlainLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -23,7 +24,8 @@ import java.util.concurrent.CancellationException
 object LyricsRepository {
     private val onlinePlainLyricsProviders = mapOf(
         PlainLyricsSearchSource.NETEASE to NeteasePlainLyricsProvider,
-        PlainLyricsSearchSource.MUSIXMATCH to MusixmatchPlainLyricsProvider
+        PlainLyricsSearchSource.MUSIXMATCH to MusixmatchPlainLyricsProvider,
+        PlainLyricsSearchSource.LRCLIB to LrclibPlainLyricsProvider
     )
 
     fun findLyrics(

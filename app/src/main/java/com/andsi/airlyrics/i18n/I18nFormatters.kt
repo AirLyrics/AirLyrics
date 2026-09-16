@@ -23,6 +23,7 @@ internal fun Context.localizedPlainLyricsProviderName(plainProviderIdOrName: Str
         "local", "local lyrics" -> R.string.provider_local_plain_lyrics
         "netease", "netease lyrics", "netease cloud music", "\u7f51\u6613\u4e91\u6b4c\u8bcd", "\u7f51\u6613\u4e91\u97f3\u4e50" -> R.string.provider_netease_plain_lyrics
         "musixmatch" -> R.string.provider_musixmatch
+        "lrclib" -> R.string.provider_lrclib
         else -> null
     }
     return providerRes?.let { getString(it) }
