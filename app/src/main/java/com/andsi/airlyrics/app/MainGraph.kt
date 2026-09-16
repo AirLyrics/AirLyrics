@@ -152,7 +152,6 @@ internal class MainGraph(
     private var stateObserverJob: Job? = null
     private var effectObserverJob: Job? = null
     private var overlayPermissionHintShown = false
-    private val pendingSavedLyricsDeletionCallbacks = mutableMapOf<Long, (Boolean) -> Unit>()
 
     fun onCreate() {
         mediaSourceController.autoSelectSourceOnceIfNeeded()
@@ -251,7 +250,6 @@ internal class MainGraph(
         effectObserverJob?.cancel()
         effectObserverJob = null
         cancelPendingUiRefreshes()
-        pendingSavedLyricsDeletionCallbacks.clear()
         receivers.unregister()
     }
 
@@ -375,8 +373,11 @@ internal class MainGraph(
         item: LyricsStorage.LocalLyricsItem,
         onCompleted: (Boolean) -> Unit
     ) {
-        val requestId = viewModel.deleteSavedLyricsItem(item)
-        pendingSavedLyricsDeletionCallbacks[requestId] = onCompleted
+        val deletion = viewModel.deleteSavedLyricsItem(item)
+        activity.lifecycleScope.launch {
+            val deleted = deletion.await()
+            if (canRenderUi()) onCompleted(deleted)
+        }
     }
 
     fun scheduleMediaPageRefresh() {
@@ -531,11 +532,6 @@ internal class MainGraph(
                     plainImportEnabled = effect.plainImportEnabled,
                     wordByWordImportEnabled = effect.wordByWordImportEnabled
                 )
-            is MainUiEffect.SavedLyricsDeletionCompleted -> {
-                pendingSavedLyricsDeletionCallbacks
-                    .remove(effect.requestId)
-                    ?.invoke(effect.deleted)
-            }
             is MainUiEffect.FloatingFontImported -> {
                 floatingController.notifyStyleChanged()
                 feedback.showMessage(

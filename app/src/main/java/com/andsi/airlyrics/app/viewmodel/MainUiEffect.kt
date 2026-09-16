@@ -34,11 +34,6 @@ internal sealed interface MainUiEffect {
         val wordByWordImportEnabled: Boolean
     ) : MainUiEffect
 
-    data class SavedLyricsDeletionCompleted(
-        val requestId: Long,
-        val deleted: Boolean
-    ) : MainUiEffect
-
     data class FloatingFontImported(
         val displayName: String
     ) : MainUiEffect

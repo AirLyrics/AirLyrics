@@ -38,11 +38,12 @@ import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
-import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,7 +67,6 @@ internal class MainViewModel(
     private val uiEffectChannel = Channel<MainUiEffect>(capacity = Channel.BUFFERED)
     val uiEffects = uiEffectChannel.receiveAsFlow()
     private var mediaRefreshJob: Job? = null
-    private val nextSavedLyricsDeletionRequestId = AtomicLong(0L)
 
     override val locked: Boolean
         get() = _uiState.value.locked
@@ -309,9 +309,8 @@ internal class MainViewModel(
         }
     }
 
-    fun deleteSavedLyricsItem(item: LyricsStorage.LocalLyricsItem): Long {
-        val requestId = nextSavedLyricsDeletionRequestId.incrementAndGet()
-        viewModelScope.launch {
+    fun deleteSavedLyricsItem(item: LyricsStorage.LocalLyricsItem): Deferred<Boolean> =
+        viewModelScope.async {
             val result = withContext(ioDispatcher) {
                 lyricsController.deleteSavedLyricsItem(item)
             }
@@ -330,12 +329,8 @@ internal class MainViewModel(
                     false
                 }
             }
-            uiEffectChannel.trySend(
-                MainUiEffect.SavedLyricsDeletionCompleted(requestId, deleted)
-            )
+            deleted
         }
-        return requestId
-    }
 
     fun deleteAllSavedLyrics() {
         viewModelScope.launch {

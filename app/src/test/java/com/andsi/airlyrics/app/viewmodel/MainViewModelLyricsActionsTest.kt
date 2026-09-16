@@ -7,10 +7,10 @@ import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -108,7 +108,7 @@ class MainViewModelLyricsActionsTest : MainViewModelTestBase() {
         }
 
     @Test
-    fun savedLyricsDeletion_assignsMonotonicIdsAndReportsEachOutcome() =
+    fun savedLyricsDeletion_returnsEachOutcomeAndReportsItsMessage() =
         runTest(mainDispatcherRule.dispatcher) {
             val lyrics = FakeLyricsOperations().apply {
                 savedDeleteResults += LyricsStorage.DeleteLocalLyricsItemResult.Deleted(songA)
@@ -119,20 +119,16 @@ class MainViewModelLyricsActionsTest : MainViewModelTestBase() {
             val effects = recordEffects(viewModel)
             val items = listOf("one", "two", "three").map(::localItem)
 
-            val requestIds = items.map(viewModel::deleteSavedLyricsItem)
+            val deletions = items.map(viewModel::deleteSavedLyricsItem)
             advanceUntilIdle()
 
-            assertEquals(3, requestIds.distinct().size)
-            assertTrue(requestIds.zipWithNext().all { (first, second) -> second > first })
+            assertEquals(listOf(true, false, false), deletions.awaitAll())
             assertEquals(items, lyrics.savedDeleteRequests)
             assertEquals(
                 listOf(
                     MainUiEffect.ShowMessage(R.string.ui_all_saved_lyrics_deleted),
-                    MainUiEffect.SavedLyricsDeletionCompleted(requestIds[0], deleted = true),
                     MainUiEffect.ShowMessage(R.string.ui_lyrics_not_found),
-                    MainUiEffect.SavedLyricsDeletionCompleted(requestIds[1], deleted = false),
-                    MainUiEffect.ShowMessage(R.string.ui_delete_saved_lyrics_failed, error = true),
-                    MainUiEffect.SavedLyricsDeletionCompleted(requestIds[2], deleted = false)
+                    MainUiEffect.ShowMessage(R.string.ui_delete_saved_lyrics_failed, error = true)
                 ),
                 effects
             )

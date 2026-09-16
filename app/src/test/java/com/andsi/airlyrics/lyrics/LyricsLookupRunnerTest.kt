@@ -206,7 +206,9 @@ class LyricsLookupRunnerTest {
             blockersCanReturn.countDown()
 
             val latestWasDelivered = latestCallback.await(2, TimeUnit.SECONDS)
-            val terminalStates = (blockerHandles + staleHandle + latestHandle)
+            val handles = blockerHandles + staleHandle + latestHandle
+            val allHandlesTerminated = awaitHandlesTerminal(handles)
+            val terminalStates = handles
                 .associate { handle ->
                     System.identityHashCode(handle) to
                         "done=${handle.isDone},cancelled=${handle.isCancelled}"
@@ -216,7 +218,7 @@ class LyricsLookupRunnerTest {
                 "Every runner request must terminate and the latest callback must be delivered; " +
                     "latestDelivered=$latestWasDelivered, states=$terminalStates, callbacks=$callbacks",
                 latestWasDelivered &&
-                    terminalStates.values.all { state -> state != "done=false,cancelled=false" }
+                    allHandlesTerminated
             )
             assertEquals(listOf("latest:latest"), callbacks.toList())
         } finally {
@@ -391,5 +393,14 @@ class LyricsLookupRunnerTest {
             }
         }
         assertEquals(0L, latch.count)
+    }
+
+    private fun awaitHandlesTerminal(handles: List<LyricsLookupHandle>): Boolean {
+        val deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(2)
+        while (System.nanoTime() < deadlineNanos) {
+            if (handles.all { handle -> handle.isDone || handle.isCancelled }) return true
+            Thread.yield()
+        }
+        return handles.all { handle -> handle.isDone || handle.isCancelled }
     }
 }
