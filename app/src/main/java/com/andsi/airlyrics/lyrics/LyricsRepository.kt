@@ -18,7 +18,7 @@ import java.util.concurrent.CancellationException
  *
  * Lookup order:
  * 1. Local plain lyrics, so imported/saved files always win.
- * 2. Online plain-lyrics provider, only when the user allows online search.
+ * 2. Selected online providers in priority order, only when the user allows online search.
  * 3. Optional local plain cache save for successful online results.
  */
 object LyricsRepository {
@@ -115,24 +115,10 @@ internal class LyricsRepositoryEngine(
                 return@runCatching null
             }
 
-            val source = settings.plainLyricsSearchSources.firstOrNull() ?: return@runCatching null
-            val provider = onlinePlainLyricsProviders[source] ?: return@runCatching null
-
-            cancellationToken?.throwIfCancellationRequested()
-            val onlinePlainLyricsResult = provider.fetch(request).getOrElse { error ->
-                if (error is CancellationException) {
-                    throw error
-                }
-                lookupLogger.logProviderFailure(
-                    provider = provider,
-                    title = title,
-                    artist = artist,
-                    durationMs = durationMs,
-                    error = error,
-                    debug = BuildConfig.DEBUG
-                )
-                throw error
-            }
+            val onlinePlainLyricsResult = findOnlinePlainLyrics(
+                sources = settings.plainLyricsSearchSources,
+                request = request
+            )
 
             cancellationToken?.throwIfCancellationRequested()
             if (onlinePlainLyricsResult != null && (settings.autoSaveLocal || forceSaveOnline)) {
@@ -158,6 +144,66 @@ internal class LyricsRepositoryEngine(
                 )
             }
         }
+    }
+
+    private fun findOnlinePlainLyrics(
+        sources: List<PlainLyricsSearchSource>,
+        request: PlainLyricsSearchRequest
+    ): LyricsProviderResult? {
+        val orderedSources = sources.distinct()
+        for ((index, source) in orderedSources.withIndex()) {
+            request.cancellationToken?.throwIfCancellationRequested()
+            val provider = checkNotNull(onlinePlainLyricsProviders[source]) {
+                "No online lyrics provider registered for source: ${source.key}"
+            }
+            lookupLogger.logProviderProgress(
+                provider = provider,
+                priority = index + 1,
+                total = orderedSources.size,
+                stage = LyricsLookupProviderStage.ATTEMPT,
+                debug = BuildConfig.DEBUG
+            )
+
+            val result = try {
+                provider.fetch(request).getOrThrow()
+            } catch (error: Throwable) {
+                request.cancellationToken?.throwIfCancellationRequested()
+                if (error is CancellationException) {
+                    throw error
+                }
+                lookupLogger.logProviderFailure(
+                    provider = provider,
+                    title = request.title,
+                    artist = request.artist,
+                    durationMs = request.durationMs,
+                    error = error,
+                    debug = BuildConfig.DEBUG
+                )
+                throw error
+            }
+
+            request.cancellationToken?.throwIfCancellationRequested()
+            if (result == null || result.plainLrc.isBlank()) {
+                lookupLogger.logProviderProgress(
+                    provider = provider,
+                    priority = index + 1,
+                    total = orderedSources.size,
+                    stage = LyricsLookupProviderStage.MISS,
+                    debug = BuildConfig.DEBUG
+                )
+                continue
+            }
+
+            lookupLogger.logProviderProgress(
+                provider = provider,
+                priority = index + 1,
+                total = orderedSources.size,
+                stage = LyricsLookupProviderStage.MATCH,
+                debug = BuildConfig.DEBUG
+            )
+            return result
+        }
+        return null
     }
 
     private fun attachLocalWordByWordLyricsIfAvailable(
@@ -206,6 +252,20 @@ internal fun interface LyricsLookupLogger {
         error: Throwable,
         debug: Boolean
     )
+
+    fun logProviderProgress(
+        provider: PlainLyricsProvider,
+        priority: Int,
+        total: Int,
+        stage: LyricsLookupProviderStage,
+        debug: Boolean
+    ) = Unit
+}
+
+internal enum class LyricsLookupProviderStage(val logValue: String) {
+    ATTEMPT("provider_attempt"),
+    MISS("provider_miss"),
+    MATCH("provider_match")
 }
 
 private object AndroidLocalPlainLyricsSaver : LocalPlainLyricsSaver {
@@ -267,5 +327,19 @@ private object AndroidLyricsLookupLogger : LyricsLookupLogger {
         } else {
             Log.w("AirLyricsLyrics", "${provider.name} lookup failed", error)
         }
+    }
+
+    override fun logProviderProgress(
+        provider: PlainLyricsProvider,
+        priority: Int,
+        total: Int,
+        stage: LyricsLookupProviderStage,
+        debug: Boolean
+    ) {
+        if (!debug) return
+        Log.d(
+            "AirLyricsLyrics",
+            "stage=${stage.logValue} source=${provider.id} priority=$priority/$total"
+        )
     }
 }

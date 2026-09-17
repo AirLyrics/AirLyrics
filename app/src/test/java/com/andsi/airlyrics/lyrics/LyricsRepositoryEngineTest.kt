@@ -68,10 +68,38 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun findLyrics_onlyUsesFirstConfiguredOnlineProvider() {
+    fun findLyrics_firstOnlineMatchStopsFallback() {
+        val neteaseResult = result("netease", "[00:01.00]online")
+        val netease = FakePlainLyricsProvider("netease", Result.success(neteaseResult))
+        val musixmatch = FakePlainLyricsProvider(
+            "musixmatch",
+            Result.success(result("musixmatch", "[00:01.00]fallback"))
+        )
+        val engine = engine(
+            onlineProviders = linkedMapOf(
+                PlainLyricsSearchSource.MUSIXMATCH to musixmatch,
+                PlainLyricsSearchSource.NETEASE to netease
+            ),
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.MUSIXMATCH
+                )
+            )
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
+
+        assertSame(neteaseResult, found)
+        assertEquals(1, netease.calls)
+        assertEquals(0, musixmatch.calls)
+    }
+
+    @Test
+    fun findLyrics_missingProviderReturnsConfigurationFailureWithoutFallback() {
         val netease = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
-            online = netease,
+            onlineProviders = mapOf(PlainLyricsSearchSource.NETEASE to netease),
             settings = settings(
                 plainLyricsSearchSources = listOf(
                     PlainLyricsSearchSource.MUSIXMATCH,
@@ -80,10 +108,159 @@ class LyricsRepositoryEngineTest {
             )
         )
 
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L)
+
+        assertTrue(found.exceptionOrNull() is IllegalStateException)
+        assertTrue(found.exceptionOrNull()?.message.orEmpty().contains("musixmatch"))
+        assertEquals(0, netease.calls)
+    }
+
+    @Test
+    fun findLyrics_fallsBackInConfiguredOrderAndSavesWinnerOnce() {
+        val callOrder = mutableListOf<String>()
+        val netease = FakePlainLyricsProvider("netease") {
+            callOrder += "netease"
+            Result.success(null)
+        }
+        val musixmatchResult = result("musixmatch", "[00:01.00]winner")
+        val musixmatch = FakePlainLyricsProvider("musixmatch") {
+            callOrder += "musixmatch"
+            Result.success(musixmatchResult)
+        }
+        val lrclib = FakePlainLyricsProvider("lrclib") {
+            callOrder += "lrclib"
+            Result.success(result("lrclib", "[00:01.00]unused"))
+        }
+        val saver = RecordingPlainLyricsSaver()
+        val logger = RecordingLogger()
+        val engine = engine(
+            onlineProviders = linkedMapOf(
+                PlainLyricsSearchSource.LRCLIB to lrclib,
+                PlainLyricsSearchSource.MUSIXMATCH to musixmatch,
+                PlainLyricsSearchSource.NETEASE to netease
+            ),
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.MUSIXMATCH,
+                    PlainLyricsSearchSource.LRCLIB
+                )
+            ),
+            localPlainLyricsSaver = saver,
+            lookupLogger = logger
+        )
+
+        val found = engine.findLyrics(
+            context,
+            "Song",
+            "Artist",
+            album = "Album",
+            durationMs = 180_000L
+        ).getOrThrow()
+
+        assertSame(musixmatchResult, found)
+        assertEquals(listOf("netease", "musixmatch"), callOrder)
+        assertEquals(0, lrclib.calls)
+        assertEquals(1, saver.saved.size)
+        assertSame(musixmatchResult, saver.saved.single().plainLyricsResult)
+        assertEquals("Album", saver.saved.single().album)
+        assertEquals(
+            listOf(
+                ProviderProgress("netease", 1, 3, LyricsLookupProviderStage.ATTEMPT),
+                ProviderProgress("netease", 1, 3, LyricsLookupProviderStage.MISS),
+                ProviderProgress("musixmatch", 2, 3, LyricsLookupProviderStage.ATTEMPT),
+                ProviderProgress("musixmatch", 2, 3, LyricsLookupProviderStage.MATCH)
+            ),
+            logger.progress
+        )
+    }
+
+    @Test
+    fun findLyrics_fallsBackWhenProviderReturnsBlankLyrics() {
+        val blank = FakePlainLyricsProvider("netease", Result.success(result("netease", "   ")))
+        val fallbackResult = result("lrclib", "[00:01.00]fallback")
+        val fallback = FakePlainLyricsProvider("lrclib", Result.success(fallbackResult))
+        val engine = engine(
+            onlineProviders = mapOf(
+                PlainLyricsSearchSource.NETEASE to blank,
+                PlainLyricsSearchSource.LRCLIB to fallback
+            ),
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.LRCLIB
+                )
+            )
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
+
+        assertSame(fallbackResult, found)
+        assertEquals(1, blank.calls)
+        assertEquals(1, fallback.calls)
+    }
+
+    @Test
+    fun findLyrics_returnsNullAfterAllProvidersMiss() {
+        val callOrder = mutableListOf<String>()
+        val providers = PlainLyricsSearchSource.onlineSources.associateWith { source ->
+            FakePlainLyricsProvider(source.key) {
+                callOrder += source.key
+                Result.success(null)
+            }
+        }
+        val saver = RecordingPlainLyricsSaver()
+        val logger = RecordingLogger()
+        val engine = engine(
+            onlineProviders = providers,
+            settings = settings(plainLyricsSearchSources = PlainLyricsSearchSource.onlineSources),
+            localPlainLyricsSaver = saver,
+            lookupLogger = logger
+        )
+
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
 
         assertNull(found)
-        assertEquals(0, netease.calls)
+        assertEquals(PlainLyricsSearchSource.onlineSources.map { it.key }, callOrder)
+        assertTrue(saver.saved.isEmpty())
+        assertEquals(0, logger.failures)
+    }
+
+    @Test
+    fun findLyrics_deduplicatesConfiguredSourcesBeforeFallback() {
+        val netease = FakePlainLyricsProvider("netease", Result.success(null))
+        val lrclibResult = result("lrclib", "[00:01.00]fallback")
+        val lrclib = FakePlainLyricsProvider("lrclib", Result.success(lrclibResult))
+        val logger = RecordingLogger()
+        val engine = engine(
+            onlineProviders = mapOf(
+                PlainLyricsSearchSource.NETEASE to netease,
+                PlainLyricsSearchSource.LRCLIB to lrclib
+            ),
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.LRCLIB
+                )
+            ),
+            lookupLogger = logger
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
+
+        assertSame(lrclibResult, found)
+        assertEquals(1, netease.calls)
+        assertEquals(1, lrclib.calls)
+        assertEquals(
+            listOf(
+                ProviderProgress("netease", 1, 2, LyricsLookupProviderStage.ATTEMPT),
+                ProviderProgress("netease", 1, 2, LyricsLookupProviderStage.MISS),
+                ProviderProgress("lrclib", 2, 2, LyricsLookupProviderStage.ATTEMPT),
+                ProviderProgress("lrclib", 2, 2, LyricsLookupProviderStage.MATCH)
+            ),
+            logger.progress
+        )
     }
 
     @Test
@@ -126,26 +303,6 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun findLyrics_autoSavesSuccessfulOnlineResult() {
-        val onlinePlainLyricsResult = result(
-            plainProviderId = "netease",
-            plainLrc = "[00:01.00]hello",
-            translatedLrc = "[00:01.00]你好"
-        )
-        val saver = RecordingPlainLyricsSaver()
-        val engine = engine(
-            online = FakePlainLyricsProvider("netease", Result.success(onlinePlainLyricsResult)),
-            localPlainLyricsSaver = saver
-        )
-
-        engine.findLyrics(context, "Song", "Artist", album = "Album", durationMs = 180_000L).getOrThrow()
-
-        assertEquals(1, saver.saved.size)
-        assertSame(onlinePlainLyricsResult, saver.saved.single().plainLyricsResult)
-        assertEquals("Album", saver.saved.single().album)
-    }
-
-    @Test
     fun findLyrics_forceSaveOnlineOverridesAutoSaveDisabled() {
         val saver = RecordingPlainLyricsSaver()
         val engine = engine(
@@ -185,18 +342,109 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun findLyrics_returnsProviderFailureAndLogsIt() {
+    fun findLyrics_stopsFallbackAtProviderFailureAndLogsIt() {
         val failure = IllegalStateException("provider down")
         val logger = RecordingLogger()
+        val netease = FakePlainLyricsProvider("netease", Result.success(null))
+        val musixmatch = FakePlainLyricsProvider("musixmatch", Result.failure(failure))
+        val lrclib = FakePlainLyricsProvider(
+            "lrclib",
+            Result.success(result("lrclib", "[00:01.00]unused"))
+        )
         val engine = engine(
-            online = FakePlainLyricsProvider("netease", Result.failure(failure)),
+            onlineProviders = mapOf(
+                PlainLyricsSearchSource.NETEASE to netease,
+                PlainLyricsSearchSource.MUSIXMATCH to musixmatch,
+                PlainLyricsSearchSource.LRCLIB to lrclib
+            ),
+            settings = settings(plainLyricsSearchSources = PlainLyricsSearchSource.onlineSources),
             lookupLogger = logger
         )
 
         val result = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L)
 
         assertSame(failure, result.exceptionOrNull())
+        assertEquals(1, netease.calls)
+        assertEquals(1, musixmatch.calls)
+        assertEquals(0, lrclib.calls)
         assertEquals(1, logger.failures)
+    }
+
+    @Test
+    fun findLyrics_cancellationBetweenProvidersStopsFallbackWithoutSavingOrLoggingFailure() {
+        val token = LyricsLookupCancellationToken(requestKey = "song", generation = 1L)
+        val netease = FakePlainLyricsProvider("netease") {
+            token.cancel()
+            Result.success(null)
+        }
+        val musixmatch = FakePlainLyricsProvider(
+            "musixmatch",
+            Result.success(result("musixmatch", "[00:01.00]unused"))
+        )
+        val saver = RecordingPlainLyricsSaver()
+        val logger = RecordingLogger()
+        val engine = engine(
+            onlineProviders = mapOf(
+                PlainLyricsSearchSource.NETEASE to netease,
+                PlainLyricsSearchSource.MUSIXMATCH to musixmatch
+            ),
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.MUSIXMATCH
+                )
+            ),
+            localPlainLyricsSaver = saver,
+            lookupLogger = logger
+        )
+
+        val result = engine.findLyrics(
+            context = context,
+            title = "Song",
+            artist = "Artist",
+            durationMs = 180_000L,
+            cancellationToken = token
+        )
+
+        assertTrue(result.exceptionOrNull() is CancellationException)
+        assertEquals(1, netease.calls)
+        assertEquals(0, musixmatch.calls)
+        assertTrue(saver.saved.isEmpty())
+        assertEquals(0, logger.failures)
+    }
+
+    @Test
+    fun findLyrics_providerCancellationFailureStopsFallbackWithoutFailureLog() {
+        val cancellation = CancellationException("provider canceled")
+        val netease = FakePlainLyricsProvider(
+            "netease",
+            Result.failure(cancellation)
+        )
+        val musixmatch = FakePlainLyricsProvider(
+            "musixmatch",
+            Result.success(result("musixmatch", "[00:01.00]unused"))
+        )
+        val logger = RecordingLogger()
+        val engine = engine(
+            onlineProviders = mapOf(
+                PlainLyricsSearchSource.NETEASE to netease,
+                PlainLyricsSearchSource.MUSIXMATCH to musixmatch
+            ),
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.MUSIXMATCH
+                )
+            ),
+            lookupLogger = logger
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L)
+
+        assertSame(cancellation, found.exceptionOrNull())
+        assertEquals(1, netease.calls)
+        assertEquals(0, musixmatch.calls)
+        assertEquals(0, logger.failures)
     }
 
     @Test
@@ -221,6 +469,8 @@ class LyricsRepositoryEngineTest {
     private fun engine(
         local: PlainLyricsProvider = FakePlainLyricsProvider("local", Result.success(null)),
         online: PlainLyricsProvider = FakePlainLyricsProvider("netease", Result.success(null)),
+        onlineProviders: Map<PlainLyricsSearchSource, PlainLyricsProvider> =
+            mapOf(PlainLyricsSearchSource.NETEASE to online),
         settings: LyricsSettings = settings(),
         localPlainLyricsSaver: LocalPlainLyricsSaver = RecordingPlainLyricsSaver(),
         wordByWordLyricsReader: WordByWordLyricsReader = WordByWordLyricsReader { _, _, _, _ -> emptyList() },
@@ -228,7 +478,7 @@ class LyricsRepositoryEngineTest {
     ): LyricsRepositoryEngine {
         return LyricsRepositoryEngine(
             localPlainLyricsProvider = local,
-            onlinePlainLyricsProviders = mapOf(PlainLyricsSearchSource.NETEASE to online),
+            onlinePlainLyricsProviders = onlineProviders,
             settingsReader = { settings },
             localPlainLyricsSaver = localPlainLyricsSaver,
             wordByWordLyricsReader = wordByWordLyricsReader,
@@ -269,8 +519,13 @@ class LyricsRepositoryEngineTest {
 
     private class FakePlainLyricsProvider(
         override val id: String,
-        private val response: Result<LyricsProviderResult?>
+        private val response: (PlainLyricsSearchRequest) -> Result<LyricsProviderResult?>
     ) : PlainLyricsProvider {
+        constructor(
+            id: String,
+            response: Result<LyricsProviderResult?>
+        ) : this(id, { response })
+
         override val name: String = id
         private val requests = mutableListOf<PlainLyricsSearchRequest>()
         val calls: Int
@@ -278,7 +533,7 @@ class LyricsRepositoryEngineTest {
 
         override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
             requests += request
-            return response
+            return response(request)
         }
     }
 
@@ -305,9 +560,17 @@ class LyricsRepositoryEngineTest {
         val plainLyricsResult: LyricsProviderResult
     )
 
+    private data class ProviderProgress(
+        val providerId: String,
+        val priority: Int,
+        val total: Int,
+        val stage: LyricsLookupProviderStage
+    )
+
     private class RecordingLogger : LyricsLookupLogger {
         var failures: Int = 0
             private set
+        val progress = mutableListOf<ProviderProgress>()
 
         override fun logProviderFailure(
             provider: PlainLyricsProvider,
@@ -318,6 +581,16 @@ class LyricsRepositoryEngineTest {
             debug: Boolean
         ) {
             failures++
+        }
+
+        override fun logProviderProgress(
+            provider: PlainLyricsProvider,
+            priority: Int,
+            total: Int,
+            stage: LyricsLookupProviderStage,
+            debug: Boolean
+        ) {
+            progress += ProviderProgress(provider.id, priority, total, stage)
         }
     }
 }
