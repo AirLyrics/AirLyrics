@@ -11,9 +11,12 @@ import com.andsi.airlyrics.app.controller.LyricsImportOutcome
 import com.andsi.airlyrics.app.controller.LyricsOperations
 import com.andsi.airlyrics.app.controller.OnlineLyricsSearchOutcome
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.testutil.MainDispatcherRule
+import java.util.Collections
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
@@ -30,14 +33,15 @@ abstract class MainViewModelTestBase {
         lyrics: LyricsOperations = FakeLyricsOperations(),
         foreground: ForegroundSnapshotReader = FakeForegroundSnapshotReader(),
         fontImporter: FloatingFontImportOperation =
-            FakeFontImportOperation(FloatingFontImportOutcome.ReadFailed)
+            FakeFontImportOperation(FloatingFontImportOutcome.ReadFailed),
+        ioDispatcher: CoroutineDispatcher = mainDispatcherRule.dispatcher
     ): MainViewModel {
         return MainViewModel(
             savedStateHandle = handle,
             lyricsController = lyrics,
             foregroundStateReader = foreground,
             floatingFontImporter = fontImporter,
-            ioDispatcher = mainDispatcherRule.dispatcher
+            ioDispatcher = ioDispatcher
         )
     }
 
@@ -57,6 +61,9 @@ abstract class MainViewModelTestBase {
             wordByWordImportEnabled = true
         )
         var onlineSearchOutcome: OnlineLyricsSearchOutcome = OnlineLyricsSearchOutcome.NotFound
+        var onlineSearchHandler: (
+            (CurrentMediaInfo, LyricsLookupCancellationToken) -> OnlineLyricsSearchOutcome
+        )? = null
         var currentDeleteResult = CurrentLyricsDeleteOutcome(false, LyricsStorage.DeleteMode.ALL)
         var deleteAllResult = LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE
         var lyricsDirectory = ""
@@ -65,7 +72,9 @@ abstract class MainViewModelTestBase {
         val savedDeleteResults = mutableListOf<LyricsStorage.DeleteLocalLyricsItemResult>()
         val availabilityRequests = mutableListOf<SongIdentity>()
         val importRequests = mutableListOf<ImportRequest>()
-        val onlineSearchRequests = mutableListOf<CurrentMediaInfo>()
+        val onlineSearchRequests = Collections.synchronizedList(mutableListOf<CurrentMediaInfo>())
+        val onlineSearchTokens =
+            Collections.synchronizedList(mutableListOf<LyricsLookupCancellationToken>())
         val currentDeleteRequests = mutableListOf<Pair<CurrentMediaInfo, LyricsStorage.DeleteMode>>()
         val savedDeleteRequests = mutableListOf<LyricsStorage.LocalLyricsItem>()
         val directoryRequests = mutableListOf<Uri>()
@@ -116,10 +125,12 @@ abstract class MainViewModelTestBase {
         }
 
         override fun searchOnlineLyricsForCurrentMedia(
-            media: CurrentMediaInfo
+            media: CurrentMediaInfo,
+            cancellationToken: LyricsLookupCancellationToken
         ): OnlineLyricsSearchOutcome {
             onlineSearchRequests += media
-            return onlineSearchOutcome
+            onlineSearchTokens += cancellationToken
+            return onlineSearchHandler?.invoke(media, cancellationToken) ?: onlineSearchOutcome
         }
 
         override fun getCurrentMediaInfo(): CurrentMediaInfo? = currentMedia

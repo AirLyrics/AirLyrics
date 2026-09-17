@@ -8,6 +8,7 @@ import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -15,6 +16,7 @@ import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.toSongIdentity
+import java.util.concurrent.CancellationException
 
 internal sealed interface LyricsDocumentValidation {
     data object Valid : LyricsDocumentValidation
@@ -207,13 +209,24 @@ internal class LyricsController(
     }
 
     override fun searchOnlineLyricsForCurrentMedia(
-        media: CurrentMediaInfo
+        media: CurrentMediaInfo,
+        cancellationToken: LyricsLookupCancellationToken
     ): OnlineLyricsSearchOutcome {
-        val result = onlineLyricsLookupGateway.findAndSave(context, media)
+        cancellationToken.throwIfCancellationRequested()
+        val result = onlineLyricsLookupGateway.findAndSave(
+            context = context,
+            media = media,
+            cancellationToken = cancellationToken
+        )
+        cancellationToken.throwIfCancellationRequested()
+        val failure = result.exceptionOrNull()
+        if (failure is CancellationException) throw failure
+
         val foundLyrics = result.getOrNull()?.takeIf { it.plainLrc.isNotBlank() }
-        val lookupError = result.exceptionOrNull() as? LyricsLookupException
+        val lookupError = failure as? LyricsLookupException
         return when {
             foundLyrics != null -> {
+                cancellationToken.throwIfCancellationRequested()
                 lyricsChangedPublisher.publish(media.toSongIdentity())
                 OnlineLyricsSearchOutcome.Saved
             }

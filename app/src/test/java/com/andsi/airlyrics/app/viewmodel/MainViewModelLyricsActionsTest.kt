@@ -6,11 +6,18 @@ import com.andsi.airlyrics.app.controller.OnlineLyricsSearchOutcome
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -76,7 +83,83 @@ class MainViewModelLyricsActionsTest : MainViewModelTestBase() {
                     effects
                 )
                 assertEquals(listOf(media(songA)), lyrics.onlineSearchRequests)
+                assertEquals(1, lyrics.onlineSearchTokens.size)
+                assertFalse(lyrics.onlineSearchTokens.single().isCancellationRequested)
             }
+        }
+
+    @Test
+    fun onlineSearch_latestRequestCancelsInFlightLookupAndOnlyReportsLatestOutcome() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val firstStarted = CountDownLatch(1)
+            val releaseFirst = CountDownLatch(1)
+            val firstReturned = CountDownLatch(1)
+            val secondReturned = CountDownLatch(1)
+            val lyrics = FakeLyricsOperations().apply {
+                currentMedia = media(songA)
+            }
+            lyrics.onlineSearchHandler = { requestedMedia, _ ->
+                if (requestedMedia.title == songA.title) {
+                    firstStarted.countDown()
+                    try {
+                        check(releaseFirst.await(5, TimeUnit.SECONDS))
+                        OnlineLyricsSearchOutcome.NotFound
+                    } finally {
+                        firstReturned.countDown()
+                    }
+                } else {
+                    secondReturned.countDown()
+                    OnlineLyricsSearchOutcome.Saved
+                }
+            }
+            val expectedEffects = listOf(
+                MainUiEffect.ShowMessage(R.string.ui_searching_online_again),
+                MainUiEffect.ShowMessage(R.string.ui_searching_online_again),
+                MainUiEffect.ShowMessage(R.string.ui_online_lyrics_saved)
+            )
+            val executor = Executors.newFixedThreadPool(2)
+            val ioDispatcher = executor.asCoroutineDispatcher()
+            lateinit var effects: MutableList<MainUiEffect>
+
+            try {
+                val viewModel = viewModel(lyrics = lyrics, ioDispatcher = ioDispatcher)
+                effects = recordEffects(viewModel)
+
+                viewModel.searchOnlineLyricsForCurrentMedia()
+                runCurrent()
+                assertTrue(firstStarted.await(5, TimeUnit.SECONDS))
+
+                lyrics.currentMedia = media(songB)
+                viewModel.searchOnlineLyricsForCurrentMedia()
+                runCurrent()
+                assertTrue(secondReturned.await(5, TimeUnit.SECONDS))
+
+                val latestOutcomeDeadline =
+                    System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+                while (effects.size < expectedEffects.size &&
+                    System.nanoTime() < latestOutcomeDeadline
+                ) {
+                    runCurrent()
+                    Thread.yield()
+                }
+
+                assertEquals(1L, firstReturned.count)
+                assertEquals(expectedEffects, effects)
+                assertEquals(listOf(media(songA), media(songB)), lyrics.onlineSearchRequests)
+                assertEquals(2, lyrics.onlineSearchTokens.size)
+                assertTrue(lyrics.onlineSearchTokens.first().isCancellationRequested)
+                assertFalse(lyrics.onlineSearchTokens.last().isCancellationRequested)
+
+                releaseFirst.countDown()
+                assertTrue(firstReturned.await(5, TimeUnit.SECONDS))
+            } finally {
+                releaseFirst.countDown()
+                ioDispatcher.close()
+                assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
+            }
+
+            advanceUntilIdle()
+            assertEquals(expectedEffects, effects)
         }
 
     @Test

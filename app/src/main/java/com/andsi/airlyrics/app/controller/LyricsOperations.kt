@@ -2,6 +2,7 @@ package com.andsi.airlyrics.app.controller
 
 import android.net.Uri
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 
@@ -29,7 +30,10 @@ internal interface LyricsOperations {
 
     fun deleteAllSavedLyrics(): LyricsStorage.DeleteAllSavedLyricsResult
 
-    fun searchOnlineLyricsForCurrentMedia(media: CurrentMediaInfo): OnlineLyricsSearchOutcome
+    fun searchOnlineLyricsForCurrentMedia(
+        media: CurrentMediaInfo,
+        cancellationToken: LyricsLookupCancellationToken
+    ): OnlineLyricsSearchOutcome
 
     fun getCurrentMediaInfo(): CurrentMediaInfo?
 
