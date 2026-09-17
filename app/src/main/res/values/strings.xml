@@ -195,7 +195,14 @@
     <string name="ui_lyrics_folder_permission_failed">Can’t keep access to this folder; choose another</string>
     <string name="ui_lyrics_folder_write_failed">Can’t write to this folder; choose another</string>
     <string name="ui_lyrics_save_folder_set">Lyrics save folder set</string>
-    <string name="ui_plain_lyrics_source">Lyrics source</string>
+    <string name="ui_plain_lyrics_source">Lyrics sources</string>
+    <string name="ui_lyrics_source_order_hint">Tap sources in fallback order. Tap again to remove.</string>
+    <string name="ui_lyrics_source_priority">%1$d. %2$s</string>
+    <string name="ui_lyrics_source_order_value">Order: %1$s</string>
+    <string name="ui_lyrics_search_order">Search order: %1$s</string>
+    <string name="ui_lyrics_source_selected_state">Selected</string>
+    <string name="ui_lyrics_source_not_selected_state">Not selected</string>
+    <string name="ui_keep_one_lyrics_source">Keep at least one source</string>
     <string name="ui_plain_lrc_edit_format_hint">Each line must start with [00:12.34]</string>
     <string name="ui_max_width">Max width</string>
     <string name="ui_media">Media</string>

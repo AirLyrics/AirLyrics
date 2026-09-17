@@ -24,25 +24,29 @@ import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.optionGridImpl(items: List<OptionItem>): LinearLayout {
+    return optionButtonGridImpl(items.map { item -> optionButton(item) })
+}
+
+internal fun MainUiHost.optionButtonGridImpl(buttons: List<TextView>): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        items.chunked(AirUiTokens.Layout.OptionColumns).forEach { rowItems ->
+        buttons.chunked(AirUiTokens.Layout.OptionColumns).forEach { rowButtons ->
             addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
-                rowItems.forEachIndexed { index, item ->
-                    addView(optionButton(item).apply {
+                rowButtons.forEachIndexed { index, button ->
+                    addView(button.apply {
                         val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
                         params.setMargins(
                             if (index == 0) 0 else dp(AirUiTokens.Space.Lg),
                             dp(AirUiTokens.Space.Xxl),
-                            if (index == rowItems.lastIndex) 0 else dp(AirUiTokens.Space.Lg),
+                            if (index == rowButtons.lastIndex) 0 else dp(AirUiTokens.Space.Lg),
                             0
                         )
                         layoutParams = params
                     })
                 }
-                if (rowItems.size == 1) {
+                if (rowButtons.size == 1) {
                     addView(View(activity).apply {
                         layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
                             setMargins(dp(AirUiTokens.Space.Lg), 0, 0, 0)

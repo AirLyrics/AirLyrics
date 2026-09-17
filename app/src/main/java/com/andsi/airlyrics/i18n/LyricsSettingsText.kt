@@ -12,6 +12,21 @@ internal fun Context.localizedPlainLyricsSourceTitle(
     plainLyricsSearchSource: PlainLyricsSearchSource
 ): String = getString(plainLyricsSourceTitleRes(plainLyricsSearchSource))
 
+internal fun Context.localizedPlainLyricsSourcePriorityTitle(
+    plainLyricsSearchSource: PlainLyricsSearchSource,
+    priority: Int
+): String = getString(
+    R.string.ui_lyrics_source_priority,
+    priority,
+    localizedPlainLyricsSourceTitle(plainLyricsSearchSource)
+)
+
+internal fun Context.localizedPlainLyricsSourceOrder(
+    plainLyricsSearchSources: List<PlainLyricsSearchSource>
+): String = plainLyricsSearchSources.mapIndexed { index, source ->
+    localizedPlainLyricsSourcePriorityTitle(source, priority = index + 1)
+}.joinToString(" → ")
+
 @StringRes
 internal fun plainLyricsSourceTitleRes(plainLyricsSearchSource: PlainLyricsSearchSource): Int =
     when (plainLyricsSearchSource) {

@@ -5,7 +5,7 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.components.*
-import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
+import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceOrder
 
 internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity) createSettingsHomePage@ {
     // The accent picker owns its height animation. A second CHANGING
@@ -20,7 +20,7 @@ internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity
         settingsCategoryCard(
             title = getString(R.string.ui_lyrics),
             subtitle = getString(R.string.ui_lyrics_settings_summary),
-            status = "${localizedPlainLyricsSourceTitle(lyricsSettings.selectedPlainLyricsSource)} · ${getString(if (lyricsSettings.autoSaveLocal) R.string.ui_auto_save else R.string.ui_no_auto_save)}",
+            status = "${localizedPlainLyricsSourceOrder(lyricsSettings.selectedPlainLyricsSources)} · ${getString(if (lyricsSettings.autoSaveLocal) R.string.ui_auto_save else R.string.ui_no_auto_save)}",
             iconRes = R.drawable.ic_air_music_note
         ) {
             uiActions.openSettingsSubPage(SettingsSubPage.LYRICS)

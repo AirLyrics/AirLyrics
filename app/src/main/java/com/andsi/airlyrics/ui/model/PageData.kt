@@ -61,7 +61,7 @@ internal data class SavedLyricsUiState(
 )
 
 internal data class LyricsSettingsUiState(
-    val selectedPlainLyricsSource: PlainLyricsSearchSource,
+    val selectedPlainLyricsSources: List<PlainLyricsSearchSource>,
     val plainLyricsSourceOptions: List<PlainLyricsSearchSource>,
     val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean,

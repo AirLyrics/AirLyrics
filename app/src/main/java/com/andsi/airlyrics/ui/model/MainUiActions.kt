@@ -39,7 +39,7 @@ internal data class MainUiActions(
     val deleteAllSavedLyrics: () -> Unit,
     val toggleLyricsAutoSearch: () -> Boolean,
     val toggleLyricsAutoSave: () -> Boolean,
-    val selectPlainLyricsSource: (PlainLyricsSearchSource) -> Unit,
+    val setPlainLyricsSources: (List<PlainLyricsSearchSource>) -> Unit,
     val openUrl: (String) -> Unit,
     val selectMediaSource: (String, View) -> Unit
 )

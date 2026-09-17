@@ -8,6 +8,7 @@ internal interface OptionControlsHost {
     fun optionGrid(items: List<OptionItem>): LinearLayout
     fun liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout
     fun optionButton(item: OptionItem): TextView
+    fun optionButtonGrid(buttons: List<TextView>): LinearLayout
     fun applyOptionButtonState(button: TextView, title: String, selected: Boolean)
 
     fun sliderRow(

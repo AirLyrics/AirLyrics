@@ -196,6 +196,13 @@
     <string name="ui_lyrics_folder_write_failed">无法写入此目录，请选择其他目录</string>
     <string name="ui_lyrics_save_folder_set">已设置歌词保存目录</string>
     <string name="ui_plain_lyrics_source">歌词搜索来源</string>
+    <string name="ui_lyrics_source_order_hint">按回退顺序选择来源，再次点击可移除。</string>
+    <string name="ui_lyrics_source_priority">%1$d. %2$s</string>
+    <string name="ui_lyrics_source_order_value">顺序：%1$s</string>
+    <string name="ui_lyrics_search_order">搜索顺序：%1$s</string>
+    <string name="ui_lyrics_source_selected_state">已选择</string>
+    <string name="ui_lyrics_source_not_selected_state">未选择</string>
+    <string name="ui_keep_one_lyrics_source">至少保留一个歌词源</string>
     <string name="ui_plain_lrc_edit_format_hint">每行需以 [00:12.34] 开头</string>
     <string name="ui_max_width">最大宽度</string>
     <string name="ui_media">媒体</string>
