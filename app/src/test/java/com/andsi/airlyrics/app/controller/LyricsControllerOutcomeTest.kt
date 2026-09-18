@@ -192,6 +192,18 @@ class LyricsControllerOutcomeTest {
                 publishes = true
             ),
             OnlineCase(
+                result = Result.success(
+                    LyricsProviderResult(
+                        plainProviderId = "provider",
+                        plainProviderName = "Provider",
+                        plainLrc = "",
+                        translatedLrc = "[00:01.00]翻译"
+                    )
+                ),
+                expected = OnlineLyricsSearchOutcome.Saved,
+                publishes = true
+            ),
+            OnlineCase(
                 result = Result.success(null),
                 expected = OnlineLyricsSearchOutcome.NotFound
             ),

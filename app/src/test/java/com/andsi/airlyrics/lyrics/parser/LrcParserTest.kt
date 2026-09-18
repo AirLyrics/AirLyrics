@@ -134,6 +134,59 @@ class LrcParserTest {
     }
 
     @Test
+    fun parseWithTranslation_matchesEqualTracksInOrderAcrossLargeOffsets() {
+        val original = "[00:00.00]Original A\n[00:01.00]Original B"
+        val translated = "[00:00.60]翻译 A\n[00:01.40]翻译 B"
+
+        val lines = LrcParser.parseWithTranslation(original, translated)
+
+        assertEquals("翻译 A", lines[0].translation)
+        assertEquals("翻译 B", lines[1].translation)
+    }
+
+    @Test
+    fun parseWithTranslation_keepsUnequalTrackMatchesMonotonic() {
+        val original =
+            "[00:00.00]Original A\n[00:00.40]Original B\n[00:10.00]Original C"
+        val translated = "[00:00.30]翻译 A\n[00:00.50]翻译 B"
+
+        val lines = LrcParser.parseWithTranslation(original, translated)
+
+        assertEquals("翻译 A", lines[0].translation)
+        assertEquals("翻译 B", lines[1].translation)
+        assertNull(lines[2].translation)
+    }
+
+    @Test
+    fun parseWithTranslation_keepsNearbyRepeatedTranslationsInSourceOrder() {
+        val original =
+            "[00:00.00]A\n[00:01.00]B\n[00:05.00]C\n[00:10.00]D"
+        val translated =
+            "[00:00.00]翻译 A\n[00:00.90]翻译 B 1\n[00:00.99]翻译 B 2"
+
+        val lines = LrcParser.parseWithTranslation(original, translated)
+
+        assertEquals("翻译 A", lines[0].translation)
+        assertEquals("翻译 B 1\n翻译 B 2", lines[1].translation)
+        assertNull(lines[2].translation)
+        assertNull(lines[3].translation)
+    }
+
+    @Test
+    fun mergeOriginalAndTranslationForStorage_preservesTranslationOnlyRows() {
+        val stored = LrcParser.mergeOriginalAndTranslationForStorage(
+            plainLrc = "",
+            translatedLrc = "[00:01.00]重复 / 重复 / 第二行"
+        )
+        val parsed = LrcParser.parse(stored)
+
+        assertEquals("[00:01.00]/ 重复 / 重复 / 第二行", stored)
+        assertEquals(1, parsed.size)
+        assertEquals("", parsed.single().text)
+        assertEquals("重复\n重复\n第二行", parsed.single().translation)
+    }
+
+    @Test
     fun normalizeForStorage_outputsStableOneLinePerLyricFormat() {
         val normalized = LrcParser.normalizeForStorage(
             """

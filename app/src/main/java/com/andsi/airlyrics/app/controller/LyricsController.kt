@@ -10,6 +10,7 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupException
+import com.andsi.airlyrics.lyrics.hasUsableLyrics
 import com.andsi.airlyrics.lyrics.importer.LyricsImportValidator
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
@@ -222,7 +223,7 @@ internal class LyricsController(
         val failure = result.exceptionOrNull()
         if (failure is CancellationException) throw failure
 
-        val foundLyrics = result.getOrNull()?.takeIf { it.plainLrc.isNotBlank() }
+        val foundLyrics = result.getOrNull()?.takeIf { it.hasUsableLyrics() }
         val lookupError = failure as? LyricsLookupException
         return when {
             foundLyrics != null -> {

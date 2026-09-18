@@ -33,10 +33,9 @@ object LrcParser {
      */
     fun mergeOriginalAndTranslationForStorage(plainLrc: String, translatedLrc: String?): String {
         if (translatedLrc.isNullOrBlank()) return plainLrc
-        if (plainLrc.isBlank()) return translatedLrc
 
         val mergedLines = parseWithTranslation(plainLrc, translatedLrc)
-        if (mergedLines.isEmpty()) return plainLrc
+        if (mergedLines.isEmpty()) return plainLrc.ifBlank { translatedLrc }
 
         return formatLinesForStorage(mergedLines)
     }
@@ -107,8 +106,13 @@ object LrcParser {
 private val timeTagRegex = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
 private val metadataTagRegex = Regex("""\[[A-Za-z][A-Za-z0-9_\-]*:.*]""")
 private val inlineTranslationSeparatorRegex = Regex("""\s+/\s+|／""")
+private val translationOnlyPrefixRegex = Regex("""^[／/]\s+(.+)$""")
 private val keyValueLineRegex = Regex("""^[^\n]{1,32}\s*[:：]""")
+private val lyricsCreditLineRegex = Regex(
+    """^(?:作词|作詞|填词|作曲|编曲|編曲|译词|翻译|翻訳|作词人|作詞家|作曲人|制作人|监制|監製|작사|작곡|편곡|번역|(?i:lyrics?|lyricist|composer|composition|arranger|translation|translator|producer))\s*[:：]"""
+)
 private const val TRANSLATION_MATCH_TOLERANCE_MS = 500L
+private const val UNMATCHED_TRANSLATION_ATTACH_TOLERANCE_MS = 2_000L
 private const val METADATA_DISPLAY_TIME_MS = 0L
 
 private fun parsePlainLines(
@@ -144,7 +148,7 @@ private fun List<LrcLine>.asTranslatedOnlyLines(): List<LrcLine> {
         if (line.isMetadata) {
             line
         } else {
-            line.copy(text = "", translation = line.text)
+            line.copy(text = "", translation = line.translationText())
         }
     }
 }
@@ -154,72 +158,263 @@ private class TranslationMatcher(
     private val translationLines: List<LrcLine>
 ) {
     fun merge(): List<LrcLine> {
-        val matchedTranslations = arrayOfNulls<String>(originalLines.size)
+        val matchedTranslations = Array(originalLines.size) {
+            mutableListOf<MatchedTranslation>()
+        }
         val usedOriginalIndexes = BooleanArray(originalLines.size)
         val usedTranslationIndexes = BooleanArray(translationLines.size)
-
-        buildCandidates().forEach { candidate ->
-            if (usedOriginalIndexes[candidate.originalIndex]) return@forEach
-            if (usedTranslationIndexes[candidate.translationIndex]) return@forEach
-
-            usedOriginalIndexes[candidate.originalIndex] = true
-            usedTranslationIndexes[candidate.translationIndex] = true
-            matchedTranslations[candidate.originalIndex] = translationLines[candidate.translationIndex].text
+        val originalIndexes = originalLines.indices.filter { index ->
+            originalLines[index].isEligibleOriginalLine()
         }
+        val translationIndexes = translationLines.indices.filter { index ->
+            translationLines[index].isEligibleTranslationLine()
+        }
+
+        if (originalIndexes.isNotEmpty() && originalIndexes.size == translationIndexes.size) {
+            // Separate translation tracks normally preserve lyric order even when every
+            // timestamp has the same provider-specific offset. Pair the complete tracks
+            // before considering distance so matches can never cross.
+            originalIndexes.zip(translationIndexes).forEach { (originalIndex, translationIndex) ->
+                matchTranslation(
+                    originalIndex = originalIndex,
+                    translationIndex = translationIndex,
+                    matchedTranslations = matchedTranslations,
+                    usedOriginalIndexes = usedOriginalIndexes,
+                    usedTranslationIndexes = usedTranslationIndexes
+                )
+            }
+        } else {
+            buildMonotonicMatches(originalIndexes, translationIndexes).forEach { candidate ->
+                matchTranslation(
+                    originalIndex = candidate.originalIndex,
+                    translationIndex = candidate.translationIndex,
+                    matchedTranslations = matchedTranslations,
+                    usedOriginalIndexes = usedOriginalIndexes,
+                    usedTranslationIndexes = usedTranslationIndexes
+                )
+            }
+        }
+
+        attachNearbyUnmatchedTranslations(
+            originalIndexes = originalIndexes,
+            translationIndexes = translationIndexes,
+            matchedTranslations = matchedTranslations,
+            usedOriginalIndexes = usedOriginalIndexes,
+            usedTranslationIndexes = usedTranslationIndexes
+        )
 
         return originalLines.mapIndexed { index, original ->
             val translation = matchedTranslations[index]
-                ?.takeIf { it.isNotBlank() && it.trim() != original.text.trim() }
+                .sortedBy(MatchedTranslation::translationIndex)
+                .joinToString("\n", transform = MatchedTranslation::text)
+                .takeIf { it.isNotBlank() && it.trim() != original.text.trim() }
 
             original.copy(translation = translation ?: original.translation)
         }
     }
 
-    private fun buildCandidates(): List<TranslationCandidate> {
-        val candidates = mutableListOf<TranslationCandidate>()
-        var firstTranslationCandidateIndex = 0
+    private fun matchTranslation(
+        originalIndex: Int,
+        translationIndex: Int,
+        matchedTranslations: Array<MutableList<MatchedTranslation>>,
+        usedOriginalIndexes: BooleanArray,
+        usedTranslationIndexes: BooleanArray
+    ) {
+        val originalText = originalLines[originalIndex].text.trim()
+        val translation = translationLines[translationIndex]
+            .translationText()
+            .withoutOriginalText(originalText)
+        if (translation.isNotBlank()) {
+            matchedTranslations[originalIndex] += MatchedTranslation(
+                translationIndex = translationIndex,
+                text = translation
+            )
+        }
+        usedOriginalIndexes[originalIndex] = true
+        usedTranslationIndexes[translationIndex] = true
+    }
 
-        originalLines.forEachIndexed { originalIndex, original ->
-            if (original.isMetadata || original.text.isBlank()) return@forEachIndexed
+    private fun attachNearbyUnmatchedTranslations(
+        originalIndexes: List<Int>,
+        translationIndexes: List<Int>,
+        matchedTranslations: Array<MutableList<MatchedTranslation>>,
+        usedOriginalIndexes: BooleanArray,
+        usedTranslationIndexes: BooleanArray
+    ) {
+        if (originalIndexes.isEmpty()) return
 
-            val earliestMatchTimeMs = original.timeMs - TRANSLATION_MATCH_TOLERANCE_MS
-            while (
-                firstTranslationCandidateIndex < translationLines.size &&
-                translationLines[firstTranslationCandidateIndex].timeMs < earliestMatchTimeMs
-            ) {
-                firstTranslationCandidateIndex++
+        translationIndexes.forEach { translationIndex ->
+            if (usedTranslationIndexes[translationIndex]) return@forEach
+
+            val translationLine = translationLines[translationIndex]
+            val originalIndex = originalIndexes.minWithOrNull(
+                compareBy<Int> { index ->
+                    abs(originalLines[index].timeMs - translationLine.timeMs)
+                }.thenBy { index -> if (usedOriginalIndexes[index]) 1 else 0 }
+            ) ?: return@forEach
+            val distanceMs = abs(originalLines[originalIndex].timeMs - translationLine.timeMs)
+            if (distanceMs > UNMATCHED_TRANSLATION_ATTACH_TOLERANCE_MS) return@forEach
+
+            val translation = translationLine
+                .translationText()
+                .withoutOriginalText(originalLines[originalIndex].text.trim())
+            if (translation.isNotBlank()) {
+                matchedTranslations[originalIndex] += MatchedTranslation(
+                    translationIndex = translationIndex,
+                    text = translation
+                )
             }
+            usedOriginalIndexes[originalIndex] = true
+            usedTranslationIndexes[translationIndex] = true
+        }
+    }
 
-            var translationIndex = firstTranslationCandidateIndex
-            while (translationIndex < translationLines.size) {
-                val translation = translationLines[translationIndex]
-                if (translation.timeMs > original.timeMs + TRANSLATION_MATCH_TOLERANCE_MS) break
+    private fun buildMonotonicMatches(
+        originalIndexes: List<Int>,
+        translationIndexes: List<Int>
+    ): List<TranslationMatch> {
+        if (originalIndexes.isEmpty() || translationIndexes.isEmpty()) return emptyList()
 
-                if (!translation.isMetadata && translation.text.isNotBlank()) {
-                    candidates += TranslationCandidate(
-                        originalIndex = originalIndex,
-                        translationIndex = translationIndex,
-                        distanceMs = abs(translation.timeMs - original.timeMs)
+        val originalCount = originalIndexes.size
+        val translationCount = translationIndexes.size
+        val decisions = Array(originalCount + 1) { ByteArray(translationCount + 1) }
+        var previousMatchCounts = IntArray(translationCount + 1)
+        var previousTotalDistances = LongArray(translationCount + 1)
+        var currentMatchCounts = IntArray(translationCount + 1)
+        var currentTotalDistances = LongArray(translationCount + 1)
+
+        for (originalPosition in 1..originalCount) {
+            currentMatchCounts[0] = 0
+            currentTotalDistances[0] = 0L
+            for (translationPosition in 1..translationCount) {
+                var bestMatches = previousMatchCounts[translationPosition]
+                var bestDistance = previousTotalDistances[translationPosition]
+                var bestDecision = ALIGNMENT_SKIP_ORIGINAL
+
+                val skipTranslationMatches = currentMatchCounts[translationPosition - 1]
+                val skipTranslationDistance = currentTotalDistances[translationPosition - 1]
+                if (
+                    isBetterAlignment(
+                        candidateMatches = skipTranslationMatches,
+                        candidateDistance = skipTranslationDistance,
+                        currentMatches = bestMatches,
+                        currentDistance = bestDistance
                     )
+                ) {
+                    bestMatches = skipTranslationMatches
+                    bestDistance = skipTranslationDistance
+                    bestDecision = ALIGNMENT_SKIP_TRANSLATION
                 }
 
-                translationIndex++
+                val originalIndex = originalIndexes[originalPosition - 1]
+                val translationIndex = translationIndexes[translationPosition - 1]
+                val distanceMs = abs(
+                    originalLines[originalIndex].timeMs - translationLines[translationIndex].timeMs
+                )
+                if (distanceMs <= TRANSLATION_MATCH_TOLERANCE_MS) {
+                    val matchedCount = previousMatchCounts[translationPosition - 1] + 1
+                    val matchedDistance =
+                        previousTotalDistances[translationPosition - 1] + distanceMs
+                    if (
+                        isBetterAlignment(
+                            candidateMatches = matchedCount,
+                            candidateDistance = matchedDistance,
+                            currentMatches = bestMatches,
+                            currentDistance = bestDistance
+                        ) || (matchedCount == bestMatches && matchedDistance == bestDistance)
+                    ) {
+                        bestMatches = matchedCount
+                        bestDistance = matchedDistance
+                        bestDecision = ALIGNMENT_MATCH
+                    }
+                }
+
+                currentMatchCounts[translationPosition] = bestMatches
+                currentTotalDistances[translationPosition] = bestDistance
+                decisions[originalPosition][translationPosition] = bestDecision
+            }
+
+            val completedMatchCounts = currentMatchCounts
+            currentMatchCounts = previousMatchCounts
+            previousMatchCounts = completedMatchCounts
+
+            val completedTotalDistances = currentTotalDistances
+            currentTotalDistances = previousTotalDistances
+            previousTotalDistances = completedTotalDistances
+        }
+
+        val matches = mutableListOf<TranslationMatch>()
+        var originalPosition = originalCount
+        var translationPosition = translationCount
+        while (originalPosition > 0 && translationPosition > 0) {
+            when (decisions[originalPosition][translationPosition]) {
+                ALIGNMENT_MATCH -> {
+                    val originalIndex = originalIndexes[originalPosition - 1]
+                    val translationIndex = translationIndexes[translationPosition - 1]
+                    matches += TranslationMatch(
+                        originalIndex = originalIndex,
+                        translationIndex = translationIndex
+                    )
+                    originalPosition--
+                    translationPosition--
+                }
+                ALIGNMENT_SKIP_TRANSLATION -> translationPosition--
+                else -> originalPosition--
             }
         }
 
-        return candidates.sortedWith(
-            compareBy<TranslationCandidate> { it.distanceMs }
-                .thenBy { it.originalIndex }
-                .thenBy { it.translationIndex }
-        )
+        matches.reverse()
+        return matches
     }
 }
 
-private data class TranslationCandidate(
+private data class TranslationMatch(
     val originalIndex: Int,
-    val translationIndex: Int,
-    val distanceMs: Long
+    val translationIndex: Int
 )
+
+private data class MatchedTranslation(
+    val translationIndex: Int,
+    val text: String
+)
+
+private fun isBetterAlignment(
+    candidateMatches: Int,
+    candidateDistance: Long,
+    currentMatches: Int,
+    currentDistance: Long
+): Boolean {
+    return candidateMatches > currentMatches ||
+        (candidateMatches == currentMatches && candidateDistance < currentDistance)
+}
+
+private const val ALIGNMENT_SKIP_ORIGINAL: Byte = 1
+private const val ALIGNMENT_SKIP_TRANSLATION: Byte = 2
+private const val ALIGNMENT_MATCH: Byte = 3
+
+private fun LrcLine.translationText(): String {
+    return sequenceOf(text, translation.orEmpty())
+        .flatMap { it.lineSequence() }
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .joinToString("\n")
+}
+
+private fun LrcLine.isEligibleOriginalLine(): Boolean {
+    return !isMetadata && text.isNotBlank() && !text.looksLikeLyricsCreditLine()
+}
+
+private fun LrcLine.isEligibleTranslationLine(): Boolean {
+    val value = translationText()
+    return !isMetadata && value.isNotBlank() && !value.looksLikeLyricsCreditLine()
+}
+
+private fun String.withoutOriginalText(originalText: String): String {
+    return lineSequence()
+        .map { it.trim() }
+        .filter { it.isNotBlank() && it != originalText }
+        .joinToString("\n")
+}
 
 private fun isIgnorableStorageLine(rawLine: String): Boolean {
     val line = rawLine.trim()
@@ -256,7 +451,7 @@ private fun formatLineForStorage(line: LrcLine): String {
             "${line.text.trim()} / ${formatTranslationForStorage(line.translation)}"
         }
         line.text.isNotBlank() -> line.text.trim()
-        line.hasTranslation() -> formatTranslationForStorage(line.translation)
+        line.hasTranslation() -> "/ ${formatTranslationForStorage(line.translation)}"
         else -> ""
     }
     return "[${formatTimeTag(line.timeMs)}]$text"
@@ -422,6 +617,15 @@ private fun normalizeDisplayText(text: String): String {
 }
 
 private fun splitOriginalAndTranslation(text: String): Pair<String, String?> {
+    translationOnlyPrefixRegex.matchEntire(text.trim())?.let { match ->
+        val translation = inlineTranslationSeparatorRegex
+            .split(match.groupValues[1])
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+        return "" to translation.takeIf { it.isNotBlank() }
+    }
+
     val parts = text.lines()
         .map { it.trim() }
         .filter { it.isNotBlank() }
@@ -449,6 +653,10 @@ private fun splitInlineTranslation(text: String): List<String>? {
 
 private fun String.looksLikeKeyValueLine(): Boolean {
     return keyValueLineRegex.containsMatchIn(trim())
+}
+
+private fun String.looksLikeLyricsCreditLine(): Boolean {
+    return lyricsCreditLineRegex.containsMatchIn(trim())
 }
 
 private fun parseTimeTag(match: MatchResult): Long? {

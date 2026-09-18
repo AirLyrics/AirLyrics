@@ -40,6 +40,29 @@ class NativePlainLyricsResultContractTest {
     }
 
     @Test
+    fun translatedOnlyNeteaseResultKeepsTranslationSemantics() {
+        val nativeResult = requireNotNull(
+            NeteasePlainLyricsProvider.mapNativePlainLyricsResultJson(
+                jsonText = JSONObject()
+                    .put("ok", true)
+                    .put("source", "netease-rust")
+                    .put("id", "translation-only")
+                    .put("lrc", "")
+                    .put("translated_lrc", "[00:01.00]Translated line")
+                    .put("merged_lrc", "[00:01.00]Translated line")
+                    .toString(),
+                fallbackTitle = "Fallback Title",
+                fallbackArtist = "Fallback Artist",
+                fallbackDurationMs = 60_000L,
+            )
+        )
+        val domainResult = requireNotNull(NeteasePlainLyricsProvider.toProviderResult(nativeResult))
+
+        assertEquals("", domainResult.plainLrc)
+        assertEquals("[00:01.00]Translated line", domainResult.translatedLrc)
+    }
+
+    @Test
     fun translatedFixture_mapsThroughMusixmatchPlainLyricsProductionProviderWithRequestedLanguage() {
         ShadowLog.clear()
         val nativeResult =

@@ -103,8 +103,14 @@ object NeteasePlainLyricsProvider : PlainLyricsProvider {
             )
         }
 
-        val primaryLrc = nativeResult.primaryPlainLrc(allowTranslatedFallback = true)
-        if (primaryLrc.isBlank()) return null
+        val translatedLrc = nativeResult.translatedLrc
+        val originalLrc = nativeResult.lrc.ifBlank {
+            // A legacy native payload may expose only merged_lrc. When translated_lrc is present,
+            // however, merged_lrc can itself be the translation-only fallback and must not be
+            // relabeled as original lyrics.
+            nativeResult.mergedLrc.takeIf { translatedLrc.isNullOrBlank() }.orEmpty()
+        }
+        if (originalLrc.isBlank() && translatedLrc.isNullOrBlank()) return null
 
         return NeteasePlainLyricsResult(
             plainSource = nativeResult.plainSource,
@@ -113,8 +119,8 @@ object NeteasePlainLyricsProvider : PlainLyricsProvider {
             artist = nativeResult.artist,
             album = nativeResult.album,
             durationMs = nativeResult.durationMs,
-            lrc = primaryLrc,
-            translatedLrc = nativeResult.translatedLrc,
+            lrc = originalLrc,
+            translatedLrc = translatedLrc,
         )
     }
 

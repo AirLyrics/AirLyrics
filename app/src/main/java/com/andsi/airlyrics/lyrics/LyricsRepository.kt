@@ -183,7 +183,7 @@ internal class LyricsRepositoryEngine(
             }
 
             request.cancellationToken?.throwIfCancellationRequested()
-            if (result == null || result.plainLrc.isBlank()) {
+            if (result == null || !result.hasUsableLyrics()) {
                 lookupLogger.logProviderProgress(
                     provider = provider,
                     priority = index + 1,

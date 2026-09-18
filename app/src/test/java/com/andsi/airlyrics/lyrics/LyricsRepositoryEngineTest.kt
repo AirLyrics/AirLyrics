@@ -96,6 +96,38 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
+    fun findLyrics_translationOnlyMatchStopsFallback() {
+        val neteaseResult = result(
+            plainProviderId = "netease",
+            plainLrc = "",
+            translatedLrc = "[00:01.00]翻译"
+        )
+        val netease = FakePlainLyricsProvider("netease", Result.success(neteaseResult))
+        val musixmatch = FakePlainLyricsProvider(
+            "musixmatch",
+            Result.success(result("musixmatch", "[00:01.00]fallback"))
+        )
+        val engine = engine(
+            onlineProviders = linkedMapOf(
+                PlainLyricsSearchSource.NETEASE to netease,
+                PlainLyricsSearchSource.MUSIXMATCH to musixmatch
+            ),
+            settings = settings(
+                plainLyricsSearchSources = listOf(
+                    PlainLyricsSearchSource.NETEASE,
+                    PlainLyricsSearchSource.MUSIXMATCH
+                )
+            )
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
+
+        assertSame(neteaseResult, found)
+        assertEquals(1, netease.calls)
+        assertEquals(0, musixmatch.calls)
+    }
+
+    @Test
     fun findLyrics_missingProviderReturnsConfigurationFailureWithoutFallback() {
         val netease = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
