@@ -1,6 +1,6 @@
 package com.andsi.airlyrics.lyrics.providers
 
-import android.content.res.Resources
+import android.content.Context
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
@@ -33,7 +33,7 @@ object MusixmatchPlainLyricsProvider : PlainLyricsProvider {
             artist = request.artist,
             album = request.album,
             durationMs = request.durationMs,
-            translationLanguageCode = systemTranslationLanguageCode(),
+            translationLanguageCode = translationLanguageCode(request.context),
             cancellationToken = request.cancellationToken
         ).map { result ->
             toProviderResult(result)
@@ -41,8 +41,8 @@ object MusixmatchPlainLyricsProvider : PlainLyricsProvider {
     }
 
 
-    private fun systemTranslationLanguageCode(): String {
-        return Resources.getSystem().configuration.locales[0]
+    private fun translationLanguageCode(context: Context): String {
+        return context.resources.configuration.locales[0]
             ?.language
             ?.lowercase(Locale.ROOT)
             ?.takeIf { it.isNotBlank() }

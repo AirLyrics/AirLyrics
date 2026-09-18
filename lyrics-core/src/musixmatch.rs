@@ -11,6 +11,7 @@ use musixmatch_inofficial::models::{
     SortOrder, Subtitle, SubtitleFormat, Track, TrackId, TranslationList,
 };
 use musixmatch_inofficial::{Error as MusixmatchApiError, Musixmatch};
+use regex::Regex;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
@@ -21,12 +22,15 @@ use std::time::{Duration, Instant};
 use unicode_normalization::UnicodeNormalization;
 
 static MUSIXMATCH_CLIENT: OnceLock<Musixmatch> = OnceLock::new();
+static TRANSLATION_MATCH_SEPARATOR: OnceLock<Regex> = OnceLock::new();
 
 const MUSIXMATCH_LOOKUP_TIMEOUT: Duration = Duration::from_secs(15);
+const MUSIXMATCH_TRANSLATION_TIMEOUT: Duration = Duration::from_secs(5);
 const MUSIXMATCH_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 const MUSIXMATCH_CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const MUSIXMATCH_CANCELLATION_POLL_INTERVAL: Duration = Duration::from_millis(50);
 const MUSIXMATCH_MAX_REQUESTS: usize = 16;
+const MUSIXMATCH_MAX_TRANSLATION_REQUESTS: usize = 2;
 const MUSIXMATCH_MAX_TRACK_ATTEMPTS: usize = 3;
 const MUSIXMATCH_MAX_EARLY_TRACK_ATTEMPTS: usize = 2;
 const MUSIXMATCH_MAX_MATCHER_SUBTITLE_REQUESTS: usize = 4;
@@ -367,12 +371,12 @@ pub(crate) fn fetch_best_lyrics(
             let artist = clean_query_part(artist);
             let album = clean_query_part(album);
             let translation_language = normalize_translation_language(translation_language);
-            let deadline = tokio::time::Instant::now() + MUSIXMATCH_LOOKUP_TIMEOUT;
+            let lookup_deadline = tokio::time::Instant::now() + MUSIXMATCH_LOOKUP_TIMEOUT;
             let mut budget = RequestBudget::new(MUSIXMATCH_MAX_REQUESTS);
             let trace = LookupTrace::new("musixmatch");
 
             let found = match within_lookup_deadline(
-                deadline,
+                lookup_deadline,
                 find_usable_lyrics(
                     &client,
                     &title,
@@ -401,27 +405,35 @@ pub(crate) fn fetch_best_lyrics(
             };
 
             check_cancelled(lookup_id)?;
+            let mut translation_budget =
+                RequestBudget::new(MUSIXMATCH_MAX_TRANSLATION_REQUESTS);
             let translated_lrc = if translation_language.is_empty() {
                 None
             } else if let Some(track) = found.track.as_ref() {
+                let translation_deadline =
+                    tokio::time::Instant::now() + MUSIXMATCH_TRANSLATION_TIMEOUT;
                 match tokio::time::timeout_at(
-                    deadline,
+                    translation_deadline,
                     fetch_translation_for_track(
                         &client,
                         track,
+                        &found.lrc,
                         &translation_language,
                         lookup_id,
-                        &mut budget,
+                        &mut translation_budget,
                     ),
                 )
                 .await
                 {
-                    Ok(Ok(translation_list)) => {
+                    Ok(Ok(translated_lrc)) => {
                         trace.event(
                             "translation",
-                            format_args!("outcome=received requestsUsed={}", budget.used()),
+                            format_args!(
+                                "outcome=received requestsUsed={}",
+                                translation_budget.used()
+                            ),
                         );
-                        translation_list_to_lrc(&found.lrc, &translation_list)
+                        Some(translated_lrc)
                     }
                     Ok(Err(error)) if error.kind == FailureKind::Cancelled => return Err(error),
                     Ok(Err(error)) => {
@@ -430,7 +442,7 @@ pub(crate) fn fetch_best_lyrics(
                             format_args!(
                                 "outcome=unavailable reason={} requestsUsed={}",
                                 failure_kind_name(error.kind),
-                                budget.used(),
+                                translation_budget.used(),
                             ),
                         );
                         None
@@ -438,12 +450,19 @@ pub(crate) fn fetch_best_lyrics(
                     Err(_) => {
                         trace.event(
                             "translation",
-                            format_args!("outcome=timeout requestsUsed={}", budget.used()),
+                            format_args!(
+                                "outcome=timeout requestsUsed={}",
+                                translation_budget.used()
+                            ),
                         );
                         None
                     }
                 }
             } else {
+                trace.event(
+                    "translation",
+                    "outcome=skipped reason=unidentified_track",
+                );
                 None
             };
 
@@ -454,10 +473,11 @@ pub(crate) fn fetch_best_lyrics(
             trace.event(
                 "result",
                 format_args!(
-                    "outcome=usable matchedTrack={} translated={} requestsUsed={}",
+                    "outcome=usable matchedTrack={} translated={} lookupRequestsUsed={} translationRequestsUsed={}",
                     track.is_some(),
                     translated_lrc.is_some(),
                     budget.used(),
+                    translation_budget.used(),
                 ),
             );
 
@@ -1222,10 +1242,11 @@ async fn fetch_lrc_with_matcher_fallback<B: MusixmatchBackend>(
 async fn fetch_translation_for_track(
     client: &Musixmatch,
     track: &Track,
+    original_lrc: &str,
     language: &str,
     lookup_id: jni::sys::jlong,
     budget: &mut RequestBudget,
-) -> Result<TranslationList, LookupFailure> {
+) -> Result<String, LookupFailure> {
     let mut failures = FailureLog::default();
     let label = format!(
         "track.translation trackId={} lang={language}",
@@ -1239,8 +1260,17 @@ async fn fetch_translation_for_track(
     )
     .await
     {
-        Ok(list) if !list.is_empty() => return Ok(list),
-        Ok(_) => failures.record(LookupFailure::not_found(&label, "empty translation"))?,
+        Ok(list) => {
+            if let Some(translated_lrc) = translation_list_to_lrc(original_lrc, &list) {
+                return Ok(translated_lrc);
+            }
+            let detail = if list.is_empty() {
+                "empty translation"
+            } else {
+                "translation does not match selected subtitle"
+            };
+            failures.record(LookupFailure::not_found(&label, detail))?;
+        }
         Err(error) => failures.record(error)?,
     }
 
@@ -1257,8 +1287,17 @@ async fn fetch_translation_for_track(
         )
         .await
         {
-            Ok(list) if !list.is_empty() => return Ok(list),
-            Ok(_) => failures.record(LookupFailure::not_found(&label, "empty translation"))?,
+            Ok(list) => {
+                if let Some(translated_lrc) = translation_list_to_lrc(original_lrc, &list) {
+                    return Ok(translated_lrc);
+                }
+                let detail = if list.is_empty() {
+                    "empty translation"
+                } else {
+                    "translation does not match selected subtitle"
+                };
+                failures.record(LookupFailure::not_found(&label, detail))?;
+            }
             Err(error) => failures.record(error)?,
         }
     }
@@ -1517,11 +1556,19 @@ fn normalize_translation_language(value: &str) -> String {
 }
 
 fn normalize_translation_match_key(value: &str) -> String {
-    clean_lrc_text(value)
-        .to_lowercase()
-        .chars()
-        .filter(|ch| !ch.is_whitespace() && !ch.is_ascii_punctuation())
-        .collect()
+    let normalized = clean_lrc_text(value)
+        .nfkc()
+        .flat_map(char::to_lowercase)
+        .collect::<String>();
+    translation_match_separator()
+        .replace_all(&normalized, "")
+        .into_owned()
+}
+
+fn translation_match_separator() -> &'static Regex {
+    TRANSLATION_MATCH_SEPARATOR.get_or_init(|| {
+        Regex::new(r"[\p{P}\s]+").expect("translation match separator regex must be valid")
+    })
 }
 
 fn clean_lrc_text(value: &str) -> String {
