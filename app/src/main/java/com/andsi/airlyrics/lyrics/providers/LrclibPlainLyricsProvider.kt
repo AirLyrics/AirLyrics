@@ -105,6 +105,12 @@ object LrclibPlainLyricsProvider : PlainLyricsProvider {
 
         val lrc = nativeResult.primaryPlainLrc()
         if (lrc.isBlank()) return null
+        val lyricsTracks = nativeResult.translatedLrc?.let { translatedLrc ->
+            LrclibEmbeddedLyricsTracks(
+                originalLrc = lrc,
+                translatedLrc = translatedLrc
+            )
+        } ?: splitLrclibEmbeddedTranslations(lrc)
 
         return LrclibPlainLyricsResult(
             plainSource = nativeResult.plainSource,
@@ -113,8 +119,8 @@ object LrclibPlainLyricsProvider : PlainLyricsProvider {
             artist = nativeResult.artist,
             album = nativeResult.album,
             durationMs = nativeResult.durationMs,
-            lrc = lrc,
-            translatedLrc = nativeResult.translatedLrc,
+            lrc = lyricsTracks.originalLrc,
+            translatedLrc = lyricsTracks.translatedLrc,
         )
     }
 

@@ -2,6 +2,7 @@ package com.andsi.airlyrics.lyrics.providers
 
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -100,5 +101,79 @@ class LrclibPlainLyricsProviderTest {
         assertEquals("LRCLIB", error.providerName)
         assertEquals(LyricsLookupErrorType.RateLimited, error.errorType)
         assertEquals("LRCLIB rate limited", error.detailMessage)
+    }
+
+    @Test
+    fun explicitTranslationIsPreservedWithoutReinterpretingEmbeddedRows() {
+        val embeddedLrc =
+            """
+            [00:01.00]君の声
+            [00:01.00]你的声音
+            [00:02.00]夜を越えて
+            [00:02.00]跨越黑夜
+            [00:03.00]また会える
+            [00:03.00]还会再见
+            """.trimIndent()
+        val explicitTranslation = "[00:01.00]Explicit translation"
+        val json = JSONObject()
+            .put("ok", true)
+            .put("source", "lrclib-rust")
+            .put("id", "42")
+            .put("lrc", embeddedLrc)
+            .put("translated_lrc", explicitTranslation)
+            .put("merged_lrc", embeddedLrc)
+            .toString()
+
+        val result = requireNotNull(
+            LrclibPlainLyricsProvider.mapNativePlainLyricsResultJson(
+                jsonText = json,
+                fallbackTitle = "Song",
+                fallbackArtist = "Artist",
+                fallbackAlbum = "Album",
+                fallbackDurationMs = 60_000L,
+            )
+        )
+
+        assertEquals(embeddedLrc, result.lrc)
+        assertEquals(explicitTranslation, result.translatedLrc)
+    }
+
+    @Test
+    fun embeddedTranslationRowsAreSplitAtTheProviderBoundary() {
+        val embeddedLrc =
+            """
+            [00:01.00]君の声
+            [00:01.00]你的声音
+            [00:02.00]夜を越えて
+            [00:02.00]跨越黑夜
+            [00:03.00]また会える
+            [00:03.00]还会再见
+            """.trimIndent()
+        val json = JSONObject()
+            .put("ok", true)
+            .put("source", "lrclib-rust")
+            .put("id", "42")
+            .put("lrc", embeddedLrc)
+            .put("merged_lrc", embeddedLrc)
+            .toString()
+
+        val result = requireNotNull(
+            LrclibPlainLyricsProvider.mapNativePlainLyricsResultJson(
+                jsonText = json,
+                fallbackTitle = "Song",
+                fallbackArtist = "Artist",
+                fallbackAlbum = "Album",
+                fallbackDurationMs = 60_000L,
+            )
+        )
+
+        assertEquals(
+            "[00:01.00]君の声\n[00:02.00]夜を越えて\n[00:03.00]また会える",
+            result.lrc
+        )
+        assertEquals(
+            "[00:01.00]你的声音\n[00:02.00]跨越黑夜\n[00:03.00]还会再见",
+            result.translatedLrc
+        )
     }
 }
