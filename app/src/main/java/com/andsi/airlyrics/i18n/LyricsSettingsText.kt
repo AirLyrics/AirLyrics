@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.i18n
 
 import android.content.Context
+import android.icu.text.ListFormatter
 import androidx.annotation.StringRes
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
@@ -12,20 +13,20 @@ internal fun Context.localizedPlainLyricsSourceTitle(
     plainLyricsSearchSource: PlainLyricsSearchSource
 ): String = getString(plainLyricsSourceTitleRes(plainLyricsSearchSource))
 
-internal fun Context.localizedPlainLyricsSourcePriorityTitle(
-    plainLyricsSearchSource: PlainLyricsSearchSource,
-    priority: Int
-): String = getString(
-    R.string.ui_lyrics_source_priority,
-    priority,
-    localizedPlainLyricsSourceTitle(plainLyricsSearchSource)
-)
+internal fun Context.localizedPlainLyricsSourceCompactTitle(
+    plainLyricsSearchSource: PlainLyricsSearchSource
+): String = getString(plainLyricsSourceCompactTitleRes(plainLyricsSearchSource))
 
-internal fun Context.localizedPlainLyricsSourceOrder(
+internal fun Context.localizedPlainLyricsSourceList(
     plainLyricsSearchSources: List<PlainLyricsSearchSource>
-): String = plainLyricsSearchSources.mapIndexed { index, source ->
-    localizedPlainLyricsSourcePriorityTitle(source, priority = index + 1)
-}.joinToString(" → ")
+): String {
+    val sourceTitles = plainLyricsSearchSources.distinct().map(::localizedPlainLyricsSourceTitle)
+    return if (sourceTitles.isEmpty()) {
+        getString(R.string.ui_off)
+    } else {
+        ListFormatter.getInstance(resources.configuration.locales[0]).format(sourceTitles)
+    }
+}
 
 @StringRes
 internal fun plainLyricsSourceTitleRes(plainLyricsSearchSource: PlainLyricsSearchSource): Int =
@@ -33,6 +34,15 @@ internal fun plainLyricsSourceTitleRes(plainLyricsSearchSource: PlainLyricsSearc
         PlainLyricsSearchSource.LOCAL_ONLY -> R.string.ui_local_only
         PlainLyricsSearchSource.NETEASE -> R.string.ui_netease_cloud_music
         PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch
+        PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
+    }
+
+@StringRes
+internal fun plainLyricsSourceCompactTitleRes(plainLyricsSearchSource: PlainLyricsSearchSource): Int =
+    when (plainLyricsSearchSource) {
+        PlainLyricsSearchSource.LOCAL_ONLY -> R.string.ui_local_only
+        PlainLyricsSearchSource.NETEASE -> R.string.provider_netease_compact
+        PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch_compact
         PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
     }
 

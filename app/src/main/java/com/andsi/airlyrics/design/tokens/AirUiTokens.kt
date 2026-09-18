@@ -63,6 +63,7 @@ object AirUiTokens {
         const val FeedbackOutMs = 240L
         const val FeedbackHoldMs = 900L
         const val ThemePickerExpandMs = 190L
+        const val LyricsSourceReorderMs = 250L
 
         const val PressAlpha = 0.88f
         const val DefaultPressScale = 0.97f
@@ -93,6 +94,7 @@ object AirUiTokens {
         const val ThemeAccentSwatchSize = 38
         const val ThemeAccentTouchSize = 48
         const val ThemePickerSlideDistance = 8
+        const val LyricsSourceButtonHeight = 48
         const val SettingsIconBubbleSize = 46
         const val FloatingTileIconSize = 40
         const val FloatingResetActionWidth = 72

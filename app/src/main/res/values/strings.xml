@@ -21,7 +21,9 @@
     <string name="provider_local_plain_lyrics">Local lyrics</string>
     <string name="provider_lrclib">LRCLIB</string>
     <string name="provider_musixmatch">Musixmatch</string>
+    <string name="provider_musixmatch_compact">Musix</string>
     <string name="provider_netease_plain_lyrics">NetEase Lyrics</string>
+    <string name="provider_netease_compact">NetEase</string>
     <string name="settings_current_value">Current: %1$s</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">About</string>
@@ -196,13 +198,8 @@
     <string name="ui_lyrics_folder_write_failed">Can’t write to this folder; choose another</string>
     <string name="ui_lyrics_save_folder_set">Lyrics save folder set</string>
     <string name="ui_plain_lyrics_source">Lyrics sources</string>
-    <string name="ui_lyrics_source_order_hint">Tap sources in fallback order. Tap again to remove.</string>
-    <string name="ui_lyrics_source_priority">%1$d. %2$s</string>
-    <string name="ui_lyrics_source_order_value">Order: %1$s</string>
-    <string name="ui_lyrics_search_order">Search order: %1$s</string>
-    <string name="ui_lyrics_source_selected_state">Selected</string>
+    <string name="ui_lyrics_source_selected_priority_state">Selected, priority %1$d</string>
     <string name="ui_lyrics_source_not_selected_state">Not selected</string>
-    <string name="ui_keep_one_lyrics_source">Keep at least one source</string>
     <string name="ui_plain_lrc_edit_format_hint">Each line must start with [00:12.34]</string>
     <string name="ui_max_width">Max width</string>
     <string name="ui_media">Media</string>
@@ -305,7 +302,6 @@ Word-timed TTML:
     <string name="ui_previous_current">Previous + current</string>
     <string name="ui_previous_lyric_preview">これは前の歌詞プレビューです</string>
     <string name="ui_previous_lyric_preview_translation">This is the previous lyric preview</string>
-    <string name="ui_lyrics_priority_hint">Priority: manual imports &gt; local cache &gt; online search</string>
     <string name="ui_purple">Purple</string>
     <string name="ui_radius">Radius</string>
     <string name="ui_range">Range</string>

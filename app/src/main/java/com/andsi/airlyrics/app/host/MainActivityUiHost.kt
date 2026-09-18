@@ -144,8 +144,6 @@ internal class MainActivityUiHost(
     override fun optionGrid(items: List<OptionItem>): LinearLayout = optionGridImpl(items)
     override fun liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout = liveOptionGridImpl(items)
     override fun optionButton(item: OptionItem): TextView = optionButtonImpl(item)
-    override fun optionButtonGrid(buttons: List<TextView>): LinearLayout =
-        optionButtonGridImpl(buttons)
     override fun applyOptionButtonState(button: TextView, title: String, selected: Boolean) = applyOptionButtonStateImpl(button, title, selected)
     override fun sliderRow(
         title: String,

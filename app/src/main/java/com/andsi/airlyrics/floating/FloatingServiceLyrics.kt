@@ -4,7 +4,6 @@ import android.net.Uri
 import android.os.SystemClock
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
-import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceOrder
 import com.andsi.airlyrics.lyrics.LyricsChange
 import com.andsi.airlyrics.lyrics.LyricsChangeKind
 import com.andsi.airlyrics.lyrics.LyricsLookupException
@@ -155,10 +154,7 @@ internal fun FloatingLyricsService.notFoundText(media: CurrentMediaInfo): String
     } else if (!LyricsSettingsStore.isAutoSearchOnlineEnabled(this)) {
         "${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
     } else {
-        val plainLyricsSourceOrder = localizedPlainLyricsSourceOrder(
-            LyricsSettingsStore.getPlainLyricsSearchSources(this)
-        )
-        "${media.displayText}\n${getString(R.string.ui_lyrics_search_order, plainLyricsSourceOrder)}\n${getString(R.string.ui_lyrics_not_found)}"
+        "${media.displayText}\n${getString(R.string.ui_lyrics_not_found)}"
     }
 }
 

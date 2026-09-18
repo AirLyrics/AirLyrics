@@ -1,22 +1,16 @@
 package com.andsi.airlyrics.ui.pages.settings
 
-import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.TextView
-import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
-import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceOrder
-import com.andsi.airlyrics.i18n.localizedPlainLyricsSourcePriorityTitle
+import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceCompactTitle
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.model.LyricsSettingsUiState
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.model.OptionItem
-import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activity) createLyricsSettingsPage@ {
@@ -31,7 +25,6 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
     container.addView(
         card(activity) {
             addView(bigText(activity, getString(R.string.ui_search_strategy)))
-            addView(normalText(activity, getString(R.string.ui_lyrics_priority_hint)))
 
             val autoSearchButton = actionButton(activity, getString(if (settings.autoSearchOnline) R.string.ui_online_fallback_on else R.string.ui_online_fallback_off)) { }
             autoSearchButton.setOnClickListener {
@@ -119,98 +112,47 @@ internal fun createLyricsSourceOrderCard(
         var selectedSources = settings.selectedPlainLyricsSources.distinct()
 
         addView(bigText(activity, getString(R.string.ui_plain_lyrics_source)))
-        addView(smallHint(activity, getString(R.string.ui_lyrics_source_order_hint)))
-
-        val sourceStatus = normalText(
-            activity,
-            getString(
-                R.string.ui_lyrics_source_order_value,
-                localizedPlainLyricsSourceOrder(selectedSources)
-            )
-        )
-        val sourceFeedback = TextView(activity).apply {
-            text = ""
-            textSize = AirUiTokens.TextSize.Caption
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorAccentMint)
-            setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
-            accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
-        }
-        lateinit var sourceGrid: LinearLayout
-        lateinit var refreshSourceOptions: () -> Unit
+        lateinit var sourceGrid: LyricsSourceOrderRow
+        lateinit var refreshSourceOptions: (Boolean) -> Unit
         val sourceButtons = settings.plainLyricsSourceOptions.associateWith { source ->
-            optionButton(
-                OptionItem(
-                    title = localizedPlainLyricsSourceTitle(source),
-                    selected = source in selectedSources,
-                    action = {
-                        val updatedSources = toggleOrderedPlainLyricsSource(
-                            selectedSources = selectedSources,
-                            source = source
-                        )
-                        if (updatedSources == selectedSources) {
-                            playLocalRefreshFeedback(
-                                activity,
-                                sourceGrid,
-                                sourceFeedback,
-                                getString(R.string.ui_keep_one_lyrics_source)
-                            )
-                        } else {
-                            selectedSources = updatedSources
-                            uiActions.setPlainLyricsSources(selectedSources)
-                            sourceStatus.text = getString(
-                                R.string.ui_lyrics_source_order_value,
-                                localizedPlainLyricsSourceOrder(selectedSources)
-                            )
-                            refreshSourceOptions()
-                            playLocalRefreshFeedback(
-                                activity,
-                                sourceGrid,
-                                sourceFeedback,
-                                getString(R.string.ui_saved)
-                            )
-                        }
-                    }
-                )
+            LyricsSourceOptionButton(
+                host = activity,
+                source = source,
+                compactTitle = localizedPlainLyricsSourceCompactTitle(source)
             ).apply {
-                isFocusable = true
+                setOnClickListener {
+                    val updatedSources = toggleOrderedPlainLyricsSource(
+                        selectedSources = selectedSources,
+                        source = source
+                    )
+                    selectedSources = updatedSources
+                    uiActions.setPlainLyricsSources(selectedSources)
+                    refreshSourceOptions(true)
+                    playTinyPulse(this)
+                }
             }
         }
-        sourceGrid = optionButtonGrid(sourceButtons.values.toList())
-        refreshSourceOptions = {
+        sourceGrid = LyricsSourceOrderRow(activity)
+        refreshSourceOptions = { animateOrder ->
             sourceButtons.forEach { (source, button) ->
                 val selectedIndex = selectedSources.indexOf(source)
-                val selected = selectedIndex >= 0
-                applyOptionButtonState(
-                    button = button,
-                    title = if (selected) {
-                        localizedPlainLyricsSourcePriorityTitle(
-                            source,
-                            priority = selectedIndex + 1
-                        )
-                    } else {
-                        localizedPlainLyricsSourceTitle(source)
-                    },
-                    selected = selected
-                )
-                button.isSelected = selected
-                ViewCompat.setStateDescription(
-                    button,
-                    getString(
-                        if (selected) {
-                            R.string.ui_lyrics_source_selected_state
-                        } else {
-                            R.string.ui_lyrics_source_not_selected_state
-                        }
-                    )
+                button.render(
+                    selectedPriority = (selectedIndex + 1).takeIf { selectedIndex >= 0 },
+                    fullTitle = localizedPlainLyricsSourceTitle(source)
                 )
             }
+            val displayedSources = orderedLyricsSourceOptions(
+                selectedSources = selectedSources,
+                sourceOptions = settings.plainLyricsSourceOptions
+            )
+            sourceGrid.setSourceOrder(
+                orderedButtons = displayedSources.map(sourceButtons::getValue),
+                animate = animateOrder
+            )
         }
 
-        addView(sourceStatus)
-        addView(sourceFeedback)
         addView(sourceGrid)
-        refreshSourceOptions()
+        refreshSourceOptions(false)
     }
 }
 

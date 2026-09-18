@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.LyricsSettings
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.LyricsChange
@@ -17,6 +18,7 @@ import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import java.io.File
@@ -129,6 +131,30 @@ class FloatingLyricsServiceLatestMediaTest {
             )
         )
         assertTrue(lyricsView.text.toString().contains(REJECTED_TITLE))
+    }
+
+    @Test
+    fun notFoundTextOmitsProviderPriorityAndSearchOrder() {
+        LyricsSettingsStore.setPlainLyricsSearchSources(
+            context,
+            PlainLyricsSearchSource.onlineSources
+        )
+        val controller = Robolectric.buildService(FloatingLyricsService::class.java)
+            .create()
+            .also { serviceController = it }
+        val service = controller.get()
+        val media = media(OLD_TITLE, sequence = 1L)
+
+        val text = service.notFoundText(media)
+
+        assertEquals(
+            "${media.displayText}\n${service.getString(R.string.ui_lyrics_not_found)}",
+            text
+        )
+        assertFalse(text.contains("→"))
+        PlainLyricsSearchSource.onlineSources.forEach { source ->
+            assertFalse(text.contains(source.key, ignoreCase = true))
+        }
     }
 
     @Test
