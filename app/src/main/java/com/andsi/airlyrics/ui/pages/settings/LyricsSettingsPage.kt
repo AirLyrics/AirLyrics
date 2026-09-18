@@ -219,9 +219,9 @@ internal fun toggleOrderedPlainLyricsSource(
     source: PlainLyricsSearchSource
 ): List<PlainLyricsSearchSource> {
     val normalizedSources = selectedSources.distinct()
-    return when {
-        source !in normalizedSources -> normalizedSources + source
-        normalizedSources.size > 1 -> normalizedSources - source
-        else -> normalizedSources
+    return if (source in normalizedSources) {
+        normalizedSources - source
+    } else {
+        normalizedSources + source
     }
 }

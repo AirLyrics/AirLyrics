@@ -8,7 +8,6 @@ import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -73,21 +72,38 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
-    fun setPlainLyricsSearchSources_rejectsEmptyEffectiveSelectionWithoutOverwriting() {
-        val savedSources = listOf(PlainLyricsSearchSource.MUSIXMATCH, PlainLyricsSearchSource.LRCLIB)
-        LyricsSettingsStore.setPlainLyricsSearchSources(context, savedSources)
+    fun setPlainLyricsSearchSources_roundTripsExplicitEmptySelection() {
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, emptyList())
 
-        assertThrows(IllegalArgumentException::class.java) {
-            LyricsSettingsStore.setPlainLyricsSearchSources(context, emptyList())
-        }
-        assertThrows(IllegalArgumentException::class.java) {
-            LyricsSettingsStore.setPlainLyricsSearchSources(
-                context,
-                listOf(PlainLyricsSearchSource.LOCAL_ONLY)
-            )
-        }
+        assertEquals(
+            emptyList<PlainLyricsSearchSource>(),
+            LyricsSettingsStore.getPlainLyricsSearchSources(context)
+        )
+        val preferences = context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE)
+        assertEquals("", preferences.getString("lyrics_source_order", null))
+        assertEquals(
+            PlainLyricsSearchSource.LOCAL_ONLY.key,
+            preferences.getString("lyrics_source", null)
+        )
+    }
 
-        assertEquals(savedSources, LyricsSettingsStore.getPlainLyricsSearchSources(context))
+    @Test
+    fun setPlainLyricsSearchSources_normalizesLegacyLocalOnlyToExplicitEmptySelection() {
+        LyricsSettingsStore.setPlainLyricsSearchSources(
+            context,
+            listOf(PlainLyricsSearchSource.LOCAL_ONLY)
+        )
+
+        assertEquals(
+            emptyList<PlainLyricsSearchSource>(),
+            LyricsSettingsStore.getPlainLyricsSearchSources(context)
+        )
+        val preferences = context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE)
+        assertEquals("", preferences.getString("lyrics_source_order", null))
+        assertEquals(
+            PlainLyricsSearchSource.LOCAL_ONLY.key,
+            preferences.getString("lyrics_source", null)
+        )
     }
 
     @Test
@@ -161,6 +177,19 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
+    fun getPlainLyricsSearchSources_explicitEmptyOrderOverridesLegacyOnlineSource() {
+        context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
+            .putString("lyrics_source_order", "")
+            .putString("lyrics_source", PlainLyricsSearchSource.LRCLIB.key)
+            .commit()
+
+        assertEquals(
+            emptyList<PlainLyricsSearchSource>(),
+            LyricsSettingsStore.getPlainLyricsSearchSources(context)
+        )
+    }
+
+    @Test
     fun setAutoSearchOnlineEnabled_falsePreservesOrderForManualSearch() {
         val sources = listOf(PlainLyricsSearchSource.MUSIXMATCH, PlainLyricsSearchSource.LRCLIB)
         LyricsSettingsStore.setPlainLyricsSearchSources(context, sources)
@@ -181,6 +210,26 @@ class LyricsSettingsStoreTest {
 
         assertEquals(sources, LyricsSettingsStore.getPlainLyricsSearchSources(context))
         assertTrue(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
+    }
+
+    @Test
+    fun setAutoSearchOnlineEnabled_trueDoesNotReplaceExplicitEmptySelection() {
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, emptyList())
+        LyricsSettingsStore.setAutoSearchOnlineEnabled(context, false)
+
+        LyricsSettingsStore.setAutoSearchOnlineEnabled(context, true)
+
+        assertEquals(
+            emptyList<PlainLyricsSearchSource>(),
+            LyricsSettingsStore.getPlainLyricsSearchSources(context)
+        )
+        assertTrue(LyricsSettingsStore.isAutoSearchOnlineEnabled(context))
+        val preferences = context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE)
+        assertEquals("", preferences.getString("lyrics_source_order", null))
+        assertEquals(
+            PlainLyricsSearchSource.LOCAL_ONLY.key,
+            preferences.getString("lyrics_source", null)
+        )
     }
 
     @Test

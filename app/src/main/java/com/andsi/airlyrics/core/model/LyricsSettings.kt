@@ -2,7 +2,7 @@ package com.andsi.airlyrics.core.model
 
 /** User-facing lyrics lookup and display configuration. */
 data class LyricsSettings(
-    /** Selected online lookup sources in priority order. */
+    /** Selected online lookup sources in priority order. Empty disables online lookup. */
     val plainLyricsSearchSources: List<PlainLyricsSearchSource>,
     val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean,
