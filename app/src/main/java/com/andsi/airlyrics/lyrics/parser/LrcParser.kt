@@ -109,7 +109,13 @@ private val inlineTranslationSeparatorRegex = Regex("""\s+/\s+|／""")
 private val translationOnlyPrefixRegex = Regex("""^[／/]\s+(.+)$""")
 private val keyValueLineRegex = Regex("""^[^\n]{1,32}\s*[:：]""")
 private val lyricsCreditLineRegex = Regex(
-    """^(?:作词|作詞|填词|作曲|编曲|編曲|译词|翻译|翻訳|作词人|作詞家|作曲人|制作人|监制|監製|작사|작곡|편곡|번역|(?i:lyrics?|lyricist|composer|composition|arranger|translation|translator|producer))\s*[:：]"""
+    "^(?:" +
+        "\u4F5C\u8BCD|\u4F5C\u8A5E|\u586B\u8BCD|\u4F5C\u66F2|" +
+        "\u7F16\u66F2|\u7DE8\u66F2|\u8BD1\u8BCD|\u7FFB\u8BD1|\u7FFB\u8A33|" +
+        "\u4F5C\u8BCD\u4EBA|\u4F5C\u8A5E\u5BB6|\u4F5C\u66F2\u4EBA|\u5236\u4F5C\u4EBA|" +
+        "\u76D1\u5236|\u76E3\u88FD|\uC791\uC0AC|\uC791\uACE1|\uD3B8\uACE1|\uBC88\uC5ED|" +
+        "(?i:lyrics?|lyricist|composer|composition|arranger|translation|translator|producer)" +
+        ")\\s*[:\uFF1A]"
 )
 private const val TRANSLATION_MATCH_TOLERANCE_MS = 500L
 private const val UNMATCHED_TRANSLATION_ATTACH_TOLERANCE_MS = 2_000L
