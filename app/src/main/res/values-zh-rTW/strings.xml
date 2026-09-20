@@ -19,8 +19,11 @@
     <string name="lyrics_plain_format_invalid_lines">格式錯誤：第 %1$s%2$s 行\n\n歌詞行以 [00:12.34] 開頭</string>
     <string name="lyrics_import_format_invalid_lines">第 %1$s%2$s 行附近格式錯誤\n\n請檢查 LRC 或 TTML 格式</string>
     <string name="provider_local_plain_lyrics">本機歌詞</string>
+    <string name="provider_lrclib">LRCLIB</string>
     <string name="provider_musixmatch">Musixmatch</string>
+    <string name="provider_musixmatch_compact">Musix</string>
     <string name="provider_netease_plain_lyrics">網易雲歌詞</string>
+    <string name="provider_netease_compact">網易雲</string>
     <string name="settings_current_value">目前：%1$s</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">關於</string>
@@ -195,7 +198,9 @@
     <string name="ui_lyrics_folder_permission_failed">無法持續存取此資料夾，請選擇其他資料夾</string>
     <string name="ui_lyrics_folder_write_failed">無法寫入此資料夾，請選擇其他資料夾</string>
     <string name="ui_lyrics_save_folder_set">已設定歌詞儲存資料夾</string>
-    <string name="ui_plain_lyrics_source">歌詞搜尋來源</string>
+    <string name="ui_plain_lyrics_source">歌詞來源</string>
+    <string name="ui_lyrics_source_selected_priority_state">已選取，優先順序 %1$d</string>
+    <string name="ui_lyrics_source_not_selected_state">未選取</string>
     <string name="ui_plain_lrc_edit_format_hint">每行需以 [00:12.34] 開頭</string>
     <string name="ui_max_width">最大寬度</string>
     <string name="ui_media">媒體</string>
@@ -298,7 +303,6 @@
     <string name="ui_previous_current">上一句 + 目前句</string>
     <string name="ui_previous_lyric_preview">これは前の歌詞プレビューです</string>
     <string name="ui_previous_lyric_preview_translation">這是上一行歌詞預覽</string>
-    <string name="ui_lyrics_priority_hint">優先順序：手動匯入 &gt; 本機快取 &gt; 線上搜尋</string>
     <string name="ui_purple">紫</string>
     <string name="ui_radius">半徑</string>
     <string name="ui_range">範圍</string>
