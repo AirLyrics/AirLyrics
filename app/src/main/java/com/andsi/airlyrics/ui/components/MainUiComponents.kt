@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.animation.LayoutTransition
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -173,24 +174,36 @@ internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String
     }
 }
 
-internal fun settingRow(activity: MainUiHost, name: String, value: String): View  = with(activity) settingRow@ {
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
+internal fun settingRow(
+    activity: MainUiHost,
+    name: String,
+    value: String,
+    trailingView: View? = null
+): View = with(activity) settingRow@ {
+    val labelView = TextView(activity).apply {
+        text = name
+        textSize = AirUiTokens.TextSize.Button
+        setTextColor(colorTextStrong)
+    }
+    val valueView = TextView(activity).apply {
+        text = value
+        textSize = AirUiTokens.TextSize.BodySmall
+        setTextColor(colorTextMuted)
+        gravity = Gravity.END
+        maxLines = 2
+        ellipsize = TextUtils.TruncateAt.END
+    }
+
+    return AdaptiveLabelValueLayout(
+        context = this,
+        labelView = labelView,
+        valueView = valueView,
+        trailingView = trailingView,
+        horizontalGapPx = dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+        verticalGapPx = dp(AirUiTokens.Space.Sm),
+        trailingGapPx = dp(AirUiTokens.Space.Xl)
+    ).apply {
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
-
-        addView(TextView(activity).apply {
-            text = name
-            textSize = AirUiTokens.TextSize.Button
-            setTextColor(colorTextStrong)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
-        })
-
-        addView(TextView(activity).apply {
-            text = value
-            textSize = AirUiTokens.TextSize.BodySmall
-            setTextColor(colorTextMuted)
-        })
     }
 }
 

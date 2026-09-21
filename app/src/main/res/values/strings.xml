@@ -167,7 +167,7 @@
     <string name="ui_imported_off">Imported · off</string>
     <string name="ui_lyrics_folder_scope_hint">Used for imported and saved lyrics</string>
     <string name="ui_invalid_format">Invalid format</string>
-    <string name="ui_item_title_word_by_word_lyrics">%1$s · word-by-word lyrics</string>
+    <string name="ui_item_title_word_by_word_lyrics">Word-by-word lyrics · %1$s</string>
     <string name="ui_language">Language</string>
     <string name="ui_left">Left</string>
     <string name="ui_like_it">Like it?</string>

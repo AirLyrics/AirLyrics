@@ -167,7 +167,7 @@
     <string name="ui_imported_off">已匯入 · 未開啟</string>
     <string name="ui_lyrics_folder_scope_hint">用於匯入和儲存歌詞</string>
     <string name="ui_invalid_format">格式不正確</string>
-    <string name="ui_item_title_word_by_word_lyrics">%1$s · 逐字歌詞</string>
+    <string name="ui_item_title_word_by_word_lyrics">逐字歌詞 · %1$s</string>
     <string name="ui_language">語言</string>
     <string name="ui_left">左對齊</string>
     <string name="ui_like_it">如果你喜歡這個專案</string>

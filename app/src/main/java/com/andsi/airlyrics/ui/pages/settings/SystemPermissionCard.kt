@@ -3,6 +3,7 @@ package com.andsi.airlyrics.ui.pages.settings
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.TouchDelegate
 import android.view.View
@@ -219,6 +220,12 @@ private fun LinearLayout.addPermissionState(
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             setTextColor(if (entry.settingsAvailable) colorAccent else colorTextMuted)
             maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+            layoutParams = LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                PERMISSION_STATUS_WEIGHT
+            )
         })
 
         if (entry.settingsAvailable) {
@@ -318,3 +325,4 @@ private const val PERMISSION_ROW_MIN_HEIGHT_DP = 64
 private const val PERMISSION_HELP_VISUAL_SIZE_DP = 18
 private const val UNAVAILABLE_PERMISSION_ALPHA = 0.52f
 private const val PERMISSION_DIVIDER_ALPHA = 0.72f
+private const val PERMISSION_STATUS_WEIGHT = 0.42f

@@ -29,7 +29,6 @@ import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
-import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 private val currentLyricsLoadRunner = LatestUiTaskRunner()
@@ -192,48 +191,33 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
 }
 
 private fun wordByWordStatusRow(activity: MainUiHost, @StringRes valueRes: Int): View = with(activity) {
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
-
-        addView(TextView(activity).apply {
-            setText(R.string.ui_word_by_word_lyrics)
-            textSize = AirUiTokens.TextSize.Button
-            setTextColor(colorTextStrong)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
-
-        addView(TextView(activity).apply {
-            setText(valueRes)
-            textSize = AirUiTokens.TextSize.BodySmall
-            setTextColor(colorTextMuted)
-            gravity = Gravity.CENTER_VERTICAL
-        })
-
-        addView(airIconView(
-            iconRes = R.drawable.ic_air_info,
-            tint = colorTextMuted,
-            contentDescription = getString(R.string.ui_local_word_by_word_lyrics_title)
-        ).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(colorSurfaceLight)
-                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-            }
-            layoutParams = LinearLayout.LayoutParams(
-                dp(AirUiTokens.Layout.CompactIconButtonSize),
-                dp(AirUiTokens.Layout.CompactIconButtonSize)
-            ).apply {
-                setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
-            }
-            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-            setOnClickListener {
-                activity.showAirInfoDialog(
-                    title = getString(R.string.ui_local_word_by_word_lyrics_title),
-                    message = getString(R.string.ui_word_by_word_lyrics_local_only)
-                )
-            }
-        })
+    val infoButton = airIconView(
+        iconRes = R.drawable.ic_air_info,
+        tint = colorTextMuted,
+        contentDescription = getString(R.string.ui_local_word_by_word_lyrics_title)
+    ).apply {
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(colorSurfaceLight)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+        }
+        layoutParams = ViewGroup.LayoutParams(
+            dp(AirUiTokens.Layout.CompactIconButtonSize),
+            dp(AirUiTokens.Layout.CompactIconButtonSize)
+        )
+        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+        setOnClickListener {
+            activity.showAirInfoDialog(
+                title = getString(R.string.ui_local_word_by_word_lyrics_title),
+                message = getString(R.string.ui_word_by_word_lyrics_local_only)
+            )
+        }
     }
+
+    return settingRow(
+        activity = activity,
+        name = getString(R.string.ui_word_by_word_lyrics),
+        value = getString(valueRes),
+        trailingView = infoButton
+    )
 }

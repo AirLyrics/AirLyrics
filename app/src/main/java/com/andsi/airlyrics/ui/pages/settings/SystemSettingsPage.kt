@@ -4,6 +4,7 @@ import com.andsi.airlyrics.R
 
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -72,36 +73,49 @@ private fun statusPopupsMuteCard(activity: MainUiHost): View = with(activity) st
 
 private fun languageChoiceCard(activity: MainUiHost): View = with(activity) languageChoiceCard@ {
     return card(activity) {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
         setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH))
         isClickable = true
         isFocusable = true
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener { showLanguageDialog(activity) }
 
-        addView(TextView(activity).apply {
+        val labelView = TextView(activity).apply {
             setText(R.string.ui_language)
             textSize = AirUiTokens.TextSize.PageTitle - 4f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        })
+        }
 
-        addView(TextView(activity).apply {
+        val valueView = TextView(activity).apply {
             text = languageSettingsState().displayName
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccent)
-        })
+            gravity = Gravity.END
+            maxLines = 2
+            ellipsize = TextUtils.TruncateAt.END
+        }
 
-        addView(airIconView(R.drawable.ic_air_chevron_right, colorAccent).apply {
-            layoutParams = LinearLayout.LayoutParams(
+        val chevron = airIconView(R.drawable.ic_air_chevron_right, colorAccent).apply {
+            layoutParams = ViewGroup.LayoutParams(
                 dp(AirUiTokens.Layout.IconSize),
                 dp(AirUiTokens.Layout.IconSize)
-            ).apply {
-                setMargins(dp(AirUiTokens.Space.Lg), 0, 0, 0)
-            }
+            )
+        }
+
+        addView(AdaptiveLabelValueLayout(
+            context = activity,
+            labelView = labelView,
+            valueView = valueView,
+            trailingView = chevron,
+            horizontalGapPx = dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
+            verticalGapPx = dp(AirUiTokens.Space.Sm),
+            trailingGapPx = dp(AirUiTokens.Space.Lg)
+        ).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
         })
     }
 }
