@@ -114,7 +114,6 @@ private fun MainUiHost.openLocalLyricsEditor(
 ) {
     val isWordByWord = target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
     val storageItem = item.toStorageItem()
-    showMessage(R.string.ui_loading)
 
     localLyricsEditorLoadRunner.submit(
         runtime = this,

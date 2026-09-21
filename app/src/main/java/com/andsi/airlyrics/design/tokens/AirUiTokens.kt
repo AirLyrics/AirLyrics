@@ -62,6 +62,8 @@ object AirUiTokens {
         const val HintOutMs = 120L
         const val FeedbackOutMs = 240L
         const val FeedbackHoldMs = 900L
+        const val SnackbarEnterMs = 360L
+        const val SnackbarExitMs = 240L
         const val ThemePickerExpandMs = 190L
         const val LyricsSourceReorderMs = 250L
 

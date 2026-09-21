@@ -137,6 +137,7 @@ internal class MainActivityUiHost(
     override fun runOnStartedUi(expectedGeneration: Long, block: () -> Unit) =
         graph.runOnStartedUi(expectedGeneration, block)
     override fun showMessage(messageRes: Int) = graph.feedback.showMessage(messageRes)
+    override fun dismissMessage() = graph.feedback.dismiss()
 
     override fun refreshMediaButton(): View = refreshMediaButtonImpl()
     override fun mediaSourceCard(controller: MediaController, selected: Boolean): View = mediaSourceCardImpl(controller, selected)

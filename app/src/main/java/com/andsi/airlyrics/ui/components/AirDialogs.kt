@@ -124,6 +124,8 @@ internal fun MainUiHost.showAirDialog(
     onPositive: () -> Unit = {}
 ): Dialog {
     val host = this
+    // The dialog owns input in a separate window, so Activity feedback must leave first.
+    dismissMessage()
     val dialog = AirAnimatedDialog(this, android.R.style.Theme_Translucent_NoTitleBar)
     dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
 

@@ -13,4 +13,6 @@ internal interface MainRuntimeHost {
     }
 
     fun showMessage(@StringRes messageRes: Int)
+
+    fun dismissMessage()
 }

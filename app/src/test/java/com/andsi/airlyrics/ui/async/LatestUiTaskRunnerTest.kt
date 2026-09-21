@@ -60,6 +60,8 @@ class LatestUiTaskRunnerTest {
 
         override fun showMessage(messageRes: Int) = Unit
 
+        override fun dismissMessage() = Unit
+
         fun runNextIo() {
             ioTasks.removeFirst().invoke()
         }
