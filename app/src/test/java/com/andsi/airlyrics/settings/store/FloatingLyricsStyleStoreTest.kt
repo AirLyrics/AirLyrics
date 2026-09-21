@@ -228,3 +228,4 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
     }
 
 }
+

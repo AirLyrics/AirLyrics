@@ -115,10 +115,16 @@ private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLangua
         positiveText = null,
         body = {
             val selectMode: (String) -> Unit = { mode ->
-                dialog.dismiss()
-                if (mode != languageState.currentMode) {
-                    setLanguageMode(mode)
-                    activity.refreshAfterLanguageChanged()
+                if (mode == languageState.currentMode) {
+                    dialog.dismiss()
+                } else {
+                    // Applying an app locale recreates the Activity. Let the dialog
+                    // finish leaving the old window before triggering recreation.
+                    dialog.setOnDismissListener {
+                        setLanguageMode(mode)
+                        activity.reloadFloatingLyricsAfterLanguageChanged()
+                    }
+                    dialog.dismiss()
                 }
             }
             languageState.options.forEach { option ->

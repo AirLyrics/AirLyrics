@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.app.viewmodel.MainViewModel
-import com.andsi.airlyrics.i18n.LanguageSettingsStore
 
 class MainActivity : AppCompatActivity() {
     internal val mainViewModel: MainViewModel by viewModels {
@@ -14,7 +13,6 @@ class MainActivity : AppCompatActivity() {
         private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        LanguageSettingsStore.applyAppLocale(this)
         super.onCreate(savedInstanceState)
         graph = MainGraph(this, mainViewModel)
         graph.onCreate()
