@@ -43,6 +43,7 @@
     <string name="ui_accent_color_selected">Color de acento %1$s, seleccionado</string>
     <string name="ui_applied">Aplicado</string>
     <string name="ui_auto_save">Guardado automático</string>
+    <string name="ui_auto_hide">Ocultar automáticamente</string>
     <string name="ui_auto_hide_when_paused">Ocultar al pausar</string>
     <string name="ui_auto_hide_when_paused_off">desactivado</string>
     <string name="ui_auto_hide_when_paused_on">activado</string>
