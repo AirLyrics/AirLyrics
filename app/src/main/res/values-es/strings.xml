@@ -118,6 +118,7 @@
     <string name="ui_draggable_click_through">Arrastrable · traspaso de toques</string>
     <string name="ui_enable_notif_access_hint">Permití el acceso a notificaciones para detectar reproductores</string>
     <string name="ui_english">English</string>
+    <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">Palabra</string>
     <string name="ui_word_by_word_color">Color de palabra</string>
     <string name="ui_word_by_word_lyrics">Letras palabra por palabra</string>

@@ -19,6 +19,7 @@ object LanguageSettingsStore {
     const val MODE_ZH_CN = "zh-CN"
     const val MODE_ZH_TW = "zh-TW"
     const val MODE_EN = "en"
+    const val MODE_ES = "es"
 
     private const val PREFS = "airlyrics_language_settings"
     private const val KEY_MODE = "language_mode"
@@ -57,14 +58,14 @@ object LanguageSettingsStore {
 
     private fun storedMode(context: Context): String {
         return when (val stored = store(context).getString(KEY_MODE, MODE_SYSTEM)) {
-            MODE_ZH_CN, MODE_ZH_TW, MODE_EN -> stored
+            MODE_ZH_CN, MODE_ZH_TW, MODE_EN, MODE_ES -> stored
             else -> MODE_SYSTEM
         }
     }
 
     fun setMode(context: Context, mode: String) {
         val normalized = when (mode) {
-            MODE_ZH_CN, MODE_ZH_TW, MODE_EN -> mode
+            MODE_ZH_CN, MODE_ZH_TW, MODE_EN, MODE_ES -> mode
             else -> MODE_SYSTEM
         }
         store(context).setString(KEY_MODE, normalized)
@@ -105,6 +106,8 @@ object LanguageSettingsStore {
             primaryTag.equals(MODE_ZH_CN, ignoreCase = true) -> MODE_ZH_CN
             primaryTag.equals(MODE_EN, ignoreCase = true) ||
                 primaryTag.startsWith("en-", ignoreCase = true) -> MODE_EN
+            primaryTag.equals(MODE_ES, ignoreCase = true) ||
+                primaryTag.startsWith("es-", ignoreCase = true) -> MODE_ES
             primaryTag.startsWith("zh-", ignoreCase = true) -> {
                 val locale = Locale.forLanguageTag(primaryTag)
                 if (locale.usesTraditionalChinese()) MODE_ZH_TW else MODE_ZH_CN
@@ -122,6 +125,7 @@ object LanguageSettingsStore {
             MODE_ZH_CN -> MODE_ZH_CN
             MODE_ZH_TW -> MODE_ZH_TW
             MODE_EN -> MODE_EN
+            MODE_ES -> MODE_ES
             else -> ""
         }
         val locale = if (tags.isBlank()) {
@@ -145,6 +149,7 @@ object LanguageSettingsStore {
             val languageRes = when (mode) {
                 MODE_ZH_CN -> R.string.ui_chinese_simplified
                 MODE_ZH_TW -> R.string.ui_chinese_traditional
+                MODE_ES -> R.string.ui_spanish
                 else -> R.string.ui_english
             }
             return context.getString(languageRes)
@@ -157,6 +162,10 @@ object LanguageSettingsStore {
     }
 
     internal fun languageNameRes(locale: Locale): Int {
+        if (locale.language.equals(MODE_ES, ignoreCase = true)) {
+            return R.string.ui_spanish
+        }
+
         if (!locale.isChineseLanguage()) {
             return R.string.ui_english
         }

@@ -69,6 +69,7 @@ for path in Path('app/src/main/java').rglob('*.kt'):
 print('Checking Android string resources...')
 resource_paths = [
     Path('app/src/main/res/values/strings.xml'),
+    Path('app/src/main/res/values-es/strings.xml'),
     Path('app/src/main/res/values-zh-rCN/strings.xml'),
     Path('app/src/main/res/values-zh-rTW/strings.xml'),
 ]

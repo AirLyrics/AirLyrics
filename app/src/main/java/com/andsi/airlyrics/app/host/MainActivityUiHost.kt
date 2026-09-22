@@ -418,6 +418,10 @@ internal class MainActivityUiHost(
                 LanguageOptionUiItem(
                     mode = LanguageSettingsStore.MODE_EN,
                     title = getString(R.string.ui_english)
+                ),
+                LanguageOptionUiItem(
+                    mode = LanguageSettingsStore.MODE_ES,
+                    title = getString(R.string.ui_spanish)
                 )
             )
         )

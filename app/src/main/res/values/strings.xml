@@ -118,6 +118,7 @@
     <string name="ui_draggable_click_through">Draggable · click-through</string>
     <string name="ui_enable_notif_access_hint">Allow notification access to detect players</string>
     <string name="ui_english">English</string>
+    <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">Word</string>
     <string name="ui_word_by_word_color">Word color</string>
     <string name="ui_word_by_word_lyrics">Word-by-word lyrics</string>

@@ -118,6 +118,7 @@
     <string name="ui_draggable_click_through">可拖动 · 已穿透</string>
     <string name="ui_enable_notif_access_hint">开启通知访问权限以识别播放器</string>
     <string name="ui_english">English</string>
+    <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">逐字</string>
     <string name="ui_word_by_word_color">逐字高亮颜色</string>
     <string name="ui_word_by_word_lyrics">逐字歌词</string>
