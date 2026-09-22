@@ -44,9 +44,8 @@
     <string name="ui_applied">Aplicado</string>
     <string name="ui_auto_save">Guardado automático</string>
     <string name="ui_auto_hide">Ocultar automáticamente</string>
-    <string name="ui_auto_hide_when_paused">Ocultar al pausar</string>
-    <string name="ui_auto_hide_when_paused_off">desactivado</string>
-    <string name="ui_auto_hide_when_paused_on">activado</string>
+    <string name="ui_auto_hide_when_paused">Cuando la reproducción está pausada</string>
+    <string name="ui_auto_hide_when_lyrics_unavailable">Cuando no se encuentran letras utilizables</string>
     <string name="ui_auto_save_off">Guardado automático: desactivado</string>
     <string name="ui_auto_save_on">Guardado automático: activado</string>
     <string name="ui_available">Disponible</string>
