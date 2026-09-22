@@ -14,6 +14,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.appcompat.widget.SwitchCompat
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -24,6 +25,7 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.theme.applyAirThemeTint
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun pageContainer(activity: MainUiHost, animateChanges: Boolean = true): LinearLayout  = with(activity) pageContainer@ {
@@ -204,6 +206,29 @@ internal fun settingRow(
         trailingGapPx = dp(AirUiTokens.Space.Xl)
     ).apply {
         setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
+    }
+}
+
+internal fun settingSwitch(
+    activity: MainUiHost,
+    text: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+): SwitchCompat = with(activity) settingSwitch@ {
+    return SwitchCompat(this).apply {
+        this.text = text
+        textSize = AirUiTokens.TextSize.Button
+        setTextColor(colorTextStrong)
+        isChecked = checked
+        applyAirThemeTint(activity)
+        setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Xl))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        setOnCheckedChangeListener { _, isChecked ->
+            onCheckedChange(isChecked)
+        }
     }
 }
 

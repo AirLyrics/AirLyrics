@@ -42,10 +42,10 @@
     <string name="ui_accent_color_option">%1$s accent color</string>
     <string name="ui_accent_color_selected">%1$s accent color, selected</string>
     <string name="ui_applied">Applied</string>
+    <string name="ui_auto_hide">Auto-hide</string>
+    <string name="ui_auto_hide_when_paused">When playback is paused</string>
+    <string name="ui_auto_hide_when_lyrics_unavailable">When no usable lyrics are found</string>
     <string name="ui_auto_save">Auto-save</string>
-    <string name="ui_auto_hide_when_paused">Hide when paused</string>
-    <string name="ui_auto_hide_when_paused_off">off</string>
-    <string name="ui_auto_hide_when_paused_on">on</string>
     <string name="ui_auto_save_off">Auto-save: off</string>
     <string name="ui_auto_save_on">Auto-save: on</string>
     <string name="ui_available">Available</string>

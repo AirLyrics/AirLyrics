@@ -24,7 +24,7 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
         FloatingServiceCommand.ToggleLockFromNotification -> toggleLockFromNotification()
         FloatingServiceCommand.ToggleClickThroughFromNotification -> toggleClickThroughFromNotification()
         FloatingServiceCommand.ToggleAdjustModeFromNotification -> toggleAdjustModeFromNotification()
-        FloatingServiceCommand.ApplyAutoHideWhenPaused -> applyAutoHideWhenPausedSetting()
+        FloatingServiceCommand.ApplyAutoHideSettings -> applyAutoHideSettings()
         FloatingServiceCommand.ApplyDisplayScope -> applyDisplayScopeSetting()
         FloatingServiceCommand.ApplyStyle -> {
             val applied = windowController.applyStyle()
@@ -54,7 +54,7 @@ internal fun FloatingLyricsService.restoreFromDesiredState() {
 internal fun FloatingLyricsService.showLyrics(updateDesiredVisible: Boolean = true): Boolean {
     if (updateDesiredVisible) {
         QuickFloatingStore.setDesiredVisible(this, true)
-        suppressAutoHideForCurrentPauseIfNeeded()
+        suppressAutoHideForManualShow()
     }
     startDisplayScopeObservation()
     if (isDisplayScopeBlockingWindow()) {
@@ -68,24 +68,21 @@ internal fun FloatingLyricsService.showLyrics(updateDesiredVisible: Boolean = tr
     if (!shown) {
         broadcastWindowVisibility(false)
     } else {
-        autoHiddenForPause = false
         startSelectedMediaObservation()
         startLyricsSync()
         if (currentMedia.isEmpty) {
             scheduleCurrentMediaRestore()
         }
-        applyAutoHideWhenPaused()
+        reevaluateAutoHide()
     }
     refreshQuickControls()
     return shown
 }
 
 internal fun FloatingLyricsService.hideLyrics() {
-    cancelPendingPauseAutoHide()
-    autoHiddenForPause = false
+    clearAutoHideVisibilityState()
     autoHiddenForDisplayScope = false
     displayScopeBlockReason = null
-    pauseAutoHideSuppressedByUser = false
     stopDisplayScopeObservation()
     QuickFloatingStore.setDesiredVisible(this, false)
     val hidden = if (isWindowControllerReady()) {

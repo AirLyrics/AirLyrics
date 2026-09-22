@@ -18,6 +18,11 @@ import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
+internal enum class ParsedLyricsAvailability {
+    AVAILABLE,
+    EMPTY
+}
+
 /**
  * Maintains parsed lyric lines and renders the line matching the current playback position.
  */
@@ -37,6 +42,7 @@ class FloatingLyricsRenderer(
     private var lastPositionUpdateUptimeMs: Long = 0L
     private var currentIsPlaying: Boolean = false
     private var lyricsOffsetMs: Long = 0L
+    private var currentMessage: String? = null
     private var lastRenderedText: String? = null
 
     fun updatePlayback(positionMs: Long, isPlaying: Boolean) {
@@ -59,6 +65,7 @@ class FloatingLyricsRenderer(
         lastPositionUpdateUptimeMs = 0L
         currentIsPlaying = false
         lyricsOffsetMs = 0L
+        currentMessage = null
         lastRenderedText = null
         resetTextAnimationState()
     }
@@ -66,6 +73,7 @@ class FloatingLyricsRenderer(
     fun show(text: String) {
         currentPlainLines = emptyList()
         currentWordByWordLines = emptyList()
+        currentMessage = text
         setTextImmediately(text)
     }
 
@@ -79,16 +87,22 @@ class FloatingLyricsRenderer(
         return true
     }
 
-    fun parseAndShow(
+    internal fun parseAndShow(
         plainLrc: String,
         translatedLrc: String? = null,
         wordByWordLines: List<WordByWordLine> = emptyList(),
         emptyText: String
-    ) {
+    ): ParsedLyricsAvailability {
         currentPlainLines = LrcParser.parseWithTranslation(plainLrc, translatedLrc)
         currentWordByWordLines = wordByWordLines
+        currentMessage = emptyText
+        val availability = if (hasRenderableLyrics()) {
+            ParsedLyricsAvailability.AVAILABLE
+        } else {
+            ParsedLyricsAvailability.EMPTY
+        }
 
-        val text = if (currentPlainLines.isNotEmpty() || currentWordByWordLines.isNotEmpty()) {
+        val text = if (availability == ParsedLyricsAvailability.AVAILABLE) {
             renderAtCurrentPosition().takeIf { it.isNotBlankText() }
                 ?: renderPlainTextAtIndex(0).takeIf { it.isNotBlankText() }
                 ?: emptyText
@@ -97,6 +111,7 @@ class FloatingLyricsRenderer(
         }
 
         setTextImmediately(text)
+        return availability
     }
 
     fun tick() {
@@ -111,11 +126,25 @@ class FloatingLyricsRenderer(
     }
 
     fun refresh() {
-        if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) return
-        val text = renderAtCurrentPosition().takeIf { it.isNotBlankText() }
-            ?: renderPlainTextAtIndex(0).takeIf { it.isNotBlankText() }
-            ?: return
+        val text = if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) {
+            currentMessage ?: return
+        } else {
+            renderAtCurrentPosition().takeIf { it.isNotBlankText() }
+                ?: renderPlainTextAtIndex(0).takeIf { it.isNotBlankText() }
+                ?: currentMessage
+                ?: return
+        }
         setTextImmediately(text)
+    }
+
+    private fun hasRenderableLyrics(): Boolean {
+        val hasPlainLyrics = currentPlainLines.any { line ->
+            !line.isMetadata && (line.text.isNotBlank() || line.hasTranslation())
+        }
+        val hasWordByWordLyrics = currentWordByWordLines.any { line ->
+            line.text.isNotBlank() || line.segments.any { it.text.isNotBlank() }
+        }
+        return hasPlainLyrics || hasWordByWordLyrics
     }
 
     private fun renderAtCurrentPosition(): CharSequence {

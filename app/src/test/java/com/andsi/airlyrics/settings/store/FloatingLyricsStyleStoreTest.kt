@@ -37,6 +37,7 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
         assertEquals(100 to 300, FloatingLyricsStyleStore.getPosition(context))
         assertTrue(FloatingLyricsStyleStore.isPreviewExpanded(context))
         assertFalse(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+        assertFalse(FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(context))
     }
 
     @Test
@@ -217,15 +218,24 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
     }
 
     @Test
-    fun autoHideWhenPausedDefaultsOffAndRoundTrips() {
+    fun autoHideSettingsDefaultOffAndRoundTripIndependently() {
         assertFalse(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+        assertFalse(FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(context))
 
         FloatingLyricsStyleStore.setAutoHideWhenPaused(context, true)
         assertTrue(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+        assertFalse(FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(context))
+
+        FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(context, true)
+        assertTrue(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+        assertTrue(FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(context))
 
         FloatingLyricsStyleStore.setAutoHideWhenPaused(context, false)
         assertFalse(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+        assertTrue(FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(context))
+
+        FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(context, false)
+        assertFalse(FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(context))
     }
 
 }
-

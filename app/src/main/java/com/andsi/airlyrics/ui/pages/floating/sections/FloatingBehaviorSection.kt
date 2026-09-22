@@ -8,6 +8,7 @@ import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.horizontalButtons
 import com.andsi.airlyrics.ui.components.settingRow
+import com.andsi.airlyrics.ui.components.settingSwitch
 import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
@@ -56,22 +57,35 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                 }
             ),
             trackedFloatingTile(
-                title = getString(R.string.ui_auto_hide_when_paused),
-                subtitle = autoHideWhenPausedSubtitle(),
+                title = getString(R.string.ui_auto_hide),
+                subtitle = autoHideSummary(),
                 iconRes = R.drawable.ic_air_visibility_off,
                 onClick = { tile ->
                     openPanel(
                         tile,
-                        getString(R.string.ui_auto_hide_when_paused),
+                        getString(R.string.ui_auto_hide),
                         ""
                     ) {
-                        val autoHideButton = actionButton(host, autoHideWhenPausedButtonText()) { }
-                        autoHideButton.setOnClickListener {
-                            uiActions.toggleAutoHideWhenPaused()
-                            autoHideButton.text = autoHideWhenPausedButtonText()
-                            refreshFloatingSettingTiles()
-                        }
-                        addView(autoHideButton)
+                        addView(
+                            settingSwitch(
+                                host,
+                                getString(R.string.ui_auto_hide_when_paused),
+                                autoHideWhenPausedEnabled()
+                            ) { enabled ->
+                                uiActions.setAutoHideWhenPaused(enabled)
+                                refreshFloatingSettingTiles()
+                            }
+                        )
+                        addView(
+                            settingSwitch(
+                                host,
+                                getString(R.string.ui_auto_hide_when_lyrics_unavailable),
+                                autoHideWhenLyricsUnavailableEnabled()
+                            ) { enabled ->
+                                uiActions.setAutoHideWhenLyricsUnavailable(enabled)
+                                refreshFloatingSettingTiles()
+                            }
+                        )
                     }
                 }
             ),
@@ -167,23 +181,9 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
             addView(settingRow(host, getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary()))
             addView(settingRow(host, getString(R.string.ui_locked), onOff(uiState.locked)))
             addView(settingRow(host, getString(R.string.ui_click_through), onOff(uiState.clickThrough)))
-            addView(settingRow(host, getString(R.string.ui_auto_hide_when_paused), autoHideWhenPausedSubtitle()))
+            addView(settingRow(host, getString(R.string.ui_auto_hide), autoHideSummary()))
             addView(settingRow(host, getString(R.string.ui_display_scope), host.displayScopeSummary()))
         }
     }
     list.addView(summaryButton)
-}
-
-private fun FloatingPageScope.autoHideWhenPausedSubtitle(): String {
-    return onOff(host.autoHideWhenPausedEnabled())
-}
-
-private fun FloatingPageScope.autoHideWhenPausedButtonText(): String {
-    return host.getString(
-        if (host.autoHideWhenPausedEnabled()) {
-            R.string.ui_auto_hide_when_paused_on
-        } else {
-            R.string.ui_auto_hide_when_paused_off
-        }
-    )
 }

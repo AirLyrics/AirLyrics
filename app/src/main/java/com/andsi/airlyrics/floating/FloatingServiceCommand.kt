@@ -16,7 +16,7 @@ internal sealed class FloatingServiceCommand {
     object ToggleLockFromNotification : FloatingServiceCommand()
     object ToggleClickThroughFromNotification : FloatingServiceCommand()
     object ToggleAdjustModeFromNotification : FloatingServiceCommand()
-    object ApplyAutoHideWhenPaused : FloatingServiceCommand()
+    object ApplyAutoHideSettings : FloatingServiceCommand()
     object ApplyDisplayScope : FloatingServiceCommand()
     object ApplyStyle : FloatingServiceCommand()
     object ReloadLyrics : FloatingServiceCommand()
@@ -52,7 +52,7 @@ internal sealed class FloatingServiceCommand {
             ToggleLockFromNotification -> ACTION_NOTIFICATION_TOGGLE_LOCK
             ToggleClickThroughFromNotification -> ACTION_NOTIFICATION_TOGGLE_CLICK_THROUGH
             ToggleAdjustModeFromNotification -> ACTION_NOTIFICATION_TOGGLE_ADJUST_MODE
-            ApplyAutoHideWhenPaused -> ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED
+            ApplyAutoHideSettings -> ACTION_APPLY_AUTO_HIDE_SETTINGS
             ApplyDisplayScope -> ACTION_APPLY_DISPLAY_SCOPE
             ApplyStyle -> ACTION_APPLY_STYLE
             ReloadLyrics -> ACTION_RELOAD_LYRICS
@@ -75,7 +75,9 @@ internal sealed class FloatingServiceCommand {
             "com.andsi.airlyrics.NOTIFICATION_TOGGLE_CLICK_THROUGH"
         private const val ACTION_NOTIFICATION_TOGGLE_ADJUST_MODE =
             "com.andsi.airlyrics.NOTIFICATION_TOGGLE_ADJUST_MODE"
-        private const val ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED =
+        private const val ACTION_APPLY_AUTO_HIDE_SETTINGS =
+            "com.andsi.airlyrics.APPLY_AUTO_HIDE_SETTINGS"
+        private const val LEGACY_ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED =
             "com.andsi.airlyrics.APPLY_AUTO_HIDE_WHEN_PAUSED"
         private const val ACTION_APPLY_DISPLAY_SCOPE =
             "com.andsi.airlyrics.APPLY_DISPLAY_SCOPE"
@@ -101,7 +103,8 @@ internal sealed class FloatingServiceCommand {
                 ACTION_NOTIFICATION_TOGGLE_LOCK -> ToggleLockFromNotification
                 ACTION_NOTIFICATION_TOGGLE_CLICK_THROUGH -> ToggleClickThroughFromNotification
                 ACTION_NOTIFICATION_TOGGLE_ADJUST_MODE -> ToggleAdjustModeFromNotification
-                ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED -> ApplyAutoHideWhenPaused
+                ACTION_APPLY_AUTO_HIDE_SETTINGS,
+                LEGACY_ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED -> ApplyAutoHideSettings
                 ACTION_APPLY_DISPLAY_SCOPE -> ApplyDisplayScope
                 ACTION_APPLY_STYLE -> ApplyStyle
                 ACTION_RELOAD_LYRICS -> ReloadLyrics

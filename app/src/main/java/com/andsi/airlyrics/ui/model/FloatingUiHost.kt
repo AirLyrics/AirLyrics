@@ -37,6 +37,7 @@ internal interface FloatingUiHost {
     fun floatingLockButtonText(): String
     fun floatingClickThroughButtonText(): String
     fun autoHideWhenPausedEnabled(): Boolean
+    fun autoHideWhenLyricsUnavailableEnabled(): Boolean
     fun displayScopeSupported(): Boolean
     fun displayScopeEnabled(): Boolean
     fun displayScopeSelectedCount(): Int

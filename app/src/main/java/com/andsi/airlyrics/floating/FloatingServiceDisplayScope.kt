@@ -5,7 +5,6 @@ import com.andsi.airlyrics.displayscope.DisplayScopeCapability
 import com.andsi.airlyrics.displayscope.DisplayScopePolicy
 import com.andsi.airlyrics.displayscope.DisplayScopeVisibilitySnapshot
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
-import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
 internal fun FloatingLyricsService.applyDisplayScopeSetting() {
@@ -19,13 +18,13 @@ internal fun FloatingLyricsService.applyDisplayScopeSetting() {
 
     if (!displayScopeFilterEnabled()) {
         val needsRestore = autoHiddenForDisplayScope ||
-            (!autoHiddenForPause &&
+            (activeAutoHideReasons.isEmpty() &&
                 (!isWindowControllerReady() || !windowController.isVisible))
         stopDisplayScopeObservation()
         autoHiddenForDisplayScope = false
         displayScopeBlockReason = null
-        if (needsRestore && !autoHiddenForPause) {
-            showLyrics(updateDesiredVisible = false)
+        if (needsRestore && activeAutoHideReasons.isEmpty()) {
+            restoreVisibleLyricsIfDesired()
         } else {
             refreshQuickControls()
         }
@@ -138,14 +137,7 @@ private fun FloatingLyricsService.restoreAfterDisplayScopeAllows() {
     if (!autoHiddenForDisplayScope) return
     autoHiddenForDisplayScope = false
     displayScopeBlockReason = null
-
-    if (autoHiddenForPause &&
-        FloatingLyricsStyleStore.isAutoHideWhenPaused(this) &&
-        !pauseAutoHideSuppressedByUser) {
-        applyAutoHideWhenPaused()
-    } else {
-        showLyrics(updateDesiredVisible = false)
-    }
+    reevaluateAutoHide()
 }
 
 private fun FloatingLyricsService.displayScopeFilterEnabled(): Boolean {

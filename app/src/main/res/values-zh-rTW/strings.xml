@@ -42,10 +42,10 @@
     <string name="ui_accent_color_option">%1$s強調色</string>
     <string name="ui_accent_color_selected">%1$s強調色，已選擇</string>
     <string name="ui_applied">已生效</string>
+    <string name="ui_auto_hide">自動隱藏</string>
+    <string name="ui_auto_hide_when_paused">樂曲暫停時</string>
+    <string name="ui_auto_hide_when_lyrics_unavailable">未找到可用歌詞時</string>
     <string name="ui_auto_save">自動儲存</string>
-    <string name="ui_auto_hide_when_paused">暫停時隱藏</string>
-    <string name="ui_auto_hide_when_paused_off">關閉</string>
-    <string name="ui_auto_hide_when_paused_on">開啟</string>
     <string name="ui_auto_save_off">自動儲存：關閉</string>
     <string name="ui_auto_save_on">自動儲存：開啟</string>
     <string name="ui_available">可選擇</string>

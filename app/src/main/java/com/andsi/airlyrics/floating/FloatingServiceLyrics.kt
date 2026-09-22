@@ -81,6 +81,7 @@ internal fun FloatingLyricsService.clearLyricsState(message: String) {
     renderer.setLyricsOffset(0L)
     renderer.clear()
     renderer.show(message)
+    resetLyricsAvailability()
 }
 
 internal fun FloatingLyricsService.loadLyricsForSong(
@@ -102,6 +103,7 @@ internal fun FloatingLyricsService.loadLyricsForSong(
             "${getString(R.string.ui_paused)}\n${media.displayText}"
         }
     )
+    markLyricsLoading(media.playbackLyricsKey())
 
     lyricsLookupRunner.submit(
         requestKey = lookupRequestKey.value,
@@ -126,17 +128,23 @@ internal fun FloatingLyricsService.applyLyricsResult(
 
     if (plainLrc != null) {
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
-        renderer.parseAndShow(
+        val availability = renderer.parseAndShow(
             plainLrc = plainLrc,
             translatedLrc = lyricsResult.translatedLrc,
             wordByWordLines = lyricsResult.wordByWordLines,
             emptyText = getString(R.string.ui_parsed_lyrics_are_empty) + "\n" + media.displayText
         )
+        if (availability == ParsedLyricsAvailability.AVAILABLE) {
+            markLyricsAvailable(media.playbackLyricsKey())
+        } else {
+            markLyricsUnavailable(media.playbackLyricsKey())
+        }
         return
     }
 
     renderer.clear()
     renderer.show(lookupFailureText(result.exceptionOrNull(), media))
+    markLyricsUnavailable(media.playbackLyricsKey())
 }
 
 internal fun FloatingLyricsService.lookupFailureText(error: Throwable?, media: CurrentMediaInfo): String {
@@ -195,10 +203,15 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
         lastPlaybackLyricsKey = media.playbackLyricsKey()
         activeLyricsLookupRequestKey = null
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
-        renderer.parseAndShow(
+        val availability = renderer.parseAndShow(
             plainLrc = localPlainLrc,
             emptyText = getString(R.string.ui_lyrics_import_empty_error)
         )
+        if (availability == ParsedLyricsAvailability.AVAILABLE) {
+            markLyricsAvailable(media.playbackLyricsKey())
+        } else {
+            markLyricsUnavailable(media.playbackLyricsKey())
+        }
     } else {
         renderer.show(getString(R.string.ui_lyrics_import_failed))
     }

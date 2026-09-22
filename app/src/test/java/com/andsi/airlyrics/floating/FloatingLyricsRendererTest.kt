@@ -176,6 +176,52 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
+    fun parseAndShow_reportsWhetherParsedContentContainsUsableLyrics() {
+        val renderer = renderer(textView = TextView(context), wordByWordEnabled = true)
+
+        assertEquals(
+            ParsedLyricsAvailability.EMPTY,
+            renderer.parseAndShow("[ar:Artist]", emptyText = "empty")
+        )
+        assertEquals(
+            ParsedLyricsAvailability.AVAILABLE,
+            renderer.parseAndShow(
+                plainLrc = "",
+                translatedLrc = "[00:01.00]translation",
+                emptyText = "empty"
+            )
+        )
+        assertEquals(
+            ParsedLyricsAvailability.AVAILABLE,
+            renderer.parseAndShow(
+                plainLrc = "not timed",
+                wordByWordLines = listOf(timedLine("Standalone")),
+                emptyText = "empty"
+            )
+        )
+    }
+
+    @Test
+    fun statusMessage_survivesTextViewReplacementUntilClear() {
+        var currentView: TextView? = TextView(context)
+        val renderer = FloatingLyricsRenderer(textViewProvider = { currentView })
+
+        renderer.show("lyrics unavailable")
+        val restoredMessageView = TextView(context)
+        currentView = restoredMessageView
+        renderer.refresh()
+
+        assertEquals("lyrics unavailable", restoredMessageView.text.toString())
+
+        renderer.clear()
+        val clearedView = TextView(context)
+        currentView = clearedView
+        renderer.refresh()
+
+        assertEquals("", clearedView.text.toString())
+    }
+
+    @Test
     fun refreshAndClear_resetTextWithoutKeepingPreviousTimingState() {
         val textView = TextView(context)
         val renderer = renderer(textView = textView)

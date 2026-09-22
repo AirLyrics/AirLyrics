@@ -90,7 +90,9 @@ open class FloatingLyricsService : Service() {
     internal var automaticOnlineLookupSuppressedSong: SongIdentity? = null
     internal var activeLyricsLookupRequestKey: LyricsLookupRequestKey? = null
     internal var selectedSourcePackage: String? = null
-    internal var autoHiddenForPause = false
+    internal val activeAutoHideReasons: MutableSet<AutoHideReason> = mutableSetOf()
+    internal var lyricsAvailability = LyricsAvailability.UNKNOWN
+    internal var lyricsAvailabilityKey: PlaybackLyricsKey? = null
     internal var autoHiddenForDisplayScope = false
     internal var displayScopeBlockReason: DisplayScopeBlockReason? = null
     internal var displayScopeVisiblePackages: Set<String> = emptySet()
@@ -99,6 +101,9 @@ open class FloatingLyricsService : Service() {
     internal var displayScopeObservationActive = false
     internal var displayScopeMonitor: DisplayScopeMonitor? = null
     internal var pauseAutoHideSuppressedByUser = false
+    internal var lyricsUnavailableAutoHideSuppressedKey: PlaybackLyricsKey? = null
+    internal var pauseAutoHidePending = false
+    internal var unavailableLyricsAutoHidePending = false
     internal var mediaRestoreAttempt = 0
     internal val mediaSnapshotGate = MediaSnapshotGate()
 
@@ -118,7 +123,11 @@ open class FloatingLyricsService : Service() {
     }
 
     internal val pauseAutoHideRunnable = Runnable {
-        applyScheduledAutoHideWhenPaused()
+        applyScheduledPauseAutoHide()
+    }
+
+    internal val unavailableLyricsAutoHideRunnable = Runnable {
+        applyScheduledUnavailableLyricsAutoHide()
     }
 
     internal val currentMediaRefreshRunnable = object : Runnable {
@@ -202,7 +211,7 @@ open class FloatingLyricsService : Service() {
     override fun onDestroy() {
         if (feedbackDelegate.isInitialized()) feedback.dismiss()
         stopLyricsSync()
-        syncHandler.removeCallbacks(pauseAutoHideRunnable)
+        cancelPendingAutoHide()
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         stopSelectedMediaObservation()
         displayScopeMonitor?.close()

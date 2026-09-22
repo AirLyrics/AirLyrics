@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.app.state.MainFloatingState
 import com.andsi.airlyrics.floating.FloatingServiceCommand
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -24,12 +25,16 @@ class FloatingControllerTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         QuickFloatingStore.setDesiredVisible(context, false)
+        FloatingLyricsStyleStore.setAutoHideWhenPaused(context, false)
+        FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(context, false)
         ShadowSettings.setCanDrawOverlays(false)
     }
 
     @After
     fun tearDown() {
         QuickFloatingStore.setDesiredVisible(context, false)
+        FloatingLyricsStyleStore.setAutoHideWhenPaused(context, false)
+        FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(context, false)
         ShadowSettings.setCanDrawOverlays(false)
     }
 
@@ -122,6 +127,27 @@ class FloatingControllerTest {
             FloatingServiceCommand.Hide,
             FloatingServiceCommand.fromIntent(commands.single())
         )
+    }
+
+    @Test
+    fun autoHideSettingsPersistIndependentlyAndNotifyVisibleService() {
+        val state = FakeFloatingState(quickFloatingDesiredVisible = true)
+        QuickFloatingStore.setDesiredVisible(context, true)
+        val commands = mutableListOf<Intent>()
+        val controller = controller(state, commands)
+
+        controller.setAutoHideWhenPaused(true)
+        controller.setAutoHideWhenLyricsUnavailable(true)
+
+        assertTrue(FloatingLyricsStyleStore.isAutoHideWhenPaused(context))
+        assertTrue(FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(context))
+        assertEquals(2, commands.size)
+        commands.forEach { intent ->
+            assertEquals(
+                FloatingServiceCommand.ApplyAutoHideSettings,
+                FloatingServiceCommand.fromIntent(intent)
+            )
+        }
     }
 
     private fun controller(

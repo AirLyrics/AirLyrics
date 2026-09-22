@@ -203,6 +203,10 @@ internal class MainActivityUiHost(
         return FloatingLyricsStyleStore.isAutoHideWhenPaused(this)
     }
 
+    override fun autoHideWhenLyricsUnavailableEnabled(): Boolean {
+        return FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(this)
+    }
+
     override fun displayScopeSupported(): Boolean = DisplayScopeCapability.isSupported()
 
     override fun displayScopeEnabled(): Boolean = DisplayScopeStore.isEnabled(this)

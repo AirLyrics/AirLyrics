@@ -38,6 +38,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ServiceController
 import org.robolectric.annotation.LooperMode
+import org.robolectric.shadow.api.Shadow
 import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowSettings
 import org.robolectric.shadows.ShadowWindowManagerImpl
@@ -217,6 +218,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
     fun destroy_cleansWindowReceiversAndPendingCallbacks() {
         MediaSourceStore.saveSelectedPackage(application, SOURCE_PACKAGE)
         FloatingLyricsStyleStore.setAutoHideWhenPaused(application, true)
+        FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(application, true)
         saveLocalPlainLyrics("[00:01.00]must not render after destroy")
         val mediaIntent = CurrentMediaBroadcast.mediaUpdateIntent(
             application,
@@ -248,12 +250,14 @@ class FloatingLyricsServiceCommandLifecycleTest {
             )
         )
         ShadowLooper.idleMainLooper()
+        service.markLyricsUnavailable(service.currentMedia.playbackLyricsKey())
         val textAtDestroy = lyricsView.text.toString()
 
         assertTrue(windowManager.views.any { it === lyricsView })
         assertNotNull(service.activeLyricsLookupRequestKey)
         assertTrue(service.syncHandler.hasCallbacks(service.syncRunnable))
         assertTrue(service.syncHandler.hasCallbacks(service.pauseAutoHideRunnable))
+        assertTrue(service.syncHandler.hasCallbacks(service.unavailableLyricsAutoHideRunnable))
         assertTrue(service.syncHandler.hasCallbacks(service.currentMediaRefreshRunnable))
 
         controller.destroy()
@@ -265,6 +269,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertNull(service.activeLyricsLookupRequestKey)
         assertFalse(service.syncHandler.hasCallbacks(service.syncRunnable))
         assertFalse(service.syncHandler.hasCallbacks(service.pauseAutoHideRunnable))
+        assertFalse(service.syncHandler.hasCallbacks(service.unavailableLyricsAutoHideRunnable))
         assertFalse(service.syncHandler.hasCallbacks(service.mediaRestoreRunnable))
         assertFalse(service.syncHandler.hasCallbacks(service.currentMediaRefreshRunnable))
         assertEquals(mediaReceiverCountBefore, receiverCount(mediaIntent.action))
@@ -299,7 +304,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
 
     private fun shadowWindowManager(service: FloatingLyricsService): ShadowWindowManagerImpl {
         val windowManager = service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        return shadowOf(windowManager) as ShadowWindowManagerImpl
+        return Shadow.extract(windowManager)
     }
 
     private fun latestWindowState(): FloatingWindowStateBroadcast.State? {

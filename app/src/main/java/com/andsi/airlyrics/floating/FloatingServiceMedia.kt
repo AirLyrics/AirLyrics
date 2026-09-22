@@ -15,7 +15,7 @@ import com.andsi.airlyrics.settings.store.QuickFloatingStore
 internal fun FloatingLyricsService.shouldObserveSelectedMedia(): Boolean {
     return isWindowControllerReady() &&
         (windowController.isVisible ||
-            ((autoHiddenForPause || autoHiddenForDisplayScope) &&
+            ((activeAutoHideReasons.isNotEmpty() || autoHiddenForDisplayScope) &&
                 QuickFloatingStore.isDesiredVisible(this))) &&
         !selectedSourcePackage.isNullOrBlank()
 }
@@ -70,7 +70,7 @@ internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo
         isPlaying = media.isPlaying
     )
     renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
-    applyAutoHideWhenPaused()
+    reevaluateAutoHide()
 
     val playbackLyricsKey = media.playbackLyricsKey()
     if (automaticOnlineLookupSuppressedSong != null &&
@@ -163,7 +163,7 @@ internal fun FloatingLyricsService.handleMediaSourceLost(sourcePackage: String) 
     )
     renderer.updatePlayback(positionMs = pausedPosition, isPlaying = false)
     renderer.refresh()
-    applyAutoHideWhenPaused()
+    reevaluateAutoHide()
 }
 
 internal fun FloatingLyricsService.selectMediaSource(packageName: String?) {

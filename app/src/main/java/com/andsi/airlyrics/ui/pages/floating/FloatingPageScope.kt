@@ -198,6 +198,15 @@ internal class FloatingPageScope(
         )
     }
 
+    internal fun autoHideSummary(): String {
+        return listOfNotNull(
+            host.getString(R.string.ui_auto_hide_when_paused)
+                .takeIf { host.autoHideWhenPausedEnabled() },
+            host.getString(R.string.ui_auto_hide_when_lyrics_unavailable)
+                .takeIf { host.autoHideWhenLyricsUnavailableEnabled() }
+        ).joinToString(" · ").ifEmpty { host.getString(R.string.ui_off) }
+    }
+
     internal fun previewLyricsText(previewStyle: FloatingLyricsStyle): CharSequence {
         return formattedPreviewLyrics(
             mode = contentDisplayMode(),
@@ -307,7 +316,10 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_word_by_word_lyrics), wordByWordLyricsSubtitle())
         updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), AirColorUtils.colorSummary(latestStyle.wordByWordHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
-        updateFloatingTileSubtitle(host.getString(R.string.ui_auto_hide_when_paused), onOff(host.autoHideWhenPausedEnabled()))
+        updateFloatingTileSubtitle(
+            host.getString(R.string.ui_auto_hide),
+            autoHideSummary()
+        )
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_scope), host.displayScopeSummary())
         updateActivePanelResetState()
     }

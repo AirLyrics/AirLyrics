@@ -67,7 +67,7 @@ class FloatingLyricsServiceDisplayScopeTest {
         assertLatestNotificationStartsWith(service, R.string.ui_display_blocked)
 
         FloatingLyricsStyleStore.setAutoHideWhenPaused(service, true)
-        service.autoHiddenForPause = true
+        service.activeAutoHideReasons += AutoHideReason.PAUSED
         service.showLyrics()
         assertTrue(service.pauseAutoHideSuppressedByUser)
 
@@ -79,7 +79,7 @@ class FloatingLyricsServiceDisplayScopeTest {
             )
         )
         assertTrue(service.windowController.isVisible)
-        assertFalse(service.autoHiddenForPause)
+        assertFalse(AutoHideReason.PAUSED in service.activeAutoHideReasons)
 
         service.applyDisplayScopeSnapshot(
             DisplayScopeVisibilitySnapshot(
@@ -223,6 +223,7 @@ class FloatingLyricsServiceDisplayScopeTest {
         DisplayScopeStore.setEnabled(application, false)
         DisplayScopeStore.setSelectedPackages(application, emptySet())
         FloatingLyricsStyleStore.setAutoHideWhenPaused(application, false)
+        FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(application, false)
         QuickFloatingStore.setDesiredVisible(application, false)
     }
 }

@@ -38,7 +38,7 @@ class FloatingServiceCommandTest {
             FloatingServiceCommand.ToggleLockFromNotification,
             FloatingServiceCommand.ToggleClickThroughFromNotification,
             FloatingServiceCommand.ToggleAdjustModeFromNotification,
-            FloatingServiceCommand.ApplyAutoHideWhenPaused,
+            FloatingServiceCommand.ApplyAutoHideSettings,
             FloatingServiceCommand.ApplyDisplayScope,
             FloatingServiceCommand.ApplyStyle,
             FloatingServiceCommand.ReloadLyrics
@@ -74,5 +74,15 @@ class FloatingServiceCommandTest {
 
         assertNull(FloatingServiceCommand.fromIntent(Intent("com.example.UNKNOWN")))
         assertNull(FloatingServiceCommand.fromIntent(missingUri))
+    }
+
+    @Test
+    fun legacyPausedAutoHideAction_mapsToGeneralAutoHideSettings() {
+        val legacyIntent = Intent("com.andsi.airlyrics.APPLY_AUTO_HIDE_WHEN_PAUSED")
+
+        assertSame(
+            FloatingServiceCommand.ApplyAutoHideSettings,
+            FloatingServiceCommand.fromIntent(legacyIntent)
+        )
     }
 }
