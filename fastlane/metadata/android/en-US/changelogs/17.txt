@@ -1,0 +1,6 @@
+v1.2.6
+• Add LRCLIB and choose the priority of multiple online lyrics sources.
+• Add Traditional Chinese and Spanish.
+• Choose whether floating lyrics auto-hide when paused or when no lyrics are available.
+• Adjust lyrics search and translation matching.
+• Keep floating controls stable and improve long-setting, light-theme, dialog, and status-message readability.

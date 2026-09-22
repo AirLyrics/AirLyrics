@@ -1,12 +1,13 @@
-v1.2.5 - 2026-09-10
+v1.2.6 - 2026-09-22
 
 Added
-- Limit floating lyrics to selected apps with Display scope on Android 10 and later.
-- Import line-timed and word-timed TTML lyrics, including common Apple Music and AMLL variants.
+- Add LRCLIB and choose the priority of multiple online lyrics sources.
+- Add Traditional Chinese and Spanish.
+- Choose whether floating lyrics auto-hide when paused or when no lyrics are available.
 
-Improved
-- Permission settings now show clearer status, purpose, and actions.
-- AirLyrics follows the system light or dark theme until you choose one.
+Changed
+- Adjust lyrics search and translation matching.
 
 Fixed
-- Display scope status is more reliable, refresh results stay visible, and locked devices do less background work.
+- Floating controls stay in place when lyrics change.
+- Long setting values and light-theme controls are easier to read, and dialogs no longer cover status messages.
