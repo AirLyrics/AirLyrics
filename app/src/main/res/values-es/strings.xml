@@ -73,7 +73,7 @@
     <string name="ui_choose_lyrics_save_folder">Elegir carpeta de guardado de letras</string>
     <string name="ui_choose_apps">Elegir apps</string>
     <string name="ui_choose_the_player_airlyrics_follows">Elige el reproductor que AirLyrics seguirá </string>
-    <string name="ui_clean_letters">Limpiar</string>
+    <string name="ui_clean_letters">Limpio</string>
     <string name="ui_click_through">Traspaso de toques</string>
     <string name="ui_click_through_off">Traspaso de toques: Desactivado</string>
     <string name="ui_click_through_on">Traspaso de toques: Activado</string>
@@ -138,7 +138,7 @@
     <string name="ui_font_formats_hint">Se admiten fuentes TTF, OTF y variables</string>
     <string name="ui_font_import_failed">No se pudo importar esta fuente</string>
     <string name="ui_font_import_success">Fuente importada: %1$s</string>
-    <string name="ui_font_opacity">Opacidad de la fuente</string>
+    <string name="ui_font_opacity">Opacidad</string>
     <string name="ui_font_size">Tamaño de fuente</string>
     <string name="ui_font_weight">Grosor de fuente</string>
     <string name="ui_import_font">Importar fuente</string>
@@ -307,7 +307,7 @@ TTML de tiempo por palabra:
     <string name="ui_radius">Radio</string>
     <string name="ui_range">Rango</string>
     <string name="ui_read_failed">Falló la lectura</string>
-    <string name="ui_reset">Restablecer</string>
+    <string name="ui_reset">Restaurar</string>
     <string name="ui_recent_local_lyrics">Letras locales recientes</string>
     <string name="ui_red">Rojo</string>
     <string name="ui_refresh_media_status">Actualizar</string>
@@ -342,8 +342,8 @@ TTML de tiempo por palabra:
     <string name="ui_search_strategy">Estrategia de búsqueda</string>
     <string name="ui_searching_lyrics">Buscando letras</string>
     <string name="ui_searching_online_again">Buscando en línea…</string>
-    <string name="ui_settings">Configuración</string>
-    <string name="ui_settings_back_label">Configuración</string>
+    <string name="ui_settings">Ajustes</string>
+    <string name="ui_settings_back_label">Ajustes</string>
     <string name="ui_shadow">Sombra</string>
     <string name="ui_shadow_radius">Radio de sombra</string>
     <string name="ui_shadow_stroke">Trazo de sombra</string>
