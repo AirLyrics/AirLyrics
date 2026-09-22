@@ -13,7 +13,6 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
 import android.widget.TextView
-import androidx.appcompat.widget.AppCompatTextView
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.core.color.AirColorUtils
@@ -257,10 +256,4 @@ class FloatingLyricsWindow(
         return (value * context.resources.displayMetrics.density).toInt()
     }
 
-    private class FloatingLyricsTextView(context: Context) : AppCompatTextView(context) {
-        override fun performClick(): Boolean {
-            super.performClick()
-            return true
-        }
-    }
 }

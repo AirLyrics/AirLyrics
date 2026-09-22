@@ -196,10 +196,34 @@ class FloatingLyricsRendererTest {
         assertEquals(1f, textView.scaleY)
     }
 
+    @Test
+    fun animatedLineSwitch_keepsFloatingBubbleTransformAtRest() {
+        val textView = FloatingLyricsTextView(context)
+        val renderer = renderer(
+            textView = textView,
+            switchAnimationMode = LyricsSwitchAnimationMode.SLIDE_UP
+        )
+        renderer.updatePlayback(positionMs = 1_100L, isPlaying = false)
+        renderer.parseAndShow(
+            plainLrc = "[00:01.00]first\n[00:02.00]second",
+            emptyText = "empty"
+        )
+
+        renderer.updatePlayback(positionMs = 2_100L, isPlaying = false)
+        renderer.tick()
+
+        assertEquals("second", textView.text.toString())
+        assertEquals(1f, textView.alpha)
+        assertEquals(0f, textView.translationY)
+        assertEquals(1f, textView.scaleX)
+        assertEquals(1f, textView.scaleY)
+    }
+
     private fun renderer(
         textView: TextView? = null,
         contentMode: LyricsContentDisplayMode = LyricsContentDisplayMode.ORIGINAL_ONLY,
         lineMode: LyricsLineDisplayMode = LyricsLineDisplayMode.CURRENT_ONLY,
+        switchAnimationMode: LyricsSwitchAnimationMode = LyricsSwitchAnimationMode.NONE,
         wordByWordEnabled: Boolean = false,
         highlightColor: Int = Color.MAGENTA,
         uptimeMillisProvider: () -> Long = { 10_000L }
@@ -208,7 +232,7 @@ class FloatingLyricsRendererTest {
             textViewProvider = { textView },
             contentModeProvider = { contentMode },
             lineModeProvider = { lineMode },
-            switchAnimationModeProvider = { LyricsSwitchAnimationMode.NONE },
+            switchAnimationModeProvider = { switchAnimationMode },
             wordByWordLyricsEnabledProvider = { wordByWordEnabled },
             wordByWordHighlightColorProvider = { highlightColor },
             noTranslationTextProvider = { "no translation" },
