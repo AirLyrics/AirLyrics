@@ -176,6 +176,6 @@ class FloatingLyricsFontStoreTest {
     }
 
     private companion object {
-        const val VALID_FONT_FIXTURE = "fonts/noto-sans-lydian-regular.ttf.base64"
+        const val VALID_FONT_FIXTURE = "font-fixtures/noto-sans-lydian-regular.ttf.base64"
     }
 }
