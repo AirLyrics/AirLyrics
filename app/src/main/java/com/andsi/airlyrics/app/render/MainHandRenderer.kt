@@ -83,7 +83,6 @@ internal class MainHandRenderer(
         topSafeArea: View,
         bottomTabs: View
     ) {
-        val baseBottomTabsHeight = host.dp(AirUiTokens.Layout.BottomBarHeight)
         val baseBottomTabsPaddingLeft = bottomTabs.paddingLeft
         val baseBottomTabsPaddingTop = bottomTabs.paddingTop
         val baseBottomTabsPaddingRight = bottomTabs.paddingRight
@@ -107,9 +106,10 @@ internal class MainHandRenderer(
             )
 
             bottomTabs.layoutParams = (bottomTabs.layoutParams as LinearLayout.LayoutParams).apply {
-                height = baseBottomTabsHeight + safeInsets.bottom
+                height = ViewGroup.LayoutParams.WRAP_CONTENT
             }
 
+            bottomTabs.minimumHeight = host.dp(AirUiTokens.Layout.BottomBarHeight) + safeInsets.bottom
             bottomTabs.setPadding(
                 baseBottomTabsPaddingLeft + safeInsets.left,
                 baseBottomTabsPaddingTop,

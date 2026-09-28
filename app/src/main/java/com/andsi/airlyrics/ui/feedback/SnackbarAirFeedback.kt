@@ -9,6 +9,7 @@ import android.view.View
 import android.view.accessibility.AccessibilityManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
+import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
@@ -30,7 +31,8 @@ internal class SnackbarAirFeedback(
     private val paletteProvider: () -> AirLyricsPalette,
     private val manualMotionProvider: () -> Boolean = {
         needsManualSnackbarMotion(activity)
-    }
+    },
+    private val showLongMessage: ((CharSequence) -> Unit)? = null
 ) : AirFeedback {
     private data class ActiveSnackbar(
         val snackbar: Snackbar,
@@ -157,10 +159,19 @@ internal class SnackbarAirFeedback(
             .setTextColor(palette.textStrong)
             .setActionTextColor(palette.accent)
             .setBehavior(behavior)
+        val messageView = snackbar.view.findViewById<TextView>(com.google.android.material.R.id.snackbar_text)
+        messageView.maxLines = Int.MAX_VALUE
+        messageView.ellipsize = null
+        val availableWidth = (anchor.rootView.width - snackbar.view.paddingLeft - snackbar.view.paddingRight).coerceAtLeast(1)
+        snackbar.view.measure(View.MeasureSpec.makeMeasureSpec(availableWidth, View.MeasureSpec.AT_MOST), View.MeasureSpec.UNSPECIFIED)
+        val availableHeight = anchor.rootView.height - anchor.height - snackbar.view.paddingTop - snackbar.view.paddingBottom
+        if (availableHeight > 0 && snackbar.view.measuredHeight > availableHeight && showLongMessage != null) {
+            showLongMessage.invoke(message)
+            return
+        }
         if (manualMotion) prepareManualEnter(snackbar.view)
 
-        lateinit var activeSnackbar: ActiveSnackbar
-        activeSnackbar = ActiveSnackbar(
+        val activeSnackbar = ActiveSnackbar(
             snackbar = snackbar,
             requestedDuration = duration,
             manualMotion = manualMotion

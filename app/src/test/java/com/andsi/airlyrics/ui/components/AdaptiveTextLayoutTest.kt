@@ -9,6 +9,7 @@ import android.widget.ScrollView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.navigation.createBottomTabs
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
@@ -123,6 +124,20 @@ class AdaptiveTextLayoutTest {
         assertEquals(View.GONE, action.visibility)
     }
 
+    @Test fun bottomNavigationGrowsInsteadOfClippingLargeLabels() {
+        RuntimeEnvironment.setFontScale(2f)
+        val host = host()
+        val tabs = createBottomTabs(host)
+        host.tabViews.values.forEach { it.text = "Configuración de subtítulos" }
+        layout(tabs, host.dp(320))
+        host.tabViews.values.forEach { label ->
+            assertTrue(label.lineCount > 1)
+            assertTrue(label.height >= label.layout.height + label.compoundPaddingTop + label.compoundPaddingBottom)
+            assertTrue(label.width <= (label.parent as View).width)
+        }
+        assertTrue(tabs.height > host.dp(86))
+    }
+
     @Test fun floatingPanelBoundsLongContentAndRetainsResetAndCloseActions() {
         RuntimeEnvironment.setFontScale(2f)
         val host = host()
@@ -185,6 +200,23 @@ class AdaptiveTextLayoutTest {
         assertTrue(scroll.getChildAt(0).height > scroll.height)
         assertTrue(listViewport.height >= host.dp(96))
         dialog.dismiss()
+    }
+
+    @Test fun oversizedSnackbarUsesCompleteMessageDetails() {
+        val host = host()
+        val activity = requireNotNull(controller).get()
+        val anchor = requireNotNull(activity.graph.viewRefs.feedbackAnchor)
+        layout(anchor.rootView, host.dp(320), host.dp(480))
+        var details: CharSequence? = null
+        val feedback = com.andsi.airlyrics.ui.feedback.SnackbarAirFeedback(
+            activity, { anchor }, activity.graph.crossWindowFeedback, { true },
+            { com.andsi.airlyrics.ui.theme.AirLyricsTheme.palette(false, com.andsi.airlyrics.core.model.ThemeAccent.DEFAULT) },
+            showLongMessage = { details = it }
+        )
+        val message = "Long message with all its details\n".repeat(100)
+        feedback.showMessage(message)
+        assertEquals("root=${anchor.rootView.height}, anchor=${anchor.height}, snackbar=${feedback.activeSnackbar?.view?.measuredHeight}", message, details)
+        assertNull(feedback.activeSnackbar)
     }
 
     private fun descendants(view: View): List<View> = listOf(view) +

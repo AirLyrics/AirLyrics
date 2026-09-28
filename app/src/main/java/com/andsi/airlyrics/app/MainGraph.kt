@@ -43,6 +43,7 @@ import com.andsi.airlyrics.settings.store.DisplayScopeStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
+import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.feedback.SnackbarAirFeedback
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.model.RefreshState
@@ -88,6 +89,7 @@ internal class MainGraph(
         anchorProvider = { viewRefs.feedbackAnchor },
         fallback = toastFeedback,
         canShow = canShowFeedback,
+        showLongMessage = { message -> uiHost.showAirDialog(title = null, message = message.toString()) },
         paletteProvider = {
             AirLyricsTheme.palette(
                 isDark = ThemeSettingsStore.isDark(activity),

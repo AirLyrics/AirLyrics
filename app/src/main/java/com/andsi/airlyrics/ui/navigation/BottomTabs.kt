@@ -24,11 +24,24 @@ import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) createBottomTabs@ {
-    val shell = FrameLayout(this).apply {
+    val shell = object : FrameLayout(this) {
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            // The MATCH_PARENT highlight is decoration, not a source of desired height.
+            // Measuring it first would make a wrap-content bar fill the entire window.
+            val content = getChildAt(childCount - 1)
+            content.measure(
+                getChildMeasureSpec(widthMeasureSpec, paddingLeft + paddingRight, LayoutParams.MATCH_PARENT),
+                MeasureSpec.UNSPECIFIED
+            )
+            val desiredHeight = maxOf(minimumHeight, content.measuredHeight + paddingTop + paddingBottom)
+            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(resolveSize(desiredHeight, heightMeasureSpec), MeasureSpec.EXACTLY))
+        }
+    }.apply {
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            dp(AirUiTokens.Layout.BottomBarHeight)
+            ViewGroup.LayoutParams.WRAP_CONTENT
         )
+        minimumHeight = dp(AirUiTokens.Layout.BottomBarHeight)
         setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         clipToPadding = false
         clipChildren = false
@@ -57,7 +70,7 @@ internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) crea
         clipChildren = false
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.CENTER
         )
     }
@@ -69,6 +82,9 @@ internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) crea
 
     shell.addView(tabHighlight)
     shell.addView(bar)
+    shell.addOnLayoutChangeListener { _, l, t, r, b, oldL, oldT, oldR, oldB ->
+        if (r - l != oldR - oldL || b - t != oldB - oldT) updateTabHighlight(activity)
+    }
     return shell
 }
 
@@ -79,7 +95,7 @@ internal fun addTab(
     @StringRes titleRes: Int
 ) = with(activity) addTab@ {
     val slot = FrameLayout(this).apply {
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, AirUiTokens.Motion.RestScale)
+        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, AirUiTokens.Motion.RestScale)
         clipToPadding = false
         clipChildren = false
         isClickable = true
@@ -99,9 +115,9 @@ internal fun addTab(
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
         includeFontPadding = false
-        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.Xl))
+        setPadding(dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Xl))
         layoutParams = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.CENTER
         )
@@ -133,8 +149,8 @@ private fun quickFloatingTabIconRes(visible: Boolean, overlayPermissionGranted: 
 }
 
 internal fun measureTabTextWidth(tab: TextView): Float {
-    val lines = tab.text.toString().split('\n')
-    return lines.maxOfOrNull { tab.paint.measureText(it) } ?: tab.paint.measureText(tab.text.toString())
+    val layout = tab.layout ?: return tab.paint.measureText(tab.text.toString())
+    return (0 until layout.lineCount).maxOfOrNull(layout::getLineWidth) ?: 0f
 }
 
 internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = with(activity) updateTabs@ {
@@ -173,7 +189,7 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         view.setLineSpacing(0f, AirUiTokens.Layout.TabTextSwapScale)
         view.setTextColor(if (selected) colorOnAccent else colorTextMuted)
         view.background = null
-        val targetScale = if (quickControlSelected) AirUiTokens.Layout.TabQuickScale else if (selected) AirUiTokens.Layout.TabSelectedScale else AirUiTokens.Motion.RestScale
+        val targetScale = AirUiTokens.Motion.RestScale
         val targetAlpha = if (selected) AirUiTokens.Motion.RestScale else AirUiTokens.Layout.TabUnselectedAlpha
         if (animate) {
             view.animate()
@@ -191,17 +207,19 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         }
     }
 
-    val selectedTab = tabViews[currentPage] ?: return@updateTabs
+    updateTabHighlight(activity)
+}
+
+private fun updateTabHighlight(activity: MainUiHost) = with(activity) {
+    val selectedTab = tabViews[currentPage] ?: return@with
     selectedTab.post {
         val highlight = tabHighlight ?: return@post
         val selectedSlot = selectedTab.parent as? View ?: selectedTab
         val textWidth = measureTabTextWidth(selectedTab)
         val horizontalPadding = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingPadding) else dp(AirUiTokens.Layout.BottomTabDefaultPadding)
-        val targetWidth = (textWidth + horizontalPadding).coerceIn(
-            dp(AirUiTokens.Layout.BottomTabMinWidth).toFloat(),
-            if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingMaxWidth).toFloat() else dp(AirUiTokens.Layout.BottomTabDefaultMaxWidth).toFloat()
-        )
-        val targetHeight = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingHeight).toFloat() else dp(AirUiTokens.Layout.BottomTabDefaultHeight).toFloat()
+        val targetWidth = (textWidth + horizontalPadding).coerceAtMost(selectedSlot.width.toFloat())
+        val baseHeight = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingHeight) else dp(AirUiTokens.Layout.BottomTabDefaultHeight)
+        val targetHeight = maxOf(baseHeight, selectedTab.height).coerceAtMost(highlight.height).toFloat()
 
         val slotLocation = IntArray(2)
         val highlightLocation = IntArray(2)

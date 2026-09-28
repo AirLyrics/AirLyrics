@@ -62,7 +62,6 @@ object AirUiTokens {
         const val ChildDelayStepMs = 24L
         const val RefreshSpinMs = 420L
         const val FeedbackInMs = 160L
-        const val HintOutMs = 120L
         const val FeedbackOutMs = 240L
         const val FeedbackHoldMs = 900L
         const val SnackbarEnterMs = 360L
@@ -112,15 +111,11 @@ object AirUiTokens {
         const val BottomTabLabelTextSp = 10
         const val BottomTabFloatingPadding = 62
         const val BottomTabDefaultPadding = 58
-        const val BottomTabMinWidth = 104
-        const val BottomTabFloatingMaxWidth = 136
-        const val BottomTabDefaultMaxWidth = 144
         const val BottomTabFloatingHeight = 56
         const val BottomTabDefaultHeight = 48
         const val DialogDimAmount = 0.28f
         const val TabTextSwapAlpha = 0.55f
         const val TabTextSwapScale = 0.92f
-        const val TabSelectedScale = 1.02f
         const val TabQuickScale = 1.14f
         const val TabUnselectedAlpha = 0.86f
         const val TabAnimationMs = 190L
