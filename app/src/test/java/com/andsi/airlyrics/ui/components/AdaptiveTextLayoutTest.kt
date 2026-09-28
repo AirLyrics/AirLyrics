@@ -5,6 +5,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.FrameLayout
+import android.widget.ScrollView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -120,6 +121,30 @@ class AdaptiveTextLayoutTest {
         text.text = "Short"
         layout(parent, host.dp(240))
         assertEquals(View.GONE, action.visibility)
+    }
+
+    @Test fun floatingPanelBoundsLongContentAndRetainsResetAndCloseActions() {
+        RuntimeEnvironment.setFontScale(2f)
+        val host = host()
+        var resets = 0
+        var closes = 0
+        val panel = host.floatingFocusBubble(
+            "Tamaño de fuente de los subtítulos", "", { resets++ }, { closes++ }
+        ) {
+            addView(TextView(host).apply { text = "Contenido de configuración\n".repeat(30); textSize = 18f })
+        }
+        panel.updateResetAction(true, false)
+        val parent = FrameLayout(host).apply { addView(panel.view) }
+        layout(parent, host.dp(320), host.dp(240))
+        assertTrue(panel.view.left >= 0 && panel.view.right <= parent.width)
+        assertTrue(panel.view.top >= 0 && panel.view.bottom <= parent.height)
+        val scroll = descendants(panel.view).filterIsInstance<ScrollView>().single()
+        assertTrue(scroll.getChildAt(0).height > scroll.height)
+        val reset = descendants(panel.view).single { it.contentDescription == host.getString(R.string.ui_reset) }
+        reset.performClick()
+        descendants(panel.view).single { it.contentDescription == host.getString(R.string.ui_close) }.performClick()
+        assertEquals(1, resets)
+        assertEquals(1, closes)
     }
 
     @Test fun selectedOptionReflowsWithoutLosingItsSelectionOrClickHandler() {

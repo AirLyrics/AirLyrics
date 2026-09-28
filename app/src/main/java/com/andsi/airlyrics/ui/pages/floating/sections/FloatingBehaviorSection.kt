@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.ui.pages.floating.sections
 
 import android.widget.LinearLayout
+import com.andsi.airlyrics.ui.components.TextDisplayPolicy
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
@@ -166,7 +167,7 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
         openPanel(summaryButton, getString(R.string.ui_current_setup), "") {
             addView(settingRow(host, getString(R.string.ui_skin), localizedPresetTitle(style().presetName)))
             addView(settingRow(host, getString(R.string.ui_font_size), "${style().textSizeSp.toInt()}sp"))
-            addView(settingRow(host, getString(R.string.ui_font), fontFamilySubtitle()))
+            addView(settingRow(host, getString(R.string.ui_font), fontFamilySubtitle(), valuePolicy = TextDisplayPolicy.SingleLineSummary))
             addView(settingRow(host, getString(R.string.ui_font_weight), fontWeightSubtitle()))
             addView(settingRow(host, getString(R.string.ui_font_opacity), fontOpacitySubtitle()))
             addView(settingRow(host, getString(R.string.ui_text), AirColorUtils.colorSummary(style().textColor)))

@@ -19,7 +19,7 @@ internal object FloatingPageTokens {
     const val PREVIEW_TOGGLE_SIZE_DP = 36
     const val PREVIEW_TOGGLE_TEXT_SP = 16f
 
-    const val PANEL_SELECTED_SCALE = 1.04f
+    const val PANEL_SELECTED_SCALE = 0.985f
     const val PANEL_SELECTED_ALPHA = 0.92f
     const val PANEL_OPEN_START_SCALE = 0.72f
     const val PANEL_OPEN_OVERSHOOT_TENSION = 0.72f

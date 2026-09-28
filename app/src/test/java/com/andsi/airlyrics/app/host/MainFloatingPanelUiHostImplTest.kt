@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.app.host
 
 import android.view.View
-import android.view.ViewGroup
+import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
@@ -30,7 +30,7 @@ class MainFloatingPanelUiHostImplTest {
     }
 
     @Test
-    fun settingGrid_expandsTilesAndKeepsRowsEvenAtLargeFontScale() {
+    fun settingGrid_keepsTwoColumnsAtLargeFontScaleAndPreservesBindings() {
         RuntimeEnvironment.setFontScale(2f)
         val activity = Robolectric.buildActivity(MainActivity::class.java)
             .setup()
@@ -51,20 +51,17 @@ class MainFloatingPanelUiHostImplTest {
         )
         grid.layout(0, 0, width, grid.measuredHeight)
 
-        val firstRow = grid.getChildAt(0) as LinearLayout
-        val secondRow = grid.getChildAt(1) as LinearLayout
-        val firstTile = firstRow.getChildAt(0) as LinearLayout
-        val secondTile = firstRow.getChildAt(1) as LinearLayout
-        val thirdTile = secondRow.getChildAt(0) as LinearLayout
-        val filler = secondRow.getChildAt(1)
+        val adaptive = grid as AdaptiveGridLayout
+        assertEquals(2, adaptive.columns)
+        val tiles = (0 until grid.childCount).map { grid.getChildAt(it) }
         val minimumHeight = host.dp(AirUiTokens.Layout.FloatingTileMinHeight)
-
-        assertEquals(ViewGroup.LayoutParams.MATCH_PARENT, firstTile.layoutParams.height)
-        assertEquals(ViewGroup.LayoutParams.MATCH_PARENT, filler.layoutParams.height)
-        assertEquals(minimumHeight, firstTile.minimumHeight)
-        assertEquals(firstTile.measuredHeight, secondTile.measuredHeight)
-        assertTrue(firstTile.measuredHeight > minimumHeight)
-        assertTrue(thirdTile.measuredHeight > minimumHeight)
+        tiles.forEach { tile ->
+            assertTrue(tile.measuredHeight >= minimumHeight)
+            assertTrue(tile.left >= 0 && tile.right <= grid.width)
+        }
+        tiles.chunked(adaptive.columns).forEach { row ->
+            assertEquals(1, row.map { it.height }.distinct().size)
+        }
         assertEquals(3, subtitles.size)
 
         subtitles.forEach { subtitle ->

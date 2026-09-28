@@ -7,6 +7,9 @@ import android.view.Gravity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.SeekBar
+import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
+import com.andsi.airlyrics.ui.components.GridColumnPolicy
+import com.andsi.airlyrics.ui.components.spacer
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.actionButton
@@ -120,10 +123,10 @@ internal fun MainUiHost.colorControlImpl(
         addView(preview)
 
         val swatchViews = mutableListOf<Pair<Int?, TextView>>()
-        val swatchGrid = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-        }
+        val swatchGrid = AdaptiveGridLayout(activity, AirUiTokens.Layout.SwatchColumns, dp(AirUiTokens.Layout.SettingGap), dp(AirUiTokens.Layout.SettingGap), columnPolicy = GridColumnPolicy.Width(AirUiTokens.Layout.SwatchMinWidth))
+        addView(spacer(activity, AirUiTokens.Layout.SettingGap))
         addView(swatchGrid)
+        addView(spacer(activity, AirUiTokens.Layout.SettingGap))
 
         val fineTuneButton = actionButton(activity, getString(R.string.ui_rgb_tune)) { }
         val rgbPanel = LinearLayout(activity).apply {
@@ -258,41 +261,22 @@ internal fun MainUiHost.colorControlImpl(
             Pair(label, swatchColor as Int?)
         } + listOf(getString(R.string.ui_custom) to null)
 
-        swatches.chunked(AirUiTokens.Layout.SwatchColumns).forEach { rowItems ->
-            swatchGrid.addView(LinearLayout(activity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                rowItems.forEachIndexed { index, (label, presetColor) ->
-                    val button = makeSwatch(label, presetColor) {
-                        if (presetColor == null) {
-                            rgbExpanded = true
-                            rgbPanel.visibility = View.VISIBLE
-                            fineTuneButton.setText(R.string.ui_hide_rgb)
-                        } else {
-                            red = Color.red(presetColor)
-                            green = Color.green(presetColor)
-                            blue = Color.blue(presetColor)
-                            syncSliders()
-                            refreshPreview(dispatch = true)
-                        }
-                    }
-                    addView(button.apply {
-                        layoutParams = LinearLayout.LayoutParams(0, dp(AirUiTokens.Layout.ColorSwatchHeight), 1f).apply {
-                            setMargins(
-                                if (index == 0) 0 else dp(AirUiTokens.Space.Md),
-                                dp(AirUiTokens.Space.Xl),
-                                if (index == rowItems.lastIndex) 0 else dp(AirUiTokens.Space.Md),
-                                0
-                            )
-                        }
-                    })
+        swatches.forEach { (label, presetColor) ->
+            swatchGrid.addView(makeSwatch(label, presetColor) {
+                if (presetColor == null) {
+                    rgbExpanded = true
+                    rgbPanel.visibility = View.VISIBLE
+                    fineTuneButton.setText(R.string.ui_hide_rgb)
+                } else {
+                    red = Color.red(presetColor)
+                    green = Color.green(presetColor)
+                    blue = Color.blue(presetColor)
+                    syncSliders()
+                    refreshPreview(dispatch = true)
                 }
-                repeat(AirUiTokens.Layout.SwatchColumns - rowItems.size) {
-                    addView(View(activity).apply {
-                        layoutParams = LinearLayout.LayoutParams(0, 1, 1f).apply {
-                            setMargins(dp(AirUiTokens.Space.Md), 0, 0, 0)
-                        }
-                    })
-                }
+            }.apply {
+                minimumHeight = dp(AirUiTokens.Layout.ColorSwatchHeight)
+                setPadding(dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Sm))
             })
         }
 

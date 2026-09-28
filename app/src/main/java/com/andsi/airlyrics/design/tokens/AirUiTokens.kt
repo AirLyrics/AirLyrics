@@ -102,11 +102,11 @@ object AirUiTokens {
         const val LyricsSourceButtonHeight = 48
         const val SettingsIconBubbleSize = 46
         const val FloatingTileIconSize = 40
-        const val FloatingResetActionWidth = 72
         const val ColorSwatchHeight = 42
         const val FloatingTileMinHeight = 112
         const val SettingTextLineHeightMultiplier = 1.5f
-        const val FloatingPanelWidthInset = 72
+        const val SettingGap = 12
+        const val SwatchMinWidth = 80
         const val FloatingPanelMaxWidth = 360
         const val BottomBarHeight = 86
         const val BottomTabLabelTextSp = 10
