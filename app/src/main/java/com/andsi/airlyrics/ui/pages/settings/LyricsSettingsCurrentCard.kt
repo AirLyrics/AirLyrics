@@ -8,6 +8,8 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
+import com.andsi.airlyrics.ui.components.TextDisplayPolicy
+import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.ui.components.actionButton
@@ -61,7 +63,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             else -> R.string.ui_not_imported
         }
 
-        body.addView(normalText(activity, media.displayText))
+        body.addView(expandableText(normalText(activity, media.displayText)))
         body.addView(
             settingRow(
                 activity,
@@ -69,7 +71,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
                 state.localSourceText ?: getString(R.string.ui_no_plain_lrc)
             )
         )
-        body.addView(settingRow(activity, getString(R.string.ui_plain_lyrics), state.plainLyricsTitle ?: getString(R.string.ui_not_bound)))
+        body.addView(settingRow(activity, getString(R.string.ui_plain_lyrics), state.plainLyricsTitle ?: getString(R.string.ui_not_bound), valuePolicy = TextDisplayPolicy.ExpandableSummary))
         body.addView(wordByWordStatusRow(activity, wordByWordSummaryRes))
         body.addView(settingRow(activity, getString(R.string.ui_current_offset), localizedOffsetDescription(state.offsetMs)))
         if (state.offsetMs != 0L) {

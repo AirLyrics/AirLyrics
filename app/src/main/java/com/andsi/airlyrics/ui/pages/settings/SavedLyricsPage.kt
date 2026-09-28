@@ -76,12 +76,13 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         isSingleLine = true
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         imeOptions = EditorInfo.IME_ACTION_SEARCH
+        minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
         setPadding(0, 0, 0, 0)
         setText(activity.savedLyricsSearchQuery)
         setSelection(text.length)
         layoutParams = LinearLayout.LayoutParams(
             0,
-            dp(AirUiTokens.Layout.IconTouchSize),
+            ViewGroup.LayoutParams.WRAP_CONTENT,
             1f
         ).apply {
             setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)

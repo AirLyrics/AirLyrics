@@ -2,12 +2,12 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
+import com.andsi.airlyrics.ui.components.adaptiveHeader
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
@@ -202,78 +202,37 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
             }
         }
 
-        addView(LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(LinearLayout(activity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-
-                addView(LinearLayout(activity).apply {
-                    orientation = LinearLayout.HORIZONTAL
-                    gravity = Gravity.CENTER_VERTICAL
-                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-
-                    addView(bigText(activity, getString(R.string.ui_recent_local_lyrics)).apply {
-                        maxLines = 1
-                        ellipsize = TextUtils.TruncateAt.END
-                        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                    })
-
-                    addView(airIconView(
-                        iconRes = R.drawable.ic_air_info,
-                        tint = colorTextMuted,
-                        contentDescription = getString(R.string.ui_recent_local_lyrics)
-                    ).apply {
-                        background = GradientDrawable().apply {
-                            shape = GradientDrawable.OVAL
-                            setColor(colorSurfaceLight)
-                            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-                        }
-                        layoutParams = LinearLayout.LayoutParams(
-                            dp(AirUiTokens.Layout.CompactIconButtonSize),
-                            dp(AirUiTokens.Layout.CompactIconButtonSize)
-                        ).apply {
-                            setMargins(dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Xl), 0)
-                        }
-                        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                        setOnClickListener {
-                            if (hintText.isVisible) {
-                                hintText.animate().alpha(0f).setDuration(AirUiTokens.Motion.HintOutMs).withEndAction {
-                                    hintText.isVisible = false
-                                }.start()
-                            } else {
-                                hintText.isVisible = true
-                                hintText.alpha = 0f
-                                hintText.animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).start()
-                            }
-                        }
-                    })
-                })
-
-                addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    setMargins(0, 0, dp(AirUiTokens.Space.Lg), 0)
-                })
-
-                addView(airIconView(
-                    iconRes = R.drawable.ic_air_refresh,
-                    tint = colorAccent,
-                    contentDescription = getString(R.string.ui_refresh_media_status)
-                ).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        dp(AirUiTokens.Layout.IconTouchSize),
-                        dp(AirUiTokens.Layout.IconTouchSize)
-                    )
-                    enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                    setOnClickListener {
-                        closeHeaderHint()
-                        animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
-                        populateRecentLyrics(true, true)
-                    }
-                })
-            })
-
-            addView(hintText)
-        })
+        val help = airIconView(R.drawable.ic_air_info, colorTextMuted, getString(R.string.ui_recent_local_lyrics)).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.CompactIconButtonSize), dp(AirUiTokens.Layout.CompactIconButtonSize))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(colorSurfaceLight)
+                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+            }
+            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+            setOnClickListener {
+                if (hintText.isVisible) closeHeaderHint() else {
+                    hintText.isVisible = true
+                    hintText.animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).start()
+                }
+            }
+        }
+        val refresh = airIconView(R.drawable.ic_air_refresh, colorAccent, getString(R.string.ui_refresh_media_status)).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.IconTouchSize), dp(AirUiTokens.Layout.IconTouchSize))
+            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+            setOnClickListener {
+                closeHeaderHint()
+                animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
+                populateRecentLyrics(true, true)
+            }
+        }
+        val icons = LinearLayout(activity).apply {
+            gravity = Gravity.CENTER_VERTICAL
+            addView(help)
+            addView(refresh)
+        }
+        addView(adaptiveHeader(bigText(activity, getString(R.string.ui_recent_local_lyrics)), feedback, icons))
+        addView(hintText)
         addView(listBody)
     }
     return RefreshableSettingsCard(

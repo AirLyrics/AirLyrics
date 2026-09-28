@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.ui.components.adaptiveHeader
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.platform.AppNavigator
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -71,24 +72,12 @@ internal fun MainUiHost.settingsBackHeaderImpl(
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             })
         })
-        addView(LinearLayout(activity).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            addView(TextView(activity).apply {
-                text = title
-                textSize = AirUiTokens.TextSize.PageTitle
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorTextStrong)
-                layoutParams = LinearLayout.LayoutParams(
-                    0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    1f
-                )
-            })
-            titleAction?.let { action ->
-                addView(action)
-            }
-        })
+        addView(adaptiveHeader(TextView(activity).apply {
+            text = title
+            textSize = AirUiTokens.TextSize.PageTitle
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorTextStrong)
+        }, endIcon = titleAction))
         if (subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
                 text = subtitle

@@ -37,8 +37,8 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
                 val appName = getAppName(selectedController.packageName)
                 val state = getPlaybackStateText(selectedController.playbackState?.state)
 
-                addView(bigText(activity, title))
-                addView(normalText(activity, "$artist · $appName"))
+                addView(expandableText(bigText(activity, title)))
+                addView(expandableText(normalText(activity, "$artist · $appName")))
                 addView(statusPill(activity, state, selectedController.playbackState?.state == PlaybackState.STATE_PLAYING))
             } else {
                 addView(bigText(activity, getString(R.string.ui_no_media_detected_yet)))

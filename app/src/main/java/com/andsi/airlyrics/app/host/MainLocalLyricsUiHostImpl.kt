@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
@@ -64,13 +65,13 @@ internal fun MainUiHost.localLyricsRowImpl(
                 setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
             })
         }
-        addView(TextView(activity).apply {
+        addView(expandableText(TextView(activity).apply {
             text = item.displayTitle
             textSize = AirUiTokens.TextSize.Body
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
-        })
-        addView(TextView(activity).apply {
+        }))
+        addView(expandableText(TextView(activity).apply {
             text = getString(
                 R.string.ui_local_lyrics_subtitle_type,
                 item.subtitle,
@@ -80,13 +81,13 @@ internal fun MainUiHost.localLyricsRowImpl(
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccentMint)
             setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
-        })
-        addView(TextView(activity).apply {
+        }))
+        addView(expandableText(TextView(activity).apply {
             text = item.metaText
             textSize = AirUiTokens.TextSize.Caption
             setTextColor(colorTextMuted)
             setPadding(0, dp(AirUiTokens.Space.Xxs), 0, 0)
-        })
+        }))
         setOnClickListener {
             activity.openLocalLyricsEditorForItem(item, onLyricsChanged)
         }

@@ -10,6 +10,7 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
+import com.andsi.airlyrics.ui.components.adaptiveHeader
 import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -48,20 +49,18 @@ private class SettingsAppearanceHeader(
         orientation = VERTICAL
         setPadding(0, 0, 0, host.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg))
 
-        addView(LinearLayout(host).apply {
+        val heading = TextView(host).apply {
+            setText(R.string.ui_settings)
+            textSize = AirUiTokens.TextSize.PageTitle
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(host.colorTextStrong)
+        }
+        val controls = LinearLayout(host).apply {
             orientation = HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-
-            addView(TextView(host).apply {
-                setText(R.string.ui_settings)
-                textSize = AirUiTokens.TextSize.PageTitle
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(host.colorTextStrong)
-                layoutParams = LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
-            })
             addView(accentButton)
             addView(host.themeToggleButton())
-        })
+        }
+        addView(host.adaptiveHeader(heading, controls))
 
         addView(accentPicker)
     }

@@ -8,7 +8,6 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
-import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +17,7 @@ import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
+import androidx.core.widget.NestedScrollView
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
@@ -139,26 +138,24 @@ internal fun MainUiHost.showAirDialog(
         }
 
         if (!title.isNullOrBlank() || headerAction != null) {
-            addView(LinearLayout(this@showAirDialog).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
-
-                addView(TextView(this@showAirDialog).apply {
-                    text = title.orEmpty()
-                    textSize = AirUiTokens.TextSize.DialogTitle
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(colorTextStrong)
-                    maxLines = 2
-                    ellipsize = TextUtils.TruncateAt.END
-                    layoutParams = LinearLayout.LayoutParams(
-                        0,
-                        ViewGroup.LayoutParams.WRAP_CONTENT,
-                        1f
-                    )
-                })
-
-                headerAction?.invoke(this)
-            })
+            val heading = TextView(this@showAirDialog).apply {
+                text = title.orEmpty()
+                textSize = AirUiTokens.TextSize.DialogTitle
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(colorTextStrong)
+            }
+            val actionGroup = headerAction?.let { create ->
+                LinearLayout(this@showAirDialog).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    create()
+                }
+            }
+            // Icon-only actions retain their top-end position; text actions can reflow.
+            val iconOnly = actionGroup != null && (0 until actionGroup.childCount).all {
+                actionGroup.getChildAt(it) !is TextView
+            }
+            addView(adaptiveHeader(heading, actionGroup.takeUnless { iconOnly }, actionGroup.takeIf { iconOnly }))
         }
 
         if (!message.isNullOrBlank()) {
@@ -175,9 +172,7 @@ internal fun MainUiHost.showAirDialog(
 
         val resolvedPositiveText = if (positiveText == DEFAULT_POSITIVE_TEXT) getString(R.string.ui_ok) else positiveText
         if (!resolvedPositiveText.isNullOrBlank() || !negativeText.isNullOrBlank()) {
-            addView(LinearLayout(this@showAirDialog).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            addView(AdaptiveGridLayout(this@showAirDialog, 2, dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xl), fillCells = false).apply {
                 setPadding(0, dp(AirUiTokens.Space.CardV), 0, 0)
 
                 if (!negativeText.isNullOrBlank()) {
@@ -197,24 +192,32 @@ internal fun MainUiHost.showAirDialog(
         }
     }
 
-    val animatedContent: View = if (useOuterScroll) {
-        ScrollView(this).apply {
-            isFillViewport = false
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER
-            )
-            addView(panel)
+    // Internal lists keep their own viewport. The outer scroll is a fallback when even
+    // the heading and actions exceed the window (large fonts, landscape or the IME).
+    val boundedBodies = if (useOuterScroll) emptyList() else (0 until panel.childCount)
+        .map { panel.getChildAt(it) }
+        .filter { (it.layoutParams as? LinearLayout.LayoutParams)?.weight?.let { weight -> weight > 0f } == true }
+        .map { it to it.layoutParams.height }
+    val animatedContent: View = object : NestedScrollView(this) {
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            if (boundedBodies.isNotEmpty() && MeasureSpec.getMode(heightMeasureSpec) != MeasureSpec.UNSPECIFIED) {
+                panel.measure(widthMeasureSpec, MeasureSpec.UNSPECIFIED)
+                val fixedHeight = panel.measuredHeight - boundedBodies.sumOf { it.first.measuredHeight }
+                val remaining = (MeasureSpec.getSize(heightMeasureSpec) - fixedHeight).coerceAtLeast(0) / boundedBodies.size
+                boundedBodies.forEach { (body, preferredHeight) ->
+                    body.layoutParams.height = remaining.coerceIn(minOf(dp(96), preferredHeight), preferredHeight)
+                }
+            }
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         }
-    } else {
-        panel.apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER
-            )
-        }
+    }.apply {
+        isFillViewport = false
+        layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        )
+        addView(panel)
     }
     animatedContent.apply {
         alpha = 0f
@@ -228,7 +231,7 @@ internal fun MainUiHost.showAirDialog(
         setPadding(rootPadding, rootPadding, rootPadding, rootPadding)
         ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
             val safeInsets = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.ime()
             )
             val topInset = view.remainingTopSystemInset(safeInsets.top)
             view.setPadding(

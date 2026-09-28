@@ -4,7 +4,6 @@ import com.andsi.airlyrics.R
 
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -91,9 +90,7 @@ private fun languageChoiceCard(activity: MainUiHost): View = with(activity) lang
             textSize = AirUiTokens.TextSize.Button
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorAccent)
-            gravity = Gravity.END
-            maxLines = 2
-            ellipsize = TextUtils.TruncateAt.END
+            gravity = Gravity.START
         }
 
         val chevron = airIconView(R.drawable.ic_air_chevron_right, colorAccent).apply {

@@ -4,6 +4,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.FrameLayout
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.ui.model.MainUiHost
 import org.junit.After
@@ -118,6 +120,46 @@ class AdaptiveTextLayoutTest {
         text.text = "Short"
         layout(parent, host.dp(240))
         assertEquals(View.GONE, action.visibility)
+    }
+
+    @Test fun selectedOptionReflowsWithoutLosingItsSelectionOrClickHandler() {
+        val host = host()
+        var selected = "first"
+        val grid = host.liveOptionGrid(listOf(
+            com.andsi.airlyrics.ui.model.KeyedOptionItem("first", "Restaurar configuración", true) { selected = "first" },
+            com.andsi.airlyrics.ui.model.KeyedOptionItem("second", "Mostrar subtítulos traducidos", false) { selected = "second" }
+        )) as AdaptiveGridLayout
+        layout(grid, host.dp(200))
+        assertEquals(1, grid.columns)
+        val second = grid.getChildAt(1)
+        second.performClick()
+        layout(grid, host.dp(800))
+        assertEquals("second", selected)
+        assertSame(second, grid.getChildAt(1))
+        assertEquals(2, grid.columns)
+    }
+
+    @Test fun dialogShrinksInternalViewportThenScrollsWholePanelInShortWindow() {
+        val host = host()
+        val listViewport = FrameLayout(host).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, host.dp(320), 1f)
+        }
+        val dialog = host.showAirDialog(
+            title = "Seleccionar aplicaciones para mostrar subtítulos",
+            positiveText = "Guardar selección",
+            negativeText = "Cancelar",
+            useOuterScroll = false,
+            body = { addView(listViewport) }
+        )
+        val scroll = descendants(requireNotNull(dialog.window).decorView)
+            .filterIsInstance<androidx.core.widget.NestedScrollView>().single()
+        layout(scroll, host.dp(320), host.dp(360))
+        assertTrue(listViewport.height < host.dp(320))
+        assertTrue(listViewport.height >= host.dp(96))
+        layout(scroll, host.dp(320), host.dp(120))
+        assertTrue(scroll.getChildAt(0).height > scroll.height)
+        assertTrue(listViewport.height >= host.dp(96))
+        dialog.dismiss()
     }
 
     private fun descendants(view: View): List<View> = listOf(view) +

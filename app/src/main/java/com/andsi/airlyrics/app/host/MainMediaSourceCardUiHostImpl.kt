@@ -4,6 +4,7 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.view.View
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -30,8 +31,8 @@ internal fun MainUiHost.mediaSourceCardImpl(controller: MediaController, selecte
         addView(label(activity, getString(if (selected) R.string.ui_connected else R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
             tag = "media_source_status:${controller.packageName}"
         })
-        addView(bigText(activity, appName))
-        addView(normalText(activity, "$title - $artist"))
+        addView(expandableText(bigText(activity, appName)))
+        addView(expandableText(normalText(activity, "$title - $artist")))
         addView(smallHint(activity, state))
         enableSoftPressFeedback(AirUiTokens.Motion.FloatingCardPressScale)
         setOnClickListener {

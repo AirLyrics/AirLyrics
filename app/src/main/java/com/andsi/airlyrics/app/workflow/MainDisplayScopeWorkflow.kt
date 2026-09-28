@@ -27,6 +27,8 @@ import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.displayscope.DisplayScopeCapability
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
+import com.andsi.airlyrics.ui.components.ExpandableTextLayout
+import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.showAirDialog
@@ -306,6 +308,7 @@ internal class MainDisplayScopeWorkflow(
                     dividerHeight = 0
                     emptyView = empty
                     isVerticalScrollBarEnabled = true
+                    isNestedScrollingEnabled = true
                     overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
                 }
                 val jumpToTop = appPickerScrollShortcut(
@@ -322,7 +325,8 @@ internal class MainDisplayScopeWorkflow(
                         minOf(
                             dp(APP_LIST_MAX_HEIGHT_DP),
                             (resources.displayMetrics.heightPixels * APP_LIST_SCREEN_HEIGHT_RATIO).toInt()
-                        )
+                        ),
+                        1f
                     ).apply {
                         setMargins(0, dp(AirUiTokens.Space.Sm), 0, 0)
                     }
@@ -462,6 +466,7 @@ internal class MainDisplayScopeWorkflow(
         var onSelectionStateChanged: (() -> Unit)? = null
 
         private val selection = DisplayScopeAppSelection(choices, selectedPackages)
+        private val expandedTexts = mutableSetOf<String>()
 
         override fun getCount(): Int = selection.visibleChoices.size
 
@@ -479,7 +484,8 @@ internal class MainDisplayScopeWorkflow(
                 onSelectedChanged = { selected ->
                     selection.setSelected(choice.packageName, selected)
                 },
-                onSelectionStateChanged = ::notifySelectionStateChanged
+                onSelectionStateChanged = ::notifySelectionStateChanged,
+                expandedTexts = expandedTexts
             )
             return row
         }
@@ -493,6 +499,7 @@ internal class MainDisplayScopeWorkflow(
             choices: List<DisplayScopeAppChoice>,
             pruneMissingSelections: Boolean
         ) {
+            expandedTexts.retainAll(choices.flatMap { listOf(it.packageName + ":label:" + it.label, it.packageName + ":package") }.toSet())
             selection.submitChoices(choices, pruneMissingSelections)
             notifyDataSetChanged()
             notifySelectionStateChanged()
@@ -539,16 +546,14 @@ internal class MainDisplayScopeWorkflow(
             addView(LinearLayout(this@with).apply {
                 orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                addView(label.apply {
+                addView(expandableText(label.apply {
                     textSize = AirUiTokens.TextSize.Button
                     setTextColor(colorTextStrong)
-                    maxLines = 1
-                })
-                addView(packageName.apply {
+                }))
+                addView(expandableText(packageName.apply {
                     textSize = AirUiTokens.TextSize.Caption
                     setTextColor(colorTextMuted)
-                    maxLines = 1
-                })
+                }))
             })
             addView(toggle)
             tag = AppChoiceRowViews(icon, label, packageName, toggle)
@@ -560,12 +565,15 @@ internal class MainDisplayScopeWorkflow(
         choice: DisplayScopeAppChoice,
         selected: Boolean,
         onSelectedChanged: (Boolean) -> Unit,
-        onSelectionStateChanged: () -> Unit
+        onSelectionStateChanged: () -> Unit,
+        expandedTexts: MutableSet<String>
     ) {
         val views = row.tag as AppChoiceRowViews
         views.icon.setImageDrawable(choice.icon)
         views.label.text = choice.label
         views.packageName.text = choice.packageName
+        (views.label.parent as ExpandableTextLayout).bindExpansion(expandedTexts, choice.packageName + ":label:" + choice.label)
+        (views.packageName.parent as ExpandableTextLayout).bindExpansion(expandedTexts, choice.packageName + ":package")
         views.toggle.setOnCheckedChangeListener(null)
         views.toggle.isChecked = selected
         views.toggle.contentDescription = choice.label

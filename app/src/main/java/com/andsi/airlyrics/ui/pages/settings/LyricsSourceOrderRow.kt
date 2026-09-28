@@ -8,10 +8,9 @@ import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
+import android.graphics.PointF
+import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.view.animation.PathInterpolator
 import android.widget.Button
@@ -52,10 +51,8 @@ internal class LyricsSourceOptionButton(
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.BodySmall
         typeface = Typeface.DEFAULT_BOLD
-        maxLines = 1
-        ellipsize = TextUtils.TruncateAt.END
         includeFontPadding = false
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
     private val priorityLabel = TextView(host).apply {
         gravity = Gravity.CENTER
@@ -63,13 +60,13 @@ internal class LyricsSourceOptionButton(
         typeface = Typeface.DEFAULT
         includeFontPadding = false
         setTextColor(AirColorUtils.withAlpha(host.colorOnAccent, PRIORITY_LABEL_ALPHA))
-        visibility = View.GONE
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        visibility = GONE
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
     private val contentRow = LinearLayout(host).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     init {
@@ -83,22 +80,22 @@ internal class LyricsSourceOptionButton(
         contentRow.addView(
             priorityLabel,
             LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT
             )
         )
         contentRow.addView(
             titleView,
             LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT
             )
         )
         addView(
             contentRow,
             LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT,
+                LayoutParams.WRAP_CONTENT,
                 Gravity.CENTER
             )
         )
@@ -116,7 +113,7 @@ internal class LyricsSourceOptionButton(
         titleView.setTextColor(if (selected) host.colorOnAccent else host.colorText)
         priorityLabel.apply {
             text = selectedPriority?.toString().orEmpty()
-            visibility = if (selected) View.VISIBLE else View.GONE
+            visibility = if (selected) VISIBLE else GONE
         }
         titleView.layoutParams = (titleView.layoutParams as LinearLayout.LayoutParams).apply {
             marginStart = host.dp(if (selected) AirUiTokens.Space.Sm else 0)
@@ -145,19 +142,19 @@ private const val PRIORITY_LABEL_ALPHA = 160
 @SuppressLint("ViewConstructor")
 internal class LyricsSourceOrderRow(
     private val host: MainUiHost
-) : LinearLayout(host) {
+) : AdaptiveGridLayout(host, PlainLyricsSearchSource.onlineSources.size, host.dp(AirUiTokens.Space.Lg), host.dp(AirUiTokens.Space.Lg)) {
     private var reorderAnimator: AnimatorSet? = null
     private var pendingPreDrawListener: ViewTreeObserver.OnPreDrawListener? = null
     private var reorderGeneration = 0L
 
     init {
-        orientation = HORIZONTAL
+        orientation = VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         clipChildren = false
         clipToPadding = false
         layoutParams = LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
+            LayoutParams.MATCH_PARENT,
+            LayoutParams.WRAP_CONTENT
         ).apply {
             topMargin = host.dp(AirUiTokens.Space.Xl)
         }
@@ -178,28 +175,28 @@ internal class LyricsSourceOrderRow(
 
         val currentOrder = (0 until childCount).map { index -> getChildAt(index) }
         if (currentOrder == orderedButtons) {
-            applyEqualLayout(orderedButtons)
+            prepareButtonLayout(orderedButtons)
             if (!animate || !ValueAnimator.areAnimatorsEnabled()) {
                 cancelPendingReorder(settle = true)
             }
             return
         }
 
-        val oldVisualX = orderedButtons
+        val oldVisualPositions = orderedButtons
             .filter { it.parent === this }
-            .associateWith { it.x }
+            .associateWith { PointF(it.x, it.y) }
         val shouldAnimate = animate &&
             isAttachedToWindow &&
             isLaidOut &&
             width > 0 &&
             ValueAnimator.areAnimatorsEnabled() &&
-            oldVisualX.size == orderedButtons.size
+            oldVisualPositions.size == orderedButtons.size
 
         cancelPendingReorder(settle = false)
 
         orderedButtons.filter { it.parent == null }.forEach(::addView)
         orderedButtons.forEach(::bringChildToFront)
-        applyEqualLayout(orderedButtons)
+        prepareButtonLayout(orderedButtons)
 
         if (!shouldAnimate) {
             settleButtons()
@@ -222,7 +219,7 @@ internal class LyricsSourceOrderRow(
                     settleButtons()
                     return true
                 }
-                startReorderAnimation(orderedButtons, oldVisualX, generation)
+                startReorderAnimation(orderedButtons, oldVisualPositions, generation)
                 return true
             }
         }
@@ -241,32 +238,32 @@ internal class LyricsSourceOrderRow(
         super.onDetachedFromWindow()
     }
 
-    private fun applyEqualLayout(buttons: List<LyricsSourceOptionButton>) {
-        buttons.forEachIndexed { index, button ->
+    private fun prepareButtonLayout(buttons: List<LyricsSourceOptionButton>) {
+        buttons.forEach { button ->
             button.layoutParams = LayoutParams(
-                0,
-                host.dp(AirUiTokens.Layout.LyricsSourceButtonHeight),
-                1f
-            ).apply {
-                marginStart = if (index == 0) 0 else host.dp(AirUiTokens.Space.Lg)
-            }
+                LayoutParams.MATCH_PARENT,
+                LayoutParams.WRAP_CONTENT
+            )
+            button.minimumHeight = host.dp(AirUiTokens.Layout.LyricsSourceButtonHeight)
+            button.setPadding(host.dp(AirUiTokens.Space.Lg), host.dp(AirUiTokens.Space.Sm), host.dp(AirUiTokens.Space.Lg), host.dp(AirUiTokens.Space.Sm))
         }
     }
 
     private fun startReorderAnimation(
         buttons: List<LyricsSourceOptionButton>,
-        oldVisualX: Map<LyricsSourceOptionButton, Float>,
+        oldVisualPositions: Map<LyricsSourceOptionButton, PointF>,
         generation: Long
     ) {
-        val animators = buttons.mapNotNull { button ->
-            val startTranslation = oldVisualX.getValue(button) - button.left.toFloat()
-            button.translationX = startTranslation
-            if (kotlin.math.abs(startTranslation) < 0.5f) {
-                button.translationX = 0f
-                null
-            } else {
-                ObjectAnimator.ofFloat(button, View.TRANSLATION_X, startTranslation, 0f)
-            }
+        val animators = buttons.flatMap { button ->
+            val old = oldVisualPositions.getValue(button)
+            val dx = old.x - button.left
+            val dy = old.y - button.top
+            button.translationX = dx
+            button.translationY = dy
+            listOfNotNull(
+                ObjectAnimator.ofFloat(button, TRANSLATION_X, dx, 0f).takeIf { kotlin.math.abs(dx) >= 0.5f },
+                ObjectAnimator.ofFloat(button, TRANSLATION_Y, dy, 0f).takeIf { kotlin.math.abs(dy) >= 0.5f }
+            )
         }
         if (animators.isEmpty()) {
             settleButtons()
@@ -305,6 +302,7 @@ internal class LyricsSourceOrderRow(
     private fun settleButtons() {
         for (index in 0 until childCount) {
             getChildAt(index).translationX = 0f
+            getChildAt(index).translationY = 0f
         }
     }
 }
