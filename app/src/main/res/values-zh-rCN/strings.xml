@@ -1,4 +1,6 @@
 <resources>
+    <string name="ui_expand_text">展开文本</string>
+    <string name="ui_collapse_text">收起文本</string>
     <string name="app_name">AirLyrics</string>
     <string name="field_value">%1$s：%2$d</string>
     <string name="field_value_with_suffix">%1$s：%2$d%3$s</string>
@@ -413,4 +415,5 @@
     <string name="ui_window_layout">窗口布局</string>
     <string name="ui_yay">我会非常非常非常开心的！</string>
     <string name="ui_overlay_update_failed">悬浮窗更新失败</string>
+    <string name="ui_scroll_text">滚动查看</string>
 </resources>

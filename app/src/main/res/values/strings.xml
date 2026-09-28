@@ -78,6 +78,8 @@
     <string name="ui_click_through_off">Click-through: Off</string>
     <string name="ui_click_through_on">Click-through: On</string>
     <string name="ui_clickable">Clickable</string>
+    <string name="ui_expand_text">Expand text</string>
+    <string name="ui_collapse_text">Collapse text</string>
     <string name="ui_collapse_preview">Collapse preview</string>
     <string name="ui_expand_preview">Expand preview</string>
     <string name="ui_close">Close</string>
@@ -414,4 +416,5 @@ Word-timed TTML:
     <string name="ui_window_layout">Window layout</string>
     <string name="ui_yay">Yay!</string>
     <string name="ui_overlay_update_failed">Overlay update failed</string>
+    <string name="ui_scroll_text">Scroll text</string>
 </resources>

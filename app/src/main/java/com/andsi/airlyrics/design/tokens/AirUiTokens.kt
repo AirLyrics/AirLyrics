@@ -49,6 +49,9 @@ object AirUiTokens {
     }
 
     object Motion {
+        const val TextScrollDelayMs = 700L
+        const val TextScrollEndHoldMs = 1000L
+        const val TextScrollDpPerSecond = 24
         const val PressDownMs = 70L
         const val PressUpMs = 150L
         const val PulseUpMs = 80L
@@ -102,6 +105,7 @@ object AirUiTokens {
         const val FloatingResetActionWidth = 72
         const val ColorSwatchHeight = 42
         const val FloatingTileMinHeight = 112
+        const val SettingTextLineHeightMultiplier = 1.5f
         const val FloatingPanelWidthInset = 72
         const val FloatingPanelMaxWidth = 360
         const val BottomBarHeight = 86

@@ -21,7 +21,8 @@ internal class AdaptiveLabelValueLayout(
     internal val trailingView: View? = null,
     private val horizontalGapPx: Int,
     private val verticalGapPx: Int,
-    private val trailingGapPx: Int
+    private val trailingGapPx: Int,
+    private val trailingAtTop: Boolean = false
 ) : ViewGroup(context) {
     internal var isStacked: Boolean = false
         private set
@@ -54,18 +55,18 @@ internal class AdaptiveLabelValueLayout(
         val desiredContentWidth: Int
         val desiredContentHeight: Int
         if (isStacked) {
-            measureWithinWidth(labelView, availableWidth, heightMeasureSpec)
+            measureWithinWidth(labelView, (availableWidth - if (trailingAtTop) trailingContentWidth() else 0).coerceAtLeast(0), heightMeasureSpec)
 
-            val valueWidth = (availableWidth - trailingContentWidth()).coerceAtLeast(0)
+            val valueWidth = (availableWidth - if (trailingAtTop) 0 else trailingContentWidth()).coerceAtLeast(0)
             measureWithinWidth(valueView, valueWidth, heightMeasureSpec)
 
             val trailingRowWidth = valueView.measuredWidth + trailingContentWidth()
             val trailingRowHeight = max(
                 valueView.measuredHeight,
-                trailingView?.measuredHeight ?: 0
+                if (trailingAtTop) 0 else trailingView?.measuredHeight ?: 0
             )
-            desiredContentWidth = max(labelView.measuredWidth, trailingRowWidth)
-            desiredContentHeight = labelView.measuredHeight + verticalGapPx + trailingRowHeight
+            desiredContentWidth = max(labelView.measuredWidth + if (trailingAtTop) trailingContentWidth() else 0, trailingRowWidth).coerceAtMost(availableWidth)
+            desiredContentHeight = max(labelView.measuredHeight, if (trailingAtTop) trailingView?.measuredHeight ?: 0 else 0) + verticalGapPx + trailingRowHeight
         } else {
             desiredContentWidth = naturalContentWidth
             desiredContentHeight = maxOf(
@@ -76,7 +77,7 @@ internal class AdaptiveLabelValueLayout(
         }
 
         val desiredWidth = desiredContentWidth + paddingLeft + paddingRight
-        val desiredHeight = desiredContentHeight + paddingTop + paddingBottom
+        val desiredHeight = (desiredContentHeight + paddingTop + paddingBottom).coerceAtLeast(minimumHeight)
         setMeasuredDimension(
             resolveSizeAndState(desiredWidth, widthMeasureSpec, 0),
             resolveSizeAndState(desiredHeight, heightMeasureSpec, 0)
@@ -128,25 +129,21 @@ internal class AdaptiveLabelValueLayout(
             layoutAtLeft(labelView, paddingLeft, labelTop, labelView.measuredHeight)
         }
 
-        val trailingRowTop = labelTop + labelView.measuredHeight + verticalGapPx
+        val trailingRowTop = labelTop + max(labelView.measuredHeight, if (trailingAtTop) trailingView?.measuredHeight ?: 0 else 0) + verticalGapPx
         val trailingRowHeight = max(
             valueView.measuredHeight,
-            trailingView?.measuredHeight ?: 0
+            if (trailingAtTop) 0 else trailingView?.measuredHeight ?: 0
         )
         if (layoutDirection == LAYOUT_DIRECTION_RTL) {
-            var endEdge = paddingLeft
             trailingView?.let { trailing ->
-                layoutAtLeft(trailing, endEdge, trailingRowTop, trailingRowHeight)
-                endEdge += trailing.measuredWidth + trailingGapPx
+                layoutAtLeft(trailing, paddingLeft, if (trailingAtTop) labelTop else trailingRowTop, if (trailingAtTop) trailing.measuredHeight else trailingRowHeight)
             }
-            layoutAtLeft(valueView, endEdge, trailingRowTop, trailingRowHeight)
+            layoutAtRight(valueView, measuredWidth - paddingRight, trailingRowTop, trailingRowHeight)
         } else {
-            var endEdge = measuredWidth - paddingRight
             trailingView?.let { trailing ->
-                layoutAtRight(trailing, endEdge, trailingRowTop, trailingRowHeight)
-                endEdge -= trailing.measuredWidth + trailingGapPx
+                layoutAtRight(trailing, measuredWidth - paddingRight, if (trailingAtTop) labelTop else trailingRowTop, if (trailingAtTop) trailing.measuredHeight else trailingRowHeight)
             }
-            layoutAtRight(valueView, endEdge, trailingRowTop, trailingRowHeight)
+            layoutAtLeft(valueView, paddingLeft, trailingRowTop, trailingRowHeight)
         }
     }
 

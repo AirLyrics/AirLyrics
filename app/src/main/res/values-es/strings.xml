@@ -1,4 +1,6 @@
 <resources>
+    <string name="ui_expand_text">Expandir texto</string>
+    <string name="ui_collapse_text">Contraer texto</string>
     <string name="app_name">AirLyrics</string>
     <string name="field_value">%1$s: %2$d</string>
     <string name="field_value_with_suffix">%1$s: %2$d%3$s</string>
@@ -414,4 +416,5 @@ TTML de tiempo por palabra:
     <string name="ui_window_layout">Diseño de ventana</string>
     <string name="ui_yay">¡Genial!</string>
     <string name="ui_overlay_update_failed">Falló la actualización de la superposición</string>
+    <string name="ui_scroll_text">Desplazar texto</string>
 </resources>

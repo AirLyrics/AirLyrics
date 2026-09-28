@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.animation.LayoutTransition
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.text.TextUtils
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -144,9 +143,9 @@ internal fun dangerActionButton(activity: MainUiHost, text: String, onClick: () 
 }
 
 internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String, () -> Unit>): LinearLayout = with(activity) horizontalButtons@ {
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        buttons.forEachIndexed { index, pair ->
+    return AdaptiveGridLayout(this, buttons.size.coerceAtLeast(1), dp(AirUiTokens.Space.Lg * 2), dp(AirUiTokens.Space.Xxl)).apply {
+        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, 0)
+        buttons.forEach { pair ->
             addView(TextView(activity).apply {
                 text = pair.first
                 gravity = Gravity.CENTER
@@ -154,14 +153,6 @@ internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(colorOnAccent)
                 setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
-                val params = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                params.setMargins(
-                    if (index == 0) 0 else dp(AirUiTokens.Space.Lg),
-                    dp(AirUiTokens.Space.Xxl),
-                    if (index == buttons.lastIndex) 0 else dp(AirUiTokens.Space.Lg),
-                    0
-                )
-                layoutParams = params
                 background = GradientDrawable().apply {
                     cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
                     setColor(colorAccent)
@@ -180,7 +171,8 @@ internal fun settingRow(
     activity: MainUiHost,
     name: String,
     value: String,
-    trailingView: View? = null
+    trailingView: View? = null,
+    valuePolicy: TextDisplayPolicy = TextDisplayPolicy.Full
 ): View = with(activity) settingRow@ {
     val labelView = TextView(activity).apply {
         text = name
@@ -191,15 +183,14 @@ internal fun settingRow(
         text = value
         textSize = AirUiTokens.TextSize.BodySmall
         setTextColor(colorTextMuted)
-        gravity = Gravity.END
-        maxLines = 2
-        ellipsize = TextUtils.TruncateAt.END
+        gravity = Gravity.START
+        if (valuePolicy == TextDisplayPolicy.SingleLineSummary) bindReadOnlyText(this, name)
     }
 
     return AdaptiveLabelValueLayout(
         context = this,
         labelView = labelView,
-        valueView = valueView,
+        valueView = if (valuePolicy == TextDisplayPolicy.ExpandableSummary) expandableText(valueView) else valueView,
         trailingView = trailingView,
         horizontalGapPx = dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
         verticalGapPx = dp(AirUiTokens.Space.Sm),
