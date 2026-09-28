@@ -22,12 +22,12 @@ internal fun Context.localizedAssetText(
     } else {
         null
     }
-    val candidates = listOf(
+    val candidates = listOfNotNull(
         "$baseName.$tag.$extension",
         chineseFallbackTag?.let { "$baseName.$it.$extension" },
         "$baseName.${tag.substringBefore('-')}.$extension",
         "$baseName.en.$extension"
-    ).filterNotNull().distinct()
+    ).distinct()
 
     for (candidate in candidates) {
         val text = runCatching {

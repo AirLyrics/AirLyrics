@@ -112,7 +112,6 @@ internal fun createLyricsSourceOrderCard(
         var selectedSources = settings.selectedPlainLyricsSources.distinct()
 
         addView(bigText(activity, getString(R.string.ui_plain_lyrics_source)))
-        lateinit var sourceGrid: LyricsSourceOrderRow
         lateinit var refreshSourceOptions: (Boolean) -> Unit
         val sourceButtons = settings.plainLyricsSourceOptions.associateWith { source ->
             LyricsSourceOptionButton(
@@ -132,7 +131,7 @@ internal fun createLyricsSourceOrderCard(
                 }
             }
         }
-        sourceGrid = LyricsSourceOrderRow(activity)
+        val sourceGrid = LyricsSourceOrderRow(activity)
         refreshSourceOptions = { animateOrder ->
             sourceButtons.forEach { (source, button) ->
                 val selectedIndex = selectedSources.indexOf(source)

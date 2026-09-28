@@ -72,9 +72,10 @@ abstract class MainViewModelTestBase {
         val savedDeleteResults = mutableListOf<LyricsStorage.DeleteLocalLyricsItemResult>()
         val availabilityRequests = mutableListOf<SongIdentity>()
         val importRequests = mutableListOf<ImportRequest>()
-        val onlineSearchRequests = Collections.synchronizedList(mutableListOf<CurrentMediaInfo>())
-        val onlineSearchTokens =
-            Collections.synchronizedList(mutableListOf<LyricsLookupCancellationToken>())
+        val onlineSearchRequests: MutableList<CurrentMediaInfo> =
+            Collections.synchronizedList(mutableListOf())
+        val onlineSearchTokens: MutableList<LyricsLookupCancellationToken> =
+            Collections.synchronizedList(mutableListOf())
         val currentDeleteRequests = mutableListOf<Pair<CurrentMediaInfo, LyricsStorage.DeleteMode>>()
         val savedDeleteRequests = mutableListOf<LyricsStorage.LocalLyricsItem>()
         val directoryRequests = mutableListOf<Uri>()
