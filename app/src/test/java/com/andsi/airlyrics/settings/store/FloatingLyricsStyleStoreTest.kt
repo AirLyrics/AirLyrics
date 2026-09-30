@@ -15,6 +15,26 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
     @Test
+    fun relativePositionTakesPrecedenceAndPreservesLegacyKeys() {
+        val position = com.andsi.airlyrics.core.model.FloatingPosition(0.5f, 0.8f)
+        FloatingLyricsStyleStore.savePosition(context, 123, 456)
+        FloatingLyricsStyleStore.saveRelativePosition(context, position)
+        assertEquals(position, FloatingLyricsStyleStore.getRelativePosition(context))
+        assertEquals(123 to 456, FloatingLyricsStyleStore.getPosition(context))
+    }
+
+    @Test
+    fun invalidRelativePositionFallsBackToLegacyMigration() {
+        context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE).edit()
+            .putFloat("position_horizontal_fraction", Float.NaN)
+            .putFloat("position_vertical_fraction", 0.5f).commit()
+        org.junit.Assert.assertNull(FloatingLyricsStyleStore.getRelativePosition(context))
+        assertFalse(FloatingLyricsStyleStore.hasLegacyPosition(context))
+        FloatingLyricsStyleStore.savePosition(context, 5, 10)
+        assertTrue(FloatingLyricsStyleStore.hasLegacyPosition(context))
+    }
+
+    @Test
     fun returnsDefaultBubbleStyle() {
         val style = FloatingLyricsStyleStore.getStyle(context)
 

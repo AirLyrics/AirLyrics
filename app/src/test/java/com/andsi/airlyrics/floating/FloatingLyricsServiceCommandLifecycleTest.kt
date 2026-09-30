@@ -70,9 +70,8 @@ class FloatingLyricsServiceCommandLifecycleTest {
             .create()
             .also { serviceController = it }
         val service = controller.get()
-        val windowManager = shadowWindowManager(service)
-
         assertEquals(Service.START_STICKY, send(service, FloatingServiceCommand.Show, startId = 1))
+        val windowManager = shadowWindowManager(service)
         val firstView = requireNotNull(service.lyricsView)
         assertTrue(service.windowController.isVisible)
         assertTrue(QuickFloatingStore.isDesiredVisible(service))
@@ -138,7 +137,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
 
         send(service, FloatingServiceCommand.Unlock)
         drag(view)
-        assertEquals("An unlocked overlay remains draggable", lockedX + 100, layoutParams.x)
+        assertTrue("An unlocked overlay remains draggable within the display", layoutParams.x > lockedX)
 
         send(service, FloatingServiceCommand.ClickThroughOn)
 
@@ -303,7 +302,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
     }
 
     private fun shadowWindowManager(service: FloatingLyricsService): ShadowWindowManagerImpl {
-        val windowManager = service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val windowManager = (service.lyricsView?.context ?: service).getSystemService(Context.WINDOW_SERVICE) as WindowManager
         return Shadow.extract(windowManager)
     }
 
