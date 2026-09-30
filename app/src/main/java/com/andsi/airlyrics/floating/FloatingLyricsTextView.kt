@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Canvas
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.graphics.withSave
@@ -18,6 +19,13 @@ import kotlin.math.roundToInt
  */
 internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(context),
     LyricsTextAnimationTarget {
+
+    internal var onWindowConfigurationChanged: (() -> Unit)? = null
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        onWindowConfigurationChanged?.invoke()
+    }
 
     private var lyricContentAlpha: Float = REST_ALPHA
     private var lyricContentTranslationY: Float = 0f

@@ -3,6 +3,7 @@ package com.andsi.airlyrics.settings.store
 import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
+import com.andsi.airlyrics.core.model.FloatingPosition
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
@@ -35,6 +36,8 @@ object FloatingLyricsStyleStore {
     private const val KEY_CLICK_THROUGH = "click_through"
     private const val KEY_POS_X = "pos_x"
     private const val KEY_POS_Y = "pos_y"
+    private const val KEY_POSITION_HORIZONTAL = "position_horizontal_fraction"
+    private const val KEY_POSITION_VERTICAL = "position_vertical_fraction"
     private const val KEY_PREVIEW_EXPANDED = "preview_expanded"
     private const val KEY_AUTO_HIDE_WHEN_PAUSED = "auto_hide_when_paused"
     private const val KEY_AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE =
@@ -305,6 +308,25 @@ object FloatingLyricsStyleStore {
     fun getPosition(context: Context): Pair<Int, Int> {
         val prefs = prefs(context)
         return prefs.getInt(KEY_POS_X, DEFAULT_X) to prefs.getInt(KEY_POS_Y, DEFAULT_Y)
+    }
+
+    internal fun hasLegacyPosition(context: Context): Boolean =
+        prefs(context).contains(KEY_POS_X) || prefs(context).contains(KEY_POS_Y)
+
+    internal fun getRelativePosition(context: Context): FloatingPosition? {
+        val store = prefs(context)
+        val horizontal = store.getFloat(KEY_POSITION_HORIZONTAL, Float.NaN)
+        val vertical = store.getFloat(KEY_POSITION_VERTICAL, Float.NaN)
+        if (!horizontal.isFinite() || !vertical.isFinite()) return null
+        return FloatingPosition(horizontal.coerceIn(0f, 1f), vertical.coerceIn(0f, 1f))
+    }
+
+    internal fun saveRelativePosition(context: Context, position: FloatingPosition) {
+        require(position.horizontal.isFinite() && position.vertical.isFinite())
+        prefs(context).edit {
+            putFloat(KEY_POSITION_HORIZONTAL, position.horizontal.coerceIn(0f, 1f))
+            putFloat(KEY_POSITION_VERTICAL, position.vertical.coerceIn(0f, 1f))
+        }
     }
 
 }

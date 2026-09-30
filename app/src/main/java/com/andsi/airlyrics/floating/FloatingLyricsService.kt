@@ -3,6 +3,7 @@ package com.andsi.airlyrics.floating
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.res.Configuration
 import android.content.Intent
 import android.graphics.Color
 import android.os.Handler
@@ -206,6 +207,11 @@ open class FloatingLyricsService : Service() {
             LyricsChangedBroadcast.lyricsChangedFilter(),
             ContextCompat.RECEIVER_NOT_EXPORTED
         )
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::windowController.isInitialized) windowController.onConfigurationChanged()
     }
 
     override fun onDestroy() {
