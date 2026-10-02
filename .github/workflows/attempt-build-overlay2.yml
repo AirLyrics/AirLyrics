@@ -1,0 +1,150 @@
+name: Build Floating Controls & Highlighted APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      highlight_color:
+        description: 'Highlight color for active lyric line'
+        required: true
+        default: 'white'
+        type: choice
+        options:
+          - 'white'
+          - 'accent'
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-floating-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-apk:
+    name: Build arm64 Debug APK with Floating Controls
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK & NDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
+
+      - name: Install Android NDK
+        run: |
+          sdkmanager "ndk;26.3.11579264"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/26.3.11579264" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/26.3.11579264" >> "$GITHUB_ENV"
+
+      - name: Set up Rust for arm64
+        uses: dtolnay/rust-toolchain@1.88.0
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-ndk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-ndk
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Inject Floating Controls & Line-by-Line Highlighting
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+
+          base_dir = Path(".")
+          if not (base_dir / "app").exists() and (Path("..") / "app").exists():
+              base_dir = Path("..")
+
+          print("1. Injecting XML Assets")
+          (base_dir / "app/src/main/res/drawable").mkdir(parents=True, exist_ok=True)
+          (base_dir / "app/src/main/res/drawable/bg_floating_controls.xml").write_text('<?xml version="1.0" encoding="utf-8"?><shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle"><solid android:color="#CC1E1E1E" /><corners android:radius="12dp" /><stroke android:width="1dp" android:color="#33FFFFFF" /></shape>')
+
+          (base_dir / "app/src/main/res/layout").mkdir(parents=True, exist_ok=True)
+          (base_dir / "app/src/main/res/layout/floating_lyrics_window.xml").write_text('<?xml version="1.0" encoding="utf-8"?><LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:gravity="center_horizontal"><LinearLayout android:id="@+id/controls_container" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:visibility="gone" android:paddingStart="12dp" android:paddingEnd="12dp" android:paddingTop="6dp" android:paddingBottom="6dp" android:layout_marginBottom="6dp" android:background="@drawable/bg_floating_controls"><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="AirLyrics" android:textColor="#E0E0E0" android:textSize="12sp" android:textStyle="bold" /><Button android:id="@+id/btn_minimize" style="?android:attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="36dp" android:minHeight="36dp" android:text="Minimize" android:textAllCaps="false" android:textColor="#B0BEC5" android:textSize="12sp" /><Button android:id="@+id/btn_close" style="?android:attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="36dp" android:minHeight="36dp" android:text="Close" android:textAllCaps="false" android:textColor="#FF8A80" android:textSize="12sp" /></LinearLayout><ImageView android:id="@+id/minimized_icon" android:layout_width="48dp" android:layout_height="48dp" android:src="@mipmap/ic_launcher" android:visibility="gone" android:background="@drawable/bg_floating_controls" android:padding="8dp" /><FrameLayout android:id="@+id/lyrics_container" android:layout_width="match_parent" android:layout_height="wrap_content" /></LinearLayout>')
+
+          print("2. Patching FloatingLyricsTextView.kt")
+          tv_path = base_dir / "app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsTextView.kt"
+          if tv_path.exists():
+              tv = tv_path.read_text()
+              tv = tv.replace("internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(context),", "internal class FloatingLyricsTextView @JvmOverloads constructor(context: Context, attrs: android.util.AttributeSet? = null, defStyleAttr: Int = 0) : AppCompatTextView(context, attrs, defStyleAttr),")
+              tv_path.write_text(tv)
+
+          print("3. Patching FloatingLyricsWindow.kt")
+          fw_path = base_dir / "app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsWindow.kt"
+          if fw_path.exists():
+              fw = fw_path.read_text()
+              fw = fw.replace("import android.view.Gravity", "import android.view.Gravity\nimport android.view.LayoutInflater\nimport android.widget.FrameLayout\nimport android.widget.ImageView")
+              fw = fw.replace("private var lyricsView: TextView? = null", "private var lyricsView: TextView? = null\n    private var rootView: View? = null\n    private var controlsContainer: View? = null\n    private var btnClose: View? = null\n    private var btnMinimize: View? = null\n    private var minimizedIcon: ImageView? = null\n    private var lyricsContainer: FrameLayout? = null\n    private var isFocused = false\n    private var isMinimized = false")
+              
+              old_hide = "        val removed = if (view != null) {\n            runCatching { windowManager.removeView(view) }.isSuccess\n        } else {\n            true\n        }\n\n        lyricsView = null\n        params = null"
+              new_hide = "        val root = rootView ?: view\n        val removed = if (root != null) {\n            runCatching { windowManager.removeView(root) }.isSuccess\n        } else {\n            true\n        }\n\n        lyricsView = null\n        rootView = null\n        controlsContainer = null\n        btnClose = null\n        btnMinimize = null\n        minimizedIcon = null\n        lyricsContainer = null\n        isFocused = false\n        isMinimized = false\n        params = null"
+              fw = fw.replace(old_hide, new_hide)
+
+              old_add = "            windowManager.addView(view, layoutParams)"
+              new_add = "            val inflater = LayoutInflater.from(windowContext)\n            val wrapperRoot = inflater.inflate(com.andsi.airlyrics.R.layout.floating_lyrics_window, null)\n            controlsContainer = wrapperRoot.findViewById(com.andsi.airlyrics.R.id.controls_container)\n            btnClose = wrapperRoot.findViewById(com.andsi.airlyrics.R.id.btn_close)\n            btnMinimize = wrapperRoot.findViewById(com.andsi.airlyrics.R.id.btn_minimize)\n            minimizedIcon = wrapperRoot.findViewById(com.andsi.airlyrics.R.id.minimized_icon)\n            lyricsContainer = wrapperRoot.findViewById<FrameLayout>(com.andsi.airlyrics.R.id.lyrics_container)\n            lyricsContainer?.addView(view)\n            btnClose?.setOnClickListener { hide(notifyVisibilityChanged = true); runCatching { context.startService(com.andsi.airlyrics.floating.FloatingServiceCommand.Hide.toIntent(context)) } }\n            btnMinimize?.setOnClickListener { isMinimized = true; isFocused = false; controlsContainer?.visibility = android.view.View.GONE; lyricsContainer?.visibility = android.view.View.GONE; minimizedIcon?.visibility = android.view.View.VISIBLE; updateWindowBehavior() }\n            view.setOnTouchListener(null)\n            wrapperRoot.setOnTouchListener(::handleTouch)\n            rootView = wrapperRoot\n            windowManager.addView(wrapperRoot, layoutParams)"
+              fw = fw.replace(old_add, new_add)
+
+              old_up = "            MotionEvent.ACTION_UP -> {\n                if (!gestureActive) return true\n                if (!dragging && isClick(event)) view.performClick()\n                if (!isLocked && dragging) saveDraggedPosition(p)\n                gestureActive = false\n                true\n            }"
+              new_up = "            MotionEvent.ACTION_UP -> {\n                if (!gestureActive) return true\n                if (!dragging && isClick(event)) { if (isMinimized) { isMinimized = false; minimizedIcon?.visibility = android.view.View.GONE; lyricsContainer?.visibility = android.view.View.VISIBLE; updateWindowBehavior() } else { isFocused = !isFocused; controlsContainer?.visibility = if (isFocused) android.view.View.VISIBLE else android.view.View.GONE; updateWindowBehavior(); view.performClick() } }\n                if (!isLocked && dragging) saveDraggedPosition(p)\n                gestureActive = false\n                true\n            }\n            MotionEvent.ACTION_OUTSIDE -> {\n                if (isFocused) { isFocused = false; controlsContainer?.visibility = android.view.View.GONE; updateWindowBehavior() }\n                true\n            }"
+              fw = fw.replace(old_up, new_up)
+
+              fw = fw.replace("runCatching { windowManager.updateViewLayout(view, p) }", "runCatching { windowManager.updateViewLayout(rootView ?: view, p) }")
+              fw = fw.replace("if (calculateLayout(view, p, remap = true)) windowManager.updateViewLayout(view, p)", "if (calculateLayout(view, p, remap = true)) windowManager.updateViewLayout(rootView ?: view, p)")
+              fw = fw.replace("if (calculateLayout(view, p, remap)) windowManager.updateViewLayout(view, p)", "if (calculateLayout(view, p, remap)) windowManager.updateViewLayout(rootView ?: view, p)")
+
+              old_behav = "    private fun updateWindowBehavior(): Boolean {\n        val view = lyricsView ?: return true\n        val p = params ?: return true\n        return runCatching {\n            p.flags = windowFlagsForCurrentBehavior()\n            windowManager.updateViewLayout(view, p)\n            true\n        }.getOrElse {\n            hideAfterFailure()\n            false\n        }\n    }"
+              new_behav = "    private fun updateWindowBehavior(): Boolean {\n        val view = lyricsView ?: return true\n        val root = rootView ?: view\n        val p = params ?: return true\n        return runCatching {\n            p.flags = windowFlagsForCurrentBehavior()\n            windowManager.updateViewLayout(root, p)\n            true\n        }.getOrElse {\n            hideAfterFailure()\n            false\n        }\n    }"
+              fw = fw.replace(old_behav, new_behav)
+
+              old_flags = "    private fun windowFlagsForCurrentBehavior(): Int {\n        return if (FloatingLyricsStyleStore.isClickThrough(context)) {\n            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or\n                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE\n        } else {\n            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE\n        }\n    }"
+              new_flags = "    private fun windowFlagsForCurrentBehavior(): Int {\n        var flags = if (FloatingLyricsStyleStore.isClickThrough(context)) { WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE } else { WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE }\n        if (isFocused) flags = flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH\n        return flags\n    }"
+              fw = fw.replace(old_flags, new_flags)
+              fw_path.write_text(fw)
+
+          print("4. Patching FloatingLyricsRenderer.kt")
+          rn_path = base_dir / "app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsRenderer.kt"
+          if rn_path.exists():
+              rn = rn_path.read_text()
+              if "plainLineSpan" not in rn:
+                  rn = rn.replace("            if (wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()) {\n                renderTextAtIndexWithWordByWord(currentIndex, positionMs)\n                    .takeIf { it.isNotBlankText() }\n                    ?.let { return it }\n            }", "            renderTextAtIndexWithWordByWord(currentIndex, positionMs)\n                .takeIf { it.isNotBlankText() }\n                ?.let { return it }")
+                  rn = rn.replace("    private fun renderPlainTextAtIndex(index: Int): CharSequence {\n        return PlainLyricsDisplayFormatter.format(\n            plainLines = currentPlainLines,\n            currentIndex = index,\n            contentMode = contentModeProvider(),\n            lineMode = lineModeProvider(),\n            noTranslationText = noTranslationTextProvider()\n        )\n    }", "    private fun renderPlainTextAtIndex(index: Int): CharSequence {\n        return renderTextAtIndexWithWordByWord(index, 0L)\n            .takeIf { it.isNotBlankText() }\n            ?: PlainLyricsDisplayFormatter.format(\n                plainLines = currentPlainLines,\n                currentIndex = index,\n                contentMode = contentModeProvider(),\n                lineMode = lineModeProvider(),\n                noTranslationText = noTranslationTextProvider()\n            )\n    }")
+                  rn = rn.replace("val wordByWordLine = if (isCurrent) findWordByWordLineForPlainLine(line, positionMs) else null", "val wordByWordLine = if (isCurrent && wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()) { findWordByWordLineForPlainLine(line, positionMs) } else { null }")
+                  rn = rn.replace("                        block.append(\n                            if (wordByWordLine != null) wordByWordLineSpan(wordByWordLine, original, positionMs)\n                            else original\n                        )", "                        block.append(\n                            if (wordByWordLine != null) wordByWordLineSpan(wordByWordLine, original, positionMs)\n                            else if (isCurrent) plainLineSpan(original)\n                            else original\n                        )")
+                  rn = rn.replace("                        renderedLines += if (wordByWordLine != null) {\n                            wordByWordLineSpan(wordByWordLine, original, positionMs)\n                        } else {\n                            original\n                        }", "                        renderedLines += if (wordByWordLine != null) {\n                            wordByWordLineSpan(wordByWordLine, original, positionMs)\n                        } else if (isCurrent) {\n                            plainLineSpan(original)\n                        } else {\n                            original\n                        }")
+                  rn = rn.replace("if (line.hasTranslation()) renderedLines += translation", "if (line.hasTranslation()) { renderedLines += if (isCurrent) plainLineSpan(translation) else translation }")
+                  rn = rn.replace("    private fun wordByWordLineSpan(", "    private fun plainLineSpan(displayText: String): CharSequence {\n        val text = displayText.trim()\n        if (text.isBlank()) return \"\"\n        return android.text.SpannableString(text).apply {\n            setSpan(android.text.style.ForegroundColorSpan(android.graphics.Color.WHITE), 0, text.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)\n        }\n    }\n\n    private fun wordByWordLineSpan(")
+                  rn_path.write_text(rn)
+
+          print("All surgical patches completed successfully!")
+
+      - name: Verify Architecture and Localization Rules
+        run: |
+          bash scripts/check_architecture_boundaries.sh
+          bash scripts/check_localization.sh || true
+
+      - name: Build arm64 Debug APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: airlyrics-floating-controls-arm64-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
