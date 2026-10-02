@@ -63,8 +63,8 @@ jobs:
       - name: Inject Floating Controls & Line-by-Line Highlighting
         env:
           HIGHLIGHT_COLOR: ${{ inputs.highlight_color || 'white' }}
+        shell: python
         run: |
-          python3 - << 'EOF'
           import os
           import re
           from pathlib import Path
@@ -152,13 +152,11 @@ jobs:
           fw_path = Path("app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsWindow.kt")
           code = fw_path.read_text(encoding="utf-8")
 
-          # A. Add Imports
           imports = ["import android.view.LayoutInflater", "import com.andsi.airlyrics.R", "import android.view.ViewConfiguration"]
           for imp in imports:
               if imp not in code:
                   code = code.replace("import android.view.View", f"{imp}\nimport android.view.View")
 
-          # B. Add State Variables
           if "private var controlsContainer: View?" not in code:
               code = code.replace("private var rootView: View? = null", 
                   "private var rootView: View? = null\n"
@@ -167,16 +165,14 @@ jobs:
                   "    private var btnMinimize: View? = null\n"
                   "    private var isFocused = false\n")
 
-          # C. Reset variables in hide()
           if "controlsContainer = null" not in code:
               code = code.replace("rootView = null", 
                   "rootView = null\n        controlsContainer = null\n        btnClose = null\n        btnMinimize = null\n        isFocused = false")
 
-          # D. Wrap the windowManager.addView logic
           add_view_match = re.search(r'windowManager\.addView\(([^,]+),\s*([^)]+)\)', code)
           if add_view_match:
-              added_view = add_view_match.group(1) # e.g. root or textView
-              params_var = add_view_match.group(2) # e.g. layoutParams
+              added_view = add_view_match.group(1) 
+              params_var = add_view_match.group(2) 
               
               wrapper_logic = f"""
                       val inflater = LayoutInflater.from(windowContext)
@@ -198,14 +194,10 @@ jobs:
                       rootView = wrapperRoot
                       windowManager.addView(wrapperRoot, {params_var})
               """
-              # Prevent double assignment of rootView
               code = re.sub(r'rootView\s*=\s*' + added_view, '// rootView reassigned to wrapper later', code)
-              # Make sure the wrapper intercepts touches, not just the inner text view
               code = re.sub(added_view + r'\.setOnTouchListener', 'wrapperRoot.setOnTouchListener', code)
-              # Replace the actual addView call
               code = code.replace(add_view_match.group(0), wrapper_logic.strip())
 
-          # E. Update Tap Gesture handling in ACTION_UP
           action_up_pattern = r'(MotionEvent\.ACTION_UP\s*->\s*\{)([\s\S]*?)(gestureActive\s*=\s*false)'
           def replace_action_up(m):
               return m.group(1) + """
@@ -219,33 +211,31 @@ jobs:
                               controlsContainer?.visibility = if (isFocused) View.VISIBLE else View.GONE
                               updateWindowBehavior()
                           }
-""" + m.group(2) + m.group(3)
+          """ + m.group(2) + m.group(3)
           
           if "isFocused = !isFocused" not in code:
               code = re.sub(action_up_pattern, replace_action_up, code)
 
-          # F. Add updateWindowBehavior helper function
           if "fun updateWindowBehavior" not in code:
               code = code.replace("private fun windowFlagsForCurrentBehavior",
-"""private fun updateWindowBehavior() {
-        val root = rootView ?: return
-        val p = params ?: return
-        runCatching {
-            p.flags = windowFlagsForCurrentBehavior()
-            if (isFocused) {
-                p.flags = p.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-            }
-            windowManager.updateViewLayout(root, p)
-        }
-    }
+          """private fun updateWindowBehavior() {
+              val root = rootView ?: return
+              val p = params ?: return
+              runCatching {
+                  p.flags = windowFlagsForCurrentBehavior()
+                  if (isFocused) {
+                      p.flags = p.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                  }
+                  windowManager.updateViewLayout(root, p)
+              }
+          }
 
-    private fun windowFlagsForCurrentBehavior""")
+          private fun windowFlagsForCurrentBehavior""")
 
           fw_path.write_text(code, encoding="utf-8")
           print("Surgical patch applied successfully!")
 
           print("--- 4. Preserving Line-by-Line Highlighting in FloatingLyricsRenderer.kt ---")
-          # [Highlight logic preserved]
           renderer_path = Path("app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsRenderer.kt")
           r_code = renderer_path.read_text(encoding="utf-8")
           highlight_mode = os.environ.get("HIGHLIGHT_COLOR", "white").lower()
@@ -343,8 +333,6 @@ jobs:
               print("Injected line-by-line highlight logic.")
           else:
               print("Highlight logic already exists.")
-
-          EOF
 
       - name: Verify Architecture and Localization Rules
         run: |
