@@ -64,7 +64,7 @@ jobs:
         env:
           HIGHLIGHT_COLOR: ${{ inputs.highlight_color || 'white' }}
         run: |
-          python3 - << 'PY'
+          python3 - << 'EOF'
           import os
           from pathlib import Path
 
@@ -469,4 +469,4 @@ jobs:
                                   lastTapUptimeMs = 0L
                               }
                               if (dragging) {
-                                  val bounds = geometry ?: retu
+                                  val bounds = geometry ?: ret
