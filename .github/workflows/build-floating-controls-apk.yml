@@ -66,6 +66,7 @@ jobs:
         run: |
           python3 - << 'EOF'
           import os
+          import re
           from pathlib import Path
 
           print("--- 1. Injecting Drawable Asset ---")
@@ -79,16 +80,14 @@ jobs:
               <corners android:radius="12dp" />
               <stroke android:width="1dp" android:color="#33FFFFFF" />
           </shape>
-          """.strip() + "\n", encoding="utf-8")
-          print("Wrote", bg_controls_path)
+          """, encoding="utf-8")
 
-          print("--- 2. Injecting Layout XML ---")
+          print("--- 2. Injecting Layout XML (Wrapper) ---")
           layout_dir = Path("app/src/main/res/layout")
           layout_dir.mkdir(parents=True, exist_ok=True)
           layout_path = layout_dir / "floating_lyrics_window.xml"
           layout_path.write_text("""<?xml version="1.0" encoding="utf-8"?>
           <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:id="@+id/floating_root"
               android:layout_width="match_parent"
               android:layout_height="wrap_content"
               android:orientation="vertical"
@@ -109,16 +108,13 @@ jobs:
                   android:background="@drawable/bg_floating_controls">
 
                   <TextView
-                      android:id="@+id/controls_title"
                       android:layout_width="0dp"
                       android:layout_height="wrap_content"
                       android:layout_weight="1"
                       android:text="AirLyrics"
                       android:textColor="#E0E0E0"
                       android:textSize="12sp"
-                      android:textStyle="bold"
-                      android:ellipsize="end"
-                      android:singleLine="true" />
+                      android:textStyle="bold" />
 
                   <Button
                       android:id="@+id/btn_minimize"
@@ -126,9 +122,6 @@ jobs:
                       android:layout_width="wrap_content"
                       android:layout_height="36dp"
                       android:minHeight="36dp"
-                      android:minWidth="0dp"
-                      android:paddingStart="10dp"
-                      android:paddingEnd="10dp"
                       android:text="Minimize"
                       android:textAllCaps="false"
                       android:textColor="#B0BEC5"
@@ -140,333 +133,233 @@ jobs:
                       android:layout_width="wrap_content"
                       android:layout_height="36dp"
                       android:minHeight="36dp"
-                      android:minWidth="0dp"
-                      android:paddingStart="10dp"
-                      android:paddingEnd="10dp"
-                      android:layout_marginStart="4dp"
                       android:text="Close"
                       android:textAllCaps="false"
                       android:textColor="#FF8A80"
                       android:textSize="12sp" />
-
               </LinearLayout>
 
-              <com.andsi.airlyrics.floating.FloatingLyricsTextView
-                  android:id="@+id/lyrics_text_view"
+              <!-- We will programmatically inject the original TextView into this FrameLayout -->
+              <FrameLayout
+                  android:id="@+id/lyrics_container"
                   android:layout_width="match_parent"
                   android:layout_height="wrap_content" />
 
           </LinearLayout>
-          """.strip() + "\n", encoding="utf-8")
-          print("Wrote", layout_path)
+          """, encoding="utf-8")
 
-          print("--- 3. Updating FloatingLyricsTextView Constructor ---")
-          tv_path = Path("app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsTextView.kt")
-          tv_content = tv_path.read_text(encoding="utf-8")
-          old_tv_decl = "internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(context),"
-          new_tv_decl = """class FloatingLyricsTextView @JvmOverloads constructor(
-              context: Context,
-              attrs: android.util.AttributeSet? = null,
-              defStyleAttr: Int = 0
-          ) : AppCompatTextView(context, attrs, defStyleAttr),"""
-          if old_tv_decl in tv_content:
-              tv_content = tv_content.replace(old_tv_decl, new_tv_decl, 1)
-              tv_path.write_text(tv_content, encoding="utf-8")
-              print("Updated FloatingLyricsTextView.kt for XML inflation support")
+          print("--- 3. Surgically Patching FloatingLyricsWindow.kt ---")
+          fw_path = Path("app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsWindow.kt")
+          code = fw_path.read_text(encoding="utf-8")
 
-          print("--- 4. Updating FloatingLyricsWindow.kt ---")
-          window_path = Path("app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsWindow.kt")
-          window_code = """package com.andsi.airlyrics.floating
+          # A. Add Imports
+          imports = ["import android.view.LayoutInflater", "import com.andsi.airlyrics.R", "import android.view.ViewConfiguration"]
+          for imp in imports:
+              if imp not in code:
+                  code = code.replace("import android.view.View", f"{imp}\nimport android.view.View")
 
-          import android.content.Context
-          import android.graphics.Color
-          import android.graphics.PixelFormat
-          import android.graphics.Point
-          import android.graphics.Rect
-          import android.graphics.drawable.GradientDrawable
-          import android.os.Build
-          import android.os.SystemClock
-          import android.provider.Settings
-          import android.util.Log
-          import android.view.Gravity
-          import android.view.LayoutInflater
-          import android.view.MotionEvent
-          import android.view.View
-          import android.view.ViewConfiguration
-          import android.view.WindowInsets
-          import android.view.WindowManager
-          import android.widget.TextView
-          import com.andsi.airlyrics.R
-          import com.andsi.airlyrics.core.color.AirColorUtils
-          import com.andsi.airlyrics.core.model.FloatingPosition
-          import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
-          import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
-          import kotlin.math.abs
+          # B. Add State Variables
+          if "private var controlsContainer: View?" not in code:
+              code = code.replace("private var rootView: View? = null", 
+                  "private var rootView: View? = null\n"
+                  "    private var controlsContainer: View? = null\n"
+                  "    private var btnClose: View? = null\n"
+                  "    private var btnMinimize: View? = null\n"
+                  "    private var isFocused = false\n")
 
-          /**
-           * Owns the floating lyrics window itself: creation, removal, dragging,
-           * style application, lock state, click-through behavior, and focused controls overlay.
-           */
-          class FloatingLyricsWindow(
-              private val context: Context,
-              private val onVisibilityChanged: (Boolean) -> Unit
-          ) {
-              private val windowContext = if (Build.VERSION.SDK_INT >= 30) {
-                  val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-                  @Suppress("DEPRECATION")
-                  context.createDisplayContext(manager.defaultDisplay)
-                      .createWindowContext(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, null)
-              } else context
+          # C. Reset variables in hide()
+          if "controlsContainer = null" not in code:
+              code = code.replace("rootView = null", 
+                  "rootView = null\n        controlsContainer = null\n        btnClose = null\n        btnMinimize = null\n        isFocused = false")
 
-              private val windowManager = windowContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-              private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
-              private val doubleTapTimeout = ViewConfiguration.getDoubleTapTimeout().toLong()
+          # D. Wrap the windowManager.addView logic
+          add_view_match = re.search(r'windowManager\.addView\(([^,]+),\s*([^)]+)\)', code)
+          if add_view_match:
+              added_view = add_view_match.group(1) # e.g. root or textView
+              params_var = add_view_match.group(2) # e.g. layoutParams
+              
+              wrapper_logic = f"""
+                      val inflater = LayoutInflater.from(windowContext)
+                      val wrapperRoot = inflater.inflate(R.layout.floating_lyrics_window, null)
+                      controlsContainer = wrapperRoot.findViewById(R.id.controls_container)
+                      btnClose = wrapperRoot.findViewById(R.id.btn_close)
+                      btnMinimize = wrapperRoot.findViewById(R.id.btn_minimize)
+                      
+                      val lyricsContainer = wrapperRoot.findViewById<android.widget.FrameLayout>(R.id.lyrics_container)
+                      lyricsContainer.addView({added_view})
+                      
+                      btnClose?.setOnClickListener {{ hide(notifyVisibilityChanged = true) }}
+                      btnMinimize?.setOnClickListener {{ 
+                          isFocused = false
+                          controlsContainer?.visibility = View.GONE
+                          updateWindowBehavior()
+                      }}
+                      
+                      rootView = wrapperRoot
+                      windowManager.addView(wrapperRoot, {params_var})
+              """
+              # Prevent double assignment of rootView
+              code = re.sub(r'rootView\s*=\s*' + added_view, '// rootView reassigned to wrapper later', code)
+              # Make sure the wrapper intercepts touches, not just the inner text view
+              code = re.sub(added_view + r'\.setOnTouchListener', 'wrapperRoot.setOnTouchListener', code)
+              # Replace the actual addView call
+              code = code.replace(add_view_match.group(0), wrapper_logic.strip())
 
-              private var rootView: View? = null
-              private var controlsContainer: View? = null
-              private var btnClose: View? = null
-              private var btnMinimize: View? = null
-              private var lyricsView: FloatingLyricsTextView? = null
+          # E. Update Tap Gesture handling in ACTION_UP
+          action_up_pattern = r'(MotionEvent\.ACTION_UP\s*->\s*\{)([\s\S]*?)(gestureActive\s*=\s*false)'
+          def replace_action_up(m):
+              return m.group(1) + """
+                          val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+                          val isClick = kotlin.math.abs(event.rawX - touchStartX) <= touchSlop &&
+                                        kotlin.math.abs(event.rawY - touchStartY) <= touchSlop
+                          val duration = android.os.SystemClock.uptimeMillis() - downUptimeMs
 
-              private var params: WindowManager.LayoutParams? = null
-              private var position: FloatingPosition? = null
-              private var geometry: FloatingWindowGeometry? = null
-
-              private var gestureActive = false
-              private var dragging = false
-              private var isFocused = false
-              private var remapPending = false
-
-              private var startX = 0
-              private var startY = 0
-              private var touchStartX = 0f
-              private var touchStartY = 0f
-              private var downUptimeMs = 0L
-              private var lastTapUptimeMs = 0L
-              private var lastTapRawX = 0f
-              private var lastTapRawY = 0f
-
-              private val refreshLayout = Runnable {
-                  val remap = remapPending
-                  remapPending = false
-                  updateLayout(remap)
-              }
-
-              private val layoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-                  scheduleLayout()
-              }
-
-              fun onConfigurationChanged() {
-                  gestureActive = false
-                  scheduleLayout(remap = true)
-              }
-
-              private fun scheduleLayout(remap: Boolean = false) {
-                  val view = rootView ?: return
-                  remapPending = remapPending || remap
-                  view.removeCallbacks(refreshLayout)
-                  view.post(refreshLayout)
-              }
-
-              val textView: TextView?
-                  get() = lyricsView
-
-              val isVisible: Boolean
-                  get() = rootView != null
-
-              fun isWindowFocused(): Boolean = isFocused
-
-              fun setFocused(focused: Boolean): Boolean {
-                  if (isFocused == focused) return true
-                  isFocused = focused
-                  controlsContainer?.visibility = if (focused) View.VISIBLE else View.GONE
-                  val root = rootView ?: return true
-                  val p = params ?: return true
-                  return runCatching {
-                      p.flags = windowFlagsForCurrentBehavior()
-                      calculateLayout(root, p, remap = false)
-                      windowManager.updateViewLayout(root, p)
-                      true
-                  }.getOrElse {
-                      hideAfterFailure()
-                      false
-                  }
-              }
-
-              fun toggleFocused(): Boolean {
-                  return setFocused(!isFocused)
-              }
-
-              fun show(): Boolean {
-                  if (!Settings.canDrawOverlays(context)) {
-                      hideAfterFailure()
-                      return false
-                  }
-                  lyricsView?.let {
-                      val refreshed = applyStyle()
-                      if (refreshed) onVisibilityChanged(true)
-                      return refreshed
-                  }
-
-                  val inflater = LayoutInflater.from(windowContext)
-                  val root = inflater.inflate(R.layout.floating_lyrics_window, null)
-                  val controls = root.findViewById<View>(R.id.controls_container)
-                  val closeBtn = root.findViewById<View>(R.id.btn_close)
-                  val minBtn = root.findViewById<View>(R.id.btn_minimize)
-                  val textView = root.findViewById<FloatingLyricsTextView>(R.id.lyrics_text_view).apply {
-                      setText(R.string.ui_waiting_for_media_message)
-                      includeFontPadding = false
-                  }
-
-                  isFocused = false
-                  controls?.visibility = View.GONE
-
-                  closeBtn?.setOnClickListener {
-                      hide(notifyVisibilityChanged = true)
-                      runCatching {
-                          context.startService(FloatingServiceCommand.Hide.toIntent(context))
-                      }
-                  }
-                  minBtn?.setOnClickListener {
-                      setFocused(false)
-                  }
-
-                  val layoutParams = WindowManager.LayoutParams(
-                      WindowManager.LayoutParams.WRAP_CONTENT,
-                      WindowManager.LayoutParams.WRAP_CONTENT,
-                      WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                      windowFlagsForCurrentBehavior(),
-                      PixelFormat.TRANSLUCENT
-                  ).apply {
-                      gravity = Gravity.TOP or Gravity.START
-                      if (Build.VERSION.SDK_INT >= 30) {
-                          setFitInsetsTypes(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
-                          setFitInsetsIgnoringVisibility(true)
-                      }
-                  }
-
-                  root.setOnTouchListener(::handleTouch)
-
-                  return runCatching {
-                      rootView = root
-                      controlsContainer = controls
-                      btnClose = closeBtn
-                      btnMinimize = minBtn
-                      lyricsView = textView
-                      params = layoutParams
-                      position = FloatingLyricsStyleStore.getRelativePosition(context)
-                      applyStyle(textView)
-                      calculateLayout(root, layoutParams, remap = true)
-                      windowManager.addView(root, layoutParams)
-                      textView.onWindowConfigurationChanged = ::onConfigurationChanged
-                      root.addOnLayoutChangeListener(layoutListener)
-                      root.setOnApplyWindowInsetsListener { _, insets ->
-                          scheduleLayout()
-                          insets
-                      }
-                      root.requestApplyInsets()
-                      onVisibilityChanged(true)
-                      true
-                  }.getOrElse {
-                      hideAfterFailure()
-                      false
-                  }
-              }
-
-              fun hide(notifyVisibilityChanged: Boolean = true): Boolean {
-                  val root = rootView
-                  root?.removeCallbacks(refreshLayout)
-                  root?.removeOnLayoutChangeListener(layoutListener)
-                  root?.setOnApplyWindowInsetsListener(null)
-                  lyricsView?.onWindowConfigurationChanged = null
-                  gestureActive = false
-                  dragging = false
-                  isFocused = false
-                  remapPending = false
-                  geometry = null
-                  position = null
-                  val removed = if (root != null) {
-                      runCatching { windowManager.removeView(root) }.isSuccess
-                  } else {
-                      true
-                  }
-                  rootView = null
-                  controlsContainer = null
-                  btnClose = null
-                  btnMinimize = null
-                  lyricsView = null
-                  params = null
-                  if (notifyVisibilityChanged) {
-                      onVisibilityChanged(false)
-                  }
-                  return removed
-              }
-
-              fun applyStyle(): Boolean {
-                  val view = lyricsView ?: return true
-                  val root = rootView ?: return true
-                  val p = params ?: return true
-                  return runCatching {
-                      applyStyle(view)
-                      if (calculateLayout(root, p, remap = true)) windowManager.updateViewLayout(root, p)
-                      true
-                  }.getOrElse {
-                      hideAfterFailure()
-                      false
-                  }
-              }
-
-              fun setLocked(locked: Boolean): Boolean {
-                  val previousLocked = FloatingLyricsStyleStore.isLocked(context)
-                  FloatingLyricsStyleStore.setLocked(context, locked)
-                  val updated = updateWindowBehavior()
-                  if (!updated) FloatingLyricsStyleStore.setLocked(context, previousLocked)
-                  return updated
-              }
-
-              fun setClickThrough(clickThrough: Boolean): Boolean {
-                  val previousClickThrough = FloatingLyricsStyleStore.isClickThrough(context)
-                  FloatingLyricsStyleStore.setClickThrough(context, clickThrough)
-                  val updated = updateWindowBehavior()
-                  if (!updated) FloatingLyricsStyleStore.setClickThrough(context, previousClickThrough)
-                  return updated
-              }
-
-              private fun handleTouch(view: View, event: MotionEvent): Boolean {
-                  val p = params ?: return false
-                  val root = rootView ?: return false
-                  val isLocked = FloatingLyricsStyleStore.isLocked(context)
-
-                  return when (event.actionMasked) {
-                      MotionEvent.ACTION_OUTSIDE -> {
-                          if (isFocused) {
-                              setFocused(false)
+                          if (!dragging && isClick && duration <= 600) {
+                              isFocused = !isFocused
+                              controlsContainer?.visibility = if (isFocused) View.VISIBLE else View.GONE
+                              updateWindowBehavior()
                           }
-                          true
-                      }
-                      MotionEvent.ACTION_DOWN -> {
-                          if (isFocused && isTouchOnInteractiveChild(event.rawX, event.rawY)) {
-                              gestureActive = false
-                              return false
-                          }
-                          gestureActive = true
-                          dragging = false
-                          startX = p.x
-                          startY = p.y
-                          touchStartX = event.rawX
-                          touchStartY = event.rawY
-                          downUptimeMs = SystemClock.uptimeMillis()
-                          true
-                      }
-                      MotionEvent.ACTION_MOVE -> {
-                          if (isLocked || !gestureActive) {
-                              true
+""" + m.group(2) + m.group(3)
+          
+          if "isFocused = !isFocused" not in code:
+              code = re.sub(action_up_pattern, replace_action_up, code)
+
+          # F. Add updateWindowBehavior helper function
+          if "fun updateWindowBehavior" not in code:
+              code = code.replace("private fun windowFlagsForCurrentBehavior",
+"""private fun updateWindowBehavior() {
+        val root = rootView ?: return
+        val p = params ?: return
+        runCatching {
+            p.flags = windowFlagsForCurrentBehavior()
+            if (isFocused) {
+                p.flags = p.flags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+            }
+            windowManager.updateViewLayout(root, p)
+        }
+    }
+
+    private fun windowFlagsForCurrentBehavior""")
+
+          fw_path.write_text(code, encoding="utf-8")
+          print("Surgical patch applied successfully!")
+
+          print("--- 4. Preserving Line-by-Line Highlighting in FloatingLyricsRenderer.kt ---")
+          # [Highlight logic preserved]
+          renderer_path = Path("app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsRenderer.kt")
+          r_code = renderer_path.read_text(encoding="utf-8")
+          highlight_mode = os.environ.get("HIGHLIGHT_COLOR", "white").lower()
+          highlight_color_expr = "Color.WHITE" if highlight_mode == "white" else "wordByWordHighlightColorProvider()"
+
+          if "plainLineSpan" not in r_code:
+              old_call = """            if (wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()) {
+                  renderTextAtIndexWithWordByWord(currentIndex, positionMs)
+                      .takeIf { it.isNotBlankText() }
+                      ?.let { return it }
+              }"""
+              new_call = """            renderTextAtIndexWithWordByWord(currentIndex, positionMs)
+                  .takeIf { it.isNotBlankText() }
+                  ?.let { return it }"""
+              r_code = r_code.replace(old_call, new_call, 1)
+
+              old_plain = """    private fun renderPlainTextAtIndex(index: Int): CharSequence {
+          return PlainLyricsDisplayFormatter.format(
+              plainLines = currentPlainLines,
+              currentIndex = index,
+              contentMode = contentModeProvider(),
+              lineMode = lineModeProvider(),
+              noTranslationText = noTranslationTextProvider()
+          )
+      }"""
+              new_plain = """    private fun renderPlainTextAtIndex(index: Int): CharSequence {
+          return renderTextAtIndexWithWordByWord(index, 0L)
+              .takeIf { it.isNotBlankText() }
+              ?: PlainLyricsDisplayFormatter.format(
+                  plainLines = currentPlainLines,
+                  currentIndex = index,
+                  contentMode = contentModeProvider(),
+                  lineMode = lineModeProvider(),
+                  noTranslationText = noTranslationTextProvider()
+              )
+      }"""
+              r_code = r_code.replace(old_plain, new_plain, 1)
+
+              old_wbw = "val wordByWordLine = if (isCurrent) findWordByWordLineForPlainLine(line, positionMs) else null"
+              new_wbw = """val wordByWordLine = if (isCurrent && wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()) {
+                  findWordByWordLineForPlainLine(line, positionMs)
+              } else {
+                  null
+              }"""
+              r_code = r_code.replace(old_wbw, new_wbw, 1)
+
+              old_trans = """                        block.append(
+                              if (wordByWordLine != null) wordByWordLineSpan(wordByWordLine, original, positionMs)
+                              else original
+                          )"""
+              new_trans = """                        block.append(
+                              if (wordByWordLine != null) wordByWordLineSpan(wordByWordLine, original, positionMs)
+                              else if (isCurrent) plainLineSpan(original)
+                              else original
+                          )"""
+              r_code = r_code.replace(old_trans, new_trans, 1)
+
+              old_orig = """                        renderedLines += if (wordByWordLine != null) {
+                              wordByWordLineSpan(wordByWordLine, original, positionMs)
                           } else {
-                              val deltaX = abs(event.rawX - touchStartX)
-                              val deltaY = abs(event.rawY - touchStartY)
-                              if (!dragging && (deltaX > touchSlop || deltaY > touchSlop)) {
-                                  dragging = true
-                                  lastTapUptimeMs = 0L
-                              }
-                              if (dragging) {
-                                  val bounds = geometry ?: ret
+                              original
+                          }"""
+              new_orig = """                        renderedLines += if (wordByWordLine != null) {
+                              wordByWordLineSpan(wordByWordLine, original, positionMs)
+                          } else if (isCurrent) {
+                              plainLineSpan(original)
+                          } else {
+                              original
+                          }"""
+              r_code = r_code.replace(old_orig, new_orig, 1)
+
+              old_only = "if (line.hasTranslation()) renderedLines += translation"
+              new_only = """if (line.hasTranslation()) {
+                          renderedLines += if (isCurrent) plainLineSpan(translation) else translation
+                      }"""
+              r_code = r_code.replace(old_only, new_only, 1)
+
+              helper_method = f"""    private fun plainLineSpan(displayText: String): CharSequence {{
+          val text = displayText.trim()
+          if (text.isBlank()) return ""
+          val highlightColor = {highlight_color_expr}
+          return SpannableString(text).apply {{
+              setSpan(
+                  android.text.style.ForegroundColorSpan(highlightColor),
+                  0,
+                  text.length,
+                  android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+              )
+          }}
+      }}
+
+      private fun wordByWordLineSpan("""
+              r_code = r_code.replace("    private fun wordByWordLineSpan(", helper_method, 1)
+              renderer_path.write_text(r_code, encoding="utf-8")
+              print("Injected line-by-line highlight logic.")
+          else:
+              print("Highlight logic already exists.")
+
+          EOF
+
+      - name: Verify Architecture and Localization Rules
+        run: |
+          bash scripts/check_architecture_boundaries.sh
+          bash scripts/check_localization.sh || true
+
+      - name: Build Debug APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: airlyrics-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          
