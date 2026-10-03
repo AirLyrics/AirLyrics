@@ -1,0 +1,216 @@
+name: Commit Source Changes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  commit-source:
+    name: Commit Source to Repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Modify Source Files
+        shell: python
+        run: |
+          import os
+          from pathlib import Path
+
+          base = Path(".")
+
+          # 1. Create bg_floating_controls.xml
+          bg_drawable = base / "app/src/main/res/drawable/bg_floating_controls.xml"
+          bg_drawable.parent.mkdir(parents=True, exist_ok=True)
+          bg_drawable.write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <shape xmlns:android="http://schemas.android.com/apk/res/android"
+              android:shape="rectangle">
+              <solid android:color="#B3000000" />
+              <corners android:radius="16dp" />
+          </shape>
+          """.strip() + "\n")
+
+          # 2. Create floating_lyrics_window.xml
+          layout_xml = base / "app/src/main/res/layout/floating_lyrics_window.xml"
+          layout_xml.parent.mkdir(parents=True, exist_ok=True)
+          layout_xml.write_text("""<?xml version="1.0" encoding="utf-8"?>
+          <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:id="@+id/floating_window_root"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content">
+
+              <com.andsi.airlyrics.floating.FloatingLyricsTextView
+                  android:id="@+id/floating_lyrics_text"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:includeFontPadding="false"
+                  android:text="@string/ui_waiting_for_media_message" />
+
+              <LinearLayout
+                  android:id="@+id/floating_controls_container"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_gravity="top|end"
+                  android:background="@drawable/bg_floating_controls"
+                  android:orientation="horizontal"
+                  android:padding="4dp"
+                  android:visibility="gone">
+
+                  <ImageView
+                      android:id="@+id/btn_minimize"
+                      android:layout_width="28dp"
+                      android:layout_height="28dp"
+                      android:padding="4dp"
+                      android:src="@drawable/ic_air_visibility_off"
+                      android:contentDescription="@string/ui_hide" />
+
+                  <ImageView
+                      android:id="@+id/btn_close"
+                      android:layout_width="28dp"
+                      android:layout_height="28dp"
+                      android:padding="4dp"
+                      android:src="@drawable/ic_air_close"
+                      android:contentDescription="@string/ui_close" />
+              </LinearLayout>
+          </FrameLayout>
+          """.strip() + "\n")
+
+          # 3. Patch FloatingLyricsTextView.kt (@JvmOverloads)
+          tv_path = base / "app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsTextView.kt"
+          tv_code = tv_path.read_text()
+          if "import android.util.AttributeSet" not in tv_code:
+              tv_code = tv_code.replace(
+                  "import android.content.res.Configuration",
+                  "import android.content.res.Configuration\nimport android.util.AttributeSet"
+              )
+          old_tv_constructor = "internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(context),"
+          new_tv_constructor = """internal class FloatingLyricsTextView @JvmOverloads constructor(
+              context: Context,
+              attrs: AttributeSet? = null,
+              defStyleAttr: Int = 0
+          ) : AppCompatTextView(context, attrs, defStyleAttr),"""
+          if old_tv_constructor in tv_code:
+              tv_code = tv_code.replace(old_tv_constructor, new_tv_constructor)
+              tv_path.write_text(tv_code)
+
+          # 4. Patch FloatingLyricsWindow.kt (wrapper, controls, and click listeners)
+          win_path = base / "app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsWindow.kt"
+          win_code = win_path.read_text()
+          if "import android.view.LayoutInflater" not in win_code:
+              win_code = win_code.replace(
+                  "import android.view.Gravity",
+                  "import android.view.Gravity\nimport android.view.LayoutInflater"
+              )
+
+          old_show_create = """        val view = FloatingLyricsTextView(windowContext).apply {
+              setText(R.string.ui_waiting_for_media_message)
+              includeFontPadding = false
+          }"""
+
+          new_show_create = """        val root = LayoutInflater.from(windowContext).inflate(R.layout.floating_lyrics_window, null)
+          val view = root.findViewById<FloatingLyricsTextView>(R.id.floating_lyrics_text)
+          val controls = root.findViewById<View>(R.id.floating_controls_container)
+          val btnMinimize = root.findViewById<View>(R.id.btn_minimize)
+          val btnClose = root.findViewById<View>(R.id.btn_close)
+
+          btnMinimize?.setOnClickListener { hide() }
+          btnClose?.setOnClickListener { hide() }
+          view.setOnClickListener {
+              controls?.let { c ->
+                  c.visibility = if (c.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+              }
+          }"""
+
+          if old_show_create in win_code:
+              win_code = win_code.replace(old_show_create, new_show_create)
+              win_code = win_code.replace(
+                  "    private var lyricsView: TextView? = null",
+                  "    private var rootLayout: View? = null\n    private var lyricsView: TextView? = null"
+              )
+              win_code = win_code.replace(
+                  "            lyricsView = view\n            params = layoutParams\n            position = FloatingLyricsStyleStore.getRelativePosition(context)\n            applyStyle(view)\n            calculateLayout(view, layoutParams, remap = true)\n            windowManager.addView(view, layoutParams)",
+                  "            rootLayout = root\n            lyricsView = view\n            params = layoutParams\n            position = FloatingLyricsStyleStore.getRelativePosition(context)\n            applyStyle(view)\n            calculateLayout(view, layoutParams, remap = true)\n            windowManager.addView(root, layoutParams)"
+              )
+              win_code = win_code.replace(
+                  "runCatching { windowManager.removeView(view) }",
+                  "runCatching { windowManager.removeView(rootLayout ?: view) }"
+              )
+              win_code = win_code.replace(
+                  "lyricsView = null\n        params = null",
+                  "rootLayout = null\n        lyricsView = null\n        params = null"
+              )
+              win_code = win_code.replace(
+                  "if (calculateLayout(view, p, remap = true)) windowManager.updateViewLayout(view, p)",
+                  "if (calculateLayout(view, p, remap = true)) windowManager.updateViewLayout(rootLayout ?: view, p)"
+              )
+              win_code = win_code.replace(
+                  "runCatching { windowManager.updateViewLayout(view, p) }",
+                  "runCatching { windowManager.updateViewLayout(rootLayout ?: view, p) }"
+              )
+              win_code = win_code.replace(
+                  "if (calculateLayout(view, p, remap)) windowManager.updateViewLayout(view, p)",
+                  "if (calculateLayout(view, p, remap)) windowManager.updateViewLayout(rootLayout ?: view, p)"
+              )
+              win_code = win_code.replace(
+                  "            p.flags = windowFlagsForCurrentBehavior()\n            windowManager.updateViewLayout(view, p)",
+                  "            p.flags = windowFlagsForCurrentBehavior()\n            windowManager.updateViewLayout(rootLayout ?: view, p)"
+              )
+              win_path.write_text(win_code)
+
+          # 5. Patch FloatingLyricsRenderer.kt (safe white highlight on active line)
+          ren_path = base / "app/src/main/java/com/andsi/airlyrics/floating/FloatingLyricsRenderer.kt"
+          ren_code = ren_path.read_text()
+
+          old_render_plain = """    private fun renderPlainTextAtIndex(index: Int): CharSequence {
+          return PlainLyricsDisplayFormatter.format(
+              plainLines = currentPlainLines,
+              currentIndex = index,
+              contentMode = contentModeProvider(),
+              lineMode = lineModeProvider(),
+              noTranslationText = noTranslationTextProvider()
+          )
+      }"""
+
+          new_render_plain = """    private fun renderPlainTextAtIndex(index: Int): CharSequence {
+          val formatted = PlainLyricsDisplayFormatter.format(
+              plainLines = currentPlainLines,
+              currentIndex = index,
+              contentMode = contentModeProvider(),
+              lineMode = lineModeProvider(),
+              noTranslationText = noTranslationTextProvider()
+          )
+          val currentLine = currentPlainLines.getOrNull(index) ?: return formatted
+          val activeText = if (contentModeProvider() == LyricsContentDisplayMode.TRANSLATION_ONLY) {
+              currentLine.translation?.trim().orEmpty()
+          } else {
+              currentLine.text.trim()
+          }
+          if (activeText.isEmpty()) return formatted
+
+          val span = SpannableString(formatted)
+          val startIdx = formatted.indexOf(activeText)
+          if (startIdx >= 0) {
+              span.setSpan(
+                  ForegroundColorSpan(Color.WHITE),
+                  startIdx,
+                  startIdx + activeText.length,
+                  Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+              )
+          }
+          return span
+      }"""
+
+          if old_render_plain in ren_code:
+              ren_code = ren_code.replace(old_render_plain, new_render_plain)
+              ren_path.write_text(ren_code)
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add app/
+          git commit -m "feat: add floating controls and line highlight"
+          git push origin HEAD
