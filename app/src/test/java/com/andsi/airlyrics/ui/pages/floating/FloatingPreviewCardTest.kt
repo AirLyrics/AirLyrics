@@ -34,6 +34,41 @@ class FloatingPreviewCardTest {
     }
 
     @Test
+    fun compactPreviewRetainsStyledFullTextAndDoesNotChangeSavedExpansion() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+            .also { activityController = it }.get()
+        val host = activity.graph.uiHost
+        host.windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(640f, 300f, 1f)
+        var writes = 0
+        val full = android.text.SpannableString("Original\nTranslation").apply {
+            setSpan(android.text.style.ForegroundColorSpan(Color.RED), 0, 8, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        val handle = host.createFloatingPreviewCard(
+            isExpanded = { true }, setExpanded = { writes++ }, style = { host.floatingStyle() },
+            lineDisplayMode = { LyricsLineDisplayMode.CURRENT_ONLY },
+            isWordByWordLyricsEnabled = { false }, plainPreviewText = { full }, wordByWordPreviewText = { full }
+        )
+        fun measure() {
+            handle.cardView.measure(android.view.View.MeasureSpec.makeMeasureSpec(500, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
+        }
+        measure()
+        assertEquals("Original", handle.lyricTextView.text.toString())
+        assertEquals(1, (handle.lyricTextView.text as android.text.Spanned).getSpans(0, 8, android.text.style.ForegroundColorSpan::class.java).size)
+        (handle.cardView as LinearLayout).getChildAt(1).performClick()
+        measure()
+        assertEquals(full.toString(), handle.lyricTextView.text.toString())
+        handle.cardView.getChildAt(1).performClick()
+        handle.updateText("Updated\nNew translation")
+        measure()
+        assertEquals("Updated", handle.lyricTextView.text.toString())
+        host.windowLayout = host.windowLayout.copy(height = 700f)
+        measure()
+        assertEquals("Updated\nNew translation", handle.lyricTextView.text.toString())
+        assertEquals(0, writes)
+    }
+
+    @Test
     fun toggleUsesAppChromeColorWhenPreviewTextIsWhiteInLightTheme() {
         val app = RuntimeEnvironment.getApplication()
         ThemeSettingsStore.setDark(app, false)
