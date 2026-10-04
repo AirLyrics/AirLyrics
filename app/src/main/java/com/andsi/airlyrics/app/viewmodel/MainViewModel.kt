@@ -65,6 +65,11 @@ internal class MainViewModel(
     private val floatingFontImporter: FloatingFontImportOperation,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel(), MainFloatingState {
+    private var lyricsReadSession: com.andsi.airlyrics.app.interaction.LyricsReadSession? = null
+    fun lyricsReads(context: Context): com.andsi.airlyrics.app.interaction.LyricsReadSession =
+        lyricsReadSession ?: com.andsi.airlyrics.app.interaction.LyricsReadSession(context, viewModelScope)
+            .also { lyricsReadSession = it }
+
     private var displayScopeChoices: Deferred<Result<List<com.andsi.airlyrics.app.workflow.DisplayScopeAppChoice>>>? = null
     fun loadDisplayScopeChoices(context: Context, newSession: Boolean = false): Deferred<Result<List<com.andsi.airlyrics.app.workflow.DisplayScopeAppChoice>>> {
         if (newSession) {
@@ -302,9 +307,10 @@ internal class MainViewModel(
         }
     }
 
-    fun searchOnlineLyricsForCurrentMedia() {
+    fun searchOnlineLyricsForCurrentMedia() = searchOnlineLyrics(lyricsController.getCurrentMediaInfo())
+
+    fun searchOnlineLyrics(media: CurrentMediaInfo?) {
         cancelOnlineLyricsSearch()
-        val media = lyricsController.getCurrentMediaInfo()
         if (media == null) {
             showMessage(R.string.ui_no_active_media_found)
             return
@@ -357,6 +363,10 @@ internal class MainViewModel(
 
     fun deleteLyricsForCurrentMedia(mode: LyricsStorage.DeleteMode) {
         val media = lyricsController.getCurrentMediaInfo() ?: return
+        deleteLyricsForTarget(media, mode)
+    }
+
+    fun deleteLyricsForTarget(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
         viewModelScope.launch {
             val outcome = withContext(ioDispatcher) {
                 lyricsController.deleteLyricsForCurrentMedia(media, mode)
@@ -388,16 +398,39 @@ internal class MainViewModel(
             deleted
         }
 
+    fun deleteAllSavedLyricsIfUnchanged(request: Bundle) {
+        viewModelScope.launch {
+            val result = withContext(ioDispatcher) {
+                LyricsStorage.withStorageLock {
+                    if (request.getString("process") != LyricsStorage.processGeneration ||
+                        request.getLong("revision") != LyricsStorage.currentRevision()) null
+                    else lyricsController.deleteAllSavedLyrics()
+                }
+            }
+            if (result == null) {
+                interactions.write("confirmation") {
+                    clear()
+                    putAll(request)
+                    putString("id", java.util.UUID.randomUUID().toString())
+                    putLong("revision", LyricsStorage.currentRevision())
+                    putString("process", LyricsStorage.processGeneration)
+                }
+                uiEffectChannel.trySend(MainUiEffect.RestoreOperationConfirmation)
+            } else showDeleteAllResult(result)
+        }
+    }
+
+    private fun showDeleteAllResult(result: LyricsStorage.DeleteAllSavedLyricsResult) {
+        when (result) {
+            LyricsStorage.DeleteAllSavedLyricsResult.DELETED -> showMessage(R.string.ui_all_saved_lyrics_deleted)
+            LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE -> showMessage(R.string.ui_no_saved_lyrics_to_delete)
+            LyricsStorage.DeleteAllSavedLyricsResult.FAILED -> showMessage(R.string.ui_delete_all_saved_lyrics_failed, error = true)
+        }
+    }
+
     fun deleteAllSavedLyrics() {
         viewModelScope.launch {
-            when (withContext(ioDispatcher) { lyricsController.deleteAllSavedLyrics() }) {
-                LyricsStorage.DeleteAllSavedLyricsResult.DELETED ->
-                    showMessage(R.string.ui_all_saved_lyrics_deleted)
-                LyricsStorage.DeleteAllSavedLyricsResult.NOTHING_TO_DELETE ->
-                    showMessage(R.string.ui_no_saved_lyrics_to_delete)
-                LyricsStorage.DeleteAllSavedLyricsResult.FAILED ->
-                    showMessage(R.string.ui_delete_all_saved_lyrics_failed, error = true)
-            }
+            showDeleteAllResult(withContext(ioDispatcher) { lyricsController.deleteAllSavedLyrics() })
         }
     }
 

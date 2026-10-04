@@ -14,6 +14,11 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
+import com.andsi.airlyrics.app.interaction.LyricsReadKind
+import com.andsi.airlyrics.app.interaction.LyricsReadSnapshot
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import com.andsi.airlyrics.ui.state.confirmationMedia
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.platform.AppNightMode
@@ -343,6 +348,56 @@ internal class MainActivityUiHost(
     override fun hasNotificationPermission(): Boolean = uiState.postNotificationsGranted
     override fun hasNotificationListenerAccess(): Boolean = uiState.notificationListenerGranted
 
+    private val readGenerations = mutableMapOf<LyricsReadKind, Long>()
+
+    private fun loadLyrics(kind: LyricsReadKind, force: Boolean, deliver: (LyricsReadSnapshot) -> Unit) {
+        val generation = (readGenerations[kind] ?: 0L) + 1
+        readGenerations[kind] = generation
+        val uiGeneration = currentUiGeneration()
+        val task = graph.viewModel.lyricsReads(applicationContext).load(kind, graph.viewModel.currentMediaInfo(), force = force)
+        activity.lifecycleScope.launch {
+            val result = task.await()
+            runOnStartedUi(uiGeneration) {
+                if (readGenerations[kind] == generation) {
+                    val snapshot = result.getOrElse {
+                        showMessage(R.string.ui_read_failed)
+                        LyricsReadSnapshot(null, null, wordByWord = false, wordEnabled = false, 0L, null, emptyList())
+                    }
+                    deliver(snapshot)
+                }
+            }
+        }
+    }
+
+    override fun loadCurrentLyrics(force: Boolean, deliver: (CurrentLyricsUiState) -> Unit) =
+        loadLyrics(LyricsReadKind.CURRENT, force) { data ->
+            val info = data.info
+            deliver(CurrentLyricsUiState(data.media?.toUiInfo(), info?.let { localizedLocalPlainLyricsSource(it) },
+                info?.friendlyTitle, info?.plainSource == LyricsStorage.SOURCE_DOWNLOADED, info != null,
+                info != null && info.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
+                data.wordByWord, data.wordEnabled, data.offset, data.media))
+        }
+
+    override fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState) -> Unit) =
+        loadLyrics(LyricsReadKind.RECENT, force) { data ->
+            deliver(RecentLyricsUiState(data.current?.let(::toUiItem), data.items.map(::toUiItem), data.media?.toUiInfo()))
+        }
+
+    override fun loadSavedLyrics(force: Boolean, deliver: (SavedLyricsUiState) -> Unit) =
+        loadLyrics(LyricsReadKind.SAVED, force) { data -> deliver(SavedLyricsUiState(data.items.map(::toUiItem))) }
+
+    override fun executeConfirmedOperation(request: android.os.Bundle) {
+        when (request.getString("operation")) {
+            "DELETE_ALL" -> graph.viewModel.deleteAllSavedLyricsIfUnchanged(request)
+            "DELETE_CURRENT" -> request.confirmationMedia()?.let { media ->
+                LyricsStorage.DeleteMode.entries.find { it.name == request.getString("mode") }?.let { mode ->
+                    graph.viewModel.deleteLyricsForTarget(media, mode)
+                }
+            }
+            "SEARCH" -> graph.viewModel.searchOnlineLyrics(request.confirmationMedia())
+        }
+    }
+
     override fun currentLyricsState(): CurrentLyricsUiState {
         val media = graph.viewModel.currentMediaInfo()
         val offsetMs = media?.let { LyricsOffsetStore.getOffsetMs(this, it.toSongIdentity()) } ?: 0L
@@ -372,7 +427,8 @@ internal class MainActivityUiHost(
                 localInfo != null && localInfo.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
             hasLocalWordByWordLyrics = hasLocalWordByWordLyrics,
             wordByWordLyricsEnabled = LyricsSettingsStore.isWordByWordLyricsEnabled(this),
-            offsetMs = offsetMs
+            offsetMs = offsetMs,
+            operationTarget = media
         )
     }
 

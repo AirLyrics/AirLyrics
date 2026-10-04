@@ -50,5 +50,11 @@ internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity
     )
 
 
-    return scroll(activity, container)
+    val categories = (1 until container.childCount).map(container::getChildAt)
+    categories.forEach(container::removeView)
+    container.addView(AdaptiveGridLayout(activity, 2, dp(24), dp(12),
+        columnPolicy = GridColumnPolicy.Width(360)).apply {
+        categories.forEach { addView(it) }
+    })
+    return scroll(activity, container, maxWidthDp = 1200)
 }

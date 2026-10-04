@@ -22,8 +22,6 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 
 private const val MAX_PAGE_HEIGHT_DP = 360
-private const val MIN_PAGE_HEIGHT_DP = 120
-private const val PAGE_HEIGHT_RATIO = 0.42f
 
 private enum class LyricsFormatGuidePage {
     LRC,
@@ -42,16 +40,15 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
         setTextColor(colorTextMuted)
         setLineSpacing(dp(AirUiTokens.Space.Xs).toFloat(), 1f)
     }
-    val maxPageHeight = minOf(
-        dp(MAX_PAGE_HEIGHT_DP),
-        (resources.displayMetrics.heightPixels * PAGE_HEIGHT_RATIO).toInt()
-            .coerceAtLeast(dp(MIN_PAGE_HEIGHT_DP))
-    )
     val pageScroll = object : ScrollView(this) {
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
             super.onMeasure(
                 widthMeasureSpec,
-                MeasureSpec.makeMeasureSpec(maxPageHeight, MeasureSpec.AT_MOST)
+                MeasureSpec.makeMeasureSpec(
+                    if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED) dp(MAX_PAGE_HEIGHT_DP)
+                    else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(dp(MAX_PAGE_HEIGHT_DP)),
+                    MeasureSpec.AT_MOST
+                )
             )
         }
     }.apply {
@@ -70,7 +67,7 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
         }
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
+            dp(MAX_PAGE_HEIGHT_DP), 1f
         ).apply {
             setMargins(0, dp(AirUiTokens.Space.Xl), 0, 0)
         }

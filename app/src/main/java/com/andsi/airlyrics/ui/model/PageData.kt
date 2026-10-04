@@ -27,7 +27,8 @@ internal data class CurrentLyricsUiState(
     val canRemoveAllLyrics: Boolean,
     val hasLocalWordByWordLyrics: Boolean,
     val wordByWordLyricsEnabled: Boolean,
-    val offsetMs: Long
+    val offsetMs: Long,
+    val operationTarget: com.andsi.airlyrics.media.model.CurrentMediaInfo? = null
 )
 
 internal data class LocalLyricsUiItem(

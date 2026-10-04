@@ -19,10 +19,10 @@ import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.settingRow
-import com.andsi.airlyrics.ui.components.showAirConfirmDialog
-import com.andsi.airlyrics.ui.components.showAirInfoDialog
+import com.andsi.airlyrics.ui.state.confirmOperation
+import com.andsi.airlyrics.ui.state.ConfirmationOperation
+import com.andsi.airlyrics.ui.state.showPersistentInfo
 import com.andsi.airlyrics.ui.components.smallHint
-import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
 import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -33,7 +33,6 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
-private val currentLyricsLoadRunner = LatestUiTaskRunner()
 
 internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsCard = with(activity) {
     val body = LinearLayout(this).apply {
@@ -83,13 +82,14 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
         })
 
         fun confirmDeleteLyrics(label: String, mode: LyricsDeleteMode, message: String? = null) {
-            activity.showAirConfirmDialog(
+            activity.confirmOperation(
+                operation = ConfirmationOperation.DELETE_CURRENT,
+                media = state.operationTarget,
+                mode = mode.name,
                 title = label,
                 message = message?.let { media.displayText + "\n\n" + it } ?: media.displayText,
                 positiveText = getString(R.string.ui_remove)
-            ) {
-                uiActions.deleteLyricsForCurrentMedia(mode)
-            }
+            )
         }
 
         if (state.hasPlainLyrics && !state.hasLocalWordByWordLyrics) {
@@ -123,13 +123,13 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
 
         if (!state.hasLocalWordByWordLyrics) {
             body.addView(actionButton(activity, getString(R.string.ui_search_online_again)) {
-                activity.showAirConfirmDialog(
+                activity.confirmOperation(
+                    operation = ConfirmationOperation.SEARCH,
+                    media = state.operationTarget,
                     title = getString(R.string.ui_search_online_again_confirm),
                     message = getString(R.string.ui_search_online_replace_cache_msg),
                     positiveText = getString(R.string.ui_search)
-                ) {
-                    uiActions.searchOnlineLyricsForCurrentMedia()
-                }
+                )
             })
         }
     }
@@ -145,10 +145,9 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             body.addView(normalText(activity, getString(R.string.ui_loading)))
         }
 
-        currentLyricsLoadRunner.submit(
-            runtime = activity,
-            load = { currentLyricsState() }
-        ) { state ->
+        body.setTag(R.id.interaction_loading, true)
+        loadCurrentLyrics(force = showRefreshFeedback) { state ->
+            body.setTag(R.id.interaction_loading, false)
             render(state)
             if (showRefreshFeedback) {
                 playLocalRefreshFeedback(activity, target = body, feedback = feedback, message = getString(R.string.ui_refreshed))
@@ -209,9 +208,9 @@ private fun wordByWordStatusRow(activity: MainUiHost, @StringRes valueRes: Int):
         )
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {
-            activity.showAirInfoDialog(
-                title = getString(R.string.ui_local_word_by_word_lyrics_title),
-                message = getString(R.string.ui_word_by_word_lyrics_local_only)
+            activity.showPersistentInfo(
+                titleRes = R.string.ui_local_word_by_word_lyrics_title,
+                textRes = R.string.ui_word_by_word_lyrics_local_only
             )
         }
     }

@@ -19,7 +19,7 @@ import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
-import com.andsi.airlyrics.ui.components.showAirInfoDialog
+import com.andsi.airlyrics.ui.state.showPersistentInfo
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -32,7 +32,8 @@ private data class PermissionEntry(
     val description: String,
     val status: String,
     val granted: Boolean,
-    val purpose: String? = null,
+    val purposeRes: Int? = null,
+    val helpTitleRes: Int = 0,
     val settingsAvailable: Boolean = true,
     val openSettings: () -> Unit
 )
@@ -66,7 +67,8 @@ internal fun MainUiHost.systemPermissionCard(): View {
             description = getString(R.string.ui_notifications_description),
             status = getString(if (notificationsGranted) R.string.ui_on else R.string.ui_off),
             granted = notificationsGranted,
-            purpose = getString(R.string.ui_notifications_usage_hint),
+            purposeRes = R.string.ui_notifications_usage_hint,
+            helpTitleRes = R.string.ui_notify,
             openSettings = uiActions.requestNotificationPermission
         ),
         PermissionEntry(
@@ -78,7 +80,8 @@ internal fun MainUiHost.systemPermissionCard(): View {
                 getString(R.string.ui_android_10_required)
             },
             granted = usageAccessGranted,
-            purpose = getString(R.string.ui_display_scope_usage_hint),
+            purposeRes = R.string.ui_display_scope_usage_hint,
+            helpTitleRes = R.string.ui_usage_access,
             settingsAvailable = usageAccessAvailable,
             openSettings = uiActions.openUsageAccessSettings
         )
@@ -121,7 +124,7 @@ private fun permissionEntryRow(
     activity: MainUiHost,
     entry: PermissionEntry
 ): View = with(activity) {
-    val helpButton = entry.purpose?.let { permissionHelpButton(activity, entry.title, it) }
+    val helpButton = entry.purposeRes?.let { permissionHelpButton(activity, entry.title, entry.helpTitleRes, it) }
     val title = TextView(this).apply {
         text = entry.title
         textSize = AirUiTokens.TextSize.Button
@@ -171,7 +174,8 @@ private fun permissionEntryRow(
 private fun permissionHelpButton(
     activity: MainUiHost,
     title: String,
-    purpose: String
+    titleRes: Int,
+    purposeRes: Int
 ): View = with(activity) {
     return FrameLayout(this).apply {
         contentDescription = getString(R.string.ui_permission_purpose, title)
@@ -185,7 +189,7 @@ private fun permissionHelpButton(
         }
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {
-            showAirInfoDialog(title = title, message = purpose)
+            showPersistentInfo(titleRes, purposeRes)
             playTinyPulse(this)
         }
 

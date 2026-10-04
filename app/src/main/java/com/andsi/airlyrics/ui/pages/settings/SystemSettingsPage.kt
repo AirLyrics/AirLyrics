@@ -1,5 +1,9 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import com.andsi.airlyrics.ui.state.rememberAuxiliaryDialog
+import com.andsi.airlyrics.ui.state.isAuxiliaryDialogShowing
+import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
+
 import com.andsi.airlyrics.R
 
 import android.graphics.Typeface
@@ -117,13 +121,24 @@ private fun languageChoiceCard(activity: MainUiHost): View = with(activity) lang
     }
 }
 
-private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLanguageDialog@ {
+internal fun showLanguageDialog(activity: MainUiHost) = with(activity) showLanguageDialog@ {
+    if (isAuxiliaryDialogShowing("language")) return@showLanguageDialog
     val languageState = languageSettingsState()
+    rememberAuxiliaryDialog("language")
+    var selectedMode: String? = null
     lateinit var dialog: android.app.Dialog
     dialog = showAirDialog(
         title = getString(R.string.ui_language),
         message = null,
         positiveText = null,
+        onUserDismiss = { forgetAuxiliaryDialog("language") },
+        scrollStateKey = "aux.language.scroll",
+        afterUserDismiss = {
+            selectedMode?.let { mode ->
+                setLanguageMode(mode)
+                activity.reloadFloatingLyricsAfterLanguageChanged()
+            }
+        },
         body = {
             val selectMode: (String) -> Unit = { mode ->
                 if (mode == languageState.currentMode) {
@@ -131,10 +146,7 @@ private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLangua
                 } else {
                     // Applying an app locale recreates the Activity. Let the dialog
                     // finish leaving the old window before triggering recreation.
-                    dialog.setOnDismissListener {
-                        setLanguageMode(mode)
-                        activity.reloadFloatingLyricsAfterLanguageChanged()
-                    }
+                    selectedMode = mode
                     dialog.dismiss()
                 }
             }
@@ -143,6 +155,7 @@ private fun showLanguageDialog(activity: MainUiHost) = with(activity) showLangua
             }
         }
     )
+    auxiliaryDialogs["language"] = dialog
 }
 
 private fun LinearLayout.addLanguageOption(

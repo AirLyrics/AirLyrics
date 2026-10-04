@@ -27,8 +27,8 @@ internal fun View.findInteractionScroll(): View? {
 
 // The touch observer returns false; the scroll view retains its normal click handling.
 @SuppressLint("ClickableViewAccessibility")
-internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String) {
-    val group = scroll as? ViewGroup ?: return
+internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String, onInteraction: () -> Unit = {}): () -> Unit {
+    val group = scroll as? ViewGroup ?: return {}
     val density = resources.displayMetrics.density
     val saved = interactions.read(key)
     var restoring = true
@@ -52,6 +52,7 @@ internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String) {
         if (restoring || !scroll.isAttachedToWindow) return
         if (key.startsWith("panel.") && interactions.panel == null) return
         if (key.startsWith("formatGuide.") && interactions.read("formatGuide") == null) return
+        if (key.startsWith("aux.") && interactions.read(key.substringBeforeLast('.')) == null) return
         val content = group.getChildAt(0) ?: return
         val candidates = anchors(content).filter { it.height > 0 && top(it) <= scroll.scrollY }
         val anchor = candidates.maxByOrNull { top(it) }
@@ -61,7 +62,10 @@ internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String) {
             putFloat("offset", (scroll.scrollY - (anchor?.let(::top) ?: 0)) / density)
         }
     }
-    scroll.setOnScrollChangeListener { _, _, _, _, _ -> capture() }
+    scroll.setOnScrollChangeListener { _, _, _, _, _ ->
+        if (!restoring) onInteraction()
+        capture()
+    }
     interactionUi.snapshot(scroll, ::capture)
     val restoreListener = ViewTreeObserver.OnGlobalLayoutListener {
         if (!restoring || isLoading(group)) return@OnGlobalLayoutListener
@@ -77,11 +81,19 @@ internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String) {
         if (event.actionMasked == MotionEvent.ACTION_DOWN) restoring = false
         false
     }
-    scroll.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+    val detachListener = object : View.OnAttachStateChangeListener {
         override fun onViewAttachedToWindow(v: View) = Unit
         override fun onViewDetachedFromWindow(v: View) {
             interactionUi.forgetSnapshot(scroll)
             scroll.viewTreeObserver.removeOnGlobalLayoutListener(restoreListener)
         }
-    })
+    }
+    scroll.addOnAttachStateChangeListener(detachListener)
+    return {
+        interactionUi.forgetSnapshot(scroll)
+        scroll.viewTreeObserver.removeOnGlobalLayoutListener(restoreListener)
+        scroll.removeOnAttachStateChangeListener(detachListener)
+        scroll.setOnScrollChangeListener(null)
+        scroll.setOnTouchListener(null)
+    }
 }

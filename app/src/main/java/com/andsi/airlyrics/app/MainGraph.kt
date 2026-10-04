@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.ui.state.restoreOperationConfirmation
+import com.andsi.airlyrics.ui.state.restoreAuxiliaryDialogs
 import com.andsi.airlyrics.app.host.observeEditorSession
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -173,8 +175,11 @@ internal class MainGraph(
     }
 
     internal fun restoreInteractionWindows() {
+        lyricsWorkflow.restorePendingOverwriteConfirmation()
         if (viewModel.interactions.read("appPicker") != null) displayScopeWorkflow.showAppPicker()
         lyricsWorkflow.restoreInteractionDialogs()
+        uiHost.restoreAuxiliaryDialogs()
+        uiHost.restoreOperationConfirmation()
     }
 
     fun onStart() {
@@ -509,6 +514,7 @@ internal class MainGraph(
     private fun handleUiEffect(effect: MainUiEffect) {
         if (!canRenderUi()) return
         when (effect) {
+            MainUiEffect.RestoreOperationConfirmation -> uiHost.restoreOperationConfirmation()
             MainUiEffect.RequestOverlayPermission -> requestOverlayPermission()
             MainUiEffect.RequestNotificationPermission -> requestNotificationPermissionIfNeeded()
             MainUiEffect.OpenNotificationListenerSettings ->

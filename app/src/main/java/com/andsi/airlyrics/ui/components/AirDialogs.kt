@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.components
 
+import com.andsi.airlyrics.ui.state.bindInteractionScroll
+import com.andsi.airlyrics.ui.layout.WindowLayoutSpec
 import com.andsi.airlyrics.R
 
 import android.app.Dialog
@@ -48,17 +50,28 @@ private class AirAnimatedDialog(
 ) : Dialog(context, themeResId) {
     var animatedContent: View? = null
     var onUserDismiss: (() -> Unit)? = null
+    var afterUserDismiss: (() -> Unit)? = null
+    private var userDismissed = false
 
     private val exitTranslationYPx = DIALOG_EXIT_TRANSLATION_Y_DP * context.resources.displayMetrics.density
     private var dismissing = false
 
     fun dismissImmediately() {
         animatedContent?.animate()?.cancel()
+        afterUserDismiss = null
         super.dismiss()
     }
 
+    fun notifyDismissed() {
+        if (userDismissed) afterUserDismiss?.invoke()
+        afterUserDismiss = null
+    }
+
     override fun dismiss() {
-        if (!dismissing) onUserDismiss?.invoke()
+        if (!dismissing) {
+            userDismissed = true
+            onUserDismiss?.invoke()
+        }
         val content = animatedContent
         if (dismissing) return
         if (content == null || !isShowing) {
@@ -126,6 +139,9 @@ internal fun MainUiHost.showAirDialog(
     headerAction: (LinearLayout.() -> Unit)? = null,
     body: (LinearLayout.() -> Unit)? = null,
     useOuterScroll: Boolean = true,
+    maxWidthDp: Int = if (useOuterScroll) WindowLayoutSpec.DIALOG_MAX else WindowLayoutSpec.LARGE_DIALOG_MAX,
+    afterUserDismiss: () -> Unit = {},
+    scrollStateKey: String? = null,
     onNegative: () -> Unit = {},
     onUserDismiss: () -> Unit = {},
     onPositive: () -> Unit = {}
@@ -227,6 +243,7 @@ internal fun MainUiHost.showAirDialog(
         )
         addView(panel)
     }
+    scrollStateKey?.let { bindInteractionScroll(animatedContent, it) }
     animatedContent.apply {
         alpha = 0f
         scaleX = DIALOG_ENTER_START_SCALE
@@ -234,20 +251,29 @@ internal fun MainUiHost.showAirDialog(
         translationY = dp(DIALOG_ENTER_TRANSLATION_Y_DP).toFloat()
     }
 
-    val rootPadding = dp(AirUiTokens.Space.CardH)
-    val root = FrameLayout(this).apply {
-        setPadding(rootPadding, rootPadding, rootPadding, rootPadding)
+    var safeLeft = 0
+    var safeTop = 0
+    var safeRight = 0
+    var safeBottom = 0
+    val root = object : FrameLayout(this) {
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            val width = MeasureSpec.getSize(widthMeasureSpec)
+            val rootPadding = dp(if ((width - safeLeft - safeRight) / resources.displayMetrics.density < 600f) 12 else 24)
+            setPadding(rootPadding + safeLeft, rootPadding + safeTop, rootPadding + safeRight, rootPadding + safeBottom)
+            val available = (width - paddingLeft - paddingRight).coerceAtLeast(0)
+            animatedContent.layoutParams.width = available.coerceAtMost(dp(maxWidthDp))
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        }
+    }.apply {
         ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
             val safeInsets = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.ime()
             )
-            val topInset = view.remainingTopSystemInset(safeInsets.top)
-            view.setPadding(
-                rootPadding + safeInsets.left,
-                rootPadding + topInset,
-                rootPadding + safeInsets.right,
-                rootPadding + safeInsets.bottom
-            )
+            safeLeft = safeInsets.left
+            safeTop = view.remainingTopSystemInset(safeInsets.top)
+            safeRight = safeInsets.right
+            safeBottom = safeInsets.bottom
+            view.requestLayout()
             insets
         }
         addView(animatedContent)
@@ -277,12 +303,14 @@ internal fun MainUiHost.showAirDialog(
                 .start()
         }
     }
+    dialog.afterUserDismiss = afterUserDismiss
     dialog.onUserDismiss = {
         if (!interactionUi.releasing && !activity.isChangingConfigurations && !activity.isDestroyed) onUserDismiss()
     }
     interactionUi.register(dialog, dialog::dismissImmediately)
     dialog.setOnDismissListener {
         interactionUi.forget(dialog)
+        dialog.notifyDismissed()
     }
     dialog.show()
     return dialog

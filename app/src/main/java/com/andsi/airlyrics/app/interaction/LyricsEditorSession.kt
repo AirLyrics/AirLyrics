@@ -9,8 +9,8 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.state.MainInteractionState
-import java.io.File
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,7 +40,7 @@ internal class LyricsEditorSession(
     context: Context,
     private val interactions: MainInteractionState,
     private val scope: CoroutineScope,
-    private val drafts: LyricsDraftStore = LyricsDraftStore(File(context.filesDir, "editor-drafts"))
+    private val drafts: LyricsDraftStore = LyricsDraftStore.forSession(context, interactions, "editor-drafts")
 ) {
     private val context = context.applicationContext
     private val current = MutableStateFlow<EditorSession?>(null)
@@ -99,7 +99,7 @@ internal class LyricsEditorSession(
         saveMetadata(next)
         if (text != old.text) {
             pendingWrite?.cancel()
-            pendingWrite = scope.launch { delay(300); flush() }
+            pendingWrite = scope.launch { delay(300.milliseconds); flush() }
         }
     }
 
@@ -121,6 +121,7 @@ internal class LyricsEditorSession(
         loading?.cancel(); pendingWrite?.cancel()
         interactions.read("editor")?.getString("id")?.let(drafts::delete)
         interactions.remove("editor")
+        if (interactions.read("confirmation")?.getString("operation") == "DELETE_EDITOR") interactions.remove("confirmation")
         current.value = null
     }
 

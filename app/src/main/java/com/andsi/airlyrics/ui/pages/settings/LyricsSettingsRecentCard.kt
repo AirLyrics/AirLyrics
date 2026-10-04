@@ -10,7 +10,6 @@ import androidx.core.view.isVisible
 import com.andsi.airlyrics.ui.components.adaptiveHeader
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
@@ -28,7 +27,6 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-private val recentLyricsLoadRunner = LatestUiTaskRunner()
 
 internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCard = with(activity) {
     val listBody = LinearLayout(this).apply {
@@ -174,10 +172,9 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
             listBody.addView(normalText(activity, getString(R.string.ui_loading)))
         }
 
-        recentLyricsLoadRunner.submit(
-            runtime = activity,
-            load = { recentLyricsState(limit = 8) }
-        ) { state ->
+        listBody.setTag(R.id.interaction_loading, true)
+        loadRecentLyrics(force = showRefreshFeedback) { state ->
+            listBody.setTag(R.id.interaction_loading, false)
             renderLyricsList(state.currentItem, state.recentLyrics, state.media, showRefreshFeedback)
         }
     }

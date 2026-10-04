@@ -10,6 +10,9 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.ui.state.rememberAuxiliaryDialog
+import com.andsi.airlyrics.ui.state.isAuxiliaryDialogShowing
+import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.bigText
@@ -171,9 +174,13 @@ private fun MainUiHost.showUpdateLogDialog() {
     )
 }
 
-private fun MainUiHost.showFullUpdateLogDialog() {
-    showAirDialog(
+internal fun MainUiHost.showFullUpdateLogDialog() {
+    if (isAuxiliaryDialogShowing("changelog")) return
+    rememberAuxiliaryDialog("changelog")
+    auxiliaryDialogs["changelog"] = showAirDialog(
         title = getString(R.string.ui_changelog),
+        scrollStateKey = "aux.changelog.scroll",
+        onUserDismiss = { forgetAuxiliaryDialog("changelog") },
         message = null,
         positiveText = getString(R.string.ui_ok),
         body = {

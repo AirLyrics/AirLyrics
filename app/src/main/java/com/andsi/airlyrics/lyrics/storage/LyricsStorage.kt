@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong
  * paths, files, index matching, song identity, listing, editing, and word-by-word codecs.
  */
 object LyricsStorage {
+    internal val processGeneration: String = java.util.UUID.randomUUID().toString()
     private val storageLock = Any()
     private val contentRevision = AtomicLong(0L)
 

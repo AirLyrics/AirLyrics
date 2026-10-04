@@ -27,7 +27,6 @@ import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.pageContainer
-import com.andsi.airlyrics.ui.components.scroll
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.pages.floating.sections.addAnimationSection
@@ -50,7 +49,6 @@ internal class FloatingPageScope(
             host.dp(FloatingPageTokens.PAGE_PADDING_BOTTOM_DP)
         )
     }
-    private val pageFrame = FrameLayout(host)
 
     internal var openingPanelId: FloatingPanelId? = null
     internal var restoringPanel = false
@@ -86,6 +84,7 @@ internal class FloatingPageScope(
             wordByWordPreviewText = { wordByWordPreviewText(style()) }
         )
         previewHandle = createdPreviewHandle
+        createdPreviewHandle.cardView.setTag(R.id.interaction_anchor, "floating.preview")
         root.addView(createdPreviewHandle.cardView)
 
         val list = pageContainer(host).apply {
@@ -96,27 +95,10 @@ internal class FloatingPageScope(
             addBehaviorSection(this)
         }
 
-        val contentScroll = scroll(host, list)
-        pageFrame.addView(contentScroll.apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        })
-        root.addView(pageFrame.apply {
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        })
-
-        rootFrame.addView(root.apply {
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        })
+        list.setTag(R.id.interaction_anchor, "floating.settings")
+        root.addView(list)
+        rootFrame.addView(com.andsi.airlyrics.ui.layout.ResponsivePage(host, root, setOf(0), "scroll.FLOATING.root"),
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         focusOverlay = FrameLayout(host).apply {
             visibility = View.GONE
@@ -438,12 +420,12 @@ internal class FloatingPageScope(
 
     private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {
         previewHandle?.updateLineMode?.invoke(lineDisplayMode())
-        previewHandle?.lyricTextView?.apply {
-            text = if (wordByWordLyricsEnabled()) {
+        previewHandle?.updateText?.invoke(if (wordByWordLyricsEnabled()) {
                 wordByWordPreviewText(latestStyle)
             } else {
                 previewLyricsText(latestStyle)
-            }
+            })
+        previewHandle?.lyricTextView?.apply {
             with(host) {
                 applyFloatingPreviewStyle(latestStyle)
             }

@@ -6,8 +6,6 @@ import com.andsi.airlyrics.ui.state.markInteractionAnchors
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isNotEmpty
@@ -15,13 +13,11 @@ import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.ui.components.animatePageEnter
 import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.navigation.Page
-import com.andsi.airlyrics.ui.navigation.createBottomTabs
 import com.andsi.airlyrics.ui.navigation.updateTabs
 import com.andsi.airlyrics.ui.pages.floating.createFloatingPage
 import com.andsi.airlyrics.ui.pages.media.createMediaPage
 import com.andsi.airlyrics.ui.pages.settings.createSettingsPage
 import com.andsi.airlyrics.ui.theme.colorBackground
-import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 /** Renderer for the existing handwritten main UI. */
 internal class MainHandRenderer(
@@ -36,93 +32,18 @@ internal class MainHandRenderer(
         get() = graph.state
 
     fun createMainView(): View {
-        val contentColumn = LinearLayout(host).apply {
-            orientation = LinearLayout.VERTICAL
+        val content = FrameLayout(host)
+        host.contentContainer = content
+        graph.viewRefs.feedbackAnchor = content
+        return com.andsi.airlyrics.ui.layout.AdaptiveWindowLayout(host, content).apply {
             setBackgroundColor(host.colorBackground)
-            layoutParams = CoordinatorLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
-
-        val topSafeArea = View(host).apply {
-            setBackgroundColor(host.colorBackground)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0
-            )
-        }
-
-        host.contentContainer = FrameLayout(host).apply {
-            setBackgroundColor(host.colorBackground)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        }
-
-        val bottomTabs = createBottomTabs(host)
-        graph.viewRefs.feedbackAnchor = bottomTabs
-
-        contentColumn.addView(topSafeArea)
-        contentColumn.addView(host.contentContainer)
-        contentColumn.addView(bottomTabs)
-
-        val root = CoordinatorLayout(host).apply {
-            setBackgroundColor(host.colorBackground)
-            addView(contentColumn)
-        }
-
-        applySystemBarInsets(root, topSafeArea, bottomTabs)
-
-        return root
-    }
-
-    private fun applySystemBarInsets(
-        root: View,
-        topSafeArea: View,
-        bottomTabs: View
-    ) {
-        val baseBottomTabsPaddingLeft = bottomTabs.paddingLeft
-        val baseBottomTabsPaddingTop = bottomTabs.paddingTop
-        val baseBottomTabsPaddingRight = bottomTabs.paddingRight
-        val baseBottomTabsPaddingBottom = bottomTabs.paddingBottom
-
-        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
-            val safeInsets = insets.getInsets(
-                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
-            )
-            val topInset = view.remainingTopSystemInset(safeInsets.top)
-
-            topSafeArea.layoutParams = (topSafeArea.layoutParams as LinearLayout.LayoutParams).apply {
-                height = topInset
+            ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+                val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+                val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+                view.setPadding(safe.left, view.remainingTopSystemInset(safe.top), safe.right, maxOf(safe.bottom, ime.bottom))
+                insets
             }
-
-            host.contentContainer?.setPadding(
-                safeInsets.left,
-                0,
-                safeInsets.right,
-                0
-            )
-
-            bottomTabs.layoutParams = (bottomTabs.layoutParams as LinearLayout.LayoutParams).apply {
-                height = ViewGroup.LayoutParams.WRAP_CONTENT
-            }
-
-            bottomTabs.minimumHeight = host.dp(AirUiTokens.Layout.BottomBarHeight) + safeInsets.bottom
-            bottomTabs.setPadding(
-                baseBottomTabsPaddingLeft + safeInsets.left,
-                baseBottomTabsPaddingTop,
-                baseBottomTabsPaddingRight + safeInsets.right,
-                baseBottomTabsPaddingBottom + safeInsets.bottom
-            )
-
-            insets
-        }
-
-        root.post {
-            ViewCompat.requestApplyInsets(root)
+            post { ViewCompat.requestApplyInsets(this) }
         }
     }
 
@@ -160,7 +81,7 @@ internal class MainHandRenderer(
 
         val scrollKey = "scroll.${state.currentPage.name}.${if (state.currentPage == Page.SETTINGS) state.settingsSubPage.name else "root"}"
         pageView.markInteractionAnchors(scrollKey)
-        pageView.findInteractionScroll()?.let { host.bindInteractionScroll(it, scrollKey) }
+        if (!pageView.hasResponsivePage()) pageView.findInteractionScroll()?.let { host.bindInteractionScroll(it, scrollKey) }
         container.addView(pageView)
         if (shouldAnimate) animatePageEnter(host, pageView, slideFromRight)
         renderedPage = state.currentPage
@@ -195,13 +116,22 @@ internal class MainHandRenderer(
     override fun recreateMainView() {
         rememberRenderedPageScroll()
         graph.feedback.dismiss()
+        host.auxiliaryRestoreJob?.cancel()
+        host.interactionUi.releaseWindows()
+        host.auxiliaryDialogs.clear()
+        host.activeConfirmationId = null
         graph.uiHost.applySystemBarsTheme()
         graph.activity.setContentView(createMainView())
         graph.uiHost.applySystemBarsTheme()
         rebuildCurrentPage()
+        host.windowGeneration.value += 1L
+        graph.restoreInteractionWindows()
     }
 
     private fun rememberRenderedPageScroll() {
         host.interactionUi.capture()
     }
 }
+
+private fun View.hasResponsivePage(): Boolean = this is com.andsi.airlyrics.ui.layout.ResponsivePage ||
+    (this is ViewGroup && (0 until childCount).any { getChildAt(it).hasResponsivePage() })

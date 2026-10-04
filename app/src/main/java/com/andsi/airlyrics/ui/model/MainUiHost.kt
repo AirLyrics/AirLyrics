@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.ui.model
 
 import androidx.lifecycle.lifecycleScope
+import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
 import android.content.ContextWrapper
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.ui.navigation.Page
@@ -22,10 +23,27 @@ internal abstract class MainUiHost(
     OptionControlsHost,
     FloatingUiHost,
     SettingsUiHost {
+    private val currentLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
+    private val recentLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
+    private val savedLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
+    open fun loadCurrentLyrics(force: Boolean, deliver: (CurrentLyricsUiState) -> Unit) =
+        currentLoad.submit(this, { currentLyricsState() }, deliver)
+    open fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState) -> Unit) =
+        recentLoad.submit(this, { recentLyricsState(8) }, deliver)
+    open fun loadSavedLyrics(force: Boolean, deliver: (SavedLyricsUiState) -> Unit) =
+        savedLoad.submit(this, { savedLyricsState() }, deliver)
+
+    val readerDrafts by lazy { com.andsi.airlyrics.app.interaction.LyricsDraftStore.forSession(applicationContext, interactions, "reader-drafts") }
+    val auxiliaryDialogs = mutableMapOf<String, android.app.Dialog>()
+    var auxiliaryRestoreJob: kotlinx.coroutines.Job? = null
+    var activeConfirmationId: String? = null
+    open fun executeConfirmedOperation(request: android.os.Bundle) = Unit
+    var windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(0f, 0f, 1f)
     open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
     open val editorSession by lazy {
         com.andsi.airlyrics.app.interaction.LyricsEditorSession(applicationContext, interactions, activity.lifecycleScope)
     }
+    val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
     var editorObserverInstalled = false
     var editorChangeCallback: ((LocalLyricsUiChange) -> Unit)? = null
     val interactionUi = com.andsi.airlyrics.ui.state.InteractionUiRegistry()
@@ -35,8 +53,20 @@ internal abstract class MainUiHost(
 
     init {
         activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) { interactionUi.capture(); if (editorObserverInstalled) editorSession.flush() }
-            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) { interactionUi.destroy(); editorChangeCallback = null; if (activity.isFinishing && editorObserverInstalled) editorSession.cancel() }
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                interactionUi.capture()
+                if (editorObserverInstalled) editorSession.flush()
+            }
+            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+                auxiliaryRestoreJob?.cancel()
+                interactionUi.destroy()
+                auxiliaryDialogs.clear()
+                editorChangeCallback = null
+                if (activity.isFinishing) {
+                    interactions.read("aux.order")?.getStringArrayList("items")?.toList()?.forEach { forgetAuxiliaryDialog(it) }
+                    if (editorObserverInstalled) editorSession.cancel()
+                }
+            }
         })
     }
 

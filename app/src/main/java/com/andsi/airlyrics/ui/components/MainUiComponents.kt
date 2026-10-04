@@ -37,10 +37,20 @@ internal fun pageContainer(activity: MainUiHost, animateChanges: Boolean = true)
     }
 }
 
-internal fun scroll(activity: MainUiHost, child: View, animateChildren: Boolean = true): ScrollView  = with(activity) scroll@ {
+internal fun scroll(activity: MainUiHost, child: View, animateChildren: Boolean = true, maxWidthDp: Int = 760): ScrollView  = with(activity) scroll@ {
     return ScrollView(this).apply {
         isFillViewport = false
-        addView(child)
+        addView(object : android.widget.FrameLayout(activity) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                val width = MeasureSpec.getSize(widthMeasureSpec)
+                child.measure(MeasureSpec.makeMeasureSpec(width.coerceAtMost(dp(maxWidthDp)), MeasureSpec.EXACTLY), heightMeasureSpec)
+                setMeasuredDimension(width, child.measuredHeight)
+            }
+            override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+                val x = (width - child.measuredWidth) / 2
+                child.layout(x, 0, x + child.measuredWidth, child.measuredHeight)
+            }
+        }.apply { addView(child) })
         if (animateChildren) {
             post { animateChildrenCascade(activity, child) }
         }

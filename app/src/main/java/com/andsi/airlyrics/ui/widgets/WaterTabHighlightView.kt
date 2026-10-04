@@ -59,21 +59,23 @@ class WaterTabHighlightView @JvmOverloads constructor(
         if (targetWidth <= 0f || targetHeight <= 0f) return
         animator?.cancel()
 
-        if (width <= 0) return
-        val safeInset = resources.displayMetrics.density * 8f
-        val halfWidth = targetWidth / 2f
+        if (width <= 0 || height <= 0) return
+        val safeInset = (resources.displayMetrics.density * 8f).coerceAtMost(width / 2f)
+        val boundedWidth = targetWidth.coerceAtMost((width - safeInset * 2).coerceAtLeast(0f))
+        val boundedHeight = targetHeight.coerceAtMost(height.toFloat())
+        val halfWidth = boundedWidth / 2f
         val clampedTargetCenterX = targetCenterX.coerceIn(
             safeInset + halfWidth,
             width - safeInset - halfWidth
         )
         val targetLeft = clampedTargetCenterX - halfWidth
-        val targetTop = targetCenterY - targetHeight / 2f
+        val targetTop = (targetCenterY - boundedHeight / 2f).coerceIn(0f, height - boundedHeight)
 
         if (!hasPosition || !animate) {
             currentLeft = targetLeft
             currentTop = targetTop
-            currentWidth = targetWidth
-            currentHeight = targetHeight
+            currentWidth = boundedWidth
+            currentHeight = boundedHeight
             stretch = 0f
             hasPosition = true
             invalidate()
@@ -85,7 +87,7 @@ class WaterTabHighlightView @JvmOverloads constructor(
         val startWidth = currentWidth
         val startHeight = currentHeight
         val startCenter = startLeft + startWidth / 2f
-        val targetCenter = targetLeft + targetWidth / 2f
+        val targetCenter = targetLeft + boundedWidth / 2f
         val travel = kotlin.math.abs(targetCenter - startCenter)
 
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
@@ -96,8 +98,8 @@ class WaterTabHighlightView @JvmOverloads constructor(
                 val eased = 0.5f - kotlin.math.cos((t * PI).toFloat()) / 2f
                 currentLeft = lerp(startLeft, targetLeft, eased)
                 currentTop = lerp(startTop, targetTop, eased)
-                currentWidth = lerp(startWidth, targetWidth, eased)
-                currentHeight = lerp(startHeight, targetHeight, eased)
+                currentWidth = lerp(startWidth, boundedWidth, eased)
+                currentHeight = lerp(startHeight, boundedHeight, eased)
                 stretch = sin((t * PI).toFloat()) * travel * 0.26f
                 invalidate()
             }
@@ -133,6 +135,11 @@ class WaterTabHighlightView @JvmOverloads constructor(
         val inset = resources.displayMetrics.density * 2f
         rect.inset(inset, inset)
         canvas.drawRoundRect(rect, (radius - inset).coerceAtLeast(1f), (radius - inset).coerceAtLeast(1f), paint)
+    }
+
+    override fun onDetachedFromWindow() {
+        animator?.cancel()
+        super.onDetachedFromWindow()
     }
 
     private fun lerp(start: Float, end: Float, amount: Float): Float {

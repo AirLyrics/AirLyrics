@@ -7,6 +7,11 @@ import androidx.lifecycle.SavedStateHandle
 internal class MainInteractionState(private val savedState: SavedStateHandle? = null) {
     private var entries = savedState?.get<Bundle>(KEY) ?: Bundle()
 
+    val fileOwner: String
+        get() = read("files")?.getString("owner") ?: java.util.UUID.randomUUID().toString().also { id ->
+            write("files") { putString("owner", id) }
+        }
+
     fun read(key: String): Bundle? = entries.getBundle(key)?.let(::Bundle)
 
     fun write(key: String, change: Bundle.() -> Unit) {

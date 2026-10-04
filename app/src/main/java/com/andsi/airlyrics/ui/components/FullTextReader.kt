@@ -15,6 +15,9 @@ import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.ui.state.rememberReader
+import com.andsi.airlyrics.ui.state.isAuxiliaryDialogShowing
+import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -28,8 +31,11 @@ internal fun MainUiHost.showFullText(
     allowScroll: Boolean = false,
     source: TextView? = null
 ) {
+    if (isAuxiliaryDialogShowing("reader")) return
     val host = this
-    showAirDialog(title = title, body = {
+    rememberReader("reader", title, text, allowScroll)
+    auxiliaryDialogs["reader"] = showAirDialog(title = title, scrollStateKey = "aux.reader.scroll",
+        onUserDismiss = { forgetAuxiliaryDialog("reader") }, body = {
         addView(FullTextReader(host, text, source, allowScroll))
     })
 }

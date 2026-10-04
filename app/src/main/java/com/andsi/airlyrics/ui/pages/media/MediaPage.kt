@@ -69,12 +69,18 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
         )
     } else {
         controllers.forEach { controller ->
-            container.addView(mediaSourceCard(controller, controller.packageName == selectedPackage))
+            container.addView(mediaSourceCard(controller, controller.packageName == selectedPackage).apply {
+                setTag(R.id.interaction_anchor, "media.player.${controller.packageName}")
+            })
         }
     }
 
     container.addView(spacer(activity, 18))
     container.addView(refreshMediaButton())
 
-    return scroll(activity, container, animateChildren = animateContent)
+    container.getChildAt(0).setTag(R.id.interaction_anchor, "media.heading")
+    container.getChildAt(1).setTag(R.id.interaction_anchor, "media.current")
+    container.getChildAt(3).setTag(R.id.interaction_anchor, "media.players.heading")
+    container.getChildAt(container.childCount - 1).setTag(R.id.interaction_anchor, "media.refresh")
+    return com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1), "scroll.MEDIA.root")
 }

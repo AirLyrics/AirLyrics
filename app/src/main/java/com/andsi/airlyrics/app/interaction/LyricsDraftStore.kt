@@ -39,6 +39,31 @@ internal class LyricsDraftStore(private val directory: File) {
     }
 
     companion object {
+        private val liveOwners = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+        fun forSession(context: android.content.Context, state: com.andsi.airlyrics.ui.state.MainInteractionState, kind: String): LyricsDraftStore {
+            val owner = state.fileOwner
+            liveOwners.add(owner)
+            val base = File(context.filesDir, kind)
+            val directory = File(base, owner)
+            val legacyId = if (kind == "editor-drafts") state.read("editor")?.getString("id") else null
+            io.submit {
+                directory.mkdirs()
+                directory.setLastModified(System.currentTimeMillis())
+                // Old flat editor drafts remain readable across an application upgrade.
+                if (legacyId != null && legacyId.matches(Regex("[a-zA-Z0-9-]+"))) {
+                    listOf(".json", ".json.bak").forEach { suffix ->
+                        val old = File(base, legacyId + suffix)
+                        val target = File(directory, legacyId + suffix)
+                        if (old.isFile && !target.exists()) old.renameTo(target)
+                    }
+                }
+                val expiry = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
+                base.listFiles()?.filter { it.lastModified() < expiry && it.name !in liveOwners }?.forEach { it.deleteRecursively() }
+            }
+            return LyricsDraftStore(directory)
+        }
+
         private val io = Executors.newSingleThreadExecutor { task -> Thread(task, "AirLyrics-Drafts").apply { isDaemon = true } }
     }
 }

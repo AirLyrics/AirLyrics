@@ -236,7 +236,6 @@ internal class MainDisplayScopeWorkflow(
             headerAction = {
                 selectAll = appPickerHeaderButton(
                     text = getString(R.string.ui_select_all),
-                    enabled = false,
                     onClick = adapter::toggleAll
                 )
                 adapter.onSelectionStateChanged = {
@@ -291,10 +290,7 @@ internal class MainDisplayScopeWorkflow(
                 addView(FrameLayout(this@with).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        minOf(
-                            dp(APP_LIST_MAX_HEIGHT_DP),
-                            (resources.displayMetrics.heightPixels * APP_LIST_SCREEN_HEIGHT_RATIO).toInt()
-                        ),
+                        dp(APP_LIST_MAX_HEIGHT_DP),
                         1f
                     ).apply {
                         setMargins(0, dp(AirUiTokens.Space.Sm), 0, 0)
@@ -391,7 +387,6 @@ internal class MainDisplayScopeWorkflow(
 
     private fun appPickerHeaderButton(
         text: String,
-        enabled: Boolean,
         onClick: () -> Unit
     ): TextView = with(graph.uiHost) {
         TextView(this).apply {
@@ -413,8 +408,8 @@ internal class MainDisplayScopeWorkflow(
                 marginStart = dp(AirUiTokens.Space.Xl)
             }
             background = appPickerButtonBackground()
-            isEnabled = enabled
-            alpha = if (enabled) 1f else APP_PICKER_DISABLED_ALPHA
+            isEnabled = false
+            alpha = APP_PICKER_DISABLED_ALPHA
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
             setOnClickListener { onClick() }
         }
@@ -577,7 +572,6 @@ internal class MainDisplayScopeWorkflow(
 
     private companion object {
         const val APP_LIST_MAX_HEIGHT_DP = 320
-        const val APP_LIST_SCREEN_HEIGHT_RATIO = 0.42f
         const val APP_PICKER_DISABLED_ALPHA = 0.45f
         const val APP_SCROLL_SHORTCUT_ALPHA = 0.62f
         const val APP_SCROLL_SHORTCUT_OFFSET_DP = 18

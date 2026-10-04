@@ -14,7 +14,6 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.ui.async.LatestUiTaskRunner
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -30,7 +29,6 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import java.util.Locale
 
-private val savedLyricsLoadRunner = LatestUiTaskRunner()
 private val savedLyricsSearchWhitespace = Regex("\\s+")
 private const val SEARCH_KEYBOARD_DELAY_MS = 80L
 private const val SEARCH_FILTER_DELAY_MS = 100L
@@ -267,10 +265,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
             listBody.setTag(R.id.interaction_loading, true)
             renderSavedLyrics()
         }
-        savedLyricsLoadRunner.submit(
-            runtime = activity,
-            load = { savedLyricsState() }
-        ) { state ->
+        loadSavedLyrics(force = preserveContent) { state ->
             allLyrics = state.lyrics
             lyricsLoaded = true
             listBody.setTag(R.id.interaction_loading, false)

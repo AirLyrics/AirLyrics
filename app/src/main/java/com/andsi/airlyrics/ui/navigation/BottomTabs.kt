@@ -95,7 +95,10 @@ internal fun addTab(
     @StringRes titleRes: Int
 ) = with(activity) addTab@ {
     val slot = FrameLayout(this).apply {
-        layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, AirUiTokens.Motion.RestScale)
+        layoutParams = if (parent.orientation == LinearLayout.VERTICAL) {
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        } else LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, AirUiTokens.Motion.RestScale)
+        minimumHeight = dp(48)
         clipToPadding = false
         clipChildren = false
         isClickable = true

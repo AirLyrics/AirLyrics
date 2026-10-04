@@ -4,6 +4,8 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import com.andsi.airlyrics.ui.state.confirmOperation
+import com.andsi.airlyrics.ui.state.ConfirmationOperation
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceCompactTitle
@@ -77,13 +79,12 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
                     )
                 })
                 addView(dangerActionButton(activity, getString(R.string.ui_delete)) {
-                    activity.showAirConfirmDialog(
+                    activity.confirmOperation(
+                        operation = ConfirmationOperation.DELETE_ALL,
                         title = getString(R.string.ui_delete_all_saved_lyrics_confirm),
                         message = getString(R.string.ui_delete_all_saved_lyrics_message),
                         positiveText = getString(R.string.ui_delete)
-                    ) {
-                        uiActions.deleteAllSavedLyrics()
-                    }
+                    )
                 }.apply {
                     (layoutParams as LinearLayout.LayoutParams).setMargins(
                         dp(AirUiTokens.Space.Xxl),
@@ -101,7 +102,10 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
         recentLyricsCard.refreshContent()
     }
 
-    return scroll(activity, container, animateChildren = false)
+    listOf("heading", "current", "search", "sources", "directory", "recent", "delete").forEachIndexed { index, name ->
+        container.getChildAt(index).setTag(R.id.interaction_anchor, "lyrics.settings.$name")
+    }
+    return com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1, 5), "scroll.SETTINGS.LYRICS")
 }
 
 internal fun createLyricsSourceOrderCard(
