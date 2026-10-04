@@ -1,5 +1,9 @@
 package com.andsi.airlyrics.ui.pages.floating
 
+import com.andsi.airlyrics.ui.state.FloatingPanelId
+import com.andsi.airlyrics.ui.state.undoChangesTo
+import com.andsi.airlyrics.ui.state.restoreFields
+import androidx.core.view.doOnLayout
 import android.graphics.Color
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -47,6 +51,10 @@ internal class FloatingPageScope(
         )
     }
     private val pageFrame = FrameLayout(host)
+
+    internal var openingPanelId: FloatingPanelId? = null
+    internal var restoringPanel = false
+    internal val panelOpeners = mutableMapOf<FloatingPanelId, () -> Unit>()
 
     internal var previewHandle: FloatingPreviewCardHandle? = null
     internal var focusOverlay: FrameLayout? = null
@@ -120,6 +128,11 @@ internal class FloatingPageScope(
         }
         rootFrame.addView(focusOverlay)
 
+        rootFrame.doOnLayout {
+            val id = interactions.panel ?: return@doOnLayout
+            restoringPanel = true
+            try { panelOpeners[id]?.invoke() } finally { restoringPanel = false }
+        }
         return@with rootFrame
     }
 
@@ -173,13 +186,14 @@ internal class FloatingPageScope(
             reset = {
                 val previous = style()
                 val defaults = host.floatingStyleDefaults(previous.presetName)
-                host.applyFloatingStyle(restoreDefaults(previous, defaults))
+                val next = restoreDefaults(previous, defaults)
+                host.applyFloatingStyle(next)
                 refreshFloatingPreview()
-                val undo: () -> Unit = {
-                    host.applyFloatingStyle(previous)
-                    refreshFloatingPreview()
-                }
-                undo
+                previous.undoChangesTo(next)
+            },
+            undo = { snapshot ->
+                host.applyFloatingStyle(style().restoreFields(snapshot))
+                refreshFloatingPreview()
             }
         )
     }
@@ -276,6 +290,7 @@ internal class FloatingPageScope(
     }
 
     internal fun trackedFloatingTile(
+        id: FloatingPanelId,
         title: String,
         subtitle: String,
         iconRes: Int,
@@ -287,7 +302,19 @@ internal class FloatingPageScope(
             subtitle = subtitle,
             iconRes = iconRes,
             enabled = enabled,
-            onClick = onClick,
+            onClick = { view ->
+                openingPanelId = id
+                onClick(view)
+            },
+            onViewCreated = { view ->
+                view.setTag(R.id.interaction_anchor, "panel:${id.name}")
+                panelOpeners[id] = {
+                    if (enabled) {
+                        openingPanelId = id
+                        onClick(view)
+                    }
+                }
+            },
             onSubtitleViewCreated = { subtitleView ->
                 pageRefs.registerTileSubtitle(title, subtitleView)
                 if (title == host.getString(R.string.ui_display_control)) {

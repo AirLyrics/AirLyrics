@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.model
 
+import androidx.lifecycle.lifecycleScope
 import android.content.ContextWrapper
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.ui.navigation.Page
@@ -21,6 +22,24 @@ internal abstract class MainUiHost(
     OptionControlsHost,
     FloatingUiHost,
     SettingsUiHost {
+    open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
+    open val editorSession by lazy {
+        com.andsi.airlyrics.app.interaction.LyricsEditorSession(applicationContext, interactions, activity.lifecycleScope)
+    }
+    var editorObserverInstalled = false
+    var editorChangeCallback: ((LocalLyricsUiChange) -> Unit)? = null
+    val interactionUi = com.andsi.airlyrics.ui.state.InteractionUiRegistry()
+    private var panelControlIndex = 0
+    fun beginPanelControls() { panelControlIndex = 0 }
+    fun nextPanelControlKey(kind: String): String? = interactions.panel?.let { "panel.control.${it.name}.$kind.${panelControlIndex++}" }
+
+    init {
+        activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) { interactionUi.capture(); if (editorObserverInstalled) editorSession.flush() }
+            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) { interactionUi.destroy(); editorChangeCallback = null; if (activity.isFinishing && editorObserverInstalled) editorSession.cancel() }
+        })
+    }
+
     abstract val actions: MainUiActions
     val uiActions: MainUiActions
         get() = actions

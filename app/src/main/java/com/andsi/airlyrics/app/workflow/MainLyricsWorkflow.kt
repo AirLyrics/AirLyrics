@@ -1,5 +1,8 @@
 package com.andsi.airlyrics.app.workflow
 
+import com.andsi.airlyrics.app.state.PendingLyricsImport
+import com.andsi.airlyrics.app.state.toBundle
+import com.andsi.airlyrics.app.state.toPendingLyricsImport
 import android.app.Dialog
 import android.content.Intent
 import android.graphics.Typeface
@@ -44,11 +47,25 @@ internal class MainLyricsWorkflow(
     private val feedback
         get() = graph.feedback
 
+    private var importDialog: Dialog? = null
+    private var formatDialog: Dialog? = null
+    private var overwriteDialog: Dialog? = null
+
+    fun restoreInteractionDialogs() {
+        uiHost.interactions.read("importChoices")?.let { saved ->
+            saved.getBundle("request")?.toPendingLyricsImport()?.let {
+                showImportLyricsDialog(it.target, saved.getBoolean("plain"), saved.getBoolean("word"))
+            }
+        }
+        if (uiHost.interactions.read("formatGuide") != null) showLyricsFormatGuideDialog()
+    }
+
     fun restorePendingOverwriteConfirmation() {
         state.pendingLyricsOverwrite?.let(::showOverwriteConfirmation)
     }
 
     fun showOverwriteConfirmation(request: PendingLyricsOverwrite) {
+        if (overwriteDialog?.isShowing == true) return
         val importAsWordByWord = request.type == LyricsImportType.WORD_BY_WORD
         val overwriteMessage = request.target.displayText + "\n\n" + activity.getString(
             if (importAsWordByWord) {
@@ -57,7 +74,7 @@ internal class MainLyricsWorkflow(
                 R.string.ui_overwrite_plain_lyrics_msg
             }
         )
-        uiHost.showAirConfirmDialog(
+        overwriteDialog = uiHost.showAirConfirmDialog(
             title = activity.getString(
                 if (importAsWordByWord) {
                     R.string.ui_overwrite_local_word_by_word_lyrics
@@ -123,6 +140,11 @@ internal class MainLyricsWorkflow(
         plainImportEnabled: Boolean,
         wordByWordImportEnabled: Boolean
     ) {
+        if (importDialog?.isShowing == true) return
+        uiHost.interactions.write("importChoices") {
+            putBundle("request", PendingLyricsImport(target, LyricsImportType.PLAIN).toBundle())
+            putBoolean("plain", plainImportEnabled); putBoolean("word", wordByWordImportEnabled)
+        }
         lateinit var dialog: Dialog
 
         fun launchImport(type: LyricsImportType) {
@@ -180,8 +202,10 @@ internal class MainLyricsWorkflow(
             title = activity.getString(R.string.ui_choose_import_type),
             positiveText = null,
             negativeText = activity.getString(R.string.ui_cancel),
-            body = { addView(content) }
+            body = { addView(content) },
+            onUserDismiss = { uiHost.interactions.remove("importChoices") }
         )
+        importDialog = dialog
     }
 
     private fun importLyricsChoiceRow(
@@ -240,6 +264,7 @@ internal class MainLyricsWorkflow(
     }
 
     private fun showLyricsFormatGuideDialog() {
+        if (formatDialog?.isShowing == true) return
         val lrcGuide = activity.localizedAssetText(
             baseName = "help/lyrics_format",
             fallback = activity.getString(R.string.ui_lyrics_format_lrc_guide_body)
@@ -249,7 +274,7 @@ internal class MainLyricsWorkflow(
             fallback = activity.getString(R.string.ui_lyrics_format_ttml_guide_body)
         )
 
-        uiHost.showLyricsFormatGuideDialog(
+        formatDialog = uiHost.showLyricsFormatGuideDialog(
             lrcGuide = lrcGuide,
             ttmlGuide = ttmlGuide
         )

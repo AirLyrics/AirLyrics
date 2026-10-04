@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.pages.floating.sections
 
 import android.graphics.Typeface
 import android.view.Gravity
+import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
@@ -23,6 +24,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
     list.addView(
         settingGrid(
             trackedFloatingTile(
+                id = FloatingPanelId.CONTENT,
                 title = getString(R.string.ui_content),
                 subtitle = localizedLyricsContentModeTitle(contentDisplayMode()),
                 iconRes = R.drawable.ic_air_subtitles,
@@ -45,6 +47,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.LINE_RANGE,
                 title = getString(R.string.ui_line_range),
                 subtitle = localizedLyricsLineModeTitle(lineDisplayMode()),
                 iconRes = R.drawable.ic_air_line_spacing,
@@ -67,6 +70,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.ALIGNMENT,
                 title = getString(R.string.ui_text_alignment),
                 subtitle = localizedGravityTitle(style().gravity),
                 iconRes = R.drawable.ic_air_align_center,
@@ -90,6 +94,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.OFFSET,
                 title = getString(R.string.ui_lyrics_offset),
                 subtitle = uiActions.currentLyricsOffsetSummary(),
                 iconRes = R.drawable.ic_air_sync_alt,

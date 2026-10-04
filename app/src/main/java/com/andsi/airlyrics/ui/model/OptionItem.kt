@@ -22,5 +22,6 @@ internal data class FloatingSettingTile(
     val iconRes: Int,
     val enabled: Boolean = true,
     val onClick: (View) -> Unit,
-    val onSubtitleViewCreated: ((TextView) -> Unit)? = null
+    val onSubtitleViewCreated: ((TextView) -> Unit)? = null,
+    val onViewCreated: ((View) -> Unit)? = null
 )

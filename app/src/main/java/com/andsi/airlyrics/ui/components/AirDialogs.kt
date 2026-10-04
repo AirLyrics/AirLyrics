@@ -47,11 +47,18 @@ private class AirAnimatedDialog(
     themeResId: Int
 ) : Dialog(context, themeResId) {
     var animatedContent: View? = null
+    var onUserDismiss: (() -> Unit)? = null
 
     private val exitTranslationYPx = DIALOG_EXIT_TRANSLATION_Y_DP * context.resources.displayMetrics.density
     private var dismissing = false
 
+    fun dismissImmediately() {
+        animatedContent?.animate()?.cancel()
+        super.dismiss()
+    }
+
     override fun dismiss() {
+        if (!dismissing) onUserDismiss?.invoke()
         val content = animatedContent
         if (dismissing) return
         if (content == null || !isShowing) {
@@ -120,6 +127,7 @@ internal fun MainUiHost.showAirDialog(
     body: (LinearLayout.() -> Unit)? = null,
     useOuterScroll: Boolean = true,
     onNegative: () -> Unit = {},
+    onUserDismiss: () -> Unit = {},
     onPositive: () -> Unit = {}
 ): Dialog {
     val host = this
@@ -268,6 +276,13 @@ internal fun MainUiHost.showAirDialog(
                 .withLayer()
                 .start()
         }
+    }
+    dialog.onUserDismiss = {
+        if (!interactionUi.releasing && !activity.isChangingConfigurations && !activity.isDestroyed) onUserDismiss()
+    }
+    interactionUi.register(dialog, dialog::dismissImmediately)
+    dialog.setOnDismissListener {
+        interactionUi.forget(dialog)
     }
     dialog.show()
     return dialog

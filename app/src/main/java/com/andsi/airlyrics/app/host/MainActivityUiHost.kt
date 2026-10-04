@@ -76,6 +76,9 @@ internal class MainActivityUiHost(
     private val viewRefs: MainActivityViewRefs
         get() = graph.viewRefs
 
+    override val editorSession get() = graph.viewModel.editorSession(applicationContext)
+    override val interactions get() = graph.viewModel.interactions
+
     override val actions: MainUiActions
         get() = graph.uiActions
 

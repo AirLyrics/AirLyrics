@@ -1,0 +1,4 @@
+<resources>
+    <item name="interaction_anchor" type="id" />
+    <item name="interaction_loading" type="id" />
+</resources>

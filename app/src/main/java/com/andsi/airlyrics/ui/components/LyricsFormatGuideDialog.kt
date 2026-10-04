@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.components
 
+import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import android.app.Dialog
 import android.graphics.Color
 import android.graphics.Typeface
@@ -33,8 +34,10 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
     lrcGuide: String,
     ttmlGuide: String
 ): Dialog {
+    val restoredPage = interactions.read("formatGuide")?.getString("page")
+    if (interactions.read("formatGuide") == null) interactions.write("formatGuide") { putString("page", "LRC") }
     val pageText = TextView(this).apply {
-        text = lrcGuide
+        text = if (restoredPage == "TTML") ttmlGuide else lrcGuide
         textSize = AirUiTokens.TextSize.Body
         setTextColor(colorTextMuted)
         setLineSpacing(dp(AirUiTokens.Space.Xs).toFloat(), 1f)
@@ -82,7 +85,8 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
 
     lateinit var lrcTab: TextView
     lateinit var ttmlTab: TextView
-    var selectedPage = LyricsFormatGuidePage.LRC
+    var selectedPage = if (restoredPage == "TTML") LyricsFormatGuidePage.TTML else LyricsFormatGuidePage.LRC
+    bindInteractionScroll(pageScroll, "formatGuide.scroll")
     var transitionGeneration = 0
 
     fun updateTab(tab: TextView, selected: Boolean) {
@@ -100,6 +104,7 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
         val direction = if (page == LyricsFormatGuidePage.TTML) 1f else -1f
         val slideDistance = dp(AirUiTokens.Layout.LyricsSlideDistanceDp).toFloat()
         selectedPage = page
+        interactions.write("formatGuide") { putString("page", page.name) }
         transitionGeneration += 1
         val generation = transitionGeneration
         updateTab(lrcTab, page == LyricsFormatGuidePage.LRC)
@@ -150,8 +155,8 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
 
     lrcTab = formatTab(getString(R.string.ui_lyrics_format_lrc_tab), LyricsFormatGuidePage.LRC)
     ttmlTab = formatTab(getString(R.string.ui_lyrics_format_ttml_tab), LyricsFormatGuidePage.TTML)
-    updateTab(lrcTab, selected = true)
-    updateTab(ttmlTab, selected = false)
+    updateTab(lrcTab, selected = selectedPage == LyricsFormatGuidePage.LRC)
+    updateTab(ttmlTab, selected = selectedPage == LyricsFormatGuidePage.TTML)
 
     val tabs = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
@@ -178,6 +183,7 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
         title = null,
         positiveText = getString(R.string.ui_ok),
         useOuterScroll = false,
+        onUserDismiss = { interactions.removePrefix("formatGuide") },
         body = {
             addView(tabs)
             addView(pageScroll)

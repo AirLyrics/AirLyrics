@@ -1,7 +1,8 @@
 package com.andsi.airlyrics.app.workflow
 
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import android.app.Dialog
-import android.content.Intent
 import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
@@ -42,6 +43,12 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 internal class MainDisplayScopeWorkflow(
     private val graph: MainGraph
 ) {
+    private fun findList(view: View?): ListView? {
+        if (view is ListView) return view
+        if (view is ViewGroup) for (i in 0 until view.childCount) findList(view.getChildAt(i))?.let { return it }
+        return null
+    }
+
     private data class AppChoiceRowViews(
         val icon: ImageView,
         val label: TextView,
@@ -61,6 +68,13 @@ internal class MainDisplayScopeWorkflow(
             if (!dialog.isShowing) return
             emptyView.setText(R.string.ui_no_apps_found)
             adapter.submitChoices(choices, pruneMissingSelections)
+            val list = findList(dialog.window?.decorView)
+            val draft = graph.viewModel.interactions.read("appPicker")
+            list?.post {
+                val key = draft?.getString("anchor")
+                val index = (0 until adapter.count).firstOrNull { adapter.getItem(it).packageName == key } ?: 0
+                list.setSelectionFromTop(index, draft?.getInt("offset") ?: 0)
+            }
         }
     }
 
@@ -190,78 +204,29 @@ internal class MainDisplayScopeWorkflow(
         }
     }
 
-    @Volatile
-    private var cachedChoices: List<DisplayScopeAppChoice>? = null
-
-    @Volatile
-    private var loadingChoices = false
+    private var currentDialog: Dialog? = null
 
     fun showAppPicker() {
-        if (!DisplayScopeCapability.isSupported()) return
-
-        cachedChoices?.let { choices ->
-            showAppPickerDialog(choices)
-            return
+        if (!DisplayScopeCapability.isSupported() || currentDialog?.isShowing == true) return
+        val state = graph.viewModel.interactions
+        val newSession = state.read("appPicker") == null
+        if (newSession) state.write("appPicker") {
+            putStringArrayList("selected", ArrayList(DisplayScopeStore.selectedPackages(graph.activity)))
         }
-        if (loadingChoices) return
-
-        loadingChoices = true
-        val generation = graph.currentUiGeneration()
-        val session = showAppPickerDialog(emptyList(), loading = true)
-        graph.runOnAppIo {
-            val loadedChoices = runCatching(::loadChoices)
-            val choices = loadedChoices.getOrDefault(emptyList())
-            if (loadedChoices.isSuccess) cachedChoices = choices
-            loadingChoices = false
-            graph.runOnStartedUi(generation) {
-                session.showChoices(
-                    choices = choices,
-                    pruneMissingSelections = loadedChoices.isSuccess
-                )
-            }
+        val session = showAppPickerDialog()
+        graph.activity.lifecycleScope.launch {
+            val loaded = graph.viewModel.loadDisplayScopeChoices(graph.activity.applicationContext, newSession).await()
+            if (currentDialog?.isShowing == true) session.showChoices(
+                loaded.getOrDefault(emptyList()), pruneMissingSelections = loaded.isSuccess
+            )
         }
     }
 
-    @Suppress("DEPRECATION")
-    private fun loadChoices(): List<DisplayScopeAppChoice> {
-        val packageManager = graph.activity.packageManager
-        val intents = listOf(
-            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
-            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-        )
-        return intents
-            .asSequence()
-            .flatMap { intent -> packageManager.queryIntentActivities(intent, 0).asSequence() }
-            .mapNotNull { resolveInfo ->
-                val packageName = resolveInfo.activityInfo?.packageName?.takeIf(String::isNotBlank)
-                    ?: return@mapNotNull null
-                packageName to resolveInfo
-            }
-            .distinctBy { (packageName) -> packageName }
-            .map { (packageName, resolveInfo) ->
-                val label = resolveInfo.loadLabel(packageManager).toString().trim()
-                    .takeIf(String::isNotBlank)
-                    ?: packageName
-                DisplayScopeAppChoice(
-                    packageName = packageName,
-                    label = label,
-                    icon = runCatching { resolveInfo.loadIcon(packageManager) }.getOrNull()
-                )
-            }
-            .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, DisplayScopeAppChoice::label))
-            .toList()
-    }
-
-    private fun showAppPickerDialog(
-        choices: List<DisplayScopeAppChoice>,
-        loading: Boolean = false
-    ): AppPickerSession = with(graph.uiHost) {
-        val selected = DisplayScopeStore.selectedPackages(this).toMutableSet().apply {
-            if (!loading) {
-                retainAll(choices.mapTo(hashSetOf(), DisplayScopeAppChoice::packageName))
-            }
-        }
-        val adapter = AppChoiceAdapter(choices, selected)
+    private fun showAppPickerDialog(): AppPickerSession = with(graph.uiHost) {
+        val draft = interactions.read("appPicker")
+        val selected = (draft?.getStringArrayList("selected")?.toSet()
+            ?: DisplayScopeStore.selectedPackages(this)).toMutableSet()
+        val adapter = AppChoiceAdapter(emptyList(), selected)
         lateinit var empty: TextView
         lateinit var selectAll: TextView
         val dialog = showAirDialog(
@@ -271,10 +236,13 @@ internal class MainDisplayScopeWorkflow(
             headerAction = {
                 selectAll = appPickerHeaderButton(
                     text = getString(R.string.ui_select_all),
-                    enabled = choices.isNotEmpty(),
+                    enabled = false,
                     onClick = adapter::toggleAll
                 )
                 adapter.onSelectionStateChanged = {
+                    if (interactions.read("appPicker") != null) interactions.write("appPicker") {
+                        putStringArrayList("selected", ArrayList(selected))
+                    }
                     updateSelectAllButton(selectAll, adapter)
                 }
                 updateSelectAllButton(selectAll, adapter)
@@ -285,6 +253,7 @@ internal class MainDisplayScopeWorkflow(
                     hint = getString(R.string.ui_search_apps)
                     inputType = InputType.TYPE_CLASS_TEXT
                     isSingleLine = true
+                    setText(draft?.getString("query").orEmpty())
                     setTextColor(colorTextStrong)
                     setHintTextColor(colorTextMuted)
                     layoutParams = LinearLayout.LayoutParams(
@@ -297,7 +266,7 @@ internal class MainDisplayScopeWorkflow(
                 addView(search)
 
                 empty = TextView(this@with).apply {
-                    text = getString(if (loading) R.string.ui_loading else R.string.ui_no_apps_found)
+                    text = getString(R.string.ui_loading)
                     textSize = AirUiTokens.TextSize.Body
                     setTextColor(colorTextMuted)
                     gravity = Gravity.CENTER
@@ -369,20 +338,42 @@ internal class MainDisplayScopeWorkflow(
                 })
                 AppPickerScrollShortcutController(list, jumpToTop, jumpToBottom)
 
+                adapter.filter(search.text.toString())
+                list.post {
+                    val key = draft?.getString("anchor")
+                    val index = (0 until adapter.count).firstOrNull { adapter.getItem(it).packageName == key } ?: 0
+                    list.setSelectionFromTop(index, draft?.getInt("offset") ?: 0)
+                }
+                interactionUi.snapshot(list) {
+                    if (list.isAttachedToWindow && adapter.count > 0 && interactions.read("appPicker") != null) {
+                        interactions.write("appPicker") {
+                            putString("anchor", adapter.getItem(list.firstVisiblePosition).packageName)
+                            putInt("offset", list.getChildAt(0)?.top ?: 0)
+                        }
+                    }
+                }
+                list.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: View) = Unit
+                    override fun onViewDetachedFromWindow(v: View) { interactionUi.forgetSnapshot(list) }
+                })
                 search.addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
                     override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                        adapter.filter(s?.toString().orEmpty())
+                        val query = s?.toString().orEmpty()
+                        adapter.filter(query)
+                        interactions.write("appPicker") { putString("query", query) }
                     }
                     override fun afterTextChanged(s: Editable?) = Unit
                 })
             },
             useOuterScroll = false,
+            onUserDismiss = { interactions.remove("appPicker") },
             onPositive = {
                 DisplayScopeStore.setSelectedPackages(this, selected)
                 graph.onDisplayScopeSelectionChanged()
             }
         )
+        currentDialog = dialog
         AppPickerSession(dialog, adapter, empty)
     }
 

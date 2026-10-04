@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.app.host.observeEditorSession
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -165,6 +166,15 @@ internal class MainGraph(
         uiInvalidator.rebuildCurrentPage()
         lastRenderedState = state
         lyricsWorkflow.restorePendingOverwriteConfirmation()
+        uiHost.observeEditorSession()
+        uiHost.contentContainer?.post {
+            if (!destroyed) restoreInteractionWindows()
+        }
+    }
+
+    internal fun restoreInteractionWindows() {
+        if (viewModel.interactions.read("appPicker") != null) displayScopeWorkflow.showAppPicker()
+        lyricsWorkflow.restoreInteractionDialogs()
     }
 
     fun onStart() {

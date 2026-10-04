@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.ui.pages.floating.sections
 
 import android.graphics.Color
+import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.actionButton
@@ -20,6 +21,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
     list.addView(
         settingGrid(
             trackedFloatingTile(
+                id = FloatingPanelId.PRESET,
                 title = getString(R.string.ui_skin_preset),
                 subtitle = localizedPresetTitle(style().presetName),
                 iconRes = R.drawable.ic_air_style,
@@ -42,6 +44,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.TEXT_COLOR,
                 title = getString(R.string.ui_text_color),
                 subtitle = AirColorUtils.colorSummary(style().textColor),
                 iconRes = R.drawable.ic_air_text_color,
@@ -78,6 +81,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.BACKGROUND,
                 title = getString(R.string.ui_background_bubble),
                 subtitle = getString(if (style().backgroundEnabled) R.string.ui_on else R.string.ui_off),
                 iconRes = R.drawable.ic_air_chat_bubble,
@@ -131,6 +135,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.TEXT_SIZE,
                 title = getString(R.string.ui_font_size),
                 subtitle = "${style().textSizeSp.toInt()} sp",
                 iconRes = R.drawable.ic_air_format_size,
@@ -163,6 +168,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.FONT,
                 title = getString(R.string.ui_font),
                 subtitle = fontFamilySubtitle(),
                 iconRes = R.drawable.ic_air_font,
@@ -205,6 +211,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.FONT_WEIGHT,
                 title = getString(R.string.ui_font_weight),
                 subtitle = fontWeightSubtitle(),
                 iconRes = R.drawable.ic_air_font_weight,
@@ -238,6 +245,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.TEXT_OPACITY,
                 title = getString(R.string.ui_font_opacity),
                 subtitle = fontOpacitySubtitle(),
                 iconRes = R.drawable.ic_air_opacity,
@@ -280,6 +288,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.SHADOW,
                 title = getString(R.string.ui_shadow_stroke),
                 subtitle = getString(R.string.ui_radius) + " ${style().shadowRadius.toInt()}",
                 iconRes = R.drawable.ic_air_shadow,
@@ -313,6 +322,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.WINDOW_LAYOUT,
                 title = getString(R.string.ui_window_layout),
                 subtitle = getString(R.string.ui_width) + " ${style().maxWidthPercent}%",
                 iconRes = R.drawable.ic_air_pip,

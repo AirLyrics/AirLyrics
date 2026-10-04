@@ -1,10 +1,12 @@
 package com.andsi.airlyrics.app.render
 
+import com.andsi.airlyrics.ui.state.bindInteractionScroll
+import com.andsi.airlyrics.ui.state.findInteractionScroll
+import com.andsi.airlyrics.ui.state.markInteractionAnchors
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -25,7 +27,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 internal class MainHandRenderer(
     private val graph: MainGraph
 ) : UiInvalidator {
-    private val pageScrollY: MutableMap<Page, Int> = mutableMapOf()
     private var renderedPage: Page = Page.MEDIA
     private var renderedSettingsSubPage = com.andsi.airlyrics.ui.navigation.SettingsSubPage.HOME
 
@@ -131,7 +132,7 @@ internal class MainHandRenderer(
     ) {
         val container = host.contentContainer ?: return
         graph.beginPageRebuild()
-        rememberRenderedPageScroll(container)
+        rememberRenderedPageScroll()
 
         val oldPage = renderedPage
         val oldSubPage = renderedSettingsSubPage
@@ -157,25 +158,14 @@ internal class MainHandRenderer(
             Page.SETTINGS -> createSettingsPage(host)
         }
 
-        val restoreY = if (
-            state.currentPage == Page.SETTINGS &&
-            state.settingsSubPage != oldSubPage
-        ) {
-            0
-        } else {
-            pageScrollY[state.currentPage] ?: 0
-        }
+        val scrollKey = "scroll.${state.currentPage.name}.${if (state.currentPage == Page.SETTINGS) state.settingsSubPage.name else "root"}"
+        pageView.markInteractionAnchors(scrollKey)
+        pageView.findInteractionScroll()?.let { host.bindInteractionScroll(it, scrollKey) }
         container.addView(pageView)
         if (shouldAnimate) animatePageEnter(host, pageView, slideFromRight)
         renderedPage = state.currentPage
         renderedSettingsSubPage = state.settingsSubPage
 
-        pageView.findPageScrollView()?.let { scrollView ->
-            scrollView.scrollTo(0, restoreY)
-            scrollView.post {
-                scrollView.scrollTo(0, restoreY)
-            }
-        }
     }
 
     override fun refreshTabs(animate: Boolean) {
@@ -203,7 +193,7 @@ internal class MainHandRenderer(
     }
 
     override fun recreateMainView() {
-        rememberRenderedPageScroll(host.contentContainer)
+        rememberRenderedPageScroll()
         graph.feedback.dismiss()
         graph.uiHost.applySystemBarsTheme()
         graph.activity.setContentView(createMainView())
@@ -211,18 +201,7 @@ internal class MainHandRenderer(
         rebuildCurrentPage()
     }
 
-    private fun rememberRenderedPageScroll(container: FrameLayout?) {
-        container?.getChildAt(0)?.findPageScrollView()?.let { scrollView ->
-            pageScrollY[renderedPage] = scrollView.scrollY
-        }
-    }
-
-    private fun View.findPageScrollView(): ScrollView? {
-        if (this is ScrollView) return this
-        if (this !is ViewGroup) return null
-        for (index in 0 until childCount) {
-            getChildAt(index).findPageScrollView()?.let { return it }
-        }
-        return null
+    private fun rememberRenderedPageScroll() {
+        host.interactionUi.capture()
     }
 }

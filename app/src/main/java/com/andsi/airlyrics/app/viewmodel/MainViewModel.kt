@@ -65,6 +65,25 @@ internal class MainViewModel(
     private val floatingFontImporter: FloatingFontImportOperation,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel(), MainFloatingState {
+    private var displayScopeChoices: Deferred<Result<List<com.andsi.airlyrics.app.workflow.DisplayScopeAppChoice>>>? = null
+    fun loadDisplayScopeChoices(context: Context, newSession: Boolean = false): Deferred<Result<List<com.andsi.airlyrics.app.workflow.DisplayScopeAppChoice>>> {
+        if (newSession) {
+            displayScopeChoices?.cancel()
+            displayScopeChoices = null
+        }
+        val appContext = context.applicationContext
+        return displayScopeChoices ?: viewModelScope.async(ioDispatcher) {
+            runCatching { com.andsi.airlyrics.app.workflow.loadDisplayScopeChoices(appContext) }
+        }.also { displayScopeChoices = it }
+    }
+
+    private var editorSession: com.andsi.airlyrics.app.interaction.LyricsEditorSession? = null
+    fun editorSession(context: Context): com.andsi.airlyrics.app.interaction.LyricsEditorSession =
+        editorSession ?: com.andsi.airlyrics.app.interaction.LyricsEditorSession(context.applicationContext, interactions, viewModelScope)
+            .also { editorSession = it }
+
+    val interactions = com.andsi.airlyrics.ui.state.MainInteractionState(savedStateHandle)
+
     private val _uiState = MutableStateFlow(restoredState())
     val uiState: StateFlow<MainScreenState> = _uiState.asStateFlow()
     private val uiEffectChannel = Channel<MainUiEffect>(capacity = Channel.BUFFERED)
@@ -90,6 +109,7 @@ internal class MainViewModel(
         get() = _uiState.value.overlayPermissionGranted
 
     fun selectPage(page: Page) {
+        if (page != _uiState.value.currentPage) interactions.panel = null
         updateState { state ->
             if (state.currentPage == page) {
                 state

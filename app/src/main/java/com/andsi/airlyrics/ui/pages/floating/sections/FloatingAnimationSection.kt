@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.pages.floating.sections
 
+import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
@@ -15,6 +16,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
     list.addView(
         settingGrid(
             trackedFloatingTile(
+                id = FloatingPanelId.ANIMATION,
                 title = getString(R.string.ui_switch_animation),
                 subtitle = localizedLyricsSwitchAnimationTitle(switchAnimationMode()),
                 iconRes = R.drawable.ic_air_lyrics,
@@ -37,6 +39,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.WORD_BY_WORD,
                 title = getString(R.string.ui_word_by_word_lyrics),
                 subtitle = wordByWordLyricsSubtitle(),
                 iconRes = R.drawable.ic_air_motion,
@@ -54,6 +57,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.HIGHLIGHT_COLOR,
                 title = getString(R.string.ui_highlight_color),
                 subtitle = AirColorUtils.colorSummary(style().wordByWordHighlightColor),
                 iconRes = R.drawable.ic_air_highlight,

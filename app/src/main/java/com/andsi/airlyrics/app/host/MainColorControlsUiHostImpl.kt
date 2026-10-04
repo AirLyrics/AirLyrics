@@ -33,10 +33,14 @@ internal fun MainUiHost.sliderRowImpl(
     onChanged: (Int) -> Unit
 ): LinearLayout {
     val activity = this
+    val key = nextPanelControlKey("slider")
+    val restoredValue = key?.let { interactions.read(it) }?.getInt("preview", value) ?: value
     val safeStep = step.coerceAtLeast(1)
-    val safeValue = value.coerceIn(min, max).let {
+    val safeValue = restoredValue.coerceIn(min, max).let {
         min + ((it - min + safeStep / 2) / safeStep) * safeStep
     }.coerceAtMost(max)
+    // These controls separate a pure preview callback from the persisted commit callback.
+    if (restoredValue != value && onChangeFinished != null) onChanged(safeValue)
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
@@ -61,11 +65,13 @@ internal fun MainUiHost.sliderRowImpl(
                     latestValue = newValue
                     valueText.text = getString(R.string.field_value_with_suffix, title, newValue, suffix)
                     if (fromUser) {
+                        key?.let { interactions.write(it) { putInt("preview", newValue) } }
                         onChanged(newValue)
                         if (isTracking) {
                             changedWhileTracking = true
                         } else {
                             onChangeFinished?.invoke(newValue)
+                            key?.let(interactions::remove)
                         }
                     }
                 }
@@ -79,6 +85,7 @@ internal fun MainUiHost.sliderRowImpl(
                     isTracking = false
                     if (changedWhileTracking) {
                         onChangeFinished?.invoke(latestValue)
+                        key?.let(interactions::remove)
                     }
                     changedWhileTracking = false
                 }
@@ -98,7 +105,8 @@ internal fun MainUiHost.colorControlImpl(
     var green = Color.green(color)
     var blue = Color.blue(color)
     var alpha = if (includeOpacity) Color.alpha(color) else 255
-    var rgbExpanded = false
+    val controlKey = nextPanelControlKey("color")
+    var rgbExpanded = controlKey?.let { interactions.read(it)?.getBoolean("expanded") } ?: false
 
     val standardColors = listOf(
         getString(R.string.ui_blue) to Color.rgb(66, 165, 245),
@@ -128,10 +136,10 @@ internal fun MainUiHost.colorControlImpl(
         addView(swatchGrid)
         addView(spacer(activity, AirUiTokens.Layout.SettingGap))
 
-        val fineTuneButton = actionButton(activity, getString(R.string.ui_rgb_tune)) { }
+        val fineTuneButton = actionButton(activity, getString(if (rgbExpanded) R.string.ui_hide_rgb else R.string.ui_rgb_tune)) { }
         val rgbPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
+            visibility = if (rgbExpanded) View.VISIBLE else View.GONE
             setPadding(0, dp(AirUiTokens.Space.Lg), 0, 0)
         }
         addView(fineTuneButton)
@@ -265,6 +273,7 @@ internal fun MainUiHost.colorControlImpl(
             swatchGrid.addView(makeSwatch(label, presetColor) {
                 if (presetColor == null) {
                     rgbExpanded = true
+                    controlKey?.let { interactions.write(it) { putBoolean("expanded", true) } }
                     rgbPanel.visibility = View.VISIBLE
                     fineTuneButton.setText(R.string.ui_hide_rgb)
                 } else {
@@ -282,6 +291,7 @@ internal fun MainUiHost.colorControlImpl(
 
         fineTuneButton.setOnClickListener {
             rgbExpanded = !rgbExpanded
+            controlKey?.let { interactions.write(it) { putBoolean("expanded", rgbExpanded) } }
             rgbPanel.visibility = if (rgbExpanded) View.VISIBLE else View.GONE
             fineTuneButton.setText(if (rgbExpanded) R.string.ui_hide_rgb else R.string.ui_rgb_tune)
             playTinyPulse(fineTuneButton)

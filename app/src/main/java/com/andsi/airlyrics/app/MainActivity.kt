@@ -18,6 +18,11 @@ class MainActivity : AppCompatActivity() {
         graph.onCreate()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (::graph.isInitialized) graph.uiHost.interactionUi.capture()
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onStart() {
         super.onStart()
         graph.onStart()

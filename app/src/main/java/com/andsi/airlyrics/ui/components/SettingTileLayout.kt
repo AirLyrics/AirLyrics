@@ -51,6 +51,7 @@ internal class SettingTileLayout(private val host: MainUiHost, item: FloatingSet
     private val textScroll = InlineTextScrollController(this, listOf(titleView, summaryView))
 
     init {
+        item.onViewCreated?.invoke(this)
         background = GradientDrawable().apply {
             cornerRadius = host.dp(AirUiTokens.Radius.Card).toFloat()
             setColor(host.colorCard)

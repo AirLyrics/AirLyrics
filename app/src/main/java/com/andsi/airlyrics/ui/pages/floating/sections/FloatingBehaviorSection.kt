@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.pages.floating.sections
 
+import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.ui.components.TextDisplayPolicy
 import com.andsi.airlyrics.R
@@ -21,6 +22,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
     list.addView(
         settingGrid(
             trackedFloatingTile(
+                id = FloatingPanelId.DISPLAY_CONTROL,
                 title = getString(R.string.ui_display_control),
                 subtitle = floatingDisplaySummary(),
                 iconRes = R.drawable.ic_air_visibility,
@@ -58,6 +60,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.AUTO_HIDE,
                 title = getString(R.string.ui_auto_hide),
                 subtitle = autoHideSummary(),
                 iconRes = R.drawable.ic_air_visibility_off,
@@ -91,6 +94,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                 }
             ),
             trackedFloatingTile(
+                id = FloatingPanelId.DISPLAY_SCOPE,
                 title = getString(R.string.ui_display_scope),
                 subtitle = displayScopeSummary(),
                 iconRes = R.drawable.ic_air_visibility,
@@ -164,6 +168,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
 private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(host) {
     val summaryButton = actionButton(host, getString(R.string.ui_view_current_setup)) { }
     summaryButton.setOnClickListener {
+        openingPanelId = FloatingPanelId.SUMMARY
         openPanel(summaryButton, getString(R.string.ui_current_setup), "") {
             addView(settingRow(host, getString(R.string.ui_skin), localizedPresetTitle(style().presetName)))
             addView(settingRow(host, getString(R.string.ui_font_size), "${style().textSizeSp.toInt()}sp"))
@@ -186,5 +191,6 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
             addView(settingRow(host, getString(R.string.ui_display_scope), host.displayScopeSummary()))
         }
     }
+    panelOpeners[FloatingPanelId.SUMMARY] = { summaryButton.performClick() }
     list.addView(summaryButton)
 }

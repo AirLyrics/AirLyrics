@@ -1,5 +1,8 @@
 package com.andsi.airlyrics.ui.pages.floating
 
+import android.os.Bundle
+import com.andsi.airlyrics.ui.state.bindInteractionScroll
+import com.andsi.airlyrics.ui.state.findInteractionScroll
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
@@ -7,7 +10,8 @@ import android.widget.LinearLayout
 
 internal data class FloatingPanelReset(
     val isAtDefault: () -> Boolean,
-    val reset: () -> (() -> Unit)
+    val reset: () -> Bundle,
+    val undo: (Bundle) -> Unit
 )
 
 internal fun FloatingPageScope.openPanel(
@@ -18,9 +22,11 @@ internal fun FloatingPageScope.openPanel(
     content: LinearLayout.() -> Unit
 ): (() -> Unit)? {
     val overlay = focusOverlay ?: return null
+    val id = openingPanelId ?: return null
+    host.interactions.panel = id
     selectedTileView = anchor
 
-    anchor.animate()
+    if (!restoringPanel) anchor.animate()
         .scaleX(FloatingPageTokens.PANEL_SELECTED_SCALE)
         .scaleY(FloatingPageTokens.PANEL_SELECTED_SCALE)
         .alpha(FloatingPageTokens.PANEL_SELECTED_ALPHA)
@@ -29,7 +35,7 @@ internal fun FloatingPageScope.openPanel(
         .start()
 
     lateinit var bubbleHandle: com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
-    var pendingUndo: (() -> Unit)? = null
+    var pendingUndo = host.interactions.read("panel")?.getBundle("undo")
 
     fun rebuildContentIfOpen() {
         if (activeBubble === bubbleHandle.view) {
@@ -41,7 +47,9 @@ internal fun FloatingPageScope.openPanel(
         val resetAction = reset ?: return
         pendingUndo?.let { undo ->
             pendingUndo = null
-            undo()
+            host.interactions.write("panel") { remove("undo") }
+            host.interactions.removePrefix("panel.control.")
+            resetAction.undo(undo)
             rebuildContentIfOpen()
             updateActivePanelResetState()
             return
@@ -49,12 +57,15 @@ internal fun FloatingPageScope.openPanel(
         if (resetAction.isAtDefault()) return
 
         pendingUndo = resetAction.reset()
+        host.interactions.write("panel") { putBundle("undo", pendingUndo) }
+        host.interactions.removePrefix("panel.control.")
         rebuildContentIfOpen()
         updateActivePanelResetState()
     }
 
     val onReset = if (reset == null) null else ::performResetOrUndo
     bubbleHandle = host.floatingFocusBubble(title, subtitle, onReset, ::closePanel) {
+        host.beginPanelControls()
         content()
     }
     val bubble = bubbleHandle.view
@@ -75,6 +86,15 @@ internal fun FloatingPageScope.openPanel(
         }
     }
     updateActivePanelResetState()
+    bubble.findInteractionScroll()?.let { host.bindInteractionScroll(it, "panel.scroll") }
+
+    bubble.setOnClickListener { /* absorb clicks inside the restored panel, too */ }
+    bubble.isClickable = true
+    if (restoringPanel) {
+        overlay.alpha = 1f
+        bubble.alpha = 1f
+        return ::rebuildContentIfOpen
+    }
 
     bubble.setOnClickListener { /* keep clicks inside the bubble */ }
     bubble.isClickable = true
@@ -118,6 +138,7 @@ internal fun FloatingPageScope.installBackHandler() {
 }
 
 private fun FloatingPageScope.closePanel() {
+    host.interactions.panel = null
     val overlay = focusOverlay ?: return
     val bubble = activeBubble
     bubble?.animate()

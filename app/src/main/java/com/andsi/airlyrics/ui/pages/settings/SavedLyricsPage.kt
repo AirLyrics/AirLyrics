@@ -264,6 +264,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     populateSavedLyrics = { preserveContent ->
         if (!preserveContent) {
             lyricsLoaded = false
+            listBody.setTag(R.id.interaction_loading, true)
             renderSavedLyrics()
         }
         savedLyricsLoadRunner.submit(
@@ -272,6 +273,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         ) { state ->
             allLyrics = state.lyrics
             lyricsLoaded = true
+            listBody.setTag(R.id.interaction_loading, false)
             rebuildSavedLyricsRows()
         }
     }
