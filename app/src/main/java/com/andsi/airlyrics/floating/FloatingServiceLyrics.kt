@@ -43,7 +43,7 @@ internal fun FloatingLyricsService.applyLyricsOffset(offsetMs: Long) {
 
 internal fun FloatingLyricsService.reloadCurrentLyrics() {
     if (currentMedia.isEmpty) {
-        clearLyricsState(getString(R.string.ui_waiting_for_media_message))
+        clearLyricsState { getString(R.string.ui_waiting_for_media_message) }
         return
     }
 
@@ -72,7 +72,7 @@ internal fun FloatingLyricsService.handleLyricsChanged(change: LyricsChange) {
     reloadCurrentLyrics()
 }
 
-internal fun FloatingLyricsService.clearLyricsState(message: String) {
+internal fun FloatingLyricsService.clearLyricsState(message: () -> String) {
     lastPlaybackLyricsKey = null
     automaticOnlineLookupSuppressedSong = null
     activeLyricsLookupRequestKey = null
@@ -96,13 +96,13 @@ internal fun FloatingLyricsService.loadLyricsForSong(
             settings
         }
     }
-    renderer.show(
+    renderer.show {
         if (media.isPlaying) {
             "${getString(R.string.ui_searching_lyrics)}...\n${media.displayText}"
         } else {
             "${getString(R.string.ui_paused)}\n${media.displayText}"
         }
-    )
+    }
     markLyricsLoading(media.playbackLyricsKey())
 
     lyricsLookupRunner.submit(
@@ -132,7 +132,7 @@ internal fun FloatingLyricsService.applyLyricsResult(
             plainLrc = plainLrc,
             translatedLrc = lyricsResult.translatedLrc,
             wordByWordLines = lyricsResult.wordByWordLines,
-            emptyText = getString(R.string.ui_parsed_lyrics_are_empty) + "\n" + media.displayText
+            emptyText = { getString(R.string.ui_parsed_lyrics_are_empty) + "\n" + media.displayText }
         )
         if (availability == ParsedLyricsAvailability.AVAILABLE) {
             markLyricsAvailable(media.playbackLyricsKey())
@@ -143,7 +143,7 @@ internal fun FloatingLyricsService.applyLyricsResult(
     }
 
     renderer.clear()
-    renderer.show(lookupFailureText(result.exceptionOrNull(), media))
+    renderer.show { lookupFailureText(result.exceptionOrNull(), media) }
     markLyricsUnavailable(media.playbackLyricsKey())
 }
 
@@ -172,7 +172,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
     val media = currentMedia
 
     if (media.title.isBlank()) {
-        renderer.show(getString(R.string.ui_no_song_for_lyrics_binding))
+        renderer.show { getString(R.string.ui_no_song_for_lyrics_binding) }
         return
     }
 
@@ -187,7 +187,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
     )
 
     if (!imported) {
-        renderer.show(getString(R.string.ui_lyrics_import_failed))
+        renderer.show { getString(R.string.ui_lyrics_import_failed) }
         return
     }
 
@@ -205,7 +205,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
         val availability = renderer.parseAndShow(
             plainLrc = localPlainLrc,
-            emptyText = getString(R.string.ui_lyrics_import_empty_error)
+            emptyText = { getString(R.string.ui_lyrics_import_empty_error) }
         )
         if (availability == ParsedLyricsAvailability.AVAILABLE) {
             markLyricsAvailable(media.playbackLyricsKey())
@@ -213,7 +213,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
             markLyricsUnavailable(media.playbackLyricsKey())
         }
     } else {
-        renderer.show(getString(R.string.ui_lyrics_import_failed))
+        renderer.show { getString(R.string.ui_lyrics_import_failed) }
     }
 }
 

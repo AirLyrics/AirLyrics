@@ -172,7 +172,7 @@ internal fun FloatingLyricsService.selectMediaSource(packageName: String?) {
     syncHandler.removeCallbacks(mediaRestoreRunnable)
     mediaRestoreAttempt = 0
 
-    clearLyricsState(
+    clearLyricsState {
         getString(
             if (packageName == null) {
                 R.string.ui_no_media_source_status
@@ -180,7 +180,7 @@ internal fun FloatingLyricsService.selectMediaSource(packageName: String?) {
                 R.string.ui_media_source_waiting_status
             }
         )
-    )
+    }
 
     if (packageName == null) {
         stopSelectedMediaObservation()

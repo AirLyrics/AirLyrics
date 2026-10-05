@@ -1,9 +1,7 @@
 package com.andsi.airlyrics.i18n
 
-import android.annotation.SuppressLint
 import android.app.LocaleManager
 import android.content.Context
-import android.content.res.Configuration
 import android.content.res.Resources
 import android.os.Build
 import android.os.LocaleList
@@ -73,6 +71,10 @@ object LanguageSettingsStore {
             store(context).setBoolean(KEY_APP_LOCALES_MIGRATED, true)
         }
         setApplicationLocales(context, normalized)
+        // Older Android versions only recreate AppCompat activities. Notify running services too.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            context.sendBroadcast(LanguageChangedBroadcast.intent(context))
+        }
     }
 
     private fun setApplicationLocales(context: Context, mode: String) {
@@ -114,33 +116,6 @@ object LanguageSettingsStore {
             }
             else -> MODE_SYSTEM
         }
-    }
-
-    @SuppressLint("AppBundleLocaleChanges")
-    fun applyAppLocale(context: Context) {
-        // Android 13+ applies app locales to every component through LocaleManager.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) return
-
-        val tags = when (getMode(context)) {
-            MODE_ZH_CN -> MODE_ZH_CN
-            MODE_ZH_TW -> MODE_ZH_TW
-            MODE_EN -> MODE_EN
-            MODE_ES -> MODE_ES
-            else -> ""
-        }
-        val locale = if (tags.isBlank()) {
-            Resources.getSystem().configuration.locales.get(0)
-        } else {
-            Locale.forLanguageTag(tags)
-        }
-        Locale.setDefault(locale)
-        val configuration = Configuration(context.resources.configuration)
-        configuration.setLocales(LocaleList(locale))
-        configuration.setLayoutDirection(locale)
-        @Suppress("DEPRECATION")
-        context.resources.updateConfiguration(configuration, context.resources.displayMetrics)
-        @Suppress("DEPRECATION")
-        context.applicationContext.resources.updateConfiguration(configuration, context.resources.displayMetrics)
     }
 
     fun currentDisplayName(context: Context): String {

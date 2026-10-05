@@ -8,7 +8,7 @@ import androidx.annotation.StringRes
 
 /** Toast feedback whose visibility policy is supplied by the owning surface. */
 internal class ToastAirFeedback(
-    context: Context,
+    private val context: Context,
     private val canShow: () -> Boolean
 ) : AirFeedback {
     private val appContext = context.applicationContext
@@ -16,7 +16,7 @@ internal class ToastAirFeedback(
     private var currentToast: Toast? = null
 
     override fun showMessage(@StringRes messageRes: Int) {
-        showMessage(appContext.getText(messageRes))
+        showMessage(context.getText(messageRes))
     }
 
     override fun showMessage(message: CharSequence) {
@@ -24,7 +24,7 @@ internal class ToastAirFeedback(
     }
 
     override fun showError(@StringRes messageRes: Int) {
-        showError(appContext.getText(messageRes))
+        showError(context.getText(messageRes))
     }
 
     override fun showError(message: CharSequence) {

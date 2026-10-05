@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.media
 
+import android.content.Context
 import android.content.ComponentName
 import android.os.Handler
 import android.os.Looper
@@ -8,7 +9,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
-import com.andsi.airlyrics.i18n.LanguageSettingsStore
+import com.andsi.airlyrics.i18n.LocalizedServiceContext
 
 class MediaNotificationListenerService : NotificationListenerService() {
     private val handler = Handler(Looper.getMainLooper())
@@ -18,8 +19,11 @@ class MediaNotificationListenerService : NotificationListenerService() {
         mediaSessionObserver.refresh()
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocalizedServiceContext.wrap(newBase))
+    }
+
     override fun onCreate() {
-        LanguageSettingsStore.applyAppLocale(this)
         super.onCreate()
         mediaSessionObserver = MediaSessionObserver(
             context = this,

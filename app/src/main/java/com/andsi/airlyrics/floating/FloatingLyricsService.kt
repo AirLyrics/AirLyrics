@@ -18,7 +18,8 @@ import com.andsi.airlyrics.displayscope.DisplayScopeBlockReason
 import com.andsi.airlyrics.displayscope.DisplayScopeMonitor
 import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.feedback.ToastAirFeedback
-import com.andsi.airlyrics.i18n.LanguageSettingsStore
+import com.andsi.airlyrics.i18n.LocalizedServiceContext
+import com.andsi.airlyrics.i18n.LanguageChangedBroadcast
 import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
@@ -157,9 +158,30 @@ open class FloatingLyricsService : Service() {
         }
     }
 
+    private var localizedContentLanguageTags: String? = null
+
+    private val languageChangedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            refreshLocalizedContent()
+        }
+    }
+
+    private fun refreshLocalizedContent() {
+        val languageTags = resources.configuration.locales.toLanguageTags()
+        if (languageTags == localizedContentLanguageTags) return
+        localizedContentLanguageTags = languageTags
+        if (feedbackDelegate.isInitialized()) feedback.dismiss()
+        renderer.refresh()
+        refreshQuickControls()
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocalizedServiceContext.wrap(newBase))
+    }
+
     override fun onCreate() {
-        LanguageSettingsStore.applyAppLocale(this)
         super.onCreate()
+        localizedContentLanguageTags = resources.configuration.locales.toLanguageTags()
 
         selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
         displayScopeMonitor = DisplayScopeMonitor(this, ::applyDisplayScopeSnapshot)
@@ -177,6 +199,12 @@ open class FloatingLyricsService : Service() {
         startForeground(FloatingServiceNotification.NOTIFICATION_ID, FloatingServiceNotification.create(this, currentQuickControlState()))
         registerMediaReceiver()
         registerLyricsChangedReceiver()
+        ContextCompat.registerReceiver(
+            this,
+            languageChangedReceiver,
+            LanguageChangedBroadcast.filter(),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -211,7 +239,10 @@ open class FloatingLyricsService : Service() {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (::windowController.isInitialized) windowController.onConfigurationChanged()
+        if (::windowController.isInitialized) {
+            windowController.onConfigurationChanged()
+            refreshLocalizedContent()
+        }
     }
 
     override fun onDestroy() {
@@ -226,6 +257,7 @@ open class FloatingLyricsService : Service() {
         lyricsLookupRunner.shutdown()
         runCatching { unregisterReceiver(mediaReceiver) }
         runCatching { unregisterReceiver(lyricsChangedReceiver) }
+        runCatching { unregisterReceiver(languageChangedReceiver) }
         if (::windowController.isInitialized) {
             windowController.hide(notifyVisibilityChanged = false)
         }

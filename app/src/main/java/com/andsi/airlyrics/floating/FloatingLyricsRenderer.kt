@@ -42,7 +42,7 @@ class FloatingLyricsRenderer(
     private var lastPositionUpdateUptimeMs: Long = 0L
     private var currentIsPlaying: Boolean = false
     private var lyricsOffsetMs: Long = 0L
-    private var currentMessage: String? = null
+    private var currentMessage: (() -> String)? = null
     private var lastRenderedText: String? = null
 
     fun updatePlayback(positionMs: Long, isPlaying: Boolean) {
@@ -70,11 +70,13 @@ class FloatingLyricsRenderer(
         resetTextAnimationState()
     }
 
-    fun show(text: String) {
+    fun show(text: String) = show { text }
+
+    fun show(text: () -> String) {
         currentPlainLines = emptyList()
         currentWordByWordLines = emptyList()
         currentMessage = text
-        setTextImmediately(text)
+        setTextImmediately(text())
     }
 
     /**
@@ -92,6 +94,13 @@ class FloatingLyricsRenderer(
         translatedLrc: String? = null,
         wordByWordLines: List<WordByWordLine> = emptyList(),
         emptyText: String
+    ): ParsedLyricsAvailability = parseAndShow(plainLrc, translatedLrc, wordByWordLines) { emptyText }
+
+    internal fun parseAndShow(
+        plainLrc: String,
+        translatedLrc: String? = null,
+        wordByWordLines: List<WordByWordLine> = emptyList(),
+        emptyText: () -> String
     ): ParsedLyricsAvailability {
         currentPlainLines = LrcParser.parseWithTranslation(plainLrc, translatedLrc)
         currentWordByWordLines = wordByWordLines
@@ -105,9 +114,9 @@ class FloatingLyricsRenderer(
         val text = if (availability == ParsedLyricsAvailability.AVAILABLE) {
             renderAtCurrentPosition().takeIf { it.isNotBlankText() }
                 ?: renderPlainTextAtIndex(0).takeIf { it.isNotBlankText() }
-                ?: emptyText
+                ?: emptyText()
         } else {
-            emptyText
+            emptyText()
         }
 
         setTextImmediately(text)
@@ -127,11 +136,11 @@ class FloatingLyricsRenderer(
 
     fun refresh() {
         val text = if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) {
-            currentMessage ?: return
+            currentMessage?.invoke() ?: return
         } else {
             renderAtCurrentPosition().takeIf { it.isNotBlankText() }
                 ?: renderPlainTextAtIndex(0).takeIf { it.isNotBlankText() }
-                ?: currentMessage
+                ?: currentMessage?.invoke()
                 ?: return
         }
         setTextImmediately(text)
