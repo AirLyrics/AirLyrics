@@ -5,7 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import com.andsi.airlyrics.ui.state.confirmOperation
-import com.andsi.airlyrics.ui.state.ConfirmationOperation
+import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceCompactTitle
@@ -80,7 +80,7 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
                 })
                 addView(dangerActionButton(activity, getString(R.string.ui_delete)) {
                     activity.confirmOperation(
-                        operation = ConfirmationOperation.DELETE_ALL,
+                        action = ConfirmationAction.DeleteAll,
                         title = getString(R.string.ui_delete_all_saved_lyrics_confirm),
                         message = getString(R.string.ui_delete_all_saved_lyrics_message),
                         positiveText = getString(R.string.ui_delete)

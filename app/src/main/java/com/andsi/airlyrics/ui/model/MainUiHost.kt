@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.ui.model
 
-import androidx.lifecycle.lifecycleScope
 import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
 import android.content.ContextWrapper
 import androidx.appcompat.app.AppCompatActivity
@@ -33,19 +32,14 @@ internal abstract class MainUiHost(
     open fun loadSavedLyrics(force: Boolean, deliver: (SavedLyricsUiState) -> Unit) =
         savedLoad.submit(this, { savedLyricsState() }, deliver)
 
-    val readerDrafts by lazy { com.andsi.airlyrics.app.interaction.LyricsDraftStore.forSession(applicationContext, interactions, "reader-drafts") }
+    abstract val readerContent: ReaderContent
+    abstract val confirmations: OperationConfirmations
     val auxiliaryDialogs = mutableMapOf<String, android.app.Dialog>()
     var auxiliaryRestoreJob: kotlinx.coroutines.Job? = null
     var activeConfirmationId: String? = null
-    open fun executeConfirmedOperation(request: android.os.Bundle) = Unit
     var windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(0f, 0f, 1f)
     open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
-    open val editorSession by lazy {
-        com.andsi.airlyrics.app.interaction.LyricsEditorSession(applicationContext, interactions, activity.lifecycleScope)
-    }
     val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
-    var editorObserverInstalled = false
-    var editorChangeCallback: ((LocalLyricsUiChange) -> Unit)? = null
     val interactionUi = com.andsi.airlyrics.ui.state.InteractionUiRegistry()
     private var panelControlIndex = 0
     fun beginPanelControls() { panelControlIndex = 0 }
@@ -55,20 +49,22 @@ internal abstract class MainUiHost(
         activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
             override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
                 interactionUi.capture()
-                if (editorObserverInstalled) editorSession.flush()
+                onInteractionsStopped()
             }
             override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
                 auxiliaryRestoreJob?.cancel()
                 interactionUi.destroy()
                 auxiliaryDialogs.clear()
-                editorChangeCallback = null
                 if (activity.isFinishing) {
                     interactions.read("aux.order")?.getStringArrayList("items")?.toList()?.forEach { forgetAuxiliaryDialog(it) }
-                    if (editorObserverInstalled) editorSession.cancel()
                 }
+                onInteractionsDestroyed(activity.isFinishing)
             }
         })
     }
+
+    protected open fun onInteractionsStopped() = Unit
+    protected open fun onInteractionsDestroyed(finishing: Boolean) = Unit
 
     abstract val actions: MainUiActions
     val uiActions: MainUiActions

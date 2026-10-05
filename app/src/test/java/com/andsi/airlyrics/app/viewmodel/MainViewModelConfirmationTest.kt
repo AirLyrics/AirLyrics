@@ -1,6 +1,10 @@
 package com.andsi.airlyrics.app.viewmodel
 
 import android.os.Bundle
+import com.andsi.airlyrics.app.interaction.MainOperationConfirmations
+import com.andsi.airlyrics.app.interaction.toOperationTarget
+import com.andsi.airlyrics.ui.model.ConfirmationAction
+import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -44,4 +48,52 @@ class MainViewModelConfirmationTest : MainViewModelTestBase() {
         assertEquals(media(songA), operations.currentDeleteRequests.single().first)
         assertEquals(media(songA), operations.onlineSearchRequests.single())
     }
+    @Test fun restoredConfirmationRequiresFreshApproval_thenExecutesOnlyOnce() = runTest(mainDispatcherRule.dispatcher) {
+        val operations = FakeLyricsOperations()
+        val model = viewModel(lyrics = operations)
+        val controller = confirmations(model)
+        controller.request(ConfirmationAction.DeleteAll, "Delete", "All lyrics", "Delete")
+        val oldId = requireNotNull(controller.pending).id
+        model.interactions.write("confirmation") { putString("process", "previous-process") }
+        controller.confirm(oldId)
+        controller.confirm(oldId)
+        advanceUntilIdle()
+        assertEquals(0, operations.deleteAllRequests)
+        val renewed = requireNotNull(controller.pending)
+        assertNotEquals(oldId, renewed.id)
+        assertEquals("All lyrics", renewed.message)
+        controller.confirm(oldId)
+        assertEquals(renewed, controller.pending)
+        controller.confirm(renewed.id)
+        controller.confirm(renewed.id)
+        advanceUntilIdle()
+        assertEquals(1, operations.deleteAllRequests)
+        assertNull(controller.pending)
+    }
+
+    @Test fun confirmationDispatchUsesDisplayedTargetAfterPlaybackChanges() = runTest(mainDispatcherRule.dispatcher) {
+        val operations = FakeLyricsOperations().apply { currentMedia = media(songA) }
+        val model = viewModel(lyrics = operations)
+        val controller = confirmations(model)
+        controller.request(ConfirmationAction.DeleteCurrent(media(songA).toOperationTarget(), LyricsDeleteMode.PLAIN),
+            "Delete", "Song A", "Delete")
+        operations.currentMedia = media(songB)
+        controller.confirm(requireNotNull(controller.pending).id)
+        advanceUntilIdle()
+        assertEquals(songA, operations.currentDeleteRequests.single().first.toOperationTarget().song)
+        controller.request(ConfirmationAction.Search(media(songA).toOperationTarget()), "Search", "Song A", "Search")
+        controller.confirm(requireNotNull(controller.pending).id)
+        advanceUntilIdle()
+        assertEquals(songA, operations.onlineSearchRequests.single().toOperationTarget().song)
+    }
+
+    private fun confirmations(model: MainViewModel) = MainOperationConfirmations(
+        interactions = model.interactions,
+        editorSessionId = { null },
+        deleteAll = model::deleteAllSavedLyricsIfUnchanged,
+        deleteCurrent = model::deleteLyricsForTarget,
+        search = { model.searchOnlineLyrics(it) },
+        deleteEditor = { error("No editor in this test") }
+    )
+
 }

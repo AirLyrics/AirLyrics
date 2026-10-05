@@ -9,7 +9,7 @@ import com.andsi.airlyrics.ui.layout.ResponsivePage
 import com.andsi.airlyrics.ui.layout.AdaptiveWindowLayout
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.components.showAirDialog
-import com.andsi.airlyrics.ui.state.ConfirmationOperation
+import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.ui.state.confirmOperation
 import com.andsi.airlyrics.ui.pages.settings.showLanguageDialog
 import org.junit.Assert.*
@@ -93,7 +93,7 @@ class MainActivityWindowLayoutTest {
     @Test fun landscapeConfigurationActuallyChangesLayoutAndRestoresConfirmation() {
         RuntimeEnvironment.setQualifiers("w360dp-h720dp-port")
         Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { controller ->
-            controller.get().graph.uiHost.confirmOperation(ConfirmationOperation.DELETE_ALL, "Delete", "All lyrics", "Delete")
+            controller.get().graph.uiHost.confirmOperation(ConfirmationAction.DeleteAll, "Delete", "All lyrics", "Delete")
             val request = controller.get().graph.viewModel.interactions.read("confirmation")!!.getString("id")
             RuntimeEnvironment.setQualifiers("w1000dp-h600dp-land")
             controller.recreate()

@@ -1,5 +1,12 @@
 package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.app.interaction.DraftReaderContent
+import com.andsi.airlyrics.app.interaction.LyricsDraftStore
+import com.andsi.airlyrics.app.interaction.MainOperationConfirmations
+import com.andsi.airlyrics.app.interaction.toOperationTarget
+import com.andsi.airlyrics.ui.model.OperationConfirmations
+import com.andsi.airlyrics.ui.model.ReaderContent
+
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.media.session.MediaController
@@ -18,7 +25,6 @@ import com.andsi.airlyrics.app.interaction.LyricsReadKind
 import com.andsi.airlyrics.app.interaction.LyricsReadSnapshot
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import com.andsi.airlyrics.ui.state.confirmationMedia
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.platform.AppNightMode
@@ -81,8 +87,33 @@ internal class MainActivityUiHost(
     private val viewRefs: MainActivityViewRefs
         get() = graph.viewRefs
 
-    override val editorSession get() = graph.viewModel.editorSession(applicationContext)
+    val editorSession get() = graph.viewModel.editorSession(applicationContext)
     override val interactions get() = graph.viewModel.interactions
+
+    var editorObserverInstalled = false
+    var editorChangeCallback: ((LocalLyricsUiChange) -> Unit)? = null
+    override val readerContent: ReaderContent by lazy {
+        DraftReaderContent(LyricsDraftStore.forSession(applicationContext, interactions, "reader-drafts"))
+    }
+    override val confirmations: OperationConfirmations by lazy {
+        MainOperationConfirmations(
+            interactions = interactions,
+            editorSessionId = { editorSession.state.value?.id },
+            deleteAll = graph.viewModel::deleteAllSavedLyricsIfUnchanged,
+            deleteCurrent = graph.viewModel::deleteLyricsForTarget,
+            search = { graph.viewModel.searchOnlineLyrics(it) },
+            deleteEditor = { editorSession.delete() }
+        )
+    }
+
+    override fun onInteractionsStopped() {
+        if (editorObserverInstalled) editorSession.flush()
+    }
+
+    override fun onInteractionsDestroyed(finishing: Boolean) {
+        editorChangeCallback = null
+        if (finishing && editorObserverInstalled) editorSession.cancel()
+    }
 
     override val actions: MainUiActions
         get() = graph.uiActions
@@ -375,7 +406,7 @@ internal class MainActivityUiHost(
             deliver(CurrentLyricsUiState(data.media?.toUiInfo(), info?.let { localizedLocalPlainLyricsSource(it) },
                 info?.friendlyTitle, info?.plainSource == LyricsStorage.SOURCE_DOWNLOADED, info != null,
                 info != null && info.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
-                data.wordByWord, data.wordEnabled, data.offset, data.media))
+                data.wordByWord, data.wordEnabled, data.offset, data.media?.toOperationTarget()))
         }
 
     override fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState) -> Unit) =
@@ -385,18 +416,6 @@ internal class MainActivityUiHost(
 
     override fun loadSavedLyrics(force: Boolean, deliver: (SavedLyricsUiState) -> Unit) =
         loadLyrics(LyricsReadKind.SAVED, force) { data -> deliver(SavedLyricsUiState(data.items.map(::toUiItem))) }
-
-    override fun executeConfirmedOperation(request: android.os.Bundle) {
-        when (request.getString("operation")) {
-            "DELETE_ALL" -> graph.viewModel.deleteAllSavedLyricsIfUnchanged(request)
-            "DELETE_CURRENT" -> request.confirmationMedia()?.let { media ->
-                LyricsStorage.DeleteMode.entries.find { it.name == request.getString("mode") }?.let { mode ->
-                    graph.viewModel.deleteLyricsForTarget(media, mode)
-                }
-            }
-            "SEARCH" -> graph.viewModel.searchOnlineLyrics(request.confirmationMedia())
-        }
-    }
 
     override fun currentLyricsState(): CurrentLyricsUiState {
         val media = graph.viewModel.currentMediaInfo()
@@ -428,7 +447,7 @@ internal class MainActivityUiHost(
             hasLocalWordByWordLyrics = hasLocalWordByWordLyrics,
             wordByWordLyricsEnabled = LyricsSettingsStore.isWordByWordLyricsEnabled(this),
             offsetMs = offsetMs,
-            operationTarget = media
+            operationTarget = media?.toOperationTarget()
         )
     }
 

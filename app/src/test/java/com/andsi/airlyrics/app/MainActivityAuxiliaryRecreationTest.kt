@@ -1,13 +1,15 @@
 package com.andsi.airlyrics.app
 
 import android.view.View
+import com.andsi.airlyrics.app.interaction.LyricsDraftStore
+import kotlinx.coroutines.runBlocking
 import android.view.ViewGroup
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.showFullText
 import com.andsi.airlyrics.ui.state.restoreAuxiliaryDialogs
 import com.andsi.airlyrics.ui.state.confirmOperation
-import com.andsi.airlyrics.ui.state.ConfirmationOperation
+import com.andsi.airlyrics.ui.model.ConfirmationAction
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,17 +40,17 @@ class MainActivityAuxiliaryRecreationTest {
             restored.dismiss()
             ShadowLooper.idleMainLooper(350, TimeUnit.MILLISECONDS)
             assertNull(host.interactions.read("aux.reader"))
-            assertNull(host.readerDrafts.read(id).get())
+            assertNull(runBlocking { host.readerContent.load(id) })
         }
     }
 
     @Test fun confirmationClickIsConsumedSynchronouslyAndDoesNotRestore() {
         Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { controller ->
             val host = controller.get().graph.uiHost
-            host.confirmOperation(ConfirmationOperation.SEARCH, "Search", "Song", host.getString(R.string.ui_search))
+            host.confirmOperation(ConfirmationAction.DeleteAll, "Delete", "All lyrics", host.getString(R.string.ui_delete))
             val dialog = ShadowDialog.getLatestDialog()
             val button = descendants(dialog.window!!.decorView).filterIsInstance<TextView>()
-                .first { it.text.toString() == host.getString(R.string.ui_search) && it.hasOnClickListeners() }
+                .first { it.text.toString() == host.getString(R.string.ui_delete) && it.hasOnClickListeners() }
             button.performClick()
             assertNull(host.interactions.read("confirmation"))
             button.performClick()
@@ -61,10 +63,10 @@ class MainActivityAuxiliaryRecreationTest {
 
     @Test fun sessionDraftPruningCannotDeleteAnotherWindowsDraft() {
         Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { first ->
-            val firstStore = first.get().graph.uiHost.readerDrafts
+            val firstStore = LyricsDraftStore.forSession(first.get(), first.get().graph.viewModel.interactions, "reader-drafts")
             firstStore.write("draft-one", "first window").get()
             Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { second ->
-                val secondStore = second.get().graph.uiHost.readerDrafts
+                val secondStore = LyricsDraftStore.forSession(second.get(), second.get().graph.viewModel.interactions, "reader-drafts")
                 secondStore.write("draft-two", "second window").get()
                 secondStore.prune("draft-two").get()
                 assertEquals("first window", firstStore.read("draft-one").get())

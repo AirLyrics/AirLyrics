@@ -10,9 +10,7 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.pages.settings.showLanguageDialog
 import com.andsi.airlyrics.ui.pages.settings.showFullUpdateLogDialog
 import java.util.UUID
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 internal fun MainUiHost.rememberAuxiliaryDialog(kind: String, data: Bundle = Bundle()) {
     interactions.write("aux.$kind") { putAll(data) }
@@ -27,19 +25,17 @@ internal fun MainUiHost.isAuxiliaryDialogShowing(kind: String): Boolean = auxili
 
 internal fun MainUiHost.forgetAuxiliaryDialog(kind: String) {
     auxiliaryDialogs.remove(kind)
-    interactions.read("aux.$kind")?.getString("file")?.let { readerStore().delete(it) }
+    interactions.read("aux.$kind")?.getString("file")?.let { readerContent.discard(it) }
     interactions.removePrefix("aux.$kind")
     interactions.write("aux.order") {
         putStringArrayList("items", (getStringArrayList("items") ?: arrayListOf()).apply { remove(kind) })
     }
 }
 
-private fun MainUiHost.readerStore() = readerDrafts
-
 internal fun MainUiHost.rememberReader(kind: String, title: String?, text: String, allowScroll: Boolean = false) {
     if (interactions.read("aux.$kind") != null) return
     val id = UUID.randomUUID().toString()
-    readerStore().write(id, text)
+    readerContent.save(id, text)
     rememberAuxiliaryDialog(kind, Bundle().apply {
         putString("file", id)
         putString("title", title)
@@ -69,7 +65,7 @@ internal fun MainUiHost.restoreAuxiliaryDialogs() {
                 "info" -> showPersistentInfo(saved.getInt("titleRes"), saved.getInt("textRes"))
                 "reader" -> {
                     val file = saved.getString("file") ?: continue
-                    val text = withContext(Dispatchers.IO) { readerStore().read(file).get() }
+                    val text = readerContent.load(file)
                     if (interactions.read("aux.$kind")?.getString("file") != file) continue
                     if (text == null) {
                         forgetAuxiliaryDialog(kind)

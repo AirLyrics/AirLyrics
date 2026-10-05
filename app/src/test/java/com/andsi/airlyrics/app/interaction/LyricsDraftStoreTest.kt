@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.app.interaction
 
 import java.io.File
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -20,6 +21,16 @@ class LyricsDraftStoreTest {
         store.write("draft", "changed")
         store.delete("draft").get()
         assertNull(store.read("draft").get())
+    }
+
+    @Test fun readerContentPreservesQueuedWriteDeleteOrdering() = runBlocking {
+        val content = DraftReaderContent(LyricsDraftStore(folder.root))
+        content.save("reader", "first")
+        content.save("reader", "latest")
+        assertEquals("latest", content.load("reader"))
+        content.save("reader", "queued")
+        content.discard("reader")
+        assertNull(content.load("reader"))
     }
 
     @Test fun corruptDraftFallsBackAndPruningKeepsOnlyActiveDraft() {

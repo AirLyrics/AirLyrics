@@ -20,7 +20,7 @@ import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.settingRow
 import com.andsi.airlyrics.ui.state.confirmOperation
-import com.andsi.airlyrics.ui.state.ConfirmationOperation
+import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.ui.state.showPersistentInfo
 import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
@@ -83,9 +83,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
 
         fun confirmDeleteLyrics(label: String, mode: LyricsDeleteMode, message: String? = null) {
             activity.confirmOperation(
-                operation = ConfirmationOperation.DELETE_CURRENT,
-                media = state.operationTarget,
-                mode = mode.name,
+                action = ConfirmationAction.DeleteCurrent(state.operationTarget ?: return, mode),
                 title = label,
                 message = message?.let { media.displayText + "\n\n" + it } ?: media.displayText,
                 positiveText = getString(R.string.ui_remove)
@@ -124,8 +122,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
         if (!state.hasLocalWordByWordLyrics) {
             body.addView(actionButton(activity, getString(R.string.ui_search_online_again)) {
                 activity.confirmOperation(
-                    operation = ConfirmationOperation.SEARCH,
-                    media = state.operationTarget,
+                    action = ConfirmationAction.Search(state.operationTarget ?: return@actionButton),
                     title = getString(R.string.ui_search_online_again_confirm),
                     message = getString(R.string.ui_search_online_replace_cache_msg),
                     positiveText = getString(R.string.ui_search)

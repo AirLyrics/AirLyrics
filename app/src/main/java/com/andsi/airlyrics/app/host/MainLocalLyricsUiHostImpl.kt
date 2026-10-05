@@ -32,10 +32,9 @@ import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.state.confirmOperation
 import com.andsi.airlyrics.ui.state.restoreOperationConfirmation
-import com.andsi.airlyrics.ui.state.ConfirmationOperation
+import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
-import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorDanger
@@ -46,7 +45,7 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
 
-internal fun MainUiHost.localLyricsRowImpl(
+internal fun MainActivityUiHost.localLyricsRowImpl(
     item: LocalLyricsUiItem,
     onLyricsChanged: ((LocalLyricsUiChange) -> Unit)? = null,
     badgeText: CharSequence? = null
@@ -106,7 +105,7 @@ internal fun MainUiHost.localLyricsRowImpl(
     }
 }
 
-private fun MainUiHost.openLocalLyricsEditorForItem(
+private fun MainActivityUiHost.openLocalLyricsEditorForItem(
     item: LocalLyricsUiItem,
     onLyricsChanged: ((LocalLyricsUiChange) -> Unit)?
 ) {
@@ -120,7 +119,7 @@ private fun MainUiHost.openLocalLyricsEditorForItem(
     }
 }
 
-private fun MainUiHost.openLocalLyricsEditor(
+private fun MainActivityUiHost.openLocalLyricsEditor(
     item: LocalLyricsUiItem,
     target: LyricsStorage.LocalLyricsEditTarget,
     onLyricsChanged: ((LocalLyricsUiChange) -> Unit)?
@@ -130,7 +129,7 @@ private fun MainUiHost.openLocalLyricsEditor(
     editorSession.open(item, target)
 }
 
-internal fun MainUiHost.observeEditorSession() {
+internal fun MainActivityUiHost.observeEditorSession() {
     if (editorObserverInstalled) return
     editorObserverInstalled = true
     editorSession.restore()
@@ -182,7 +181,7 @@ internal fun MainUiHost.observeEditorSession() {
 
 private data class EditorDialogBinding(val id: String, val dialog: Dialog, val setBusy: (Boolean) -> Unit)
 
-private fun MainUiHost.showLocalLyricsEditorDialog(session: EditorSession): EditorDialogBinding {
+private fun MainActivityUiHost.showLocalLyricsEditorDialog(session: EditorSession): EditorDialogBinding {
     val item = session.item
     var changed: (() -> Unit)? = null
     val editor = object : AppCompatEditText(this) {
@@ -236,7 +235,7 @@ private fun MainUiHost.showLocalLyricsEditorDialog(session: EditorSession): Edit
                 layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.IconTouchSize), dp(AirUiTokens.Layout.IconTouchSize))
                 setOnClickListener {
                     confirmOperation(
-                        operation = ConfirmationOperation.DELETE_EDITOR,
+                        action = ConfirmationAction.DeleteEditor(session.id),
                         title = getString(R.string.ui_delete_saved_lyrics_confirm, item.displayTitle),
                         message = getString(R.string.ui_delete_all_saved_lyrics_message),
                         positiveText = getString(R.string.ui_delete)
@@ -286,7 +285,7 @@ private fun MainUiHost.showLocalLyricsEditorDialog(session: EditorSession): Edit
     }
 }
 
-private fun MainUiHost.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
+private fun MainActivityUiHost.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     showAirDialog(
         title = getString(R.string.ui_invalid_format),
         message = plainLyricsFormatErrorMessage(invalidLineNumbers),
@@ -294,7 +293,7 @@ private fun MainUiHost.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>
     )
 }
 
-private fun MainUiHost.showWordByWordLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
+private fun MainActivityUiHost.showWordByWordLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     showAirDialog(
         title = getString(R.string.ui_invalid_format),
         message = wordByWordLyricsFormatErrorMessage(invalidLineNumbers),
@@ -308,7 +307,7 @@ private enum class LocalLyricsDialogActionStyle {
     PRIMARY
 }
 
-private fun MainUiHost.localLyricsDialogButton(
+private fun MainActivityUiHost.localLyricsDialogButton(
     text: String,
     style: LocalLyricsDialogActionStyle,
     marginStartDp: Int = 0,
