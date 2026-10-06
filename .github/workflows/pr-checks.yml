@@ -52,6 +52,9 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Check architecture sources, bytecode, policy, and checker tests
+        run: ./scripts/check_architecture_boundaries.sh
+
       - name: Run JVM unit tests
         run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true --stacktrace
 
@@ -60,9 +63,6 @@ jobs:
 
       - name: Check localization
         run: ./scripts/check_localization.sh
-
-      - name: Check architecture boundaries
-        run: ./scripts/check_architecture_boundaries.sh
 
       - name: Upload Android lint reports
         if: always()

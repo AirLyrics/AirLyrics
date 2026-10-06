@@ -1,15 +1,25 @@
 package com.andsi.airlyrics.architecture
 
 import java.io.File
+import org.json.JSONObject
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppLocalProtocolGuardTest {
     @Test
     fun appLocalProtocolActions_areOwnedByProtocolObjects() {
-        val violations = mainSourceFiles()
-            .filterNot { it.relativePath in PROTOCOL_OWNER_FILES }
-            .flatMap(::findAppLocalActionStrings)
+        val policy = JSONObject(File(projectRoot(), "scripts/architecture/policy.json").readText())
+        val namespace = policy.getString("namespace")
+        val roots = policy.getJSONArray("source_roots")
+        val sourceRoots = (0 until roots.length()).map { roots.getString(it) }
+        val owners = policy.getJSONArray("protocol_owners")
+        val ownerPaths = (0 until owners.length()).map {
+            namespace.replace('.', '/') + "/" + owners.getString(it)
+        }.flatMap { relative -> sourceRoots.map { root -> "$root/$relative" } }.toSet()
+        val actionPattern = Regex("\"" + Regex.escape(namespace) + "\\.[^\"]+\"")
+        val violations = mainSourceFiles(sourceRoots)
+            .filterNot { it.relativePath in ownerPaths }
+            .flatMap { findAppLocalActionStrings(it, actionPattern) }
             .toList()
 
         assertTrue(
@@ -19,10 +29,10 @@ class AppLocalProtocolGuardTest {
         )
     }
 
-    private fun mainSourceFiles(): Sequence<SourceFile> {
+    private fun mainSourceFiles(sourceRoots: List<String>): Sequence<SourceFile> {
         val root = projectRoot()
-        val sourceDir = File(root, "app/src/main/java")
-        return sourceDir.walkTopDown()
+        return sourceRoots.asSequence()
+            .flatMap { File(root, it).walkTopDown() }
             .filter { it.isFile && it.extension in SOURCE_EXTENSIONS }
             .map { file ->
                 SourceFile(
@@ -32,9 +42,9 @@ class AppLocalProtocolGuardTest {
             }
     }
 
-    private fun findAppLocalActionStrings(sourceFile: SourceFile): List<String> {
+    private fun findAppLocalActionStrings(sourceFile: SourceFile, actionPattern: Regex): List<String> {
         val text = sourceFile.file.readText()
-        return APP_LOCAL_ACTION_STRING.findAll(text)
+        return actionPattern.findAll(text)
             .map { match ->
                 val line = text.lineNumberAt(match.range.first)
                 "${sourceFile.relativePath}:$line ${match.value}"
@@ -58,15 +68,6 @@ class AppLocalProtocolGuardTest {
     )
 
     private companion object {
-        private val APP_LOCAL_ACTION_STRING = Regex("\"com\\.andsi\\.airlyrics\\.[^\"]+\"")
         private val SOURCE_EXTENSIONS = setOf("kt", "java")
-
-        private val PROTOCOL_OWNER_FILES = setOf(
-            "app/src/main/java/com/andsi/airlyrics/floating/FloatingServiceCommand.kt",
-            "app/src/main/java/com/andsi/airlyrics/floating/FloatingWindowStateBroadcast.kt",
-            "app/src/main/java/com/andsi/airlyrics/lyrics/LyricsChangedBroadcast.kt",
-            "app/src/main/java/com/andsi/airlyrics/i18n/LanguageChangedBroadcast.kt",
-            "app/src/main/java/com/andsi/airlyrics/media/CurrentMediaBroadcast.kt"
-        )
     }
 }

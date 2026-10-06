@@ -3,7 +3,7 @@ package com.andsi.airlyrics.floating
 import android.net.Uri
 import android.os.SystemClock
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizedLyricsLookupMessage
+import com.andsi.airlyrics.i18n.lyrics.localizedLyricsLookupMessage
 import com.andsi.airlyrics.lyrics.LyricsChange
 import com.andsi.airlyrics.lyrics.LyricsChangeKind
 import com.andsi.airlyrics.lyrics.LyricsLookupException

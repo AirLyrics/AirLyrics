@@ -351,3 +351,19 @@ tasks.named("preBuild") {
         dependsOn("buildRustLyrics")
     }
 }
+
+// Use the producing task's declared outputs so a stale/unrelated jar cannot satisfy the check.
+val checkArchitecture = tasks.register<Exec>("checkArchitecture") {
+    group = "verification"
+    description = "Check source and compiled project dependencies against the architecture policy."
+    dependsOn("bundleDebugClassesToCompileJar")
+    workingDir = rootProject.projectDir
+    environment("JAVA_HOME", System.getProperty("java.home"))
+    doFirst {
+        commandLine(
+            listOf("python3", "-B", "scripts/architecture/check.py", "--self-test", "--classes") +
+                tasks.named("bundleDebugClassesToCompileJar").get().outputs.files.files.map { it.absolutePath }
+        )
+    }
+}
+tasks.named("check") { dependsOn(checkArchitecture) }

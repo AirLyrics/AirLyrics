@@ -76,13 +76,15 @@ Gradle 项目只包含一个 Android 模块 `:app`。`lyrics-core/` 是 Cargo cr
 app/              依赖组装、生命周期协调、控制器、工作流和 UI 适配器
 core/             依赖稳定的模型、颜色工具和偏好设置抽象
 design/           共享 UI 设计 token
+displayscope/     显示范围策略、能力检查和前台应用观察
 feedback/         不依赖功能包的临时反馈契约和 Toast host
 media/            媒体会话监听、当前媒体模型、广播和媒体来源持久化
 lyrics/           查询、取消、歌词来源、解析、导入、格式化和存储
 floating/         前台服务、服务命令、悬浮窗控制和歌词渲染
 settings/         各功能设置持久化和状态提示策略
 ui/               页面、Snackbar 反馈、组件、导航、主题、UI 模型和异步界面工具
-i18n/             语言选择、本地化 assets 和用户文案格式化
+i18n/             语言选择、本地化 assets 和通用值格式化
+i18n/lyrics/      歌词错误和存储值的文案适配
 ```
 
 临时反馈由交互界面负责：主 Activity 使用带锚点的 Snackbar，悬浮窗 Service 使用 Toast；
@@ -90,22 +92,29 @@ i18n/             语言选择、本地化 assets 和用户文案格式化
 
 ## 包边界
 
-当前 Kotlin 顶层包的依赖关系如下：
+以下允许依赖由 `scripts/architecture/policy.json` 生成。它是源码检查、JVM 依赖检查、广播
+协议归属和文档表格的统一规则来源。表格列出允许的依赖，不代表每条依赖当前都被使用：
 
+<!-- architecture-policy:start -->
 ```text
-core      -> （无）
-feedback  -> （无）
-design    -> core
-settings  -> core
-lyrics    -> core
-i18n      -> core, lyrics
-media     -> core, i18n
-ui        -> core, design, feedback, i18n
-floating  -> core, design, feedback, i18n, lyrics, media, settings
-app       -> core, design, feedback, floating, i18n, lyrics, media, settings, ui
+core         -> (none)
+design       -> core.model
+displayscope -> (none)
+feedback     -> (none)
+settings     -> core.model, core.prefs, core.color
+lyrics       -> core
+i18n         -> core.model, core.prefs
+i18n.lyrics  -> lyrics.LyricsLookupErrorType, lyrics.LyricsLookupException, lyrics.storage.LyricsStorage
+media        -> core.model, core.prefs, i18n.LocalizedServiceContext
+ui           -> core.model, core.color, design, feedback.AirFeedback, i18n
+floating     -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics, media, settings
+app          -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics, media, settings, floating, ui
 ```
+<!-- architecture-policy:end -->
 
-箭头表示“导入自”，生成的 `R` 类和平台库未列出。
+箭头表示“允许依赖”。符号归属于匹配最精确的已登记分组：允许 `i18n` 不代表允许
+`i18n.lyrics`。具体符号的授权包含其嵌套类型和成员，不包含名称相近的其他类型。
+生成的 `R`、`BuildConfig` 和外部平台、库类型未列出。
 
 主要边界规则如下：
 
@@ -117,7 +126,47 @@ app       -> core, design, feedback, floating, i18n, lyrics, media, settings, ui
   UI 页面。
 - `app/` 是允许连接所有功能包的依赖组装层。
 
-CI 通过 `scripts/check_architecture_boundaries.sh` 强制检查这些导入限制。
+`displayscope` 不依赖其他项目包，由 `app` 和 `floating` 使用。通用 `i18n` 不依赖歌词；
+`i18n.lyrics` 只允许访问表格列出的歌词错误类型和存储门面。存储门面的授权用于其嵌套数据
+类型和来源常量，属于类级别授权，不能保证每个方法调用都合理；代码审查仍需确保适配器只做
+文案转换。`lyrics` 不得反向依赖这两个 i18n 分组。
+UI 可以使用稳定值模型和反馈契约，但不能访问偏好存储或具体 Toast 实现。接口的参数、
+返回值也不能暴露被禁止的实现类型。
+
+使用 JDK 17 和 Python 3.10+ 运行完整检查：
+
+```bash
+./scripts/check_architecture_boundaries.sh
+# 等价 Gradle 入口，也接入了 :app:check
+./gradlew :app:checkArchitecture -Pairlyrics.skipRustBuild=true
+# 不编译的快速预检查，不能替代完整检查
+./scripts/check_architecture_boundaries.sh --source-only
+```
+
+快速检查对 Kotlin/Java 的导入和全限定代码引用进行词法扫描，包含别名和 Kotlin 字符串模板
+中的表达式；注释和普通字符串内容不产生依赖。完整检查先构建 debug 项目类，再通过 JDK
+`jdeps` 检查编译后的类引用，包括类型推断、泛型签名和继承。输入来自 Gradle 编译任务声明的
+产物，不读取任意缓存 jar。测试和第三方类不纳入检查；缺失项目类、未登记包及空输入都会
+失败。编译器生成的辅助类仍参与检查。源码违规定位到文件和行，JVM 违规定位到引用方类名。
+实际依赖图中的循环，以及规则允许关系本身引入的循环，都会被拒绝。
+
+两层检查互补：`jdeps` 不报告全部注解属性或仅存在于源码的类型别名，因此源码检查不能省略。
+反射字符串、原生代码及外部库内部实现不在检查范围内。静态边界检查也不能替代职责和数据流
+方面的代码审查。
+
+调整边界时，登记分组及允许的使用方；按需要将授权限制到子包或具体符号，并填写理由。
+新顶层包在登记前不能通过检查。当前登记 main/debug 的 Java、Kotlin 源码目录；新增生产
+源码目录（例如 release 专用目录）也必须登记。`test` 和 `androidTest` 明确排除，因为测试可以
+组装多个层。不提供违规基线或源码内豁免。运行检查器样例测试和完整检查，
+并同步两种语言的规则表格：
+
+```bash
+python3 -B -m unittest discover -s scripts/architecture -p 'test_*.py'
+./scripts/check_architecture_boundaries.sh --update-docs
+```
+
+普通检查只读；任一文档的生成表格过期都会失败。完整 Gradle 检查同时运行检查器样例测试，
+CI 在 JVM 单元测试前执行完整检查。
 
 ## 应用内通信协议
 
@@ -139,13 +188,16 @@ MainReceivers / FloatingController 据此同步主界面。
 LyricsChangedBroadcast
 负责按 SongIdentity 标识持久歌词变更。LyricsController 在导入成功后发送；主界面进行刷新，
 悬浮服务只在变更歌曲为当前歌曲时重新加载。
+
+LanguageChangedBroadcast
+在 Android 12L 及以下使用 AppCompat 切换语言后，通知运行中的服务刷新文案。
 ```
 
 这些广播限定在应用包内，并以 not exported 方式注册。前台通知由
 `FloatingServiceNotification` 创建；通知操作通过 `FloatingServiceCommand` 构造
 `PendingIntent`，再回到 `FloatingLyricsService.handleCommand`。
 
-`AppLocalProtocolGuardTest` 确保应用内 action 字符串只存在于四个协议所有者文件中。
+`AppLocalProtocolGuardTest` 从同一份架构规则读取协议所有者文件，检查应用内 action 字符串的归属。
 
 ## App 外壳与 UI 边界
 
@@ -297,7 +349,7 @@ Service。`i18n/` 下的其他辅助类负责格式化媒体状态、设置值�
 
 ## 架构保障
 
-- `scripts/check_architecture_boundaries.sh` 检查禁止出现的顶层包导入。
+- `scripts/check_architecture_boundaries.sh` 检查源码及 JVM 依赖、分组登记、循环和规则与文档的一致性。
 - `AppLocalProtocolGuardTest` 防止应用内 action 字符串离开协议所有者。
 - 原生结果契约测试确保 Rust JSON 与 Kotlin 解析保持一致。
 - 存储原子性、歌曲标识、最新结果门控和悬浮服务生命周期行为由对应的单元测试、

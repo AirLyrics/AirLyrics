@@ -97,8 +97,11 @@ Provider 只负责获取和返回歌词数据，不应该直接更新 UI。
 ### 架构边界
 
 项目目前仍使用单个 Gradle `:app` 模块，因此包边界通过检查脚本维护。
-重构前请运行 `./scripts/check_architecture_boundaries.sh`。尤其是 UI 代码不能直接 import
-`settings`、`lyrics`、`media`、`floating` 或 `app` 包。
+提交重构前，请使用 JDK 17 和 Python 3.10+ 运行 `./scripts/check_architecture_boundaries.sh`。
+它会构建项目类，同时检查源码引用和 JVM 依赖；`--source-only` 只是更快的预检查。
+UI 不能依赖 `settings`、`lyrics`、`media`、`floating` 或 `app` 实现，包括全限定名称和
+类型推断产生的依赖。新增包及带理由的授权应登记在 `scripts/architecture/policy.json`，
+再用 `--update-docs` 同步文档表格。契约范围和检查限制见[架构说明](ARCHITECTURE.zh-CN.md#包边界)。
 
 如果新增了 string 资源，请同时补充对应语言的文本，避免界面出现缺失翻译。
 

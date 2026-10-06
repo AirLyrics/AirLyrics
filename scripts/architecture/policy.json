@@ -1,0 +1,226 @@
+{
+  "namespace": "com.andsi.airlyrics",
+  "source_roots": [
+    "app/src/main/java",
+    "app/src/main/kotlin",
+    "app/src/debug/java",
+    "app/src/debug/kotlin"
+  ],
+  "generated_symbols": [
+    "R",
+    "BuildConfig"
+  ],
+  "groups": {
+    "core": {
+      "allows": []
+    },
+    "design": {
+      "allows": [
+        {
+          "group": "core",
+          "symbols": [
+            "core.model"
+          ],
+          "reason": "Shared theme value models."
+        }
+      ]
+    },
+    "displayscope": {
+      "allows": []
+    },
+    "feedback": {
+      "allows": []
+    },
+    "settings": {
+      "allows": [
+        {
+          "group": "core",
+          "symbols": [
+            "core.model",
+            "core.prefs",
+            "core.color"
+          ],
+          "reason": "Persist settings and normalize shared values."
+        }
+      ]
+    },
+    "lyrics": {
+      "allows": [
+        {
+          "group": "core",
+          "reason": "Stable values and infrastructure; no presentation dependency."
+        }
+      ]
+    },
+    "i18n": {
+      "allows": [
+        {
+          "group": "core",
+          "symbols": [
+            "core.model",
+            "core.prefs"
+          ],
+          "reason": "Language preferences and formatting shared values."
+        }
+      ]
+    },
+    "i18n.lyrics": {
+      "allows": [
+        {
+          "group": "lyrics",
+          "symbols": [
+            "lyrics.LyricsLookupErrorType",
+            "lyrics.LyricsLookupException",
+            "lyrics.storage.LyricsStorage"
+          ],
+          "reason": "Format lyric error/source values and storage facade data types; other lyric implementations remain private to their consumers."
+        }
+      ]
+    },
+    "media": {
+      "allows": [
+        {
+          "group": "core",
+          "symbols": [
+            "core.model",
+            "core.prefs"
+          ],
+          "reason": "Media identity and selected-source preferences."
+        },
+        {
+          "group": "i18n",
+          "symbols": [
+            "i18n.LocalizedServiceContext"
+          ],
+          "reason": "Localize the notification listener without depending on lyric formatters."
+        }
+      ]
+    },
+    "ui": {
+      "allows": [
+        {
+          "group": "core",
+          "symbols": [
+            "core.model",
+            "core.color"
+          ],
+          "reason": "Shared value models and presentation colors, not preference storage."
+        },
+        {
+          "group": "design",
+          "reason": "Shared UI tokens and palettes."
+        },
+        {
+          "group": "feedback",
+          "symbols": [
+            "feedback.AirFeedback"
+          ],
+          "reason": "Feedback contract; concrete Toast ownership stays in composition roots."
+        },
+        {
+          "group": "i18n",
+          "reason": "Common localized presentation; lyric-specific adapters stay in the application layer."
+        }
+      ]
+    },
+    "floating": {
+      "allows": [
+        {
+          "group": "core",
+          "reason": "Shared values and infrastructure."
+        },
+        {
+          "group": "design",
+          "reason": "Overlay theme tokens."
+        },
+        {
+          "group": "displayscope",
+          "reason": "Observe overlay visibility policy."
+        },
+        {
+          "group": "feedback",
+          "reason": "Service-owned feedback."
+        },
+        {
+          "group": "i18n",
+          "reason": "Service locales and common text."
+        },
+        {
+          "group": "i18n.lyrics",
+          "reason": "Present lyric lookup outcomes."
+        },
+        {
+          "group": "lyrics",
+          "reason": "Load and render lyrics."
+        },
+        {
+          "group": "media",
+          "reason": "Observe playback."
+        },
+        {
+          "group": "settings",
+          "reason": "Apply overlay settings."
+        }
+      ]
+    },
+    "app": {
+      "allows": [
+        {
+          "group": "core",
+          "reason": "Composition root."
+        },
+        {
+          "group": "design",
+          "reason": "Composition root."
+        },
+        {
+          "group": "displayscope",
+          "reason": "Composition root."
+        },
+        {
+          "group": "feedback",
+          "reason": "Composition root."
+        },
+        {
+          "group": "i18n",
+          "reason": "Composition root."
+        },
+        {
+          "group": "i18n.lyrics",
+          "reason": "Adapt lyric values to UI text."
+        },
+        {
+          "group": "lyrics",
+          "reason": "Composition root."
+        },
+        {
+          "group": "media",
+          "reason": "Composition root."
+        },
+        {
+          "group": "settings",
+          "reason": "Composition root."
+        },
+        {
+          "group": "floating",
+          "reason": "Composition root."
+        },
+        {
+          "group": "ui",
+          "reason": "Implement UI-owned contracts and assemble screens."
+        }
+      ]
+    }
+  },
+  "protocol_owners": [
+    "floating/FloatingServiceCommand.kt",
+    "floating/FloatingWindowStateBroadcast.kt",
+    "lyrics/LyricsChangedBroadcast.kt",
+    "i18n/LanguageChangedBroadcast.kt",
+    "media/CurrentMediaBroadcast.kt"
+  ],
+  "excluded_source_sets": [
+    "test",
+    "androidTest"
+  ]
+}

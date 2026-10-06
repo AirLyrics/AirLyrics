@@ -105,8 +105,13 @@ When changing UI text, please note:
 ### Architecture boundaries
 
 The project currently uses one Gradle `:app` module, so package boundaries are enforced by checks.
-Run `./scripts/check_architecture_boundaries.sh` before submitting refactors. In particular, UI
-code must not import `settings`, `lyrics`, `media`, `floating`, or `app` packages directly.
+Run `./scripts/check_architecture_boundaries.sh` with JDK 17 and Python 3.10+ before submitting
+refactors. It builds project classes and checks both source references and JVM dependencies;
+`--source-only` is a faster preflight, not the full check. UI code must not depend on `settings`,
+`lyrics`, `media`, `floating`, or `app` implementations, including through fully qualified names
+or inferred types. Register new packages and reasoned allowances in
+`scripts/architecture/policy.json`; update generated documentation with `--update-docs`.
+See [Architecture](ARCHITECTURE.md#package-boundaries) for contract scopes and checker limits.
 
 If you add new string resources, please also provide text for the corresponding languages to avoid
 missing translations in the UI.

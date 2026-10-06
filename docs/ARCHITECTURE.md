@@ -79,13 +79,15 @@ Lyrics import
 app/              Composition root, lifecycle coordination, controllers, workflows, and UI adapters
 core/             Dependency-stable models, color helpers, and preference abstractions
 design/           Shared UI design tokens
+displayscope/     Display-scope policy, capability checks, and foreground-app observation
 feedback/         Feature-independent transient-feedback contracts and Toast host
 media/            Media-session observation, current-media models, broadcasts, and source persistence
 lyrics/           Lookup, cancellation, providers, parsing, importing, formatting, and storage
 floating/         Foreground service, service commands, overlay control, and lyrics rendering
 settings/         Feature-specific settings persistence and status-popup policy
 ui/               Screens, Snackbar feedback, components, navigation, themes, UI models, and async UI helpers
-i18n/             Language selection, localized assets, and user-facing text formatters
+i18n/             Language selection, localized assets, and common value formatters
+i18n/lyrics/      Lyric-specific error and storage-value text adapters
 ```
 
 Transient feedback is surface-owned: the main Activity uses an anchored Snackbar host, while the
@@ -93,22 +95,30 @@ floating Service uses a Toast host. Their composition roots supply the same stat
 
 ## Package Boundaries
 
-The current top-level Kotlin package dependencies are:
+The allowed dependencies below are generated from `scripts/architecture/policy.json`, the single
+source of truth for source checks, JVM dependency checks, protocol ownership, and this table.
+They describe permitted dependencies, not a claim that every edge is currently used:
 
+<!-- architecture-policy:start -->
 ```text
-core      -> (none)
-feedback  -> (none)
-design    -> core
-settings  -> core
-lyrics    -> core
-i18n      -> core, lyrics
-media     -> core, i18n
-ui        -> core, design, feedback, i18n
-floating  -> core, design, feedback, i18n, lyrics, media, settings
-app       -> core, design, feedback, floating, i18n, lyrics, media, settings, ui
+core         -> (none)
+design       -> core.model
+displayscope -> (none)
+feedback     -> (none)
+settings     -> core.model, core.prefs, core.color
+lyrics       -> core
+i18n         -> core.model, core.prefs
+i18n.lyrics  -> lyrics.LyricsLookupErrorType, lyrics.LyricsLookupException, lyrics.storage.LyricsStorage
+media        -> core.model, core.prefs, i18n.LocalizedServiceContext
+ui           -> core.model, core.color, design, feedback.AirFeedback, i18n
+floating     -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics, media, settings
+app          -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics, media, settings, floating, ui
 ```
+<!-- architecture-policy:end -->
 
-Arrows mean “imports from”; generated `R` and platform libraries are omitted.
+Arrows mean “may depend on”. The most specific registered group owns a symbol: allowing `i18n`
+does not also allow `i18n.lyrics`. A symbol allowance includes nested types and members, but not
+similarly named siblings. Generated `R`/`BuildConfig` and external platform/library types are omitted.
 
 The important boundary rules are:
 
@@ -123,7 +133,52 @@ The important boundary rules are:
   host, but it does not depend on the main app shell or UI pages.
 - `app/` is the composition layer that is allowed to connect all feature packages.
 
-`scripts/check_architecture_boundaries.sh` enforces these import restrictions in CI.
+`displayscope` has no project dependencies and is consumed by `app` and `floating`. Common `i18n`
+cannot depend on lyrics; `i18n.lyrics` can access only the listed lyric error types and storage facade.
+The facade allowance supports its nested data types and source constants; it is a class-level
+allowance, not a guarantee that every method call on that facade is appropriate. Review still needs
+to keep these adapters limited to text conversion. `lyrics` cannot depend on either i18n group.
+UI can use stable value models and feedback contracts, but not preference stores or concrete Toast
+hosts. Interfaces must not expose forbidden implementation types through their signatures.
+
+Run the complete check with JDK 17 and Python 3.10+:
+
+```bash
+./scripts/check_architecture_boundaries.sh
+# Equivalent Gradle entry; also included in :app:check
+./gradlew :app:checkArchitecture -Pairlyrics.skipRustBuild=true
+# Fast preflight without compilation (does not replace the complete check)
+./scripts/check_architecture_boundaries.sh --source-only
+```
+
+The fast check tokenizes Kotlin/Java imports and fully qualified code references, including aliases
+and Kotlin string-template expressions. Comments and literal text do not create dependency edges.
+The complete check builds the debug project classes and uses JDK `jdeps` to check resolved class
+references, including inferred types, generic signatures, and inheritance. It reads the producing
+Gradle task's outputs, never an arbitrary cached jar. Tests and third-party classes are excluded;
+missing project classes, unregistered packages, and empty analysis inputs fail the check. Compiler
+synthetic classes remain included. Source errors report file/line; JVM errors report the referring
+class. Both actual dependency cycles and cycles introduced by policy allowances are rejected.
+
+The two checks are complementary: `jdeps` does not report every annotation attribute or source-only
+type alias, so source checks remain mandatory. Reflection strings, native code, and external-library
+implementation details are outside this checker’s scope. The check enforces static boundaries; it
+does not replace review of responsibilities or data flow.
+
+When changing boundaries, register the group and its explicit consumers, narrow allowances to
+subpackages or symbols where useful, and give each allowance a reason. New top-level packages are
+rejected until registered. Main/debug Java and Kotlin roots are registered; new production source
+roots (for example a release-only source set) fail until added. `test` and `androidTest` are explicitly
+excluded because tests may assemble multiple layers. There is no violation baseline or source-level suppression. Run checker
+fixtures and the full check, then synchronize both language versions of the table:
+
+```bash
+python3 -B -m unittest discover -s scripts/architecture -p 'test_*.py'
+./scripts/check_architecture_boundaries.sh --update-docs
+```
+
+Normal checks are read-only and fail if either generated documentation block is stale. The complete
+Gradle check runs the checker fixtures too; CI invokes it before JVM unit tests.
 
 ## App-Local Communication Protocols
 
@@ -146,14 +201,16 @@ sends actual window state; MainReceivers / FloatingController synchronize the ma
 LyricsChangedBroadcast
 Owns durable lyrics-change notifications keyed by SongIdentity. LyricsController publishes after a
 successful import; the main UI refreshes and the service reloads only if the changed song is current.
+
+LanguageChangedBroadcast
+Refreshes running services after an AppCompat language change on Android 12L and earlier.
 ```
 
 The broadcasts are package-scoped and registered as not exported. The foreground notification is
 created by `FloatingServiceNotification`; its actions create `PendingIntent`s through
 `FloatingServiceCommand` and return to `FloatingLyricsService.handleCommand`.
 
-`AppLocalProtocolGuardTest` ensures that app-local action strings remain in the four protocol-owner
-files.
+`AppLocalProtocolGuardTest` reads the protocol-owner files from the same architecture policy.
 
 ## App Shell and UI Boundary
 
@@ -325,7 +382,7 @@ errors, offsets, and floating-style labels.
 
 ## Architecture Safeguards
 
-- `scripts/check_architecture_boundaries.sh` checks forbidden top-level package imports.
+- `scripts/check_architecture_boundaries.sh` checks source/JVM dependencies, registered groups, cycles, and policy/documentation consistency.
 - `AppLocalProtocolGuardTest` prevents app-local action strings from escaping protocol owners.
 - Native-result contract tests keep Rust JSON and Kotlin parsing aligned.
 - Storage atomicity, song identity, latest-result gating, and floating-service lifecycle behavior are

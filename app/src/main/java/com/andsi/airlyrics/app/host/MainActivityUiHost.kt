@@ -39,10 +39,10 @@ import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.displayscope.DisplayScopeCapability
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
-import com.andsi.airlyrics.i18n.localizedLocalLyricsMeta
-import com.andsi.airlyrics.i18n.localizedLocalLyricsSubtitle
-import com.andsi.airlyrics.i18n.localizedLocalLyricsType
-import com.andsi.airlyrics.i18n.localizedLocalPlainLyricsSource
+import com.andsi.airlyrics.i18n.lyrics.localizedLocalLyricsMeta
+import com.andsi.airlyrics.i18n.lyrics.localizedLocalLyricsSubtitle
+import com.andsi.airlyrics.i18n.lyrics.localizedLocalLyricsType
+import com.andsi.airlyrics.i18n.lyrics.localizedLocalPlainLyricsSource
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
