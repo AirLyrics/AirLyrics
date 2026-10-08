@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+cases.json
+results/
+diagnose_spicy.py
+spotify_probe.py
+.local/
