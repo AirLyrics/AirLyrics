@@ -63,6 +63,7 @@ enum FailureKind {
     NeedCredential,
     RateLimited,
     Restricted,
+    Http,
     Network,
     Parse,
     NotFound,
@@ -118,25 +119,44 @@ impl LookupFailure {
             | MusixmatchApiError::WrongCredentials => FailureKind::NeedCredential,
             MusixmatchApiError::MusixmatchError { status_code, .. } => match status_code {
                 401 => FailureKind::NeedCredential,
-                403 => FailureKind::Restricted,
+                403 => FailureKind::Http,
                 404 => FailureKind::NotFound,
                 429 => FailureKind::RateLimited,
-                500..=599 => FailureKind::Network,
-                _ => FailureKind::Unknown,
+                _ => FailureKind::Http,
             },
             MusixmatchApiError::NotFound => FailureKind::NotFound,
             MusixmatchApiError::NotAvailable => FailureKind::Restricted,
             MusixmatchApiError::InvalidData(_) => FailureKind::Parse,
-            MusixmatchApiError::Http(_) => FailureKind::Network,
+            MusixmatchApiError::Http(http) => match http.status().map(|status| status.as_u16()) {
+                Some(401) => FailureKind::NeedCredential,
+                Some(429) => FailureKind::RateLimited,
+                Some(_) => FailureKind::Http,
+                None => FailureKind::Network,
+            },
             _ => FailureKind::Unknown,
         };
-        Self::new(kind, context, error.to_string())
+        // Do not allow an authenticated request URL into the native error payload.
+        let detail = match &error {
+            MusixmatchApiError::Http(http) if http.status().is_some() => {
+                format!("HTTP {}", http.status().expect("checked status"))
+            }
+            MusixmatchApiError::Http(http) if http.is_timeout() => "request timed out".into(),
+            MusixmatchApiError::Http(_) => "connection or transport failed".into(),
+            MusixmatchApiError::MusixmatchError { status_code, .. } => {
+                format!("HTTP {status_code} in API response")
+            }
+            _ => error.to_string(),
+        };
+        Self::new(kind, context, detail)
     }
 
     fn is_immediate(&self) -> bool {
         matches!(
             self.kind,
-            FailureKind::Cancelled | FailureKind::NeedCredential | FailureKind::RateLimited
+            FailureKind::Cancelled
+                | FailureKind::NeedCredential
+                | FailureKind::RateLimited
+                | FailureKind::Http
         )
     }
 }
@@ -148,6 +168,7 @@ impl fmt::Display for LookupFailure {
             FailureKind::NeedCredential => "musixmatch credential required",
             FailureKind::RateLimited => "musixmatch rate limited",
             FailureKind::Restricted => "musixmatch restricted lyrics",
+            FailureKind::Http => "musixmatch HTTP error",
             FailureKind::Network => "musixmatch network error",
             FailureKind::Parse => "musixmatch parse error",
             FailureKind::NotFound => "musixmatch content not found",
@@ -182,6 +203,7 @@ impl FailureLog {
             FailureKind::Cancelled,
             FailureKind::NeedCredential,
             FailureKind::RateLimited,
+            FailureKind::Http,
             FailureKind::Network,
             FailureKind::Parse,
             FailureKind::Restricted,
@@ -1420,6 +1442,7 @@ fn failure_kind_name(kind: FailureKind) -> &'static str {
         FailureKind::NeedCredential => "credential",
         FailureKind::RateLimited => "rate_limited",
         FailureKind::Restricted => "restricted",
+        FailureKind::Http => "http",
         FailureKind::Network => "network",
         FailureKind::Parse => "parse",
         FailureKind::NotFound => "not_found",
@@ -2221,6 +2244,62 @@ mod tests {
             LookupFailure::from_api("subtitle", MusixmatchApiError::NotFound).kind,
             FailureKind::NotFound
         );
+        assert_eq!(
+            LookupFailure::from_api(
+                "search",
+                MusixmatchApiError::MusixmatchError {
+                    status_code: 403,
+                    msg: "blocked".into(),
+                },
+            )
+            .kind,
+            FailureKind::Http
+        );
+        assert_eq!(
+            LookupFailure::from_api(
+                "search",
+                MusixmatchApiError::MusixmatchError {
+                    status_code: 503,
+                    msg: "busy".into(),
+                },
+            )
+            .kind,
+            FailureKind::Http
+        );
+    }
+
+    #[tokio::test]
+    async fn musixmatch_http_status_is_not_a_network_failure() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("local listener");
+        let address = listener.local_addr().expect("listener address");
+        let server = std::thread::spawn(move || {
+            use std::io::{Read, Write};
+            let (mut socket, _) = listener.accept().expect("test request");
+            let mut request = [0u8; 1024];
+            socket.read(&mut request).expect("read request");
+            socket
+                .write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
+                .expect("status response");
+        });
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .build()
+            .expect("client");
+        let error = client
+            .get(format!("http://{address}/?usertoken=secret"))
+            .send()
+            .await
+            .expect("HTTP response")
+            .error_for_status()
+            .expect_err("403 status");
+        server.join().expect("server task");
+
+        let failure = LookupFailure::from_api("matcher.track", MusixmatchApiError::Http(error));
+        assert_eq!(failure.kind, FailureKind::Http);
+        assert!(failure.is_immediate());
+        assert_eq!(failure.detail, "HTTP 403 Forbidden");
+        assert!(!failure.to_string().contains("secret"));
+        assert_eq!(crate::classify_error(&failure.to_string()), "HttpError");
     }
 
     #[test]

@@ -289,6 +289,8 @@ fn classify_error(message: &str) -> &'static str {
         "RateLimited"
     } else if lower.contains("restricted") || lower.contains("copyright") {
         "RestrictedLyrics"
+    } else if lower.contains("http error") {
+        "HttpError"
     } else if lower.contains("lookup canceled")
         || lower.contains("lookup cancelled")
         || lower.contains("native panic")

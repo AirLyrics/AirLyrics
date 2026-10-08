@@ -12,6 +12,7 @@
     <string name="lyrics_lookup_native_error">%1$s 歌词模块异常</string>
     <string name="lyrics_lookup_need_credentials">%1$s 需要访问凭据</string>
     <string name="lyrics_lookup_network_failed">%1$s 网络请求失败</string>
+    <string name="lyrics_lookup_http_failed">%1$s 服务请求失败</string>
     <string name="lyrics_lookup_not_found">%1$s 未找到歌词</string>
     <string name="lyrics_lookup_parse_failed">%1$s 歌词解析失败</string>
     <string name="lyrics_lookup_rate_limited">%1$s 请求过于频繁，请稍后再试</string>

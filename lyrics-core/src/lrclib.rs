@@ -44,6 +44,7 @@ static LRCLIB_REQUEST_SCHEDULE: OnceLock<Mutex<RequestSchedule>> = OnceLock::new
 struct RequestSchedule {
     next_request_at: Option<Instant>,
     retry_after_until: Option<Instant>,
+    retry_after_status: Option<StatusCode>,
 }
 
 #[derive(Debug)]
@@ -79,16 +80,20 @@ impl LrclibError {
         Self::new("NetworkError", message)
     }
 
+    fn http(status: StatusCode, retry_after: Option<Duration>) -> Self {
+        Self {
+            error_type: "HttpError",
+            message: format!("LRCLIB request failed with HTTP {status}"),
+            retry_after,
+        }
+    }
+
     fn parse(message: impl Into<String>) -> Self {
         Self::new("ParseError", message)
     }
 
     pub(crate) fn native(message: impl Into<String>) -> Self {
         Self::new("NativeError", message)
-    }
-
-    fn unknown(message: impl Into<String>) -> Self {
-        Self::new("Unknown", message)
     }
 
     pub(crate) fn error_type(&self) -> &'static str {
@@ -245,7 +250,7 @@ trait LrclibBackend {
         &'a self,
         query: &'a LookupQuery,
         lookup_id: jni::sys::jlong,
-        observed_retry_after: &'a mut Option<Duration>,
+        observed_retry_after: &'a mut Option<(Duration, StatusCode)>,
     ) -> Pin<Box<dyn Future<Output = Result<Option<ApiTrack>, LrclibError>> + 'a>>;
 
     fn search<'a>(
@@ -254,7 +259,7 @@ trait LrclibBackend {
         track_name: &'a str,
         artist_name: Option<&'a str>,
         lookup_id: jni::sys::jlong,
-        observed_retry_after: &'a mut Option<Duration>,
+        observed_retry_after: &'a mut Option<(Duration, StatusCode)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<ApiTrack>, LrclibError>> + 'a>>;
 }
 
@@ -265,7 +270,7 @@ impl LrclibBackend for HttpLrclibBackend {
         &'a self,
         query: &'a LookupQuery,
         lookup_id: jni::sys::jlong,
-        observed_retry_after: &'a mut Option<Duration>,
+        observed_retry_after: &'a mut Option<(Duration, StatusCode)>,
     ) -> Pin<Box<dyn Future<Output = Result<Option<ApiTrack>, LrclibError>> + 'a>> {
         Box::pin(fetch_metadata_track(query, lookup_id, observed_retry_after))
     }
@@ -276,7 +281,7 @@ impl LrclibBackend for HttpLrclibBackend {
         track_name: &'a str,
         artist_name: Option<&'a str>,
         lookup_id: jni::sys::jlong,
-        observed_retry_after: &'a mut Option<Duration>,
+        observed_retry_after: &'a mut Option<(Duration, StatusCode)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<ApiTrack>, LrclibError>> + 'a>> {
         Box::pin(fetch_search_tracks(
             query,
@@ -359,10 +364,21 @@ pub(crate) fn fetch_best_lyrics(
 
     let now = Instant::now();
     schedule.next_request_at = Some(now + LRCLIB_REQUEST_INTERVAL);
-    let retry_after =
-        observed_retry_after.or_else(|| result.as_ref().err().and_then(|error| error.retry_after));
-    if let Some(retry_after) = retry_after {
+    let retry_after = observed_retry_after.or_else(|| {
+        result.as_ref().err().and_then(|error| {
+            error.retry_after.map(|duration| {
+                let status = if error.error_type == "RateLimited" {
+                    StatusCode::TOO_MANY_REQUESTS
+                } else {
+                    StatusCode::SERVICE_UNAVAILABLE
+                };
+                (duration, status)
+            })
+        })
+    });
+    if let Some((retry_after, status)) = retry_after {
         schedule.retry_after_until = Some(now + retry_after);
+        schedule.retry_after_status = Some(status);
     }
 
     match &result {
@@ -379,7 +395,7 @@ pub(crate) fn fetch_best_lyrics(
 async fn fetch_with_fallback(
     query: &LookupQuery,
     lookup_id: jni::sys::jlong,
-    observed_retry_after: &mut Option<Duration>,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
     trace: &LookupTrace,
 ) -> Result<NativeResult, LrclibError> {
     fetch_with_fallback_backend_traced(
@@ -397,7 +413,7 @@ async fn fetch_with_fallback_backend<B: LrclibBackend>(
     backend: &B,
     query: &LookupQuery,
     lookup_id: jni::sys::jlong,
-    observed_retry_after: &mut Option<Duration>,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
 ) -> Result<NativeResult, LrclibError> {
     let trace = LookupTrace::new("lrclib-test");
     fetch_with_fallback_backend_traced(backend, query, lookup_id, observed_retry_after, &trace)
@@ -408,7 +424,7 @@ async fn fetch_with_fallback_backend_traced<B: LrclibBackend>(
     backend: &B,
     query: &LookupQuery,
     lookup_id: jni::sys::jlong,
-    observed_retry_after: &mut Option<Duration>,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
     trace: &LookupTrace,
 ) -> Result<NativeResult, LrclibError> {
     let deadline = tokio::time::Instant::now() + LRCLIB_LOOKUP_TIMEOUT;
@@ -649,7 +665,7 @@ where
 async fn fetch_metadata_track(
     query: &LookupQuery,
     lookup_id: jni::sys::jlong,
-    observed_retry_after: &mut Option<Duration>,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
 ) -> Result<Option<ApiTrack>, LrclibError> {
     check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
     let request = client()?.get(LRCLIB_GET_URL).query(&query.api_query());
@@ -667,7 +683,7 @@ async fn fetch_search_tracks(
     track_name: &str,
     artist_name: Option<&str>,
     lookup_id: jni::sys::jlong,
-    observed_retry_after: &mut Option<Duration>,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
 ) -> Result<Vec<ApiTrack>, LrclibError> {
     check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
     let request = client()?
@@ -685,21 +701,26 @@ async fn fetch_search_tracks(
 async fn fetch_response_body(
     request: RequestBuilder,
     lookup_id: jni::sys::jlong,
-    observed_retry_after: &mut Option<Duration>,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
 ) -> Result<Option<String>, LrclibError> {
     let response = await_reqwest(request.send(), lookup_id).await?;
     check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
 
     let status = response.status();
-    let retry_after = (status == StatusCode::TOO_MANY_REQUESTS).then(|| {
-        response
-            .headers()
-            .get(RETRY_AFTER)
-            .and_then(parse_retry_after)
-            .unwrap_or(LRCLIB_DEFAULT_RETRY_AFTER)
-    });
+    let retry_after = (status == StatusCode::TOO_MANY_REQUESTS
+        || status == StatusCode::SERVICE_UNAVAILABLE)
+        .then(|| {
+            response
+                .headers()
+                .get(RETRY_AFTER)
+                .and_then(parse_retry_after)
+                .or_else(|| {
+                    (status == StatusCode::TOO_MANY_REQUESTS).then_some(LRCLIB_DEFAULT_RETRY_AFTER)
+                })
+        })
+        .flatten();
     if let Some(retry_after) = retry_after {
-        *observed_retry_after = Some(retry_after);
+        *observed_retry_after = Some((retry_after, status));
     }
     if response_disposition(status, retry_after)? == ResponseDisposition::NotFound {
         return Ok(None);
@@ -723,12 +744,7 @@ fn response_disposition(
         ));
     }
     if !status.is_success() {
-        let message = format!("LRCLIB request failed with HTTP {status}");
-        return if status.is_server_error() {
-            Err(LrclibError::network(message))
-        } else {
-            Err(LrclibError::unknown(message))
-        };
+        return Err(LrclibError::http(status, retry_after));
     }
 
     Ok(ResponseDisposition::ReadBody)
@@ -764,7 +780,13 @@ where
 }
 
 fn map_reqwest_error(error: reqwest::Error) -> LrclibError {
-    if error.is_decode() {
+    if let Some(status) = error.status() {
+        if status == StatusCode::TOO_MANY_REQUESTS {
+            LrclibError::rate_limited(LRCLIB_DEFAULT_RETRY_AFTER)
+        } else {
+            LrclibError::http(status, None)
+        }
+    } else if error.is_decode() {
         LrclibError::parse(format!("failed to decode LRCLIB response: {error}"))
     } else if error.is_timeout() {
         LrclibError::network("LRCLIB request timed out")
@@ -1054,9 +1076,16 @@ fn enforce_request_schedule(
     let now = Instant::now();
     if let Some(retry_after_until) = schedule.retry_after_until {
         if retry_after_until > now {
-            return Err(LrclibError::rate_limited(retry_after_until - now));
+            return Err(match schedule.retry_after_status {
+                Some(StatusCode::SERVICE_UNAVAILABLE) => LrclibError::http(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    Some(retry_after_until - now),
+                ),
+                _ => LrclibError::rate_limited(retry_after_until - now),
+            });
         }
         schedule.retry_after_until = None;
+        schedule.retry_after_status = None;
     }
 
     while let Some(wait) = schedule
@@ -1147,7 +1176,7 @@ mod tests {
             &'a self,
             _query: &'a LookupQuery,
             _lookup_id: jni::sys::jlong,
-            _observed_retry_after: &'a mut Option<Duration>,
+            _observed_retry_after: &'a mut Option<(Duration, StatusCode)>,
         ) -> Pin<Box<dyn Future<Output = Result<Option<ApiTrack>, LrclibError>> + 'a>> {
             *self.metadata_calls.lock().unwrap() += 1;
             let result = self
@@ -1165,7 +1194,7 @@ mod tests {
             track_name: &'a str,
             artist_name: Option<&'a str>,
             _lookup_id: jni::sys::jlong,
-            _observed_retry_after: &'a mut Option<Duration>,
+            _observed_retry_after: &'a mut Option<(Duration, StatusCode)>,
         ) -> Pin<Box<dyn Future<Output = Result<Vec<ApiTrack>, LrclibError>> + 'a>> {
             self.search_calls
                 .lock()
@@ -1677,15 +1706,19 @@ mod tests {
         let rate_limited =
             response_disposition(StatusCode::TOO_MANY_REQUESTS, Some(Duration::from_secs(9)))
                 .expect_err("rate limit");
-        let server_error =
-            response_disposition(StatusCode::SERVICE_UNAVAILABLE, None).expect_err("server error");
+        let server_error = response_disposition(
+            StatusCode::SERVICE_UNAVAILABLE,
+            Some(Duration::from_secs(3)),
+        )
+        .expect_err("server error");
         let client_error =
             response_disposition(StatusCode::BAD_REQUEST, None).expect_err("client error");
 
         assert_eq!(rate_limited.error_type(), "RateLimited");
         assert_eq!(rate_limited.retry_after, Some(Duration::from_secs(9)));
-        assert_eq!(server_error.error_type(), "NetworkError");
-        assert_eq!(client_error.error_type(), "Unknown");
+        assert_eq!(server_error.error_type(), "HttpError");
+        assert_eq!(server_error.retry_after, Some(Duration::from_secs(3)));
+        assert_eq!(client_error.error_type(), "HttpError");
     }
 
     #[test]
@@ -1695,6 +1728,22 @@ mod tests {
 
         assert_eq!(parse_retry_after(&short), Some(Duration::from_secs(17)));
         assert_eq!(parse_retry_after(&excessive), Some(LRCLIB_MAX_RETRY_AFTER));
+    }
+
+    #[test]
+    fn service_unavailable_backoff_keeps_http_classification() {
+        let mut schedule = RequestSchedule {
+            next_request_at: None,
+            retry_after_until: Some(Instant::now() + Duration::from_secs(2)),
+            retry_after_status: Some(StatusCode::SERVICE_UNAVAILABLE),
+        };
+        let error = enforce_request_schedule(&mut schedule, 0).expect_err("backoff active");
+        assert_eq!(error.error_type(), "HttpError");
+        assert!(error.message().contains("HTTP 503"));
+
+        schedule.retry_after_status = Some(StatusCode::TOO_MANY_REQUESTS);
+        let error = enforce_request_schedule(&mut schedule, 0).expect_err("rate limit active");
+        assert_eq!(error.error_type(), "RateLimited");
     }
 
     #[test]

@@ -12,6 +12,7 @@
     <string name="lyrics_lookup_native_error">%1$s 歌詞模組異常</string>
     <string name="lyrics_lookup_need_credentials">%1$s 需要存取憑證</string>
     <string name="lyrics_lookup_network_failed">%1$s 網路請求失敗</string>
+    <string name="lyrics_lookup_http_failed">%1$s 服務請求失敗</string>
     <string name="lyrics_lookup_not_found">%1$s 未找到歌詞</string>
     <string name="lyrics_lookup_parse_failed">%1$s 歌詞解析失敗</string>
     <string name="lyrics_lookup_rate_limited">%1$s 請求過於頻繁，請稍後再試</string>

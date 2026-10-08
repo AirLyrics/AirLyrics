@@ -84,6 +84,7 @@ internal fun Context.localizedLyricsLookupMessage(error: LyricsLookupException):
         LyricsLookupErrorType.NeedCredential -> R.string.lyrics_lookup_need_credentials
         LyricsLookupErrorType.RateLimited -> R.string.lyrics_lookup_rate_limited
         LyricsLookupErrorType.RestrictedLyrics -> R.string.lyrics_lookup_restricted
+        LyricsLookupErrorType.HttpError -> R.string.lyrics_lookup_http_failed
         LyricsLookupErrorType.NetworkError -> R.string.lyrics_lookup_network_failed
         LyricsLookupErrorType.ParseError -> R.string.lyrics_lookup_parse_failed
         LyricsLookupErrorType.NativeError -> R.string.lyrics_lookup_native_error

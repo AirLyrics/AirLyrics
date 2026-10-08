@@ -14,6 +14,7 @@ enum class LyricsLookupErrorType {
     NeedCredential,
     RateLimited,
     RestrictedLyrics,
+    HttpError,
     NetworkError,
     ParseError,
     NativeError,
@@ -26,6 +27,7 @@ enum class LyricsLookupErrorType {
                 "NeedCredential" -> NeedCredential
                 "RateLimited" -> RateLimited
                 "RestrictedLyrics" -> RestrictedLyrics
+                "HttpError" -> HttpError
                 "NetworkError" -> NetworkError
                 "ParseError" -> ParseError
                 "NativeError" -> NativeError

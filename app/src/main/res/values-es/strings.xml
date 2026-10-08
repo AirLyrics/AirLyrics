@@ -12,6 +12,7 @@
     <string name="lyrics_lookup_native_error">Error del módulo de letras de %1$s</string>
     <string name="lyrics_lookup_need_credentials">%1$s necesita credenciales</string>
     <string name="lyrics_lookup_network_failed">Falló la solicitud de red de %1$s</string>
+    <string name="lyrics_lookup_http_failed">Falló la solicitud al servicio de %1$s</string>
     <string name="lyrics_lookup_not_found">%1$s no encontró letras</string>
     <string name="lyrics_lookup_parse_failed">Falló el análisis de letras de %1$s</string>
     <string name="lyrics_lookup_rate_limited">%1$s tiene un límite de solicitudes; intenta de nuevo más tarde</string>

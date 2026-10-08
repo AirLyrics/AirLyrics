@@ -10,6 +10,7 @@
     <string name="lyrics_lookup_native_error">%1$s lyrics module error</string>
     <string name="lyrics_lookup_need_credentials">%1$s needs credentials</string>
     <string name="lyrics_lookup_network_failed">%1$s network request failed</string>
+    <string name="lyrics_lookup_http_failed">%1$s service request failed</string>
     <string name="lyrics_lookup_not_found">%1$s found no lyrics</string>
     <string name="lyrics_lookup_parse_failed">%1$s lyrics parse failed</string>
     <string name="lyrics_lookup_rate_limited">%1$s is rate limited; try again later</string>
