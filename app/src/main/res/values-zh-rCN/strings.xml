@@ -127,7 +127,7 @@
     <string name="ui_word_by_word_lyrics">逐字歌词</string>
     <string name="ui_word_by_word_lyrics_import_success">逐字歌词已导入</string>
     <string name="ui_word_by_word_lyrics_lrc_file">逐字歌词（.lrc / .ttml）</string>
-    <string name="ui_word_by_word_lyrics_local_only">仅支持本地导入</string>
+    <string name="ui_word_by_word_lyrics_local_only">支持导入和部分在线来源</string>
     <string name="ui_word_by_word_lyrics_format_hint">行时间 [00:12.34] · 字词时间 &lt;00:12.34&gt;</string>
     <string name="ui_word_by_word_blocked_by_plain_lrc">请先移除普通歌词</string>
     <string name="ui_plain_lrc_blocked_by_word_by_word">请先移除逐字歌词</string>
@@ -417,4 +417,9 @@
     <string name="ui_yay">我会非常非常非常开心的！</string>
     <string name="ui_overlay_update_failed">悬浮窗更新失败</string>
     <string name="ui_scroll_text">滚动查看</string>
+    <string name="provider_spicy">Spicy Lyrics</string>
+    <string name="provider_spicy_unavailable">Spicy Lyrics · 不可用</string>
+    <string name="ui_spicy_expiry">%1$s 到期</string>
+    <string name="ui_lyrics_expired">歌词已过期</string>
+    <string name="provider_spicy_name">Spicy Lyrics</string>
 </resources>

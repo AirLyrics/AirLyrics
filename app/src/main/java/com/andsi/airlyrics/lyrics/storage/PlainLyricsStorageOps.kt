@@ -107,7 +107,7 @@ internal object PlainLyricsStorageOps {
         album: String = "",
         overwrite: Boolean = true
     ): LyricsStorage.ImportLyricsResult {
-        if (LyricsStorage.hasWordByWordLyrics(context, title, artist, duration)) {
+        if (WordByWordLyricsStorageOps.hasWordByWordLyrics(context, title, artist, duration)) {
             return LyricsStorage.ImportLyricsResult.WordByWordLyricsAlreadyExists
         }
 

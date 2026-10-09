@@ -127,7 +127,7 @@
     <string name="ui_word_by_word_lyrics">Letras palabra por palabra</string>
     <string name="ui_word_by_word_lyrics_import_success">Letras palabra por palabra importadas</string>
     <string name="ui_word_by_word_lyrics_lrc_file">Letras palabra por palabra (.lrc / .ttml)</string>
-    <string name="ui_word_by_word_lyrics_local_only">Disponible solo desde importaciones locales</string>
+    <string name="ui_word_by_word_lyrics_local_only">Disponible mediante importaciones y fuentes en línea compatibles</string>
     <string name="ui_word_by_word_lyrics_format_hint">Tiempo de línea [00:12.34] · tiempo de palabra &lt;00:12.34&gt;</string>
     <string name="ui_word_by_word_blocked_by_plain_lrc">Elimina primero las letras simples</string>
     <string name="ui_plain_lrc_blocked_by_word_by_word">Elimina primero las letras palabra por palabra</string>
@@ -418,4 +418,9 @@ TTML de tiempo por palabra:
     <string name="ui_yay">¡Genial!</string>
     <string name="ui_overlay_update_failed">Falló la actualización de la superposición</string>
     <string name="ui_scroll_text">Desplazar texto</string>
+    <string name="provider_spicy">Spicy Lyrics</string>
+    <string name="provider_spicy_unavailable">Spicy Lyrics · No disponible en esta versión</string>
+    <string name="provider_spicy_name">Spicy Lyrics</string>
+    <string name="ui_spicy_expiry">Caduca el %1$s</string>
+    <string name="ui_lyrics_expired">La letra ha caducado</string>
 </resources>

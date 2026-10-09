@@ -224,7 +224,23 @@ class FloatingLyricsWindow(
 
             MotionEvent.ACTION_UP -> {
                 if (!gestureActive) return true
-                if (!dragging && isClick(event)) view.performClick()
+                if (!dragging && isClick(event)) {
+                    val textView = view as? TextView
+                    val layout = textView?.layout
+                    val text = textView?.text as? android.text.Spanned
+                    val x = event.x - (textView?.totalPaddingLeft ?: 0) + (textView?.scrollX ?: 0)
+                    val y = event.y - (textView?.totalPaddingTop ?: 0) + (textView?.scrollY ?: 0)
+                    val link = if (!isLocked && layout != null && text != null && y >= 0 && y < layout.height) {
+                        val line = layout.getLineForVertical(y.toInt())
+                        if (x >= layout.getLineLeft(line) && x <= layout.getLineRight(line)) {
+                            val offset = layout.getOffsetForHorizontal(line, x)
+                            text.getSpans(offset, offset, android.text.style.URLSpan::class.java).firstOrNull()
+                        } else null
+                    } else null
+                    if (link != null && link.url.startsWith("https://")) {
+                        runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(link.url)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    } else view.performClick()
+                }
                 if (!isLocked && dragging) saveDraggedPosition(p)
                 gestureActive = false
                 true

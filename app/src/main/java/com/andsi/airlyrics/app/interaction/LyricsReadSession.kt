@@ -23,7 +23,8 @@ internal data class LyricsReadRequest(
     val media: CurrentMediaInfo?,
     val limit: Int,
     val wordEnabled: Boolean,
-    val offset: Long
+    val offset: Long,
+    val preferOnlineWords: Boolean = false
 )
 internal data class LyricsReadSnapshot(
     val media: CurrentMediaInfo?,
@@ -43,7 +44,7 @@ internal class LyricsReadSession(
     private val read: suspend (LyricsReadRequest) -> LyricsReadSnapshot = defaultReader(context.applicationContext)
 ) {
     private val context = context.applicationContext
-    private data class Key(val song: SongIdentity?, val revision: Long, val directory: String, val offset: Long, val word: Boolean, val limit: Int)
+    private data class Key(val song: SongIdentity?, val revision: Long, val directory: String, val offset: Long, val word: Boolean, val limit: Int, val onlineWords: Boolean)
     private data class Entry(val key: Key, val task: Deferred<Result<LyricsReadSnapshot>>)
     private val entries = mutableMapOf<LyricsReadKind, Entry>()
 
@@ -52,13 +53,14 @@ internal class LyricsReadSession(
         val target = media?.takeUnless { it.isEmpty || kind == LyricsReadKind.SAVED }
         val offset = target?.let { LyricsOffsetStore.getOffsetMs(context, it.toSongIdentity()) } ?: 0L
         val word = LyricsSettingsStore.isWordByWordLyricsEnabled(context)
-        val key = Key(target?.toSongIdentity(), LyricsStorage.currentRevision(), LyricsStorage.getLyricsDirRawPath(context), offset, word, limit)
+        val onlineWords = word && LyricsSettingsStore.getPlainLyricsSearchSources(context).any { it.supportsWordTiming }
+        val key = Key(target?.toSongIdentity(), LyricsStorage.currentRevision(), LyricsStorage.getLyricsDirRawPath(context), offset, word, limit, onlineWords)
         val old = entries[kind]
         if (!force && old?.key == key && !old.task.isCancelled && (!old.task.isCompleted || old.task.getCompleted().isSuccess)) return old.task
         old?.task?.cancel()
         val task = scope.async(dispatcher) {
             try {
-                val result = read(LyricsReadRequest(kind, target, limit, word, offset))
+                val result = read(LyricsReadRequest(kind, target, limit, word, offset, onlineWords))
                 currentCoroutineContext().ensureActive()
                 Result.success(result)
             } catch (cancelled: CancellationException) {
@@ -74,9 +76,12 @@ internal class LyricsReadSession(
 
 private fun defaultReader(context: Context): suspend (LyricsReadRequest) -> LyricsReadSnapshot = { request ->
     val target = request.media
-    val info = target?.let { LyricsStorage.getLocalPlainLyricsInfo(context, it.title, it.artist, it.durationMs) }
-    val hasWord = target?.let { LyricsStorage.hasWordByWordLyrics(context, it.title, it.artist, it.durationMs) } == true
-    val current = info?.let {
+    val preferred = target?.takeIf { request.preferOnlineWords }?.let {
+        LyricsStorage.preferredOnlineWordItem(context, it.title, it.artist, it.durationMs)
+    }
+    val info = preferred?.let { LyricsStorage.LocalPlainLyricsInfo(it.title, it.artist, it.durationMs, it.name, it.source, it.provider, it.modifiedTimeMillis, it.indexKey, it.album) } ?: target?.let { LyricsStorage.getLocalPlainLyricsInfo(context, it.title, it.artist, it.durationMs) }
+    val hasWord = preferred?.hasWordByWordLyrics ?: (target?.let { LyricsStorage.hasWordByWordLyrics(context, it.title, it.artist, it.durationMs) } == true)
+    val current = preferred ?: info?.let {
         LyricsStorage.LocalLyricsItem(it.plainFileName, it.updatedAt,
             LyricsStorage.localLyricsFileSize(context, it.plainFileName), it.title, it.artist, it.album,
             it.durationMs, it.indexKey, it.plainSource, it.plainProvider, true, hasWord)

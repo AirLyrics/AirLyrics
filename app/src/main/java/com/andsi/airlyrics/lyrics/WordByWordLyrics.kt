@@ -4,7 +4,8 @@ data class WordByWordLine(
     val startMs: Long,
     val endMs: Long,
     val text: String,
-    val segments: List<WordByWordSegment> = emptyList()
+    val segments: List<WordByWordSegment> = emptyList(),
+    val isBackground: Boolean = false
 )
 
 data class WordByWordSegment(

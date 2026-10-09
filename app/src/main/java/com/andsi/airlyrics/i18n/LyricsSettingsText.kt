@@ -35,6 +35,7 @@ internal fun plainLyricsSourceTitleRes(plainLyricsSearchSource: PlainLyricsSearc
         PlainLyricsSearchSource.NETEASE -> R.string.ui_netease_cloud_music
         PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch
         PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
+        PlainLyricsSearchSource.SPICY -> if (com.andsi.airlyrics.BuildConfig.SPICY_CLIENT_KEY.isBlank()) R.string.provider_spicy_unavailable else R.string.provider_spicy
     }
 
 @StringRes
@@ -44,6 +45,7 @@ internal fun plainLyricsSourceCompactTitleRes(plainLyricsSearchSource: PlainLyri
         PlainLyricsSearchSource.NETEASE -> R.string.provider_netease_compact
         PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch_compact
         PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
+        PlainLyricsSearchSource.SPICY -> R.string.provider_spicy_name
     }
 
 internal fun Context.localizedLyricsContentModeTitle(mode: LyricsContentDisplayMode): String =

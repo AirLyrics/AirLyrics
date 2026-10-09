@@ -125,6 +125,7 @@ internal fun FloatingLyricsService.applyLyricsResult(
 ) {
     val lyricsResult = result.getOrNull()
     val plainLrc = lyricsResult?.plainLrc
+    renderer.setLyricsAccess(lyricsResult?.access)
 
     if (plainLrc != null) {
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
@@ -199,6 +200,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
     )
 
     if (localPlainLrc != null) {
+        renderer.setLyricsAccess(null)
         automaticOnlineLookupSuppressedSong = null
         lastPlaybackLyricsKey = media.playbackLyricsKey()
         activeLyricsLookupRequestKey = null

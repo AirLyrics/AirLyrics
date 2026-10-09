@@ -88,8 +88,8 @@ internal class LyricsController(
             duration = target.durationMs
         )
         return LyricsImportAvailability(
-            plainImportEnabled = !hasWordByWordLyrics,
-            wordByWordImportEnabled = localInfo == null ||
+            plainImportEnabled = localInfo?.plainSource == LyricsStorage.SOURCE_PROVIDER_CACHE || !hasWordByWordLyrics,
+            wordByWordImportEnabled = localInfo == null || localInfo.plainSource == LyricsStorage.SOURCE_PROVIDER_CACHE ||
                 localInfo.plainSource == LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
         )
     }
@@ -193,7 +193,8 @@ internal class LyricsController(
                 deletedTarget != null &&
                 currentTarget?.isStrongSameSong(deletedTarget) == true
             if (currentTarget != null &&
-                (deletesCurrentItem || deletesCurrentWordByWordOnlyItem)
+                (deletesCurrentItem || deletesCurrentWordByWordOnlyItem ||
+                    (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && deletedTarget?.let(currentTarget::isStrongSameSong) == true))
             ) {
                 lyricsChangedPublisher.publishDeleted(currentTarget)
             }
@@ -258,6 +259,7 @@ internal class LyricsController(
         target: SongIdentity,
         importAsWordByWord: Boolean
     ): LyricsStorage.ImportLyricsResult? {
+        if (LyricsStorage.getLocalPlainLyricsInfo(context, target.title, target.artist, target.durationMs)?.plainSource == LyricsStorage.SOURCE_PROVIDER_CACHE) return null
         return if (importAsWordByWord) {
             val localInfo = LyricsStorage.getLocalPlainLyricsInfo(
                 context = context,

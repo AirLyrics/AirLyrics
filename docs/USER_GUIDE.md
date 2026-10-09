@@ -45,7 +45,7 @@ If no player appears, start playing music, check that notification access is ena
   window from appearing. It will appear automatically when those conditions clear. While display is
   blocked, tapping the notification opens AirLyrics, but display and adjustment controls are unavailable.
 - **Lyrics offset** is saved for each song and does not change the original lyrics file.
-- To use **Word-by-word lyrics**, import a local lyrics file. When this option is enabled and the
+- To use **Word-by-word lyrics**, import a local lyrics file or select **Spicy Lyrics** in a build where it is available. When this option is enabled and the
   current song has word-by-word lyrics, **Highlight color** marks the part of the current line that
   has already played.
 
@@ -63,6 +63,7 @@ the returned version, artist tags, or duration may not exactly match the current
 
 - **NetEase Lyrics**: searches by keywords and tries candidates in relevance order.
 - **Musixmatch**: uses exact matching, general search, and broader matching in sequence.
+- **Spicy Lyrics**: supplies ordinary and word-by-word lyrics. Edits remain inside the app and expire with the lyrics 30 days after acquisition. Source credits appear below the lyrics. Existing installations must select this source explicitly.
 - **LRCLIB**: starts with an exact metadata lookup, then searches by title and artist or title alone.
 
 - Use **Current song lyrics** to import or remove lyrics. **Search online** skips the current
@@ -101,3 +102,5 @@ If **Display scope** is still unreliable, set AirLyrics battery usage to **Unres
 settings.
 
 For other known issues, search [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues).
+
+For key configuration and storage details, see [Spicy Lyrics integration](spicy-lyrics.md).

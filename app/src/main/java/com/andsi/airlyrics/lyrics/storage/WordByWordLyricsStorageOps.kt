@@ -238,7 +238,7 @@ internal object WordByWordLyricsStorageOps {
         artist: String,
         duration: Long
     ): Boolean {
-        val localInfo = LyricsStorage.getLocalPlainLyricsInfo(context, title, artist, duration) ?: return false
+        val localInfo = PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, title, artist, duration) ?: return false
         return localInfo.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
     }
 

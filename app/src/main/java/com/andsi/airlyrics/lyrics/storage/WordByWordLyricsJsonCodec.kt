@@ -70,6 +70,7 @@ internal object WordByWordLyricsJsonCodec {
                 put(KEY_START_MS, line.startMs)
                 put(KEY_END_MS, line.endMs)
                 put(KEY_TEXT, line.text)
+                if (line.isBackground) put("background", true)
                 put(KEY_SEGMENTS, JSONArray().apply {
                     line.segments.forEach { segment ->
                         put(JSONObject().apply {
@@ -107,7 +108,7 @@ internal object WordByWordLyricsJsonCodec {
                     }
                 }
 
-                if (segments.isNotEmpty()) add(WordByWordLine(startMs, endMs, text, segments))
+                if (segments.isNotEmpty()) add(WordByWordLine(startMs, endMs, text, segments, line.optBoolean("background")))
             }
         }.sortedBy { it.startMs }
     }

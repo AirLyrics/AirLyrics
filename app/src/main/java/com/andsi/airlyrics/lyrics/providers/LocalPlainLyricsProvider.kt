@@ -13,6 +13,11 @@ object LocalPlainLyricsProvider : PlainLyricsProvider {
     override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
         return runCatching {
             request.cancellationToken?.throwIfCancellationRequested()
+            val info = LyricsStorage.getLocalPlainLyricsInfo(request.context, request.title, request.artist, request.durationMs)
+            if (info?.plainProvider == "spicy" && info.indexKey.startsWith("spicy:")) {
+                return@runCatching com.andsi.airlyrics.lyrics.storage.SpicyLyricsCache.forContext(request.context)
+                    .read(info.indexKey.removePrefix("spicy:"))
+            }
             val plainLrc = LyricsStorage.readPlainLyrics(
                 context = request.context,
                 title = request.title,
@@ -28,7 +33,8 @@ object LocalPlainLyricsProvider : PlainLyricsProvider {
                 matchedTitle = request.title,
                 matchedArtist = request.artist,
                 matchedAlbum = request.album,
-                matchedDurationMs = request.durationMs
+                matchedDurationMs = request.durationMs,
+                manualLocal = info?.plainSource != LyricsStorage.SOURCE_DOWNLOADED
             )
         }
     }

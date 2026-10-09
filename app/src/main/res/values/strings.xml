@@ -127,7 +127,7 @@
     <string name="ui_word_by_word_lyrics">Word-by-word lyrics</string>
     <string name="ui_word_by_word_lyrics_import_success">Word-by-word lyrics imported</string>
     <string name="ui_word_by_word_lyrics_lrc_file">Word-by-word lyrics (.lrc / .ttml)</string>
-    <string name="ui_word_by_word_lyrics_local_only">Available from local imports only</string>
+    <string name="ui_word_by_word_lyrics_local_only">Available from imports and supported online sources</string>
     <string name="ui_word_by_word_lyrics_format_hint">Line time [00:12.34] · word time &lt;00:12.34&gt;</string>
     <string name="ui_word_by_word_blocked_by_plain_lrc">Remove plain lyrics first</string>
     <string name="ui_plain_lrc_blocked_by_word_by_word">Remove word-by-word lyrics first</string>
@@ -418,4 +418,9 @@ Word-timed TTML:
     <string name="ui_yay">Yay!</string>
     <string name="ui_overlay_update_failed">Overlay update failed</string>
     <string name="ui_scroll_text">Scroll text</string>
+    <string name="provider_spicy">Spicy Lyrics</string>
+    <string name="provider_spicy_unavailable">Spicy Lyrics · Unavailable</string>
+    <string name="ui_spicy_expiry">Expires %1$s</string>
+    <string name="ui_lyrics_expired">Lyrics expired</string>
+    <string name="provider_spicy_name">Spicy Lyrics</string>
 </resources>

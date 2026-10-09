@@ -25,6 +25,7 @@ mod matching;
 mod musixmatch;
 #[cfg(test)]
 mod native_result_contract_tests;
+mod spicy;
 
 const NETEASE_LOOKUP_TIMEOUT: Duration = Duration::from_secs(12);
 const NETEASE_MAX_REQUESTS: usize = 8;
@@ -79,6 +80,28 @@ pub(crate) struct NativeResult {
     merged_lrc: Option<String>,
     error_type: Option<&'static str>,
     error: Option<String>,
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNative_fetchLyricsJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+    key: JString,
+    lookup_id: jni::sys::jlong,
+) -> jstring {
+    let title = jstring_to_string(&mut env, title);
+    let artist = jstring_to_string(&mut env, artist);
+    let album = jstring_to_string(&mut env, album);
+    let key = jstring_to_string(&mut env, key);
+    let result = std::panic::catch_unwind(|| spicy::fetch(&title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id))
+        .unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
+    env.new_string(result.to_string())
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]

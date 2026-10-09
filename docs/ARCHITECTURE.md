@@ -387,3 +387,7 @@ errors, offsets, and floating-style labels.
 - Native-result contract tests keep Rust JSON and Kotlin parsing aligned.
 - Storage atomicity, song identity, latest-result gating, and floating-service lifecycle behavior are
   covered by focused unit, Robolectric, and instrumentation tests.
+
+## Spicy Lyrics
+
+[Independent provider, private cache and expiry design](spicy-lyrics.md). The repository carries origin restrictions and attribution with the whole payload; the existing plain-provider name remains a compatibility alias.

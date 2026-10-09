@@ -13,16 +13,17 @@ data class LyricsSettings(
 )
 
 /** An online lookup source. Local lyrics are always checked first. */
-enum class PlainLyricsSearchSource(val key: String) {
+enum class PlainLyricsSearchSource(val key: String, val supportsWordTiming: Boolean = false) {
     /** Persisted compatibility value. New UI models local-only behavior with [LyricsSettings.autoSearchOnline]. */
     LOCAL_ONLY("local_only"),
     NETEASE("netease"),
     MUSIXMATCH("musixmatch"),
-    LRCLIB("lrclib");
+    LRCLIB("lrclib"),
+    SPICY("spicy", supportsWordTiming = true);
 
     companion object {
         val default: PlainLyricsSearchSource = NETEASE
-        val onlineSources: List<PlainLyricsSearchSource> = listOf(NETEASE, MUSIXMATCH, LRCLIB)
+        val onlineSources: List<PlainLyricsSearchSource> = listOf(NETEASE, MUSIXMATCH, LRCLIB, SPICY)
 
         fun fromKeyOrNull(key: String?): PlainLyricsSearchSource? {
             return entries.firstOrNull { it.key == key }

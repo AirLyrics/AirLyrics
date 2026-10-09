@@ -187,7 +187,8 @@ class LyricsSourceOrderCardTest {
             listOf(
                 PlainLyricsSearchSource.NETEASE,
                 PlainLyricsSearchSource.LRCLIB,
-                PlainLyricsSearchSource.MUSIXMATCH
+                PlainLyricsSearchSource.MUSIXMATCH,
+                PlainLyricsSearchSource.SPICY
             ),
             sourceRow.displayedSources()
         )
@@ -201,13 +202,13 @@ class LyricsSourceOrderCardTest {
             PlainLyricsSearchSource.MUSIXMATCH
         )
         assertEquals(allSources, LyricsSettingsStore.getPlainLyricsSearchSources(context))
-        assertEquals(allSources, sourceRow.displayedSources())
+        assertEquals(allSources + PlainLyricsSearchSource.SPICY, sourceRow.displayedSources())
         allSources.forEachIndexed { index, source ->
             assertPriorityButton(originalButtons.getValue(source), host, index + 1)
         }
         card = createLyricsSourceOrderCard(host, host.lyricsSettingsState())
         sourceRow = card.requireSourceOrderRow()
-        assertEquals(allSources, sourceRow.displayedSources())
+        assertEquals(allSources + PlainLyricsSearchSource.SPICY, sourceRow.displayedSources())
         allSources.forEachIndexed { index, source ->
             assertPriorityButton(card.requireSourceButton(source), host, index + 1)
         }
@@ -222,7 +223,8 @@ class LyricsSourceOrderCardTest {
             listOf(
                 PlainLyricsSearchSource.LRCLIB,
                 PlainLyricsSearchSource.MUSIXMATCH,
-                PlainLyricsSearchSource.NETEASE
+                PlainLyricsSearchSource.NETEASE,
+                PlainLyricsSearchSource.SPICY
             ),
             sourceRow.displayedSources()
         )
@@ -236,7 +238,8 @@ class LyricsSourceOrderCardTest {
             listOf(
                 PlainLyricsSearchSource.MUSIXMATCH,
                 PlainLyricsSearchSource.NETEASE,
-                PlainLyricsSearchSource.LRCLIB
+                PlainLyricsSearchSource.LRCLIB,
+                PlainLyricsSearchSource.SPICY
             ),
             sourceRow.displayedSources()
         )
@@ -274,7 +277,8 @@ class LyricsSourceOrderCardTest {
             listOf(
                 PlainLyricsSearchSource.LRCLIB,
                 PlainLyricsSearchSource.NETEASE,
-                PlainLyricsSearchSource.MUSIXMATCH
+                PlainLyricsSearchSource.MUSIXMATCH,
+                PlainLyricsSearchSource.SPICY
             ),
             card.requireSourceOrderRow().displayedSources()
         )
@@ -302,21 +306,22 @@ class LyricsSourceOrderCardTest {
             listOf(
                 PlainLyricsSearchSource.NETEASE,
                 PlainLyricsSearchSource.LRCLIB,
-                PlainLyricsSearchSource.MUSIXMATCH
+                PlainLyricsSearchSource.MUSIXMATCH,
+                PlainLyricsSearchSource.SPICY
             ),
             sourceRow.displayedSources()
         )
         if (ValueAnimator.areAnimatorsEnabled()) {
-            assertTrue(sourceRow.sourceButtons().any { abs(it.translationX) > 0.5f })
+            assertTrue(sourceRow.sourceButtons().any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
         }
 
         advancePastSourceReorder()
 
-        assertTrue(sourceRow.sourceButtons().all { it.translationX == 0f })
+        assertTrue(sourceRow.sourceButtons().all { it.translationX == 0f && it.translationY == 0f })
     }
 
     @Test
-    fun sourceCard_usesOneRowOfEqualTilesWithoutTruncatingCompactTitles() {
+    fun sourceCard_scrollsOneRowWithoutTruncatingTitles() {
         val activity = launchActivity()
         val host = activity.graph.uiHost
         val card = createLyricsSourceOrderCard(
@@ -332,12 +337,14 @@ class LyricsSourceOrderCardTest {
         val cardLayout = card as ViewGroup
         assertEquals(2, cardLayout.childCount)
         assertSame(sourceRow, cardLayout.getChildAt(1))
-        assertEquals(3, sourceRow.childCount)
+        assertEquals(4, sourceRow.sourceButtons().size)
+        assertTrue(sourceRow.getChildAt(0).width > sourceRow.width)
         val buttons = PlainLyricsSearchSource.onlineSources.map { source ->
             card.requireSourceButton(source)
         }
-        val measuredWidths = buttons.map { it.measuredWidth }
-        assertTrue(measuredWidths.max() - measuredWidths.min() <= 1)
+        assertEquals(1, buttons.map { it.top }.distinct().size)
+        sourceRow.scrollTo(sourceRow.getChildAt(0).width, 0)
+        assertTrue(sourceRow.scrollX > 0)
         assertEquals(1, buttons.map { it.measuredHeight }.distinct().size)
         assertEquals(host.dp(AirUiTokens.Layout.LyricsSourceButtonHeight), buttons.first().measuredHeight)
         buttons.forEachIndexed { index, button ->
@@ -356,6 +363,23 @@ class LyricsSourceOrderCardTest {
             )
             assertTrue(abs(priority.centerY() - title.centerY()) <= 1f)
         }
+    }
+
+    @Test
+    fun sourceRow_acceptsMoreSourcesWithoutAddingRows() {
+        val host = launchActivity().graph.uiHost
+        val row = LyricsSourceOrderRow(host)
+        val buttons = (1..12).map { index ->
+            LyricsSourceOptionButton(host, PlainLyricsSearchSource.LRCLIB, "Provider $index")
+        }
+        row.setSourceOrder(buttons, animate = false)
+        measureAndLayout(row, host.dp(280))
+        assertEquals(12, row.sourceButtons().size)
+        assertEquals(1, buttons.map { it.top }.distinct().size)
+        assertTrue(row.getChildAt(0).width > row.width * 2)
+        row.scrollTo(row.getChildAt(0).width, 0)
+        assertTrue(row.scrollX > 0)
+        assertTrue(buttons.last().right <= row.scrollX + row.width)
     }
 
     @Test
@@ -395,32 +419,34 @@ class LyricsSourceOrderCardTest {
         val animatedOrder = listOf(
             PlainLyricsSearchSource.LRCLIB,
             PlainLyricsSearchSource.NETEASE,
-            PlainLyricsSearchSource.MUSIXMATCH
+            PlainLyricsSearchSource.MUSIXMATCH,
+            PlainLyricsSearchSource.SPICY
         ).map(buttons::getValue)
         row.setSourceOrder(animatedOrder, animate = true)
         measureAndLayout(row, host.dp(280))
         row.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(animatedOrder.map { it.source }, row.displayedSources())
         if (ValueAnimator.areAnimatorsEnabled()) {
-            assertTrue(animatedOrder.any { abs(it.translationX) > 0.5f })
+            assertTrue(animatedOrder.any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
         }
 
         val latestOrder = listOf(
             PlainLyricsSearchSource.MUSIXMATCH,
             PlainLyricsSearchSource.LRCLIB,
-            PlainLyricsSearchSource.NETEASE
+            PlainLyricsSearchSource.NETEASE,
+            PlainLyricsSearchSource.SPICY
         ).map(buttons::getValue)
         row.setSourceOrder(latestOrder, animate = true)
         measureAndLayout(row, host.dp(280))
         row.viewTreeObserver.dispatchOnPreDraw()
         if (ValueAnimator.areAnimatorsEnabled()) {
-            assertTrue(latestOrder.any { abs(it.translationX) > 0.5f })
+            assertTrue(latestOrder.any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
         }
 
         advancePastSourceReorder()
 
         assertEquals(latestOrder.map { it.source }, row.displayedSources())
-        assertTrue(latestOrder.all { it.translationX == 0f })
+        assertTrue(latestOrder.all { it.translationX == 0f && it.translationY == 0f })
     }
 
     private fun launchActivity(): MainActivity {
@@ -486,7 +512,7 @@ class LyricsSourceOrderCardTest {
             ?: error("No lyrics source order row found")
 
     private fun ViewGroup.sourceButtons(): List<LyricsSourceOptionButton> =
-        (0 until childCount).map { index -> getChildAt(index) as LyricsSourceOptionButton }
+        descendantsAndSelf().filterIsInstance<LyricsSourceOptionButton>().toList()
 
     private fun View.requireSourceButton(source: PlainLyricsSearchSource): LyricsSourceOptionButton =
         descendantsAndSelf()

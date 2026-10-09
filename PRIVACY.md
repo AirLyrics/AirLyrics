@@ -39,6 +39,10 @@ When the user searches lyrics online, AirLyrics sends the search request require
 
 AirLyrics does not add personal identifiers, accounts, analytics identifiers, or advertising identifiers to these requests.
 
+When Spicy Lyrics is selected, AirLyrics sends the song title to Spotify to identify the recording, then sends its Spotify track ID to the Spicy Lyrics API. Requests use the app's publishable API key. These services receive normal network information such as the requesting IP address. No AirLyrics server is involved.
+
+Spicy lyrics and any edits are stored in private app storage excluded from backup, for at most 30 days of use after acquisition. Expired content is unavailable and is removed on access, app startup or scheduled cleanup. Android may delay scheduled cleanup while the app is stopped. AirLyrics does not offer file export or sharing for this content.
+
 ## Third-party services
 
 AirLyrics currently uses online lyrics providers only for lyrics search. Those providers may receive the search request needed to return lyrics. Their own privacy practices are controlled by those providers.

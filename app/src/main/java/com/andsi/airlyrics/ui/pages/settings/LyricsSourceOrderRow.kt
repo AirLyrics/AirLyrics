@@ -9,7 +9,7 @@ import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.PointF
-import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
+import android.widget.HorizontalScrollView
 import android.view.Gravity
 import android.view.ViewTreeObserver
 import android.view.animation.PathInterpolator
@@ -52,6 +52,7 @@ internal class LyricsSourceOptionButton(
         textSize = AirUiTokens.TextSize.BodySmall
         typeface = Typeface.DEFAULT_BOLD
         includeFontPadding = false
+        setSingleLine(true)
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
     private val priorityLabel = TextView(host).apply {
@@ -107,9 +108,13 @@ internal class LyricsSourceOptionButton(
         selectedPriority: Int?,
         fullTitle: String
     ) {
+        val configured = source != PlainLyricsSearchSource.SPICY || com.andsi.airlyrics.BuildConfig.SPICY_CLIENT_KEY.isNotBlank()
+        isEnabled = configured || selectedPriority != null
+        alpha = if (configured) 1f else 0.5f
         val selected = selectedPriority != null
         isSelected = selected
         contentDescription = fullTitle
+        tooltipText = fullTitle
         titleView.setTextColor(if (selected) host.colorOnAccent else host.colorText)
         priorityLabel.apply {
             text = selectedPriority?.toString().orEmpty()
@@ -142,17 +147,24 @@ private const val PRIORITY_LABEL_ALPHA = 160
 @SuppressLint("ViewConstructor")
 internal class LyricsSourceOrderRow(
     private val host: MainUiHost
-) : AdaptiveGridLayout(host, PlainLyricsSearchSource.onlineSources.size, host.dp(AirUiTokens.Space.Lg), host.dp(AirUiTokens.Space.Lg)) {
+) : HorizontalScrollView(host) {
+    private val sourceStrip = LinearLayout(host).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        clipChildren = false
+        clipToPadding = false
+    }
     private var reorderAnimator: AnimatorSet? = null
     private var pendingPreDrawListener: ViewTreeObserver.OnPreDrawListener? = null
     private var reorderGeneration = 0L
 
     init {
-        orientation = VERTICAL
-        gravity = Gravity.CENTER_VERTICAL
-        clipChildren = false
+        isHorizontalScrollBarEnabled = false
+        isFillViewport = true
+        addView(sourceStrip, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        clipChildren = true
         clipToPadding = false
-        layoutParams = LayoutParams(
+        layoutParams = LinearLayout.LayoutParams(
             LayoutParams.MATCH_PARENT,
             LayoutParams.WRAP_CONTENT
         ).apply {
@@ -168,12 +180,12 @@ internal class LyricsSourceOrderRow(
             "Lyrics source buttons must be unique"
         }
         orderedButtons.forEach { button ->
-            require(button.parent == null || button.parent === this) {
+            require(button.parent == null || button.parent === sourceStrip) {
                 "Lyrics source button already belongs to another parent"
             }
         }
 
-        val currentOrder = (0 until childCount).map { index -> getChildAt(index) }
+        val currentOrder = (0 until sourceStrip.childCount).map { index -> sourceStrip.getChildAt(index) }
         if (currentOrder == orderedButtons) {
             prepareButtonLayout(orderedButtons)
             if (!animate || !ValueAnimator.areAnimatorsEnabled()) {
@@ -183,7 +195,7 @@ internal class LyricsSourceOrderRow(
         }
 
         val oldVisualPositions = orderedButtons
-            .filter { it.parent === this }
+            .filter { it.parent === sourceStrip }
             .associateWith { PointF(it.x, it.y) }
         val shouldAnimate = animate &&
             isAttachedToWindow &&
@@ -194,8 +206,9 @@ internal class LyricsSourceOrderRow(
 
         cancelPendingReorder(settle = false)
 
-        orderedButtons.filter { it.parent == null }.forEach(::addView)
-        orderedButtons.forEach(::bringChildToFront)
+        currentOrder.filterNot { it in orderedButtons }.forEach(sourceStrip::removeView)
+        orderedButtons.filter { it.parent == null }.forEach(sourceStrip::addView)
+        orderedButtons.forEach(sourceStrip::bringChildToFront)
         prepareButtonLayout(orderedButtons)
 
         if (!shouldAnimate) {
@@ -229,8 +242,8 @@ internal class LyricsSourceOrderRow(
     }
 
     internal fun displayedSources(): List<PlainLyricsSearchSource> =
-        (0 until childCount).map { index ->
-            (getChildAt(index) as LyricsSourceOptionButton).source
+        (0 until sourceStrip.childCount).map { index ->
+            (sourceStrip.getChildAt(index) as LyricsSourceOptionButton).source
         }
 
     override fun onDetachedFromWindow() {
@@ -239,11 +252,12 @@ internal class LyricsSourceOrderRow(
     }
 
     private fun prepareButtonLayout(buttons: List<LyricsSourceOptionButton>) {
-        buttons.forEach { button ->
-            button.layoutParams = LayoutParams(
-                LayoutParams.MATCH_PARENT,
+        buttons.forEachIndexed { index, button ->
+            button.layoutParams = LinearLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT,
                 LayoutParams.WRAP_CONTENT
-            )
+            ).apply { marginEnd = if (index < buttons.lastIndex) host.dp(AirUiTokens.Space.Lg) else 0 }
+            button.minimumWidth = host.dp(76)
             button.minimumHeight = host.dp(AirUiTokens.Layout.LyricsSourceButtonHeight)
             button.setPadding(host.dp(AirUiTokens.Space.Lg), host.dp(AirUiTokens.Space.Sm), host.dp(AirUiTokens.Space.Lg), host.dp(AirUiTokens.Space.Sm))
         }
@@ -300,9 +314,9 @@ internal class LyricsSourceOrderRow(
     }
 
     private fun settleButtons() {
-        for (index in 0 until childCount) {
-            getChildAt(index).translationX = 0f
-            getChildAt(index).translationY = 0f
+        for (index in 0 until sourceStrip.childCount) {
+            sourceStrip.getChildAt(index).translationX = 0f
+            sourceStrip.getChildAt(index).translationY = 0f
         }
     }
 }

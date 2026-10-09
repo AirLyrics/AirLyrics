@@ -83,7 +83,14 @@ open class FloatingLyricsService : Service() {
             artist = media.artist,
             album = media.album,
             durationMs = media.durationMs,
-            cancellationToken = cancellationToken
+            cancellationToken = cancellationToken,
+            onInterimResult = { interim ->
+                syncHandler.post {
+                    if (!cancellationToken.isCancellationRequested && activeLyricsLookupRequestKey?.value == cancellationToken.requestKey) {
+                        applyLyricsResult(Result.success(interim), media)
+                    }
+                }
+            }
         )
     }
 
@@ -248,6 +255,7 @@ open class FloatingLyricsService : Service() {
     override fun onDestroy() {
         if (feedbackDelegate.isInitialized()) feedback.dismiss()
         stopLyricsSync()
+        renderer.clear()
         cancelPendingAutoHide()
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         stopSelectedMediaObservation()

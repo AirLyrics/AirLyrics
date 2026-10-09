@@ -9,5 +9,6 @@ class AirLyricsApplication : Application() {
         super.onCreate()
         LanguageSettingsStore.initialize(this)
         AppNightMode.applyStoredMode(this)
+        com.andsi.airlyrics.lyrics.storage.LyricsStorage.scheduleCacheMaintenance(this)
     }
 }

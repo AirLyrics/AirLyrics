@@ -16,6 +16,7 @@ internal fun Context.localizedPlainLyricsProviderName(plainProviderIdOrName: Str
         "netease", "netease lyrics", "netease cloud music", "\u7f51\u6613\u4e91\u6b4c\u8bcd", "\u7f51\u6613\u4e91\u97f3\u4e50" -> R.string.provider_netease_plain_lyrics
         "musixmatch" -> R.string.provider_musixmatch
         "lrclib" -> R.string.provider_lrclib
+        "spicy" -> R.string.provider_spicy_name
         else -> null
     }
     return providerRes?.let { getString(it) }
@@ -23,7 +24,7 @@ internal fun Context.localizedPlainLyricsProviderName(plainProviderIdOrName: Str
 }
 
 internal fun Context.localizedLocalPlainLyricsSource(plainSource: String, plainProvider: String): String {
-    if (plainSource == LyricsStorage.SOURCE_DOWNLOADED) {
+    if (plainSource == LyricsStorage.SOURCE_DOWNLOADED || plainSource == LyricsStorage.SOURCE_PROVIDER_CACHE) {
         val providerName = localizedPlainLyricsProviderName(plainProvider)
         return if (plainProvider.isBlank() || plainProvider.trim().equals("local", ignoreCase = true)) {
             getString(R.string.ui_cache)

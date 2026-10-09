@@ -5,6 +5,7 @@ import com.andsi.airlyrics.app.host.toStorageItem
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.parser.LrcParser
+import com.andsi.airlyrics.lyrics.LyricsAccess
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
@@ -32,7 +33,8 @@ internal data class EditorSession(
     val busy: Boolean = false,
     val notice: EditorNotice? = null,
     val invalidLines: List<Int> = emptyList(),
-    val finished: LocalLyricsUiChange? = null
+    val finished: LocalLyricsUiChange? = null,
+    val access: LyricsAccess? = null
 )
 
 /** Retains only application context and data; UI subscribes anew after recreation. */
@@ -49,6 +51,7 @@ internal class LyricsEditorSession(
     private var loading: Job? = null
     private var operation: Job? = null
     private var restored = false
+    private var expiryJob: Job? = null
 
     init { drafts.prune(interactions.read("editor")?.getString("id")) }
 
@@ -60,15 +63,17 @@ internal class LyricsEditorSession(
         val target = LyricsStorage.LocalLyricsEditTarget.entries.find { it.name == saved.getString("target") } ?: return
         val id = saved.getString("id") ?: return
         loading = scope.launch {
-            val draft = withContext(Dispatchers.IO) { runCatching { drafts.read(id).get() }.getOrNull() }
+            val draft = if (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE) null else withContext(Dispatchers.IO) { runCatching { drafts.read(id).get() }.getOrNull() }
             val text = draft ?: withContext(Dispatchers.IO) { runCatching { LyricsStorage.readLocalLyricsItemText(context, item.toStorageItem(), target) }.getOrNull() }
-            if (text == null) {
+            val access = withContext(Dispatchers.IO) { LyricsStorage.restrictedLyricsAccess(context, item.indexKey) }
+            if (text == null || (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && access == null)) {
                 interactions.remove("editor")
                 current.value = EditorSession(id, item, target, "", notice = EditorNotice.READ_FAILED)
             } else {
                 current.value = EditorSession(id, item, target, text,
                     saved.getInt("start").coerceIn(0, text.length), saved.getInt("end").coerceIn(0, text.length),
-                    saved.getInt("scroll"), notice = if (draft == null) EditorNotice.READ_FAILED else null)
+                    saved.getInt("scroll"), notice = if (draft == null && item.source != LyricsStorage.SOURCE_PROVIDER_CACHE) EditorNotice.READ_FAILED else null, access = access)
+                watchExpiry()
             }
         }
     }
@@ -83,9 +88,15 @@ internal class LyricsEditorSession(
         }
         loading = scope.launch {
             val text = withContext(Dispatchers.IO) { runCatching { LyricsStorage.readLocalLyricsItemText(context, item.toStorageItem(), target) }.getOrNull() }
-            if (text == null) interactions.remove("editor")
-            current.value = EditorSession(id, item, target, text.orEmpty(), notice = if (text == null) EditorNotice.READ_FAILED else null)
-            if (text != null) flush()
+            val access = withContext(Dispatchers.IO) { LyricsStorage.restrictedLyricsAccess(context, item.indexKey) }
+            if (text == null || (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && access == null)) {
+                interactions.remove("editor")
+                current.value = null
+                return@launch
+            }
+            current.value = EditorSession(id, item, target, text, access = access)
+            watchExpiry()
+            flush()
         }
     }
 
@@ -113,20 +124,35 @@ internal class LyricsEditorSession(
 
     fun flush() {
         pendingWrite?.cancel(); pendingWrite = null
-        current.value?.takeIf { it.finished == null && interactions.read("editor") != null }?.let { saveMetadata(it); drafts.write(it.id, it.text) }
+        current.value?.takeIf { it.finished == null && interactions.read("editor") != null }?.let { saveMetadata(it); if (it.item.source != LyricsStorage.SOURCE_PROVIDER_CACHE) drafts.write(it.id, it.text) }
     }
 
     fun cancel() {
         if (current.value?.busy == true) return
-        loading?.cancel(); pendingWrite?.cancel()
+        loading?.cancel(); pendingWrite?.cancel(); expiryJob?.cancel()
         interactions.read("editor")?.getString("id")?.let(drafts::delete)
         interactions.remove("editor")
         if (interactions.read("confirmation")?.getString("operation") == "DELETE_EDITOR") interactions.remove("confirmation")
         current.value = null
     }
 
+    private fun watchExpiry() {
+        expiryJob?.cancel()
+        val session = current.value ?: return
+        val access = session.access ?: return
+        expiryJob = scope.launch {
+            delay((access.expiresAtMs - System.currentTimeMillis()).coerceAtLeast(0).milliseconds)
+            if (current.value?.id == session.id) {
+                operation?.cancel()
+                current.value = current.value?.copy(busy = false)
+                cancel()
+                withContext(Dispatchers.IO) { LyricsStorage.pruneOnlineCache(context) }
+            }
+        }
+    }
+
     fun consumeNotice() { current.value = current.value?.copy(notice = null, invalidLines = emptyList()) }
-    fun acknowledgeCompletion() { current.value = null }
+    fun acknowledgeCompletion() { expiryJob?.cancel(); expiryJob = null; current.value = null }
 
     fun check() = operate { session ->
         val result = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
@@ -161,6 +187,7 @@ internal class LyricsEditorSession(
     private fun operate(failure: EditorNotice = EditorNotice.SAVE_FAILED, block: (EditorSession) -> EditorSession) {
         val snapshot = current.value ?: return
         if (snapshot.busy || snapshot.finished != null || operation?.isActive == true) return
+        if (snapshot.access?.isExpired() == true) { cancel(); return }
         flush()
         current.value = snapshot.copy(busy = true)
         operation = scope.launch {

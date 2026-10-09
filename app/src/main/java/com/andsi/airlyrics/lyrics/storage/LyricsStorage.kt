@@ -22,10 +22,11 @@ object LyricsStorage {
     /** Process-local signal used to reconcile visible UI after local lyrics mutations. */
     internal fun currentRevision(): Long = contentRevision.get()
 
-    private fun markContentChanged() {
+    internal fun markContentChanged() {
         contentRevision.incrementAndGet()
     }
 
+    const val SOURCE_PROVIDER_CACHE = "provider_cache"
     const val SOURCE_MANUAL_IMPORT = "manual_import"
     const val SOURCE_DOWNLOADED = "downloaded"
     // Persisted compatibility contract. Do not change the serialized value.
@@ -124,11 +125,11 @@ object LyricsStorage {
     )
 
     fun listRecentLyrics(context: Context, limit: Int = 8): List<LocalLyricsItem> = withStorageLock {
-        LocalLyricsLister.listRecent(context, limit)
+        (LocalLyricsLister.listRecent(context, limit) + SpicyLyricsCache.forContext(context).list()).sortedByDescending { it.modifiedTimeMillis }.take(limit)
     }
 
     fun listAllLyrics(context: Context): List<LocalLyricsItem> = withStorageLock {
-        LocalLyricsLister.listAll(context)
+        (LocalLyricsLister.listAll(context) + SpicyLyricsCache.forContext(context).list()).sortedByDescending { it.modifiedTimeMillis }
     }
 
     internal fun localLyricsFileSize(context: Context, relativeFile: String): Long = withStorageLock {
@@ -140,7 +141,12 @@ object LyricsStorage {
         item: LocalLyricsItem,
         target: LocalLyricsEditTarget
     ): String? = withStorageLock {
-        LocalLyricsEditor.readItemText(context, item, target)
+        if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX)) {
+            val result = SpicyLyricsCache.forContext(context).read(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX)) ?: return@withStorageLock null
+            if (target == LocalLyricsEditTarget.WORD_BY_WORD) {
+                com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser.wordByWordLinesToWordByWordLrc(result.wordByWordLines)
+            } else if (result.wordByWordLines.isEmpty()) result.plainLrc else null
+        } else LocalLyricsEditor.readItemText(context, item, target)
     }
 
     fun updatePlainLyricsItemTextWithResult(
@@ -148,6 +154,8 @@ object LyricsStorage {
         item: LocalLyricsItem,
         plainLrc: String
     ): LocalLyricsUpdateResult {
+        if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX)) return SpicyLyricsCache.forContext(context)
+            .edit(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX), plainLrc, false)
         return LocalLyricsEditor.updatePlainItemTextWithResult(context, item, plainLrc).also { result ->
             if (result.saved) markContentChanged()
         }
@@ -162,6 +170,8 @@ object LyricsStorage {
         item: LocalLyricsItem,
         wordByWordLrc: String
     ): LocalLyricsUpdateResult {
+        if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX)) return SpicyLyricsCache.forContext(context)
+            .edit(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX), wordByWordLrc, true)
         return LocalLyricsEditor.updateWordByWordItemTextWithResult(context, item, wordByWordLrc)
             .also { result ->
                 if (result.saved) markContentChanged()
@@ -183,6 +193,15 @@ object LyricsStorage {
         duration: Long
     ): LocalPlainLyricsInfo? = withStorageLock {
         PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, title, artist, duration)
+            ?: SpicyLyricsCache.forContext(context).item(SpicyLyricsCache.key(title, artist, duration))
+                ?.let { LocalPlainLyricsInfo(it.title, it.artist, it.durationMs, it.name, it.source, it.provider, it.modifiedTimeMillis, it.indexKey, it.album) }
+    }
+
+    /** Metadata for the same word upgrade chosen by the repository, without accessing the network. */
+    fun preferredOnlineWordItem(context: Context, title: String, artist: String, duration: Long): LocalLyricsItem? = withStorageLock {
+        val local = PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, title, artist, duration)
+        if (local != null && (local.plainSource != SOURCE_DOWNLOADED || WordByWordLyricsStorageOps.hasWordByWordLyrics(context, title, artist, duration))) return@withStorageLock null
+        SpicyLyricsCache.forContext(context).item(SpicyLyricsCache.key(title, artist, duration))?.takeIf { it.hasWordByWordLyrics }
     }
 
     fun hasPlainLyrics(context: Context, title: String, artist: String, duration: Long): Boolean {
@@ -191,6 +210,7 @@ object LyricsStorage {
 
     fun readPlainLyrics(context: Context, title: String, artist: String, duration: Long): String? = withStorageLock {
         PlainLyricsStorageOps.readPlainLyrics(context, title, artist, duration)
+            ?: SpicyLyricsCache.forContext(context).read(SpicyLyricsCache.key(title, artist, duration))?.plainLrc
     }
 
     fun savePlainLyrics(
@@ -204,6 +224,7 @@ object LyricsStorage {
         plainProvider: String = "local",
         overwrite: Boolean = true
     ): Boolean = withStorageLock {
+        if (plainProvider == "spicy") return@withStorageLock false
         val saved = PlainLyricsStorageOps.savePlainLyrics(
             context = context,
             title = title,
@@ -262,7 +283,9 @@ object LyricsStorage {
     }
 
     fun hasWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): Boolean = withStorageLock {
-        WordByWordLyricsStorageOps.hasWordByWordLyrics(context, title, artist, duration)
+        WordByWordLyricsStorageOps.hasWordByWordLyrics(context, title, artist, duration) ||
+            (PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, title, artist, duration) == null &&
+            SpicyLyricsCache.forContext(context).read(SpicyLyricsCache.key(title, artist, duration))?.wordByWordLines?.isNotEmpty() == true)
     }
 
     fun readWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): List<WordByWordLine> = withStorageLock {
@@ -281,6 +304,7 @@ object LyricsStorage {
         overwrite: Boolean = true,
         metadataLines: List<String> = emptyList()
     ): Boolean = withStorageLock {
+        if (wordByWordProvider == "spicy") return@withStorageLock false
         val saved = WordByWordLyricsStorageOps.saveWordByWordLyrics(
             context = context,
             title = title,
@@ -358,7 +382,8 @@ object LyricsStorage {
         duration: Long,
         mode: DeleteMode = DeleteMode.ALL
     ): Boolean = withStorageLock {
-        val deleted = LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode)
+        val cached = SpicyLyricsCache.forContext(context).delete(SpicyLyricsCache.key(title, artist, duration))
+        val deleted = LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode) || cached
         if (deleted) markContentChanged()
         deleted
     }
@@ -367,14 +392,36 @@ object LyricsStorage {
         context: Context,
         item: LocalLyricsItem
     ): DeleteLocalLyricsItemResult = withStorageLock {
+        if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX)) {
+            return@withStorageLock if (SpicyLyricsCache.forContext(context).delete(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX)))
+                DeleteLocalLyricsItemResult.Deleted(SongIdentity(item.title, item.artist, item.album, item.durationMs)) else DeleteLocalLyricsItemResult.NotFound
+        }
         val result = LocalLyricsDeleteOps.deleteLocalLyricsItem(context, item)
         if (result !is DeleteLocalLyricsItemResult.NotFound) markContentChanged()
         result
     }
 
     fun deleteAllSavedLyrics(context: Context): DeleteAllSavedLyricsResult = withStorageLock {
-        val result = LocalLyricsDeleteOps.deleteAllSavedLyrics(context)
+        val cache = SpicyLyricsCache.forContext(context)
+        val hadCache = cache.list().isNotEmpty()
+        if (!cache.clear()) return@withStorageLock DeleteAllSavedLyricsResult.FAILED
+        val localResult = LocalLyricsDeleteOps.deleteAllSavedLyrics(context)
+        val result = if (hadCache && localResult == DeleteAllSavedLyricsResult.NOTHING_TO_DELETE) DeleteAllSavedLyricsResult.DELETED else localResult
         if (result != DeleteAllSavedLyricsResult.NOTHING_TO_DELETE) markContentChanged()
         result
     }
+    fun restrictedLyricsAccess(context: Context, itemKey: String): com.andsi.airlyrics.lyrics.LyricsAccess? =
+        if (itemKey.startsWith(SpicyLyricsCache.PREFIX)) SpicyLyricsCache.forContext(context).read(itemKey.removePrefix(SpicyLyricsCache.PREFIX))?.access else null
+
+    fun pruneOnlineCache(context: Context) = SpicyLyricsCache.forContext(context).prune()
+
+    fun scheduleCacheMaintenance(context: Context) {
+        val app = context.applicationContext
+        Thread({ runCatching { pruneOnlineCache(app) } }, "AirLyrics-CacheCleanup").apply { isDaemon = true }.start()
+        val scheduler = app.getSystemService(android.app.job.JobScheduler::class.java)
+        val job = android.app.job.JobInfo.Builder(7301, android.content.ComponentName(app, SpicyCacheCleanupService::class.java))
+            .setPeriodic(24 * 60 * 60 * 1000L).build()
+        runCatching { scheduler?.schedule(job) }
+    }
+
 }

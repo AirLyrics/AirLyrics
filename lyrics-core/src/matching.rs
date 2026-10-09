@@ -416,7 +416,7 @@ fn compare_optional_duration(left: Option<u64>, right: Option<u64>) -> Option<f6
     })
 }
 
-fn version_difference_penalty(query_title: &str, candidate_title: &str) -> f64 {
+pub(crate) fn version_difference_penalty(query_title: &str, candidate_title: &str) -> f64 {
     let query_groups = version_groups(query_title);
     let candidate_groups = version_groups(candidate_title);
     let differences = (query_groups ^ candidate_groups).count_ones() as f64;

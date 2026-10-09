@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.app.host
 
 import android.app.Dialog
+import com.andsi.airlyrics.core.model.displayText
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
@@ -190,6 +191,7 @@ private fun MainActivityUiHost.showLocalLyricsEditorDialog(session: EditorSessio
             changed?.invoke()
         }
     }.apply {
+        isSaveEnabled = session.access == null
         setText(session.text)
         textSize = AirUiTokens.TextSize.BodySmall
         minLines = 8
@@ -257,6 +259,20 @@ private fun MainActivityUiHost.showLocalLyricsEditorDialog(session: EditorSessio
         onUserDismiss = { if (editorSession.state.value?.id == session.id) editorSession.cancel() },
         body = {
             addView(editor)
+            session.access?.let { access ->
+                addView(TextView(this@showLocalLyricsEditorDialog).apply {
+                    text = access.attribution.displayText()
+                    textSize = 11f
+                    setTextColor(colorTextMuted)
+                    movementMethod = android.text.method.LinkMovementMethod.getInstance()
+                    setPadding(0, dp(6), 0, dp(6))
+                })
+                addView(TextView(this@showLocalLyricsEditorDialog).apply {
+                    text = getString(R.string.ui_spicy_expiry, java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(access.expiresAtMs)))
+                    textSize = AirUiTokens.TextSize.Caption
+                    setTextColor(colorTextMuted)
+                })
+            }
             addView(LinearLayout(this@showLocalLyricsEditorDialog).apply {
                 orientation = LinearLayout.VERTICAL
                 val check = localLyricsDialogButton(getString(R.string.ui_check_format), LocalLyricsDialogActionStyle.ACCENT_TEXT) {

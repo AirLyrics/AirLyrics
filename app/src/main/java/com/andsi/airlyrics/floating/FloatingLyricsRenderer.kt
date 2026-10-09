@@ -6,6 +6,9 @@ import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
+import android.text.style.AbsoluteSizeSpan
+import com.andsi.airlyrics.core.model.displayText
+import com.andsi.airlyrics.lyrics.LyricsAccess
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
@@ -36,7 +39,39 @@ class FloatingLyricsRenderer(
     private val noTranslationTextProvider: () -> String = { "No translation for this lyric" },
     private val uptimeMillisProvider: () -> Long = { SystemClock.uptimeMillis() }
 ) {
+    private var access: LyricsAccess? = null
+
+    private val expiryHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val expiryCheck = Runnable { expireIfNeeded() }
+
+    fun setLyricsAccess(value: LyricsAccess?) {
+        expiryHandler.removeCallbacks(expiryCheck)
+        access = value
+        value?.let { expiryHandler.postDelayed(expiryCheck, (it.expiresAtMs - System.currentTimeMillis()).coerceAtLeast(0)) }
+    }
+
+    private fun expireIfNeeded(): Boolean {
+        if (access?.isExpired() != true) return false
+        clear()
+        show { textViewProvider()?.context?.getString(com.andsi.airlyrics.R.string.ui_lyrics_expired).orEmpty() }
+        return true
+    }
+
+    private fun credited(text: CharSequence): CharSequence {
+        val credit = access?.attribution ?: return text
+        val view = textViewProvider() ?: return text
+        return SpannableStringBuilder(text).apply {
+            append("\n")
+            val start = length
+            append(credit.displayText())
+            val size = (11 * view.resources.configuration.fontScale).toInt().coerceAtLeast(10)
+            setSpan(AbsoluteSizeSpan(size, true), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(ForegroundColorSpan(ColorUtils.setAlphaComponent(view.currentTextColor, 180)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
+
     private var currentPlainLines: List<LrcLine> = emptyList()
+    private var backgroundLines: List<WordByWordLine> = emptyList()
     private var currentWordByWordLines: List<WordByWordLine> = emptyList()
     private var currentPositionMs: Long = 0L
     private var lastPositionUpdateUptimeMs: Long = 0L
@@ -59,8 +94,10 @@ class FloatingLyricsRenderer(
     }
 
     fun clear() {
+        setLyricsAccess(null)
         currentPlainLines = emptyList()
         currentWordByWordLines = emptyList()
+        backgroundLines = emptyList()
         currentPositionMs = 0L
         lastPositionUpdateUptimeMs = 0L
         currentIsPlaying = false
@@ -73,8 +110,10 @@ class FloatingLyricsRenderer(
     fun show(text: String) = show { text }
 
     fun show(text: () -> String) {
+        setLyricsAccess(null)
         currentPlainLines = emptyList()
         currentWordByWordLines = emptyList()
+        backgroundLines = emptyList()
         currentMessage = text
         setTextImmediately(text())
     }
@@ -102,8 +141,10 @@ class FloatingLyricsRenderer(
         wordByWordLines: List<WordByWordLine> = emptyList(),
         emptyText: () -> String
     ): ParsedLyricsAvailability {
+        if (expireIfNeeded()) return ParsedLyricsAvailability.EMPTY
         currentPlainLines = LrcParser.parseWithTranslation(plainLrc, translatedLrc)
-        currentWordByWordLines = wordByWordLines
+        currentWordByWordLines = wordByWordLines.filterNot { it.isBackground }
+        backgroundLines = wordByWordLines.filter { it.isBackground }
         currentMessage = emptyText
         val availability = if (hasRenderableLyrics()) {
             ParsedLyricsAvailability.AVAILABLE
@@ -124,6 +165,7 @@ class FloatingLyricsRenderer(
     }
 
     fun tick() {
+        if (expireIfNeeded()) return
         if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) return
 
         val text = renderAtCurrentPosition().takeIf { it.isNotBlankText() } ?: return
@@ -135,6 +177,7 @@ class FloatingLyricsRenderer(
     }
 
     fun refresh() {
+        if (expireIfNeeded()) return
         val text = if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) {
             currentMessage?.invoke() ?: return
         } else {
@@ -157,6 +200,20 @@ class FloatingLyricsRenderer(
     }
 
     private fun renderAtCurrentPosition(): CharSequence {
+        val primary = renderPrimaryAtCurrentPosition()
+        if (!wordByWordLyricsEnabledProvider() || contentModeProvider() == LyricsContentDisplayMode.TRANSLATION_ONLY) return primary
+        val position = getEstimatedPositionMs()
+        val activeBackground = backgroundLines.filter { position in it.startMs until it.endMs }
+        if (activeBackground.isEmpty()) return primary
+        return SpannableStringBuilder(primary).apply {
+            activeBackground.forEach { line ->
+                if (isNotEmpty()) append("\n")
+                append(wordByWordLineSpan(line, line.text, position))
+            }
+        }
+    }
+
+    private fun renderPrimaryAtCurrentPosition(): CharSequence {
         val positionMs = getEstimatedPositionMs()
         val currentIndex = LrcParser.findCurrentIndex(currentPlainLines, positionMs)
 
@@ -437,7 +494,7 @@ class FloatingLyricsRenderer(
     private fun setTextImmediately(text: CharSequence) {
         val view = textViewProvider() ?: return
         resetTextAnimationState(view)
-        view.text = text
+        view.text = credited(text)
         lastRenderedText = text.toString()
     }
 
@@ -501,7 +558,7 @@ class FloatingLyricsRenderer(
     private fun prepareTextSwitchAnimation(text: CharSequence, textKey: String): TextView? {
         val view = textViewProvider() ?: return null
         cancelTextAnimation(view)
-        view.text = text
+        view.text = credited(text)
         lastRenderedText = textKey
         return view
     }

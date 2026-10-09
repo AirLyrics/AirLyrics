@@ -52,6 +52,12 @@ val releaseSigningValues = listOf(
 )
 val hasReleaseSigning = releaseSigningValues.all { !it.isNullOrBlank() }
 val hasPartialReleaseSigning = releaseSigningValues.any { !it.isNullOrBlank() } && !hasReleaseSigning
+// Publishable client credential only. Never read the local smoke-test secret file.
+val spicyClientKey = signingValue("airlyrics.spicy.clientKey", "AIRLYRICS_SPICY_CLIENT_KEY").orEmpty().trim()
+if (spicyClientKey.isNotEmpty() && !Regex("sl_pk_[A-Za-z0-9_-]+").matches(spicyClientKey)) {
+    throw GradleException("Spicy requires a publishable sl_pk_ client key; secret keys cannot be packaged.")
+}
+
 val buildX8664 = providers.gradleProperty("airlyrics.buildX86_64").orNull == "true"
 
 fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } ?: rootProject.file(path)
@@ -88,6 +94,7 @@ android {
 
     defaultConfig {
         applicationId = "com.andsi.airlyrics"
+        buildConfigField("String", "SPICY_CLIENT_KEY", "\"$spicyClientKey\"")
         minSdk = 26
         //noinspection OldTargetApi
         targetSdk = 36

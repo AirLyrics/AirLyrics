@@ -498,6 +498,92 @@ class LyricsRepositoryEngineTest {
         assertEquals(0, local.calls)
     }
 
+    @Test
+    fun spicyUpgradeShowsInterimThenReplacesWholePayloadWithoutExportSave() {
+        val plain = result("local", "[00:01.00]ordinary", "[00:01.00]translation")
+        val spicy = spicyResult()
+        val saver = RecordingPlainLyricsSaver()
+        val interim = mutableListOf<LyricsProviderResult>()
+        val engine = engine(
+            local = FakePlainLyricsProvider("local", Result.success(plain)),
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to FakePlainLyricsProvider("spicy", Result.success(spicy))),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true),
+            localPlainLyricsSaver = saver
+        )
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180000, forceSaveOnline = true, onInterimResult = interim::add).getOrThrow()
+        assertSame(spicy, found)
+        assertEquals(listOf(plain), interim)
+        assertNull(found?.translatedLrc)
+        assertTrue(saver.saved.isEmpty())
+    }
+
+    @Test
+    fun manualImportWinsEvenWhenSpicyWordTimingIsSelected() {
+        val manual = result("local", "[00:01.00]manual").copy(manualLocal = true)
+        val spicy = FakePlainLyricsProvider("spicy", Result.success(spicyResult()))
+        val engine = engine(local = FakePlainLyricsProvider("local", Result.success(manual)),
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to spicy),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true))
+        assertSame(manual, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
+        assertEquals(0, spicy.calls)
+    }
+
+    @Test
+    fun spicyErrorKeepsExistingDownloadedResult() {
+        val plain = result("local", "[00:01.00]ordinary")
+        val engine = engine(local = FakePlainLyricsProvider("local", Result.success(plain)),
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to FakePlainLyricsProvider("spicy", Result.failure(IllegalStateException()))),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true))
+        assertSame(plain, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
+    }
+
+    @Test
+    fun cachedWordsUpgradeDownloadedPlainWithoutNetwork() {
+        val spicy = spicyResult()
+        val online = FakePlainLyricsProvider("spicy", Result.failure(AssertionError("Network must not run")))
+        val engine = engine(local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]old"))),
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to online),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true, autoSearchOnline = false),
+            cachedOnlineLyricsReader = { _, _ -> spicy })
+        assertSame(spicy, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
+        assertEquals(0, online.calls)
+    }
+
+    @Test
+    fun spicyLineSurvivesAnotherProviderFailure() {
+        val line = spicyResult().copy(wordByWordLines = emptyList())
+        val engine = engine(onlineProviders = mapOf(
+            PlainLyricsSearchSource.SPICY to FakePlainLyricsProvider("spicy", Result.success(line)),
+            PlainLyricsSearchSource.NETEASE to FakePlainLyricsProvider("netease", Result.failure(IllegalStateException()))),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.NETEASE, PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true))
+        assertSame(line, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
+    }
+
+    @Test
+    fun cancellationDuringWordUpgradeDoesNotPublishResult() {
+        val token = LyricsLookupCancellationToken("song", 1)
+        val engine = engine(onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to FakePlainLyricsProvider("spicy") {
+            token.cancel(); Result.success(spicyResult())
+        }), settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true))
+        assertTrue(engine.findLyrics(context, "Song", "Artist", durationMs = 180000, cancellationToken = token).exceptionOrNull() is CancellationException)
+    }
+
+    @Test
+    fun wordUpgradeUsesProviderCapabilityRatherThanSourceName() {
+        val words = spicyResult().copy(plainProviderId = "future")
+        val provider = FakePlainLyricsProvider("future", Result.success(words)).apply { supportsWordTiming = true }
+        val engine = engine(onlineProviders = mapOf(PlainLyricsSearchSource.LRCLIB to provider),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.LRCLIB), wordByWordLyricsEnabled = true),
+            local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]cached"))))
+        assertSame(words, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
+        assertEquals(1, provider.calls)
+    }
+
+    private fun spicyResult() = result("spicy", "[00:01.00]word").copy(
+        wordByWordLines = listOf(WordByWordLine(1000, 2000, "word", listOf(WordByWordSegment("word", 1000, 2000)))),
+        access = LyricsAccess(1, Long.MAX_VALUE, "key", com.andsi.airlyrics.core.model.LyricsAttribution("Spicy Lyrics", emptyList()))
+    )
+
     private fun engine(
         local: PlainLyricsProvider = FakePlainLyricsProvider("local", Result.success(null)),
         online: PlainLyricsProvider = FakePlainLyricsProvider("netease", Result.success(null)),
@@ -506,6 +592,7 @@ class LyricsRepositoryEngineTest {
         settings: LyricsSettings = settings(),
         localPlainLyricsSaver: LocalPlainLyricsSaver = RecordingPlainLyricsSaver(),
         wordByWordLyricsReader: WordByWordLyricsReader = WordByWordLyricsReader { _, _, _, _ -> emptyList() },
+        cachedOnlineLyricsReader: (LyricsProvider, PlainLyricsSearchRequest) -> LyricsProviderResult? = { _, _ -> null },
         lookupLogger: LyricsLookupLogger = RecordingLogger()
     ): LyricsRepositoryEngine {
         return LyricsRepositoryEngine(
@@ -514,6 +601,7 @@ class LyricsRepositoryEngineTest {
             settingsReader = { settings },
             localPlainLyricsSaver = localPlainLyricsSaver,
             wordByWordLyricsReader = wordByWordLyricsReader,
+            cachedOnlineLyricsReader = cachedOnlineLyricsReader,
             lookupLogger = lookupLogger
         )
     }
@@ -559,6 +647,7 @@ class LyricsRepositoryEngineTest {
         ) : this(id, { response })
 
         override val name: String = id
+        override var supportsWordTiming: Boolean = id == "spicy"
         private val requests = mutableListOf<PlainLyricsSearchRequest>()
         val calls: Int
             get() = requests.size
