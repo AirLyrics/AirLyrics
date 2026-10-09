@@ -9,7 +9,9 @@ import sys
 import tempfile
 import unittest
 
-from run import PROVIDERS, load_cases, summarize
+from run import PROVIDERS, load_cases, resume_positions, summarize
+from compare import compare_runs
+from report import render_report
 
 
 class CoverageTest(unittest.TestCase):
@@ -72,6 +74,55 @@ class CoverageTest(unittest.TestCase):
         self.assertEqual(result['all']['union_found'], 1)
         self.assertEqual(result['primary']['providers']['netease']['coverage_percent'], 50)
         self.assertEqual(result['edge']['union_found'], 0)
+
+    def test_partial_run_reports_progress_without_claiming_full_coverage(self):
+        cases = [dict(case_id=f'c{i}', query_title=f'Song {i}', query_artist='Artist',
+                      album='', duration_sec=180, test_group='primary') for i in range(3)]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            (output/'spicy.jsonl').write_text('\n'.join(json.dumps(row) for row in [
+                dict(case_id='c0', provider='spicy', status='found', word_found=True, word_line_count=12),
+                dict(case_id='c1', provider='spicy', status='error', error_type='RateLimited'),
+            ])+'\n')
+            with contextlib.redirect_stdout(io.StringIO()):
+                render_report(output, cases, {'providers': ['spicy']})
+            stats = json.loads((output/'summary.json').read_text())['all']['providers']['spicy']
+            report = (output/'REPORT.zh-CN.md').read_text()
+            self.assertEqual((stats['tested'], stats['found'], stats['word_found']), (2, 1, 1))
+            self.assertIsNone(stats['coverage_percent'])
+            self.assertIsNone(stats['word_coverage_percent'])
+            self.assertIn('未完成', report)
+            self.assertIn('word_found', (output/'comparison.csv').read_text(encoding='utf-8-sig'))
+
+    def test_before_after_comparison_separates_new_hits_from_error_recovery(self):
+        cases = [dict(case_id=f'c{i}', query_title=f'Song {i}', query_artist='Artist') for i in range(3)]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            before, after = root/'before', root/'after'
+            before.mkdir(); after.mkdir()
+            old = [('not_found', False), ('error', False), ('found', False)]
+            new = [('found', True), ('found', True), ('found', True)]
+            for output, values in ((before, old), (after, new)):
+                (output/'spicy.jsonl').write_text('\n'.join(json.dumps({
+                    'case_id': f'c{i}', 'provider': 'spicy', 'status': status, 'word_found': word,
+                    'matched': {'id': str(i)} if status == 'found' else {},
+                }) for i, (status, word) in enumerate(values))+'\n')
+            summary, details = compare_runs(before, after, cases, ('spicy',))
+            stats = summary['spicy']
+            self.assertEqual((stats['new_hits_from_miss'], stats['hits_recovered_from_error']), (1, 1))
+            self.assertEqual((stats['coverage_delta_points'], stats['word_delta_points']), (66.67, 100.0))
+            self.assertEqual(len(details), 3)
+
+    def test_resume_requires_each_provider_results_to_follow_input_order(self):
+        cases = [dict(case_id='a'), dict(case_id='b')]
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            (output/'spicy.jsonl').write_text(json.dumps(dict(case_id='a', provider='spicy', status='found'))+'\n')
+            self.assertEqual(resume_positions(output, cases, ('netease', 'spicy')),
+                             {'netease': 0, 'spicy': 1})
+            (output/'spicy.jsonl').write_text(json.dumps(dict(case_id='b', provider='spicy', status='found'))+'\n')
+            with self.assertRaisesRegex(ValueError, 'not a prefix'):
+                resume_positions(output, cases, ('spicy',))
 
 
 if __name__ == '__main__':

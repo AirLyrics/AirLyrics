@@ -1,3 +1,5 @@
+import com.andsi.airlyrics.BuildConfig;
+import com.andsi.airlyrics.lyrics.*;
 import com.andsi.airlyrics.lyrics.providers.*;
 import com.andsi.airlyrics.lyrics.parser.*;
 import org.json.*;
@@ -26,11 +28,22 @@ public class Benchmark {
             || compact.equals("instrumental") || compact.equals("instrumentalonly");
     }
     public static void main(String[] args) throws Exception {
+        if (args.length == 1 && args[0].equals("--check-spicy-key")) {
+            if (!BuildConfig.SPICY_CLIENT_KEY.matches("sl_pk_[A-Za-z0-9_-]+")) {
+                throw new IllegalStateException("Spicy publishable key is not configured for this app build");
+            }
+            return;
+        }
         String provider = args[0];
         JSONArray cases = new JSONObject(Files.readString(Path.of(args[1]))).getJSONArray("cases");
+        int startIndex = args.length > 3 ? Integer.parseInt(args[3]) : 0;
+        if (startIndex < 0 || startIndex > cases.length()) throw new IllegalArgumentException("Invalid resume position");
         // Native diagnostics are intentionally discarded: reports contain metadata only.
-        try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(Path.of(args[2]), StandardOpenOption.CREATE_NEW))) {
-            for (int i = 0; i < cases.length(); i++) {
+        try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(Path.of(args[2]),
+                startIndex == 0 ? new StandardOpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE}
+                    : new StandardOpenOption[]{StandardOpenOption.APPEND, StandardOpenOption.WRITE}))) {
+            int consecutiveNetworkErrors = 0;
+            for (int i = startIndex; i < cases.length(); i++) {
                 JSONObject c = cases.getJSONObject(i);
                 String title = c.getString("query_title"), artist = c.getString("query_artist"), album = c.optString("album");
                 long duration = Math.round(c.getDouble("duration_sec") * 1000);
@@ -43,6 +56,7 @@ public class Benchmark {
                         case "netease" -> NeteaseLyricsNative.INSTANCE.fetchBestLyricsJson(title, artist, album, duration, i + 1);
                         case "lrclib" -> LrclibLyricsNative.INSTANCE.fetchBestLyricsJson(title, artist, album, duration, i + 1);
                         case "musixmatch" -> MusixmatchLyricsNative.INSTANCE.fetchBestLyricsJson(title, artist, album, duration, "zh", i + 1);
+                        case "spicy" -> SpicyLyricsNative.INSTANCE.fetchLyricsJson(title, artist, album, duration, BuildConfig.SPICY_CLIENT_KEY, i + 1);
                         default -> throw new IllegalArgumentException("Unknown provider");
                     };
                     JSONObject root = new JSONObject(raw);
@@ -62,15 +76,41 @@ public class Benchmark {
                         }
                         if (root.has("stage")) r.put("stage", root.getString("stage"));
                     } else {
-                        String lrc, translation = null;
+                        String lrc = "", translation = null;
                         JSONObject matched = new JSONObject();
+                        JSONObject sourceTrack = provider.equals("spicy") ? root.getJSONObject("track") : root;
                         for (String field : new String[]{"id", "title", "artist", "album", "duration_ms"})
-                            if (root.has(field)) matched.put(field, root.get(field));
+                            if (sourceTrack.has(field)) matched.put(field, sourceTrack.get(field));
                         r.put("matched", matched);
-                        NativePlainLyricsJsonResult parsed = NativePlainLyricsResultParser.INSTANCE.parse(raw, provider, title, artist, album, duration);
-                        translation = parsed.getTranslatedLrc();
-                        lrc = provider.equals("netease") ? parsed.getLrc() : parsed.primaryPlainLrc(false);
-                        if (provider.equals("netease") && lrc.isBlank() && (translation == null || translation.isBlank())) lrc = parsed.getMergedLrc();
+                        if (provider.equals("spicy")) {
+                            LyricsProviderResult parsed = SpicyLyricsParser.INSTANCE.parse(raw, c.getString("case_id"), System.currentTimeMillis());
+                            if (parsed != null) {
+                                lrc = parsed.getPlainLrc();
+                                translation = parsed.getTranslatedLrc();
+                                long wordLines = parsed.getWordByWordLines().stream()
+                                    .filter(line -> !line.isBackground() && !line.getSegments().isEmpty()
+                                        && !line.getText().isBlank() && !placeholder(line.getText()) && !credit(line.getText()))
+                                    .count();
+                                r.put("word_line_count", wordLines);
+                            } else {
+                                r.put("word_line_count", 0);
+                            }
+                            String lyricSource = root.getJSONObject("response").getJSONObject("Body").optString("source");
+                            r.put("lyric_source", switch (lyricSource) {
+                                case "spicy_lyrics", "apple_music", "spotify" -> lyricSource;
+                                default -> "unknown";
+                            });
+                            JSONObject lookup = root.optJSONObject("lookup");
+                            if (lookup != null) {
+                                r.put("candidate_count", lookup.optInt("candidates"));
+                                r.put("attempted_count", lookup.optInt("attempted"));
+                            }
+                        } else {
+                            NativePlainLyricsJsonResult parsed = NativePlainLyricsResultParser.INSTANCE.parse(raw, provider, title, artist, album, duration);
+                            translation = parsed.getTranslatedLrc();
+                            lrc = provider.equals("netease") ? parsed.getLrc() : parsed.primaryPlainLrc(false);
+                            if (provider.equals("netease") && lrc.isBlank() && (translation == null || translation.isBlank())) lrc = parsed.getMergedLrc();
+                        }
                         var lines = LrcParser.INSTANCE.parseWithTranslation(lrc, translation);
                         long displayable = lines.stream().filter(line -> !line.isMetadata() && (!line.getText().isBlank() || line.hasTranslation())).count();
                         long placeholders = lines.stream().filter(line -> !line.isMetadata() && placeholder(line.getText())).count();
@@ -79,6 +119,7 @@ public class Benchmark {
                             && (!line.getText().isBlank() || line.hasTranslation())).count();
                         r.put("displayable_line_count", displayable).put("placeholder_line_count", placeholders).put("credit_line_count", credits);
                         r.put("line_count", usable).put("status", usable > 0 ? "found" : "not_found");
+                        if (provider.equals("spicy")) r.put("word_found", usable > 0 && r.optLong("word_line_count") > 0);
                         if (usable == 0) r.put("stage", placeholders > 0 ? "instrumental_placeholder" : credits > 0 ? "credits_only" : "no_usable_lines");
                     }
                 } catch (Exception | LinkageError e) {
@@ -89,8 +130,15 @@ public class Benchmark {
                 out.println(r); out.flush();
                 System.out.printf("%s %d/%d %s %s%n", provider, i + 1, cases.length(), c.getString("case_id"), r.getString("status"));
                 int httpStatus = r.optInt("http_status", 0);
-                if (r.optString("error_type").equals("RateLimited") || httpStatus == 403 || httpStatus == 429 || httpStatus == 503) {
+                String errorType = r.optString("error_type");
+                consecutiveNetworkErrors = errorType.equals("NetworkError") ? consecutiveNetworkErrors + 1 : 0;
+                if (errorType.equals("RateLimited") || errorType.equals("NeedCredential")
+                    || httpStatus == 403 || httpStatus == 429 || httpStatus == 503) {
                     System.out.printf("%s stopped after upstream HTTP/rate refusal%n", provider);
+                    break;
+                }
+                if (consecutiveNetworkErrors >= 5) {
+                    System.out.printf("%s stopped after repeated network errors%n", provider);
                     break;
                 }
                 Thread.sleep(1000);

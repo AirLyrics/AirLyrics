@@ -7,13 +7,16 @@ import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 from datetime import datetime, timezone
 from collections import Counter
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
-PROVIDERS = ('netease', 'musixmatch', 'lrclib')
+PROVIDERS = ('netease', 'musixmatch', 'lrclib', 'spicy')
+DEFAULT_PROVIDERS = ('netease', 'lrclib', 'spicy')
+MATCHING_SOURCE_PREFIXES = ('lyrics-core/src/', 'lyrics-core/data/', 'app/src/main/java/')
 
 
 def load_cases(path):
@@ -53,9 +56,23 @@ def load_cases(path):
 def load_rows(output, providers=PROVIDERS):
     rows = []
     for provider in providers:
-        for line in (output/f'{provider}.jsonl').read_text().splitlines():
+        path = output/f'{provider}.jsonl'
+        for line in path.read_text().splitlines() if path.exists() else ():
             rows.append(json.loads(line))
     return rows
+
+
+def resume_positions(output, cases, providers):
+    expected_ids = [case['case_id'] for case in cases]
+    positions = {}
+    for provider in providers:
+        path = output/f'{provider}.jsonl'
+        rows = [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+        if len(rows) > len(cases) or any(row.get('provider') != provider or row.get('case_id') != expected_ids[i]
+                                              for i, row in enumerate(rows)):
+            raise ValueError(f'{provider} results are not a prefix of the input file')
+        positions[provider] = len(rows)
+    return positions
 
 
 def summarize(output, cases, providers=PROVIDERS):
@@ -70,11 +87,19 @@ def summarize(output, cases, providers=PROVIDERS):
             subset = [r for r in rows if r['provider'] == provider and r['case_id'] in ids]
             counts = Counter(r['status'] for r in subset)
             found = counts['found']
-            stats[provider] = dict(total=len(ids), tested=len(subset), found=found,
-                not_found=counts['not_found'], error=counts['error'], coverage_percent=round(100*found/len(ids), 2),
+            completed = len(subset) == len(ids)
+            word_found = sum(r['status'] == 'found' and r.get('word_found', False) for r in subset)
+            stats[provider] = dict(total=len(ids), tested=len(subset), complete=completed,
+                found=found, not_found=counts['not_found'], error=counts['error'],
+                coverage_percent=round(100*found/len(ids), 2) if completed else None,
+                observed_hit_rate_percent=round(100*found/len(subset), 2) if subset else None,
+                word_found=word_found,
+                word_coverage_percent=round(100*word_found/len(ids), 2) if provider == 'spicy' and completed else None,
                 errors=dict(Counter(r.get('error_type', 'Unknown') for r in subset if r['status'] == 'error')))
         union = {r['case_id'] for r in rows if r['case_id'] in ids and r['status'] == 'found'}
-        summary[group] = dict(providers=stats, union_found=len(union), total=len(ids), union_coverage_percent=round(100*len(union)/len(ids), 2))
+        complete = all(stat['complete'] for stat in stats.values())
+        summary[group] = dict(providers=stats, union_found=len(union), total=len(ids), complete=complete,
+            union_coverage_percent=round(100*len(union)/len(ids), 2) if complete else None)
     (output / 'summary.json').write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n')
     print(json.dumps(summary['all'], ensure_ascii=False, indent=2), flush=True)
 
@@ -83,11 +108,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--prepare-only', action='store_true', help='Compile and validate inputs without API requests')
+    parser.add_argument('--resume', action='store_true', help='Continue an interrupted run with the same input and matching code')
     parser.add_argument('--input', '--cases', dest='input', type=Path, required=True,
                         help='JSON file containing a list of songs or an object with a cases list')
-    parser.add_argument('--providers', nargs='+', choices=PROVIDERS, default=PROVIDERS)
+    parser.add_argument('--providers', nargs='+', choices=PROVIDERS, default=DEFAULT_PROVIDERS,
+                        help='Sources to query; default excludes frequently rate-limited Musixmatch')
     parser.add_argument('--proxy', help='Explicit HTTP proxy for the probe processes (no credentials in URL)')
     args = parser.parse_args()
+    args.providers = tuple(dict.fromkeys(args.providers))
+    if args.resume and args.prepare_only:
+        parser.error('--resume cannot be combined with --prepare-only')
     fixture = args.input.resolve()
     try:
         cases = load_cases(fixture)
@@ -112,34 +142,79 @@ def main():
     with tempfile.TemporaryDirectory(prefix='airlyrics-benchmark-') as build:
         cp = os.pathsep.join(map(str, [Path(build), *jars]))
         subprocess.run([env['JAVA_HOME']+'/bin/javac', '-cp', cp, '-d', build, str(HERE/'Benchmark.java')], check=True)
+        if 'spicy' in args.providers:
+            subprocess.run([env['JAVA_HOME']+'/bin/java', '-cp', cp, 'Benchmark', '--check-spicy-key'],
+                           check=True, env=env)
         if args.prepare_only:
             print(f'Prepared {len(cases)} cases × {len(args.providers)} providers; no API requests sent.')
-            return
+            return 0
         output = args.output.resolve()
-        output.mkdir(parents=True, exist_ok=False)
         normalized_fixture = Path(build) / 'cases.json'
         normalized_fixture.write_text(json.dumps({'cases': cases}, ensure_ascii=False), encoding='utf-8')
-        source_paths = sorted([*ROOT.glob('lyrics-core/src/**/*.rs'), *ROOT.glob('lyrics-core/data/**/*'), *ROOT.glob('app/src/main/java/**/*.kt'), HERE/'Benchmark.java', HERE/'run.py'])
-        manifest = dict(started_at=datetime.now(timezone.utc).isoformat(), fixture_sha256=hashlib.sha256(fixture.read_bytes()).hexdigest(),
-            providers=args.providers, case_count=len(cases),
-            git_head=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
-            source_sha256={str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_paths if p.is_file()},
-            translation_language='zh', pause_seconds=1, retries=0,
-            explicit_proxy=args.proxy,
-            provider_execution='sequential',
-            scope='Host JNI + production parsers; no repository/local cache or UI; returned matches not manually verified')
+        source_paths = sorted([*ROOT.glob('lyrics-core/src/**/*.rs'), *ROOT.glob('lyrics-core/data/**/*'), *ROOT.glob('app/src/main/java/**/*.kt'),
+                               HERE/'Benchmark.java', HERE/'run.py', HERE/'report.py', HERE/'compare.py'])
+        source_sha256 = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_paths if p.is_file()}
+        fixture_sha256 = hashlib.sha256(fixture.read_bytes()).hexdigest()
+        if args.resume:
+            if not (output/'manifest.json').is_file():
+                parser.error('--resume requires an existing benchmark output directory')
+            manifest = json.loads((output/'manifest.json').read_text())
+            if (manifest['fixture_sha256'] != fixture_sha256 or tuple(manifest['providers']) != args.providers
+                    or manifest.get('explicit_proxy') != args.proxy):
+                parser.error('Input file, providers and proxy must match the original run')
+            old_matching_sources = {k: v for k, v in manifest['source_sha256'].items()
+                                    if k.startswith(MATCHING_SOURCE_PREFIXES)}
+            current_matching_sources = {k: v for k, v in source_sha256.items()
+                                        if k.startswith(MATCHING_SOURCE_PREFIXES)}
+            if old_matching_sources != current_matching_sources:
+                parser.error('Matching code changed; start a new run for a valid comparison')
+            try:
+                positions = resume_positions(output, cases, args.providers)
+            except (OSError, ValueError, KeyError, json.JSONDecodeError) as error:
+                parser.error(f'Cannot resume results: {error}')
+            manifest.setdefault('resumptions', []).append(dict(started_at=datetime.now(timezone.utc).isoformat(),
+                harness_source_sha256={k: v for k, v in source_sha256.items()
+                                       if not k.startswith(MATCHING_SOURCE_PREFIXES)}))
+        else:
+            output.mkdir(parents=True, exist_ok=False)
+            positions = {provider: 0 for provider in args.providers}
+            manifest = dict(started_at=datetime.now(timezone.utc).isoformat(), fixture_sha256=fixture_sha256,
+                providers=args.providers, case_count=len(cases),
+                git_head=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+                source_sha256=source_sha256, translation_language='zh', pause_seconds=1, benchmark_retries=0,
+                explicit_proxy=args.proxy, provider_execution='sequential',
+                scope='Host JNI + production parsers; no repository/local cache or UI; returned matches not manually verified')
+        manifest.pop('process_failures', None)
         (output/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
-        def run(provider):
+        def run(provider, start_index):
             subprocess.run([env['JAVA_HOME']+'/bin/java', '-Djava.library.path='+str(ROOT/'lyrics-core/target/debug'), '-cp', cp,
-                'Benchmark', provider, str(normalized_fixture), str(output/f'{provider}.jsonl')],
+                'Benchmark', provider, str(normalized_fixture), str(output/f'{provider}.jsonl'), str(start_index)],
                 check=True, stderr=subprocess.DEVNULL, env=env)
+        process_failures = {}
         for provider in args.providers:
-            run(provider)
-        incomplete = [provider for provider in args.providers if len((output/f'{provider}.jsonl').read_text().splitlines()) < len(cases)]
+            start_index = positions[provider]
+            if start_index == len(cases):
+                continue
+            path = output/f'{provider}.jsonl'
+            if start_index == 0 and path.exists():
+                path.unlink()
+            try:
+                run(provider, start_index)
+            except subprocess.CalledProcessError as error:
+                process_failures[provider] = error.returncode
+                print(f'{provider} process failed with exit code {error.returncode}; continuing with remaining sources', file=sys.stderr)
+        if process_failures:
+            manifest['process_failures'] = process_failures
+            (output/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
+        from report import render_report
+        render_report(output, cases, manifest)
+        incomplete = [provider for provider in args.providers
+                      if not (output/f'{provider}.jsonl').exists() or len((output/f'{provider}.jsonl').read_text().splitlines()) < len(cases)]
         if incomplete:
-            raise RuntimeError(f'Upstream refusal stopped {", ".join(incomplete)}; checkpoints kept at {output}; no coverage summary generated')
-        summarize(output, cases, args.providers)
+            print(f'Incomplete sources: {", ".join(incomplete)}; partial results and report saved at {output}', file=sys.stderr)
+            return 2
+        return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())
