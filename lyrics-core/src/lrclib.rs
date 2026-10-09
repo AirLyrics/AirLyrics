@@ -28,6 +28,7 @@ const LRCLIB_QUEUE_WAIT_TIMEOUT: Duration = Duration::from_secs(8);
 const LRCLIB_GATE_POLL_INTERVAL: Duration = Duration::from_millis(25);
 const LRCLIB_CANCELLATION_POLL_INTERVAL: Duration = Duration::from_millis(50);
 const LRCLIB_REQUEST_INTERVAL: Duration = Duration::from_millis(250);
+const LRCLIB_MAX_INLINE_503_RETRY_AFTER: Duration = Duration::from_secs(3);
 const LRCLIB_DEFAULT_RETRY_AFTER: Duration = Duration::from_secs(60);
 const LRCLIB_MAX_RETRY_AFTER: Duration = Duration::from_secs(24 * 60 * 60);
 const LRCLIB_MAX_REQUESTS: usize = 5;
@@ -703,32 +704,54 @@ async fn fetch_response_body(
     lookup_id: jni::sys::jlong,
     observed_retry_after: &mut Option<(Duration, StatusCode)>,
 ) -> Result<Option<String>, LrclibError> {
-    let response = await_reqwest(request.send(), lookup_id).await?;
-    check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
+    let mut request = request;
+    let mut retried_503 = false;
+    loop {
+        let retry_request = (!retried_503).then(|| request.try_clone()).flatten();
+        let response = await_reqwest(request.send(), lookup_id).await?;
+        check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
 
-    let status = response.status();
-    let retry_after = (status == StatusCode::TOO_MANY_REQUESTS
-        || status == StatusCode::SERVICE_UNAVAILABLE)
-        .then(|| {
-            response
-                .headers()
-                .get(RETRY_AFTER)
-                .and_then(parse_retry_after)
-                .or_else(|| {
-                    (status == StatusCode::TOO_MANY_REQUESTS).then_some(LRCLIB_DEFAULT_RETRY_AFTER)
-                })
-        })
-        .flatten();
-    if let Some(retry_after) = retry_after {
-        *observed_retry_after = Some((retry_after, status));
-    }
-    if response_disposition(status, retry_after)? == ResponseDisposition::NotFound {
-        return Ok(None);
-    }
+        let status = response.status();
+        let retry_after = (status == StatusCode::TOO_MANY_REQUESTS
+            || status == StatusCode::SERVICE_UNAVAILABLE)
+            .then(|| {
+                response
+                    .headers()
+                    .get(RETRY_AFTER)
+                    .and_then(parse_retry_after)
+                    .or_else(|| {
+                        (status == StatusCode::TOO_MANY_REQUESTS)
+                            .then_some(LRCLIB_DEFAULT_RETRY_AFTER)
+                    })
+            })
+            .flatten();
+        if let Some(retry_after) = retry_after {
+            *observed_retry_after = Some((retry_after, status));
+        }
+        if status == StatusCode::SERVICE_UNAVAILABLE {
+            if let (Some(next_request), Some(delay)) = (retry_request, retry_after) {
+                if delay <= LRCLIB_MAX_INLINE_503_RETRY_AFTER {
+                    wait_between_requests(lookup_id, delay.max(LRCLIB_REQUEST_INTERVAL)).await?;
+                    request = next_request;
+                    retried_503 = true;
+                    continue;
+                }
+            }
+        }
+        if response_disposition(status, retry_after)? == ResponseDisposition::NotFound {
+            if retried_503 {
+                *observed_retry_after = None;
+            }
+            return Ok(None);
+        }
 
-    let body = await_reqwest(response.text(), lookup_id).await?;
-    check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
-    Ok(Some(body))
+        let body = await_reqwest(response.text(), lookup_id).await?;
+        check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
+        if retried_503 {
+            *observed_retry_after = None;
+        }
+        return Ok(Some(body));
+    }
 }
 
 fn response_disposition(
@@ -1719,6 +1742,42 @@ mod tests {
         assert_eq!(server_error.error_type(), "HttpError");
         assert_eq!(server_error.retry_after, Some(Duration::from_secs(3)));
         assert_eq!(client_error.error_type(), "HttpError");
+    }
+
+    #[tokio::test]
+    async fn service_unavailable_retries_once_after_retry_after() {
+        use std::io::{Read, Write};
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("local server");
+        let address = listener.local_addr().expect("local address");
+        let server = std::thread::spawn(move || {
+            for response in [
+                "HTTP/1.1 503 Service Unavailable\r\nRetry-After: 0\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+                "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            ] {
+                let (mut stream, _) = listener.accept().expect("request");
+                stream
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .expect("read timeout");
+                let mut buffer = [0; 2048];
+                stream.read(&mut buffer).expect("request headers");
+                stream.write_all(response.as_bytes()).expect("response");
+            }
+        });
+
+        let request = Client::new().get(format!("http://{address}/api/get"));
+        let mut observed_retry_after = None;
+        let result = tokio::time::timeout(
+            Duration::from_secs(4),
+            fetch_response_body(request, 0, &mut observed_retry_after),
+        )
+        .await
+        .expect("lookup completed")
+        .expect("retry reached 404");
+
+        assert!(result.is_none());
+        assert!(observed_retry_after.is_none());
+        server.join().expect("server completed");
     }
 
     #[test]
