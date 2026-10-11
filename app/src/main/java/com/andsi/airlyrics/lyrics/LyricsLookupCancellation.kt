@@ -28,17 +28,26 @@ class LyricsLookupCancellationToken internal constructor(
 ) {
     private val lock = Any()
     private val cancellationCallbacks = mutableListOf<() -> Unit>()
+    internal var onSearchModeChanged: ((LyricsSearchMode) -> Unit)? = null
+
+    internal fun reportSearchMode(mode: LyricsSearchMode) {
+        throwIfCancellationRequested()
+        LyricsSearchCoordinator.updateMode(this, mode)
+        onSearchModeChanged?.invoke(mode)
+    }
 
     @Volatile
-    var isCancellationRequested: Boolean = false
-        private set
+    private var cancelled: Boolean = false
+    @Volatile
+    internal var searchIsCurrent: () -> Boolean = { true }
+    val isCancellationRequested: Boolean get() = cancelled || !searchIsCurrent()
 
     internal fun cancel() {
         val callbacks = synchronized(lock) {
-            if (isCancellationRequested) {
+            if (cancelled) {
                 emptyList()
             } else {
-                isCancellationRequested = true
+                cancelled = true
                 cancellationCallbacks.toList()
             }
         }

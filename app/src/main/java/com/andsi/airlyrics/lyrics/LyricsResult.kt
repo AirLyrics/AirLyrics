@@ -15,7 +15,9 @@ data class LyricsProviderResult(
     val matchedAlbum: String = "",
     val matchedDurationMs: Long = 0L,
     val access: LyricsAccess? = null,
-    val manualLocal: Boolean = false
+    val manualLocal: Boolean = false,
+    val selectedManually: Boolean = false,
+    val pendingSpicyLyrics: PendingSpicyLyrics? = null
 ) {
     val precision: LyricsPrecision get() = if (wordByWordLines.isEmpty()) LyricsPrecision.LINE else LyricsPrecision.WORD
 }
@@ -23,3 +25,6 @@ data class LyricsProviderResult(
 internal fun LyricsProviderResult.hasUsableLyrics(): Boolean {
     return plainLrc.isNotBlank() || !translatedLrc.isNullOrBlank()
 }
+
+/** Provider response held in memory until the repository chooses and commits it. */
+data class PendingSpicyLyrics(val raw: String, val searchKey: String, val fetchedAtMs: Long)

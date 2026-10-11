@@ -104,10 +104,6 @@ impl LrclibError {
     pub(crate) fn message(&self) -> &str {
         &self.message
     }
-
-    fn is_not_found(&self) -> bool {
-        self.error_type == "NotFound"
-    }
 }
 
 #[derive(Debug)]
@@ -479,41 +475,13 @@ async fn fetch_with_fallback_backend_traced<B: LrclibBackend>(
             }
         };
         if let Some(track) = full_match {
-            seen_track_ids.insert(track.id);
-            match map_api_track(track, query) {
-                Ok(result) => {
-                    trace.event(
-                        "lookup_stop",
-                        format_args!(
-                            "reason=exact_usable requestMs={} requestsUsed={}",
-                            started.elapsed().as_millis(),
-                            request_count,
-                        ),
-                    );
-                    return Ok(result);
-                }
-                Err(error) if error.is_not_found() => {
-                    trace.event(
-                        "exact",
-                        format_args!(
-                            "outcome=no_usable_timed_lyrics requestMs={} requestsUsed={}",
-                            started.elapsed().as_millis(),
-                            request_count,
-                        ),
-                    );
-                }
-                Err(error) => {
-                    trace.event(
-                        "exact",
-                        format_args!(
-                            "outcome=error reason={} requestMs={} requestsUsed={}",
-                            error.error_type(),
-                            started.elapsed().as_millis(),
-                            request_count,
-                        ),
-                    );
-                    return Err(error);
-                }
+            // Even the exact endpoint goes through the common candidate policy. A
+            // related but weak match must not prevent broader searches.
+            let stats =
+                add_search_candidates(vec![track], query, &mut seen_track_ids, &mut candidates);
+            trace_lrclib_search(trace, 0, true, started, &stats, &candidates, request_count);
+            if let Some(track) = take_best_candidate(&mut candidates, true) {
+                return map_api_track(track, query);
             }
         } else {
             trace.event(
@@ -959,7 +927,7 @@ fn add_search_candidates(
             stats.duplicate += 1;
             continue;
         }
-        match score_search_track_with_reason(track, query) {
+        match score_track_with_reason(track, query) {
             Ok(candidate) => {
                 stats.accepted += 1;
                 candidates.push(candidate);
@@ -1002,10 +970,10 @@ fn best_candidate_or_error(
 
 #[cfg(test)]
 fn score_search_track(track: ApiTrack, query: &LookupQuery) -> Option<ScoredApiTrack> {
-    score_search_track_with_reason(track, query).ok()
+    score_track_with_reason(track, query).ok()
 }
 
-fn score_search_track_with_reason(
+fn score_track_with_reason(
     mut track: ApiTrack,
     query: &LookupQuery,
 ) -> Result<ScoredApiTrack, SearchCandidateRejection> {
@@ -1809,5 +1777,50 @@ mod tests {
     fn user_agent_identifies_the_app_and_project() {
         assert!(LRCLIB_USER_AGENT.starts_with("AirLyrics/"));
         assert!(LRCLIB_USER_AGENT.contains("github.com/AirLyrics/AirLyrics"));
+    }
+    #[tokio::test]
+    async fn exact_endpoint_cannot_bypass_shared_matching_policy() {
+        let query = query();
+        let backend = FakeLrclibBackend::new(
+            [Ok(Some(usable_search_track(
+                1,
+                "Unrelated",
+                "Contract Artist",
+                "Contract Album",
+                123.456,
+            )))],
+            [Ok(vec![usable_search_track(
+                2,
+                "Contract Song",
+                "Contract Artist",
+                "Contract Album",
+                123.456,
+            )])],
+        );
+        let result = fetch_with_fallback_backend(&backend, &query, 0, &mut None)
+            .await
+            .unwrap();
+        assert_eq!(result.id.as_deref(), Some("2"));
+        assert_eq!(backend.search_calls.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn confident_exact_endpoint_match_skips_search() {
+        let query = query();
+        let backend = FakeLrclibBackend::new(
+            [Ok(Some(usable_search_track(
+                1,
+                "Contract Song",
+                "Contract Artist",
+                "Contract Album",
+                123.456,
+            )))],
+            [],
+        );
+        let result = fetch_with_fallback_backend(&backend, &query, 0, &mut None)
+            .await
+            .unwrap();
+        assert_eq!(result.id.as_deref(), Some("1"));
+        assert!(backend.search_calls.lock().unwrap().is_empty());
     }
 }

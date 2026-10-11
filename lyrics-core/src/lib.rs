@@ -5,7 +5,7 @@ use jni::JNIEnv;
 #[cfg(test)]
 use matching::EARLY_ACCEPT_SCORE;
 use matching::{
-    build_search_queries, is_confident_early_match, normalize_usable_lrc, score_candidate,
+    build_search_keywords, is_confident_early_match, normalize_usable_lrc, score_candidate,
     MatchMetadata,
 };
 use ncmapi::types::{Album, Artist, LyricResp, SearchSongResp, Song};
@@ -19,6 +19,7 @@ use std::time::{Duration, Instant};
 use unicode_normalization::UnicodeNormalization;
 
 mod diagnostics;
+mod international;
 mod lrc;
 mod lrclib;
 mod matching;
@@ -83,7 +84,43 @@ pub(crate) struct NativeResult {
 }
 
 #[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_InternationalTitleNative_resolveJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+    lookup_id: jni::sys::jlong,
+) -> jstring {
+    let title = jstring_to_string(&mut env, title);
+    let artist = jstring_to_string(&mut env, artist);
+    let album = jstring_to_string(&mut env, album);
+    let result = std::panic::catch_unwind(|| international::resolve(
+        &title, &artist, &album, duration_ms.max(0) as u64, lookup_id,
+    )).unwrap_or_else(|_| serde_json::json!({"reason":"native_error"}));
+    env.new_string(result.to_string()).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+}
+
+// Keep the benchmark and existing native callers on the original-title entry point.
+#[no_mangle]
 pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNative_fetchLyricsJson(
+    env: JNIEnv,
+    this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+    key: JString,
+    lookup_id: jni::sys::jlong,
+) -> jstring {
+    Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNative_fetchLyricsForSearchJson(
+        env, this, title, artist, album, duration_ms, key, lookup_id, 0,
+    )
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNative_fetchLyricsForSearchJson(
     mut env: JNIEnv,
     _this: JObject,
     title: JString,
@@ -92,12 +129,13 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNati
     duration_ms: jni::sys::jlong,
     key: JString,
     lookup_id: jni::sys::jlong,
+    international: jni::sys::jboolean,
 ) -> jstring {
     let title = jstring_to_string(&mut env, title);
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
     let key = jstring_to_string(&mut env, key);
-    let result = std::panic::catch_unwind(|| spicy::fetch(&title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id))
+    let result = std::panic::catch_unwind(|| spicy::fetch(&title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id, international != 0))
         .unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
     env.new_string(result.to_string())
         .map(|s| s.into_raw())
@@ -900,32 +938,6 @@ where
             }
         }
     }
-}
-
-fn build_search_keywords(title: &str, artist: &str, album: &str) -> Vec<String> {
-    let mut keywords = Vec::new();
-    let title = clean_query_part(title);
-    let artist = clean_query_part(artist);
-    let album = clean_query_part(album);
-
-    if !title.is_empty() && !artist.is_empty() && !album.is_empty() {
-        keywords.push(format!("{title} {album} {artist}"));
-    }
-
-    for query in build_search_queries(&title, &artist) {
-        let keyword = match query.artist {
-            Some(artist) => format!("{} {artist}", query.title),
-            None => query.title,
-        };
-        keywords.push(keyword);
-    }
-
-    let mut seen = HashSet::new();
-    keywords
-        .into_iter()
-        .filter(|keyword| seen.insert(clean_query_part(keyword).to_lowercase()))
-        .take(5)
-        .collect()
 }
 
 fn clean_query_part(value: &str) -> String {

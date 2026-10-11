@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.providers
 
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.*
 import com.andsi.airlyrics.lyrics.storage.SpicyLyricsCache
@@ -22,12 +23,16 @@ object SpicyLyricsProvider : LyricsProvider {
         while (!fetchLock.tryLock(100, TimeUnit.MILLISECONDS)) request.cancellationToken?.throwIfCancellationRequested()
         try {
             request.cancellationToken?.throwIfCancellationRequested()
-            cached(request)?.let { return@runCatching it }
+            val song = request.originalSong ?: SongIdentity(request.title, request.artist, request.album, request.durationMs)
+            val key = SpicyLyricsCache.key(song.title, song.artist, song.durationMs)
+            val searchKey = if (request.searchMode == LyricsSearchMode.International) {
+                "international:" + org.json.JSONArray(listOf(request.title, request.artist, request.album, request.durationMs)).toString()
+            } else key
+            SpicyLyricsCache.forContext(request.context).readForSearch(key, searchKey)?.let { return@runCatching it }
             if (!isConfigured) throw LyricsLookupException(id, name, LyricsLookupErrorType.NeedCredential, "Spicy client key not configured")
-            val key = SpicyLyricsCache.key(request.title, request.artist, request.durationMs)
-            if ((misses[key] ?: 0L) > System.currentTimeMillis()) return@runCatching null
+            if ((misses[searchKey] ?: 0L) > System.currentTimeMillis()) return@runCatching null
             val raw = withNativeLyricsCancellation(request.cancellationToken) { lookup ->
-                SpicyLyricsNative.fetchLyricsJson(request.title, request.artist, request.album, request.durationMs, BuildConfig.SPICY_CLIENT_KEY, lookup)
+                SpicyLyricsNative.fetchLyricsForSearchJson(request.title, request.artist, request.album, request.durationMs, BuildConfig.SPICY_CLIENT_KEY, lookup, request.searchMode == LyricsSearchMode.International)
             }
             request.cancellationToken?.throwIfCancellationRequested()
             if (BuildConfig.DEBUG) {
@@ -36,10 +41,13 @@ object SpicyLyricsProvider : LyricsProvider {
                 val lookup = summary.optJSONObject("lookup")
                 android.util.Log.d("AirLyricsLyrics", "source=$id stage=$stage ok=${summary.optBoolean("ok")} candidates=${lookup?.optInt("candidates") ?: summary.optInt("candidates")} attempted=${lookup?.optInt("attempted") ?: 0}")
             }
-            val result = SpicyLyricsCache.forContext(request.context).save(key, request.title, request.artist, request.album, request.durationMs, raw)
+            val fetchedAt = System.currentTimeMillis()
+            val result = SpicyLyricsParser.parse(raw, key, fetchedAt)?.copy(
+                pendingSpicyLyrics = PendingSpicyLyrics(raw, searchKey, fetchedAt)
+            )
             if (result == null) {
                 if (misses.size >= 128) misses.remove(misses.keys.first())
-                misses[key] = System.currentTimeMillis() + 5 * 60_000
+                misses[searchKey] = System.currentTimeMillis() + 5 * 60_000
             }
             result
         } finally { fetchLock.unlock() }

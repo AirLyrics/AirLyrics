@@ -345,7 +345,7 @@ Word-timed TTML:
     <string name="ui_search_online_again_confirm">Search online?</string>
     <string name="ui_search_strategy">Search strategy</string>
     <string name="ui_searching_lyrics">Searching for lyrics</string>
-    <string name="ui_searching_online_again">Searching online…</string>
+    <string name="ui_searching_online_again">Trying original-title search…</string>
     <string name="ui_settings">Settings</string>
     <string name="ui_settings_back_label">Settings</string>
     <string name="ui_shadow">Shadow</string>
@@ -423,4 +423,6 @@ Word-timed TTML:
     <string name="ui_spicy_expiry">Expires %1$s</string>
     <string name="ui_lyrics_expired">Lyrics expired</string>
     <string name="provider_spicy_name">Spicy Lyrics</string>
+    <string name="ui_search_international_title">Search with international title</string>
+    <string name="ui_searching_international_title">Trying international-title search…</string>
 </resources>

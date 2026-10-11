@@ -593,7 +593,7 @@ async fn find_usable_lyrics_with_backend<B: MusixmatchBackend>(
     let mut selected_track_ids = Vec::<u64>::new();
     let mut selected_track_set = HashSet::<u64>::new();
     let mut subtitle_request_keys = HashSet::<SubtitleRequestKey>::new();
-    let search_attempts = build_track_search_attempts(title, artist);
+    let search_attempts = build_search_queries(title, artist);
 
     trace.event(
         "lookup_start",
@@ -811,37 +811,6 @@ async fn find_usable_lyrics_with_backend<B: MusixmatchBackend>(
     )))
 }
 
-struct SearchAttempt {
-    title: String,
-    artist: Option<String>,
-}
-
-impl SearchAttempt {
-    fn from_query(query: SearchQuery) -> Self {
-        Self {
-            title: query.title,
-            artist: query.artist,
-        }
-    }
-
-    fn key(&self) -> String {
-        format!(
-            "{}\0{}",
-            self.title.to_lowercase(),
-            self.artist.as_deref().unwrap_or_default().to_lowercase()
-        )
-    }
-}
-
-fn build_track_search_attempts(title: &str, artist: &str) -> Vec<SearchAttempt> {
-    let mut seen = HashSet::new();
-    build_search_queries(title, artist)
-        .into_iter()
-        .map(SearchAttempt::from_query)
-        .filter(|attempt| seen.insert(attempt.key()))
-        .collect()
-}
-
 trait MusixmatchBackend {
     fn matcher_track<'a>(
         &'a self,
@@ -852,7 +821,7 @@ trait MusixmatchBackend {
 
     fn search<'a>(
         &'a self,
-        attempt: &'a SearchAttempt,
+        attempt: &'a SearchQuery,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<Track>, LookupFailure>> + 'a>>;
 
     fn track_subtitle<'a>(
@@ -888,7 +857,7 @@ impl MusixmatchBackend for ApiMusixmatchBackend<'_> {
 
     fn search<'a>(
         &'a self,
-        attempt: &'a SearchAttempt,
+        attempt: &'a SearchQuery,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<Track>, LookupFailure>> + 'a>> {
         let mut query = self
             .client
@@ -1710,7 +1679,7 @@ mod tests {
 
         fn search<'a>(
             &'a self,
-            attempt: &'a SearchAttempt,
+            attempt: &'a SearchQuery,
         ) -> Pin<Box<dyn Future<Output = Result<Vec<Track>, LookupFailure>> + 'a>> {
             self.calls.lock().unwrap().push(format!(
                 "search:{}|{}",
@@ -1855,7 +1824,7 @@ mod tests {
 
     #[test]
     fn source_search_queries_relax_in_order_and_allow_blank_artist() {
-        let attempts = build_track_search_attempts("Song (Live)", "Artist");
+        let attempts = build_search_queries("Song (Live)", "Artist");
         let actual = attempts
             .iter()
             .map(|attempt| (attempt.title.as_str(), attempt.artist.as_deref()))
@@ -1870,7 +1839,7 @@ mod tests {
             ]
         );
 
-        let no_artist = build_track_search_attempts("Song", "  ");
+        let no_artist = build_search_queries("Song", "  ");
         assert_eq!(no_artist.len(), 1);
         assert_eq!(no_artist[0].title, "Song");
         assert_eq!(no_artist[0].artist, None);

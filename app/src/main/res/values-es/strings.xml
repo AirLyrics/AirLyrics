@@ -345,7 +345,7 @@ TTML de tiempo por palabra:
     <string name="ui_search_online_again_confirm">¿Buscar en línea?</string>
     <string name="ui_search_strategy">Estrategia de búsqueda</string>
     <string name="ui_searching_lyrics">Buscando letras</string>
-    <string name="ui_searching_online_again">Buscando en línea…</string>
+    <string name="ui_searching_online_again">Buscando con el título original…</string>
     <string name="ui_settings">Ajustes</string>
     <string name="ui_settings_back_label">Ajustes</string>
     <string name="ui_shadow">Sombra</string>
@@ -423,4 +423,6 @@ TTML de tiempo por palabra:
     <string name="provider_spicy_name">Spicy Lyrics</string>
     <string name="ui_spicy_expiry">Caduca el %1$s</string>
     <string name="ui_lyrics_expired">La letra ha caducado</string>
+    <string name="ui_search_international_title">Buscar con título internacional</string>
+    <string name="ui_searching_international_title">Buscando con el título internacional…</string>
 </resources>

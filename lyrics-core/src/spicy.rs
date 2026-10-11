@@ -1,7 +1,5 @@
 //! Spotify identity resolution and Spicy developer API. Never log credentials or response bodies.
-use crate::matching::{
-    score_candidate, simplify_title, text_similarity, version_difference_penalty, MatchMetadata,
-};
+use crate::matching::{build_search_keywords, score_candidate, MatchMetadata};
 use openssl::{hash::MessageDigest, pkey::PKey, sign::Signer};
 use regex::Regex;
 use reqwest::{Client, Response};
@@ -14,7 +12,6 @@ use std::{
 
 const SEARCH_HASH: &str = "3c9d3f60dac5dea3876b6db3f534192b1c1d90032c4233c1bbaba526db41eb31";
 const UA: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36";
-const MAX_SEARCH_ROUNDS: usize = 4;
 const MAX_TRACK_CANDIDATES: usize = 4;
 static TOKEN: OnceLock<Mutex<Option<(String, u64)>>> = OnceLock::new();
 static TRACKS: OnceLock<Mutex<HashMap<String, (Vec<Value>, u64)>>> = OnceLock::new();
@@ -36,6 +33,7 @@ pub(crate) fn fetch(
     duration: u64,
     key: &str,
     lookup: i64,
+    international: bool,
 ) -> Value {
     let result = (|| -> Result<Value, String> {
         let _guard = crate::begin_lookup_cancellation(lookup)?;
@@ -51,7 +49,7 @@ pub(crate) fn fetch(
                 async {
                     tokio::time::timeout(
                         Duration::from_secs(25),
-                        resolve(title, artist, album, duration, key),
+                        resolve(title, artist, album, duration, key, international),
                     )
                     .await
                     .map_err(|_| err("NetworkError"))?
@@ -204,79 +202,6 @@ async fn token(client: &Client) -> Result<String, String> {
     Ok(value)
 }
 
-// Normalize only metadata used for matching; never transform lyric text or the stored API response.
-fn match_text(text: &str) -> String {
-    if text.is_ascii() {
-        return text.to_owned();
-    }
-    static CHARACTERS: OnceLock<HashMap<char, char>> = OnceLock::new();
-    let characters = CHARACTERS.get_or_init(|| {
-        include_str!("../data/opencc/TSCharacters.txt")
-            .lines()
-            .filter(|line| !line.starts_with('#'))
-            .filter_map(|line| {
-                let (source, targets) = line.split_once('\t')?;
-                let mut source = source.chars();
-                let from = source.next()?;
-                if source.next().is_some() {
-                    return None;
-                }
-                let to = targets.split_whitespace().next()?.chars().next()?;
-                Some((from, to))
-            })
-            .collect()
-    });
-    text.chars()
-        .map(|c| characters.get(&c).copied().unwrap_or(c))
-        .collect()
-}
-
-fn has_cjk(value: &str) -> bool {
-    value
-        .chars()
-        .any(|c| matches!(c, '\u{3040}'..='\u{30ff}' | '\u{3400}'..='\u{9fff}'))
-}
-
-fn different_scripts(left: &str, right: &str) -> bool {
-    has_cjk(left) != has_cjk(right)
-        && left.chars().any(char::is_alphabetic)
-        && right.chars().any(char::is_alphabetic)
-}
-
-// Queries contain only title text. Keep the original first and never remove a real
-// recording-version marker merely because it appears in parentheses.
-fn title_queries(title: &str) -> Vec<String> {
-    let original = title.split_whitespace().collect::<Vec<_>>().join(" ");
-    let mut variants = vec![original.clone(), simplify_title(&original)];
-    for (open, close) in [('(', ')'), ('（', '）'), ('[', ']'), ('【', '】')] {
-        if let Some(without_close) = original.strip_suffix(close) {
-            if let Some((base, annotation)) = split_annotation(without_close, open) {
-                let has_kana = |s: &str| s.chars().any(|c| matches!(c, '\u{3040}'..='\u{30ff}'));
-                if (different_scripts(base, annotation) || has_kana(base) != has_kana(annotation))
-                    && version_difference_penalty(&original, base) == 0.0
-                {
-                    variants.push(base.to_owned());
-                }
-            }
-        }
-    }
-    let normalized: Vec<_> = variants.iter().map(|s| match_text(s)).collect();
-    variants.extend(normalized);
-    let mut seen = std::collections::HashSet::new();
-    variants
-        .into_iter()
-        .filter(|s| !s.is_empty() && seen.insert(s.clone()))
-        .take(MAX_SEARCH_ROUNDS)
-        .collect()
-}
-
-fn split_annotation(value: &str, open: char) -> Option<(&str, &str)> {
-    let (base, annotation) = value.rsplit_once(open)?;
-    let base = base.trim();
-    let annotation = annotation.trim();
-    (!base.is_empty() && !annotation.is_empty()).then_some((base, annotation))
-}
-
 fn candidate(track: &Value, query: MatchMetadata<'_>) -> Option<(f64, Value)> {
     let id = track["uri"].as_str()?.strip_prefix("spotify:track:")?;
     if id.len() != 22 || !id.bytes().all(|b| b.is_ascii_alphanumeric()) {
@@ -291,87 +216,17 @@ fn candidate(track: &Value, query: MatchMetadata<'_>) -> Option<(f64, Value)> {
         .join(", ");
     let album = track["albumOfTrack"]["name"].as_str().unwrap_or("");
     let duration = track["duration"]["totalMilliseconds"].as_u64()?;
-    let normalized_title = match_text(title);
-    let normalized_query_title = match_text(query.title);
-    let normalized_artist = match_text(&artist);
-    let normalized_query_artist = match_text(query.artist);
-    if version_difference_penalty(&normalized_query_title, &normalized_title) > 0.0 {
-        return None;
-    }
-    let artist_similarity = (!query.artist.trim().is_empty()).then(|| {
-        // Multiple artists are supporting metadata, not a single indivisible name.
-        query
-            .artist
-            .split([';', ',', '、', '，'])
-            .flat_map(|name| {
-                artists
-                    .iter()
-                    .filter_map(|a| a["profile"]["name"].as_str())
-                    .map(move |other| text_similarity(&match_text(name), &match_text(other)))
-            })
-            .fold(
-                text_similarity(&normalized_query_artist, &normalized_artist),
-                f64::max,
-            )
-    });
-    let duration_delta = query
-        .duration_ms
-        .filter(|ms| *ms > 0)
-        .map(|ms| ms.abs_diff(duration));
-    let strong_artist = artist_similarity.is_some_and(|s| s >= 0.85);
-    let title_score = title_queries(query.title)
-        .iter()
-        .flat_map(|left| {
-            title_queries(title)
-                .into_iter()
-                .map(move |right| text_similarity(&match_text(left), &match_text(&right)))
-        })
-        .fold(0.0, f64::max);
-    // Spotify can return an English/localized title for a Japanese title query.
-    // Search relevance alone is insufficient to accept an unrelated recording.
-    let localized_title = title_score < 0.80
-        && different_scripts(&normalized_query_title, &normalized_title)
-        && strong_artist
-        && duration_delta.is_some_and(|ms| ms <= 2000);
-    if title_score < 0.80 && !localized_title {
-        return None;
-    }
-    if artist_similarity.is_some_and(|s| s < 0.5)
-        && !(different_scripts(&normalized_query_artist, &normalized_artist)
-            && title_score >= 0.95
-            && duration_delta.is_some_and(|ms| ms <= 2000))
-    {
-        return None;
-    }
-    // Strong title and artist evidence tolerates small encoding/edition offsets.
-    let duration_limit = if title_score >= 0.95 && strong_artist {
-        10_000
-    } else {
-        5_000
-    };
-    if duration_delta
-        .is_some_and(|delta| delta > duration_limit.max(query.duration_ms.unwrap_or(0) / 50))
-    {
-        return None;
-    }
     let score = score_candidate(
+        query,
         MatchMetadata {
-            title: &normalized_title,
-            artist: "",
-            ..query
-        },
-        MatchMetadata {
-            title: &normalized_title,
-            artist: "",
+            title,
+            artist: &artist,
             album,
             duration_ms: Some(duration),
         },
     )?;
-    let title_confidence = if localized_title { 0.80 } else { title_score };
-    let rank =
-        score.total * 0.15 + title_confidence * 0.65 + artist_similarity.unwrap_or(0.5) * 0.20;
     Some((
-        rank,
+        score.total,
         json!({"id":id,"title":title,"artist":artist,"album":album,"duration_ms":duration}),
     ))
 }
@@ -427,7 +282,7 @@ async fn search(client: &Client, access: &mut String, term: &str) -> Result<Valu
 }
 
 async fn discover(client: &Client, query: MatchMetadata<'_>) -> Result<Vec<Value>, String> {
-    let terms = title_queries(query.title);
+    let terms = build_search_keywords(query.title, query.artist, query.album);
     if terms.is_empty() {
         return Ok(Vec::new());
     }
@@ -475,6 +330,7 @@ async fn resolve(
     album: &str,
     duration: u64,
     key: &str,
+    international: bool,
 ) -> Result<Value, String> {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(24);
     if *COOLDOWN
@@ -492,7 +348,7 @@ async fn resolve(
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|_| err("NativeError"))?;
-    let cache_key = json!([title, artist, album, duration]).to_string();
+    let cache_key = json!([title, artist, album, duration, international]).to_string();
     let cached = TRACKS
         .get_or_init(|| Mutex::new(HashMap::new()))
         .lock()
@@ -594,50 +450,6 @@ mod tests {
             "albumOfTrack":{"name":"唱遊"},"duration":{"totalMilliseconds":256026}})
     }
     #[test]
-    fn localized_artist_needs_strong_title_and_duration() {
-        let track = localized_track();
-        let query = MatchMetadata {
-            title: "红豆",
-            artist: "王菲",
-            album: "",
-            duration_ms: Some(256000),
-        };
-        assert!(candidate(&track, query).is_some());
-        assert!(candidate(
-            &track,
-            MatchMetadata {
-                duration_ms: None,
-                ..query
-            }
-        )
-        .is_none());
-        assert!(candidate(
-            &track,
-            MatchMetadata {
-                title: "红豆 - Live",
-                ..query
-            }
-        )
-        .is_none());
-        assert!(candidate(
-            &track,
-            MatchMetadata {
-                duration_ms: Some(220000),
-                ..query
-            }
-        )
-        .is_none());
-        assert!(candidate(
-            &track,
-            MatchMetadata {
-                artist: "",
-                duration_ms: None,
-                ..query
-            }
-        )
-        .is_some());
-    }
-    #[test]
     fn simplified_title_matches_without_changing_display_metadata() {
         let track = localized_track();
         let (_, selected) = candidate(
@@ -651,8 +463,6 @@ mod tests {
         )
         .unwrap();
         assert_eq!(selected["title"], "紅豆");
-        assert_eq!(match_text("周杰倫"), match_text("周杰伦"));
-        assert_eq!(match_text("夜に駆ける"), "夜に駆ける");
     }
     fn track(title: &str, artist: &str, duration: u64) -> Value {
         json!({"uri":"spotify:track:0X5X6D3kZyDEG8Im1LQaVf", "name":title,
@@ -661,74 +471,29 @@ mod tests {
     }
 
     #[test]
-    fn queries_use_title_and_remove_translated_annotation() {
-        assert_eq!(title_queries("Faded"), vec!["Faded"]);
-        assert!(title_queries("未だ、青い (湛蓝依旧)").contains(&"未だ、青い".to_owned()));
-        assert!(title_queries("Song (Live)").contains(&"Song (Live)".to_owned()));
-        assert!(title_queries("  ").is_empty());
-        assert!(title_queries("紅豆（Red Bean）").len() <= MAX_SEARCH_ROUNDS);
-    }
-
-    #[test]
-    fn title_only_lookup_works_without_artist_album_or_duration() {
-        let query = MatchMetadata {
-            title: "未だ、青い (湛蓝依旧)",
-            artist: "",
-            album: "",
-            duration_ms: None,
-        };
-        assert!(candidate(&track("未だ、青い", "Singer", 221189), query).is_some());
-        assert!(candidate(&track("Completely Different", "Singer", 221189), query).is_none());
-        assert!(candidate(&track("未だ、青い - Live", "Singer", 221189), query).is_none());
-    }
-
-    #[test]
-    fn localized_title_requires_artist_and_close_duration() {
-        let query = MatchMetadata {
-            title: "マイライフ",
-            artist: "CY8ER",
-            album: "",
-            duration_ms: Some(198619),
-        };
-        assert!(candidate(&track("MyLife", "CY8ER", 198666), query).is_some());
-        assert!(candidate(&track("MyLife", "Other", 198666), query).is_none());
-        assert!(candidate(&track("MyLife", "CY8ER", 230000), query).is_none());
-        assert!(candidate(&track("MyLife - Live", "CY8ER", 198666), query).is_none());
-        assert!(candidate(
-            &track("MyLife", "CY8ER", 198666),
-            MatchMetadata {
-                artist: "",
-                ..query
-            }
-        )
-        .is_none());
-        assert!(candidate(
-            &track("MyLife", "CY8ER", 198666),
-            MatchMetadata {
-                duration_ms: None,
-                ..query
-            }
-        )
-        .is_none());
-    }
-
-    #[test]
-    fn multiple_artists_and_small_duration_offsets_are_supported() {
+    fn spotify_adapter_uses_shared_policy_for_related_and_localized_tracks() {
         let query = MatchMetadata {
             title: "守護霊",
             artist: "Yunomi; nicamoq",
             album: "",
             duration_ms: Some(198139),
         };
-        assert!(candidate(&track("守護霊", "Yunomi", 204773), query).is_some());
-        assert!(candidate(&track("守護霊", "Yunomi", 230000), query).is_none());
+        let close = candidate(&track("守護霊", "Yunomi", 204773), query)
+            .unwrap()
+            .0;
+        let distant = candidate(&track("守護霊", "Yunomi", 230000), query)
+            .unwrap()
+            .0;
+        assert!(close > distant); // Same soft duration fallback as the other providers.
         let query = MatchMetadata {
             title: "サンダーソニア",
             artist: "PIKASONIC; iMeiden; 小花依ある",
-            album: "",
             duration_ms: Some(171638),
+            ..query
         };
         assert!(candidate(&track("Sandersonia", "PIKASONIC", 171679), query).is_some());
+        assert!(candidate(&track("Sandersonia", "Other", 171679), query).is_none());
+        assert!(candidate(&track("Sandersonia - Live", "PIKASONIC", 171679), query).is_none());
     }
 
     #[test]
@@ -840,38 +605,23 @@ mod tests {
         assert_eq!(result.unwrap_err(), "RateLimited");
     }
     #[test]
-    fn reject_cover_and_wrong_duration() {
-        let track = json!({"uri":"spotify:track:7gHs73wELdeycvS48JfIos","name":"Faded","artists":{"items":[{"profile":{"name":"Alan Walker"}}]},"albumOfTrack":{"name":"Faded"},"duration":{"totalMilliseconds":212626}});
+    fn exact_recording_outranks_related_fallbacks() {
         let query = MatchMetadata {
             title: "Faded",
             artist: "Alan Walker",
             album: "",
             duration_ms: Some(212000),
         };
-        assert!(candidate(&track, query).is_some());
-        assert!(candidate(
-            &track,
-            MatchMetadata {
-                artist: "Other Artist",
-                ..query
-            }
-        )
-        .is_none());
-        assert!(candidate(
-            &track,
-            MatchMetadata {
-                duration_ms: Some(250000),
-                ..query
-            }
-        )
-        .is_none());
-        assert!(candidate(
-            &track,
-            MatchMetadata {
-                title: "Faded - Live",
-                ..query
-            }
-        )
-        .is_none());
+        let exact = candidate(&track("Faded", "Alan Walker", 212626), query)
+            .unwrap()
+            .0;
+        for related in [
+            track("Faded", "Other Artist", 212626),
+            track("Faded", "Alan Walker", 250000),
+            track("Faded - Live", "Alan Walker", 212626),
+        ] {
+            assert!(candidate(&related, query).unwrap().0 < exact);
+        }
+        assert!(candidate(&track("Unrelated", "Alan Walker", 212626), query).is_none());
     }
 }

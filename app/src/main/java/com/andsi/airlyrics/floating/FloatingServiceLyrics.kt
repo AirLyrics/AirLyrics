@@ -1,5 +1,8 @@
 package com.andsi.airlyrics.floating
 
+import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.lyrics.LyricsSearchCoordinator
+import com.andsi.airlyrics.core.model.SongIdentity
 import android.net.Uri
 import android.os.SystemClock
 import com.andsi.airlyrics.R
@@ -96,9 +99,13 @@ internal fun FloatingLyricsService.loadLyricsForSong(
             settings
         }
     }
+    if (LyricsSearchCoordinator.manualMode(media.toSongIdentity()) != null) {
+        showManualLyricsSearch(media.toSongIdentity())
+        return
+    }
     renderer.show {
         if (media.isPlaying) {
-            "${getString(R.string.ui_searching_lyrics)}...\n${media.displayText}"
+            "${getString(R.string.ui_searching_online_again)}\n${media.displayText}"
         } else {
             "${getString(R.string.ui_paused)}\n${media.displayText}"
         }
@@ -224,4 +231,14 @@ internal fun FloatingLyricsService.isAutomaticOnlineLookupSuppressed(
 ): Boolean {
     return automaticOnlineLookupSuppressedSong
         ?.isSameSong(media.toSongIdentity()) == true
+}
+
+internal fun FloatingLyricsService.showManualLyricsSearch(song: SongIdentity) {
+    val mode = LyricsSearchCoordinator.manualMode(song) ?: return
+    lyricsLookupRunner.cancelActive()
+    activeLyricsLookupRequestKey = null
+    renderer.show {
+        getString(if (mode == LyricsSearchMode.International)
+            R.string.ui_searching_international_title else R.string.ui_searching_online_again) + "\n" + currentMedia.displayText
+    }
 }

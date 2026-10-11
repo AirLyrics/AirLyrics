@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics.providers
 
+import com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore
+import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.PlainLyricsProvider
 import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
@@ -13,6 +15,9 @@ object LocalPlainLyricsProvider : PlainLyricsProvider {
     override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
         return runCatching {
             request.cancellationToken?.throwIfCancellationRequested()
+            ManualLyricsSelectionStore.read(request.context,
+                SongIdentity(request.title, request.artist, request.album, request.durationMs))
+                ?.let { return@runCatching it.result }
             val info = LyricsStorage.getLocalPlainLyricsInfo(request.context, request.title, request.artist, request.durationMs)
             if (info?.plainProvider == "spicy" && info.indexKey.startsWith("spicy:")) {
                 return@runCatching com.andsi.airlyrics.lyrics.storage.SpicyLyricsCache.forContext(request.context)

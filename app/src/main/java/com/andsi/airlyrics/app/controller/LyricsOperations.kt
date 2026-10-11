@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.app.controller
 
 import android.net.Uri
+import com.andsi.airlyrics.lyrics.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -34,6 +35,15 @@ internal interface LyricsOperations {
         media: CurrentMediaInfo,
         cancellationToken: LyricsLookupCancellationToken
     ): OnlineLyricsSearchOutcome
+
+    fun searchOnlineLyricsForCurrentMedia(
+        media: CurrentMediaInfo,
+        cancellationToken: LyricsLookupCancellationToken,
+        mode: LyricsSearchMode
+    ): OnlineLyricsSearchOutcome {
+        check(mode == LyricsSearchMode.Original) { "International search is not supported by this implementation" }
+        return searchOnlineLyricsForCurrentMedia(media, cancellationToken)
+    }
 
     fun getCurrentMediaInfo(): CurrentMediaInfo?
 

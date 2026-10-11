@@ -391,3 +391,9 @@ errors, offsets, and floating-style labels.
 ## Spicy Lyrics
 
 [Independent provider, private cache and expiry design](spicy-lyrics.md). The repository carries origin restrictions and attribution with the whole payload; the existing plain-provider name remains a compatibility alias.
+
+## Lyrics matching
+
+[Shared query planning and candidate policy](lyrics-matching.md) live in `lyrics-core/src/matching.rs`. All four online providers adapt their API metadata to this module; provider-specific code owns transport, request budgets and lyric decoding.
+
+Manual international-title search is a per-request mode, resolved once in LyricsRepository through the Apple storefront resolver before the shared provider pipeline. Lookup aliases do not change the original song identity used for storage. See [lyrics matching](lyrics-matching.md#manual-international-title-search).

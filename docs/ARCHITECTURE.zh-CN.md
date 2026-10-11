@@ -358,3 +358,9 @@ Service。`i18n/` 下的其他辅助类负责格式化媒体状态、设置值�
 ## Spicy Lyrics
 
 [独立歌词源、私有缓存及有效期设计](spicy-lyrics.md)。来源限制与署名随完整歌词结果传递；原有普通歌词源接口名称保留为兼容别名。
+
+## 歌词匹配
+
+[统一查询与候选匹配](lyrics-matching.md) 由 `lyrics-core/src/matching.rs` 负责。四个在线源都将接口元数据交给该模块；各源只保留传输、请求预算与歌词解析等接口差异。
+
+“国际标题搜索”是单次手动搜索模式：LyricsRepository 在调用歌词源前统一通过 Apple 商店解析标题，再复用共用搜索与评分链路。搜索别名与用于保存的原歌曲身份分离。参见[歌词匹配说明](lyrics-matching.md#manual-international-title-search)。

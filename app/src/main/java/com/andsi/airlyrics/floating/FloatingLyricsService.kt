@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.floating
 
+import com.andsi.airlyrics.lyrics.LyricsSearchCoordinator
+import com.andsi.airlyrics.core.model.SongIdentity
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -13,7 +15,6 @@ import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.LyricsSettings
-import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.displayscope.DisplayScopeBlockReason
 import com.andsi.airlyrics.displayscope.DisplayScopeMonitor
 import com.andsi.airlyrics.feedback.AirFeedback
@@ -94,6 +95,7 @@ open class FloatingLyricsService : Service() {
         )
     }
 
+    private var manualSearchObservation: AutoCloseable? = null
     internal var currentMedia: CurrentMediaInfo = CurrentMediaInfo.Empty
     internal var lastPlaybackLyricsKey: PlaybackLyricsKey? = null
     internal var automaticOnlineLookupSuppressedSong: SongIdentity? = null
@@ -236,6 +238,15 @@ open class FloatingLyricsService : Service() {
     }
 
     private fun registerLyricsChangedReceiver() {
+        manualSearchObservation = LyricsSearchCoordinator.observe { song ->
+            syncHandler.post {
+                if (manualSearchObservation != null && !currentMedia.isEmpty &&
+                    SongIdentity(currentMedia.title, currentMedia.artist, currentMedia.album, currentMedia.durationMs).isSameSong(song)) {
+                    if (LyricsSearchCoordinator.manualMode(song) == null) reloadCurrentLyrics()
+                    else showManualLyricsSearch(song)
+                }
+            }
+        }
         ContextCompat.registerReceiver(
             this,
             lyricsChangedReceiver,
@@ -253,6 +264,8 @@ open class FloatingLyricsService : Service() {
     }
 
     override fun onDestroy() {
+        manualSearchObservation?.close()
+        manualSearchObservation = null
         if (feedbackDelegate.isInitialized()) feedback.dismiss()
         stopLyricsSync()
         renderer.clear()

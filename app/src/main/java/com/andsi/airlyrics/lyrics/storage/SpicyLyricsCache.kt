@@ -51,14 +51,28 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
     fun read(key: String): LyricsProviderResult? = synchronized(lock) {
         runCatching { document(key)?.let { result(key, it) } }.getOrNull()
     }
-    fun save(key: String, title: String, artist: String, album: String, duration: Long, raw: String): LyricsProviderResult? = synchronized(lock) {
-        val at = clock()
-        val parsed = SpicyLyricsParser.parse(raw, key, at) ?: return null
-        val doc = JSONObject().put("raw", raw).put("fetchedAt", at).put("updatedAt", at)
-            .put("title", title).put("artist", artist).put("album", album).put("duration", duration)
+    /** Lookup caches are mode-specific; the saved document remains bound to the original song. */
+    fun readForSearch(key: String, searchKey: String): LyricsProviderResult? = synchronized(lock) {
+        runCatching {
+            document(key)?.takeIf { it.optString("searchKey", key) == searchKey }?.let { result(key, it) }
+        }.getOrNull()
+    }
+    fun save(key: String, title: String, artist: String, album: String, duration: Long, raw: String, searchKey: String = key, fetchedAtMs: Long = clock()): LyricsProviderResult? = synchronized(lock) {
+        val parsed = SpicyLyricsParser.parse(raw, key, fetchedAtMs) ?: return null
+        val doc = JSONObject().put("raw", raw).put("fetchedAt", fetchedAtMs).put("updatedAt", fetchedAtMs)
+            .put("title", title).put("artist", artist).put("album", album).put("duration", duration).put("searchKey", searchKey)
         write(key, doc)
         parsed
     }
+    internal fun snapshot(key: String): ByteArray? = synchronized(lock) {
+        if (file(key).exists() || File(file(key).path + ".bak").exists()) AtomicFile(file(key)).readFully() else null
+    }
+
+    internal fun restore(key: String, bytes: ByteArray?) = synchronized(lock) {
+        if (bytes == null) AtomicFile(file(key)).delete()
+        else write(key, JSONObject(String(bytes, Charsets.UTF_8)))
+    }
+
     private fun write(key: String, document: JSONObject) {
         check(directory.isDirectory || directory.mkdirs())
         val atomic = AtomicFile(file(key))

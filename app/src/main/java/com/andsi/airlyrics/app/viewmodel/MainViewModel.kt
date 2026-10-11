@@ -11,6 +11,7 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.andsi.airlyrics.lyrics.LyricsSearchMode
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.controller.CurrentLyricsDeleteOutcome
@@ -32,6 +33,8 @@ import com.andsi.airlyrics.app.state.toPendingLyricsOverwrite
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
+import com.andsi.airlyrics.lyrics.LyricsSearchCoordinator
+import com.andsi.airlyrics.lyrics.LyricsSearchOrigin
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
@@ -309,7 +312,7 @@ internal class MainViewModel(
 
     fun searchOnlineLyricsForCurrentMedia() = searchOnlineLyrics(lyricsController.getCurrentMediaInfo())
 
-    fun searchOnlineLyrics(media: CurrentMediaInfo?) {
+    fun searchOnlineLyrics(media: CurrentMediaInfo?, mode: LyricsSearchMode = LyricsSearchMode.Original) {
         cancelOnlineLyricsSearch()
         if (media == null) {
             showMessage(R.string.ui_no_active_media_found)
@@ -320,12 +323,23 @@ internal class MainViewModel(
             requestKey = "manual:${media.toSongIdentity().storageKey()}",
             generation = ++nextOnlineLyricsSearchGeneration
         )
+        val lease = LyricsSearchCoordinator.begin(media.toSongIdentity(), cancellationToken, LyricsSearchOrigin.Manual, mode)
+        var displayedMode = mode
+        cancellationToken.onSearchModeChanged = { effectiveMode ->
+            viewModelScope.launch {
+                if (onlineLyricsSearchToken === cancellationToken && !cancellationToken.isCancellationRequested && displayedMode != effectiveMode) {
+                    displayedMode = effectiveMode
+                    showMessage(if (effectiveMode == LyricsSearchMode.International) R.string.ui_searching_international_title else R.string.ui_searching_online_again)
+                }
+            }
+        }
         val searchJob = viewModelScope.launch(start = CoroutineStart.LAZY) {
             try {
                 val outcome = withContext(ioDispatcher) {
                     lyricsController.searchOnlineLyricsForCurrentMedia(
                         media = media,
-                        cancellationToken = cancellationToken
+                        cancellationToken = cancellationToken,
+                        mode = mode
                     )
                 }
                 cancellationToken.throwIfCancellationRequested()
@@ -342,6 +356,7 @@ internal class MainViewModel(
                         showMessage(R.string.ui_online_lyrics_search_failed, error = true)
                 }
             } finally {
+                lease.close()
                 if (onlineLyricsSearchToken === cancellationToken) {
                     onlineLyricsSearchToken = null
                     onlineLyricsSearchJob = null
@@ -350,7 +365,7 @@ internal class MainViewModel(
         }
         onlineLyricsSearchToken = cancellationToken
         onlineLyricsSearchJob = searchJob
-        showMessage(R.string.ui_searching_online_again)
+        showMessage(if (mode == LyricsSearchMode.International) R.string.ui_searching_international_title else R.string.ui_searching_online_again)
         searchJob.start()
     }
 

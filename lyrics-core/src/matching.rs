@@ -1,3 +1,5 @@
+//! Shared query planning and candidate policy for every online lyrics provider.
+//! Providers translate queries/results to their APIs; matching rules belong here.
 use crate::lrc;
 use std::collections::{HashMap, HashSet};
 use unicode_normalization::UnicodeNormalization;
@@ -152,6 +154,45 @@ const VERSION_MARKER_GROUPS: &[&[&str]] = &[
     ],
 ];
 
+// Normalize only metadata used for matching; never transform lyric text or the stored API response.
+fn match_text(text: &str) -> String {
+    if text.is_ascii() {
+        return text.to_owned();
+    }
+    static CHARACTERS: std::sync::OnceLock<HashMap<char, char>> = std::sync::OnceLock::new();
+    let characters = CHARACTERS.get_or_init(|| {
+        include_str!("../data/opencc/TSCharacters.txt")
+            .lines()
+            .filter(|line| !line.starts_with('#'))
+            .filter_map(|line| {
+                let (source, targets) = line.split_once('\t')?;
+                let mut source = source.chars();
+                let from = source.next()?;
+                if source.next().is_some() {
+                    return None;
+                }
+                let to = targets.split_whitespace().next()?.chars().next()?;
+                Some((from, to))
+            })
+            .collect()
+    });
+    text.chars()
+        .map(|c| characters.get(&c).copied().unwrap_or(c))
+        .collect()
+}
+
+fn has_cjk(value: &str) -> bool {
+    value
+        .chars()
+        .any(|c| matches!(c, '\u{3040}'..='\u{30ff}' | '\u{3400}'..='\u{9fff}'))
+}
+
+fn different_scripts(left: &str, right: &str) -> bool {
+    has_cjk(left) != has_cjk(right)
+        && left.chars().any(char::is_alphabetic)
+        && right.chars().any(char::is_alphabetic)
+}
+
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct MatchMetadata<'a> {
     pub(crate) title: &'a str,
@@ -176,50 +217,133 @@ pub(crate) struct SearchQuery {
     pub(crate) artist: Option<String>,
 }
 
-/// Builds progressively broader queries without repeating equivalent requests.
-///
-/// The order is full title + artist, simplified title + artist, full title only, then
-/// simplified title only. Empty artists naturally start at the title-only rounds.
-pub(crate) fn build_search_queries(title: &str, artist: &str) -> Vec<SearchQuery> {
-    let title = clean_query_part(title);
-    if title.is_empty() {
-        return Vec::new();
-    }
-
-    let artist = non_empty(clean_query_part(artist));
-    let simplified_title = simplify_title(&title);
-    let mut queries = Vec::new();
-    let mut seen = HashSet::new();
-
-    if let Some(artist) = artist.as_deref() {
-        push_unique_query(&mut queries, &mut seen, &title, Some(artist));
-        if simplified_title != title {
-            push_unique_query(&mut queries, &mut seen, &simplified_title, Some(artist));
+/// Original spelling comes first; annotations and script variants are fallbacks only.
+fn title_variants(title: &str) -> Vec<String> {
+    let original = clean_query_part(title);
+    let mut variants = vec![original.clone(), simplify_title(&original)];
+    for (open, close) in [('(', ')'), ('（', '）'), ('[', ']'), ('【', '】')] {
+        if let Some(without_close) = original.strip_suffix(close) {
+            if let Some((base, annotation)) = without_close.rsplit_once(open) {
+                let base = base.trim();
+                let annotation = annotation.trim();
+                let has_kana = |s: &str| s.chars().any(|c| matches!(c, '\u{3040}'..='\u{30ff}'));
+                if !base.is_empty()
+                    && !annotation.is_empty()
+                    && (different_scripts(base, annotation)
+                        || has_kana(base) != has_kana(annotation))
+                    && version_difference_penalty(&original, base) == 0.0
+                {
+                    variants.push(base.to_owned());
+                }
+            }
         }
     }
+    variants.extend(variants.clone().iter().map(|s| match_text(s)));
+    let mut seen = HashSet::new();
+    variants
+        .into_iter()
+        .filter(|s| !s.is_empty() && seen.insert(s.to_lowercase()))
+        .collect()
+}
 
-    push_unique_query(&mut queries, &mut seen, &title, None);
-    if simplified_title != title {
-        push_unique_query(&mut queries, &mut seen, &simplified_title, None);
+/// Shared structured plan: title variants with artist, followed by title-only fallback.
+/// Version markers stay in the original metadata used for scoring, even when a broader
+/// search omits them. API adapters must not invent their own title variants.
+pub(crate) fn build_search_queries(title: &str, artist: &str) -> Vec<SearchQuery> {
+    let titles = title_variants(title);
+    let artist = non_empty(clean_query_part(artist));
+    let mut queries = Vec::new();
+    let mut seen = HashSet::new();
+    if let Some(artist) = artist.as_deref() {
+        for title in &titles {
+            push_unique_query(&mut queries, &mut seen, title, Some(artist));
+        }
     }
-
+    for title in &titles {
+        push_unique_query(&mut queries, &mut seen, title, None);
+    }
     queries
+}
+
+/// Free-text projection of the same plan (NetEase and Spotify). Structured APIs use
+/// build_search_queries because their search endpoints do not accept an album field.
+/// Keep NetEase's five-round budget, reserving the broadest fallback when truncated.
+pub(crate) fn build_search_keywords(title: &str, artist: &str, album: &str) -> Vec<String> {
+    let title = clean_query_part(title);
+    let artist = clean_query_part(artist);
+    let album = clean_query_part(album);
+    let mut keywords = Vec::new();
+    if !title.is_empty() && !artist.is_empty() && !album.is_empty() {
+        keywords.push(format!("{title} {album} {artist}"));
+    }
+    keywords.extend(build_search_queries(&title, &artist).into_iter().map(
+        |query| match query.artist {
+            Some(artist) => format!("{} {artist}", query.title),
+            None => query.title,
+        },
+    ));
+    let mut seen = HashSet::new();
+    keywords.retain(|keyword| seen.insert(keyword.to_lowercase()));
+    if keywords.len() > 5 {
+        let broadest = keywords.pop().unwrap();
+        keywords.truncate(4);
+        keywords.push(broadest);
+    }
+    keywords
 }
 
 pub(crate) fn score_candidate(
     query: MatchMetadata<'_>,
     candidate: MatchMetadata<'_>,
 ) -> Option<MatchScore> {
+    score_candidate_with_policy(query, candidate, false)
+}
+
+/// Experimental metadata aliases: rank every song, without a title acceptance gate.
+pub(crate) fn score_metadata_alias(query: MatchMetadata<'_>, candidate: MatchMetadata<'_>) -> MatchScore {
+    score_candidate_with_policy(query, candidate, true).expect("alias ranking accepts every candidate")
+}
+
+fn score_candidate_with_policy(
+    query: MatchMetadata<'_>,
+    candidate: MatchMetadata<'_>,
+    relaxed: bool,
+) -> Option<MatchScore> {
     let title_similarity = title_similarity(query.title, candidate.title);
-    if title_similarity < MIN_TITLE_SIMILARITY {
+    let mut artist_similarity = compare_artists(query.artist, candidate.artist);
+    let close_duration = query
+        .duration_ms
+        .filter(|ms| *ms > 0)
+        .zip(candidate.duration_ms.filter(|ms| *ms > 0))
+        .is_some_and(|(left, right)| left.abs_diff(right) <= 2_000);
+    let version_penalty = version_difference_penalty(query.title, candidate.title);
+    // Cross-script titles cannot be established by text similarity alone. Require
+    // both performer and recording-length evidence, and no version disagreement.
+    let localized_title = title_similarity < MIN_TITLE_SIMILARITY
+        && different_scripts(query.title, candidate.title)
+        && artist_similarity.is_some_and(|score| score >= 0.85)
+        && close_duration
+        && version_penalty == 0.0;
+    if !relaxed && title_similarity < MIN_TITLE_SIMILARITY && !localized_title {
         return None;
     }
+    if title_similarity >= 0.95
+        && close_duration
+        && version_penalty == 0.0
+        && different_scripts(query.artist, candidate.artist)
+    {
+        artist_similarity = artist_similarity.map(|score| score.max(0.80));
+    }
 
-    let artist_similarity = compare_optional_text(query.artist, candidate.artist);
     let album_similarity = compare_optional_text(query.album, candidate.album);
     let duration_similarity = compare_optional_duration(query.duration_ms, candidate.duration_ms);
 
-    let mut weighted_sum = title_similarity * TITLE_WEIGHT;
+    let title_confidence = if localized_title {
+        0.80
+    } else {
+        title_similarity
+    };
+    let mut weighted_sum = title_confidence * TITLE_WEIGHT;
     let mut compared_weight = TITLE_WEIGHT;
     if let Some(value) = artist_similarity {
         weighted_sum += value * ARTIST_WEIGHT;
@@ -234,7 +358,6 @@ pub(crate) fn score_candidate(
         compared_weight += ALBUM_WEIGHT;
     }
 
-    let version_penalty = version_difference_penalty(query.title, candidate.title);
     let total = (weighted_sum / compared_weight - version_penalty).clamp(0.0, 1.0);
     Some(MatchScore {
         total,
@@ -380,16 +503,29 @@ pub(crate) fn text_similarity(left: &str, right: &str) -> f64 {
 }
 
 fn title_similarity(query_title: &str, candidate_title: &str) -> f64 {
-    let query_simple = simplify_title(query_title);
-    let candidate_simple = simplify_title(candidate_title);
-    [
-        text_similarity(query_title, candidate_title),
-        text_similarity(&query_simple, candidate_title),
-        text_similarity(query_title, &candidate_simple),
-        text_similarity(&query_simple, &candidate_simple),
-    ]
-    .into_iter()
-    .fold(0.0, f64::max)
+    let query_titles = title_variants(query_title);
+    let candidate_titles = title_variants(candidate_title);
+    query_titles
+        .iter()
+        .flat_map(|left| {
+            candidate_titles
+                .iter()
+                .map(move |right| text_similarity(left, right))
+        })
+        .fold(0.0, f64::max)
+}
+
+fn compare_artists(left: &str, right: &str) -> Option<f64> {
+    let full = compare_optional_text(left, right)?;
+    Some(
+        left.split([';', ',', '、', '，'])
+            .flat_map(|left| {
+                right
+                    .split([';', ',', '、', '，'])
+                    .map(move |right| text_similarity(left, right))
+            })
+            .fold(full, f64::max),
+    )
 }
 
 fn compare_optional_text(left: &str, right: &str) -> Option<f64> {
@@ -655,8 +791,10 @@ fn push_unique_query(
 ) {
     let key = format!(
         "{}\0{}",
-        normalize_words(title),
-        artist.map(normalize_words).unwrap_or_default()
+        clean_query_part(title).to_lowercase(),
+        artist
+            .map(|s| clean_query_part(s).to_lowercase())
+            .unwrap_or_default()
     );
     if seen.insert(key) {
         queries.push(SearchQuery {
@@ -686,7 +824,7 @@ fn clean_query_part(value: &str) -> String {
 }
 
 fn normalize_words(value: &str) -> String {
-    value
+    match_text(value)
         .nfkc()
         .collect::<String>()
         .to_lowercase()
@@ -705,7 +843,7 @@ fn normalize_words(value: &str) -> String {
 }
 
 fn normalize_identity(value: &str) -> String {
-    value
+    match_text(value)
         .nfkc()
         .collect::<String>()
         .to_lowercase()
@@ -863,7 +1001,7 @@ mod tests {
         assert_eq!(text_similarity("ＡＢＣ（Live）", "ABC (Live)"), 1.0);
         assert_eq!(text_similarity("♡", "♡"), 1.0);
         assert_eq!(text_similarity("♡", "☆"), 0.0);
-        assert_eq!(text_similarity("后来的我们", "後來的我們"), 0.25);
+        assert_eq!(text_similarity("后来的我们", "後來的我們"), 1.0);
     }
 
     #[test]
@@ -999,5 +1137,82 @@ mod tests {
             normalize_usable_lrc("[00:01.00]Line\r\n".to_string()).as_deref(),
             Some("[00:01.00]Line\n")
         );
+    }
+    #[test]
+    fn localized_titles_require_independent_evidence_and_remain_final_fallbacks() {
+        let query = metadata("マイライフ", "CY8ER", "", Some(198619));
+        let found = score_candidate(query, metadata("MyLife", "CY8ER", "", Some(198666))).unwrap();
+        assert!(!is_confident_early_match(&found));
+        for candidate in [
+            metadata("MyLife", "Other", "", Some(198666)),
+            metadata("MyLife", "CY8ER", "", Some(230000)),
+            metadata("MyLife", "CY8ER", "", None),
+            metadata("MyLife - Live", "CY8ER", "", Some(198666)),
+        ] {
+            assert!(score_candidate(query, candidate).is_none());
+        }
+        assert!(score_candidate(
+            metadata("マイライフ", "", "", Some(198619)),
+            metadata("MyLife", "CY8ER", "", Some(198666))
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn localized_artists_are_supported_by_title_and_duration_not_assumed_equivalent() {
+        let query = metadata("红豆", "王菲", "", Some(256000));
+        let found =
+            score_candidate(query, metadata("紅豆", "Faye Wong", "", Some(256026))).unwrap();
+        assert!(is_confident_early_match(&found));
+        for candidate in [
+            metadata("紅豆", "Faye Wong", "", None),
+            metadata("紅豆", "Faye Wong", "", Some(220000)),
+        ] {
+            assert!(!is_confident_early_match(
+                &score_candidate(query, candidate).unwrap()
+            ));
+        }
+        assert_eq!(text_similarity("周杰倫", "周杰伦"), 1.0);
+        assert_eq!(match_text("夜に駆ける"), "夜に駆ける");
+    }
+
+    #[test]
+    fn collaborative_artists_and_translated_annotations_share_the_same_policy() {
+        let query = metadata("未だ、青い (湛蓝依旧)", "湊あくあ", "", Some(221121));
+        let candidate = metadata("未だ、青い", "湊あくあ", "", Some(221189));
+        assert!(is_confident_early_match(
+            &score_candidate(query, candidate).unwrap()
+        ));
+        let score = score_candidate(
+            metadata(
+                "サンダーソニア",
+                "PIKASONIC; iMeiden; 小花依ある",
+                "",
+                Some(171638),
+            ),
+            metadata("Sandersonia", "PIKASONIC", "", Some(171679)),
+        )
+        .unwrap();
+        assert_eq!(score.artist_similarity, Some(1.0));
+    }
+
+    #[test]
+    fn query_spellings_are_preserved_and_broadest_fallback_survives_budget() {
+        let queries = build_search_queries("紅豆（Red Bean）", "王菲");
+        assert_eq!(queries.first().unwrap().title, "紅豆(Red Bean)");
+        assert!(queries
+            .iter()
+            .any(|q| q.title == "红豆" && q.artist.is_none()));
+        let keywords = build_search_keywords("紅豆（Red Bean）", "王菲", "唱遊");
+        assert_eq!(keywords.len(), 5);
+        assert_eq!(keywords.last().unwrap(), "红豆");
+        assert!(build_search_keywords("  ", "Artist", "Album").is_empty());
+        assert_eq!(
+            build_search_keywords("Faded", "Alan Walker", ""),
+            vec!["Faded Alan Walker", "Faded"]
+        );
+        assert!(!title_variants("Song (Live)")
+            .iter()
+            .any(|title| title == "Live"));
     }
 }

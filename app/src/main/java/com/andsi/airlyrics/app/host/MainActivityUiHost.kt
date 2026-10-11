@@ -102,6 +102,7 @@ internal class MainActivityUiHost(
             deleteAll = graph.viewModel::deleteAllSavedLyricsIfUnchanged,
             deleteCurrent = graph.viewModel::deleteLyricsForTarget,
             search = { graph.viewModel.searchOnlineLyrics(it) },
+            searchWithMode = { media, mode -> graph.viewModel.searchOnlineLyrics(media, mode) },
             deleteEditor = { editorSession.delete() }
         )
     }

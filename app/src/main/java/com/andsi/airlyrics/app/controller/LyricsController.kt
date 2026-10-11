@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.controller
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import com.andsi.airlyrics.lyrics.LyricsSearchMode
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
@@ -213,12 +214,19 @@ internal class LyricsController(
     override fun searchOnlineLyricsForCurrentMedia(
         media: CurrentMediaInfo,
         cancellationToken: LyricsLookupCancellationToken
+    ): OnlineLyricsSearchOutcome = searchOnlineLyricsForCurrentMedia(media, cancellationToken, LyricsSearchMode.Original)
+
+    override fun searchOnlineLyricsForCurrentMedia(
+        media: CurrentMediaInfo,
+        cancellationToken: LyricsLookupCancellationToken,
+        mode: LyricsSearchMode
     ): OnlineLyricsSearchOutcome {
         cancellationToken.throwIfCancellationRequested()
         val result = onlineLyricsLookupGateway.findAndSave(
             context = context,
             media = media,
-            cancellationToken = cancellationToken
+            cancellationToken = cancellationToken,
+            mode = mode
         )
         cancellationToken.throwIfCancellationRequested()
         val failure = result.exceptionOrNull()

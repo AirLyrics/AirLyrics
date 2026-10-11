@@ -345,7 +345,7 @@
     <string name="ui_search_online_again_confirm">線上搜尋歌詞？</string>
     <string name="ui_search_strategy">搜尋策略</string>
     <string name="ui_searching_lyrics">正在查詢歌詞</string>
-    <string name="ui_searching_online_again">正在線上搜尋…</string>
+    <string name="ui_searching_online_again">正在嘗試原文搜尋…</string>
     <string name="ui_settings">設定</string>
     <string name="ui_settings_back_label">設定</string>
     <string name="ui_shadow">陰影</string>
@@ -422,4 +422,6 @@
     <string name="ui_spicy_expiry">%1$s 到期</string>
     <string name="ui_lyrics_expired">歌詞已到期</string>
     <string name="provider_spicy_name">Spicy Lyrics</string>
+    <string name="ui_search_international_title">國際標題搜尋</string>
+    <string name="ui_searching_international_title">正在嘗試國際標題搜尋…</string>
 </resources>

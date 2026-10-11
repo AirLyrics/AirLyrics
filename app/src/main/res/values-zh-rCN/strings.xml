@@ -345,7 +345,7 @@
     <string name="ui_search_online_again_confirm">联网搜索歌词？</string>
     <string name="ui_search_strategy">搜索策略</string>
     <string name="ui_searching_lyrics">正在查找歌词</string>
-    <string name="ui_searching_online_again">正在联网搜索…</string>
+    <string name="ui_searching_online_again">正在尝试原文搜索…</string>
     <string name="ui_settings">设置</string>
     <string name="ui_settings_back_label">设置</string>
     <string name="ui_shadow">阴影</string>
@@ -422,4 +422,6 @@
     <string name="ui_spicy_expiry">%1$s 到期</string>
     <string name="ui_lyrics_expired">歌词已过期</string>
     <string name="provider_spicy_name">Spicy Lyrics</string>
+    <string name="ui_search_international_title">国际标题搜索</string>
+    <string name="ui_searching_international_title">正在尝试国际标题搜索…</string>
 </resources>
