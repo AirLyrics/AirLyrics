@@ -104,17 +104,24 @@ internal fun FloatingLyricsService.loadLyricsForSong(
         return
     }
     renderer.show {
-        if (media.isPlaying) {
-            "${getString(R.string.ui_searching_online_again)}\n${media.displayText}"
-        } else {
-            "${getString(R.string.ui_paused)}\n${media.displayText}"
-        }
+        "${getString(R.string.ui_loading)}\n${media.displayText}"
     }
     markLyricsLoading(media.playbackLyricsKey())
 
     lyricsLookupRunner.submit(
         requestKey = lookupRequestKey.value,
         lookup = { token ->
+            token.onSearchModeChanged = { mode ->
+                syncHandler.post {
+                    if (!token.isCancellationRequested && activeLyricsLookupRequestKey == lookupRequestKey) {
+                        renderer.show {
+                            getString(if (mode == LyricsSearchMode.International)
+                                R.string.ui_searching_international_title else R.string.ui_searching_online_again) +
+                                "\n" + media.displayText
+                        }
+                    }
+                }
+            }
             lookupLyricsForMedia(media, lookupSettings, token)
         },
         callback = { completedLookupRequestKey, result ->
@@ -241,4 +248,5 @@ internal fun FloatingLyricsService.showManualLyricsSearch(song: SongIdentity) {
         getString(if (mode == LyricsSearchMode.International)
             R.string.ui_searching_international_title else R.string.ui_searching_online_again) + "\n" + currentMedia.displayText
     }
+    markLyricsLoading(currentMedia.playbackLyricsKey())
 }
