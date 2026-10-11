@@ -33,7 +33,8 @@ internal data class LyricsReadSnapshot(
     val wordEnabled: Boolean,
     val offset: Long,
     val current: LyricsStorage.LocalLyricsItem?,
-    val items: List<LyricsStorage.LocalLyricsItem>
+    val items: List<LyricsStorage.LocalLyricsItem>,
+    val deletable: LyricsStorage.DeletableLyrics = LyricsStorage.DeletableLyrics()
 )
 
 /** A bounded, per-ViewModel cache of raw data. It never retains UI mapping callbacks. */
@@ -91,5 +92,8 @@ private fun defaultReader(context: Context): suspend (LyricsReadRequest) -> Lyri
         LyricsReadKind.RECENT -> LyricsStorage.listRecentLyrics(context, request.limit)
         LyricsReadKind.SAVED -> LyricsStorage.listAllLyrics(context)
     }
-    LyricsReadSnapshot(target, info, hasWord, request.wordEnabled, request.offset, current, items)
+    val deletable = target?.takeIf { request.kind == LyricsReadKind.CURRENT }?.let {
+        LyricsStorage.deletableLyrics(context, it.title, it.artist, it.durationMs)
+    } ?: LyricsStorage.DeletableLyrics()
+    LyricsReadSnapshot(target, info, hasWord, request.wordEnabled, request.offset, current, items, deletable)
 }

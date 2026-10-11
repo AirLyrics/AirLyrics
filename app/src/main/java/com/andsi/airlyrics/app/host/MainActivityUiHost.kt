@@ -405,9 +405,10 @@ internal class MainActivityUiHost(
         loadLyrics(LyricsReadKind.CURRENT, force) { data ->
             val info = data.info
             deliver(CurrentLyricsUiState(data.media?.toUiInfo(), info?.let { localizedLocalPlainLyricsSource(it) },
-                info?.friendlyTitle, info?.plainSource == LyricsStorage.SOURCE_DOWNLOADED, info != null,
-                info != null && info.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
-                data.wordByWord, data.wordEnabled, data.offset, data.media?.toOperationTarget()))
+                info?.friendlyTitle,
+                data.deletable.all,
+                data.wordByWord, data.wordEnabled, data.offset, data.media?.toOperationTarget(),
+                data.deletable.plain, data.deletable.wordByWord))
         }
 
     override fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState) -> Unit) =
@@ -437,14 +438,16 @@ internal class MainActivityUiHost(
                 duration = it.durationMs
             )
         } == true
+        val deletable = media?.let {
+            LyricsStorage.deletableLyrics(this, it.title, it.artist, it.durationMs)
+        } ?: LyricsStorage.DeletableLyrics()
         return CurrentLyricsUiState(
             media = media?.toUiInfo(),
             localSourceText = localInfo?.let { localizedLocalPlainLyricsSource(it) },
             plainLyricsTitle = localInfo?.friendlyTitle,
-            plainLyricsDownloaded = localInfo?.plainSource == LyricsStorage.SOURCE_DOWNLOADED,
-            hasPlainLyrics = localInfo != null,
-            canRemoveAllLyrics =
-                localInfo != null && localInfo.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
+            canRemoveAllLyrics = deletable.all,
+            canRemovePlainLyrics = deletable.plain,
+            canRemoveWordByWordLyrics = deletable.wordByWord,
             hasLocalWordByWordLyrics = hasLocalWordByWordLyrics,
             wordByWordLyricsEnabled = LyricsSettingsStore.isWordByWordLyricsEnabled(this),
             offsetMs = offsetMs,

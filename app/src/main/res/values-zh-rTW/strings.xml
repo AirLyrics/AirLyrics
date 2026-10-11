@@ -108,7 +108,7 @@
     <string name="ui_delete_saved_lyrics_confirm">刪除「%1$s」？</string>
     <string name="ui_delete_saved_lyrics_action">刪除「%1$s」的已儲存歌詞</string>
     <string name="ui_delete_saved_lyrics_failed">無法刪除歌詞，請檢查資料夾權限</string>
-    <string name="ui_remove_word_by_word_lyrics_message">由此產生的一般歌詞也會一併移除</string>
+    <string name="ui_remove_word_by_word_lyrics_message">同時移除由此產生的一般歌詞</string>
     <string name="ui_display_blocked">顯示被阻止</string>
     <string name="ui_display_control">顯示控制</string>
     <string name="ui_display_scope">顯示範圍</string>

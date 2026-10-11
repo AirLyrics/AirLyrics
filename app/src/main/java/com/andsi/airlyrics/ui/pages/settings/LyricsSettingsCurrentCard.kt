@@ -91,8 +91,8 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             )
         }
 
-        if (state.hasPlainLyrics && !state.hasLocalWordByWordLyrics) {
-            val plainLabel = getString(if (state.plainLyricsDownloaded) R.string.ui_remove_downloaded_lrc else R.string.ui_remove_plain_lrc)
+        if (state.canRemovePlainLyrics) {
+            val plainLabel = getString(R.string.ui_remove_plain_lrc)
             body.addView(actionButton(activity, plainLabel) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_plain_lrc_confirm),
@@ -101,7 +101,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             })
         }
 
-        if (state.hasLocalWordByWordLyrics) {
+        if (state.canRemoveWordByWordLyrics) {
             body.addView(actionButton(activity, getString(R.string.ui_remove_word_by_word_lyrics)) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_word_by_word_lyrics_confirm),
@@ -111,7 +111,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             })
         }
 
-        if (state.canRemoveAllLyrics && state.hasLocalWordByWordLyrics) {
+        if (state.canRemoveAllLyrics) {
             body.addView(actionButton(activity, getString(R.string.ui_remove_all_lyrics)) {
                 confirmDeleteLyrics(
                     label = getString(R.string.ui_remove_all_lyrics_confirm),

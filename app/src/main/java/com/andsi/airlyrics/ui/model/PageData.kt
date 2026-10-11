@@ -22,13 +22,13 @@ internal data class CurrentLyricsUiState(
     val media: CurrentMediaUiInfo?,
     val localSourceText: String?,
     val plainLyricsTitle: String?,
-    val plainLyricsDownloaded: Boolean,
-    val hasPlainLyrics: Boolean,
     val canRemoveAllLyrics: Boolean,
     val hasLocalWordByWordLyrics: Boolean,
     val wordByWordLyricsEnabled: Boolean,
     val offsetMs: Long,
-    val operationTarget: LyricsOperationTarget? = null
+    val operationTarget: LyricsOperationTarget? = null,
+    val canRemovePlainLyrics: Boolean = false,
+    val canRemoveWordByWordLyrics: Boolean = false
 )
 
 internal data class LocalLyricsUiItem(

@@ -165,7 +165,7 @@ internal object LocalLyricsDeleteOps {
                 mode == LyricsStorage.DeleteMode.WORD_BY_WORD &&
                     entry.plainSource == LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
             if (
-                (mode == LyricsStorage.DeleteMode.PLAIN ||
+                ((mode == LyricsStorage.DeleteMode.PLAIN && entry.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK) ||
                     mode == LyricsStorage.DeleteMode.ALL ||
                     deleteGeneratedPlainFallback) &&
                 entry.plainFile.isNotBlank()
@@ -189,7 +189,7 @@ internal object LocalLyricsDeleteOps {
                 mode == LyricsStorage.DeleteMode.WORD_BY_WORD &&
                     entry.plainSource == LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK
             val plainFile = if (
-                mode == LyricsStorage.DeleteMode.PLAIN ||
+                (mode == LyricsStorage.DeleteMode.PLAIN && entry.plainSource != LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK) ||
                 mode == LyricsStorage.DeleteMode.ALL ||
                 deleteGeneratedPlainFallback
             ) {

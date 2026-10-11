@@ -393,6 +393,27 @@ object LyricsStorage {
         }
     }
 
+    /** Stored resources, independent of playback selection and display settings. */
+    data class DeletableLyrics(val plain: Boolean = false, val wordByWord: Boolean = false) {
+        val all: Boolean get() = plain && wordByWord
+    }
+
+    fun deletableLyrics(context: Context, title: String, artist: String, duration: Long): DeletableLyrics = withStorageLock {
+        val song = SongIdentity(title, artist, durationMs = duration)
+        val entries = LyricsIndexStore.read(context).filter { it.isSameSong(song) }
+        val cached = SpicyLyricsCache.forContext(context).read(SpicyLyricsCache.key(title, artist, duration))
+        val cachedWords = cached?.wordByWordLines?.isNotEmpty() == true
+        DeletableLyrics(
+            plain = (cached != null && !cachedWords) || entries.any {
+                it.plainSource != SOURCE_WORD_BY_WORD_FALLBACK && it.plainFile.isNotBlank() &&
+                    LyricsFileStore.managedLyricsExists(context, it.plainFile)
+            } || LyricsFileStore.readLegacyPlainLyrics(context, title, artist, duration) != null,
+            wordByWord = cachedWords || entries.any {
+                it.wordByWordFile.isNotBlank() && LyricsFileStore.managedLyricsExists(context, it.wordByWordFile)
+            }
+        )
+    }
+
     fun deleteLocalLyrics(
         context: Context,
         title: String,
@@ -400,10 +421,15 @@ object LyricsStorage {
         duration: Long,
         mode: DeleteMode = DeleteMode.ALL
     ): Boolean = withStorageLock {
-        val cached = SpicyLyricsCache.forContext(context).delete(SpicyLyricsCache.key(title, artist, duration))
+        val cache = SpicyLyricsCache.forContext(context)
+        val key = SpicyLyricsCache.key(title, artist, duration)
+        val payload = cache.read(key)
+        val cacheMode = if (payload?.wordByWordLines?.isNotEmpty() == true) DeleteMode.WORD_BY_WORD else DeleteMode.PLAIN
+        val cached = (mode == DeleteMode.ALL || (payload != null && mode == cacheMode)) && cache.delete(key)
         val deleted = LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode) || cached
         if (deleted) {
-            ManualLyricsSelectionStore.forget(context, SongIdentity(title, artist, durationMs = duration))
+            // Reading invalidates only a selection whose underlying resource was removed.
+            ManualLyricsSelectionStore.read(context, SongIdentity(title, artist, durationMs = duration))
             markContentChanged()
         }
         deleted
