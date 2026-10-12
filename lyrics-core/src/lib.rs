@@ -96,10 +96,19 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_InternationalTi
     let title = jstring_to_string(&mut env, title);
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
-    let result = std::panic::catch_unwind(|| international::resolve(
-        &title, &artist, &album, duration_ms.max(0) as u64, lookup_id,
-    )).unwrap_or_else(|_| serde_json::json!({"reason":"native_error"}));
-    env.new_string(result.to_string()).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    let result = std::panic::catch_unwind(|| {
+        international::resolve(
+            &title,
+            &artist,
+            &album,
+            duration_ms.max(0) as u64,
+            lookup_id,
+        )
+    })
+    .unwrap_or_else(|_| serde_json::json!({"reason":"native_error"}));
+    env.new_string(result.to_string())
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
 }
 
 // Keep the benchmark and existing native callers on the original-title entry point.
@@ -115,7 +124,15 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNati
     lookup_id: jni::sys::jlong,
 ) -> jstring {
     Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNative_fetchLyricsForSearchJson(
-        env, this, title, artist, album, duration_ms, key, lookup_id, 0,
+        env,
+        this,
+        title,
+        artist,
+        album,
+        duration_ms,
+        key,
+        lookup_id,
+        0,
     )
 }
 

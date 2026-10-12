@@ -300,8 +300,12 @@ pub(crate) fn score_candidate(
 }
 
 /// Experimental metadata aliases: rank every song, without a title acceptance gate.
-pub(crate) fn score_metadata_alias(query: MatchMetadata<'_>, candidate: MatchMetadata<'_>) -> MatchScore {
-    score_candidate_with_policy(query, candidate, true).expect("alias ranking accepts every candidate")
+pub(crate) fn score_metadata_alias(
+    query: MatchMetadata<'_>,
+    candidate: MatchMetadata<'_>,
+) -> MatchScore {
+    score_candidate_with_policy(query, candidate, true)
+        .expect("alias ranking accepts every candidate")
 }
 
 fn score_candidate_with_policy(
