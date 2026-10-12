@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.providers
 
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.*

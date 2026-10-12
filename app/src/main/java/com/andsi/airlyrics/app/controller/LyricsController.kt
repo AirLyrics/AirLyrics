@@ -3,7 +3,7 @@ package com.andsi.airlyrics.app.controller
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsOverwrite

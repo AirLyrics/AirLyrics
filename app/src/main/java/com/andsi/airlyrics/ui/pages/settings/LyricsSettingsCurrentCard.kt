@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.ui.components.TextDisplayPolicy
 import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.R

@@ -1,6 +1,6 @@
 package com.andsi.airlyrics.floating
 
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.lyrics.LyricsSearchCoordinator
 import com.andsi.airlyrics.core.model.SongIdentity
 import android.net.Uri

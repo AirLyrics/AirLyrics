@@ -3,7 +3,7 @@ package com.andsi.airlyrics.lyrics.providers
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 import java.util.concurrent.CancellationException
 import org.json.JSONObject
@@ -37,7 +37,7 @@ internal object InternationalTitleResolver {
             }
         } catch (error: CancellationException) {
             throw error
-        } catch (error: LinkageError) {
+        } catch (_: LinkageError) {
             request.cancellationToken?.throwIfCancellationRequested()
             log("fallback=native_unavailable")
             request

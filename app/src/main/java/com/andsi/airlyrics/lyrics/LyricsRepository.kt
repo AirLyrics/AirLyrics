@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics
 
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.lyrics.providers.InternationalTitleResolver
 import android.content.Context
 import android.util.Log

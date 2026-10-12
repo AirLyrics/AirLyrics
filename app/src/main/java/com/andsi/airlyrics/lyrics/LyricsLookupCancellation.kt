@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics
 
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.CancellationException

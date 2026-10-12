@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.app.controller
 
 import android.net.Uri
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage

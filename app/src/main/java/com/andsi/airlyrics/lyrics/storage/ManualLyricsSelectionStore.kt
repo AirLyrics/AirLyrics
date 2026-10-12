@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.AtomicFile
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import java.io.File
 import org.json.JSONObject

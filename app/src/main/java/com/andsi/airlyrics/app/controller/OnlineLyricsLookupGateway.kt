@@ -2,7 +2,7 @@ package com.andsi.airlyrics.app.controller
 
 import com.andsi.airlyrics.lyrics.LyricsSearchOrigin
 import android.content.Context
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository

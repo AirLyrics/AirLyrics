@@ -1,6 +1,6 @@
 package com.andsi.airlyrics.ui.model
 
-import com.andsi.airlyrics.lyrics.LyricsSearchMode
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 
 /** Immutable target captured with the displayed song, independent of live playback state. */

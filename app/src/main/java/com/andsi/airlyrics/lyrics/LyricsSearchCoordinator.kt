@@ -1,12 +1,17 @@
 package com.andsi.airlyrics.lyrics
 
+import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 import java.util.concurrent.CancellationException
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /** Shared ownership of searches for the same song, including their durable commit. */
 internal object LyricsSearchCoordinator {
-    private val lock = Object()
+    private val lock = ReentrantLock()
+    private val searchesChanged = lock.newCondition()
     private val searches = mutableMapOf<String, MutableList<Lease>>()
     private val epochs = mutableMapOf<String, AtomicLong>()
     private val observers = mutableSetOf<(SongIdentity) -> Unit>()
@@ -20,14 +25,14 @@ internal object LyricsSearchCoordinator {
         internal var active = true
         internal var cancellation: LyricsLookupCancellationRegistration? = null
 
-        fun <T> commit(block: () -> T): T = synchronized(lock) {
+        fun <T> commit(block: () -> T): T = lock.withLock {
             token.throwIfCancellationRequested()
             if (!active) throw CancellationException("Superseded lyrics search")
             block()
         }
 
         override fun close() {
-            val notify = synchronized(lock) {
+            val notify = lock.withLock {
                 if (!active) return
                 active = false
                 val key = song.copy(durationMs = 0L).storageKey()
@@ -35,7 +40,7 @@ internal object LyricsSearchCoordinator {
                     entries.remove(this)
                     if (entries.isEmpty()) searches.remove(key)
                 }
-                lock.notifyAll()
+                searchesChanged.signalAll()
                 origin == LyricsSearchOrigin.Manual
             }
             cancellation?.dispose()
@@ -45,11 +50,11 @@ internal object LyricsSearchCoordinator {
 
     fun begin(song: SongIdentity, token: LyricsLookupCancellationToken, origin: LyricsSearchOrigin, mode: LyricsSearchMode): Lease {
         val retired = mutableListOf<Lease>()
-        val lease = synchronized(lock) {
+        val lease = lock.withLock {
             val key = song.copy(durationMs = 0L).storageKey()
             while (origin == LyricsSearchOrigin.Automatic && searches[key]?.any { it.origin == LyricsSearchOrigin.Manual } == true) {
                 token.throwIfCancellationRequested()
-                lock.wait(100)
+                searchesChanged.await(100, TimeUnit.MILLISECONDS)
             }
             token.throwIfCancellationRequested()
             searches[key]?.firstOrNull { it.token === token }?.let { return it }
@@ -69,16 +74,16 @@ internal object LyricsSearchCoordinator {
         return lease
     }
 
-    fun current(token: LyricsLookupCancellationToken): Lease? = synchronized(lock) {
+    fun current(token: LyricsLookupCancellationToken): Lease? = lock.withLock {
         searches.values.asSequence().flatten().firstOrNull { it.token === token && it.active }
     }
 
-    fun manualMode(song: SongIdentity): LyricsSearchMode? = synchronized(lock) {
+    fun manualMode(song: SongIdentity): LyricsSearchMode? = lock.withLock {
         searches[song.copy(durationMs = 0L).storageKey()]?.firstOrNull { it.origin == LyricsSearchOrigin.Manual }?.mode
     }
 
     fun updateMode(token: LyricsLookupCancellationToken, mode: LyricsSearchMode) {
-        val song = synchronized(lock) {
+        val song = lock.withLock {
             current(token)?.takeIf { it.origin == LyricsSearchOrigin.Manual && it.mode != mode }?.let {
                 it.mode = mode
                 it.song
@@ -88,12 +93,12 @@ internal object LyricsSearchCoordinator {
     }
 
     fun observe(observer: (SongIdentity) -> Unit): AutoCloseable {
-        synchronized(lock) { observers.add(observer) }
-        return AutoCloseable { synchronized(lock) { observers.remove(observer) } }
+        lock.withLock { observers.add(observer) }
+        return AutoCloseable { lock.withLock { observers.remove(observer) } }
     }
 
     private fun notifyObservers(song: SongIdentity) {
-        val listeners = synchronized(lock) { observers.toList() }
+        val listeners = lock.withLock { observers.toList() }
         listeners.forEach { it(song) }
     }
 }
