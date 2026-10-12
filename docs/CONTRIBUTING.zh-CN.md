@@ -86,6 +86,15 @@ Provider 只负责获取和返回歌词数据，不应该直接更新 UI。
 
 ### 本地化规则
 
+感谢为 AirLyrics 贡献本地化的人！
+
+| 语言 | 贡献者 |
+| --- | --- |
+| 繁体中文（台湾，`zh-TW`） | [bingxyz](https://github.com/bingxyz) |
+| 西班牙语（`es`） | [NokiaXP](https://github.com/NokiaXP) |
+
+贡献本地化后，如果后续有新文本加入，会由 AI 补上缺失的翻译。如果有不准确或不自然的地方，也欢迎继续帮忙修正。
+
 修改 UI 文案时，请注意：
 
 - 不要随意修改已有 string key。

@@ -2,98 +2,46 @@
 
 [English](ARCHITECTURE.md) · [简体中文](ARCHITECTURE.zh-CN.md)
 
-AirLyrics 是一个 Android 悬浮歌词应用。Android 应用使用 Kotlin 编写，联网歌词来源由
-Rust 原生核心实现，并通过 JNI 暴露给 Android 端。
+AirLyrics 使用 Kotlin 实现 Android 应用，Rust 核心负责联网歌词查询，通过 JNI 与应用交互。
 
-代码按照职责划分为媒体检测、歌词查询与存储、悬浮窗渲染、设置持久化、本地化、
-界面渲染和应用层协调。
+## 项目结构
 
-## 项目目录
+| 目录 | 职责 |
+| --- | --- |
+| `app/` | 唯一的 Gradle 模块 `:app`，包含 Android 应用和测试 |
+| `lyrics-core/` | Rust 歌词查询、匹配与解析 |
+| `scripts/` | 构建检查和开发工具 |
+| `docs/` | 使用、贡献和架构文档 |
 
-```text
-app/              Android 应用模块和 Kotlin 源码
-lyrics-core/      编译为原生库的 Rust 歌词查询核心
-scripts/          仓库检查和开发辅助脚本
-docs/             用户、贡献、歌词格式和架构文档
-```
+Gradle 通过 `cargo ndk` 构建 `libairlyrics_lyrics.so`，输出到 `app/src/main/jniLibs/`。已有原生库时，可用 `-Pairlyrics.skipRustBuild=true` 跳过 Rust 构建。
 
-Gradle 项目只包含一个 Android 模块 `:app`。`lyrics-core/` 是 Cargo crate，而不是 Gradle
-子项目。App 模块的 `buildRustLyrics` 任务通过 `cargo ndk` 构建该 crate，并将
-`libairlyrics_lyrics.so` 放入 `app/src/main/jniLibs/`。除非传入
-`-Pairlyrics.skipRustBuild=true`，常规 pre-build 任务都会依赖该任务。
+## Android 主要职责
+
+| 包 | 职责 |
+| --- | --- |
+| `app` | 依赖组装、生命周期、ViewModel 和用户操作协调 |
+| `ui` | 页面、组件及面向界面的接口 |
+| `media` | 媒体会话监听、播放器选择和播放状态 |
+| `lyrics` | 歌词查询、导入、解析和存储 |
+| `floating` | 前台服务、悬浮窗控制和歌词渲染 |
+| `settings` / `displayscope` | 设置持久化 / 按应用控制显示范围 |
+| `core` / `design` / `feedback` / `i18n` | 共享模型、设计参数、反馈契约和本地化 |
 
 ## 运行流程
 
 ```text
-音乐应用
-  -> Android 媒体会话和通知生命周期
-  -> MediaNotificationListenerService
-      -> MediaSessionObserver
-          -> CurrentMediaReader
-          -> CurrentMediaBroadcast
-              -> MainReceivers
-                  -> MediaSourceController
-                  -> 主界面局部刷新
-              -> FloatingLyricsService
-                  -> MediaSnapshotGate
-                  -> LyricsLookupRunner
-                      -> LyricsRepository
-                          -> LocalPlainLyricsProvider
-                              -> LyricsStorage
-                          -> NeteasePlainLyricsProvider 或 MusixmatchPlainLyricsProvider
-                              -> JNI
-                              -> lyrics-core
-                          -> 可选本地保存和本地逐字歌词附加
-                  -> FloatingLyricsRenderer
-                  -> FloatingLyricsWindow
+音乐应用 → media → 主界面 / FloatingLyricsService
+                        → LyricsRepository → 本地存储 / JNI → Rust 歌词源
+                        → FloatingLyricsRenderer → 悬浮窗
 ```
 
-主界面和悬浮服务分别消费媒体广播。主界面负责展示状态和处理用户操作；悬浮服务只接受
-所选媒体应用包的更新，负责查询歌词、维护播放时间并刷新悬浮窗。
+主界面处理用户操作，悬浮服务跟随所选播放器更新歌词。旧媒体快照和过期查询结果会被丢弃；手动搜索期间，自动查询不能覆盖其结果。
 
-悬浮歌词处于工作状态时，服务还会通过 `CurrentMediaReader` 定期读取所选媒体会话。
-这样可以补偿延迟或遗漏的监听器更新，并保持所选 session 同步。`MediaSnapshotGate`
-会拒绝序号更旧的快照，避免过期回调让播放状态倒退。
-
-歌词查询采用“最新请求优先”。当歌曲变化或发起新的刷新请求时，`LyricsLookupRunner`
-会取消此前的 Kotlin worker 和对应原生查询；悬浮服务在应用结果前还会核对请求 key。
-
-歌词导入成功后使用另一条持久化变更流程：
-
-```text
-歌词导入
-  -> MainViewModel（viewModelScope）
-  -> LyricsController
-  -> LyricsStorage
-  -> LyricsChangedBroadcast
-      -> MainReceivers -> 刷新受影响界面
-      -> FloatingLyricsService -> 变更歌曲是当前歌曲时重新加载
-```
-
-## Android 端主要包
-
-```text
-app/              依赖组装、生命周期协调、控制器、工作流和 UI 适配器
-core/             依赖稳定的模型、颜色工具和偏好设置抽象
-design/           共享 UI 设计 token
-displayscope/     显示范围策略、能力检查和前台应用观察
-feedback/         不依赖功能包的临时反馈契约和 Toast host
-media/            媒体会话监听、当前媒体模型、广播和媒体来源持久化
-lyrics/           查询、取消、歌词来源、解析、导入、格式化和存储
-floating/         前台服务、服务命令、悬浮窗控制和歌词渲染
-settings/         各功能设置持久化和状态提示策略
-ui/               页面、Snackbar 反馈、组件、导航、主题、UI 模型和异步界面工具
-i18n/             语言选择、本地化 assets 和通用值格式化
-i18n/lyrics/      歌词错误和存储值的文案适配
-```
-
-临时反馈由交互界面负责：主 Activity 使用带锚点的 Snackbar，悬浮窗 Service 使用 Toast；
-各自的依赖组装入口向两者提供同一个状态提示策略。
+导入、编辑或删除歌词后，通过 `LyricsChangedBroadcast` 通知界面和悬浮服务刷新。跨组件操作使用专用广播或命令对象，避免重复定义 action 和 extra。
 
 ## 包边界
 
-以下允许依赖由 `scripts/architecture/policy.json` 生成。它是源码检查、JVM 依赖检查、广播
-协议归属和文档表格的统一规则来源。表格列出允许的依赖，不代表每条依赖当前都被使用：
+依赖规则由 `scripts/architecture/policy.json` 维护，以下为自动生成的允许依赖表：
 
 <!-- architecture-policy:start -->
 ```text
@@ -112,255 +60,35 @@ app          -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics,
 ```
 <!-- architecture-policy:end -->
 
-箭头表示“允许依赖”。符号归属于匹配最精确的已登记分组：允许 `i18n` 不代表允许
-`i18n.lyrics`。具体符号的授权包含其嵌套类型和成员，不包含名称相近的其他类型。
-生成的 `R`、`BuildConfig` 和外部平台、库类型未列出。
+- `app` 负责组装功能包；`ui` 通过接口获取数据和操作，不直接访问业务实现或设置存储。
+- `lyrics` 与 `media` 互不依赖；`floating` 可以协调二者，但不依赖主界面。
+- 授权按最精确的分组匹配，允许 `i18n` 不等于允许 `i18n.lyrics`。接口也不能暴露被禁止的实现类型。
 
-主要边界规则如下：
-
-- `core/` 和 `feedback/` 不依赖其他项目包；`design/` 只依赖稳定的 `core/` 模型。
-- `lyrics/` 与 `media/` 互不依赖，也不依赖 `app/`、`floating/`、`settings/` 或 `ui/`。
-- `ui/` 不导入具体的媒体、歌词、设置或悬浮窗实现；反馈显示策略和调色板由 `app/` 注入，
-  页面通过 `ui/model/` 下的接口接收面向界面的数据和操作。
-- `floating/` 可以协调媒体、歌词和设置并使用无功能依赖的反馈 host，但不依赖主应用外壳或
-  UI 页面。
-- `app/` 是允许连接所有功能包的依赖组装层。
-
-`displayscope` 不依赖其他项目包，由 `app` 和 `floating` 使用。通用 `i18n` 不依赖歌词；
-`i18n.lyrics` 只允许访问表格列出的歌词错误类型和存储门面。存储门面的授权用于其嵌套数据
-类型和来源常量，属于类级别授权，不能保证每个方法调用都合理；代码审查仍需确保适配器只做
-文案转换。`lyrics` 不得反向依赖这两个 i18n 分组。
-UI 可以使用稳定值模型和反馈契约，但不能访问偏好存储或具体 Toast 实现。接口的参数、
-返回值也不能暴露被禁止的实现类型。
-
-使用 JDK 17 和 Python 3.10+ 运行完整检查：
+使用 JDK 17 和 Python 3.10+ 检查源码、JVM 依赖及规则一致性：
 
 ```bash
 ./scripts/check_architecture_boundaries.sh
-# 等价 Gradle 入口，也接入了 :app:check
-./gradlew :app:checkArchitecture -Pairlyrics.skipRustBuild=true
-# 不编译的快速预检查，不能替代完整检查
-./scripts/check_architecture_boundaries.sh --source-only
 ```
 
-快速检查对 Kotlin/Java 的导入和全限定代码引用进行词法扫描，包含别名和 Kotlin 字符串模板
-中的表达式；注释和普通字符串内容不产生依赖。完整检查先构建 debug 项目类，再通过 JDK
-`jdeps` 检查编译后的类引用，包括类型推断、泛型签名和继承。输入来自 Gradle 编译任务声明的
-产物，不读取任意缓存 jar。测试和第三方类不纳入检查；缺失项目类、未登记包及空输入都会
-失败。编译器生成的辅助类仍参与检查。源码违规定位到文件和行，JVM 违规定位到引用方类名。
-实际依赖图中的循环，以及规则允许关系本身引入的循环，都会被拒绝。
+`--source-only` 仅用于快速预检查。新增包或调整依赖时，修改规则并填写理由，再用 `--update-docs` 同步中英文表格。检查不覆盖反射字符串、原生代码和外部库内部实现，仍需代码审查。
 
-两层检查互补：`jdeps` 不报告全部注解属性或仅存在于源码的类型别名，因此源码检查不能省略。
-反射字符串、原生代码及外部库内部实现不在检查范围内。静态边界检查也不能替代职责和数据流
-方面的代码审查。
+## 状态与存储
 
-调整边界时，登记分组及允许的使用方；按需要将授权限制到子包或具体符号，并填写理由。
-新顶层包在登记前不能通过检查。当前登记 main/debug 的 Java、Kotlin 源码目录；新增生产
-源码目录（例如 release 专用目录）也必须登记。`test` 和 `androidTest` 明确排除，因为测试可以
-组装多个层。不提供违规基线或源码内豁免。运行检查器样例测试和完整检查，
-并同步两种语言的规则表格：
+- `MainActivity` 创建 `MainGraph` 组装依赖；`MainViewModel` 管理界面状态，`SavedStateHandle` 保存需要恢复的操作，UI effect 交由 `MainGraph` 执行。
+- `LyricsStorage` 统一管理应用目录或 SAF 自定义目录中的歌词和索引。写入串行执行；逐字歌词与生成的普通 LRC 协调更新，失败时尝试回滚。
+- 悬浮窗的“期望显示”与实际可见性分开保存，暂停、锁屏或显示范围限制不会清除用户的开启意图。
+- 设置通过 `settings/store/` 读写；界面文案使用 Android 字符串资源，较长的帮助和更新记录放在 `assets/`。
 
-```bash
-python3 -B -m unittest discover -s scripts/architecture -p 'test_*.py'
-./scripts/check_architecture_boundaries.sh --update-docs
-```
+## 歌词来源限制与匹配
 
-普通检查只读；任一文档的生成表格过期都会失败。完整 Gradle 检查同时运行检查器样例测试，
-CI 在 JVM 单元测试前执行完整检查。
+### Spicy Lyrics
 
-## 应用内通信协议
+Spicy 支持普通和逐字歌词，需手动启用。歌词和编辑内容仅保留在应用内，获取 30 天后到期，不提供文件导出、分享或备份。显示时保留来源和贡献者署名；请求受限流约束。具体要求见 [Spicy API 使用条款](https://developers.spicylyrics.org/terms)。
 
-跨组件通信由专用协议对象负责。发送方和接收方不得各自重复定义原始 action 或 extra 名称。
+构建时，在未跟踪的 `local.properties` 或用户 Gradle 配置中设置 `airlyrics.spicy.clientKey`，或使用环境变量 `AIRLYRICS_SPICY_CLIENT_KEY`。使用已启用客户端访问的 `sl_pk_` key，不要使用 `sl_sk_` secret key 或将实际 key 提交到仓库。未配置时，Spicy 显示为不可用。
 
-```text
-CurrentMediaBroadcast
-负责媒体更新和媒体来源丢失广播。MediaNotificationListenerService 发送；
-MainReceivers / MediaSourceController 与 FloatingLyricsService 分别消费。
+### 歌词匹配
 
-FloatingServiceCommand
-负责通过 startForegroundService 或 PendingIntent 发送给 FloatingLyricsService 的命令。
-调用方构造有类型的命令对象，服务端也通过同一对象解析命令。
+手动导入优先于缓存和联网搜索。在线来源按所选优先级查询，共用歌名、歌手、时长和专辑评分；找不到时逐步放宽条件，因此命中不保证是同一录音版本。Spicy 通过 Spotify 搜索候选歌曲，再获取歌词；没有逐字歌词时可保留普通同步歌词。
 
-FloatingWindowStateBroadcast
-负责悬浮窗可见性、锁定和触摸穿透状态广播。FloatingLyricsService 发送真实窗口状态，
-MainReceivers / FloatingController 据此同步主界面。
-
-LyricsChangedBroadcast
-负责按 SongIdentity 标识持久歌词变更。LyricsController 在导入成功后发送；主界面进行刷新，
-悬浮服务只在变更歌曲为当前歌曲时重新加载。
-
-LanguageChangedBroadcast
-在 Android 12L 及以下使用 AppCompat 切换语言后，通知运行中的服务刷新文案。
-```
-
-这些广播限定在应用包内，并以 not exported 方式注册。前台通知由
-`FloatingServiceNotification` 创建；通知操作通过 `FloatingServiceCommand` 构造
-`PendingIntent`，再回到 `FloatingLyricsService.handleCommand`。
-
-`AppLocalProtocolGuardTest` 从同一份架构规则读取协议所有者文件，检查应用内 action 字符串的归属。
-
-## App 外壳与 UI 边界
-
-`MainActivity` 创建 `MainGraph`，并通过 `viewModels` 获取 `MainViewModel`。
-
-`MainViewModel` 持有 `MainScreenState`，使用 `SavedStateHandle` 保存导航、搜索和待处理的歌词
-导入状态。歌词导入、删除、联网查询、目录校验和字体导入运行在 `viewModelScope` 中。权限请求、
-文件选择和对话框通过 `MainUiEffect` 交给 `MainGraph` 处理。
-
-`MainGraph` 组装控制器、Activity Result launcher、广播接收器、UI host 和渲染器，并根据
-ViewModel 的状态与 effect 更新界面。
-
-```text
-MainUiActions -> MainViewModel / Controller
-MainViewModel -> MainScreenState -> MainGraph -> Renderer
-MainViewModel -> MainUiEffect    -> MainGraph -> Android UI
-```
-
-应用层目录：
-
-```text
-controller/       媒体、歌词和悬浮窗操作
-contracts/        应用层依赖接口
-host/             页面数据与操作适配
-lifecycle/        Activity Result 和广播注册
-platform/         Android 权限与导航
-render/           主界面构建与刷新
-state/            待处理操作模型
-viewmodel/        主界面状态与一次性 effect
-workflow/         对话框与文档权限流程
-```
-
-`ui/pages/` 通过 `MainUiHost` 读取页面数据并调用 `MainUiActions`；`app/host/` 负责连接页面、
-控制器和存储。
-
-## 媒体检测
-
-`MediaNotificationListenerService` 是通知访问权限的边界。Android 通知变化会触发防抖后的
-媒体会话重新扫描；`MediaSessionObserver` 则监听活跃 session 变化，以及 controller 的
-metadata 和播放状态回调。
-
-Observer 为每个媒体 session token 注册一个回调，并为每个媒体应用包发布最合适的可用
-controller。`CurrentMediaReader` 维护 Observer、主界面和悬浮服务共用的选择规则：依次优先
-有标题且正在播放、有标题、正在播放、有 metadata，以及第一个可用 controller。
-
-`CurrentMediaInfo` 包含来源包名、歌曲 metadata、播放状态、估算位置和单调递增的快照序号。
-`CurrentMediaBroadcast` 负责在 Android 组件之间传递该模型。
-
-`MediaSourceStore` 持久化用户选中的应用包名。当多个播放器同时活跃时，该选择会限定
-媒体展示、歌词导入与删除，以及悬浮服务接收的更新。
-
-## 歌词查询
-
-`LyricsRepository` 是统一查询入口。主界面的歌词操作由 `MainViewModel` 调度，
-`LyricsController` 执行存储和查询，`MainLyricsWorkflow` 负责导入选择与覆盖确认。
-所选媒体变化或手动刷新歌词时，悬浮服务会调用该仓库。
-
-调用方将 `LyricsSettings` 值传入仓库，因此 `lyrics/` 不依赖设置存储实现。常规查询顺序为：
-
-1. 读取本地导入或此前缓存的普通歌词。
-2. 本地歌词不存在且允许联网查询时，调用选中的联网歌词来源。
-3. 开启自动保存或强制保存时，将成功的联网结果保存到本地。
-4. 开启逐字显示且存在本地逐字数据时，将逐字时间信息附加到结果。
-
-除非请求明确跳过本地查询，否则本地普通歌词始终优先。存在逐字歌词时，联网自动保存不会
-替换普通歌词。
-
-逐字歌词以本地导入为主。导入后会生成普通 LRC，供普通显示模式回退使用；编辑逐字歌词会
-重新生成该文件，移除逐字歌词时，如果普通歌词仍是自动生成版本，也会一并移除。同一首歌
-不能同时导入一份独立维护的普通 LRC 和一份逐字 LRC。
-
-## 原生歌词核心
-
-`NeteasePlainLyricsProvider` 和 `MusixmatchPlainLyricsProvider` 将 Kotlin provider 协议
-适配到 JNI。`LyricsNativeLibrary` 加载 `libairlyrics_lyrics.so`，各来源的 JNI 对象将歌曲
-metadata、翻译语言和原生查询 ID 传入 Rust 核心。
-
-Rust 核心负责搜索并评分候选歌曲、获取普通与翻译 LRC，然后返回包含稳定成功和错误字段的
-JSON 结果。Kotlin 将 JSON 映射为 `LyricsProviderResult` 或有类型的
-`LyricsLookupException`。取消 ID 允许新请求在原生查询的网络阶段之间终止旧任务。
-
-`lyrics-core/testdata/native-contract/` 下的 Rust 与 Kotlin 共用契约 fixture 会验证原生
-结果结构。
-
-## 歌词存储
-
-`LyricsStorage` 是本地歌词持久化的公共 facade。具体实现按路径、文件 I/O、文件命名、
-索引访问、列表、编辑、删除、普通歌词和逐字歌词拆分为专用辅助类。
-
-默认后端是 App 专属文件目录；用户选择的目录通过 Android Storage Access Framework
-使用可持久化的读写权限。受管理歌词位于 `lyrics/` 目录，`lyrics_index.json` 记录其索引。
-
-`SongIdentity` 统一规范化歌曲匹配和稳定存储 key。所有存储操作通过 facade 串行执行，
-避免并发导入交错修改索引与文件。逐字歌词导入会将逐字时间数据、自动生成的普通歌词和
-索引作为一次协调操作；开始前会保存现有状态，后续写入失败时尝试回滚。编辑逐字歌词时，
-也会在持有同一存储锁的情况下重新生成普通歌词。
-
-最近歌词列表和编辑也统一经过 facade，UI 不直接修改索引或歌词文件。
-
-## 悬浮歌词
-
-`FloatingLyricsService` 是前台服务的协调入口。主类持有共享运行状态，命令处理、所选媒体
-观察、歌词查询、暂停可见性、通知快捷控制和协议 key 分别拆分到专用文件。
-
-服务本身不实现媒体 session 选择，而是使用 media 层的 `CurrentMediaReader`，并通过
-`MediaSourceStore` 过滤所有更新。持久化的“期望显示”状态与真实窗口可见性分开维护，
-真实状态通过 `FloatingWindowStateBroadcast` 报告给主界面。
-
-`FloatingLyricsWindow` 负责 `WindowManager` 操作，包括创建、移除、位置保存、样式应用、
-拖动、锁定和触摸穿透 flag。窗口操作失败后会收敛为隐藏状态，并广播该真实状态。
-
-`FloatingLyricsRenderer` 负责 LRC 时间轴、播放位置估算、歌词偏移、当前与相邻歌词选择、
-原文/翻译显示模式、切行动画和逐字高亮。
-
-开启自动隐藏/显示后，歌曲暂停会暂时移除窗口，但不会清除用户的“期望显示”设置。
-所选媒体观察仍会继续，因此恢复播放时可以重新显示窗口。
-
-Android 10+ 的可选“显示范围”功能通过 `UsageEvents` 重建可见 Activity：Activity 在 resumed
-或 paused 后保持可见，直到 stopped。任一所选包名可见时，`DisplayScopePolicy` 允许显示窗口；
-使用情况访问被撤销时会收敛为隐藏，但服务保留“期望显示”，以便所选应用出现后自动恢复。
-
-## 设置
-
-各功能设置通过 `settings/store/` 下的专用 store 读写：
-
-```text
-AppSettingsStore             全局 App 和状态提示行为
-FloatingLyricsStyleStore     悬浮窗样式、行为、位置和预览状态
-DisplayScopeStore            可选应用白名单与启用状态
-LyricsOffsetStore            按歌曲保存的时间偏移
-LyricsSettingsStore          歌词查询和显示偏好
-QuickFloatingStore           持久化的悬浮窗期望显示状态
-ThemeSettingsStore           主界面主题
-```
-
-`AppNightMode` 会在 Activity 创建前，通过 AppCompat DayNight 应用已保存的明暗模式；没有明确
-选择时跟随系统。DayNight 的有效配置与品牌 `AirLyricsTheme` 调色板因此使用同一明暗状态。
-
-UI 页面不直接访问裸露的 `SharedPreferences` key，也不读取具体的设置、歌词存储或媒体数据源。
-共享设置值模型位于 `core/model/`，让不同功能包可以交换稳定值，而无需依赖彼此的 store。
-
-## 本地化
-
-较短的界面文案存放在 Android string resource 中，较长的帮助和更新记录文本存放在
-`assets/` 下，并按照当前语言加载。
-
-`LanguageSettingsStore` 持久化跟随系统、English 或简体中文模式，并应用到 Activity 和
-Service。`i18n/` 下的其他辅助类负责格式化媒体状态、设置值、查询错误、歌词偏移和悬浮样式名称。
-
-## 架构保障
-
-- `scripts/check_architecture_boundaries.sh` 检查源码及 JVM 依赖、分组登记、循环和规则与文档的一致性。
-- `AppLocalProtocolGuardTest` 防止应用内 action 字符串离开协议所有者。
-- 原生结果契约测试确保 Rust JSON 与 Kotlin 解析保持一致。
-- 存储原子性、歌曲标识、最新结果门控和悬浮服务生命周期行为由对应的单元测试、
-  Robolectric 测试和 instrumentation 测试覆盖。
-
-## Spicy Lyrics
-
-[独立歌词源、私有缓存及有效期设计](spicy-lyrics.md)。来源限制与署名随完整歌词结果传递；原有普通歌词源接口名称保留为兼容别名。
-
-## 歌词匹配
-
-[统一查询与候选匹配](lyrics-matching.md) 由 `lyrics-core/src/matching.rs` 负责。四个在线源都将接口元数据交给该模块；各源只保留传输、请求预算与歌词解析等接口差异。
-
-“国际标题搜索”是单次手动搜索模式：LyricsRepository 在调用歌词源前统一通过 Apple 商店解析标题，再复用共用搜索与评分链路。搜索别名与用于保存的原歌曲身份分离。参见[歌词匹配说明](lyrics-matching.md#manual-international-title-search)。
+“国际标题搜索”会先尝试解析国际标题，再沿用相同的匹配流程，不改变本地保存时的歌曲身份。实现见 `lyrics-core/src/matching.rs`，详细说明见[歌词匹配](lyrics-matching.md)。

@@ -103,4 +103,4 @@ settings.
 
 For other known issues, search [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues).
 
-For key configuration and storage details, see [Spicy Lyrics integration](spicy-lyrics.md).
+For key configuration and storage details, see [Spicy Lyrics](ARCHITECTURE.md#spicy-lyrics).

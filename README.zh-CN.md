@@ -38,10 +38,10 @@
 
 ## 项目状态
 
-AirLyrics 目前已可用于日常听歌，仍在持续维护和改进。
+AirLyrics 目前已可用于日常听歌，仍在持续维护和改进。(更新可能有点慢，但我有在维护！)
 
 不同 Android 版本、设备厂商和音乐应用可能存在兼容性差异。
-如果遇到问题，或有想要的功能，非常欢迎提交 [Issue](https://github.com/AirLyrics/AirLyrics/issues)。
+如果遇到问题，或有想要的功能，非常欢迎提交，项目的很多功能都是靠大家的反馈形成的。 [Issue](https://github.com/AirLyrics/AirLyrics/issues)。
 
 ---
 
@@ -52,7 +52,7 @@ AirLyrics 目前已可用于日常听歌，仍在持续维护和改进。
 3. 播放音乐，并在 AirLyrics 中手动选择对应的媒体源。
 4. 打开 **悬浮窗** 页面，点击底栏的 **显示**。
 
-更多设置和常见问题见[使用说明书](docs/USER_GUIDE.zh-CN.md)。
+更多设置和常见问题见[使用说明书](docs/USER_GUIDE.zh-CN.md)，里面还包含了可能常见的一些问题。
 
 ---
 
