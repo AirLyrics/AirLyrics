@@ -8,6 +8,8 @@ import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
 import com.andsi.airlyrics.R
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,21 +34,22 @@ class MainActivityRotationInstrumentedTest {
             for ((index, orientation) in listOf(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE).withIndex()) {
-                scenario.onActivity { it.requestedOrientation = orientation }
+                awaitActivity(scenario) { it.requestedOrientation = orientation }
                 val expected = if (orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) Configuration.ORIENTATION_PORTRAIT else Configuration.ORIENTATION_LANDSCAPE
-                var matched = false
-                val deadline = System.nanoTime() + 10_000_000_000L
-                while (!matched && System.nanoTime() < deadline) {
-                    instrumentation.waitForIdleSync()
-                    scenario.onActivity {
-                        val root = it.findViewById<View>(android.R.id.content)
-                        matched = it.resources.configuration.orientation == expected && root.width > 0 && root.height > 0 &&
-                            !root.isLayoutRequested && (if (expected == Configuration.ORIENTATION_LANDSCAPE) root.width > root.height else root.height > root.width)
+                awaitActivity(
+                    scenario,
+                    "Requested orientation $expected was not applied",
+                    ready = { activity ->
+                        val root = activity.findViewById<View>(android.R.id.content)
+                        activity.resources.configuration.orientation == expected &&
+                            root.width > 0 && root.height > 0 && !root.isLayoutRequested &&
+                            (if (expected == Configuration.ORIENTATION_LANDSCAPE) {
+                                root.width > root.height
+                            } else {
+                                root.height > root.width
+                            })
                     }
-                    if (!matched) Thread.sleep(50)
-                }
-                assertTrue("Requested orientation was not applied", matched)
-                scenario.onActivity { activity ->
+                ) { activity ->
                     val root = activity.findViewById<View>(android.R.id.content)
                     val target = descendants(root).filterIsInstance<TextView>()
                         .filter { it.text.toString() == activity.getString(R.string.ui_settings) && it.isShown }
@@ -82,21 +85,21 @@ class MainActivityRotationInstrumentedTest {
             shell("settings put system user_rotation 0")
             shell("wm density 160")
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-                scenario.onActivity { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+                awaitActivity(scenario) { it.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
                 val cases = listOf(Triple(320, 640, 1f), Triple(640, 360, 1f), Triple(1200, 800, 1f), Triple(800, 600, 2f), Triple(360, 640, 1.3f))
                 for ((index, dimensions) in cases.withIndex()) {
                     val (width, height, scale) = dimensions
                     shell("wm size ${width}x${height}")
                     shell("settings put system font_scale $scale")
                     awaitLayout(scenario, width, height, scale)
-                    scenario.onActivity { activity ->
+                    awaitActivity(scenario) { activity ->
                         activity.graph.viewModel.selectPage(Page.FLOATING)
                         activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
                         if (index == 3) activity.findViewById<View>(android.R.id.content).layoutDirection = View.LAYOUT_DIRECTION_RTL
                     }
                     instrumentation.waitForIdleSync()
                     SystemClock.sleep(500)
-                    scenario.onActivity { activity ->
+                    awaitActivity(scenario) { activity ->
                         val host = activity.graph.uiHost
                         val root = activity.findViewById<View>(android.R.id.content)
                         host.tabViews.values.forEach { tab ->
@@ -110,7 +113,7 @@ class MainActivityRotationInstrumentedTest {
                 }
                 lateinit var editor: EditText
                 lateinit var editorDialog: Dialog
-                scenario.onActivity { activity ->
+                awaitActivity(scenario) { activity ->
                     val host = activity.graph.uiHost
                     editorDialog = host.showAirDialog("Editor", positiveText = "Save", body = {
                         addView(EditText(activity).apply {
@@ -122,7 +125,7 @@ class MainActivityRotationInstrumentedTest {
                     })
                 }
                 instrumentation.waitForIdleSync()
-                scenario.onActivity {
+                awaitActivity(scenario) {
                     editor.requestFocus()
                     WindowCompat.getInsetsController(editorDialog.window!!, editor).show(WindowInsetsCompat.Type.ime())
                 }
@@ -131,7 +134,7 @@ class MainActivityRotationInstrumentedTest {
                 while (!keyboardVisible && System.nanoTime() < deadline) {
                     SystemClock.sleep(100)
                     instrumentation.waitForIdleSync()
-                    scenario.onActivity {
+                    awaitActivity(scenario) {
                         keyboardVisible = ViewCompat.getRootWindowInsets(editor)?.isVisible(WindowInsetsCompat.Type.ime()) == true
                     }
                 }
@@ -139,7 +142,7 @@ class MainActivityRotationInstrumentedTest {
                 // IME visibility can precede its final inset/layout dispatch.
                 SystemClock.sleep(700)
                 instrumentation.waitForIdleSync()
-                scenario.onActivity {
+                awaitActivity(scenario) {
                     // Very short windows scroll the whole form, including its actions.
                     descendants(editorDialog.window!!.decorView).filterIsInstance<androidx.core.widget.NestedScrollView>()
                         .single().apply {
@@ -148,7 +151,7 @@ class MainActivityRotationInstrumentedTest {
                         }
                 }
                 SystemClock.sleep(500)
-                scenario.onActivity {
+                awaitActivity(scenario) {
                     val save = descendants(editorDialog.window!!.decorView).filterIsInstance<TextView>().single { it.text.toString() == "Save" }
                     val visible = android.graphics.Rect()
                     assertTrue("Save must remain visible above the keyboard", save.getGlobalVisibleRect(visible))
@@ -172,20 +175,45 @@ class MainActivityRotationInstrumentedTest {
     }
 
     private fun awaitLayout(scenario: ActivityScenario<MainActivity>, width: Int, height: Int, scale: Float) {
+        awaitActivity(scenario, "Window did not settle at ${width}x${height}, font $scale", ready = {
+            val display = it.resources.displayMetrics
+            val root = it.findViewById<View>(android.R.id.content)
+            display.widthPixels == width && display.heightPixels <= height &&
+                kotlin.math.abs(it.resources.configuration.fontScale - scale) < 0.01f &&
+                root.width == width && root.height > 0 && !root.isLayoutRequested
+        }) {}
+    }
+
+    private fun awaitActivity(
+        scenario: ActivityScenario<MainActivity>,
+        message: String = "MainActivity did not resume",
+        ready: (MainActivity) -> Boolean = { true },
+        action: (MainActivity) -> Unit
+    ) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val deadline = System.nanoTime() + 10_000_000_000L
-        var matched = false
-        while (!matched && System.nanoTime() < deadline) {
-            instrumentation.waitForIdleSync()
-            scenario.onActivity {
-                val display = it.resources.displayMetrics
-                val root = it.findViewById<View>(android.R.id.content)
-                matched = display.widthPixels == width && display.heightPixels <= height &&
-                    kotlin.math.abs(it.resources.configuration.fontScale - scale) < 0.01f && root.width == width && !root.isLayoutRequested
+        val deadline = SystemClock.uptimeMillis() + 10_000L
+        while (SystemClock.uptimeMillis() < deadline) {
+            var completed = false
+            instrumentation.runOnMainSync {
+                val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+                // Rotation temporarily leaves ActivityScenario without a current Activity.
+                // Check lifecycle and act in one main-thread turn so destruction cannot
+                // occur between the readiness check and onActivity.
+                if (monitor.getActivitiesInStage(Stage.RESUMED).none { it is MainActivity }) {
+                    return@runOnMainSync
+                }
+                scenario.onActivity { activity ->
+                    if (!activity.isFinishing && !activity.isDestroyed &&
+                        monitor.getLifecycleStageOf(activity) == Stage.RESUMED && ready(activity)) {
+                        action(activity)
+                        completed = true
+                    }
+                }
             }
-            if (!matched) SystemClock.sleep(50)
+            if (completed) return
+            SystemClock.sleep(50)
         }
-        assertTrue("Window did not settle at ${width}x${height}, font $scale", matched)
+        throw AssertionError(message)
     }
 
     private fun screenshot(name: String) {
