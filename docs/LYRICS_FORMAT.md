@@ -6,7 +6,7 @@ AirLyrics supports local imports of `.lrc` and `.ttml` files.
 
 ## Plain LRC
 
-Use one timestamp per line:
+One timestamp per line is recommended:
 
 ```lrc
 [00:12.34]This is a lyric line
@@ -132,7 +132,7 @@ The examples above are the recommended forms. This section lists the formats and
 | Word-timed LRC with line and word tags | Word tags are not interpreted; use the word-by-word option | Supported |
 | Line-timed TTML | Supported | Not supported |
 | Word-timed TTML | Supported, flattened to lines | Supported |
-| Mixed line- and word-timed TTML | Supported | Not supported; every visible lyric line needs word timing |
+| Mixed line- and word-timed TTML | Supported | Not supported; every valid lyric line needs word timing |
 | AirLyrics word-timing JSON | Not supported | Compatible; see the structure below |
 
 Prefer `.lrc` and `.ttml` extensions. When the filename and type are inconclusive, the app tries to detect the contents. It does not convert unrelated formats automatically.

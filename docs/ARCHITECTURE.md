@@ -1,4 +1,4 @@
-# Architecture
+# Project Architecture
 
 [English](ARCHITECTURE.md) · [简体中文](ARCHITECTURE.zh-CN.md)
 
@@ -37,7 +37,7 @@ Music app → media → Main UI / FloatingLyricsService
 
 The main UI handles user actions; the floating service follows the selected player. Stale media snapshots and lookup results are discarded. Automatic lookups cannot override an active manual search.
 
-Imports, edits and deletions notify the UI and floating service through `LyricsChangedBroadcast`. Dedicated broadcast and command objects own cross-component actions and extras.
+Imports, edits and deletions notify the UI and floating service through `LyricsChangedBroadcast`. Cross-component actions use dedicated broadcast or command objects to avoid duplicate action and extra definitions.
 
 ## Package boundaries
 
@@ -62,7 +62,7 @@ app          -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics,
 
 - `app` wires feature packages together. `ui` accesses data and operations through interfaces, without depending on feature implementations or settings storage.
 - `lyrics` and `media` are independent. `floating` can coordinate both, but cannot depend on the main UI.
-- Rules use the most specific registered group: allowing `i18n` does not allow `i18n.lyrics`. Interface signatures must also respect these boundaries.
+- Rules use the most specific registered group: allowing `i18n` does not allow `i18n.lyrics`. Interfaces must not expose forbidden implementation types either.
 
 Run the source, JVM dependency and policy checks with JDK 17 and Python 3.10+:
 
@@ -83,7 +83,7 @@ Run the source, JVM dependency and policy checks with JDK 17 and Python 3.10+:
 
 ### Spicy Lyrics
 
-Spicy is an optional source for line and word timing. Lyrics and edits stay inside the app, expire 30 days after acquisition, and cannot be exported, shared as files or backed up. Display source and contributor credits, and respect rate limits. See the [Spicy API terms](https://developers.spicylyrics.org/terms).
+Spicy supports plain and word-by-word lyrics and must be enabled manually. Lyrics and edits stay inside the app, expire 30 days after acquisition, and cannot be exported, shared as files or backed up. Source and contributor credits are preserved when displaying lyrics; requests are subject to rate limits. See the [Spicy API terms](https://developers.spicylyrics.org/terms).
 
 Set `airlyrics.spicy.clientKey` in an untracked `local.properties` or user Gradle properties file, or use `AIRLYRICS_SPICY_CLIENT_KEY`. Use an `sl_pk_` key with client access enabled, never an `sl_sk_` secret key. Do not commit real keys. Without a configured key, Spicy is unavailable.
 
@@ -91,4 +91,4 @@ Set `airlyrics.spicy.clientKey` in an untracked `local.properties` or user Gradl
 
 Manual imports take priority over cached and online lyrics. Selected providers run in priority order and share title, artist, duration and album scoring. Queries broaden when needed, so a match may be a different recording. Spicy searches Spotify for candidates before fetching lyrics; line timing can remain available when word timing is missing.
 
-Manual international-title search resolves an alternative title before using the same matching flow. It preserves the original song identity for storage. See `lyrics-core/src/matching.rs` and the [matching documentation](lyrics-matching.md).
+International title search first tries to resolve an international title, then uses the same matching flow. It preserves the original song identity for storage. See `lyrics-core/src/matching.rs` and the [matching documentation](lyrics-matching.md).

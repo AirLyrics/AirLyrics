@@ -10,44 +10,39 @@ Thank you for reading this guide!
 2. [Select a Player](#select-a-player)
 3. [Use Floating Lyrics](#use-floating-lyrics)
 4. [Lyrics and Local Files](#lyrics-and-local-files)
-5. [Permissions](#permissions)
-6. [Troubleshooting](#troubleshooting)
+5. [Troubleshooting](#troubleshooting)
 
 ## First Launch
 
-1. Open **Settings > System** and enable **Overlay** and **Notification access**. If you want to use
-   notification controls, also enable **Notifications**.
+1. Open **Settings > System** and enable the required permissions.
 2. Start playing music, open **Media**, and manually select the player AirLyrics should follow.
-3. Open **Floating**, then tap **Show** in the bottom bar. Granting overlay permission alone does not
-   display the floating window.
+3. Open **Floating**, then tap **Show** in the bottom bar.
 
 ## Select a Player
 
-Use the **Media** page to choose the player AirLyrics follows. AirLyrics remembers this choice and
-uses that player's current song when searching for, importing, or removing lyrics.
+Use the **Media** page to choose the player AirLyrics follows. AirLyrics remembers this choice, and
+lyrics operations for the current song also follow the selected player.
 
 AirLyrics only attempts to select a player automatically when it starts. After granting notification
 access, please select the player manually, even if it already appears on the **Media** page.
 
-If no player appears, start playing music, check that notification access is enabled, and tap
-**Refresh**.
+If no player appears, check whether a music app is running in the background or notification access
+is enabled.
 
 ## Use Floating Lyrics
 
 - When **Click-through** is enabled, use **Adjustment mode** in the notification to make the window
   draggable and responsive to touch again.
 - **Hide when paused** hides the window when playback is paused and shows it again when playback
-  resumes.
+  resumes. (There may be a slight delay.)
 - **Display scope** (Android 10+) shows the window only while a selected app is visible. Tap
   **Grant usage access**, choose apps with **Choose apps**, then tap **Enable**. Apps in split-screen,
   freeform windows, and picture-in-picture also count as visible.
 - **Display blocked** means floating lyrics are still enabled, but current conditions prevent the
-  window from appearing. It will appear automatically when those conditions clear. While display is
-  blocked, tapping the notification opens AirLyrics, but display and adjustment controls are unavailable.
+  window from appearing. See the troubleshooting section at the bottom.
 - **Lyrics offset** is saved for each song and does not change the original lyrics file.
-- To use **Word-by-word lyrics**, import a local lyrics file or select **Spicy Lyrics** in a build where it is available. When this option is enabled and the
-  current song has word-by-word lyrics, **Highlight color** marks the part of the current line that
-  has already played.
+- **Word-by-word lyrics** supports local imports and the Spicy lyrics source. (I am also trying to find
+  ways to support other lyrics sources, but it is quite likely that I will not be able to.)
 
 ## Lyrics and Local Files
 
@@ -56,36 +51,20 @@ manual import > local cache > online search.
 
 ### Online Lyrics Sources
 
-AirLyrics currently queries one source selected under **Lyrics source**. Each source tries the full
-track information first, then broadens the query and checks other related candidates if the first
-one has no synchronized lyrics. Only lyrics with a valid timeline are used; to improve the hit rate,
-the returned version, artist tags, or duration may not exactly match the current track.
+Multiple online lyrics sources are supported. You can select them and adjust their priority in
+Settings > Lyrics. Each source tries the full track information first, then broadens the query and
+checks other related candidates if the first one has no synchronized lyrics. Only lyrics with a
+valid timeline are used; to improve the hit rate, the returned version, artist tags, or duration may
+not exactly match the current track. If you need more accurate lyrics, just adjust them yourself.
 
-- **NetEase Lyrics**: searches by keywords and tries candidates in relevance order.
-- **Musixmatch**: uses exact matching, general search, and broader matching in sequence.
-- **Spicy Lyrics**: supplies ordinary and word-by-word lyrics. Edits remain inside the app and expire with the lyrics 30 days after acquisition. Source credits appear below the lyrics. Existing installations must select this source explicitly.
-- **LRCLIB**: starts with an exact metadata lookup, then searches by title and artist or title alone.
-
-- Use **Current song lyrics** to import or remove lyrics. **Search online** skips the current
-  plain lyrics cache.
-- Open lyrics from **Recent local lyrics** to check their format, make changes, and save.
+- International title search is mainly meant to fix incorrect matches for non-English songs
+  (especially Japanese and Korean), since these songs use English spellings on the lyrics sources.
+  If you cannot find the right lyrics, you can try this feature.
 - Uninstalling AirLyrics also deletes the default lyrics folder. To use a custom folder, select it
   through the system file picker.
 
-Plain and word-by-word lyrics for the same song cannot be managed independently. Remove any existing
-plain lyrics before importing word-by-word lyrics. AirLyrics then generates a plain LRC file and
-updates or removes it when the word-by-word lyrics are edited or removed.
-
-See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC and TTML examples.
-
-## Permissions
-
-- **Overlay** allows AirLyrics to display the floating window over other apps.
-- **Notification access** allows AirLyrics to detect media playback on the device.
-- The **Notifications** setting enables the floating lyrics notification and its controls. It is separate from
-  notification access.
-- **Usage access** is used only when **Display scope** is enabled, to check whether the selected apps
-  are visible. AirLyrics does not read or upload app content.
+See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC and TTML examples. I generally do not plan to
+add support for more lyrics formats; you can use AI to convert them yourself.
 
 ## Troubleshooting
 
@@ -99,8 +78,7 @@ device being locked, or missing **Overlay** or **Usage access** permissions. Ope
 resume playback, and check the relevant permissions.
 If **Display scope** is the cause, turning it off allows the window to appear in all apps again.
 If **Display scope** is still unreliable, set AirLyrics battery usage to **Unrestricted** in Android
-settings.
+settings. (Checking Don't Kill My App would be even better, but simply removing battery restrictions
+can solve a lot of problems.)
 
 For other known issues, search [GitHub Issues](https://github.com/AirLyrics/AirLyrics/issues).
-
-For key configuration and storage details, see [Spicy Lyrics](ARCHITECTURE.md#spicy-lyrics).

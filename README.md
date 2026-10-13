@@ -39,11 +39,11 @@ playing, with a customizable overlay and support for importing local lyrics.
 
 ## Project Status
 
-AirLyrics is ready for everyday use and is actively maintained.
+AirLyrics is ready for everyday use and is still being maintained and improved. (Updates may be a bit slow, but I am still maintaining it!)
 
 Compatibility may vary depending on the Android version, device manufacturer, and music app.
-If something isn't working or there's a feature you'd like to see, feel free to open an
-[issue](https://github.com/AirLyrics/AirLyrics/issues).
+If something isn't working or there's a feature you'd like to see, you're very welcome to open an
+[issue](https://github.com/AirLyrics/AirLyrics/issues). Many of the project's features have come from your feedback.
 
 ---
 

@@ -94,6 +94,16 @@ Providers only fetch and return lyrics data. They should not update UI directly.
 
 ### Localization rules
 
+Thanks to everyone who has contributed to AirLyrics localization!
+
+| Language | Contributor |
+| --- | --- |
+| Traditional Chinese (Taiwan, `zh-TW`) | [bingxyz](https://github.com/bingxyz) |
+| Spanish (`es`) | [NokiaXP](https://github.com/NokiaXP) |
+
+After a localization contribution, AI will fill in missing translations when new text is added.
+If anything is inaccurate or sounds unnatural, you're welcome to keep helping with corrections.
+
 When changing UI text, please note:
 
 - Do not casually change existing string keys.
