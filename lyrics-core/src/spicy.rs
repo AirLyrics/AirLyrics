@@ -13,8 +13,13 @@ use std::{
 const SEARCH_HASH: &str = "3c9d3f60dac5dea3876b6db3f534192b1c1d90032c4233c1bbaba526db41eb31";
 const UA: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36";
 const MAX_TRACK_CANDIDATES: usize = 4;
+struct CachedTracks {
+    tracks: Vec<Value>,
+    cached_at: u64,
+}
+
 static TOKEN: OnceLock<Mutex<Option<(String, u64)>>> = OnceLock::new();
-static TRACKS: OnceLock<Mutex<HashMap<String, (Vec<Value>, u64)>>> = OnceLock::new();
+static TRACKS: OnceLock<Mutex<HashMap<String, CachedTracks>>> = OnceLock::new();
 static COOLDOWN: OnceLock<Mutex<u64>> = OnceLock::new();
 fn now() -> u64 {
     SystemTime::now()
@@ -354,8 +359,8 @@ async fn resolve(
         .lock()
         .map_err(|_| err("NativeError"))?
         .get(&cache_key)
-        .filter(|(_, at)| now().saturating_sub(*at) < 86400)
-        .map(|(v, _)| v.clone());
+        .filter(|entry| now().saturating_sub(entry.cached_at) < 86400)
+        .map(|entry| entry.tracks.clone());
     let tracks = if let Some(tracks) = cached {
         tracks
     } else {
@@ -378,7 +383,13 @@ async fn resolve(
             if cache.len() >= 256 {
                 cache.clear();
             }
-            cache.insert(cache_key, (tracks.clone(), now()));
+            cache.insert(
+                cache_key,
+                CachedTracks {
+                    tracks: tracks.clone(),
+                    cached_at: now(),
+                },
+            );
         }
         tracks
     };

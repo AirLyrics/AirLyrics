@@ -2242,10 +2242,23 @@ mod tests {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("local listener");
         let address = listener.local_addr().expect("listener address");
         let server = std::thread::spawn(move || {
-            use std::io::{Read, Write};
+            use std::io::{BufRead, BufReader, Read, Write};
             let (mut socket, _) = listener.accept().expect("test request");
-            let mut request = [0u8; 1024];
-            socket.read(&mut request).expect("read request");
+            socket
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .expect("read timeout");
+            let mut reader = BufReader::new((&mut socket).take(16 * 1024));
+            let mut line = String::new();
+            loop {
+                line.clear();
+                assert!(
+                    reader.read_line(&mut line).expect("request headers") > 0,
+                    "request headers ended before the blank line or exceeded 16 KiB"
+                );
+                if line == "\r\n" {
+                    break;
+                }
+            }
             socket
                 .write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
                 .expect("status response");

@@ -1714,7 +1714,7 @@ mod tests {
 
     #[tokio::test]
     async fn service_unavailable_retries_once_after_retry_after() {
-        use std::io::{Read, Write};
+        use std::io::{BufRead, BufReader, Read, Write};
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("local server");
         let address = listener.local_addr().expect("local address");
@@ -1727,8 +1727,16 @@ mod tests {
                 stream
                     .set_read_timeout(Some(Duration::from_secs(2)))
                     .expect("read timeout");
-                let mut buffer = [0; 2048];
-                stream.read(&mut buffer).expect("request headers");
+                let mut reader = BufReader::new((&mut stream).take(16 * 1024));
+                let mut line = String::new();
+                loop {
+                    line.clear();
+                    assert!(reader.read_line(&mut line).expect("request headers") > 0,
+                        "request headers ended before the blank line or exceeded 16 KiB");
+                    if line == "\r\n" {
+                        break;
+                    }
+                }
                 stream.write_all(response.as_bytes()).expect("response");
             }
         });
