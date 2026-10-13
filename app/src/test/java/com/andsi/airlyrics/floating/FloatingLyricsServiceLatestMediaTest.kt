@@ -1,6 +1,13 @@
 package com.andsi.airlyrics.floating
 
 import android.content.Context
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSession
+import com.andsi.airlyrics.media.CurrentMediaReader
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
+import org.robolectric.Shadows.shadowOf
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.LyricsSettings
@@ -62,6 +69,60 @@ class FloatingLyricsServiceLatestMediaTest {
         serviceController = null
         MediaSourceStore.saveSelectedPackage(context, null)
         resetState()
+    }
+
+    // ShadowMediaController exposes a public setter but a protected metadata getter.
+    @Suppress("UsePropertyAccessSyntax")
+    @Test
+    fun neteaseBluetoothLyricChangesKeepLocalWordLyricsWithoutAnotherLookup() {
+        val source = "com.netease.cloudmusic"
+        MediaSourceStore.saveSelectedPackage(context, source)
+        LyricsSettingsStore.setWordByWordLyricsEnabled(context, true)
+        // A word-by-word import also stores a plain fallback for the same song.
+        saveLocalPlainLyrics(OLD_TITLE, "[00:00.00]local words")
+        assertTrue(LyricsStorage.saveWordByWordLyrics(
+            context = context,
+            title = OLD_TITLE,
+            artist = ARTIST,
+            duration = DURATION_MS,
+            wordByWordLines = listOf(WordByWordLine(
+                startMs = 0L,
+                endMs = 10_000L,
+                text = "local words",
+                segments = listOf(WordByWordSegment("local words", 0L, 10_000L))
+            ))
+        ))
+        val controller = Robolectric.buildService(QueuedLookupFloatingLyricsService::class.java)
+            .create().also { serviceController = it }
+        val service = controller.get()
+        val session = MediaSession(context, "netease-local-lyrics")
+        val mediaController = MediaController(context, session.sessionToken)
+        shadowOf(mediaController).setPackageName(source)
+        fun read(lyric: String): CurrentMediaInfo {
+            shadowOf(mediaController).setMetadata(MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, lyric)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "$OLD_TITLE - $ARTIST")
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, OLD_TITLE)
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, ARTIST)
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, DURATION_MS)
+                .build())
+            return requireNotNull(CurrentMediaReader.currentMediaFromController(mediaController))
+        }
+        try {
+            assertTrue(service.showLyrics())
+            assertTrue(service.applyCurrentMediaInfo(read("说再见太难")))
+            service.callbackDispatcher.takeDelivery()()
+            val view = requireNotNull(service.lyricsView)
+            assertEquals("local words", view.text.toString())
+            for (lyric in listOf("谁转身离开", "开始用力去猜")) {
+                assertTrue(service.applyCurrentMediaInfo(read(lyric)))
+            }
+            service.awaitLookupIdle()
+            assertEquals(0, service.callbackDispatcher.pendingDeliveryCount())
+            assertEquals("local words", view.text.toString())
+        } finally {
+            session.release()
+        }
     }
 
     @Test

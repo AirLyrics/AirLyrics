@@ -72,6 +72,41 @@ class MainActivityLyricsImportLifecycleTest {
         resetStorage()
     }
 
+    // ShadowMediaController exposes a public setter but a protected metadata getter.
+    @Suppress("UsePropertyAccessSyntax")
+    @Test
+    fun neteaseDisplayIdentityIsSharedByMediaCardsAndLyricsImportTarget() {
+        installCurrentMedia(SONG)
+        val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+        val mediaController = manager.getActiveSessions(null).single()
+        shadowOf(mediaController).apply {
+            setPackageName("com.netease.cloudmusic")
+            setMetadata(MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, "说再见太难")
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "再见太难 - 利得汇")
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, "再见太难")
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, "利得汇")
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, 288417L)
+                .build())
+        }
+        MediaSourceStore.saveSelectedPackage(context, "com.netease.cloudmusic")
+        val activity = launchActivity().get()
+        activity.graph.viewModel.selectPage(Page.MEDIA)
+        activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
+        val mediaTexts = activity.visibleTexts()
+        assertTrue(mediaTexts.contains("再见太难"))
+        assertTrue(mediaTexts.contains("再见太难 - 利得汇"))
+        assertTrue(mediaTexts.none { it.contains("说再见太难") })
+
+        showLyricsSettings(activity)
+        awaitAppIo(activity)
+        val target = requireNotNull(activity.graph.viewModel.currentMediaInfo())
+        assertEquals("再见太难", target.title)
+        assertEquals("利得汇", target.artist)
+        assertTrue(activity.visibleTexts().contains("再见太难 - 利得汇"))
+        assertTrue(activity.visibleTexts().none { it.contains("说再见太难") })
+    }
+
     @Test
     fun pendingImport_restoresIntoNewViewModelFromSavedInstanceState() {
         val originalController = launchActivity()

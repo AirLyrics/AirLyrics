@@ -2,9 +2,9 @@ package com.andsi.airlyrics.ui.pages.media
 
 import com.andsi.airlyrics.R
 
-import android.media.MediaMetadata
 import android.media.session.PlaybackState
 import android.view.View
+import com.andsi.airlyrics.media.resolveMediaSongMetadata
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
@@ -28,11 +28,11 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
         card(activity) {
             addView(label(activity, getString(R.string.ui_current_media), colorTextMuted))
             if (selectedController != null) {
-                val title = selectedController.metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
+                val song = resolveMediaSongMetadata(selectedController.packageName, selectedController.metadata)
+                val title = song.title
                     .orEmpty()
                     .ifBlank { getString(R.string.ui_unknown_song) }
-                val artist = selectedController.metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST)
-                    ?: selectedController.metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
+                val artist = song.artist
                     ?: getString(R.string.ui_unknown_artist)
                 val appName = getAppName(selectedController.packageName)
                 val state = getPlaybackStateText(selectedController.playbackState?.state)

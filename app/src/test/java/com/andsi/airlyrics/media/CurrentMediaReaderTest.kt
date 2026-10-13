@@ -1,5 +1,15 @@
 package com.andsi.airlyrics.media
 
+import android.content.Context
+import android.media.MediaMetadata
+import android.media.session.MediaController
+import android.media.session.MediaSession
+import android.media.session.MediaSessionManager
+import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.app.viewmodel.MainForegroundStateReader
+import com.andsi.airlyrics.floating.playbackLyricsKey
+import org.junit.Assert.assertNotEquals
+import org.robolectric.Shadows.shadowOf
 import android.media.session.PlaybackState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -9,6 +19,50 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class CurrentMediaReaderTest {
+    // ShadowMediaController exposes a public setter but a protected metadata getter.
+    @Suppress("UsePropertyAccessSyntax")
+    @Test
+    fun neteaseLyricChangesKeepSongIdentityAndForegroundSnapshotStable() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val session = MediaSession(context, "netease-metadata")
+        val controller = MediaController(context, session.sessionToken)
+        val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+        shadowOf(controller).setPackageName("com.netease.cloudmusic")
+        shadowOf(manager).addController(controller)
+        fun metadata(lyric: String, title: String = "再见太难", artist: String = "利得汇") =
+            MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, lyric)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, "$title - $artist")
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, artist)
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, 288417L)
+                .build()
+        try {
+            shadowOf(controller).setMetadata(metadata("说再见太难"))
+            val first = requireNotNull(CurrentMediaReader.currentMediaFromController(controller))
+            val foreground = MainForegroundStateReader(context).read().media
+            assertEquals("再见太难", first.title)
+            assertEquals("利得汇", first.artist)
+            assertEquals(first.title, foreground.players.single().title)
+            assertEquals(first.artist, foreground.players.single().artist)
+
+            for (lyric in listOf("谁转身离开", "这城市不该留我一个人独白", "")) {
+                shadowOf(controller).setMetadata(metadata(lyric))
+                assertEquals(controller, CurrentMediaReader.selectedController(listOf(controller), controller.packageName))
+                val next = requireNotNull(CurrentMediaReader.currentMediaFromController(controller))
+                assertEquals(first.toSongIdentity(), next.toSongIdentity())
+                assertEquals(first.playbackLyricsKey(), next.playbackLyricsKey())
+                assertEquals(foreground, MainForegroundStateReader(context).read().media)
+            }
+            shadowOf(controller).setMetadata(metadata("从未将你的贴相", "偿还", "王菲"))
+            val switched = requireNotNull(CurrentMediaReader.currentMediaFromController(controller))
+            assertNotEquals(first.playbackLyricsKey(), switched.playbackLyricsKey())
+        } finally {
+            shadowOf(manager).clearControllers()
+            session.release()
+        }
+    }
+
     @Test
     fun estimatedPositionMs_handlesPlaybackStatesAndSpeed() {
         val cases = listOf(

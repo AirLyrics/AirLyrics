@@ -1,12 +1,12 @@
 package com.andsi.airlyrics.app.viewmodel
 
 import android.content.Context
-import android.media.MediaMetadata
 import android.provider.Settings
 import com.andsi.airlyrics.app.platform.PermissionHelper
 import com.andsi.airlyrics.floating.FloatingWindowRuntimeState
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
+import com.andsi.airlyrics.media.resolveMediaSongMetadata
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
@@ -50,16 +50,11 @@ internal class MainForegroundStateReader(
         return MediaUiSnapshot(
             selectedPackage = MediaSourceStore.getSelectedPackage(appContext),
             players = controllers.map { controller ->
+                val song = resolveMediaSongMetadata(controller.packageName, controller.metadata)
                 MediaPlayerUiSnapshot(
                     packageName = controller.packageName,
-                    title = controller.metadata
-                        ?.getString(MediaMetadata.METADATA_KEY_TITLE)
-                        .orEmpty(),
-                    artist = controller.metadata
-                        ?.getString(MediaMetadata.METADATA_KEY_ARTIST)
-                        ?: controller.metadata
-                            ?.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-                            .orEmpty(),
+                    title = song.title.orEmpty(),
+                    artist = song.artist.orEmpty(),
                     playbackState = controller.playbackState?.state
                 )
             }

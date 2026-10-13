@@ -69,9 +69,7 @@ object CurrentMediaReader {
     }
 
     private fun MediaController.hasMediaTitle(): Boolean {
-        return metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
-            ?.isNotBlank()
-            ?: false
+        return !resolveMediaSongMetadata(packageName, metadata).title.isNullOrBlank()
     }
 
     private fun MediaController.toCandidate(): ControllerCandidate<MediaController> {
@@ -118,12 +116,11 @@ object CurrentMediaReader {
 
     fun MediaController.toCurrentMediaInfo(): CurrentMediaInfo? {
         val metadata = this.metadata ?: return null
-        val title = metadata.getString(MediaMetadata.METADATA_KEY_TITLE).orEmpty().trim()
+        val song = resolveMediaSongMetadata(packageName, metadata)
+        val title = song.title.orEmpty().trim()
         if (title.isBlank()) return null
 
-        val artist = metadata.getString(MediaMetadata.METADATA_KEY_ARTIST)
-            ?: metadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ARTIST)
-            ?: ""
+        val artist = song.artist.orEmpty()
         val state = this.playbackState
 
         return CurrentMediaInfo(
