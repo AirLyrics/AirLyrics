@@ -4,9 +4,7 @@ on:
   pull_request:
     paths:
       - 'lyrics-core/**'
-      - 'app/src/androidTest/**'
-      - 'app/src/main/java/com/andsi/airlyrics/core/model/SongIdentity.kt'
-      - 'app/src/main/java/com/andsi/airlyrics/lyrics/storage/**'
+      - 'app/src/**'
       - 'app/build.gradle.kts'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
@@ -14,17 +12,13 @@ on:
       - 'gradle/libs.versions.toml'
       - 'gradle/wrapper/**'
       - 'gradlew'
-      - 'app/src/main/jniLibs/**'
-      - 'app/src/main/java/com/andsi/airlyrics/lyrics/providers/**Native*.kt'
       - '.github/workflows/full-android-rust-build.yml'
   push:
     branches:
       - main
     paths:
       - 'lyrics-core/**'
-      - 'app/src/androidTest/**'
-      - 'app/src/main/java/com/andsi/airlyrics/core/model/SongIdentity.kt'
-      - 'app/src/main/java/com/andsi/airlyrics/lyrics/storage/**'
+      - 'app/src/**'
       - 'app/build.gradle.kts'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
@@ -32,8 +26,6 @@ on:
       - 'gradle/libs.versions.toml'
       - 'gradle/wrapper/**'
       - 'gradlew'
-      - 'app/src/main/jniLibs/**'
-      - 'app/src/main/java/com/andsi/airlyrics/lyrics/providers/**Native*.kt'
       - '.github/workflows/full-android-rust-build.yml'
   workflow_dispatch:
 

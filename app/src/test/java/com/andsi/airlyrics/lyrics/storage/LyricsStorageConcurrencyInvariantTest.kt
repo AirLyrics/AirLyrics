@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
@@ -25,12 +26,12 @@ class LyricsStorageConcurrencyInvariantTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @After
     fun tearDown() {
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @Test
@@ -109,15 +110,6 @@ class LyricsStorageConcurrencyInvariantTest {
                 writeText("[00:10.00]<00:10.00>karaoke")
             }
         )
-    }
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
     }
 
     private class GateInputStream(text: String) : InputStream() {

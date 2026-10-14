@@ -9,7 +9,7 @@ import android.view.WindowManager
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
-import com.andsi.airlyrics.lyrics.LyricsLookupCallbackDispatcher
+import com.andsi.airlyrics.testutil.QueuedCallbackDispatcher
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -21,8 +21,6 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import java.io.File
 import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -391,22 +389,6 @@ class FloatingLyricsServiceCommandLifecycleTest {
             .commit()
         val base = application.getExternalFilesDir(null) ?: application.filesDir
         File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
-    }
-
-    class QueuedCallbackDispatcher : LyricsLookupCallbackDispatcher {
-        private val deliveries = LinkedBlockingQueue<() -> Unit>()
-
-        override fun dispatch(block: () -> Unit) {
-            deliveries.put(block)
-        }
-
-        fun takeDelivery(): () -> Unit {
-            return requireNotNull(deliveries.poll(5, TimeUnit.SECONDS)) {
-                "Timed out waiting for a completed lookup to queue its callback"
-            }
-        }
-
-        fun pendingDeliveryCount(): Int = deliveries.size
     }
 
     class QueuedLookupFloatingLyricsService : FloatingLyricsService() {

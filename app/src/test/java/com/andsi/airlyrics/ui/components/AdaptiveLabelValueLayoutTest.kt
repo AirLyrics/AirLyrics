@@ -3,7 +3,6 @@ package com.andsi.airlyrics.ui.components
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import org.junit.After
@@ -87,17 +86,6 @@ class AdaptiveLabelValueLayoutTest {
         assertContainedHorizontally(row, row.labelView)
         assertContainedHorizontally(row, row.valueView)
         assertContainedHorizontally(row, trailingAction)
-    }
-
-    @Test
-    fun wordByWordEditorTitleKeepsCategoryBeforeTruncatedSongTitle() {
-        val host = createHost()
-        val songTitle = "A song title long enough to be truncated by the dialog header"
-
-        val title = host.getString(R.string.ui_item_title_word_by_word_lyrics, songTitle)
-
-        assertTrue(title.endsWith(songTitle))
-        assertTrue(title.indexOf(songTitle) > 0)
     }
 
     @Test

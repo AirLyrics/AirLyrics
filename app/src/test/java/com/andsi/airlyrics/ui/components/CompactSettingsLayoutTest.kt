@@ -2,12 +2,10 @@ package com.andsi.airlyrics.ui.components
 
 import android.os.Looper
 import org.robolectric.Shadows.shadowOf
-import android.graphics.Bitmap
-import android.graphics.Canvas
+import android.graphics.Rect
 import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
@@ -27,7 +25,6 @@ import org.robolectric.annotation.GraphicsMode
 import org.robolectric.shadows.ShadowViewRootImpl
 import org.robolectric.shadow.api.Shadow
 import org.robolectric.util.ReflectionHelpers
-import java.io.File
 import java.time.Duration
 import android.content.Context
 import android.view.accessibility.AccessibilityManager
@@ -184,36 +181,46 @@ class CompactSettingsLayoutTest {
         dialog.dismiss()
     }
 
-    @Test fun renderLocalizedTwoColumnSettingsPreviews() {
-        val host = host()
-        val output = File("build/reports/long-text-previews").apply { mkdirs() }
-        for (locale in listOf("en", "es", "zh")) {
-            val spanish = locale == "es"
-            val chinese = locale == "zh"
-            RuntimeEnvironment.setQualifiers("${if (chinese) "zh-rCN" else locale}-w360dp-h800dp-mdpi")
-            val titles = if (chinese) listOf("预设", "文字颜色", "字体大小", "字体", "字体不透明度", "阴影描边", "窗口布局")
-                else if (spanish) listOf("Preajuste", "Color del texto", "Tamaño de fuente", "Fuente", "Opacidad de la fuente", "Trazo de sombra", "Diseño de ventana")
-                else listOf("Preset", "Text color", "Font size", "Font", "Font opacity", "Shadow stroke", "Window layout")
-            val summaries = listOf("Vinyl", "R255 G255 B255 A255", "18 sp", "System default", "100%", "8", "85%")
-            val page = LinearLayout(host).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(host.dp(20), host.dp(20), host.dp(20), host.dp(20))
-                addView(host.settingGrid(*titles.mapIndexed { index, title -> tile(title, summaries[index]) }.toTypedArray()))
-                addView(host.settingGrid(
-                    tile(if (chinese) "显示控制" else if (spanish) "Control de visualización" else "Display control", if (chinese) "需要悬浮窗权限 · 可拖动 · 可点击" else if (spanish) "Se requiere permiso de superposición · Arrastrable · Tocable" else "Overlay permission required · Draggable · Touchable"),
-                    tile(if (chinese) "自动隐藏" else if (spanish) "Ocultar automáticamente" else "Auto hide", if (chinese) "关闭" else if (spanish) "Desactivado" else "Off"),
-                    tile(if (chinese) "显示范围" else if (spanish) "Alcance de visualización" else "Display scope", if (chinese) "关闭" else if (spanish) "Desactivado" else "Off")))
-            }
-            render(page, host.dp(360), File(output, "settings-$locale.png"))
-            for (color in listOf(false, true)) {
-                val title = if (color) titles[1] else titles[4]
-                val panel = host.floatingFocusBubble(title, "", {}, {}) {
-                    if (color) addView(host.colorControl(if (chinese) "文字" else if (spanish) "Texto" else "Text", Color.WHITE, false) {})
-                    else addView(host.sliderRow(title, 100, 0, 100, "%") {})
+    @Test fun localizedSettingsKeepBoundSubtitlesReadableAndClickableAtLargeFontScale() {
+        val titleIds = listOf(R.string.ui_font, R.string.ui_text_color, R.string.ui_font_size,
+            R.string.ui_font_opacity, R.string.ui_display_control, R.string.ui_auto_hide, R.string.ui_display_scope)
+        for (qualifier in listOf("en-rUS", "es", "zh-rCN", "zh-rTW")) {
+            RuntimeEnvironment.setQualifiers("$qualifier-w360dp-h800dp-mdpi")
+            RuntimeEnvironment.setFontScale(2f)
+            val host = host()
+            try {
+                val subtitles = mutableListOf<TextView>()
+                val clicked = mutableListOf<Int>()
+                val grid = host.settingGrid(*titleIds.mapIndexed { index, title ->
+                    tile(host.getString(title), "100%", onClick = { clicked += index })
+                        .copy(onSubtitleViewCreated = subtitles::add)
+                }.toTypedArray()) as AdaptiveGridLayout
+                layout(grid, host.dp(320))
+                assertEquals(qualifier, 2, grid.columns)
+                assertEquals(titleIds.size, subtitles.size)
+                for (index in titleIds.indices) {
+                    val tile = grid.getChildAt(index) as ViewGroup
+                    val subtitle = subtitles[index]
+                    assertTrue(tile.measuredHeight >= host.dp(AirUiTokens.Layout.FloatingTileMinHeight))
+                    assertTrue(tile.left >= 0 && tile.right <= grid.width)
+                    assertTrue(subtitle.height >= subtitle.layout.height + subtitle.compoundPaddingTop + subtitle.compoundPaddingBottom)
+                    val bounds = Rect()
+                    subtitle.getDrawingRect(bounds)
+                    tile.offsetDescendantRectToMyCoords(subtitle, bounds)
+                    assertTrue("$qualifier subtitle is clipped by tile", bounds.bottom <= tile.height - tile.paddingBottom)
+                    assertTrue(descendants(tile).filterIsInstance<TextView>().any { it.text.toString() == host.getString(titleIds[index]) })
+                    tile.performClick()
                 }
-                panel.updateResetAction(true, false)
-                val parent = FrameLayout(host).apply { addView(panel.view) }
-                render(parent, host.dp(360), File(output, "panel-$locale-${if (color) "color" else "opacity"}.png"))
+                assertEquals(titleIds.indices.toList(), clicked)
+                val tiles = (0 until grid.childCount).map(grid::getChildAt)
+                tiles.chunked(2).forEach { row -> assertEquals(1, row.map { it.height }.distinct().size) }
+                assertEquals(tiles.first().width, tiles.last().width)
+                subtitles.first().text = "Updated summary"
+                layout(grid, host.dp(320))
+                assertTrue(descendants(tiles.first()).filterIsInstance<TextView>().any { it.text.toString() == "Updated summary" })
+            } finally {
+                controller?.close()
+                controller = null
             }
         }
     }
@@ -224,13 +231,4 @@ class CompactSettingsLayoutTest {
         shadowOf(Looper.getMainLooper()).idle()
     }
 
-    private fun render(view: View, width: Int, output: File) {
-        layout(view, width)
-        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawColor(Color.rgb(245, 246, 250))
-        view.draw(canvas)
-        output.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        bitmap.recycle()
-    }
 }

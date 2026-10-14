@@ -1,10 +1,11 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
+import android.graphics.Typeface
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
-import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
+import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -19,6 +20,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.annotation.GraphicsMode
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -102,18 +104,24 @@ class FloatingLyricsFontStoreTest {
     }
 
     @Test
-    fun resolveTypeface_supportsEverySystemFamilyAndNormalizedWeight() {
-        FloatingLyricsFontFamily.entries
-            .filter { it != FloatingLyricsFontFamily.CUSTOM }
-            .forEach { family ->
-                assertNotNull(
-                    FloatingLyricsFontStore.resolveTypeface(
-                        context,
-                        family,
-                        FloatingLyricsFontWeight.normalize(555)
-                    )
-                )
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun resolveTypeface_preservesEachSystemFamilyAndNormalizesRawWeights() {
+        val families = mapOf(
+            FloatingLyricsFontFamily.SYSTEM_DEFAULT to Typeface.DEFAULT,
+            FloatingLyricsFontFamily.SANS_SERIF to Typeface.SANS_SERIF,
+            FloatingLyricsFontFamily.SERIF to Typeface.SERIF,
+            FloatingLyricsFontFamily.MONOSPACE to Typeface.MONOSPACE
+        )
+        // Independent boundary examples: do not call the production normalizer here.
+        val weights = mapOf(-1 to 100, 149 to 100, 150 to 200, 555 to 600, 900 to 900, 1001 to 900)
+        families.forEach { (family, base) ->
+            weights.forEach { (raw, expectedWeight) ->
+                val actual = FloatingLyricsFontStore.resolveTypeface(context, family, raw)
+                assertEquals("$family at $raw", expectedWeight, actual.weight)
+                assertEquals("$family at $raw", Typeface.create(base, expectedWeight, false), actual)
+                assertFalse(actual.isItalic)
             }
+        }
     }
 
     @Test

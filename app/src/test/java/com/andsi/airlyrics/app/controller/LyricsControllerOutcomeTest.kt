@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app.controller
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -16,9 +17,7 @@ import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
-import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.toSongIdentity
@@ -44,7 +43,7 @@ class LyricsControllerOutcomeTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
         MediaSourceStore.saveSelectedPackage(context, null)
         ShadowLog.clear()
     }
@@ -53,7 +52,7 @@ class LyricsControllerOutcomeTest {
     fun tearDown() {
         MediaSourceStore.saveSelectedPackage(context, null)
         ShadowLog.clear()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @Test
@@ -482,15 +481,6 @@ class LyricsControllerOutcomeTest {
 
     private fun writeImportFile(name: String, text: String): Uri {
         return Uri.fromFile(File(context.cacheDir, name).apply { writeText(text) })
-    }
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
     }
 
     private data class ImportCase(

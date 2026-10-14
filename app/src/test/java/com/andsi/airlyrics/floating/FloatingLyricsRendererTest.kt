@@ -1,6 +1,11 @@
 package com.andsi.airlyrics.floating
 
+import android.animation.TimeInterpolator
 import android.content.Context
+import android.text.style.URLSpan
+import com.andsi.airlyrics.core.model.LyricsAttribution
+import com.andsi.airlyrics.core.model.LyricsCredit
+import com.andsi.airlyrics.lyrics.LyricsAccess
 import android.graphics.Color
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -244,7 +249,7 @@ class FloatingLyricsRendererTest {
 
     @Test
     fun animatedLineSwitch_keepsFloatingBubbleTransformAtRest() {
-        val textView = FloatingLyricsTextView(context)
+        val textView = RecordingAnimationView(context)
         val renderer = renderer(
             textView = textView,
             switchAnimationMode = LyricsSwitchAnimationMode.SLIDE_UP
@@ -259,10 +264,67 @@ class FloatingLyricsRendererTest {
         renderer.tick()
 
         assertEquals("second", textView.text.toString())
+        assertEquals(1, textView.animationDurations.size)
+        assertTrue(textView.animationDurations.single() > 0L)
+        assertEquals(0f, textView.contentAlpha)
+        assertTrue("SLIDE_UP must animate content from below", textView.contentTranslationY > 0f)
+        assertEquals(1f, textView.contentScaleX)
+        assertEquals(1f, textView.contentScaleY)
         assertEquals(1f, textView.alpha)
         assertEquals(0f, textView.translationY)
         assertEquals(1f, textView.scaleX)
         assertEquals(1f, textView.scaleY)
+    }
+
+    @Test fun displaysLinkedAttributionAndClearsExpiredPayload() {
+        val view = TextView(context)
+        val renderer = renderer(textView = view)
+        val access = LyricsAccess(0, Long.MAX_VALUE, "key",
+            LyricsAttribution("Spicy Lyrics", listOf(LyricsCredit("Maker", "https://example.com/maker"))))
+        renderer.setLyricsAccess(access)
+        renderer.parseAndShow("[00:01.00]Test", emptyText = "empty")
+        assertEquals("Test\nSpicy Lyrics · Maker", view.text.toString())
+        assertEquals("https://example.com/maker", (view.text as Spanned).getSpans(0, view.text.length, URLSpan::class.java).single().url)
+        renderer.setLyricsAccess(access.copy(expiresAtMs = 1))
+        renderer.tick()
+        assertFalse(view.text.contains("Test"))
+        assertFalse(view.text.contains("Maker"))
+        renderer.refresh()
+        assertFalse(view.text.contains("Test"))
+    }
+    @Test fun backgroundDoesNotReplaceLeadOrBecomeTranslation() {
+        val view = TextView(context)
+        val renderer = renderer(textView = view, wordByWordEnabled = true)
+        renderer.updatePlayback(1500, false)
+        renderer.parseAndShow("[00:01.00]Lead", wordByWordLines = listOf(
+            WordByWordLine(1000, 3000, "Lead", listOf(WordByWordSegment("Lead", 1000, 3000))),
+            WordByWordLine(1200, 2000, "Background", listOf(WordByWordSegment("Background", 1200, 2000)), true)
+        ), emptyText = "empty")
+        assertTrue(view.text.contains("Lead"))
+        assertTrue(view.text.contains("Background"))
+        renderer.updatePlayback(2200, false)
+        renderer.tick()
+        assertTrue(view.text.contains("Lead"))
+        assertFalse(view.text.contains("Background"))
+    }
+
+    private class RecordingAnimationView(context: Context) : TextView(context), LyricsTextAnimationTarget {
+        var contentAlpha = 1f
+        var contentTranslationY = 0f
+        var contentScaleX = 1f
+        var contentScaleY = 1f
+        val animationDurations = mutableListOf<Long>()
+
+        override fun cancelLyricsTextAnimation() = Unit
+        override fun setLyricsTextAnimationState(alpha: Float, translationY: Float, scaleX: Float, scaleY: Float) {
+            contentAlpha = alpha
+            contentTranslationY = translationY
+            contentScaleX = scaleX
+            contentScaleY = scaleY
+        }
+        override fun animateLyricsTextToRest(durationMs: Long, interpolator: TimeInterpolator) {
+            animationDurations += durationMs
+        }
     }
 
     private fun renderer(

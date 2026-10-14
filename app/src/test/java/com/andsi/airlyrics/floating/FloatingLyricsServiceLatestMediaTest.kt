@@ -16,7 +16,7 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.LyricsChange
 import com.andsi.airlyrics.lyrics.LyricsChangeKind
-import com.andsi.airlyrics.lyrics.LyricsLookupCallbackDispatcher
+import com.andsi.airlyrics.testutil.QueuedCallbackDispatcher
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
@@ -440,22 +440,6 @@ class FloatingLyricsServiceLatestMediaTest {
             .commit()
         val base = context.getExternalFilesDir(null) ?: context.filesDir
         File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
-    }
-
-    class QueuedCallbackDispatcher : LyricsLookupCallbackDispatcher {
-        private val deliveries = LinkedBlockingQueue<() -> Unit>()
-
-        override fun dispatch(block: () -> Unit) {
-            deliveries.put(block)
-        }
-
-        fun takeDelivery(): () -> Unit {
-            return requireNotNull(deliveries.poll(5, TimeUnit.SECONDS)) {
-                "Timed out waiting for a completed lookup to queue its callback"
-            }
-        }
-
-        fun pendingDeliveryCount(): Int = deliveries.size
     }
 
     class QueuedLookupFloatingLyricsService : FloatingLyricsService() {

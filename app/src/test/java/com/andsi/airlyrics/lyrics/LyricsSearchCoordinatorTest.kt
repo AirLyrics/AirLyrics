@@ -3,10 +3,13 @@ package com.andsi.airlyrics.lyrics
 import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.locks.LockSupport
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -16,24 +19,24 @@ class LyricsSearchCoordinatorTest {
         val song = SongIdentity("waiting", "artist", "album", 1000L)
         val manual = LyricsSearchCoordinator.begin(song, token("manual"), LyricsSearchOrigin.Manual, LyricsSearchMode.Original)
         val executor = Executors.newSingleThreadExecutor()
-        val started = CountDownLatch(1)
+        val worker = AtomicReference<Thread>()
         val acquired = CountDownLatch(1)
         try {
             val future = executor.submit {
-                started.countDown()
+                worker.set(Thread.currentThread())
                 LyricsSearchCoordinator.begin(song, token("automatic"), LyricsSearchOrigin.Automatic, LyricsSearchMode.Original).use {
                     acquired.countDown()
                 }
             }
-            assertTrue(started.await(5, TimeUnit.SECONDS))
-            assertFalse(acquired.await(200, TimeUnit.MILLISECONDS))
+            awaitCoordinatorWait(worker)
+            assertEquals(1L, acquired.count)
             manual.close()
             future.get(5, TimeUnit.SECONDS)
             assertTrue(acquired.await(5, TimeUnit.SECONDS))
         } finally {
             manual.close()
             executor.shutdownNow()
-            executor.awaitTermination(5, TimeUnit.SECONDS)
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
         }
     }
 
@@ -43,10 +46,10 @@ class LyricsSearchCoordinatorTest {
         val manual = LyricsSearchCoordinator.begin(song, token("manual"), LyricsSearchOrigin.Manual, LyricsSearchMode.Original)
         val automaticToken = token("automatic")
         val executor = Executors.newSingleThreadExecutor()
-        val started = CountDownLatch(1)
+        val worker = AtomicReference<Thread>()
         try {
             val future = executor.submit<Boolean> {
-                started.countDown()
+                worker.set(Thread.currentThread())
                 try {
                     LyricsSearchCoordinator.begin(song, automaticToken, LyricsSearchOrigin.Automatic, LyricsSearchMode.Original).close()
                     false
@@ -54,14 +57,31 @@ class LyricsSearchCoordinatorTest {
                     true
                 }
             }
-            assertTrue(started.await(5, TimeUnit.SECONDS))
+            awaitCoordinatorWait(worker)
             automaticToken.cancel()
             assertTrue(future.get(5, TimeUnit.SECONDS))
+            assertNull(LyricsSearchCoordinator.current(automaticToken))
+            // Cancellation must finish while the manual owner is still active.
+            assertEquals(LyricsSearchMode.Original, LyricsSearchCoordinator.manualMode(song))
         } finally {
             manual.close()
             executor.shutdownNow()
-            executor.awaitTermination(5, TimeUnit.SECONDS)
+            assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
         }
+    }
+
+    private fun awaitCoordinatorWait(worker: AtomicReference<Thread>) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (System.nanoTime() < deadline) {
+            // Thread stack inspection is available on both Android and JVM 17.
+            // Observe the wait inside begin(), not merely that the worker started.
+            val stack = worker.get()?.stackTrace.orEmpty()
+            if (stack.any { it.className == LyricsSearchCoordinator::class.java.name && it.methodName == "begin" } &&
+                stack.any { it.methodName.startsWith("await") }
+            ) return
+            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1))
+        }
+        throw AssertionError("Automatic search never entered the coordinator's wait; worker=${worker.get()?.state}")
     }
 
     private fun token(key: String) = LyricsLookupCancellationToken(key, 1L)

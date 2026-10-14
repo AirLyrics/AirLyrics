@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
@@ -7,12 +8,9 @@ import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
-import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsFileStore
 import com.andsi.airlyrics.lyrics.storage.LyricsIndexStore
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
-import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -30,12 +28,12 @@ class LyricsRepositoryPersistenceTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @After
     fun tearDown() {
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @Test
@@ -208,15 +206,6 @@ class LyricsRepositoryPersistenceTest {
             matchedAlbum = "matched album",
             matchedDurationMs = 180_000L
         )
-    }
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
     }
 
     private companion object {

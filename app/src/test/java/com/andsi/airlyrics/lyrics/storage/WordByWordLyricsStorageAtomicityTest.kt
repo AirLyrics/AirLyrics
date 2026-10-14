@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
@@ -29,12 +30,12 @@ class WordByWordLyricsStorageAtomicityTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @After
     fun tearDown() {
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @Test
@@ -627,15 +628,6 @@ class WordByWordLyricsStorageAtomicityTest {
                 writeText(text)
             }
         )
-    }
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
     }
 
     private data class ImportState(

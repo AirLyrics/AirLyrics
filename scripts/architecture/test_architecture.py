@@ -66,6 +66,41 @@ class SourcePolicyTest(unittest.TestCase):
     def test_backtick_keyword_identifier_is_not_a_package_declaration(self):
         self.assertEqual([], self.analyze('val `package` = "value"'))
 
+    def test_protocol_action_literals_must_be_owned_in_java_and_kotlin(self):
+        for code, filename in [
+            (f'val action = "{NS}.SHOW"', "Example.kt"),
+            (f'val action = """{NS}.SHOW"""', "Example.kt"),
+            ('val action = "com.andsi.airlyrics.\\u0053HOW"', "Example.kt"),
+            (f'class Example {{ String action = "{NS}.SHOW"; }}', "Example.java"),
+            ('val text = "${run { "' + NS + '.SHOW" }}"', "Example.kt"),
+        ]:
+            with self.subTest(code=code):
+                errors = self.analyze(code, filename=filename)
+                self.assertTrue(any("protocol action must be owned" in e for e in errors), errors)
+                self.assertTrue(any(f"{filename}:2:" in e for e in errors), errors)
+
+    def test_protocol_comments_class_names_and_prose_are_not_actions(self):
+        code = '\n'.join([
+            f'// "{NS}.SHOW"',
+            f'/* nested /* "{NS}.SHOW" */ comment */',
+            f'val className = "{NS}.app.MainActivity"',
+            f'val help = "Example: {NS}.SHOW"',
+        ])
+        self.assertEqual([], self.analyze(code))
+
+    def test_protocol_allowance_is_an_exact_file_not_a_package(self):
+        code = f'val action = "{NS}.SHOW"'
+        self.assertEqual([], self.analyze(code, "floating", "FloatingServiceCommand.kt"))
+        self.assertTrue(self.analyze(code, "floating", "OtherCommand.kt"))
+        self.assertTrue(self.analyze(code, "ui", "FloatingServiceCommand.kt"))
+
+    def test_protocol_scan_is_part_of_source_check_and_empty_scan_fails(self):
+        errors, _, _ = check_sources(self.root, self.policy)
+        self.assertIn("No production source files found", errors)
+        self.analyze(f'val action = "{NS}.SHOW"')
+        errors, _, _ = check_sources(self.root, self.policy)
+        self.assertTrue(any("protocol action must be owned" in e for e in errors), errors)
+
     def test_multiline_and_backtick_qualified_names_are_checked(self):
         code = 'val x = com . andsi . airlyrics\n . `app` /* note */ . Hidden()'
         self.assertTrue(any("must not depend" in e for e in self.analyze(code)))

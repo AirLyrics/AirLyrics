@@ -55,6 +55,9 @@ jobs:
       - name: Check architecture sources, bytecode, policy, and checker tests
         run: ./scripts/check_architecture_boundaries.sh
 
+      - name: Test lyrics benchmark tooling
+        run: python3 -B -m unittest discover -s scripts/lyrics_benchmark -p 'test_*.py'
+
       - name: Run JVM unit tests
         run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true --stacktrace
 

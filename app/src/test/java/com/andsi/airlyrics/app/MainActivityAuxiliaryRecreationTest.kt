@@ -1,9 +1,9 @@
 package com.andsi.airlyrics.app
 
-import android.view.View
+import com.andsi.airlyrics.testutil.descendants
+import com.andsi.airlyrics.testutil.awaitUiCondition as await
 import com.andsi.airlyrics.app.interaction.LyricsDraftStore
 import kotlinx.coroutines.runBlocking
-import android.view.ViewGroup
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.showFullText
@@ -75,13 +75,4 @@ class MainActivityAuxiliaryRecreationTest {
         }
     }
 
-    private fun await(condition: () -> Boolean) {
-        val deadline = System.nanoTime() + 5_000_000_000L
-        while (!condition() && System.nanoTime() < deadline) {
-            ShadowLooper.idleMainLooper()
-            Thread.sleep(10)
-        }
-        assertTrue(condition())
-    }
-    private fun descendants(view: View): List<View> = listOf(view) + if (view is ViewGroup) (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
 }

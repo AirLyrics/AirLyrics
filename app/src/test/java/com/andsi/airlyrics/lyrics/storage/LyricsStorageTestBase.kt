@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
@@ -13,12 +14,12 @@ abstract class LyricsStorageTestBase {
     @Before
     fun setUpLyricsStorageTestBase() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @After
     fun tearDownLyricsStorageTestBase() {
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     protected fun writeImportFile(name: String, text: String): Uri {
@@ -31,16 +32,6 @@ abstract class LyricsStorageTestBase {
         val file = File(context.cacheDir, name)
         file.writeBytes(bytes)
         return Uri.fromFile(file)
-    }
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
     }
 
     protected val lineTimedTtml =

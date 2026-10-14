@@ -2,6 +2,7 @@ package com.andsi.airlyrics.lyrics.providers
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Test
@@ -86,6 +87,27 @@ class NativeLyricsJniSmokeInstrumentedTest {
             }
         }
         MultipleFailureException.assertEmpty(failures)
+    }
+
+    @Test
+    fun spicyBindingsRejectMissingCredentialsOffline() {
+        // Empty credentials must be rejected before any network request, including
+        // the benchmark entry point and both app search modes.
+        val lookupId = Long.MAX_VALUE - 106L
+        try {
+            val results = listOf(
+                SpicyLyricsNative.fetchLyricsJson("Test", "Artist", "", 1000L, "", lookupId),
+                SpicyLyricsNative.fetchLyricsForSearchJson("Test", "Artist", "", 1000L, "", lookupId, false),
+                SpicyLyricsNative.fetchLyricsForSearchJson("Test", "Artist", "", 1000L, "", lookupId, true)
+            )
+            results.forEachIndexed { index, raw ->
+                val result = JSONObject(raw)
+                assertFalse("Spicy binding $index must reject missing credentials", result.getBoolean("ok"))
+                assertEquals("NeedCredential", result.getString("error_type"))
+            }
+        } finally {
+            LyricsNativeCancellation.clearLookup(lookupId)
+        }
     }
 
     private fun fetchNeteasePlainLyricsValidation(lookupId: Long): NativePlainLyricsJsonResult {

@@ -1,15 +1,15 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
+import com.andsi.airlyrics.testutil.awaitBackgroundCondition
+import com.andsi.airlyrics.testutil.awaitUiCondition as awaitCondition
 import android.content.Context
 import android.media.session.MediaSessionManager
 import androidx.test.core.app.ApplicationProvider
-import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
-import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.After
@@ -33,7 +33,7 @@ class MainActivitySavedLyricsUiTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
         clearCurrentMedia()
     }
 
@@ -41,7 +41,7 @@ class MainActivitySavedLyricsUiTest {
     fun tearDown() {
         activityController?.close()
         clearCurrentMedia()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @Test
@@ -108,38 +108,10 @@ class MainActivitySavedLyricsUiTest {
         ShadowLooper.idleMainLooper()
     }
 
-    private fun awaitBackgroundCondition(condition: () -> Boolean) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-        while (System.nanoTime() < deadline) {
-            if (condition()) return
-            Thread.sleep(10)
-        }
-        assertTrue("Timed out waiting for background work", condition())
-    }
-
-    private fun awaitCondition(condition: () -> Boolean) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-        while (System.nanoTime() < deadline) {
-            ShadowLooper.idleMainLooper()
-            if (condition()) return
-            Thread.sleep(10)
-        }
-        ShadowLooper.idleMainLooper()
-        assertTrue("Timed out waiting for UI work", condition())
-    }
-
     private fun clearCurrentMedia() {
         val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         shadowOf(manager).clearControllers()
         MediaSourceStore.saveSelectedPackage(context, null)
     }
 
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
-    }
 }

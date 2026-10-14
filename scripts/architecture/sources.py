@@ -10,7 +10,7 @@ class Token:
     escaped: bool = False
 
 
-def tokens(text):
+def tokens(text, literal_strings=None):
     """Skip comments/literal text, but scan Kotlin ${...} template expressions as code."""
     result = []
     i, line = 0, 1
@@ -21,17 +21,31 @@ def tokens(text):
         i += count
 
     def string(quote):
+        start_line = line
+        value = []
+        interpolated = False
         advance(len(quote))
         while i < len(text):
             if text.startswith(quote, i):
                 advance(len(quote))
+                if literal_strings is not None and quote != "'" and not interpolated:
+                    literal_strings.append(Token("".join(value), start_line))
                 return
             if quote != '"""' and text[i] == "\\":
-                advance(min(2, len(text) - i))
+                unicode_escape = re.match(r"\\u([0-9a-fA-F]{4})", text[i:])
+                if unicode_escape:
+                    value.append(chr(int(unicode_escape[1], 16)))
+                    advance(6)
+                else:
+                    escaped = text[i + 1:i + 2]
+                    value.append({"n": "\n", "r": "\r", "t": "\t"}.get(escaped, escaped))
+                    advance(min(2, len(text) - i))
             elif quote != "'" and text.startswith("${", i):
+                interpolated = True
                 advance(2)
                 code(template=True)
             else:
+                value.append(text[i])
                 advance()
         raise ValueError(f"Unterminated string at line {line}")
 
@@ -103,7 +117,8 @@ def qualified(items, start):
 
 def analyze_file(path, source_root, policy):
     text = path.read_text(encoding="utf-8")
-    items = tokens(text)
+    literals = []
+    items = tokens(text, literal_strings=literals)
     declarations = [(n, t) for n, t in enumerate(items) if t.text == "package" and not t.escaped]
     if len(declarations) != 1:
         return [f"{path}: expected exactly one package declaration"], [], None
@@ -114,6 +129,16 @@ def analyze_file(path, source_root, policy):
     if group is None:
         return [f"{path}: unregistered source package {package}"], [], None
     errors = []
+    # Local protocol actions use namespace.UPPER_SNAKE_CASE. Class names and
+    # prose containing a namespace are not protocol declarations. This guard
+    # intentionally checks literal declarations, not runtime-computed actions.
+    relative_path = path.relative_to(source_root).as_posix()
+    owners = {policy.namespace.replace(".", "/") + "/" + owner
+              for owner in policy.data["protocol_owners"]}
+    action = re.compile(re.escape(policy.namespace) + r"\.[A-Z][A-Z0-9_]*")
+    if relative_path not in owners:
+        errors.extend(f"{path}:{literal.line}: app-local protocol action must be owned by a protocol object: {literal.text}"
+                      for literal in literals if action.fullmatch(literal.text))
     if path.parent.relative_to(source_root).as_posix() != package.replace(".", "/"):
         errors.append(f"{path}: directory does not match declared package {package}")
     references = []

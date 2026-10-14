@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
+import com.andsi.airlyrics.testutil.awaitUiCondition as awaitCondition
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -17,15 +19,12 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsImport
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import java.io.ByteArrayInputStream
-import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -54,7 +53,7 @@ class MainActivityLyricsImportLifecycleTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
         clearCurrentMedia()
         AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
@@ -69,7 +68,7 @@ class MainActivityLyricsImportLifecycleTest {
         AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
         ShadowDialog.reset()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     // ShadowMediaController exposes a public setter but a protected metadata getter.
@@ -249,17 +248,6 @@ class MainActivityLyricsImportLifecycleTest {
         ShadowLooper.idleMainLooper()
     }
 
-    private fun awaitCondition(message: String, condition: () -> Boolean) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-        while (System.nanoTime() < deadline) {
-            ShadowLooper.idleMainLooper()
-            if (condition()) return
-            Thread.sleep(10)
-        }
-        ShadowLooper.idleMainLooper()
-        assertTrue(message, condition())
-    }
-
     private fun MainActivity.visibleTexts(): List<String> {
         return findViewById<View>(android.R.id.content).descendantTexts()
     }
@@ -274,15 +262,6 @@ class MainActivityLyricsImportLifecycleTest {
         val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         shadowOf(manager).clearControllers()
         MediaSourceStore.saveSelectedPackage(context, null)
-    }
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
     }
 
     private companion object {

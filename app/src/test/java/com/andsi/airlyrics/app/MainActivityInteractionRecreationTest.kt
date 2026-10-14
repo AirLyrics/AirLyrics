@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.descendants
+import com.andsi.airlyrics.testutil.awaitUiCondition as await
 import android.app.Dialog
 import android.content.Context
 import android.content.Intent
@@ -8,7 +10,6 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.ResolveInfo
 import android.os.Bundle
 import android.view.View
-import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.ListView
@@ -84,7 +85,11 @@ class MainActivityInteractionRecreationTest {
     }
 
     @Test fun importDialogAndGuideRestoreWithoutLaunchingPickerAgain() {
-        activity.graph.lyricsWorkflow.showImportLyricsDialog(SongIdentity("Song", "Artist", "", 0), true, true)
+        activity.graph.lyricsWorkflow.showImportLyricsDialog(
+            SongIdentity("Song", "Artist", "", 0),
+            plainImportEnabled = true,
+            wordByWordImportEnabled = true
+        )
         settle()
         button(latestDialog(), R.string.ui_lyrics_format_guide).performClick(); settle()
         button(latestDialog(), R.string.ui_lyrics_format_ttml_tab).performClick(); settle()
@@ -193,18 +198,12 @@ class MainActivityInteractionRecreationTest {
     }
     private fun floatingPage() {
         activity.graph.viewModel.selectPage(Page.FLOATING)
-        activity.graph.uiInvalidator.rebuildCurrentPage(false, false)
+        activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
         settle()
     }
     private fun action(res: Int): View = descendants(activity.window.decorView).first { it.contentDescription == activity.getString(res) }
     private fun button(dialog: Dialog, res: Int): View = descendants(dialog.window!!.decorView).filterIsInstance<TextView>().first { it.text.toString().lineSequence().first() == activity.getString(res) }
     private fun latestDialogOrNull(): Dialog? = ShadowDialog.getLatestDialog()?.takeIf { it.isShowing }
     private fun latestDialog(): Dialog = requireNotNull(latestDialogOrNull())
-    private fun descendants(view: View): List<View> = listOf(view) + if (view is ViewGroup) (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
     private fun settle() { ShadowLooper.idleMainLooper(350, java.util.concurrent.TimeUnit.MILLISECONDS) }
-    private fun await(condition: () -> Boolean) {
-        val deadline = System.nanoTime() + 5_000_000_000L
-        while (!condition() && System.nanoTime() < deadline) { ShadowLooper.idleMainLooper(); Thread.sleep(10) }
-        assertTrue("Timed out waiting for background operation", condition())
-    }
 }

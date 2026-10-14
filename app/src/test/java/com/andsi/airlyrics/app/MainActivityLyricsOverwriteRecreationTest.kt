@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.resetLyricsStorage
+import com.andsi.airlyrics.testutil.awaitUiCondition as awaitCondition
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
@@ -14,9 +16,7 @@ import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsImport
 import com.andsi.airlyrics.app.state.PendingLyricsOverwrite
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -48,7 +48,7 @@ class MainActivityLyricsOverwriteRecreationTest {
     @Before
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
-        resetStorage()
+        resetLyricsStorage(context)
         AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
         ShadowDialog.reset()
@@ -61,7 +61,7 @@ class MainActivityLyricsOverwriteRecreationTest {
         AppSettingsStore.setStatusPopupsMuted(context, false)
         ShadowContentResolver.reset()
         ShadowDialog.reset()
-        resetStorage()
+        resetLyricsStorage(context)
     }
 
     @Test
@@ -195,17 +195,6 @@ class MainActivityLyricsOverwriteRecreationTest {
         }
     }
 
-    private fun awaitCondition(message: String, condition: () -> Boolean) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-        while (System.nanoTime() < deadline) {
-            ShadowLooper.idleMainLooper()
-            if (condition()) return
-            Thread.sleep(10)
-        }
-        ShadowLooper.idleMainLooper()
-        assertTrue(message, condition())
-    }
-
     private fun registerLyricsInput(uri: Uri, openCount: AtomicInteger) {
         shadowOf(context.contentResolver).registerInputStreamSupplier(uri) {
             openCount.incrementAndGet()
@@ -241,15 +230,6 @@ class MainActivityLyricsOverwriteRecreationTest {
         if (this is TextView && this.text.toString() == text) return this
         if (this !is ViewGroup) return null
         return (0 until childCount).firstNotNullOfOrNull { getChildAt(it).findTextView(text) }
-    }
-
-    private fun resetStorage() {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .edit()
-            .clear()
-            .commit()
-        val base = context.getExternalFilesDir(null) ?: context.filesDir
-        File(base, FALLBACK_LYRICS_DIR).deleteRecursively()
     }
 
     private companion object {
