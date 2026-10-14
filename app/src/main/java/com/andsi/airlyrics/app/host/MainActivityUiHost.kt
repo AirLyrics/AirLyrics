@@ -46,6 +46,7 @@ import com.andsi.airlyrics.i18n.lyrics.localizedLocalPlainLyricsSource
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.resolveMediaSongMetadata
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
@@ -163,10 +164,14 @@ internal class MainActivityUiHost(
             .values
             .toList()
         val selectedPackage = MediaSourceStore.getSelectedPackage(this)
+        val selectedController = CurrentMediaReader.bestController(controllers, selectedPackage)
+        val song = selectedController?.let { resolveMediaSongMetadata(it.packageName, it.metadata) }
         return MediaPageState(
             controllers = controllers,
             selectedPackage = selectedPackage,
-            selectedController = CurrentMediaReader.bestController(controllers, selectedPackage)
+            selectedController = selectedController,
+            selectedTitle = song?.title,
+            selectedArtist = song?.artist
         )
     }
     override fun getAppName(packageName: String): String = graph.mediaSourceController.getAppName(packageName)

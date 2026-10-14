@@ -6,7 +6,9 @@ import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 internal data class MediaPageState(
     val controllers: List<MediaController>,
     val selectedPackage: String?,
-    val selectedController: MediaController?
+    val selectedController: MediaController?,
+    val selectedTitle: String?,
+    val selectedArtist: String?
 )
 
 internal data class CurrentMediaUiInfo(
