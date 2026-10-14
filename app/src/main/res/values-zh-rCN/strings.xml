@@ -27,7 +27,6 @@
     <string name="provider_musixmatch_compact">Musix</string>
     <string name="provider_netease_plain_lyrics">网易云歌词</string>
     <string name="provider_netease_compact">网易云</string>
-    <string name="settings_current_value">当前：%1$s</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">关于</string>
     <string name="ui_active_players">活跃媒体</string>
@@ -205,7 +204,6 @@
     <string name="ui_plain_lyrics_source">歌词搜索来源</string>
     <string name="ui_lyrics_source_selected_priority_state">已选择，优先级 %1$d</string>
     <string name="ui_lyrics_source_not_selected_state">未选择</string>
-    <string name="ui_plain_lrc_edit_format_hint">每行需以 [00:12.34] 开头</string>
     <string name="ui_max_width">最大宽度</string>
     <string name="ui_media">媒体</string>
     <string name="ui_media_source_waiting_status">等待播放器更新…</string>
@@ -320,7 +318,6 @@
     <string name="ui_remove">移除</string>
     <string name="ui_remove_all_lyrics">移除全部本地歌词</string>
     <string name="ui_remove_all_lyrics_confirm">移除全部本地歌词？</string>
-    <string name="ui_remove_downloaded_lrc">移除已下载歌词</string>
     <string name="ui_remove_word_by_word_lyrics">移除逐字歌词</string>
     <string name="ui_remove_word_by_word_lyrics_confirm">移除逐字歌词？</string>
     <string name="ui_remove_plain_lrc">移除普通歌词</string>
@@ -362,7 +359,6 @@
     <string name="ui_slide_up">上滑淡入</string>
     <string name="ui_soft_fade">柔和淡入</string>
     <string name="ui_songs">首</string>
-    <string name="ui_source">当前来源：</string>
     <string name="ui_lyrics_settings_summary">歌词来源、存储与本地管理</string>
     <string name="ui_stopped">已停止</string>
     <string name="ui_switch_animation">歌词切换动画</string>

@@ -27,7 +27,6 @@
     <string name="provider_musixmatch_compact">Musix</string>
     <string name="provider_netease_plain_lyrics">網易雲歌詞</string>
     <string name="provider_netease_compact">網易雲</string>
-    <string name="settings_current_value">目前：%1$s</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">關於</string>
     <string name="ui_active_players">使用中的播放器</string>
@@ -205,7 +204,6 @@
     <string name="ui_plain_lyrics_source">歌詞來源</string>
     <string name="ui_lyrics_source_selected_priority_state">已選取，優先順序 %1$d</string>
     <string name="ui_lyrics_source_not_selected_state">未選取</string>
-    <string name="ui_plain_lrc_edit_format_hint">每行需以 [00:12.34] 開頭</string>
     <string name="ui_max_width">最大寬度</string>
     <string name="ui_media">媒體</string>
     <string name="ui_media_source_waiting_status">等待播放器更新…</string>
@@ -320,7 +318,6 @@
     <string name="ui_remove">移除</string>
     <string name="ui_remove_all_lyrics">移除全部本機歌詞</string>
     <string name="ui_remove_all_lyrics_confirm">移除全部本機歌詞？</string>
-    <string name="ui_remove_downloaded_lrc">移除已下載歌詞</string>
     <string name="ui_remove_word_by_word_lyrics">移除逐字歌詞</string>
     <string name="ui_remove_word_by_word_lyrics_confirm">移除逐字歌詞？</string>
     <string name="ui_remove_plain_lrc">移除一般歌詞</string>
@@ -362,7 +359,6 @@
     <string name="ui_slide_up">向上滑入</string>
     <string name="ui_soft_fade">柔和淡入</string>
     <string name="ui_songs">首</string>
-    <string name="ui_source">目前來源：</string>
     <string name="ui_lyrics_settings_summary">歌詞來源、儲存與本機管理</string>
     <string name="ui_stopped">已停止</string>
     <string name="ui_switch_animation">歌詞切換動畫</string>

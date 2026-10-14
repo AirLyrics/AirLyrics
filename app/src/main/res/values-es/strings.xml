@@ -27,7 +27,6 @@
     <string name="provider_musixmatch_compact">Musix</string>
     <string name="provider_netease_plain_lyrics">Letras de NetEase</string>
     <string name="provider_netease_compact">NetEase</string>
-    <string name="settings_current_value">Actual: %1$s</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">Acerca de</string>
     <string name="ui_active_players">Medios activos</string>
@@ -205,7 +204,6 @@
     <string name="ui_plain_lyrics_source">Fuentes de letras</string>
     <string name="ui_lyrics_source_selected_priority_state">Seleccionada, prioridad %1$d</string>
     <string name="ui_lyrics_source_not_selected_state">No seleccionada</string>
-    <string name="ui_plain_lrc_edit_format_hint">Cada línea debe empezar con [00:12.34]</string>
     <string name="ui_max_width">Ancho máximo</string>
     <string name="ui_media">Medios</string>
     <string name="ui_media_source_waiting_status">Esperando actualización del reproductor…</string>
@@ -320,7 +318,6 @@ TTML de tiempo por palabra:
     <string name="ui_remove">Quitar</string>
     <string name="ui_remove_all_lyrics">Quitar todas las letras</string>
     <string name="ui_remove_all_lyrics_confirm">¿Quitar todas las letras?</string>
-    <string name="ui_remove_downloaded_lrc">Quitar letras descargadas</string>
     <string name="ui_remove_word_by_word_lyrics">Quitar letras palabra por palabra</string>
     <string name="ui_remove_word_by_word_lyrics_confirm">¿Quitar las letras palabra por palabra?</string>
     <string name="ui_remove_plain_lrc">Quitar letras simples</string>
@@ -362,7 +359,6 @@ TTML de tiempo por palabra:
     <string name="ui_slide_up">Deslizar hacia arriba</string>
     <string name="ui_soft_fade">Desvanecido suave</string>
     <string name="ui_songs">canciones</string>
-    <string name="ui_source">Fuente: </string>
     <string name="ui_lyrics_settings_summary">Fuentes, almacenamiento y letras locales</string>
     <string name="ui_stopped">Detenido</string>
     <string name="ui_switch_animation">Animación de cambio</string>
@@ -378,6 +374,7 @@ TTML de tiempo por palabra:
     <string name="ui_jump_to_bottom">Ir abajo</string>
     <plurals name="ui_selected_apps_count">
         <item quantity="one">%1$d app seleccionada</item>
+        <item quantity="many">%1$d apps seleccionadas</item>
         <item quantity="other">%1$d apps seleccionadas</item>
     </plurals>
     <string name="ui_tap_to_preview_or_edit">Toca un elemento para previsualizar o editar</string>
