@@ -1,3 +1,17 @@
+v1.2.7 - 2026-10-14
+
+Added
+- Add Spicy Lyrics as an optional source with word-by-word lyrics.
+- Search by international song titles when the original title finds no suitable lyrics.
+
+Improved
+- Better layouts for long text, large fonts, and smaller windows.
+- Clearer lyrics search status and more reliable online searches.
+
+Fixed
+- Fix various bugs and improve stability.
+
+
 v1.2.6 - 2026-09-22
 
 Added

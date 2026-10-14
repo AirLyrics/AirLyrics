@@ -1,13 +1,12 @@
-v1.2.6 - 2026-09-22
+v1.2.7 - 2026-10-14
 
 Added
-- Add LRCLIB and choose the priority of multiple online lyrics sources.
-- Add Traditional Chinese and Spanish.
-- Choose whether floating lyrics auto-hide when paused or when no lyrics are available.
+- Add Spicy Lyrics as an optional source with word-by-word lyrics.
+- Search by international song titles when the original title finds no suitable lyrics.
 
-Changed
-- Adjust lyrics search and translation matching.
+Improved
+- Better layouts for long text, large fonts, and smaller windows.
+- Clearer lyrics search status and more reliable online searches.
 
 Fixed
-- Floating controls stay in place when lyrics change.
-- Long setting values and light-theme controls are easier to read, and dialogs no longer cover status messages.
+- Fix various bugs and improve stability.

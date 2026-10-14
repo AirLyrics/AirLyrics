@@ -117,7 +117,9 @@ internal class LyricsSourceOptionButton(
         tooltipText = fullTitle
         titleView.setTextColor(if (selected) host.colorOnAccent else host.colorText)
         priorityLabel.apply {
-            text = selectedPriority?.toString().orEmpty()
+            text = selectedPriority?.let {
+                String.format(resources.configuration.locales[0], "%d", it)
+            }.orEmpty()
             visibility = if (selected) VISIBLE else GONE
         }
         titleView.layoutParams = (titleView.layoutParams as LinearLayout.LayoutParams).apply {

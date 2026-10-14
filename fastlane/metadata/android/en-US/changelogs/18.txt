@@ -1,0 +1,6 @@
+v1.2.7
+• Add optional Spicy Lyrics with word-by-word lyrics.
+• Search by international song titles.
+• Improve long text, large fonts, and small-window layouts.
+• Improve online search reliability and status messages.
+• Fix various bugs and improve stability.

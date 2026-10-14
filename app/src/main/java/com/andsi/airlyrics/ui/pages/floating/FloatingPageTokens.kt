@@ -16,7 +16,6 @@ internal object FloatingPageTokens {
 
     const val PREVIEW_CARD_MARGIN_BOTTOM_DP = 8
     const val PREVIEW_LINE_SPACING_EXTRA_DP = 2
-    const val PREVIEW_TOGGLE_SIZE_DP = 36
     const val PREVIEW_TOGGLE_TEXT_SP = 16f
 
     const val PANEL_SELECTED_SCALE = 0.985f

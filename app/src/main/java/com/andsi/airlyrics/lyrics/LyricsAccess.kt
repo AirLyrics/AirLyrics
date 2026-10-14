@@ -13,5 +13,5 @@ data class LyricsAccess(
     val allowExport: Boolean = false
 ) {
     fun isExpired(nowMs: Long = System.currentTimeMillis()): Boolean =
-        nowMs < fetchedAtMs || nowMs >= expiresAtMs
+        nowMs !in fetchedAtMs..<expiresAtMs
 }
