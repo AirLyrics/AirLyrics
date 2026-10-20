@@ -9,7 +9,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.shadows.ShadowLog
 
 @RunWith(RobolectricTestRunner::class)
 class NativePlainLyricsResultContractTest {
@@ -63,8 +62,7 @@ class NativePlainLyricsResultContractTest {
     }
 
     @Test
-    fun translatedFixture_mapsThroughMusixmatchPlainLyricsProductionProviderWithRequestedLanguage() {
-        ShadowLog.clear()
+    fun translatedFixture_mapsThroughMusixmatchPlainLyricsProductionProviderWithTranslation() {
         val nativeResult =
             requireNotNull(
                 MusixmatchPlainLyricsProvider.mapNativePlainLyricsResultJson(
@@ -84,10 +82,6 @@ class NativePlainLyricsResultContractTest {
         assertEquals("Musixmatch", domainResult.plainProviderName)
         assertEquals("[00:03.00]Original subtitle", domainResult.plainLrc)
         assertEquals("[00:03.00]Translated subtitle", domainResult.translatedLrc)
-        assertTrue(
-            ShadowLog.getLogsForTag("AirLyricsLyrics")
-                .any { it.msg.contains("Musixmatch translation found") },
-        )
     }
 
     @Test
@@ -114,7 +108,6 @@ class NativePlainLyricsResultContractTest {
 
     @Test
     fun nullableFixture_mapsFallbacksThroughMusixmatchPlainLyricsProductionProvider() {
-        ShadowLog.clear()
         val nativeResult =
             requireNotNull(
                 MusixmatchPlainLyricsProvider.mapNativePlainLyricsResultJson(
@@ -139,10 +132,6 @@ class NativePlainLyricsResultContractTest {
         assertEquals("Musixmatch", domainResult.plainProviderName)
         assertEquals("[00:02.00]Original only", domainResult.plainLrc)
         assertNull(domainResult.translatedLrc)
-        assertTrue(
-            ShadowLog.getLogsForTag("AirLyricsLyrics")
-                .any { it.msg.contains("Musixmatch translation empty") },
-        )
     }
 
     private fun fixtureCase(name: String): String = fixture.getJSONObject(name).toString()

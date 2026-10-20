@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.app
 
 import com.andsi.airlyrics.testutil.resetLyricsStorage
-import com.andsi.airlyrics.testutil.awaitBackgroundCondition
+import com.andsi.airlyrics.testutil.QueuedCallbackDispatcher
 import com.andsi.airlyrics.testutil.awaitUiCondition as awaitCondition
 import android.content.Context
 import android.media.session.MediaSessionManager
@@ -54,14 +54,20 @@ class MainActivitySavedLyricsUiTest {
         val staleItem = LyricsStorage.listAllLyrics(oldActivity).single()
         val oldCallbackResults = mutableListOf<Boolean>()
 
-        oldActivity.graph.deleteSavedLyrics(staleItem, oldCallbackResults::add)
-        awaitBackgroundCondition { LyricsStorage.listAllLyrics(context).isEmpty() }
+        val callbacks = QueuedCallbackDispatcher()
+        oldActivity.graph.deleteSavedLyrics(staleItem, oldCallbackResults::add, callbacks::dispatch)
+        awaitCondition { callbacks.pendingDeliveryCount() == 1 }
+        val deliverOldCallback = callbacks.takeDelivery()
 
         controller.recreate()
         val restoredActivity = controller.get()
         val newCallbackResults = mutableListOf<Boolean>()
-        restoredActivity.graph.deleteSavedLyrics(staleItem, newCallbackResults::add)
-        awaitCondition { newCallbackResults.isNotEmpty() }
+        val newCallbacks = QueuedCallbackDispatcher()
+        restoredActivity.graph.deleteSavedLyrics(staleItem, newCallbackResults::add, newCallbacks::dispatch)
+        awaitCondition { newCallbacks.pendingDeliveryCount() == 1 }
+        deliverOldCallback()
+        assertTrue(newCallbackResults.isEmpty())
+        newCallbacks.takeDelivery()()
 
         assertTrue(oldActivity.isDestroyed)
         assertTrue(oldCallbackResults.isEmpty())
@@ -71,6 +77,21 @@ class MainActivitySavedLyricsUiTest {
             LyricsStorage.currentRevision(),
             restoredActivity.graph.state.foreground.lyricsRevision
         )
+    }
+
+    @Test
+    fun deletionDeliveredBeforeRecreationCompletesTheOldRequestOnce() {
+        saveLyrics()
+        val controller = launchActivity()
+        val activity = controller.get()
+        val results = mutableListOf<Boolean>()
+        activity.graph.deleteSavedLyrics(LyricsStorage.listAllLyrics(context).single(), results::add)
+        awaitCondition { results.isNotEmpty() }
+        assertEquals(listOf(true), results)
+        controller.recreate()
+        ShadowLooper.idleMainLooper()
+        assertEquals(listOf(true), results)
+        assertTrue(LyricsStorage.listAllLyrics(context).isEmpty())
     }
 
     private fun launchActivity(): ActivityController<MainActivity> {

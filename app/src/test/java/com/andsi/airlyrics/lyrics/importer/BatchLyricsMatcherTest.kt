@@ -30,7 +30,14 @@ class BatchLyricsMatcherTest {
 
     @Test fun multipleFilesForOneSongAreAllSkippedRegardlessOfOrder() {
         val docs = listOf(BatchLyricsMatcher.Document("Artist - Song One.lrc"), BatchLyricsMatcher.Document("Song One.ttml"))
-        assertTrue(BatchLyricsMatcher.match(docs, listOf(first, second)).all { it.problem == BatchLyricsMatcher.Problem.DUPLICATE })
+        for (ordered in listOf(docs, docs.reversed())) {
+            val matches = BatchLyricsMatcher.match(ordered, listOf(first, second))
+            assertEquals(listOf(null, null), matches.map { it.target })
+            assertEquals(List(2) { BatchLyricsMatcher.Problem.DUPLICATE }, matches.map { it.problem })
+            val mixed = BatchLyricsMatcher.match(ordered + BatchLyricsMatcher.Document("Song Two.lrc"), listOf(first, second))
+            assertEquals(listOf(null, null, second), mixed.map { it.target })
+            assertEquals(listOf(BatchLyricsMatcher.Problem.DUPLICATE, BatchLyricsMatcher.Problem.DUPLICATE, null), mixed.map { it.problem })
+        }
     }
 
     @Test fun oneSelectedSongAndOneFileAreAnExplicitMapping() {

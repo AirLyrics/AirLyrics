@@ -13,7 +13,8 @@ object SpicyLyricsProvider : LyricsProvider {
     override val name = "Spicy Lyrics"
     override val supportsWordTiming = true
     override val continueOnFailure = true
-    val isConfigured: Boolean get() = BuildConfig.SPICY_CLIENT_KEY.startsWith("sl_pk_")
+    val isConfigured: Boolean get() = isConfigured(BuildConfig.SPICY_CLIENT_KEY)
+    internal fun isConfigured(key: String) = com.andsi.airlyrics.core.model.LyricsSourceCapability.spicyConfigured(key)
     private val fetchLock = ReentrantLock()
     private val misses = LinkedHashMap<String, Long>()
 

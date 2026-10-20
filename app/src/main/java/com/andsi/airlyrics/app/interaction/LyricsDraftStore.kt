@@ -7,8 +7,11 @@ import java.util.concurrent.Future
 import org.json.JSONObject
 
 /** Ordered writes ensure that a delayed save cannot recreate a discarded draft. */
-internal class LyricsDraftStore(private val directory: File) {
-    fun write(id: String, text: String): Future<*> = io.submit {
+internal class LyricsDraftStore(
+    private val directory: File,
+    private val executor: java.util.concurrent.ExecutorService = io
+) {
+    fun write(id: String, text: String): Future<*> = executor.submit {
         directory.mkdirs()
         val file = atomic(id)
         val stream = file.startWrite()
@@ -21,15 +24,15 @@ internal class LyricsDraftStore(private val directory: File) {
         }
     }
 
-    fun read(id: String): Future<String?> = io.submit<String?> {
+    fun read(id: String): Future<String?> = executor.submit<String?> {
         runCatching {
             val json = JSONObject(atomic(id).readFully().toString(Charsets.UTF_8))
             if (json.getInt("version") == 1) json.getString("text") else null
         }.getOrNull()
     }
 
-    fun delete(id: String): Future<*> = io.submit { atomic(id).delete() }
-    fun prune(keep: String?): Future<*> = io.submit {
+    fun delete(id: String): Future<*> = executor.submit { atomic(id).delete() }
+    fun prune(keep: String?): Future<*> = executor.submit {
         directory.listFiles()?.filter { it.name.substringBefore('.') != keep }?.forEach(File::delete)
     }
 

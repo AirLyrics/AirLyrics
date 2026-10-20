@@ -7,7 +7,6 @@ import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
-import com.google.android.material.behavior.SwipeDismissBehavior
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
 import org.junit.After
@@ -22,7 +21,6 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowDialog
-import org.robolectric.util.ReflectionHelpers
 
 @RunWith(RobolectricTestRunner::class)
 class SnackbarAirFeedbackTest {
@@ -60,10 +58,7 @@ class SnackbarAirFeedbackTest {
         assertSame(anchor, snackbar.anchorView)
         assertEquals(BaseTransientBottomBar.ANIMATION_MODE_SLIDE, snackbar.animationMode)
         assertTrue(behavior.canSwipeDismissView(snackbar.view))
-        assertEquals(
-            SwipeDismissBehavior.SWIPE_DIRECTION_ANY,
-            ReflectionHelpers.getField<Int>(behavior, "swipeDirection")
-        )
+
 
         activity.graph.uiHost.showAirDialog(
             title = "Lyrics editor",

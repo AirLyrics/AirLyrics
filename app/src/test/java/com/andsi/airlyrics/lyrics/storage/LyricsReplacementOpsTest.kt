@@ -55,7 +55,7 @@ class LyricsReplacementOpsTest {
         assertEquals(LyricsStorage.SOURCE_MANUAL_IMPORT, LyricsIndexStore.read(context).single().plainSource)
     }
 
-    @Test fun missingOrChangedSelectedEntryIsNeverRecreated() {
+    @Test fun deletedSelectedEntryIsNeverRecreated() {
         val item = seed()
         LyricsStorage.deleteLocalLyricsItem(context, item)
         assertEquals(LyricsReplacementOps.Result.STALE, LyricsStorage.replaceSavedLyrics(context, item, plain))
@@ -117,6 +117,77 @@ class LyricsReplacementOpsTest {
         assertEquals(LyricsReplacementOps.Result.SAVED, LyricsStorage.replaceSavedLyrics(context, item, plain))
         assertEquals(other, LyricsIndexStore.read(context).single { it.key == other.key })
         assertEquals("[00:01.00]live", LyricsFileStore.readManagedLyrics(context, other.plainFile))
+    }
+
+    @Test fun changedSelectedEntryPreservesCurrentFilesAndIndex() {
+        val stale = seed()
+        val original = LyricsIndexStore.read(context).single()
+        LyricsFileStore.writeManagedLyrics(context, original.plainFile.substringAfterLast('/'), "[00:01.00]edited elsewhere")
+        LyricsIndexStore.write(context, listOf(original.copy(updatedAt = original.updatedAt + 1)))
+        val before = LyricsIndexStore.read(context)
+        assertEquals(LyricsReplacementOps.Result.STALE, LyricsStorage.replaceSavedLyrics(context, stale, plain))
+        assertEquals(before, LyricsIndexStore.read(context))
+        assertEquals("[00:01.00]edited elsewhere", LyricsFileStore.readManagedLyrics(context, original.plainFile))
+    }
+
+    @Test fun unreadableFileSnapshotDoesNotWrite() {
+        val item = seed()
+        val before = LyricsIndexStore.read(context)
+        val io = object : ManagedLyricsIo by AndroidManagedLyricsIo {
+            override fun read(context: Context, relativeFile: String): String? = null
+            override fun write(context: Context, fileName: String, lyrics: String): Boolean = error("Must not write without snapshot")
+        }
+        assertEquals(LyricsReplacementOps.Result.FAILED, LyricsReplacementOps.replace(context, item, plain, io))
+        assertEquals(before, LyricsIndexStore.read(context))
+        assertEquals("[00:01.00]old", LyricsStorage.readPlainLyrics(context, "Song", "Artist", 180_000))
+    }
+
+    @Test fun conflictingFileOwnerPreventsReplacement() {
+        val item = seed()
+        val entry = LyricsIndexStore.read(context).single()
+        val entries = listOf(entry, entry.copy(key = "other", durationMs = 240_000))
+        val index = object : LyricsIndexIo by AndroidLyricsIndexIo {
+            override fun read(context: Context) = entries
+            override fun write(context: Context, entries: List<LyricsIndexEntry>): Boolean = error("Must not write a shared path")
+        }
+        assertEquals(LyricsReplacementOps.Result.FAILED, LyricsReplacementOps.replace(context, item, plain, indexIo = index))
+        assertEquals(listOf(entry), LyricsIndexStore.read(context))
+        assertEquals("[00:01.00]old", LyricsFileStore.readManagedLyrics(context, entry.plainFile))
+    }
+
+    @Test fun failedWordFileCleanupRollsBackPlainFileAndRawIndex() {
+        val item = seed()
+        assertEquals(LyricsReplacementOps.Result.SAVED, LyricsStorage.replaceSavedLyrics(context, item, words))
+        val original = LyricsIndexStore.read(context).single()
+        val other = original.copy(key = "other-version", durationMs = 240_000, plainFile = "lyrics/other.lrc", wordByWordFile = "")
+        assertTrue(LyricsFileStore.writeManagedLyrics(context, "other.lrc", "[00:01.00]other version"))
+        assertTrue(LyricsIndexStore.write(context, listOf(original, other)))
+        val indexFile = java.io.File(LyricsStoragePaths.fallbackLyricsDir(context), INDEX_FILE_NAME)
+        val json = org.json.JSONArray(indexFile.readText())
+        json.getJSONObject(0).put("futureMetadata", org.json.JSONObject().put("unknown", "preserve"))
+        indexFile.writeText(json.toString(3))
+        val rawBefore = indexFile.readBytes()
+        val selected = LyricsStorage.listAllLyrics(context).single { it.indexKey == item.indexKey }
+        val before = LyricsIndexStore.read(context)
+        val files = before.flatMap { listOf(it.plainFile, it.wordByWordFile) }.filter { it.isNotBlank() }.associateWith { LyricsFileStore.readManagedLyrics(context, it) }
+        val io = object : ManagedLyricsIo by AndroidManagedLyricsIo {
+            override fun delete(context: Context, relativeFile: String): Boolean = false
+        }
+        assertEquals(LyricsReplacementOps.Result.FAILED, LyricsReplacementOps.replace(context, selected, plain, io))
+        assertEquals(before, LyricsIndexStore.read(context))
+        files.forEach { (path, content) -> assertEquals(content, LyricsFileStore.readManagedLyrics(context, path)) }
+        assertArrayEquals(rawBefore, indexFile.readBytes())
+    }
+
+    @Test fun unreadableIndexSnapshotPreventsAnyFileWrites() {
+        val item = seed()
+        val index = object : LyricsIndexIo by AndroidLyricsIndexIo {
+            override fun captureRaw(context: Context) = LyricsIndexStore.RawSnapshot.Unreadable
+        }
+        val before = (LyricsIndexStore.captureRaw(context) as LyricsIndexStore.RawSnapshot.Present).bytes
+        assertEquals(LyricsReplacementOps.Result.FAILED, LyricsReplacementOps.replace(context, item, plain, indexIo = index))
+        assertArrayEquals(before, (LyricsIndexStore.captureRaw(context) as LyricsIndexStore.RawSnapshot.Present).bytes)
+        assertEquals("[00:01.00]old", LyricsStorage.readPlainLyrics(context, "Song", "Artist", 180_000))
     }
 
     private fun seed(): LyricsStorage.LocalLyricsItem {

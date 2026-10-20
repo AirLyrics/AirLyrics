@@ -358,6 +358,27 @@ class MainActivityBatchLyricsTest {
         assertEquals(2, recreated.graph.uiHost.interactions.read("savedLyricsSelection")!!.getStringArrayList("keys")!!.size)
     }
 
+    @Test fun realMultipleDocumentLauncherDeliversPreviewAndCancellationDoesNotWrite() {
+        val activity = launch()
+        val selected = activity.graph.uiHost.savedLyricsState().lyrics
+        activity.graph.uiHost.manageSavedLyrics(selected, delete = false)
+        val shadow = org.robolectric.Shadows.shadowOf(activity)
+        val cancelled = shadow.nextStartedActivityForResult
+        assertEquals(android.content.Intent.ACTION_OPEN_DOCUMENT, cancelled.intent.action)
+        assertTrue(cancelled.intent.getBooleanExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, false))
+        shadow.receiveResult(cancelled.intent, android.app.Activity.RESULT_CANCELED, null)
+        assertNull(activity.graph.uiHost.batchLyricsSession.state.value)
+        activity.graph.uiHost.manageSavedLyrics(selected, delete = false)
+        val request = shadow.nextStartedActivityForResult
+        val file = File(context.cacheDir, "One.lrc").apply { writeText("[00:01.00]new One") }
+        try {
+            shadow.receiveResult(request.intent, android.app.Activity.RESULT_OK, android.content.Intent().setData(Uri.fromFile(file)))
+            awaitUiCondition { activity.graph.uiHost.batchLyricsSession.state.value?.stage == BatchLyricsStage.PREVIEW }
+            assertEquals("One", activity.graph.uiHost.batchLyricsSession.state.value!!.rows.single().target!!.title)
+            assertEquals("[00:01.00]old One", LyricsStorage.readPlainLyrics(context, "One", "Artist", 180_000))
+        } finally { file.delete() }
+    }
+
     private fun launch(): MainActivity {
         controller = Robolectric.buildActivity(MainActivity::class.java).setup()
         val activity = controller!!.get()

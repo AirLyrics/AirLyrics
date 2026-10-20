@@ -48,12 +48,13 @@ internal object LyricsSearchCoordinator {
         }
     }
 
-    fun begin(song: SongIdentity, token: LyricsLookupCancellationToken, origin: LyricsSearchOrigin, mode: LyricsSearchMode): Lease {
+    fun begin(song: SongIdentity, token: LyricsLookupCancellationToken, origin: LyricsSearchOrigin, mode: LyricsSearchMode, onWaiting: () -> Unit = {}): Lease {
         val retired = mutableListOf<Lease>()
         val lease = lock.withLock {
             val key = song.copy(durationMs = 0L).storageKey()
             while (origin == LyricsSearchOrigin.Automatic && searches[key]?.any { it.origin == LyricsSearchOrigin.Manual } == true) {
                 token.throwIfCancellationRequested()
+                onWaiting()
                 searchesChanged.await(100, TimeUnit.MILLISECONDS)
             }
             token.throwIfCancellationRequested()

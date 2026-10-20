@@ -14,7 +14,11 @@ import com.andsi.airlyrics.lyrics.storage.LyricsReplacementOps
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.state.MainInteractionState
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
+import com.andsi.airlyrics.lyrics.importer.BatchLyricsDocument
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,7 +35,8 @@ internal data class BatchLyricsRow(
     val fingerprint: String,
     val wordByWord: Boolean,
     val target: LocalLyricsUiItem? = null,
-    val problem: BatchLyricsProblem? = null
+    val problem: BatchLyricsProblem? = null,
+    val accessRetained: Boolean = true
 )
 internal data class BatchLyricsState(
     val stage: BatchLyricsStage,
@@ -49,12 +54,34 @@ internal data class BatchLyricsState(
 internal class BatchLyricsSession(
     context: Context,
     private val interactions: MainInteractionState,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val readDocument: (Context, Uri) -> BatchLyricsDocumentReader.Result = BatchLyricsDocumentReader::read,
+    private val replaceDocument: (Context, LyricsStorage.LocalLyricsItem, BatchLyricsDocument) -> LyricsReplacementOps.Result = LyricsStorage::replaceSavedLyrics,
+    private val publisher: LyricsChangedPublisher = BroadcastLyricsChangedPublisher(context),
+    private val access: BatchLyricsAccess = AndroidBatchLyricsAccess(context)
 ) {
     private val context = context.applicationContext
     private val current = MutableStateFlow<BatchLyricsState?>(null)
     val state = current.asStateFlow()
     private var restored = false
+
+    init {
+        scope.coroutineContext[Job]?.invokeOnCompletion { releaseOwnedGrants() }
+    }
+
+    private fun releaseOwnedGrants() {
+        interactions.read("batchLyrics")?.getStringArrayList("ownedGrants")?.forEach {
+            access.release(it.toUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        interactions.read("batchLyrics")?.getString("exportGrant")?.let {
+            access.release(it.toUri(), Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }
+        if (interactions.read("batchLyrics") != null) interactions.write("batchLyrics") {
+            remove("ownedGrants")
+            remove("exportGrant")
+        }
+    }
 
     fun restore() {
         if (restored) return
@@ -65,7 +92,10 @@ internal class BatchLyricsSession(
         current.value = BatchLyricsState(stage, items, saved.getString("directory").orEmpty(), exporting = saved.getBoolean("exporting"))
         when (stage) {
             BatchLyricsStage.PREVIEW, BatchLyricsStage.READING -> filesSelected(saved.getStringArrayList("uris").orEmpty().map(Uri::parse))
-            BatchLyricsStage.RUNNING, BatchLyricsStage.EXPORTING, BatchLyricsStage.FINISHED -> current.value = current.value?.copy(stage = BatchLyricsStage.FINISHED, interrupted = true)
+            BatchLyricsStage.RUNNING, BatchLyricsStage.EXPORTING, BatchLyricsStage.FINISHED -> {
+                current.value = current.value?.copy(stage = BatchLyricsStage.FINISHED, interrupted = true)
+                releaseOwnedGrants()
+            }
             else -> Unit
         }
     }
@@ -98,15 +128,13 @@ internal class BatchLyricsSession(
         persist()
         // Retain the destination grant while the ViewModel-owned writer survives rotation.
         var ownedGrant = false
-        if (context.contentResolver.persistedUriPermissions.none { it.uri == uri && it.isWritePermission }) {
-            ownedGrant = runCatching {
-                context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
-            }.isSuccess
+        if (!access.held(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)) {
+            ownedGrant = access.take(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
         }
         if (ownedGrant) interactions.write("batchLyrics") { putString("exportGrant", uri.toString()) }
         scope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
+                val result = withContext(ioDispatcher) {
                     BatchLyricsExporter.export(context, snapshot.items.map { it.toStorageItem() }, snapshot.directory, uri)
                 }
                 current.value = snapshot.copy(stage = BatchLyricsStage.FINISHED, completed = result.exported,
@@ -115,8 +143,9 @@ internal class BatchLyricsSession(
                     })
                 persist()
             } finally {
-                if (ownedGrant) runCatching {
-                    context.contentResolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                if (ownedGrant) {
+                    access.release(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                    interactions.write("batchLyrics") { remove("exportGrant") }
                 }
             }
         }
@@ -141,22 +170,24 @@ internal class BatchLyricsSession(
         if (uris.isEmpty()) { dismiss(); return }
         val uniqueUris = uris.distinct()
         val ownedGrants = interactions.read("batchLyrics")?.getStringArrayList("ownedGrants").orEmpty().toMutableSet()
+        val unretained = mutableSetOf<Uri>()
         uniqueUris.forEach { uri ->
-            if (context.contentResolver.persistedUriPermissions.none { it.uri == uri && it.isReadPermission }) {
-                runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                    .onSuccess { ownedGrants += uri.toString() }
+            if (!access.held(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)) {
+                if (access.take(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)) ownedGrants += uri.toString()
+                else unretained += uri
             }
         }
         interactions.write("batchLyrics") { putStringArrayList("ownedGrants", ArrayList(ownedGrants)) }
         current.value = snapshot.copy(stage = BatchLyricsStage.READING)
         persist(uniqueUris)
         scope.launch {
-            val rows = withContext(Dispatchers.IO) {
+            val rows = withContext(ioDispatcher) {
                 val read = uniqueUris.map { uri ->
-                    val result = BatchLyricsDocumentReader.read(context, uri)
+                    val result = readDocument(context, uri)
                     BatchLyricsRow(uri, result.name, result.document?.matchInfo ?: BatchLyricsMatcher.Document(result.name),
                         result.fingerprint, result.document?.words?.isNotEmpty() == true,
-                        problem = result.failure?.let { BatchLyricsProblem.valueOf(it.name) })
+                        problem = result.failure?.let { BatchLyricsProblem.valueOf(it.name) },
+                        accessRetained = uri !in unretained)
                 }
                 // The list may show both a local copy and an online cache for the same exact identity.
                 val targets = snapshot.items.filter { it.indexKey.isNotBlank() && it.title.isNotBlank() }
@@ -182,10 +213,9 @@ internal class BatchLyricsSession(
         current.value = snapshot.copy(stage = BatchLyricsStage.RUNNING)
         persist()
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
+            val result = withContext(ioDispatcher) {
                 var completed = 0
                 val failures = mutableListOf<BatchLyricsFailure>()
-                val publisher = BroadcastLyricsChangedPublisher(context)
                 if (snapshot.stage == BatchLyricsStage.DELETE) {
                     snapshot.items.forEach { item ->
                         val deleted = runCatching {
@@ -206,12 +236,12 @@ internal class BatchLyricsSession(
                         val item = checkNotNull(row.target)
                         var problem = BatchLyricsProblem.SAVE
                         val saved = runCatching {
-                            val read = BatchLyricsDocumentReader.read(context, row.uri)
+                            val read = readDocument(context, row.uri)
                             if (read.fingerprint != row.fingerprint || read.document == null) problem = BatchLyricsProblem.CHANGED
                             check(read.fingerprint == row.fingerprint && read.document != null)
                             LyricsStorage.withStorageLock {
                                 check(snapshot.directory == LyricsStorage.getLyricsDirRawPath(context))
-                                LyricsStorage.replaceSavedLyrics(context, item.toStorageItem(), read.document)
+                                replaceDocument(context, item.toStorageItem(), read.document)
                             }
                         }.getOrNull()
                         if (saved == LyricsReplacementOps.Result.SAVED) {
@@ -227,6 +257,7 @@ internal class BatchLyricsSession(
                 snapshot.copy(stage = BatchLyricsStage.FINISHED, completed = completed, failures = failures)
             }
             current.value = result
+            releaseOwnedGrants()
             interactions.remove("savedLyricsSelection")
             persist()
         }
@@ -234,12 +265,7 @@ internal class BatchLyricsSession(
 
     fun dismiss() {
         if (current.value?.stage in setOf(BatchLyricsStage.READING, BatchLyricsStage.RUNNING, BatchLyricsStage.EXPORTING)) return
-        interactions.read("batchLyrics")?.getStringArrayList("ownedGrants")?.forEach { uri ->
-            runCatching { context.contentResolver.releasePersistableUriPermission(uri.toUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        }
-        interactions.read("batchLyrics")?.getString("exportGrant")?.let { uri ->
-            runCatching { context.contentResolver.releasePersistableUriPermission(uri.toUri(), Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
-        }
+        releaseOwnedGrants()
         current.value = null
         interactions.remove("batchLyrics")
     }

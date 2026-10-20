@@ -1714,34 +1714,11 @@ mod tests {
 
     #[tokio::test]
     async fn service_unavailable_retries_once_after_retry_after() {
-        use std::io::{BufRead, BufReader, Read, Write};
-
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("local server");
-        let address = listener.local_addr().expect("local address");
-        let server = std::thread::spawn(move || {
-            for response in [
-                "HTTP/1.1 503 Service Unavailable\r\nRetry-After: 0\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
-                "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
-            ] {
-                let (mut stream, _) = listener.accept().expect("request");
-                stream
-                    .set_read_timeout(Some(Duration::from_secs(2)))
-                    .expect("read timeout");
-                let mut reader = BufReader::new((&mut stream).take(16 * 1024));
-                let mut line = String::new();
-                loop {
-                    line.clear();
-                    assert!(reader.read_line(&mut line).expect("request headers") > 0,
-                        "request headers ended before the blank line or exceeded 16 KiB");
-                    if line == "\r\n" {
-                        break;
-                    }
-                }
-                stream.write_all(response.as_bytes()).expect("response");
-            }
-        });
-
-        let request = Client::new().get(format!("http://{address}/api/get"));
+        let server = crate::test_http::Server::new(vec![
+            "HTTP/1.1 503 Service Unavailable\r\nRetry-After: 0\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+            "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        ]);
+        let request = crate::test_http::client().get(format!("{}/api/get", server.url));
         let mut observed_retry_after = None;
         let result = tokio::time::timeout(
             Duration::from_secs(4),
@@ -1753,7 +1730,7 @@ mod tests {
 
         assert!(result.is_none());
         assert!(observed_retry_after.is_none());
-        server.join().expect("server completed");
+        server.finish();
     }
 
     #[test]

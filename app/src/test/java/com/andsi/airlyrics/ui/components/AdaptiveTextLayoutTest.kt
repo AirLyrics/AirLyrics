@@ -93,6 +93,20 @@ class AdaptiveTextLayoutTest {
         }
     }
 
+    @Test fun productionStatusRowStacksOnlyBelowItsNaturalWidth() {
+        val host = host()
+        val row = settingRow(host, host.getString(R.string.ui_current_offset), host.getString(R.string.ui_no_offset)) as AdaptiveLabelValueLayout
+        val unspecified = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        row.measure(unspecified, unspecified)
+        val natural = row.measuredWidth
+        assertTrue(natural > 1)
+        layout(row, natural + 1)
+        assertFalse("Just above the natural width", row.isStacked)
+        layout(row, natural - 1)
+        assertTrue("Just below the natural width", row.isStacked)
+        assertTrue(row.labelView.bottom <= row.valueView.top)
+    }
+
     @Test fun expandingSummaryDoesNotClickParentAndBindingRestoresOnlyMatchingItem() {
         val host = host()
         var parentClicks = 0

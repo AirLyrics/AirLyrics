@@ -12,9 +12,13 @@ import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
 import androidx.test.runner.lifecycle.Stage
 import com.andsi.airlyrics.R
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Rule
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.io.File
+import androidx.test.platform.io.PlatformTestStorageRegistry
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.os.ParcelFileDescriptor
@@ -28,12 +32,18 @@ import android.app.Dialog
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityRotationInstrumentedTest {
+    @get:Rule val diagnostics = object : TestWatcher() {
+        override fun failed(error: Throwable, description: Description) {
+            runCatching { screenshot("${description.methodName}.png") }
+        }
+    }
+
     @Test fun repeatedRealRotationKeepsNavigationReachable() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            for ((index, orientation) in listOf(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
+            for (orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
                 ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT,
-                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE).withIndex()) {
+                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)) {
                 awaitActivity(scenario) { it.requestedOrientation = orientation }
                 val expected = if (orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) Configuration.ORIENTATION_PORTRAIT else Configuration.ORIENTATION_LANDSCAPE
                 awaitActivity(
@@ -50,20 +60,21 @@ class MainActivityRotationInstrumentedTest {
                             })
                     }
                 ) { activity ->
+                    activity.graph.viewModel.selectPage(Page.MEDIA)
+                    activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
                     val root = activity.findViewById<View>(android.R.id.content)
                     val target = descendants(root).filterIsInstance<TextView>()
                         .filter { it.text.toString() == activity.getString(R.string.ui_settings) && it.isShown }
                         .firstNotNullOf { text -> generateSequence(text as View) { it.parent as? View }.firstOrNull { it.hasOnClickListeners() } }
                     assertTrue("Settings navigation must have a click listener", target.performClick())
-                    assertTrue(root.width > 0 && root.height > 0)
+                    assertEquals(Page.SETTINGS, activity.graph.state.currentPage)
                 }
                 instrumentation.waitForIdleSync()
-                // Surface rotation animations run outside the app's main looper.
-                SystemClock.sleep(500)
-                val bitmap = instrumentation.uiAutomation.takeScreenshot()
-                val output = File(instrumentation.targetContext.getExternalFilesDir(null), "rotation-$index.png")
-                output.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                bitmap.recycle()
+                awaitActivity(scenario, "Settings page content did not become usable", ready = { activity ->
+                    descendants(activity.window.decorView).filterIsInstance<TextView>().any {
+                        it.isShown && it.text.toString() == activity.getString(R.string.ui_lyrics_settings_summary)
+                    }
+                }) {}
             }
         }
     }
@@ -103,19 +114,17 @@ class MainActivityRotationInstrumentedTest {
                         val host = activity.graph.uiHost
                         val root = activity.findViewById<View>(android.R.id.content)
                         host.tabViews.values.forEach { tab ->
-                            val visible = android.graphics.Rect()
-                            assertTrue("Navigation label must remain reachable", tab.getGlobalVisibleRect(visible))
-                            assertTrue(visible.width() > 0 && visible.height() > 0)
+                            assertFullyVisible(tab, activity.window.decorView, "Navigation label")
                         }
                         assertTrue(root.width > 0 && root.height > 0)
                     }
-                    screenshot("window-$index.png")
                 }
+                var savedText: String? = null
                 lateinit var editor: EditText
                 lateinit var editorDialog: Dialog
                 awaitActivity(scenario) { activity ->
                     val host = activity.graph.uiHost
-                    editorDialog = host.showAirDialog("Editor", positiveText = "Save", body = {
+                    editorDialog = host.showAirDialog("Editor", positiveText = "Save", onPositive = { savedText = editor.text.toString() }, body = {
                         addView(EditText(activity).apply {
                             editor = this
                             setText("Long text for keyboard layout ".repeat(15))
@@ -153,12 +162,11 @@ class MainActivityRotationInstrumentedTest {
                 SystemClock.sleep(500)
                 awaitActivity(scenario) {
                     val save = descendants(editorDialog.window!!.decorView).filterIsInstance<TextView>().single { it.text.toString() == "Save" }
-                    val visible = android.graphics.Rect()
-                    assertTrue("Save must remain visible above the keyboard", save.getGlobalVisibleRect(visible))
-                    val ime = ViewCompat.getRootWindowInsets(editor)!!.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                    assertTrue(visible.bottom <= editorDialog.window!!.decorView.height - ime)
+                    assertFullyVisible(save, editorDialog.window!!.decorView, "Save")
+                    val expected = editor.text.toString()
+                    assertTrue(save.performClick())
+                    assertEquals(expected, savedText)
                 }
-                screenshot("keyboard.png")
                 instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
             }
         } finally {
@@ -171,6 +179,25 @@ class MainActivityRotationInstrumentedTest {
             restoreSetting("font_scale", fontScale)
             restoreSetting("user_rotation", rotation)
             restoreSetting("accelerometer_rotation", autoRotation)
+        }
+    }
+
+    private fun assertFullyVisible(view: View, decor: View, label: String) {
+        try {
+            val origin = IntArray(2).also(view::getLocationOnScreen)
+            val full = android.graphics.Rect(origin[0], origin[1], origin[0] + view.width, origin[1] + view.height)
+            val visible = android.graphics.Rect()
+            assertTrue("$label must be visible", view.getLocalVisibleRect(visible))
+            assertEquals("$label must not be clipped", android.graphics.Rect(0, 0, view.width, view.height), visible)
+            val decorOrigin = IntArray(2).also(decor::getLocationOnScreen)
+            val insets = ViewCompat.getRootWindowInsets(decor)?.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime()) ?: androidx.core.graphics.Insets.NONE
+            val available = android.graphics.Rect(decorOrigin[0] + insets.left, decorOrigin[1] + insets.top,
+                decorOrigin[0] + decor.width - insets.right, decorOrigin[1] + decor.height - insets.bottom)
+            assertTrue("$label must fit available window $available; actual $full", available.contains(full))
+        } catch (failure: AssertionError) {
+            runCatching { screenshot("clipped-control.png") }
+            throw failure
         }
     }
 
@@ -219,9 +246,11 @@ class MainActivityRotationInstrumentedTest {
     private fun screenshot(name: String) {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val bitmap = instrumentation.uiAutomation.takeScreenshot()
-        val output = File(instrumentation.targetContext.getExternalFilesDir(null), name)
-        output.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        bitmap.recycle()
+        try {
+            PlatformTestStorageRegistry.getInstance().openOutputFile(name).use {
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+            }
+        } finally { bitmap.recycle() }
     }
 
     private fun shell(command: String): String = ParcelFileDescriptor.AutoCloseInputStream(

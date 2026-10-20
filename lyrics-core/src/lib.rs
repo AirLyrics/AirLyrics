@@ -1477,3 +1477,6 @@ mod netease_tests {
         assert_eq!(build_search_keywords("Song", "", ""), vec!["Song"]);
     }
 }
+
+#[cfg(test)]
+mod test_http;

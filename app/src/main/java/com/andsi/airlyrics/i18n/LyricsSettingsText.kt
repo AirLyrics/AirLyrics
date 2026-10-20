@@ -35,7 +35,7 @@ internal fun plainLyricsSourceTitleRes(plainLyricsSearchSource: PlainLyricsSearc
         PlainLyricsSearchSource.NETEASE -> R.string.ui_netease_cloud_music
         PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch
         PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
-        PlainLyricsSearchSource.SPICY -> if (com.andsi.airlyrics.BuildConfig.SPICY_CLIENT_KEY.isBlank()) R.string.provider_spicy_unavailable else R.string.provider_spicy
+        PlainLyricsSearchSource.SPICY -> if (!com.andsi.airlyrics.core.model.LyricsSourceCapability.spicyConfigured(com.andsi.airlyrics.BuildConfig.SPICY_CLIENT_KEY)) R.string.provider_spicy_unavailable else R.string.provider_spicy
     }
 
 @StringRes

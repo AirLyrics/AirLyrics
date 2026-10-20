@@ -5,6 +5,8 @@ on:
     paths:
       - 'lyrics-core/**'
       - 'app/src/**'
+      - 'scripts/run_instrumentation_ci.sh'
+      - 'scripts/test_reports/**'
       - 'app/build.gradle.kts'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
@@ -19,6 +21,8 @@ on:
     paths:
       - 'lyrics-core/**'
       - 'app/src/**'
+      - 'scripts/run_instrumentation_ci.sh'
+      - 'scripts/test_reports/**'
       - 'app/build.gradle.kts'
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
@@ -165,42 +169,11 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_7
-          script: >-
-            ./gradlew :app:connectedDebugAndroidTest
-            -Pairlyrics.skipRustBuild=true
-            -Pairlyrics.buildX86_64=true
-            --stacktrace
+          script: bash scripts/run_instrumentation_ci.sh
 
       - name: Verify instrumentation test results
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import sys
-          import xml.etree.ElementTree as ET
-
-          report_root = Path("app/build/outputs/androidTest-results/connected")
-          reports = sorted(report_root.rglob("TEST-*.xml"))
-          if not reports:
-              sys.exit(f"No instrumentation XML reports found under {report_root}")
-
-          totals = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
-          for report in reports:
-              suite = ET.parse(report).getroot()
-              for key in totals:
-                  totals[key] += int(suite.attrib.get(key, "0"))
-
-          print("Instrumentation results:", totals)
-          if totals["tests"] == 0:
-              sys.exit("No instrumentation tests ran")
-
-          incomplete = {
-              key: totals[key]
-              for key in ("failures", "errors", "skipped")
-              if totals[key]
-          }
-          if incomplete:
-              sys.exit(f"Instrumentation tests were not clean: {incomplete}")
-          PY
+        if: always()
+        run: python3 -B scripts/test_reports/summary.py app/build/outputs/androidTest-results/connected --strict
 
       - name: Upload instrumentation test reports
         if: always()
@@ -210,4 +183,6 @@ jobs:
           path: |
             app/build/reports/androidTests/connected/
             app/build/outputs/androidTest-results/connected/
+            app/build/test-diagnostics/
+            app/build/outputs/connected_android_test_additional_output/
           if-no-files-found: ignore

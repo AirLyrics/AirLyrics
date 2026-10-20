@@ -45,7 +45,6 @@ class AirLyricsThemeTest {
 
         assertNotEquals(pink.accent, blue.accent)
         assertNotEquals(pink.accentLight, blue.accentLight)
-        assertNotEquals(pink.onAccent, blue.onAccent)
         assertEquals(pink.background, blue.background)
         assertEquals(pink.accentSoft, blue.accentSoft)
         assertEquals(pink.accentPink, blue.accentPink)

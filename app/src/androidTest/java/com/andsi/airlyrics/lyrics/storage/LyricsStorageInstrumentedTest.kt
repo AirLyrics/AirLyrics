@@ -132,7 +132,7 @@ class LyricsStorageInstrumentedTest {
         val executor = Executors.newFixedThreadPool(8)
         val futures = (0 until count).map { index ->
             executor.submit<Boolean> {
-                startGate.await()
+                check(startGate.await(10, TimeUnit.SECONDS)) { "Save start gate timed out" }
                 LyricsStorage.savePlainLyrics(
                     context = context,
                     title = "Concurrent Song $index",
@@ -144,10 +144,14 @@ class LyricsStorageInstrumentedTest {
             }
         }
 
-        startGate.countDown()
-        futures.forEach { future -> assertTrue(future.get(10, TimeUnit.SECONDS)) }
-        executor.shutdown()
-        assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS))
+        try {
+            startGate.countDown()
+            futures.forEach { future -> assertTrue(future.get(10, TimeUnit.SECONDS)) }
+        } finally {
+            startGate.countDown()
+            executor.shutdownNow()
+            assertTrue("Save workers did not stop", executor.awaitTermination(10, TimeUnit.SECONDS))
+        }
 
         val entries = LyricsIndexStore.read(context)
             .filter { it.plainProvider == "concurrent-test" }

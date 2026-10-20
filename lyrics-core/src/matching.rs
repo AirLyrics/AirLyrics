@@ -960,7 +960,7 @@ mod tests {
             ]
         );
         assert_eq!(
-            build_search_queries("Song", ""),
+            build_search_queries("Song", "  "),
             vec![SearchQuery {
                 title: "Song".to_string(),
                 artist: None,

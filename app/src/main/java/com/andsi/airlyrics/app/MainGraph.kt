@@ -394,12 +394,13 @@ internal class MainGraph(
 
     fun deleteSavedLyrics(
         item: LyricsStorage.LocalLyricsItem,
-        onCompleted: (Boolean) -> Unit
+        onCompleted: (Boolean) -> Unit,
+        dispatchCompletion: (() -> Unit) -> Unit = { it() }
     ) {
         val deletion = viewModel.deleteSavedLyricsItem(item)
         activity.lifecycleScope.launch {
             val deleted = deletion.await()
-            if (canRenderUi()) onCompleted(deleted)
+            dispatchCompletion { if (canRenderUi()) onCompleted(deleted) }
         }
     }
 

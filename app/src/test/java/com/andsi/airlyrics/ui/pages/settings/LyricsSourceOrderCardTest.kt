@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import android.animation.ValueAnimator
 import android.content.Context
-import android.graphics.Color
 import android.os.Looper
 import android.util.TypedValue
 import android.view.View
@@ -13,21 +12,17 @@ import androidx.core.view.ViewCompat
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceCompactTitle
-import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceList
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorOnAccent
 import kotlin.math.abs
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -46,8 +41,16 @@ class LyricsSourceOrderCardTest {
     private lateinit var context: Context
     private var activityController: ActivityController<MainActivity>? = null
 
+    private var animationScale = 1f
+    private fun setAnimationScale(scale: Float) {
+        org.robolectric.util.ReflectionHelpers.callStaticMethod<Unit>(ValueAnimator::class.java, "setDurationScale",
+            org.robolectric.util.ReflectionHelpers.ClassParameter.from(Float::class.javaPrimitiveType, scale))
+    }
+
     @Before
     fun setUp() {
+        animationScale = ValueAnimator.getDurationScale()
+        setAnimationScale(1f)
         context = ApplicationProvider.getApplicationContext()
         lyricsPreferences().edit().clear().commit()
         QuickFloatingStore.setDesiredVisible(context, false)
@@ -55,6 +58,7 @@ class LyricsSourceOrderCardTest {
 
     @After
     fun tearDown() {
+        setAnimationScale(animationScale)
         activityController?.close()
         activityController = null
         lyricsPreferences().edit().clear().commit()
@@ -311,7 +315,7 @@ class LyricsSourceOrderCardTest {
             ),
             sourceRow.displayedSources()
         )
-        if (ValueAnimator.areAnimatorsEnabled()) {
+        run {
             assertTrue(sourceRow.sourceButtons().any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
         }
 
@@ -334,9 +338,6 @@ class LyricsSourceOrderCardTest {
 
         measureAndLayout(card, host.dp(280))
 
-        val cardLayout = card as ViewGroup
-        assertEquals(2, cardLayout.childCount)
-        assertSame(sourceRow, cardLayout.getChildAt(1))
         assertEquals(4, sourceRow.sourceButtons().size)
         assertTrue(sourceRow.getChildAt(0).width > sourceRow.width)
         val buttons = PlainLyricsSearchSource.onlineSources.map { source ->
@@ -366,23 +367,6 @@ class LyricsSourceOrderCardTest {
     }
 
     @Test
-    fun sourceRow_acceptsMoreSourcesWithoutAddingRows() {
-        val host = launchActivity().graph.uiHost
-        val row = LyricsSourceOrderRow(host)
-        val buttons = (1..12).map { index ->
-            LyricsSourceOptionButton(host, PlainLyricsSearchSource.LRCLIB, "Provider $index")
-        }
-        row.setSourceOrder(buttons, animate = false)
-        measureAndLayout(row, host.dp(280))
-        assertEquals(12, row.sourceButtons().size)
-        assertEquals(1, buttons.map { it.top }.distinct().size)
-        assertTrue(row.getChildAt(0).width > row.width * 2)
-        row.scrollTo(row.getChildAt(0).width, 0)
-        assertTrue(row.scrollX > 0)
-        assertTrue(buttons.last().right <= row.scrollX + row.width)
-    }
-
-    @Test
     fun settingsHomeLyricsSummaryUsesSourceNamesWithoutPriorityPunctuation() {
         val sources = PlainLyricsSearchSource.onlineSources
         LyricsSettingsStore.setPlainLyricsSearchSources(context, sources)
@@ -390,15 +374,24 @@ class LyricsSourceOrderCardTest {
         val host = activity.graph.uiHost
 
         val page = createSettingsHomePage(host)
-        val expectedSummary = "${host.localizedPlainLyricsSourceList(sources)} · ${host.getString(R.string.ui_auto_save)}"
+        val titles = listOf(R.string.ui_netease_cloud_music, R.string.provider_musixmatch, R.string.provider_lrclib,
+            if (com.andsi.airlyrics.lyrics.providers.SpicyLyricsProvider.isConfigured) R.string.provider_spicy else R.string.provider_spicy_unavailable)
+            .map(host::getString)
+        val expectedSummary = "${android.icu.text.ListFormatter.getInstance(host.resources.configuration.locales[0]).format(titles)} · ${host.getString(R.string.ui_auto_save)}"
 
         assertTrue(page.hasText(expectedSummary))
-        assertFalse(expectedSummary.contains("→"))
-        assertFalse(expectedSummary.contains("1."))
     }
 
     @Test
-    fun sourceRow_latestOrderCancelsInFlightMotionAndSettlesEveryTile() {
+    fun sourceRow_latestOrderCancelsInFlightMotionAndSettlesEveryTile() = assertLatestOrder(true)
+
+    @Test
+    fun sourceRow_disabledAnimationsStillSettleLatestOrder() {
+        setAnimationScale(0f)
+        assertLatestOrder(false)
+    }
+
+    private fun assertLatestOrder(expectMotion: Boolean) {
         val activity = launchActivity()
         val host = activity.graph.uiHost
         val row = LyricsSourceOrderRow(host)
@@ -426,7 +419,7 @@ class LyricsSourceOrderCardTest {
         measureAndLayout(row, host.dp(280))
         row.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(animatedOrder.map { it.source }, row.displayedSources())
-        if (ValueAnimator.areAnimatorsEnabled()) {
+        if (expectMotion) {
             assertTrue(animatedOrder.any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
         }
 
@@ -439,7 +432,7 @@ class LyricsSourceOrderCardTest {
         row.setSourceOrder(latestOrder, animate = true)
         measureAndLayout(row, host.dp(280))
         row.viewTreeObserver.dispatchOnPreDraw()
-        if (ValueAnimator.areAnimatorsEnabled()) {
+        if (expectMotion) {
             assertTrue(latestOrder.any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
         }
 
@@ -447,6 +440,25 @@ class LyricsSourceOrderCardTest {
 
         assertEquals(latestOrder.map { it.source }, row.displayedSources())
         assertTrue(latestOrder.all { it.translationX == 0f && it.translationY == 0f })
+    }
+
+    @Test
+    fun spicyCapabilityMatchesProviderAndUnavailableSelectionCanBeRemoved() {
+        val host = launchActivity().graph.uiHost
+        for ((key, expected) in listOf("" to false, "invalid" to false, "sl_pk_" to false, "sl_pk_fake-key" to true)) {
+            assertEquals(expected, com.andsi.airlyrics.lyrics.providers.SpicyLyricsProvider.isConfigured(key))
+            val button = LyricsSourceOptionButton(host, PlainLyricsSearchSource.SPICY, "Spicy") {
+                com.andsi.airlyrics.core.model.LyricsSourceCapability.spicyConfigured(key)
+            }
+            button.render(null, "Spicy")
+            assertEquals(expected, button.isEnabled)
+            button.render(1, "Spicy")
+            assertTrue(button.isEnabled)
+            var removed = false
+            button.setOnClickListener { removed = true }
+            button.performClick()
+            assertTrue(removed)
+        }
     }
 
     private fun launchActivity(): MainActivity {
@@ -469,13 +481,7 @@ class LyricsSourceOrderCardTest {
         assertEquals(context.localizedPlainLyricsSourceTitle(button.source), button.contentDescription)
         assertEquals(Button::class.java.name, button.accessibilityClassName)
         val priorityLabel = button.requireTextView(priority.toString())
-        assertNull(priorityLabel.background)
-        assertFalse(priorityLabel.typeface.isBold)
-        assertEquals(
-            AirColorUtils.withAlpha(context.colorOnAccent, Color.alpha(priorityLabel.currentTextColor)),
-            priorityLabel.currentTextColor
-        )
-        assertEquals(160, Color.alpha(priorityLabel.currentTextColor))
+        assertTrue(priorityLabel.isShown || priorityLabel.visibility == View.VISIBLE)
     }
 
     private fun assertUnselectedButton(

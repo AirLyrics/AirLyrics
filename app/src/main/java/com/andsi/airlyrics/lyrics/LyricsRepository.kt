@@ -49,6 +49,27 @@ object LyricsRepository {
         searchOrigin: LyricsSearchOrigin = LyricsSearchOrigin.Automatic,
         onInterimResult: ((LyricsProviderResult) -> Unit)? = null
     ): Result<LyricsProviderResult?> {
+        return findLyricsWithProviders(context, onlinePlainLyricsProviders, settings, title, artist,
+            album, durationMs, bypassLocal, forceSaveOnline, ignoreAutoSearchSetting,
+            cancellationToken, searchMode, searchOrigin, onInterimResult)
+    }
+
+    internal fun findLyricsWithProviders(
+        context: Context,
+        onlinePlainLyricsProviders: Map<PlainLyricsSearchSource, PlainLyricsProvider>,
+        settings: LyricsSettings,
+        title: String,
+        artist: String,
+        album: String = "",
+        durationMs: Long,
+        bypassLocal: Boolean = false,
+        forceSaveOnline: Boolean = false,
+        ignoreAutoSearchSetting: Boolean = false,
+        cancellationToken: LyricsLookupCancellationToken? = null,
+        searchMode: LyricsSearchMode = LyricsSearchMode.Original,
+        searchOrigin: LyricsSearchOrigin = LyricsSearchOrigin.Automatic,
+        onInterimResult: ((LyricsProviderResult) -> Unit)? = null
+    ): Result<LyricsProviderResult?> {
         val song = SongIdentity(title, artist, album, durationMs)
         val token = cancellationToken ?: LyricsLookupCancellationToken(song.storageKey(), 0L)
         val existing = LyricsSearchCoordinator.current(token)

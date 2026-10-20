@@ -1823,29 +1823,6 @@ mod tests {
     }
 
     #[test]
-    fn source_search_queries_relax_in_order_and_allow_blank_artist() {
-        let attempts = build_search_queries("Song (Live)", "Artist");
-        let actual = attempts
-            .iter()
-            .map(|attempt| (attempt.title.as_str(), attempt.artist.as_deref()))
-            .collect::<Vec<_>>();
-        assert_eq!(
-            actual,
-            vec![
-                ("Song (Live)", Some("Artist")),
-                ("Song", Some("Artist")),
-                ("Song (Live)", None),
-                ("Song", None),
-            ]
-        );
-
-        let no_artist = build_search_queries("Song", "  ");
-        assert_eq!(no_artist.len(), 1);
-        assert_eq!(no_artist[0].title, "Song");
-        assert_eq!(no_artist[0].artist, None);
-    }
-
-    #[test]
     fn candidates_are_deduplicated_by_track_id() {
         let metadata = query("Song", "Artist", "", None);
         let mut pool = CandidatePool::default();
@@ -2103,12 +2080,30 @@ mod tests {
         );
     }
 
-    #[test]
-    fn commontrack_requests_are_not_repeated_across_track_variants() {
-        let mut requested = HashSet::new();
-        assert!(requested.insert(SubtitleRequestKey::Commontrack(42)));
-        assert!(!requested.insert(SubtitleRequestKey::Commontrack(42)));
-        assert!(requested.insert(SubtitleRequestKey::Track(42)));
+    #[tokio::test]
+    async fn commontrack_requests_are_not_repeated_across_track_variants() {
+        let mut first = test_track(1, "Song", "Artist", "Album", 180, true, 90);
+        let mut second = test_track(2, "Song", "Artist", "Album", 180, true, 80);
+        first.commontrack_id = 42;
+        second.commontrack_id = 42;
+        let backend = FakeMusixmatchBackend::new(
+            Err(missing("matcher")),
+            [Ok(vec![first, second]), Ok(vec![])],
+            [],
+            [],
+        );
+        let (result, _) = run_fake_lookup(&backend, "Song", "Artist", Some(180_000)).await;
+        assert!(result.is_err());
+        let calls = backend.calls();
+        assert_eq!(
+            calls
+                .iter()
+                .filter(|call| *call == "subtitle:Commontrack(42)")
+                .count(),
+            1
+        );
+        assert!(calls.iter().any(|call| call == "subtitle:Track(1)"));
+        assert!(calls.iter().any(|call| call == "subtitle:Track(2)"));
     }
 
     #[test]
@@ -2239,42 +2234,18 @@ mod tests {
 
     #[tokio::test]
     async fn musixmatch_http_status_is_not_a_network_failure() {
-        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("local listener");
-        let address = listener.local_addr().expect("listener address");
-        let server = std::thread::spawn(move || {
-            use std::io::{BufRead, BufReader, Read, Write};
-            let (mut socket, _) = listener.accept().expect("test request");
-            socket
-                .set_read_timeout(Some(Duration::from_secs(2)))
-                .expect("read timeout");
-            let mut reader = BufReader::new((&mut socket).take(16 * 1024));
-            let mut line = String::new();
-            loop {
-                line.clear();
-                assert!(
-                    reader.read_line(&mut line).expect("request headers") > 0,
-                    "request headers ended before the blank line or exceeded 16 KiB"
-                );
-                if line == "\r\n" {
-                    break;
-                }
-            }
-            socket
-                .write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n")
-                .expect("status response");
-        });
-        let client = reqwest::Client::builder()
-            .no_proxy()
-            .build()
-            .expect("client");
+        let server = crate::test_http::Server::new(vec![
+            "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n",
+        ]);
+        let client = crate::test_http::client();
         let error = client
-            .get(format!("http://{address}/?usertoken=secret"))
+            .get(format!("{}/?usertoken=secret", server.url))
             .send()
             .await
             .expect("HTTP response")
             .error_for_status()
             .expect_err("403 status");
-        server.join().expect("server task");
+        server.finish();
 
         let failure = LookupFailure::from_api("matcher.track", MusixmatchApiError::Http(error));
         assert_eq!(failure.kind, FailureKind::Http);

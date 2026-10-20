@@ -12,6 +12,16 @@ import org.junit.runners.model.MultipleFailureException
 @RunWith(AndroidJUnit4::class)
 class NativeLyricsJniSmokeInstrumentedTest {
     @Test
+    fun packagedProviderConfigurationIsReportedWithoutCredentials() {
+        val configured = com.andsi.airlyrics.core.model.LyricsSourceCapability.spicyConfigured(com.andsi.airlyrics.BuildConfig.SPICY_CLIENT_KEY)
+        assertEquals(configured, SpicyLyricsProvider.isConfigured)
+        androidx.test.platform.io.PlatformTestStorageRegistry.getInstance()
+            .openOutputFile("provider-capabilities.txt").bufferedWriter().use {
+                it.write("Spicy configured=$configured\nOffline JNI bindings tested separately; server authorization not tested.\n")
+            }
+    }
+
+    @Test
     fun nativeLibrary_loadsAndOfflineBindingsRoundTrip() {
         LyricsNativeLibrary.ensureLoaded()
 

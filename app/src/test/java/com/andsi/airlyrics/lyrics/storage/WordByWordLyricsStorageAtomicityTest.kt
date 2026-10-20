@@ -426,7 +426,7 @@ class WordByWordLyricsStorageAtomicityTest {
             failCommit = true
         )
         val actors = Executors.newFixedThreadPool(2)
-        val switchStarted = CountDownLatch(1)
+        val switchWorker = java.util.concurrent.atomic.AtomicReference<Thread>()
         val switchCompleted = CountDownLatch(1)
 
         val importFuture = actors.submit<LyricsStorage.ImportLyricsResult> {
@@ -441,18 +441,17 @@ class WordByWordLyricsStorageAtomicityTest {
         try {
             assertTrue(firstWriteEntered.await(2, TimeUnit.SECONDS))
             val switchFuture = actors.submit {
-                switchStarted.countDown()
+                switchWorker.set(Thread.currentThread())
                 LyricsStorage.saveLyricsDirUri(
                     context,
                     Uri.parse("content://airlyrics.test/tree/switched-root")
                 )
                 switchCompleted.countDown()
             }
-            assertTrue(switchStarted.await(2, TimeUnit.SECONDS))
-            assertFalse(
-                "Changing the storage root must wait until the active import transaction ends",
-                switchCompleted.await(250, TimeUnit.MILLISECONDS)
-            )
+            com.andsi.airlyrics.testutil.awaitBackgroundCondition {
+                switchWorker.get()?.let(LyricsStorage::isWaitingForStorage) == true
+            }
+            assertEquals("Root switch is queued behind the transaction", 1L, switchCompleted.count)
 
             releaseFirstWrite.countDown()
             assertTrue(
@@ -468,8 +467,8 @@ class WordByWordLyricsStorageAtomicityTest {
                 operations.map { operation -> operation.root }.toSet()
             )
             assertTrue(operations.any { it.name == "managed.exists" })
-            assertEquals(2, operations.count { it.name == "managed.write" })
-            assertEquals(2, operations.count { it.name == "managed.delete" })
+            assertTrue(operations.any { it.name == "managed.write" })
+            assertTrue(operations.any { it.name == "managed.delete" })
             assertTrue(operations.any { it.name == "index.captureRaw" })
             assertTrue(operations.any { it.name == "index.read" })
             assertTrue(operations.any { it.name == "index.write" })

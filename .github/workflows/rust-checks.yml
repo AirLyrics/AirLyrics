@@ -50,4 +50,15 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings
 
       - name: Run Rust tests
-        run: cargo test
+        run: |
+          set -o pipefail
+          rustc --version | tee rust-tests.log
+          cargo test --locked 2>&1 | tee -a rust-tests.log
+
+      - name: Upload Rust test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: rust-test-results
+          path: lyrics-core/rust-tests.log
+          if-no-files-found: ignore

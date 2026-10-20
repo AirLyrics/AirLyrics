@@ -57,8 +57,9 @@ class LyricsRepositoryPersistenceTest {
             }
         }
 
-        withNeteasePlainLyricsProvider(provider) {
-            val found = LyricsRepository.findLyrics(
+        run {
+            val found = LyricsRepository.findLyricsWithProviders(
+                onlinePlainLyricsProviders = mapOf(PlainLyricsSearchSource.NETEASE to provider),
                 context = context,
                 settings = onlineAutoSaveSettings(),
                 title = STORED_TITLE,
@@ -121,7 +122,8 @@ class LyricsRepositoryPersistenceTest {
                 )
             )
 
-            val protectedFound = LyricsRepository.findLyrics(
+            val protectedFound = LyricsRepository.findLyricsWithProviders(
+                onlinePlainLyricsProviders = mapOf(PlainLyricsSearchSource.NETEASE to provider),
                 context = context,
                 settings = onlineAutoSaveSettings(),
                 title = WORD_BY_WORD_TITLE,
@@ -159,24 +161,6 @@ class LyricsRepositoryPersistenceTest {
             assertTrue(protectedEntry!!.plainFile.isBlank())
             assertTrue(protectedEntry.wordByWordFile.isNotBlank())
             assertEquals("local-karaoke", protectedEntry.wordByWordProvider)
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> withNeteasePlainLyricsProvider(provider: PlainLyricsProvider, block: () -> T): T {
-        val field = LyricsRepository::class.java.getDeclaredField("onlinePlainLyricsProviders").apply {
-            isAccessible = true
-        }
-        val providers = field.get(LyricsRepository) as MutableMap<PlainLyricsSearchSource, PlainLyricsProvider>
-        val previous = providers.put(PlainLyricsSearchSource.NETEASE, provider)
-        return try {
-            block()
-        } finally {
-            if (previous == null) {
-                providers.remove(PlainLyricsSearchSource.NETEASE)
-            } else {
-                providers[PlainLyricsSearchSource.NETEASE] = previous
-            }
         }
     }
 

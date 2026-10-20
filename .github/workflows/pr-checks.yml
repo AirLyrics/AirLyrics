@@ -58,11 +58,17 @@ jobs:
       - name: Test lyrics benchmark tooling
         run: python3 -B -m unittest discover -s scripts/lyrics_benchmark -p 'test_*.py'
 
+      - name: Test XML report summary
+        run: python3 -B -m unittest discover -s scripts/test_reports -p 'test_*.py'
+
       - name: Run JVM unit tests
         run: ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true --stacktrace
 
       - name: Compile Android instrumentation tests
         run: ./gradlew :app:assembleDebugAndroidTest -Pairlyrics.skipRustBuild=true --stacktrace
+
+      - name: Test localization checker
+        run: python3 -B -m unittest discover -s scripts/localization -p 'test_*.py'
 
       - name: Check localization
         run: ./scripts/check_localization.sh
@@ -77,12 +83,18 @@ jobs:
             app/build/reports/lint-results-*.xml
           if-no-files-found: ignore
 
+      - name: Summarize JVM results
+        if: always()
+        run: python3 -B scripts/test_reports/summary.py app/build/test-results/testDebugUnitTest
+
       - name: Upload JVM test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: android-unit-test-reports
-          path: app/build/reports/tests/
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
           if-no-files-found: ignore
 
   android-debug-build:

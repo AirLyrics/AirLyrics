@@ -5,14 +5,12 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class FloatingWindowGeometryTest {
-    @Test fun centeredPositionSurvivesRepeatedRotations() {
+    @Test fun preferredPositionMapsToPortraitAndLandscapeCoordinates() {
         val portrait = FloatingWindowGeometry(1080, 2200, 918, 100)
         val landscape = FloatingWindowGeometry(2200, 1080, 1870, 180)
         val position = FloatingPosition(0.5f, 0.8f)
-        repeat(100) {
-            assertEquals(165 to 720, landscape.coordinates(position))
-            assertEquals(81 to 1680, portrait.coordinates(position))
-        }
+        assertEquals(165 to 720, landscape.coordinates(position))
+        assertEquals(81 to 1680, portrait.coordinates(position))
     }
 
     @Test fun fullWidthAndOversizedContentRetainPreferredPosition() {

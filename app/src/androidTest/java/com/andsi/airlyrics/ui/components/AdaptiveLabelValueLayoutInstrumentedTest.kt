@@ -30,6 +30,19 @@ class AdaptiveLabelValueLayoutInstrumentedTest {
         }
     }
 
+    @Test fun productionSettingRowKeepsLongValueAndLabelWithinBounds() {
+        androidx.test.core.app.ActivityScenario.launch(com.andsi.airlyrics.app.MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val row = settingRow(activity.graph.uiHost, "Lyrics", "A long song title with Artist and Album".repeat(3)) as AdaptiveLabelValueLayout
+                measureAndLayout(row, activity.dp(280))
+                assertTrue(row.isStacked)
+                assertContainedHorizontally(row, row.labelView)
+                assertContainedHorizontally(row, row.valueView)
+                assertTrue(row.labelView.bottom <= row.valueView.top)
+            }
+        }
+    }
+
     private fun verifyRows(context: Context) {
         val rowWidth = context.dp(280)
         val songRow = createRow(

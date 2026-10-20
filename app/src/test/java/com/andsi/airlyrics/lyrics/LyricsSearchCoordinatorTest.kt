@@ -3,8 +3,6 @@ package com.andsi.airlyrics.lyrics
 import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 import java.util.concurrent.CancellationException
-import java.util.concurrent.atomic.AtomicReference
-import java.util.concurrent.locks.LockSupport
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -19,16 +17,15 @@ class LyricsSearchCoordinatorTest {
         val song = SongIdentity("waiting", "artist", "album", 1000L)
         val manual = LyricsSearchCoordinator.begin(song, token("manual"), LyricsSearchOrigin.Manual, LyricsSearchMode.Original)
         val executor = Executors.newSingleThreadExecutor()
-        val worker = AtomicReference<Thread>()
+        val waiting = CountDownLatch(1)
         val acquired = CountDownLatch(1)
         try {
             val future = executor.submit {
-                worker.set(Thread.currentThread())
-                LyricsSearchCoordinator.begin(song, token("automatic"), LyricsSearchOrigin.Automatic, LyricsSearchMode.Original).use {
+                LyricsSearchCoordinator.begin(song, token("automatic"), LyricsSearchOrigin.Automatic, LyricsSearchMode.Original, waiting::countDown).use {
                     acquired.countDown()
                 }
             }
-            awaitCoordinatorWait(worker)
+            assertTrue("Automatic search never reached the ownership wait", waiting.await(5, TimeUnit.SECONDS))
             assertEquals(1L, acquired.count)
             manual.close()
             future.get(5, TimeUnit.SECONDS)
@@ -46,18 +43,17 @@ class LyricsSearchCoordinatorTest {
         val manual = LyricsSearchCoordinator.begin(song, token("manual"), LyricsSearchOrigin.Manual, LyricsSearchMode.Original)
         val automaticToken = token("automatic")
         val executor = Executors.newSingleThreadExecutor()
-        val worker = AtomicReference<Thread>()
+        val waiting = CountDownLatch(1)
         try {
             val future = executor.submit<Boolean> {
-                worker.set(Thread.currentThread())
                 try {
-                    LyricsSearchCoordinator.begin(song, automaticToken, LyricsSearchOrigin.Automatic, LyricsSearchMode.Original).close()
+                    LyricsSearchCoordinator.begin(song, automaticToken, LyricsSearchOrigin.Automatic, LyricsSearchMode.Original, waiting::countDown).close()
                     false
                 } catch (_: CancellationException) {
                     true
                 }
             }
-            awaitCoordinatorWait(worker)
+            assertTrue("Automatic search never reached the ownership wait", waiting.await(5, TimeUnit.SECONDS))
             automaticToken.cancel()
             assertTrue(future.get(5, TimeUnit.SECONDS))
             assertNull(LyricsSearchCoordinator.current(automaticToken))
@@ -68,20 +64,6 @@ class LyricsSearchCoordinatorTest {
             executor.shutdownNow()
             assertTrue(executor.awaitTermination(5, TimeUnit.SECONDS))
         }
-    }
-
-    private fun awaitCoordinatorWait(worker: AtomicReference<Thread>) {
-        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
-        while (System.nanoTime() < deadline) {
-            // Thread stack inspection is available on both Android and JVM 17.
-            // Observe the wait inside begin(), not merely that the worker started.
-            val stack = worker.get()?.stackTrace.orEmpty()
-            if (stack.any { it.className == LyricsSearchCoordinator::class.java.name && it.methodName == "begin" } &&
-                stack.any { it.methodName.startsWith("await") }
-            ) return
-            LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(1))
-        }
-        throw AssertionError("Automatic search never entered the coordinator's wait; worker=${worker.get()?.state}")
     }
 
     private fun token(key: String) = LyricsLookupCancellationToken(key, 1L)

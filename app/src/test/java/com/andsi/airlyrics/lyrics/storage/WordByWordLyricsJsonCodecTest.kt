@@ -6,180 +6,9 @@ import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordByWordLyricsJsonCodecTest {
-    @Test
-    fun parseWordByWordLrc_buildsSegmentTimingLines() {
-        val wordByWordLines = WordByWordLrcParser.parse(
-            """
-            [00:10.00]<00:10.00>he<00:10.30>llo <00:10.60>world
-            [00:12.00]<00:12.00>next
-            """.trimIndent()
-        )
-
-        assertEquals(2, wordByWordLines.size)
-        assertEquals(10_000L, wordByWordLines[0].startMs)
-        assertEquals(12_000L, wordByWordLines[0].endMs)
-        assertEquals("hello world", wordByWordLines[0].text)
-        assertEquals(listOf("he", "llo ", "world"), wordByWordLines[0].segments.map { it.text })
-        assertEquals(listOf(10_000L, 10_300L, 10_600L), wordByWordLines[0].segments.map { it.startMs })
-        assertEquals(12_000L, wordByWordLines[0].segments.last().endMs)
-    }
-
-    @Test
-    fun parseWordByWordLrc_ignoresInvalidOrUntimedLines() {
-        val wordByWordLines = WordByWordLrcParser.parse(
-            """
-            plain text
-            [00:01.00]no word tags
-            [00:02.00]<00:01.50>starts before line
-            [00:03.00]<00:03.00>valid
-            """.trimIndent()
-        )
-
-        assertEquals(1, wordByWordLines.size)
-        assertEquals("valid", wordByWordLines.single().text)
-    }
-
-    @Test
-    fun wordByWordLinesToPlainLrc_preservesLineTextAndTiming() {
-        val plainLrc = WordByWordLrcParser.wordByWordLinesToPlainLrc(
-            listOf(
-                WordByWordLine(
-                    startMs = 1_230L,
-                    endMs = 2_000L,
-                    text = "hello",
-                    segments = listOf(WordByWordSegment("hello", 1_230L, 2_000L))
-                ),
-                WordByWordLine(
-                    startMs = 62_345L,
-                    endMs = 63_000L,
-                    text = "world",
-                    segments = listOf(WordByWordSegment("world", 62_345L, 63_000L))
-                )
-            )
-        )
-
-        assertEquals("[00:01.23]hello\n[01:02.34]world", plainLrc)
-    }
-
-    @Test
-    fun parseWordByWordImport_buildsPlainLrcWithSameTimestampTranslation() {
-        val plainLrc = WordByWordLrcParser.parseImport(
-            """
-            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
-            [00:10.00]你的背影
-            [00:12.00]<00:12.00>next
-            [00:12.00]下一句
-            """.trimIndent()
-        ).plainLrc
-
-        assertEquals("[00:10.00]君の背中 / 你的背影\n[00:12.00]next / 下一句", plainLrc)
-    }
-
-    @Test
-    fun parseWordByWordImport_ignoresUnmatchedTranslationLine() {
-        val plainLrc = WordByWordLrcParser.parseImport(
-            """
-            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
-            [00:11.00]不会被误合并的翻译
-            """.trimIndent()
-        ).plainLrc
-
-        assertEquals("[00:10.00]君の背中", plainLrc)
-    }
-
-    @Test
-    fun parseWordByWordImport_reportsTranslationPresence() {
-        assertTrue(
-            WordByWordLrcParser.parseImport(
-                """
-                [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
-                [00:10.00]你的背影
-                """.trimIndent()
-            ).hasTranslation
-        )
-    }
-
-    @Test
-    fun validateWordByWordLrcForStorage_allowsSameTimestampTranslationLines() {
-        val result = WordByWordLrcParser.validateForStorage(
-            """
-            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
-            [00:10.00]你的背影
-            """.trimIndent()
-        )
-
-        assertTrue(result.isValid)
-        assertEquals(emptyList<Int>(), result.invalidLineNumbers)
-    }
-
-    @Test
-    fun validateWordByWordLrcForStorage_ignoresMetadataAndReportsInvalidLines() {
-        val result = WordByWordLrcParser.validateForStorage(
-            """
-            [ar:Artist]
-            not timed
-            [00:10.00]<00:10.00>valid
-            """.trimIndent()
-        )
-
-        assertEquals(false, result.isValid)
-        assertEquals(listOf(2), result.invalidLineNumbers)
-    }
-
-    @Test
-    fun validateWordByWordLrcForStorage_rejectsInvalidSecondValues() {
-        val result = WordByWordLrcParser.validateForStorage(
-            """
-            [00:60.00]<00:60.00>bad
-            [01:00.00]<01:00.00>good
-            """.trimIndent()
-        )
-
-        assertEquals(false, result.isValid)
-        assertEquals(listOf(1), result.invalidLineNumbers)
-    }
-
-    @Test
-    fun parseWordByWordImport_preservesMetadataInPlainLrc() {
-        val wordByWordLrc = """
-            [ar:Artist]
-            [ti:Title]
-            [00:10.00]<00:10.00>君<00:10.20>の<00:10.40>背中
-            [00:10.00]你的背影
-        """.trimIndent()
-
-        val parsedWordByWordLyrics = WordByWordLrcParser.parseImport(wordByWordLrc)
-
-        assertEquals(listOf("[ar:Artist]", "[ti:Title]"), parsedWordByWordLyrics.metadataLines)
-        assertEquals(
-            "[ar:Artist]\n[ti:Title]\n[00:10.00]君の背中 / 你的背影",
-            parsedWordByWordLyrics.plainLrc
-        )
-    }
-
-    @Test
-    fun wordByWordLinesToWordByWordLrc_preservesMetadata() {
-        val wordByWordLines = listOf(
-            WordByWordLine(
-                startMs = 10_000L,
-                endMs = 10_400L,
-                text = "hi",
-                segments = listOf(WordByWordSegment("hi", 10_000L, 10_400L))
-            )
-        )
-
-        val wordByWordLrc = WordByWordLrcParser.wordByWordLinesToWordByWordLrc(
-            wordByWordLines = wordByWordLines,
-            metadataLines = listOf("[ar:Artist]", "[ti:Title]")
-        )
-
-        assertEquals("[ar:Artist]\n[ti:Title]\n[00:10.00]<00:10.00>hi", wordByWordLrc)
-    }
-
     @Test
     fun wordByWordJsonParser_readsFixedPersistedArrayFixture() {
         val document = WordByWordLyricsJsonCodec.parseWordByWordDocumentJson(LEGACY_WORD_BY_WORD_JSON_FIXTURE)
@@ -222,7 +51,6 @@ class WordByWordLyricsJsonCodecTest {
 
         val documentRoot =
             JSONObject(WordByWordLyricsJsonCodec.wordByWordLinesToJson(wordByWordLines, metadataLines))
-        assertEquals(2, documentRoot.length())
         val metadata = documentRoot.getJSONArray("metadata")
         assertEquals(2, metadata.length())
         assertEquals("[ar:Artist]", metadata.getString(0))
@@ -283,8 +111,19 @@ class WordByWordLyricsJsonCodecTest {
         )
     }
 
+    @Test
+    fun additionalDocumentAndLineFieldsRemainCompatibleWithHistoricalSchema() {
+        val lines = JSONArray(LEGACY_WORD_BY_WORD_JSON_FIXTURE)
+        lines.getJSONObject(0).put("futureLineMetadata", "ignored")
+        val json = JSONObject().put("metadata", JSONArray().put("[ar:Artist]"))
+            .put("lines", lines).put("futureDocumentMetadata", true)
+        val parsed = WordByWordLyricsJsonCodec.parseWordByWordDocumentJson(json.toString())
+        assertEquals(listOf("[ar:Artist]"), parsed.metadataLines)
+        assertEquals("hi", parsed.wordByWordLines.single().text)
+        assertEquals(5_000L, parsed.wordByWordLines.single().startMs)
+    }
+
     private fun assertSerializedLine(wordByWordLineJson: JSONObject) {
-        assertEquals(4, wordByWordLineJson.length())
         assertEquals(5_000L, wordByWordLineJson.getLong("startMs"))
         assertEquals(6_000L, wordByWordLineJson.getLong("endMs"))
         assertEquals("hi", wordByWordLineJson.getString("text"))
@@ -301,7 +140,6 @@ class WordByWordLyricsJsonCodecTest {
         expectedStartMs: Long,
         expectedEndMs: Long
     ) {
-        assertEquals(3, wordByWordSegmentJson.length())
         assertEquals(expectedText, wordByWordSegmentJson.getString("text"))
         assertEquals(expectedStartMs, wordByWordSegmentJson.getLong("startMs"))
         assertEquals(expectedEndMs, wordByWordSegmentJson.getLong("endMs"))

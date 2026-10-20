@@ -565,7 +565,7 @@ mod tests {
         assert_eq!(result["track"]["id"], "second");
         assert_eq!(result["lookup"]["attempted"], 2);
     }
-    #[tokio::test]
+    #[tokio::test(start_paused = true)]
     async fn line_fallback_survives_variant_timeout() {
         let tracks = vec![json!({"id":"line"}), json!({"id":"slow"})];
         let result = fetch_tracks(
