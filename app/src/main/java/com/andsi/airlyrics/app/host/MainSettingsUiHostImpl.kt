@@ -36,7 +36,8 @@ internal fun MainUiHost.settingsHomeHeaderImpl(): View {
 internal fun MainUiHost.settingsBackHeaderImpl(
     title: String,
     subtitle: String = "",
-    titleAction: View? = null
+    titleAction: View? = null,
+    inlineTitleAction: View? = null
 ): View {
     val activity = this
     val parentPage = settingsSubPage.parentPage()
@@ -51,7 +52,9 @@ internal fun MainUiHost.settingsBackHeaderImpl(
             setPadding(0, 0, 0, dp(AirUiTokens.Space.Xxl))
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
             setOnClickListener {
-                parentPage?.let(uiActions.openSettingsSubPage)
+                if (settingsSubPage != SettingsSubPage.SAVED_LYRICS || savedLyricsSelectionBackHandler?.invoke() != true) {
+                    parentPage?.let(uiActions.openSettingsSubPage)
+                }
             }
             addView(airIconView(R.drawable.ic_air_arrow_back, colorAccent).apply {
                 layoutParams = LinearLayout.LayoutParams(
@@ -72,12 +75,21 @@ internal fun MainUiHost.settingsBackHeaderImpl(
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             })
         })
-        addView(adaptiveHeader(TextView(activity).apply {
+        val titleView = TextView(activity).apply {
             text = title
             textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
-        }, endIcon = titleAction))
+        }
+        val titleContent = if (inlineTitleAction == null) titleView else LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(titleView, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+            ))
+            addView(inlineTitleAction)
+        }
+        addView(adaptiveHeader(titleContent, endIcon = titleAction))
         if (subtitle.isNotBlank()) {
             addView(TextView(activity).apply {
                 text = subtitle

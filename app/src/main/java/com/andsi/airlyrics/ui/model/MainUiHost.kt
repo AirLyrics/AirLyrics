@@ -40,6 +40,7 @@ internal abstract class MainUiHost(
     var windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(0f, 0f, 1f)
     open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
     val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
+    var savedLyricsSelectionBackHandler: (() -> Boolean)? = null
     val interactionUi = com.andsi.airlyrics.ui.state.InteractionUiRegistry()
     private var panelControlIndex = 0
     fun beginPanelControls() { panelControlIndex = 0 }

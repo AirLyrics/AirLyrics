@@ -420,4 +420,30 @@
     <string name="provider_spicy_name">Spicy Lyrics</string>
     <string name="ui_search_international_title">國際標題搜尋</string>
     <string name="ui_searching_international_title">正在嘗試國際標題搜尋…</string>
+    <string name="ui_batch_selected">已選取：%1$d</string>
+    <string name="ui_batch_select_item">選取 %1$s</string>
+    <string name="ui_batch_replace">匯入並取代</string>
+    <plurals name="ui_batch_delete_title">
+        <item quantity="other">刪除 %1$d 項歌詞？</item>
+    </plurals>
+    <string name="ui_batch_preview">已匹配：%1$d · 已略過：%2$d</string>
+    <string name="ui_batch_mapping">%1$s → %2$s · %3$s</string>
+    <string name="ui_batch_skipped_file">%1$s · %2$s</string>
+    <string name="ui_batch_plain">普通</string>
+    <string name="ui_batch_word">逐字</string>
+    <string name="ui_batch_no_match">未匹配</string>
+    <string name="ui_batch_ambiguous">匹配不唯一</string>
+    <string name="ui_batch_duplicate">重複匹配</string>
+    <string name="ui_batch_result">批次處理結果</string>
+    <string name="ui_batch_result_counts">已完成：%1$d · 失敗：%2$d · 略過：%3$d</string>
+    <string name="ui_batch_interrupted">操作中斷，請檢查結果後重試。</string>
+    <string name="ui_batch_rollback_failed">部分歌詞未能還原，請檢查。</string>
+    <string name="ui_batch_changed">內容已變更，請重新選取</string>
+    <string name="ui_multi_select">多選</string>
+    <string name="ui_exit_multi_select">結束多選</string>
+    <string name="ui_batch_export">匯出</string>
+    <string name="ui_batch_export_result">已匯出：%1$d · 已略過：%2$d</string>
+    <string name="ui_batch_export_failed">匯出失敗，請嘗試其他儲存位置。</string>
+    <string name="ui_batch_export_restricted">不支援匯出</string>
+    <string name="ui_batch_deselect_all">取消全選</string>
 </resources>

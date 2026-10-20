@@ -7,7 +7,8 @@ internal interface SettingsUiHost {
     fun settingsBackHeader(
         title: String,
         subtitle: String = "",
-        titleAction: View? = null
+        titleAction: View? = null,
+        inlineTitleAction: View? = null
     ): View
     fun themeToggleButton(): View
     fun settingsCategoryCard(
@@ -21,8 +22,13 @@ internal interface SettingsUiHost {
     fun localLyricsRow(
         item: LocalLyricsUiItem,
         onLyricsChanged: ((LocalLyricsUiChange) -> Unit)? = null,
-        badgeText: CharSequence? = null
+        badgeText: CharSequence? = null,
+        onClickIntercept: (() -> Boolean)? = null
     ): View
+
+    fun exportSavedLyrics(items: List<LocalLyricsUiItem>)
+
+    fun manageSavedLyrics(items: List<LocalLyricsUiItem>, delete: Boolean)
 
     fun changelogItem(title: String, body: String): View
     fun permissionSummary(): String

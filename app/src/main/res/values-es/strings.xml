@@ -422,4 +422,32 @@ TTML de tiempo por palabra:
     <string name="ui_lyrics_expired">La letra ha caducado</string>
     <string name="ui_search_international_title">Buscar con título internacional</string>
     <string name="ui_searching_international_title">Buscando con el título internacional…</string>
+    <string name="ui_batch_selected">Seleccionados: %1$d</string>
+    <string name="ui_batch_select_item">Seleccionar %1$s</string>
+    <string name="ui_batch_replace">Importar y reemplazar</string>
+    <plurals name="ui_batch_delete_title">
+        <item quantity="one">¿Eliminar %1$d letra?</item>
+        <item quantity="many">¿Eliminar %1$d entradas de letras?</item>
+        <item quantity="other">¿Eliminar %1$d entradas de letras?</item>
+    </plurals>
+    <string name="ui_batch_preview">Coincidencias: %1$d · Omitidos: %2$d</string>
+    <string name="ui_batch_mapping">%1$s → %2$s · %3$s</string>
+    <string name="ui_batch_skipped_file">%1$s · %2$s</string>
+    <string name="ui_batch_plain">Normal</string>
+    <string name="ui_batch_word">Palabra por palabra</string>
+    <string name="ui_batch_no_match">Sin coincidencia</string>
+    <string name="ui_batch_ambiguous">Coincidencia ambigua</string>
+    <string name="ui_batch_duplicate">Coincidencia duplicada</string>
+    <string name="ui_batch_result">Resultados del lote</string>
+    <string name="ui_batch_result_counts">Completados: %1$d · Fallidos: %2$d · Omitidos: %3$d</string>
+    <string name="ui_batch_interrupted">Operación interrumpida. Revisa el resultado antes de reintentar.</string>
+    <string name="ui_batch_rollback_failed">Algunas letras no se restauraron. Revísalas.</string>
+    <string name="ui_batch_changed">Contenido modificado. Selecciona de nuevo.</string>
+    <string name="ui_multi_select">Selección múltiple</string>
+    <string name="ui_exit_multi_select">Salir de la selección</string>
+    <string name="ui_batch_export">Exportar</string>
+    <string name="ui_batch_export_result">Exportados: %1$d · Omitidos: %2$d</string>
+    <string name="ui_batch_export_failed">No se pudo exportar. Prueba otra ubicación.</string>
+    <string name="ui_batch_export_restricted">Exportación no disponible</string>
+    <string name="ui_batch_deselect_all">Deseleccionar todo</string>
 </resources>

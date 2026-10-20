@@ -16,7 +16,9 @@ internal class MainLaunchers(
     private val onLyricsFileResult: (Uri?) -> Unit,
     private val onFloatingFontFileResult: (Uri?) -> Unit,
     private val onLyricsDirectorySelected: (Uri) -> Unit,
-    private val onNotificationPermissionResult: (Boolean) -> Unit
+    private val onNotificationPermissionResult: (Boolean) -> Unit,
+    private val onBatchLyricsFilesResult: (List<Uri>) -> Unit = {},
+    private val onBatchLyricsExportResult: (Uri?) -> Unit = {}
 ) {
     private val lyricsDocumentMimeTypes = LyricsFormatCatalog.pickerMimeTypes()
 
@@ -51,6 +53,24 @@ internal class MainLaunchers(
         activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             onNotificationPermissionResult(granted)
         }
+
+    private val batchLyricsFilesLauncher =
+        activity.registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+            onBatchLyricsFilesResult(uris)
+        }
+
+    private val batchLyricsExportLauncher =
+        activity.registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+            onBatchLyricsExportResult(uri)
+        }
+
+    fun selectBatchLyricsExportDestination() {
+        batchLyricsExportLauncher.launch("AirLyrics-${System.currentTimeMillis()}.zip")
+    }
+
+    fun selectBatchLyricsFiles() {
+        batchLyricsFilesLauncher.launch(lyricsDocumentMimeTypes)
+    }
 
     fun selectLyricsFile() {
         lyricsFileLauncher.launch(lyricsDocumentMimeTypes)

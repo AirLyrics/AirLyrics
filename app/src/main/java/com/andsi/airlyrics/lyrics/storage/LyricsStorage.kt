@@ -26,6 +26,12 @@ object LyricsStorage {
         contentRevision.incrementAndGet()
     }
 
+    internal fun replaceSavedLyrics(
+        context: Context,
+        item: LocalLyricsItem,
+        document: com.andsi.airlyrics.lyrics.importer.BatchLyricsDocument
+    ): LyricsReplacementOps.Result = LyricsReplacementOps.replace(context, item, document)
+
     const val SOURCE_PROVIDER_CACHE = "provider_cache"
     const val SOURCE_MANUAL_IMPORT = "manual_import"
     const val SOURCE_DOWNLOADED = "downloaded"

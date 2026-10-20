@@ -21,7 +21,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.layout.WindowLayoutSpec
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
-import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
@@ -37,7 +36,6 @@ import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -49,61 +47,12 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 internal fun MainActivityUiHost.localLyricsRowImpl(
     item: LocalLyricsUiItem,
     onLyricsChanged: ((LocalLyricsUiChange) -> Unit)? = null,
-    badgeText: CharSequence? = null
+    badgeText: CharSequence? = null,
+    onClickIntercept: (() -> Boolean)? = null
 ): View {
-    val activity = this
-    return LinearLayout(this).apply {
-        setTag(R.id.interaction_anchor, "lyrics:${item.indexKey.ifBlank { item.name }}")
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
-        val params = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        )
-        params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
-        layoutParams = params
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-            setColor(colorSurfaceLight)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-        }
-        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale + 0.01f)
-        if (!badgeText.isNullOrBlank()) {
-            addView(TextView(activity).apply {
-                text = badgeText
-                textSize = AirUiTokens.TextSize.Tiny
-                typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorAccent)
-                setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
-            })
-        }
-        addView(expandableText(TextView(activity).apply {
-            text = item.displayTitle
-            textSize = AirUiTokens.TextSize.Body
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
-        }))
-        addView(expandableText(TextView(activity).apply {
-            text = getString(
-                R.string.ui_local_lyrics_subtitle_type,
-                item.subtitle,
-                item.typeText
-            )
-            textSize = AirUiTokens.TextSize.Caption
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorAccentMint)
-            setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
-        }))
-        addView(expandableText(TextView(activity).apply {
-            text = item.metaText
-            textSize = AirUiTokens.TextSize.Caption
-            setTextColor(colorTextMuted)
-            setPadding(0, dp(AirUiTokens.Space.Xxs), 0, 0)
-        }))
-        setOnClickListener {
-            activity.openLocalLyricsEditorForItem(item, onLyricsChanged)
-        }
-    }
+    return com.andsi.airlyrics.ui.components.LocalLyricsRowView(
+        this, { current -> openLocalLyricsEditorForItem(current, onLyricsChanged) }, onClickIntercept, badgeText
+    ).apply { bind(item) }
 }
 
 private fun MainActivityUiHost.openLocalLyricsEditorForItem(

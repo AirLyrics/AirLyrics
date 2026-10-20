@@ -89,6 +89,16 @@ internal class MainActivityUiHost(
         get() = graph.viewRefs
 
     val editorSession get() = graph.viewModel.editorSession(applicationContext)
+    val batchLyricsSession get() = graph.viewModel.batchLyricsSession(applicationContext)
+    var batchObserverInstalled = false
+
+    override fun exportSavedLyrics(items: List<LocalLyricsUiItem>) {
+        if (batchLyricsSession.beginExport(items)) graph.launchers.selectBatchLyricsExportDestination()
+    }
+
+    override fun manageSavedLyrics(items: List<LocalLyricsUiItem>, delete: Boolean) {
+        if (batchLyricsSession.begin(items, delete) && !delete) graph.launchers.selectBatchLyricsFiles()
+    }
     override val interactions get() = graph.viewModel.interactions
 
     var editorObserverInstalled = false
@@ -360,8 +370,8 @@ internal class MainActivityUiHost(
     override fun notifyFloatingStyleChanged() = graph.floatingController.notifyStyleChanged()
 
     override fun settingsHomeHeader(): View = settingsHomeHeaderImpl()
-    override fun settingsBackHeader(title: String, subtitle: String, titleAction: View?): View =
-        settingsBackHeaderImpl(title, subtitle, titleAction)
+    override fun settingsBackHeader(title: String, subtitle: String, titleAction: View?, inlineTitleAction: View?): View =
+        settingsBackHeaderImpl(title, subtitle, titleAction, inlineTitleAction)
     override fun themeToggleButton(): View = themeToggleButtonImpl()
     override fun settingsCategoryCard(
         title: String,
@@ -373,8 +383,9 @@ internal class MainActivityUiHost(
     override fun localLyricsRow(
         item: LocalLyricsUiItem,
         onLyricsChanged: ((LocalLyricsUiChange) -> Unit)?,
-        badgeText: CharSequence?
-    ): View = localLyricsRowImpl(item, onLyricsChanged, badgeText)
+        badgeText: CharSequence?,
+        onClickIntercept: (() -> Boolean)?
+    ): View = localLyricsRowImpl(item, onLyricsChanged, badgeText, onClickIntercept)
     override fun changelogItem(title: String, body: String): View = changelogItemImpl(title, body)
     override fun permissionSummary(): String = permissionSummaryImpl()
     override fun getAppVersionName(): String = getAppVersionNameImpl()

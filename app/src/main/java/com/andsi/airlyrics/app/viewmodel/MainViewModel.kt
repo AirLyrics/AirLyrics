@@ -86,6 +86,10 @@ internal class MainViewModel(
     }
 
     private var editorSession: com.andsi.airlyrics.app.interaction.LyricsEditorSession? = null
+    private var batchSession: com.andsi.airlyrics.app.interaction.BatchLyricsSession? = null
+    fun batchLyricsSession(context: Context): com.andsi.airlyrics.app.interaction.BatchLyricsSession =
+        batchSession ?: com.andsi.airlyrics.app.interaction.BatchLyricsSession(context.applicationContext, interactions, viewModelScope)
+            .also { batchSession = it }
     fun editorSession(context: Context): com.andsi.airlyrics.app.interaction.LyricsEditorSession =
         editorSession ?: com.andsi.airlyrics.app.interaction.LyricsEditorSession(context.applicationContext, interactions, viewModelScope)
             .also { editorSession = it }
