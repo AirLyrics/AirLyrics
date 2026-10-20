@@ -51,8 +51,8 @@ If something isn't working or there's a feature you'd like to see, you're very w
 
 1. Install AirLyrics (Android 8.0 or later required).
 2. Grant the required permissions.
-3. Play some music, then manually select the corresponding media source in AirLyrics.
-4. Open the **Overlay** page and tap **Show** in the bottom bar.
+3. Play some music, then manually select the corresponding player on the **Media** page.
+4. Open the **Floating** page and tap **Show** in the bottom bar.
 
 For more settings and help with common problems, see the [User Guide](docs/USER_GUIDE.md).
 
@@ -61,7 +61,7 @@ For more settings and help with common problems, see the [User Guide](docs/USER_
 ## Features
 
 - **Lyrics search and import**: Follows song changes in the selected player and searches for lyrics
-  through NetEase Cloud Music or Musixmatch. You can also import local LRC and TTML files, with
+  through NetEase Cloud Music, Musixmatch, LRCLIB, or Spicy Lyrics. You can also import local LRC and TTML files, with
   support for common timing and translation fields used by Apple Music and AMLL, original lyrics,
   translations, and word-by-word highlighting.
 - **Overlay appearance**: Adjust the font, weight, colors, opacity, window style, and transition

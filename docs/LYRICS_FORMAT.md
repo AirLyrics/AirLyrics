@@ -36,7 +36,7 @@ translations. AirLyrics converts them to the single-line form automatically.
 
 ## Word-by-word LRC
 
-Word-by-word lyrics are available only through local import. Each original lyric line must include
+For local word-by-word LRC imports, each original lyric line must include
 both a line timestamp and word timestamps:
 
 ```lrc
@@ -51,7 +51,8 @@ A translation uses the same line timestamp as the original lyric and does not ne
 ```
 
 Plain and word-by-word lyrics for the same song cannot be stored as independently managed versions.
-Remove existing lyrics before importing the other type. After importing word-by-word lyrics,
+For the current song's import options, remove existing lyrics before importing the other type;
+**Import and replace** in **Saved lyrics** can replace the type directly. After importing word-by-word lyrics,
 AirLyrics automatically generates and synchronizes a plain LRC; edit or remove the word-by-word
 lyrics instead of the generated file.
 
