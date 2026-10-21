@@ -53,7 +53,14 @@ object LyricsDisplayPolicy {
         isConversion: Boolean,
         preference: LyricsScriptPreference
     ): Rendered {
-        if (translation.isBlank()) return Rendered(original)
+        if (translation.isBlank()) {
+            // No translation at all: the preference can still simplify the original, which is
+            // the common case for Chinese songs Apple ships without a zh-Hans translation.
+            return when (preference) {
+                LyricsScriptPreference.SIMPLIFIED -> Rendered(ChineseText.toSimplified(original))
+                LyricsScriptPreference.TRADITIONAL, LyricsScriptPreference.NONE -> Rendered(original)
+            }
+        }
         if (original.isBlank()) return Rendered(translation)
         // The preference only chooses between two copies of the same line written in different
         // scripts. A real translation says something else, so both lines are always shown.

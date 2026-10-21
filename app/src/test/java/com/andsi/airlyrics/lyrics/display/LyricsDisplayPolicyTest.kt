@@ -24,6 +24,18 @@ class LyricsDisplayPolicyTest {
     }
 
     @Test
+    fun `simplified preference converts the original when there is no translation`() {
+        val rendered = LyricsDisplayPolicy.render(
+            LyricsContentDisplayMode.AUTO,
+            original = "我愛你 這是我心裡的話",
+            translation = null,
+            scriptPreference = LyricsScriptPreference.SIMPLIFIED
+        )
+        assertEquals("我爱你 这是我心里的话", rendered.primary)
+        assertNull(rendered.secondary)
+    }
+
+    @Test
     fun `simplified preference shows one line for a script conversion`() {
         val rendered = LyricsDisplayPolicy.render(
             LyricsContentDisplayMode.AUTO,
