@@ -25,7 +25,10 @@ internal object PlainLyricsStorageOps {
                 plainProvider = indexed.plainProvider,
                 updatedAt = indexed.updatedAt,
                 indexKey = indexed.key,
-                album = indexed.album
+                album = indexed.album,
+                matchedTitle = indexed.matchedTitle,
+                matchedArtist = indexed.matchedArtist,
+                matchedDurationMs = indexed.matchedDurationMs
             )
         }
 
@@ -64,7 +67,10 @@ internal object PlainLyricsStorageOps {
         album: String = "",
         plainSource: String = LyricsStorage.SOURCE_DOWNLOADED,
         plainProvider: String = "local",
-        overwrite: Boolean = true
+        overwrite: Boolean = true,
+        matchedTitle: String = "",
+        matchedArtist: String = "",
+        matchedDurationMs: Long = 0L
     ): Boolean {
         val identity = SongIdentity(title = title, artist = artist, album = album, durationMs = duration)
         val normalizedKey = identity.storageKey()
@@ -92,7 +98,10 @@ internal object PlainLyricsStorageOps {
             plainProvider = plainProvider,
             wordByWordProvider = existing?.wordByWordProvider.orEmpty(),
             createdAt = existing?.createdAt ?: now,
-            updatedAt = now
+            updatedAt = now,
+            matchedTitle = matchedTitle.ifBlank { existing?.matchedTitle.orEmpty() },
+            matchedArtist = matchedArtist.ifBlank { existing?.matchedArtist.orEmpty() },
+            matchedDurationMs = matchedDurationMs.takeIf { it > 0L } ?: existing?.matchedDurationMs ?: 0L
         )
 
         return LyricsIndexStore.write(context, entries)

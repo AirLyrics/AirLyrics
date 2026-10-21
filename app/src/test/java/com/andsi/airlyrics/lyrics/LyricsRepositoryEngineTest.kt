@@ -40,6 +40,24 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
+    fun findLyrics_keepsLocalPlainWhenOnlineOnlyReturnsPlain() {
+        val local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]local")))
+        val spicy = FakePlainLyricsProvider("spicy", Result.success(result("spicy", "[00:01.00]online")))
+        val engine = engine(
+            local = local,
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to spicy),
+            settings = settings(
+                plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY),
+                wordByWordLyricsEnabled = true
+            )
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
+
+        assertEquals("local", found?.plainProviderId)
+    }
+
+    @Test
     fun findLyrics_emptySourceOrderDoesNotCallOnlineProvider() {
         val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(

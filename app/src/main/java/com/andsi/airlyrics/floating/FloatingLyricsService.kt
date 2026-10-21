@@ -51,6 +51,7 @@ open class FloatingLyricsService : Service() {
     internal val renderer = FloatingLyricsRenderer(
         textViewProvider = { lyricsView },
         contentModeProvider = { LyricsSettingsStore.getContentDisplayMode(this) },
+        scriptPreferenceProvider = { LyricsSettingsStore.getScriptPreference(this) },
         lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
         wordByWordLyricsEnabledProvider = { LyricsSettingsStore.isWordByWordLyricsEnabled(this) },

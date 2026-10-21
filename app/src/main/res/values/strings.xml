@@ -252,6 +252,7 @@
     <string name="ui_grant_usage_access">Grant usage access</string>
     <string name="ui_orange">Orange</string>
     <string name="ui_original_only">Original only</string>
+    <string name="ui_auto_language">Auto (follow lyric language)</string>
     <string name="ui_original_translation">Original + translation</string>
     <string name="ui_overlay">Overlay</string>
     <string name="ui_overlay_and_notification_permissions">Permissions and language</string>
@@ -448,4 +449,21 @@ Word-timed TTML:
     <string name="ui_batch_export_failed">Export failed. Try another location.</string>
     <string name="ui_batch_export_restricted">Export unavailable</string>
     <string name="ui_batch_deselect_all">Deselect all</string>
+    <string name="ui_apple_account">Apple Music account</string>
+    <string name="ui_apple_account_summary">Sign in to use Apple\'s own lyrics, including word-by-word timing</string>
+    <string name="ui_apple_not_logged_in">Not signed in</string>
+    <string name="ui_apple_logged_in_as">Signed in · storefront %1$s</string>
+    <string name="ui_apple_login">Sign in with Apple</string>
+    <string name="ui_apple_verify">Verify sign-in</string>
+    <string name="ui_apple_logout">Sign out</string>
+    <string name="ui_apple_failed">Failed: %1$s</string>
+    <string name="ui_apple_verifying">Verifying…</string>
+    <string name="ui_apple_login_hint">Sign in with your Apple ID. Two-factor verification is handled by Apple on this page.</string>
+    <string name="ui_apple_login_not_found">No token found yet. Finish signing in, then tap the button again.</string>
+    <string name="ui_apple_login_capture">Capture and save</string>
+    <string name="provider_apple">Apple Music</string>
+    <string name="ui_script_preference">Chinese script</string>
+    <string name="ui_script_simplified">Simplified Chinese</string>
+    <string name="ui_script_traditional">Traditional Chinese</string>
+    <string name="ui_script_none">No conversion</string>
 </resources>

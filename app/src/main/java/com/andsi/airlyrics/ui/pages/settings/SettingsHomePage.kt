@@ -29,6 +29,19 @@ internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity
 
     container.addView(
         settingsCategoryCard(
+            title = getString(R.string.ui_apple_account),
+            subtitle = getString(R.string.ui_apple_account_summary),
+            status = com.andsi.airlyrics.apple.AppleMusicSessionStore.load(activity)
+                ?.let { getString(R.string.ui_apple_logged_in_as, it.storefront.uppercase()) }
+                ?: getString(R.string.ui_apple_not_logged_in),
+            iconRes = R.drawable.ic_air_music_note
+        ) {
+            uiActions.openSettingsSubPage(SettingsSubPage.APPLE_ACCOUNT)
+        }
+    )
+
+    container.addView(
+        settingsCategoryCard(
             title = getString(R.string.ui_system),
             subtitle = getString(R.string.ui_overlay_and_notification_permissions),
             status = permissionSummary(),

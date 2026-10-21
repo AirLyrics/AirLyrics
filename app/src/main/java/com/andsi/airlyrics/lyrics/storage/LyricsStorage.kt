@@ -120,7 +120,10 @@ object LyricsStorage {
         val plainProvider: String,
         val updatedAt: Long,
         val indexKey: String = "",
-        val album: String = ""
+        val album: String = "",
+        val matchedTitle: String = "",
+        val matchedArtist: String = "",
+        val matchedDurationMs: Long = 0L
     ) {
         val friendlyTitle: String
             get() = if (title.isNotBlank()) {
@@ -236,7 +239,10 @@ object LyricsStorage {
         album: String = "",
         plainSource: String = SOURCE_DOWNLOADED,
         plainProvider: String = "local",
-        overwrite: Boolean = true
+        overwrite: Boolean = true,
+        matchedTitle: String = "",
+        matchedArtist: String = "",
+        matchedDurationMs: Long = 0L
     ): Boolean = withStorageLock {
         if (plainProvider == "spicy") return@withStorageLock false
         val saved = PlainLyricsStorageOps.savePlainLyrics(
@@ -248,7 +254,10 @@ object LyricsStorage {
             album = album,
             plainSource = plainSource,
             plainProvider = plainProvider,
-            overwrite = overwrite
+            overwrite = overwrite,
+            matchedTitle = matchedTitle,
+            matchedArtist = matchedArtist,
+            matchedDurationMs = matchedDurationMs
         )
         if (saved) markContentChanged()
         saved

@@ -75,6 +75,11 @@ internal fun FloatingPageScope.openPanel(
     overlay.alpha = 0f
     overlay.setOnClickListener { closePanel() }
     overlay.addView(bubble)
+    // Keep focus inside the overlay. Hiding the focused sub-menu otherwise makes Android run a
+    // focus search over the whole window, which scrolls the settings page underneath to reveal
+    // whatever it lands on.
+    overlay.isFocusableInTouchMode = true
+    overlay.requestFocus()
     activeBubble = bubble
     activePanelResetStateUpdater = reset?.let { resetAction ->
         {

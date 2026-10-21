@@ -252,6 +252,7 @@
     <string name="ui_grant_usage_access">授予使用情况访问权限</string>
     <string name="ui_orange">橙</string>
     <string name="ui_original_only">仅原文</string>
+    <string name="ui_auto_language">自动（中文只显译文）</string>
     <string name="ui_original_translation">原文 + 翻译</string>
     <string name="ui_overlay">悬浮窗权限</string>
     <string name="ui_overlay_and_notification_permissions">权限与语言</string>
@@ -446,4 +447,21 @@
     <string name="ui_batch_export_failed">导出失败，请尝试其他保存位置。</string>
     <string name="ui_batch_export_restricted">不支持导出</string>
     <string name="ui_batch_deselect_all">取消全选</string>
+    <string name="ui_apple_account">Apple Music 账号</string>
+    <string name="ui_apple_account_summary">登录后可使用 Apple 官方歌词，含逐字时间轴</string>
+    <string name="ui_apple_not_logged_in">未登录</string>
+    <string name="ui_apple_logged_in_as">已登录 · 商店区域 %1$s</string>
+    <string name="ui_apple_login">登录 Apple 账号</string>
+    <string name="ui_apple_verify">验证登录</string>
+    <string name="ui_apple_logout">退出登录</string>
+    <string name="ui_apple_failed">失败：%1$s</string>
+    <string name="ui_apple_verifying">正在验证…</string>
+    <string name="ui_apple_login_hint">用 Apple ID 登录，两步验证在 Apple 页面上完成。</string>
+    <string name="ui_apple_login_not_found">还没抓到 token，请先完成登录，再点一次按钮。</string>
+    <string name="ui_apple_login_capture">抓取并保存</string>
+    <string name="provider_apple">Apple Music</string>
+    <string name="ui_script_preference">简繁显示</string>
+    <string name="ui_script_simplified">简体优先</string>
+    <string name="ui_script_traditional">繁体优先</string>
+    <string name="ui_script_none">不处理</string>
 </resources>

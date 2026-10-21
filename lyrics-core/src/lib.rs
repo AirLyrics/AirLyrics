@@ -2,8 +2,6 @@ use diagnostics::LookupTrace;
 use jni::objects::{JObject, JString};
 use jni::sys::jstring;
 use jni::JNIEnv;
-#[cfg(test)]
-use matching::EARLY_ACCEPT_SCORE;
 use matching::{
     build_search_keywords, is_confident_early_match, normalize_usable_lrc, score_candidate,
     MatchMetadata,
@@ -18,7 +16,11 @@ use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 use unicode_normalization::UnicodeNormalization;
 
+mod aliases;
+mod apple;
+mod confidence;
 mod diagnostics;
+mod discovery;
 mod international;
 mod lrc;
 mod lrclib;
@@ -26,6 +28,9 @@ mod matching;
 mod musixmatch;
 #[cfg(test)]
 mod native_result_contract_tests;
+mod qq;
+mod recording;
+mod review;
 mod spicy;
 
 const NETEASE_LOOKUP_TIMEOUT: Duration = Duration::from_secs(12);
@@ -53,7 +58,8 @@ struct CandidateBatchStats {
     returned: usize,
     accepted: usize,
     duplicate: usize,
-    rejected_title: usize,
+    /// Candidates the confidence policy refused (title-only or version-conflicting matches).
+    rejected_evidence: usize,
     best_score: Option<f64>,
     best_title_score: Option<f64>,
     best_artist_score: Option<f64>,
@@ -81,6 +87,61 @@ pub(crate) struct NativeResult {
     merged_lrc: Option<String>,
     error_type: Option<&'static str>,
     error: Option<String>,
+}
+
+/// Candidates the confidence policy refused to show automatically, for the "pick one" UI.
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LrclibLyricsNative_takeReviewCandidatesJson(
+    env: JNIEnv,
+    _this: JObject,
+) -> jstring {
+    let payload = std::panic::catch_unwind(review::take_json)
+        .unwrap_or_else(|_| "{\"query\":null,\"candidates\":[]}".to_owned());
+    env.new_string(payload)
+        .map(|value| value.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+
+/// Aliases confirmed by the user are pushed into the engine before a lookup so the same
+/// recording is resolved without asking again. Payload: JSON array of alias entries.
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SongAliasNative_registerJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    payload: JString,
+) -> jni::sys::jboolean {
+    #[derive(serde::Deserialize)]
+    struct Entry {
+        original_title: String,
+        original_artist: String,
+        #[serde(default)]
+        original_artist_aliases: Vec<String>,
+        alias_title: String,
+        #[serde(default)]
+        alias_artist: Option<String>,
+        source: String,
+        confidence: f64,
+    }
+
+    let payload = jstring_to_string(&mut env, payload);
+    let parsed = std::panic::catch_unwind(|| serde_json::from_str::<Vec<Entry>>(&payload));
+    match parsed {
+        Ok(Ok(entries)) => {
+            for entry in entries {
+                aliases::register(aliases::AliasEntry {
+                    original_title: entry.original_title,
+                    original_artist: entry.original_artist,
+                    original_artist_aliases: entry.original_artist_aliases,
+                    alias_title: entry.alias_title,
+                    alias_artist: entry.alias_artist,
+                    source: entry.source,
+                    confidence: entry.confidence,
+                });
+            }
+            jni::sys::JNI_TRUE
+        }
+        _ => jni::sys::JNI_FALSE,
+    }
 }
 
 #[no_mangle]
@@ -160,6 +221,43 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNati
 }
 
 #[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_AppleLyricsNative_fetchLyricsJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+    media_user_token: JString,
+    developer_token: JString,
+    storefront: JString,
+    lookup_id: jni::sys::jlong,
+) -> jstring {
+    let title = jstring_to_string(&mut env, title);
+    let artist = jstring_to_string(&mut env, artist);
+    let album = jstring_to_string(&mut env, album);
+    let media_user_token = jstring_to_string(&mut env, media_user_token);
+    let developer_token = jstring_to_string(&mut env, developer_token);
+    let storefront = jstring_to_string(&mut env, storefront);
+    let result = std::panic::catch_unwind(|| {
+        apple::fetch(
+            &title,
+            &artist,
+            &album,
+            duration_ms.max(0) as u64,
+            &media_user_token,
+            &developer_token,
+            &storefront,
+            lookup_id,
+        )
+    })
+    .unwrap_or_else(|_| serde_json::json!({"ok":false,"source":"apple","error_type":"NativeError","error":"Apple lookup failed"}));
+    env.new_string(result.to_string())
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+
+#[no_mangle]
 pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_NeteaseLyricsNative_fetchBestLyricsJson(
     env: JNIEnv,
     this: JObject,
@@ -192,6 +290,8 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
     } else {
         None
     };
+
+    discovery::ensure_registered(&title, &artist, duration_ms);
 
     let result = std::panic::catch_unwind(|| {
         musixmatch::fetch_best_lyrics(
@@ -239,6 +339,8 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LrclibLyricsNat
     } else {
         None
     };
+
+    discovery::ensure_registered(&title, &artist, duration_ms);
 
     let result = std::panic::catch_unwind(|| {
         lrclib::fetch_best_lyrics(&title, &artist, &album, duration_ms, lookup_id)
@@ -300,6 +402,10 @@ fn fetch_netease_lyrics_json(
     } else {
         None
     };
+
+    // Best effort: a romanized title can only reach its localized release through an alias,
+    // and the catalogue can supply one without anyone hard-coding it.
+    discovery::ensure_registered(&title, &artist, duration_ms);
 
     let result = std::panic::catch_unwind(|| {
         fetch_best_lyrics(&title, &artist, &album, duration_ms, lookup_id)
@@ -537,7 +643,7 @@ impl CandidatePool {
                 target_album,
                 target_duration_ms,
             ) else {
-                stats.rejected_title += 1;
+                stats.rejected_evidence += 1;
                 continue;
             };
 
@@ -722,12 +828,12 @@ async fn fetch_netease_from_backend<B: NeteaseBackend>(
                 trace.event(
                     "search_result",
                     format_args!(
-                        "round={} requestMs={} returned={} accepted={} rejectedTitle={} duplicates={} pool={} bestScore={:.3} bestTitleScore={:.3} bestArtistScore={} bestEarly={} requestsUsed={}",
+                        "round={} requestMs={} returned={} accepted={} rejectedEvidence={} duplicates={} pool={} bestScore={:.3} bestTitleScore={:.3} bestArtistScore={} bestEarly={} requestsUsed={}",
                         round + 1,
                         request_started.elapsed().as_millis(),
                         stats.returned,
                         stats.accepted,
-                        stats.rejected_title,
+                        stats.rejected_evidence,
                         stats.duplicate,
                         candidates.len(),
                         stats.best_score.unwrap_or_default(),
@@ -996,20 +1102,40 @@ fn map_song(
 
     let album_name = album.as_deref().unwrap_or("");
 
-    let match_score = score_candidate(
-        MatchMetadata {
-            title: target_title,
-            artist: target_artist,
-            album: target_album,
-            duration_ms: target_duration_ms,
-        },
-        MatchMetadata {
-            title: name,
-            artist: &artist,
-            album: album_name,
-            duration_ms: Some(*duration as u64).filter(|value| *value > 0),
-        },
-    )?;
+    let query_metadata = MatchMetadata {
+        title: target_title,
+        artist: target_artist,
+        album: target_album,
+        duration_ms: target_duration_ms,
+    };
+    let candidate_metadata = MatchMetadata {
+        title: name,
+        artist: &artist,
+        album: album_name,
+        duration_ms: Some(*duration as u64).filter(|value| *value > 0),
+    };
+    let match_score = match confidence::assess(query_metadata, candidate_metadata) {
+        Some(assessment) => assessment.score,
+        None => {
+            // Park the plausible-but-unproven candidates for the "pick one" UI.
+            if let Some(title_score) = score_candidate(query_metadata, candidate_metadata) {
+                review::park(
+                    &review::query_key(target_title, target_artist, target_duration_ms),
+                    review::ParkedCandidate {
+                        title: name.clone(),
+                        artist: artist.clone(),
+                        album: album_name.to_owned(),
+                        duration_ms: Some(*duration as u64).filter(|value| *value > 0),
+                        provider: "netease",
+                        score: title_score.total,
+                        reason: confidence::rejection_reason(query_metadata, candidate_metadata),
+                        alias_hit: aliases::lookup(target_title, target_artist).is_some(),
+                    },
+                );
+            }
+            return None;
+        }
+    };
 
     Some(Candidate {
         id: *id,
@@ -1254,7 +1380,7 @@ mod netease_tests {
     }
 
     #[test]
-    fn related_candidate_below_early_score_is_used_after_search_fallbacks() {
+    fn title_only_candidate_below_early_score_is_not_used() {
         let candidate = song(
             9,
             "Contract Song",
@@ -1262,36 +1388,78 @@ mod netease_tests {
             "Other Album",
             300_000,
         );
-        let mapped = map_song(
-            &candidate,
-            "Contract Song",
-            "Contract Artist",
-            "Contract Album",
-            Some(180_000),
-        )
-        .expect("the title remains related");
-        assert!(mapped.score < EARLY_ACCEPT_SCORE);
+        assert!(
+            map_song(
+                &candidate,
+                "Contract Song",
+                "Contract Artist",
+                "Contract Album",
+                Some(180_000),
+            )
+            .is_none(),
+            "a title-only coincidence must not become a candidate"
+        );
 
         let backend = FakeNeteaseBackend::new(
             vec![Ok(search_response(vec![candidate]))],
             [(9, Ok(lyric_response(Some("[00:02.00]low score match"))))],
         );
-        let result = run_fake_lookup(
+        let error = run_fake_lookup(
             &backend,
             "Contract Song",
             "Contract Artist",
             "Contract Album",
             Some(180_000),
         )
-        .expect("related low-score candidate should remain eligible");
+        .expect_err("no corroborated candidate exists");
 
-        assert_eq!(result.id.as_deref(), Some("9"));
-        assert_eq!(backend.lyric_calls(), vec![9]);
+        assert_eq!(classify_error(&error), "NotFound");
         assert!(backend.search_calls().len() > 1);
     }
 
     #[test]
-    fn blank_artist_still_searches_by_title() {
+    fn radio_love_song_english_lookalike_is_rejected_for_netease() {
+        // Same reported failure as the LRCLIB case: a similar English title must not be shown.
+        let candidate = song(
+            78,
+            "Radio Love Songs",
+            "The Highways",
+            "Long Drives",
+            214_000,
+        );
+
+        assert!(
+            map_song(
+                &candidate,
+                "Radio Love Song",
+                "Karen Mok",
+                "",
+                Some(242_000)
+            )
+            .is_none(),
+            "a title-only English lookalike must not become a candidate"
+        );
+    }
+
+    #[test]
+    fn radio_love_song_alias_candidate_is_accepted_for_netease() {
+        // 莫文蔚《电台情歌》is reachable through the confirmed alias, not through the English title.
+        let candidate = song(77, "电台情歌", "莫文蔚", "", 241_000);
+
+        let mapped = map_song(
+            &candidate,
+            "Radio Love Song",
+            "Karen Mok",
+            "",
+            Some(242_000),
+        )
+        .expect("the confirmed alias accepts the localized release");
+        assert_eq!(mapped.title, "电台情歌");
+        assert_eq!(mapped.artist, "莫文蔚");
+    }
+
+    #[test]
+    fn blank_artist_still_searches_but_title_only_result_is_not_used() {
         let backend = FakeNeteaseBackend::new(
             vec![Ok(search_response(vec![song(
                 10,
@@ -1303,10 +1471,9 @@ mod netease_tests {
             [(10, Ok(lyric_response(Some("[00:03.00]found by title"))))],
         );
 
-        let result = run_fake_lookup(&backend, "Solo Song", "", "", None)
-            .expect("artist is optional for NetEase search");
-
-        assert_eq!(result.id.as_deref(), Some("10"));
+        let error = run_fake_lookup(&backend, "Solo Song", "", "", None)
+            .expect_err("a title-only match has no corroborating evidence");
+        assert_eq!(classify_error(&error), "NotFound");
         assert_eq!(backend.search_calls(), vec!["Solo Song"]);
     }
 
@@ -1358,11 +1525,11 @@ mod netease_tests {
     #[test]
     fn candidate_ids_are_not_retried_and_total_requests_are_bounded() {
         let repeated = vec![
-            song(20, "Budget Song", "Artist", "Album", 180_000),
-            song(20, "Budget Song", "Artist", "Album", 180_000),
-            song(21, "Budget Song", "Artist", "Album", 180_000),
-            song(22, "Budget Song", "Artist", "Album", 180_000),
-            song(23, "Budget Song", "Artist", "Album", 180_000),
+            song(20, "Budget Song (Live)", "Artist", "Album", 180_000),
+            song(20, "Budget Song (Live)", "Artist", "Album", 180_000),
+            song(21, "Budget Song (Live)", "Artist", "Album", 180_000),
+            song(22, "Budget Song (Live)", "Artist", "Album", 180_000),
+            song(23, "Budget Song (Live)", "Artist", "Album", 180_000),
         ];
         let backend = FakeNeteaseBackend::new(
             vec![Ok(search_response(repeated))],

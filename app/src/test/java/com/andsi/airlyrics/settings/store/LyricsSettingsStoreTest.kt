@@ -31,7 +31,7 @@ class LyricsSettingsStoreTest {
         assertEquals(listOf(PlainLyricsSearchSource.NETEASE), settings.plainLyricsSearchSources)
         assertTrue(settings.autoSearchOnline)
         assertTrue(settings.autoSaveLocal)
-        assertEquals(LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION, settings.contentDisplayMode)
+        assertEquals(LyricsContentDisplayMode.AUTO, settings.contentDisplayMode)
         assertEquals(LyricsLineDisplayMode.CURRENT_ONLY, settings.lineDisplayMode)
         assertEquals(LyricsSwitchAnimationMode.FADE, settings.switchAnimationMode)
         assertFalse(settings.wordByWordLyricsEnabled)

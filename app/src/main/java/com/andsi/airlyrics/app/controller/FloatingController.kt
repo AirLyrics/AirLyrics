@@ -249,6 +249,13 @@ internal class FloatingController(
         }
     }
 
+    /** Re-render the lyric text without re-applying the window layout, which avoids a flash. */
+    fun notifyTextChanged() {
+        if (state.quickFloatingVisible) {
+            sendFloatingCommand(FloatingServiceCommand.RefreshText)
+        }
+    }
+
     fun notifySourceChangedIfVisible(packageName: String?) {
         if (state.quickFloatingDesiredVisible) {
             sendFloatingCommand(FloatingServiceCommand.SelectMediaSource(packageName))

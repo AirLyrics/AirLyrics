@@ -50,13 +50,14 @@ design       -> core.model
 displayscope -> (none)
 feedback     -> (none)
 settings     -> core.model, core.prefs, core.color
-lyrics       -> core
+lyrics       -> core, apple
 i18n         -> core.model, core.prefs
 i18n.lyrics  -> lyrics.LyricsLookupErrorType, lyrics.LyricsLookupException, lyrics.storage.LyricsStorage
 media        -> core.model, core.prefs, i18n.LocalizedServiceContext
-ui           -> core.model, core.color, design, feedback.AirFeedback, i18n
+ui           -> core.model, core.color, core.text, design, feedback.AirFeedback, i18n, apple
 floating     -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics, media, settings
-app          -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics, media, settings, floating, ui
+app          -> core, design, displayscope, feedback, i18n, i18n.lyrics, lyrics, media, settings, floating, ui, apple
+apple        -> (none)
 ```
 <!-- architecture-policy:end -->
 

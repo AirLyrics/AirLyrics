@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.floating
 
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import kotlin.math.floor
 
 /**
@@ -20,7 +21,8 @@ internal data class WordByWordHighlightProgress(
 internal fun wordByWordHighlightProgress(
     line: WordByWordLine,
     displayText: String,
-    positionMs: Long
+    positionMs: Long,
+    displaySegments: List<WordByWordSegment> = line.segments
 ): WordByWordHighlightProgress {
     if (displayText.isBlank() || positionMs <= line.startMs) {
         return WordByWordHighlightProgress()
@@ -33,7 +35,7 @@ internal fun wordByWordHighlightProgress(
     var completedEnd = 0
     var matchedSegment = false
 
-    for (segment in line.segments) {
+    for (segment in displaySegments) {
         val segmentText = segment.text.trim()
         if (segmentText.isBlank()) continue
 

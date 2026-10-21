@@ -252,6 +252,7 @@
     <string name="ui_grant_usage_access">Otorgar acceso de uso</string>
     <string name="ui_orange">Naranja</string>
     <string name="ui_original_only">Solo original</string>
+    <string name="ui_auto_language">Automático (según el idioma)</string>
     <string name="ui_original_translation">Original + traducción</string>
     <string name="ui_overlay">Superposición</string>
     <string name="ui_overlay_and_notification_permissions">Permisos e idioma</string>
@@ -450,4 +451,21 @@ TTML de tiempo por palabra:
     <string name="ui_batch_export_failed">No se pudo exportar. Prueba otra ubicación.</string>
     <string name="ui_batch_export_restricted">Exportación no disponible</string>
     <string name="ui_batch_deselect_all">Deseleccionar todo</string>
+    <string name="ui_apple_account">Cuenta de Apple Music</string>
+    <string name="ui_apple_account_summary">Inicia sesión para usar las letras de Apple, con tiempos por palabra</string>
+    <string name="ui_apple_not_logged_in">Sin sesión</string>
+    <string name="ui_apple_logged_in_as">Sesión iniciada · tienda %1$s</string>
+    <string name="ui_apple_login">Iniciar sesión con Apple</string>
+    <string name="ui_apple_verify">Verificar sesión</string>
+    <string name="ui_apple_logout">Cerrar sesión</string>
+    <string name="ui_apple_failed">Error: %1$s</string>
+    <string name="ui_apple_verifying">Verificando…</string>
+    <string name="ui_apple_login_hint">Inicia sesión con tu Apple ID. Apple gestiona la verificación en dos pasos.</string>
+    <string name="ui_apple_login_not_found">Aún no hay token. Termina de iniciar sesión y pulsa otra vez.</string>
+    <string name="ui_apple_login_capture">Capturar y guardar</string>
+    <string name="provider_apple">Apple Music</string>
+    <string name="ui_script_preference">Escritura china</string>
+    <string name="ui_script_simplified">Chino simplificado</string>
+    <string name="ui_script_traditional">Chino tradicional</string>
+    <string name="ui_script_none">Sin conversión</string>
 </resources>

@@ -49,6 +49,10 @@
         {
           "group": "core",
           "reason": "Stable values and infrastructure; no presentation dependency."
+        },
+        {
+          "group": "apple",
+          "reason": "Apple Music lyrics provider consumes the account session."
         }
       ]
     },
@@ -102,9 +106,10 @@
           "group": "core",
           "symbols": [
             "core.model",
-            "core.color"
+            "core.color",
+            "core.text"
           ],
-          "reason": "Shared value models and presentation colors, not preference storage."
+          "reason": "Shared value models, presentation colors and text normalization."
         },
         {
           "group": "design",
@@ -120,6 +125,10 @@
         {
           "group": "i18n",
           "reason": "Common localized presentation; lyric-specific adapters stay in the application layer."
+        },
+        {
+          "group": "apple",
+          "reason": "Apple Music account settings entry."
         }
       ]
     },
@@ -208,8 +217,15 @@
         {
           "group": "ui",
           "reason": "Implement UI-owned contracts and assemble screens."
+        },
+        {
+          "group": "apple",
+          "reason": "Composition root."
         }
       ]
+    },
+    "apple": {
+      "allows": []
     }
   },
   "protocol_owners": [

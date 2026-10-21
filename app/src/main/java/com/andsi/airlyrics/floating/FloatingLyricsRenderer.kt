@@ -13,10 +13,14 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import com.andsi.airlyrics.lyrics.display.PlainLyricsDisplayFormatter
 import com.andsi.airlyrics.lyrics.parser.LrcLine
+import com.andsi.airlyrics.core.text.ChineseText
+import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -32,6 +36,7 @@ internal enum class ParsedLyricsAvailability {
 class FloatingLyricsRenderer(
     private val textViewProvider: () -> TextView?,
     private val contentModeProvider: () -> LyricsContentDisplayMode = { LyricsContentDisplayMode.default },
+    private val scriptPreferenceProvider: () -> LyricsScriptPreference = { LyricsScriptPreference.default },
     private val lineModeProvider: () -> LyricsLineDisplayMode = { LyricsLineDisplayMode.default },
     private val switchAnimationModeProvider: () -> LyricsSwitchAnimationMode = { LyricsSwitchAnimationMode.default },
     private val wordByWordLyricsEnabledProvider: () -> Boolean = { false },
@@ -245,6 +250,7 @@ class FloatingLyricsRenderer(
             plainLines = currentPlainLines,
             currentIndex = index,
             contentMode = contentModeProvider(),
+            scriptPreference = scriptPreferenceProvider(),
             lineMode = lineModeProvider(),
             noTranslationText = noTranslationTextProvider()
         )
@@ -277,36 +283,28 @@ class FloatingLyricsRenderer(
             val isCurrent = index == currentIndex
             val wordByWordLine = if (isCurrent) findWordByWordLineForPlainLine(line, positionMs) else null
 
-            when (contentMode) {
-                LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
-                    val block = SpannableStringBuilder()
-                    if (original.isNotBlank()) {
-                        block.append(
-                            if (wordByWordLine != null) wordByWordLineSpan(wordByWordLine, original, positionMs)
-                            else original
+            val rendered = LyricsDisplayPolicy.render(
+                contentMode, original, translation, scriptPreferenceProvider()
+            )
+            if (rendered.primary.isNotBlank()) {
+                // When the preferred script replaces the line with its translation, keep the
+                // translation's own timing; otherwise the original tokens stay authoritative.
+                val showsTranslationOnly = rendered.secondary == null &&
+                    rendered.primary.trim() != original.trim()
+                renderedLines += when {
+                    wordByWordLine == null -> rendered.primary
+                    showsTranslationOnly && wordByWordLine.translatedSegments.isNotEmpty() ->
+                        wordByWordLineSpan(
+                            wordByWordLine,
+                            rendered.primary,
+                            positionMs,
+                            wordByWordLine.translatedSegments
                         )
-                    }
-                    if (line.hasTranslation()) {
-                        if (block.isNotEmpty()) block.append('\n')
-                        block.append(translation)
-                    }
-                    if (block.isNotBlankText()) renderedLines += block
-                }
-
-                LyricsContentDisplayMode.ORIGINAL_ONLY -> {
-                    if (original.isNotBlank()) {
-                        renderedLines += if (wordByWordLine != null) {
-                            wordByWordLineSpan(wordByWordLine, original, positionMs)
-                        } else {
-                            original
-                        }
-                    }
-                }
-
-                LyricsContentDisplayMode.TRANSLATION_ONLY -> {
-                    if (line.hasTranslation()) renderedLines += translation
+                    showsTranslationOnly -> rendered.primary
+                    else -> wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs)
                 }
             }
+            rendered.secondary?.takeIf { it.isNotBlank() }?.let { renderedLines += it }
         }
 
         if (renderedLines.isEmpty()) {
@@ -346,6 +344,19 @@ class FloatingLyricsRenderer(
                         isTextCompatible(plainLine.text, wordByWordOriginalText(candidate))
                 }
         }
+
+        // Apple/other providers can normalize punctuation or split whitespace differently between
+        // the line LRC and the word-timed payload. When both payloads carry the same line start,
+        // the timestamp is the stronger identity than a long-text comparison. Keep a narrow
+        // timestamp fallback so long lines do not lose karaoke rendering while still avoiding a
+        // neighboring line accidentally matching.
+        currentWordByWordLines
+            .filter { kotlin.math.abs(it.startMs - plainLine.timeMs) <= 120L }
+            .minByOrNull { kotlin.math.abs(it.startMs - plainLine.timeMs) }
+            ?.takeIf { candidate ->
+                isTextCompatible(plainLine.text, wordByWordOriginalText(candidate))
+            }
+            ?.let { return it }
 
         val aroundPosition = currentWordByWordLines
             .filter { positionMs in (it.startMs - 350L)..(it.endMs + 700L) }
@@ -395,12 +406,13 @@ class FloatingLyricsRenderer(
     private fun wordByWordLineSpan(
         wordByWordLine: WordByWordLine,
         displayText: String,
-        positionMs: Long
+        positionMs: Long,
+        displaySegments: List<WordByWordSegment> = wordByWordLine.segments
     ): CharSequence {
         val text = displayText.trim()
         if (text.isBlank()) return ""
 
-        val progress = wordByWordHighlightProgress(wordByWordLine, text, positionMs)
+        val progress = wordByWordHighlightProgress(wordByWordLine, text, positionMs, displaySegments)
         val span = SpannableString(text)
         if (progress.completedEnd > 0 || progress.hasActiveCharacter) {
             val highlightColor = wordByWordHighlightColorProvider()
@@ -442,7 +454,7 @@ class FloatingLyricsRenderer(
     }
 
     private fun normalizeWordByWordMatchText(text: String): String {
-        return text.lowercase()
+        return ChineseText.toSimplified(text).lowercase()
             .replace(Regex("""[^\p{L}\p{N}]"""), "")
             .trim()
     }

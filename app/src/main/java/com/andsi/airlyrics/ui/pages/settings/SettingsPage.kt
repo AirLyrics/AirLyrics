@@ -11,5 +11,7 @@ internal fun createSettingsPage(activity: MainUiHost): View  = with(activity) cr
         SettingsSubPage.LYRICS -> createLyricsSettingsPage(activity)
         SettingsSubPage.SAVED_LYRICS -> createSavedLyricsPage(activity)
         SettingsSubPage.ABOUT -> createAboutSettingsPage(activity)
+        SettingsSubPage.APPLE_ACCOUNT -> createAppleAccountPage(activity)
+        SettingsSubPage.APPLE_LOGIN -> createAppleLoginPage(activity)
     }
 }

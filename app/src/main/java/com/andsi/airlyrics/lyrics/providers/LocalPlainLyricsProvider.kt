@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.lyrics.providers
 
+import com.andsi.airlyrics.lyrics.CachedMatchGuard
 import com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore
+import com.andsi.airlyrics.lyrics.storage.SongAliasStore
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.PlainLyricsProvider
@@ -23,6 +25,17 @@ object LocalPlainLyricsProvider : PlainLyricsProvider {
                 return@runCatching com.andsi.airlyrics.lyrics.storage.SpicyLyricsCache.forContext(request.context)
                     .read(info.indexKey.removePrefix("spicy:"))
             }
+            val song = SongIdentity(request.title, request.artist, request.album, request.durationMs)
+            val aliasTitle = SongAliasStore.read(request.context, song)?.aliasTitle
+            if (!CachedMatchGuard.isTrusted(
+                    playedTitle = request.title,
+                    cachedMatchedTitle = info?.matchedTitle.orEmpty(),
+                    aliasTitle = aliasTitle
+                )
+            ) {
+                // Cached text came from an unrelated match: let the online providers try again.
+                return@runCatching null
+            }
             val plainLrc = LyricsStorage.readPlainLyrics(
                 context = request.context,
                 title = request.title,
@@ -35,8 +48,8 @@ object LocalPlainLyricsProvider : PlainLyricsProvider {
                 plainProviderId = id,
                 plainProviderName = name,
                 plainLrc = plainLrc,
-                matchedTitle = request.title,
-                matchedArtist = request.artist,
+                matchedTitle = info?.matchedTitle?.takeIf { it.isNotBlank() } ?: request.title,
+                matchedArtist = info?.matchedArtist?.takeIf { it.isNotBlank() } ?: request.artist,
                 matchedAlbum = request.album,
                 matchedDurationMs = request.durationMs,
                 manualLocal = info?.plainSource != LyricsStorage.SOURCE_DOWNLOADED

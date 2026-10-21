@@ -1,10 +1,8 @@
 use crate::diagnostics::LookupTrace;
 use crate::lrc;
-#[cfg(test)]
-use crate::matching::EARLY_ACCEPT_SCORE;
 use crate::matching::{
-    build_search_queries, is_confident_early_match, normalize_usable_lrc, score_candidate,
-    MatchMetadata, MatchScore, SearchQuery,
+    build_search_queries, is_confident_early_match, normalize_usable_lrc, MatchMetadata,
+    MatchScore, SearchQuery,
 };
 use crate::{begin_lookup_cancellation, check_lookup_cancelled, NativeResult};
 use musixmatch_inofficial::models::{
@@ -262,7 +260,8 @@ struct CandidateBatchStats {
     returned: usize,
     accepted: usize,
     duplicates: usize,
-    rejected_title: usize,
+    /// Candidates the confidence policy refused (title-only or version-conflicting matches).
+    rejected_evidence: usize,
 }
 
 #[derive(Default)]
@@ -284,10 +283,11 @@ impl CandidatePool {
             album: &track.album_name,
             duration_ms: candidate_duration_ms,
         };
-        let Some(match_score) = score_candidate(query, candidate) else {
-            stats.rejected_title = 1;
+        let Some(assessment) = crate::confidence::assess(query, candidate) else {
+            stats.rejected_evidence = 1;
             return stats;
         };
+        let match_score = assessment.score;
 
         let confident_early_match = is_confident_early_match(&match_score);
         let already_present = self.tracks.contains_key(&track.track_id);
@@ -323,7 +323,7 @@ impl CandidatePool {
                 total.returned += stats.returned;
                 total.accepted += stats.accepted;
                 total.duplicates += stats.duplicates;
-                total.rejected_title += stats.rejected_title;
+                total.rejected_evidence += stats.rejected_evidence;
                 total
             })
     }
@@ -1357,13 +1357,13 @@ fn trace_candidate_batch(
     trace.event(
         stage,
         format_args!(
-            "round={} outcome=ok requestMs={} returned={} accepted={} duplicate={} rejectedTitle={} pool={} topScore={} topTitleScore={} topArtistScore={} topEarly={} requestsUsed={}",
+            "round={} outcome=ok requestMs={} returned={} accepted={} duplicate={} rejectedEvidence={} pool={} topScore={} topTitleScore={} topArtistScore={} topEarly={} requestsUsed={}",
             round,
             started.elapsed().as_millis(),
             stats.returned,
             stats.accepted,
             stats.duplicates,
-            stats.rejected_title,
+            stats.rejected_evidence,
             pool.len(),
             format_optional_score(best.as_ref().map(|candidate| candidate.match_score.total)),
             format_optional_score(
@@ -1835,6 +1835,7 @@ mod tests {
         assert_eq!(pool.tracks.len(), 1);
         assert!(pool.best().expect("candidate").track.has_subtitles);
 
+        // A "(Live)" entry is a different recording: it must not be merged with the studio one.
         let mut flagged_pool = CandidatePool::default();
         flagged_pool.add(
             test_track(8, "Song (Live)", "Artist", "", 180, true, 80),
@@ -1845,8 +1846,8 @@ mod tests {
             metadata,
         );
         let retained = flagged_pool.best().expect("deduplicated candidate");
-        assert!(retained.track.has_subtitles);
-        assert_eq!(retained.track.track_name, "Song (Live)");
+        assert!(!retained.track.has_subtitles);
+        assert_eq!(retained.track.track_name, "Song");
     }
 
     #[tokio::test]
@@ -1980,7 +1981,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn low_score_candidate_is_finally_eligible_but_cannot_stop_searches_early() {
+    async fn title_only_candidate_is_not_eligible_at_any_stage() {
         let candidate = test_track(
             30,
             "Song",
@@ -1995,9 +1996,10 @@ mod tests {
             candidate.clone(),
             query("Song", "Query Artist", "Album", Some(180_000)),
         );
-        let scored = pool.best().expect("title-related candidate");
-        assert!(scored.match_score.total < EARLY_ACCEPT_SCORE);
-        assert!(!scored.confident_early_match);
+        assert!(
+            pool.tracks.is_empty(),
+            "a title-only candidate has no supporting evidence and must not enter the pool"
+        );
 
         let backend = FakeMusixmatchBackend::new(
             Err(missing("matcher.track")),
@@ -2014,47 +2016,32 @@ mod tests {
             [],
         );
 
-        let (result, _) =
-            run_fake_lookup(&backend, "Song (Live)", "Query Artist", Some(180_000)).await;
-        let found = result.expect("related candidate remains eligible at final selection");
-        assert_eq!(found.track.as_ref().map(|track| track.track_id), Some(30));
-        let calls = backend.calls();
-        let first_subtitle = calls
-            .iter()
-            .position(|call| call.starts_with("subtitle:"))
-            .expect("subtitle call");
-        assert_eq!(
-            calls[..first_subtitle]
-                .iter()
-                .filter(|call| call.starts_with("search:"))
-                .count(),
-            4
+        let (result, _) = run_fake_lookup(&backend, "Song", "Query Artist", Some(180_000)).await;
+        assert!(
+            result.is_err(),
+            "a title-only candidate must not be shown, however many searches ran"
         );
     }
 
     #[test]
-    fn missing_artist_and_version_or_duration_differences_do_not_reject() {
+    fn missing_artist_and_version_differences_lower_certainty() {
+        // No artist to corroborate the title: nothing to show automatically.
         let mut no_artist_pool = CandidatePool::default();
         no_artist_pool.add(
             test_track(4, "Song", "Known Artist", "", 180, true, 70),
             query("Song", "", "", None),
         );
-        assert_eq!(
-            no_artist_pool
-                .best()
-                .expect("title-only candidate")
-                .match_score
-                .artist_similarity,
-            None
-        );
+        assert!(no_artist_pool.tracks.is_empty());
 
-        let mut variant_pool = CandidatePool::default();
-        variant_pool.add(
-            test_track(5, "Song - Live", "Artist", "", 300, true, 70),
-            query("Song (Live)", "Artist", "", Some(180_000)),
+        // A large duration difference alone does not reject when the performer matches.
+        let mut duration_pool = CandidatePool::default();
+        duration_pool.add(
+            test_track(5, "Song", "Artist", "", 300, true, 70),
+            query("Song", "Artist", "", Some(180_000)),
         );
-        let variant = variant_pool.best().expect("related live variant");
-        assert_eq!(variant.match_score.version_penalty, 0.0);
+        let variant = duration_pool
+            .best()
+            .expect("performer-corroborated candidate");
         assert_eq!(variant.match_score.duration_similarity, Some(0.0));
     }
 
@@ -2134,9 +2121,10 @@ mod tests {
         );
 
         let ranked = pool.ranked();
+        // The artist-mismatched entry carries no corroborating evidence and never reaches ranking.
+        assert_eq!(ranked.len(), 2);
         assert_eq!(ranked[0].track.track_id, 21);
         assert_eq!(ranked[1].track.track_id, 20);
-        assert_eq!(ranked[2].track.track_id, 22);
     }
 
     #[test]
