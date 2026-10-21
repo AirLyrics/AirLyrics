@@ -115,7 +115,7 @@ class WordByWordLrcParserTest {
             )
         )
 
-        assertEquals("[00:01.23]hello\n[01:02.34]world", plainLrc)
+        assertEquals("[00:01.23]hello\n[01:02.345]world", plainLrc)
     }
 
     @Test
@@ -174,7 +174,51 @@ class WordByWordLrcParserTest {
             metadataLines = listOf("[ar:Artist]", "[ti:Title]")
         )
 
-        assertEquals("[ar:Artist]\n[ti:Title]\n[00:10.00]<00:10.00>hi", wordByWordLrc)
+        assertEquals("[ar:Artist]\n[ti:Title]\n[00:10.00]<00:10.00>hi<00:10.40>", wordByWordLrc)
+    }
+
+    @Test fun lddcFormatsPreserveWordEndsAndPauses() {
+        for (text in listOf(
+            "[00:01.000]你[00:01.301][00:01.500]好[00:02.000]",
+            "[00:01.000]<00:01.000>你<00:01.301><00:01.500>好<00:02.000>"
+        )) {
+            assertTrue(WordByWordLrcParser.hasWordTiming(text))
+            assertTrue(WordByWordLrcParser.validateForStorage(text).isValid)
+            val line = WordByWordLrcParser.parse(text).single()
+            assertEquals("你好", line.text)
+            assertEquals(listOf(1301L, 2000L), line.segments.map { it.endMs })
+            assertEquals(listOf(1000L, 1500L), line.segments.map { it.startMs })
+            assertEquals(2000L, line.endMs)
+            val exported = WordByWordLrcParser.wordByWordLinesToWordByWordLrc(listOf(line))
+            assertEquals(listOf(line), WordByWordLrcParser.parse(exported))
+        }
+    }
+
+    @Test fun lddcMultilingualLinesKeepOriginalAndTranslations() {
+        for (text in listOf(
+            "[00:01.00]你[00:01.50]好[00:02.00]\n[00:01.00]hello[00:02.00]\n[00:01.00]ni hao[00:02.00]",
+            "[00:01.00]<00:01.00>你<00:01.50>好<00:02.00>\n[00:01.00]hello<00:02.00>\n[00:01.00]ni hao<00:02.00>"
+        )) {
+            assertTrue(WordByWordLrcParser.validateForStorage(text).isValid)
+            val parsed = WordByWordLrcParser.parseImport(text)
+            assertEquals(1, parsed.wordByWordLines.size)
+            assertEquals("[00:01.00]你好 / hello / ni hao", parsed.plainLrc)
+        }
+    }
+
+    @Test fun ordinaryRepeatedAndCompactLinesAreNotWordTiming() {
+        for (text in listOf("[00:01.00][00:03.00]chorus", "[00:01.00]first[00:03.00]second")) {
+            assertEquals(false, WordByWordLrcParser.hasWordTiming(text))
+            assertEquals(false, WordByWordLrcParser.validateForStorage(text).isValid)
+        }
+    }
+
+    @Test fun invalidWordIntervalsAreRejected() {
+        for (text in listOf(
+            "[00:01.00]你[00:00.50]好[00:02.00]",
+            "[00:01.00]<00:01.00>你<00:00.50>好<00:02.00>",
+            "[00:01.00]<00:01.00>你<00:bad>好"
+        )) assertEquals(false, WordByWordLrcParser.validateForStorage(text).isValid)
     }
 
 }

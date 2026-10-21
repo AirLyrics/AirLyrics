@@ -12,6 +12,11 @@ data class ParsedWordByWordLyrics(
 )
 
 object WordByWordLrcParser {
+    /** Closed square-tag lines distinguish verbatim LRC from repeated timestamps and compact LRC. */
+    fun hasWordTiming(text: String): Boolean = text.lineSequence().any {
+        wordTagCandidateRegex.containsMatchIn(it) || isSquareWordLine(it.trim())
+    }
+
     data class StorageValidationResult(
         val isValid: Boolean,
         val invalidLineNumbers: List<Int> = emptyList()
@@ -77,11 +82,12 @@ object WordByWordLrcParser {
         val wordByWordLrcLines = wordByWordLines
             .sortedBy { it.startMs }
             .map { line ->
-                val segmentText = line.segments
-                    .sortedBy { it.startMs }
-                    .joinToString(separator = "") { segment ->
-                        "<${formatLrcTimeTag(segment.startMs)}>${segment.text}"
-                    }
+                val segments = line.segments.sortedBy { it.startMs }
+                val segmentText = segments.mapIndexed { index, segment ->
+                    val endTag = if (segments.getOrNull(index + 1)?.startMs == segment.endMs) ""
+                        else "<${formatLrcTimeTag(segment.endMs)}>"
+                    "<${formatLrcTimeTag(segment.startMs)}>${segment.text}$endTag"
+                }.joinToString("")
                 "[${formatLrcTimeTag(line.startMs)}]$segmentText"
             }
 
@@ -108,8 +114,10 @@ private const val FALLBACK_SEGMENT_DURATION_MS = 400L
 
 private data class RawWordByWordLine(
     val startMs: Long,
-    val segments: List<Pair<String, Long>>
+    val segments: List<RawWordSegment>
 )
+
+private data class RawWordSegment(val text: String, val startMs: Long, val endMs: Long?)
 
 private data class WordByWordImportParts(
     val metadataLines: List<String>,
@@ -136,6 +144,7 @@ private fun emptyParsedWordByWordLyrics(
 private fun collectImportParts(wordByWordLrc: String): WordByWordImportParts {
     val metadataLines = mutableListOf<String>()
     val rawLines = mutableListOf<RawWordByWordLine>()
+    val originalStarts = mutableSetOf<Long>()
     val translationCandidates = mutableListOf<TimedTextSegment>()
 
     wordByWordLrc.lineSequence().forEach { rawLine ->
@@ -149,13 +158,20 @@ private fun collectImportParts(wordByWordLrc: String): WordByWordImportParts {
 
         val rawWordByWordLine = parseRawWordByWordLine(line)
         if (rawWordByWordLine != null) {
-            rawLines += rawWordByWordLine
+            // LDDC emits original, translation and romanization in that order at the same start.
+            if (!originalStarts.add(rawWordByWordLine.startMs)) {
+                translationCandidates += TimedTextSegment(rawWordByWordLine.startMs,
+                    rawWordByWordLine.segments.joinToString("") { it.text })
+            } else rawLines += rawWordByWordLine
             return@forEach
         }
 
-        if (wordTimeTagRegex.containsMatchIn(line)) return@forEach
-
-        translationCandidates += parseTimedTextSegments(line)
+        val translation = terminalOnlyTranslation(line)
+        if (translation != null) {
+            translationCandidates += translation
+        } else if (!wordTagCandidateRegex.containsMatchIn(line)) {
+            translationCandidates += parseTimedTextSegments(line)
+        }
     }
 
     return WordByWordImportParts(
@@ -184,7 +200,7 @@ private fun buildWordByWordLine(
         .trim()
     if (lineText.isBlank() || segmentList.isEmpty()) return null
 
-    val lineEnd = nextLineStart ?: segmentList.last().endMs
+    val lineEnd = segmentList.last().endMs
     if (lineEnd <= rawLine.startMs) return null
 
     return WordByWordLine(
@@ -199,15 +215,10 @@ private fun buildSegmentList(
     rawLine: RawWordByWordLine,
     nextLineStart: Long?
 ): List<WordByWordSegment> {
-    return rawLine.segments.mapIndexed { segmentIndex, (segmentText, segmentStartMs) ->
-        val nextSegmentStart = rawLine.segments.getOrNull(segmentIndex + 1)?.second
-            ?: nextLineStart
-            ?: (segmentStartMs + FALLBACK_SEGMENT_DURATION_MS)
-        WordByWordSegment(
-            text = segmentText,
-            startMs = segmentStartMs,
-            endMs = nextSegmentStart.coerceAtLeast(segmentStartMs + 1L)
-        )
+    return rawLine.segments.mapIndexed { index, segment ->
+        val end = segment.endMs ?: rawLine.segments.getOrNull(index + 1)?.startMs
+            ?: nextLineStart ?: (segment.startMs + FALLBACK_SEGMENT_DURATION_MS)
+        WordByWordSegment(segment.text, segment.startMs, end.coerceAtLeast(segment.startMs + 1L))
     }
 }
 
@@ -238,30 +249,52 @@ private fun buildEffectiveTranslations(
 }
 
 private fun isValidWordByWordLrcImportLine(line: String): Boolean {
-    if (parseRawWordByWordLine(line) != null) return true
-    if (wordTimeTagRegex.containsMatchIn(line)) return false
+    if (parseRawWordByWordLine(line) != null || terminalOnlyTranslation(line) != null) return true
+    if (wordTagCandidateRegex.containsMatchIn(line) || isSquareWordLine(line)) return false
     return parseTimedTextSegments(line).isNotEmpty()
 }
 
+private fun isSquareWordLine(line: String): Boolean {
+    val tags = timeTagRegex.findAll(line).toList()
+    if (tags.size < 2 || tags.first().range.first != 0 || tags.last().range.last != line.lastIndex) return false
+    // [t1][t2]same lyric is ordinary repeated-line LRC, not word timing.
+    return line.substring(tags[0].range.last + 1, tags[1].range.first).isNotBlank()
+}
+
+/** LDDC can append only an end marker to an untimed translation. */
+private fun terminalOnlyTranslation(line: String): TimedTextSegment? {
+    val start = timeTagRegex.find(line)?.takeIf { it.range.first == 0 } ?: return null
+    val tags = wordTimeTagRegex.findAll(line).toList()
+    val end = tags.singleOrNull()?.takeIf { it.range.last == line.lastIndex } ?: return null
+    val text = line.substring(start.range.last + 1, end.range.first)
+    if (text.isBlank() || wordTagCandidateRegex.containsMatchIn(text)) return null
+    val startMs = parseTimeTag(start) ?: return null
+    val endMs = parseTimeTag(end) ?: return null
+    if (endMs < startMs) return null
+    return TimedTextSegment(startMs, text)
+}
+
 private fun parseRawWordByWordLine(line: String): RawWordByWordLine? {
-    val lineStart = timeTagRegex.find(line)?.let { parseTimeTag(it) }
-        ?: return null
-    val content = line.replace(timeTagRegex, "").trim()
-    val wordTags = wordTimeTagRegex.findAll(content).toList()
-    if (wordTags.isEmpty()) return null
-
-    val segments = wordTags.mapIndexedNotNull { index, match ->
-        val startMs = parseTimeTag(match) ?: return@mapIndexedNotNull null
-        val textStart = match.range.last + 1
-        val textEndExclusive = wordTags.getOrNull(index + 1)?.range?.first ?: content.length
-        if (textStart > textEndExclusive || textStart > content.length) return@mapIndexedNotNull null
-        val segmentText = content.substring(textStart, textEndExclusive)
-            .replace(wordTimeTagRegex, "")
-        if (segmentText.isBlank()) return@mapIndexedNotNull null
-        segmentText to startMs
-    }.filter { (_, startMs) -> startMs >= lineStart }
-
-    return if (segments.isEmpty()) null else RawWordByWordLine(lineStart, segments)
+    val lineTag = timeTagRegex.find(line)?.takeIf { it.range.first == 0 } ?: return null
+    val lineStart = parseTimeTag(lineTag) ?: return null
+    val enhanced = wordTagCandidateRegex.containsMatchIn(line)
+    if (!enhanced && !isSquareWordLine(line)) return null
+    val content = if (enhanced) line.substring(lineTag.range.last + 1) else line
+    val tags = (if (enhanced) wordTimeTagRegex else timeTagRegex).findAll(content).toList()
+    if (tags.isEmpty() || content.substring(0, tags.first().range.first).isNotBlank()) return null
+    val times = tags.map { parseTimeTag(it) ?: return null }
+    if (times.any { it < lineStart } || times.zipWithNext().any { (a, b) -> b < a }) return null
+    val segments = tags.mapIndexedNotNull { index, tag ->
+        val next = tags.getOrNull(index + 1)
+        val text = content.substring(tag.range.last + 1, next?.range?.first ?: content.length)
+        if (text.isBlank()) return@mapIndexedNotNull null
+        // Do not hide malformed timing tags inside the lyric text.
+        if (wordTagCandidateRegex.containsMatchIn(text) || squareTagCandidateRegex.containsMatchIn(text)) return null
+        val end = times.getOrNull(index + 1)
+        if (end != null && end <= times[index]) return null
+        RawWordSegment(text, times[index], end)
+    }
+    return segments.takeIf { it.isNotEmpty() }?.let { RawWordByWordLine(lineStart, it) }
 }
 
 private fun parseTimedTextSegments(line: String): List<TimedTextSegment> {
@@ -366,7 +399,8 @@ private fun formatLrcTimeTag(timeMs: Long): String {
     val minutes = timeMs / 60_000L
     val seconds = (timeMs % 60_000L) / 1_000L
     val centiseconds = (timeMs % 1_000L) / 10L
-    return "%02d:%02d.%02d".format(Locale.ROOT, minutes, seconds, centiseconds)
+    return if (timeMs % 10L == 0L) "%02d:%02d.%02d".format(Locale.ROOT, minutes, seconds, centiseconds)
+    else "%02d:%02d.%03d".format(Locale.ROOT, minutes, seconds, timeMs % 1_000L)
 }
 
 private fun parseTimeTag(match: MatchResult): Long? {
@@ -387,3 +421,6 @@ private val timeTagRegex = Regex("""\[(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?]""")
 private val wordTimeTagRegex = Regex("""<(\d{1,2}):(\d{2})(?:[.:](\d{1,3}))?>""")
 private val metadataTagRegex = Regex("""\[[A-Za-z][A-Za-z0-9_\-]*:.*]""")
 private val whitespaceRegex = Regex("\\s+")
+
+private val wordTagCandidateRegex = Regex("""<\d{1,3}:""")
+private val squareTagCandidateRegex = Regex("""\[\d{1,3}:""")

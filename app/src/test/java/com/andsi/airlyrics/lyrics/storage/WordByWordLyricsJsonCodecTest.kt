@@ -106,7 +106,7 @@ class WordByWordLyricsJsonCodecTest {
 
         assertEquals(originalWordByWordLines, parsedWordByWordLines)
         assertEquals(
-            "[00:10.00]<00:10.00>I <00:10.30>love <00:10.60>you",
+            "[00:10.00]<00:10.00>I <00:10.30>love <00:10.60>you<00:11.00>",
             WordByWordLrcParser.wordByWordLinesToWordByWordLrc(parsedWordByWordLines)
         )
     }

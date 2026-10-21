@@ -56,7 +56,7 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
 
         assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
         assertEquals(
-            "[ar:Artist]\n[00:10.00]<00:10.00>valid",
+            "[ar:Artist]\n[00:10.00]<00:10.00>valid<00:10.40>",
             LyricsStorage.readLocalLyricsItemText(
                 context = context,
                 item = item,
@@ -103,7 +103,7 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
 
         val item = LyricsStorage.listRecentLyrics(context).single { it.title == "Word TTML" }
         assertEquals(
-            "[00:10.00]<00:10.00>he<00:10.30>llo <00:10.60>world",
+            "[00:10.00]<00:10.00>he<00:10.30>llo <00:10.60>world<00:12.00>",
             LyricsStorage.readLocalLyricsItemText(
                 context,
                 item,
@@ -200,7 +200,7 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
                 target = LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
             )
         )
-        assertEquals(originalLyrics, editorText)
+        assertEquals("$originalLyrics<00:11.00>", editorText)
 
         val update = LyricsStorage.updateWordByWordLyricsItemTextWithResult(
             context = context,
@@ -210,7 +210,7 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
 
         assertTrue(update.saved)
         assertEquals(
-            originalLyrics,
+            "$originalLyrics<00:11.00>",
             LyricsStorage.readLocalLyricsItemText(
                 context = context,
                 item = item,
@@ -221,6 +221,20 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
             "[00:10.00]I love you",
             LyricsStorage.readPlainLyrics(context, "Karaoke Spaces", "AndSi", 11_000L)
         )
+    }
+
+    @Test fun importLddcVerbatimPreservesTimingThroughStorageAndEditor() {
+        val text = "[00:01.000]你[00:01.301][00:01.500]好[00:02.003]"
+        val result = LyricsStorage.importWordByWordLyricsFromUriWithResult(
+            context, writeImportFile("lddc.lrc", text), "LDDC", "Artist", 5000L)
+        assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
+        val before = LyricsStorage.readWordByWordLyrics(context, "LDDC", "Artist", 5000L)
+        assertEquals(1301L, before.single().segments.first().endMs)
+        assertEquals(2003L, before.single().endMs)
+        val item = LyricsStorage.listRecentLyrics(context).single { it.title == "LDDC" }
+        val editor = LyricsStorage.readLocalLyricsItemText(context, item, LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD)!!
+        assertTrue(LyricsStorage.updateWordByWordLyricsItemTextWithResult(context, item, editor).saved)
+        assertEquals(before, LyricsStorage.readWordByWordLyrics(context, "LDDC", "Artist", 5000L))
     }
 
 }

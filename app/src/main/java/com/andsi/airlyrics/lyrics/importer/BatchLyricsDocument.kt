@@ -6,6 +6,7 @@ import android.provider.OpenableColumns
 import java.net.URLDecoder
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.parser.TtmlParseResult
+import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
 import com.andsi.airlyrics.lyrics.parser.TtmlParser
 import com.andsi.airlyrics.lyrics.parser.TtmlTimingMode
 import com.andsi.airlyrics.lyrics.parser.toParsedWordByWordLyrics
@@ -60,7 +61,7 @@ internal object BatchLyricsDocumentReader {
             }
             LyricsDocumentFormat.LRC -> {
                 // Do not silently downgrade malformed word timing to plain text.
-                val hasWordTags = Regex("<\\d{1,3}:").containsMatchIn(content)
+                val hasWordTags = WordByWordLrcParser.hasWordTiming(content)
                 if (hasWordTags) {
                     val words = (LyricsImportParsers.parseWordByWord(format, content) as? LyricsTextParseResult.Success)?.value
                         ?: return Result(name, failure = Failure.INVALID)
