@@ -67,10 +67,7 @@ internal object WordByWordLyricsStorageOps {
             plainProvider = existing?.plainProvider ?: "local",
             wordByWordProvider = wordByWordProvider,
             createdAt = existing?.createdAt ?: now,
-            updatedAt = now,
-            matchedTitle = existing?.matchedTitle.orEmpty(),
-            matchedArtist = existing?.matchedArtist.orEmpty(),
-            matchedDurationMs = existing?.matchedDurationMs ?: 0L
+            updatedAt = now
         )
 
         return LyricsIndexStore.write(context, entries)

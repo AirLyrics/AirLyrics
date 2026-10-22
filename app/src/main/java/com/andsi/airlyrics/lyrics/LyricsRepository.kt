@@ -432,12 +432,27 @@ private object AndroidLocalPlainLyricsSaver : LocalPlainLyricsSaver {
             matchedArtist = plainLyricsResult.matchedArtist,
             matchedDurationMs = plainLyricsResult.matchedDurationMs
         )
-        SongAliasStore.rememberCatalogueAlias(
-            context,
-            SongIdentity(title, artist, album, durationMs),
-            plainLyricsResult.matchedTitle,
-            plainLyricsResult.matchedArtist
-        )
+        // Remember how this song's foreign-language title maps to what the source returned, so the
+        // cache is trusted next time instead of being re-verified (or wrongly invalidated).
+        val matchedTitle = plainLyricsResult.matchedTitle
+        if (matchedTitle.isNotBlank() &&
+            !CachedMatchGuard.isTrusted(title, matchedTitle, null)
+        ) {
+            SongAliasStore.save(
+                context,
+                SongIdentity(title, artist, album, durationMs),
+                SongAliasStore.Alias(
+                    originalTitle = title,
+                    originalArtist = artist,
+                    originalArtistAliases = listOf(artist),
+                    aliasTitle = matchedTitle,
+                    aliasArtist = plainLyricsResult.matchedArtist,
+                    source = SongAliasStore.SOURCE_CATALOGUE,
+                    confidence = 0.85,
+                    confirmedAt = System.currentTimeMillis()
+                )
+            )
+        }
     }
 }
 

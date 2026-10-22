@@ -53,26 +53,7 @@ internal object ManualLyricsSelectionStore {
                     matchedDurationMs = song.durationMs, manualLocal = true, selectedManually = true), local)
             }
         }.getOrNull()
-        if (selected == null) {
-            selectionFile.delete()
-            return@withStorageLock null
-        }
-        // A manual choice keeps its word timing across reloads: the timed file was saved for
-        // this same song when the choice was made.
-        if (selected.result.wordByWordLines.isEmpty()) {
-            val words = LyricsStorage.readWordByWordLyrics(
-                context = context,
-                title = song.title,
-                artist = song.artist,
-                duration = song.durationMs
-            )
-            if (words.isNotEmpty()) {
-                return@withStorageLock Selection(
-                    selected.result.copy(wordByWordLines = words),
-                    selected.info
-                )
-            }
-        }
+        if (selected == null) selectionFile.delete()
         selected
     }
 
@@ -118,12 +99,7 @@ internal object ManualLyricsSelectionStore {
             } else {
                 check(PlainLyricsStorageOps.savePlainLyrics(context, song.title, song.artist, song.durationMs,
                     LrcParser.mergeOriginalAndTranslationForStorage(result.plainLrc, result.translatedLrc),
-                    song.album, LyricsStorage.SOURCE_DOWNLOADED, result.plainProviderId, overwrite = true,
-                    matchedTitle = result.matchedTitle, matchedArtist = result.matchedArtist,
-                    matchedDurationMs = result.matchedDurationMs)) { "Lyrics save failed" }
-                SongAliasStore.rememberCatalogueAlias(
-                    context, song, result.matchedTitle, result.matchedArtist
-                )
+                    song.album, LyricsStorage.SOURCE_DOWNLOADED, result.plainProviderId, overwrite = true)) { "Lyrics save failed" }
                 val info = checkNotNull(PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, song.title, song.artist, song.durationMs))
                 doc.put("kind", "plain").put("key", info.indexKey).put("provider", info.plainProvider)
                 result
