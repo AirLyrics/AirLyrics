@@ -277,7 +277,8 @@ object ApplePlainLyricsProvider : LyricsProvider {
         character.code in 0x3400..0x9FFF || character.code in 0xF900..0xFAFF
 
     private fun isIgnorable(character: Char): Boolean =
-        character.isWhitespace() || character in "，。！？、；：,.!?;:·…—"
+        character.isWhitespace() ||
+        character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014"
 
     /** Whitespace and punctuation differ between scripts; they must not block the comparison. */
     private fun comparable(text: String): String = text.filterNot(::isIgnorable)

@@ -291,7 +291,7 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_MusixmatchLyric
         None
     };
 
-    discovery::ensure_registered(&title, &artist, duration_ms);
+    discovery::ensure_registered(&title, &artist, duration_ms, lookup_id);
 
     let result = std::panic::catch_unwind(|| {
         musixmatch::fetch_best_lyrics(
@@ -340,7 +340,7 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LrclibLyricsNat
         None
     };
 
-    discovery::ensure_registered(&title, &artist, duration_ms);
+    discovery::ensure_registered(&title, &artist, duration_ms, lookup_id);
 
     let result = std::panic::catch_unwind(|| {
         lrclib::fetch_best_lyrics(&title, &artist, &album, duration_ms, lookup_id)
@@ -405,7 +405,7 @@ fn fetch_netease_lyrics_json(
 
     // Best effort: a romanized title can only reach its localized release through an alias,
     // and the catalogue can supply one without anyone hard-coding it.
-    discovery::ensure_registered(&title, &artist, duration_ms);
+    discovery::ensure_registered(&title, &artist, duration_ms, lookup_id);
 
     let result = std::panic::catch_unwind(|| {
         fetch_best_lyrics(&title, &artist, &album, duration_ms, lookup_id)

@@ -45,15 +45,10 @@ fn paragraph_regex() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r#"(?s)<p\b([^>]*)>(.*?)</p>"#).expect("paragraph regex"))
 }
 
-fn span_regex() -> &'static Regex {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    RE.get_or_init(|| Regex::new(r#"(?s)<span\b([^>]*)>(.*?)</span>"#).expect("span regex"))
-}
-
 fn translation_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        Regex::new(r#"(?s)<translation\b[^>]*>(.*?)</translation>"#).expect("translation regex")
+        Regex::new(r#"(?s)<translation\b([^>]*)>(.*?)</translation>"#).expect("translation regex")
     })
 }
 
@@ -97,9 +92,16 @@ fn decode_entities(value: &str) -> String {
 }
 
 fn strip_tags(value: &str) -> String {
+    let stripped = strip_tags_raw(value);
+    decode_entities(stripped.trim())
+}
+
+/// Removes tags but keeps the interior spacing, so text split across several spans still
+/// renders with the whitespace between its words.
+fn strip_tags_raw(value: &str) -> String {
     static TAGS: OnceLock<Regex> = OnceLock::new();
     let regex = TAGS.get_or_init(|| Regex::new(r"(?s)<[^>]+>").expect("tag regex"));
-    decode_entities(regex.replace_all(value, "").trim())
+    decode_entities(&regex.replace_all(value, ""))
 }
 
 /// Parses Apple's lyric TTML into timed lines, word spans and per-line translations.
@@ -113,32 +115,7 @@ pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
             .and_then(|capture| capture.get(1).map(|m| m.as_str().to_string()));
 
         let mut words = Vec::new();
-        for span in span_regex().captures_iter(body) {
-            let span_attributes = span.get(1).map(|m| m.as_str()).unwrap_or_default();
-            let span_body = span.get(2).map(|m| m.as_str()).unwrap_or_default();
-            let times = time_regex().captures(span_attributes);
-            let (Some(start), Some(end)) = (
-                times
-                    .as_ref()
-                    .and_then(|c| c.get(1))
-                    .and_then(|m| parse_time(m.as_str())),
-                times
-                    .as_ref()
-                    .and_then(|c| c.get(2))
-                    .and_then(|m| parse_time(m.as_str())),
-            ) else {
-                continue;
-            };
-            let text = strip_tags(span_body);
-            if text.trim().is_empty() {
-                continue;
-            }
-            words.push(Word {
-                text,
-                start_ms: start,
-                end_ms: end.max(start),
-            });
-        }
+        collect_timed_spans(body, &mut words);
 
         let (start_ms, end_ms) = match time_regex().captures(attributes) {
             Some(capture) => (
@@ -154,10 +131,13 @@ pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
         let line_end = end_ms
             .or_else(|| words.last().map(|w| w.end_ms))
             .unwrap_or(line_start);
-        let text = if words.is_empty() {
-            strip_tags(body)
-        } else {
+        // Derive the line text from the body instead of the timed spans: inter-span
+        // whitespace and separator text nodes would be lost in the join.
+        let body_text = strip_tags(body);
+        let text = if body_text.is_empty() {
             words.iter().map(|w| w.text.as_str()).collect::<String>()
+        } else {
+            body_text
         };
         if text.trim().is_empty() {
             continue;
@@ -171,8 +151,31 @@ pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
         });
     }
 
+    let mut blocks: Vec<(String, String)> = Vec::new();
     for translation in translation_regex().captures_iter(ttml) {
-        let body = translation.get(1).map(|m| m.as_str()).unwrap_or_default();
+        let attributes = translation.get(1).map(|m| m.as_str()).unwrap_or_default();
+        let body = translation.get(2).map(|m| m.as_str()).unwrap_or_default();
+        blocks.push((attributes.to_string(), body.to_string()));
+    }
+    // Only the simplified-Chinese translation satisfies the feature requirement. When the
+    // document does not tag any language, a single translation block is still accepted;
+    // multiple untagged or differently tagged languages are ambiguous and dropped.
+    let zh_hans: Vec<&(String, String)> = blocks
+        .iter()
+        .filter(|(attributes, _)| attributes.to_ascii_lowercase().contains("zh-hans"))
+        .collect();
+    let untagged: Vec<&(String, String)> = blocks
+        .iter()
+        .filter(|(attributes, _)| !attributes.to_ascii_lowercase().contains("xml:lang"))
+        .collect();
+    let chosen: Vec<&(String, String)> = if !zh_hans.is_empty() {
+        zh_hans
+    } else if blocks.len() == 1 {
+        blocks.iter().collect()
+    } else {
+        untagged
+    };
+    for (_, body) in chosen {
         for entry in text_regex().captures_iter(body) {
             let key = entry.get(1).map(|m| m.as_str()).unwrap_or_default();
             let text = strip_tags(entry.get(2).map(|m| m.as_str()).unwrap_or_default());
@@ -182,6 +185,79 @@ pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
         }
     }
     parsed
+}
+
+/// Collects timed word spans, recursing into untimed containers: Apple nests the timed spans
+/// of background vocals inside an outer span without its own timing.
+fn collect_timed_spans(fragment: &str, words: &mut Vec<Word>) {
+    let mut rest = fragment;
+    while let Some(open) = rest.find("<span") {
+        let after_open = &rest[open + "<span".len()..];
+        let Some(attributes_end) = after_open.find('>') else {
+            break;
+        };
+        let attributes = &after_open[..attributes_end];
+        let inner_start = attributes_end + 1;
+        let Some(inner_end) = find_span_close(inner_start, after_open) else {
+            break;
+        };
+        let inner = &after_open[inner_start..inner_end];
+        rest = &after_open[inner_end..];
+
+        let times = time_regex().captures(attributes);
+        let (Some(start), Some(end)) = (
+            times
+                .as_ref()
+                .and_then(|capture| capture.get(1))
+                .and_then(|m| parse_time(m.as_str())),
+            times
+                .as_ref()
+                .and_then(|capture| capture.get(2))
+                .and_then(|m| parse_time(m.as_str())),
+        ) else {
+            collect_timed_spans(inner, words);
+            continue;
+        };
+        let text = strip_tags_raw(inner);
+        if text.trim().is_empty() {
+            continue;
+        }
+        words.push(Word {
+            text,
+            start_ms: start,
+            end_ms: end.max(start),
+        });
+    }
+}
+
+/// Finds the `</span>` that closes a span whose inner content starts at `from`, skipping over
+/// nested spans. Returns the offset just past the closing tag.
+fn find_span_close(from: usize, fragment: &str) -> Option<usize> {
+    let mut depth = 1usize;
+    let mut cursor = from;
+    while cursor <= fragment.len() {
+        let open = fragment[cursor..]
+            .find("<span")
+            .map(|offset| cursor + offset);
+        let close = fragment[cursor..]
+            .find("</span>")
+            .map(|offset| cursor + offset);
+        match (open, close) {
+            (Some(open_at), Some(close_at)) if open_at < close_at => {
+                depth += 1;
+                cursor = open_at + "<span".len();
+            }
+            (_, Some(close_at)) => {
+                depth -= 1;
+                cursor = close_at + "</span>".len();
+                if depth == 0 {
+                    return Some(cursor);
+                }
+            }
+            _ => return None,
+        }
+    }
+    None
 }
 
 fn lrc_timestamp(millis: u64) -> String {
@@ -262,12 +338,13 @@ fn pick_candidate(
     candidates: &[Candidate],
     title: &str,
     artist: &str,
+    album: &str,
     duration_ms: u64,
 ) -> Option<usize> {
     let query = MatchMetadata {
         title,
         artist,
-        album: "",
+        album,
         duration_ms: Some(duration_ms),
     };
     let mut scored: Vec<(usize, u64, f64)> = candidates
@@ -291,13 +368,14 @@ fn pick_candidate(
             Some((index, difference, score.total))
         })
         .collect();
+    // The match score is the primary signal; the duration difference only breaks ties. A
+    // closer-but-wrong release must not outrank the best-scoring candidate.
     scored.sort_by(|left, right| {
-        left.1.cmp(&right.1).then_with(|| {
-            right
-                .2
-                .partial_cmp(&left.2)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
+        right
+            .2
+            .partial_cmp(&left.2)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| left.1.cmp(&right.1))
     });
     scored.first().map(|entry| entry.0)
 }
@@ -388,7 +466,13 @@ async fn resolve(
     } else {
         storefront.trim()
     };
-    let term = format!("{title} {artist}").trim().to_string();
+    let term = if album.trim().is_empty() {
+        format!("{title} {artist}")
+    } else {
+        format!("{title} {artist} {album}")
+    }
+    .trim()
+    .to_string();
     let search_url = format!("{API}/v1/catalog/{storefront}/search");
     let response = headers(client.get(&search_url))
         .query(&[("term", term.as_str()), ("types", "songs"), ("limit", "10")])
@@ -433,7 +517,7 @@ async fn resolve(
         })
         .collect();
 
-    let Some(index) = pick_candidate(&candidates, title, artist, duration_ms) else {
+    let Some(index) = pick_candidate(&candidates, title, artist, album, duration_ms) else {
         return Ok(json!({
             "ok": false,
             "source": "apple",
@@ -588,6 +672,6 @@ mod tests {
             album: "".into(),
             duration_ms: 269_000,
         }];
-        assert!(pick_candidate(&candidates, "晴天", "周杰伦", 200_000).is_none());
+        assert!(pick_candidate(&candidates, "晴天", "周杰伦", "", 200_000).is_none());
     }
 }

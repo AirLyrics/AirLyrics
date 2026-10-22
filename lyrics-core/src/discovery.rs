@@ -166,6 +166,7 @@ pub(crate) fn pick_alias(
 pub(crate) fn discover_and_register(
     query: MatchMetadata<'_>,
     backend: &dyn CatalogueBackend,
+    lookup_id: jni::sys::jlong,
 ) -> Option<AliasEntry> {
     if query.artist.trim().is_empty() {
         return None;
@@ -188,6 +189,9 @@ pub(crate) fn discover_and_register(
         .unwrap_or(query);
 
     for storefront in STOREFRONTS {
+        if crate::check_lookup_cancelled(lookup_id).is_err() {
+            return None;
+        }
         let Ok(Some(artist)) = backend.search_artist(query.artist, storefront) else {
             continue;
         };
@@ -221,8 +225,22 @@ pub(crate) fn discover_and_register(
 }
 
 /// Registers a discovered alias for later lookups in this process, at most once per recording.
-pub(crate) fn ensure_registered(title: &str, artist: &str, duration_ms: Option<u64>) {
+pub(crate) fn ensure_registered(
+    title: &str,
+    artist: &str,
+    duration_ms: Option<u64>,
+    lookup_id: jni::sys::jlong,
+) {
     if title.trim().is_empty() || artist.trim().is_empty() {
+        return;
+    }
+    // A CJK title needs no romanised-to-localised resolution, and an alias that is already
+    // registered makes the whole catalogue walk redundant.
+    if crate::qq::has_cjk(title) || crate::aliases::lookup(title, artist).is_some() {
+        return;
+    }
+    // Skip the catalogue walk as soon as the player moves on to another song.
+    if crate::check_lookup_cancelled(lookup_id).is_err() {
         return;
     }
     let key = format!(
@@ -256,7 +274,7 @@ pub(crate) fn ensure_registered(title: &str, artist: &str, duration_ms: Option<u
                      // The storefront catalogue is authoritative when it can pair the recording, but it keeps the
                      // same English title for many CJK releases. QQ Music's public smart-box knows the Chinese
                      // release title, which is what the NetEase / LRCLIB searches actually need.
-    let discovered = discover_and_register(query, &backend)
+    let discovered = discover_and_register(query, &backend, lookup_id)
         .or_else(|| crate::qq::resolve_alias(title, artist, duration_ms));
 
     if let Ok(mut cache) = cache().lock() {
@@ -429,7 +447,7 @@ mod live_tests {
     #[test]
     #[ignore]
     fn live_discovery_resolves_shouldnt_be() {
-        super::ensure_registered("Shouldn't Be (feat. a-mei)", "Jay Chou", Some(291_407));
+        super::ensure_registered("Shouldn't Be (feat. a-mei)", "Jay Chou", Some(291_407), 0);
         let hit = crate::aliases::lookup("Shouldn't Be (feat. a-mei)", "Jay Chou");
         println!("hit = {hit:?}");
         let hit = hit.expect("alias");
@@ -514,7 +532,7 @@ mod tests {
 
     #[test]
     fn the_localized_title_of_the_same_master_is_discovered() {
-        let alias = discover_and_register(cyndi_query(), &cyndi_catalogue()).expect("alias");
+        let alias = discover_and_register(cyndi_query(), &cyndi_catalogue(), 0).expect("alias");
         assert_eq!(alias.alias_title, "大眠");
         assert_eq!(alias.alias_artist.as_deref(), Some("王心凌"));
         assert_eq!(alias.original_title, "The Big Sleep");
@@ -536,7 +554,7 @@ mod tests {
                 track("另一個歌", "王心凌", 239_680),
             ],
         };
-        assert!(discover_and_register(cyndi_query(), &catalogue).is_none());
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
     }
 
     #[test]
@@ -550,7 +568,7 @@ mod tests {
                 track("心電心", "王心凌", 230_000),
             ],
         };
-        assert!(discover_and_register(cyndi_query(), &catalogue).is_none());
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
     }
 
     #[test]
@@ -570,7 +588,7 @@ mod tests {
             album: "",
             duration_ms: Some(242_000),
         };
-        assert!(discover_and_register(query, &catalogue).is_none());
+        assert!(discover_and_register(query, &catalogue, 0).is_none());
     }
 
     #[test]
@@ -579,7 +597,7 @@ mod tests {
             artist: "",
             ..cyndi_query()
         };
-        assert!(discover_and_register(no_artist, &cyndi_catalogue()).is_none());
+        assert!(discover_and_register(no_artist, &cyndi_catalogue(), 0).is_none());
     }
 
     #[test]
@@ -590,7 +608,7 @@ mod tests {
             duration_ms: None,
             ..cyndi_query()
         };
-        let alias = discover_and_register(no_duration, &cyndi_catalogue()).expect("alias");
+        let alias = discover_and_register(no_duration, &cyndi_catalogue(), 0).expect("alias");
         assert_eq!(alias.alias_title, "大眠");
     }
 
@@ -602,7 +620,7 @@ mod tests {
             album: "",
             duration_ms: Some(239_671),
         };
-        assert!(discover_and_register(already_localized, &cyndi_catalogue()).is_none());
+        assert!(discover_and_register(already_localized, &cyndi_catalogue(), 0).is_none());
     }
 
     #[test]
@@ -616,7 +634,7 @@ mod tests {
                 track("BEAUTY", "王心凌", 210_000),
             ],
         };
-        assert!(discover_and_register(cyndi_query(), &catalogue).is_none());
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
     }
 
     #[test]
@@ -637,7 +655,7 @@ mod tests {
             album: "",
             duration_ms: Some(291_000),
         };
-        let alias = discover_and_register(query, &catalogue);
+        let alias = discover_and_register(query, &catalogue, 0);
         assert_eq!(
             crate::aliases::localized_artist("Jay Chou").as_deref(),
             Some("周杰倫")
@@ -658,7 +676,7 @@ mod tests {
             album: "",
             duration_ms: Some(239_671),
         };
-        let alias = discover_and_register(query, &backend).expect("live alias");
+        let alias = discover_and_register(query, &backend, 0).expect("live alias");
         println!("live alias: {alias:?}");
         assert_eq!(alias.alias_title, "大眠");
     }

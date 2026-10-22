@@ -90,6 +90,24 @@ object LyricsRepository {
                     lookupLogger = AndroidLyricsLookupLogger,
                     commitOnlineResult = { request, result ->
                         lease.commit {
+                            if (searchOrigin == LyricsSearchOrigin.Automatic) {
+                                // The network request may have outlived the lookup that started it:
+                                // re-check inside the storage lock so lyrics imported (or otherwise
+                                // written) while the request was in flight are never overwritten.
+                                val appeared = LocalPlainLyricsProvider.fetch(request).getOrNull()
+                                if (appeared != null) {
+                                    val cachedWords = if (settings.wordByWordLyricsEnabled) {
+                                        LyricsStorage.readWordByWordLyrics(
+                                            context = context.applicationContext,
+                                            title = title,
+                                            artist = artist,
+                                            duration = durationMs
+                                        )
+                                    } else emptyList()
+                                    return@commit if (cachedWords.isEmpty()) appeared
+                                    else appeared.copy(wordByWordLines = cachedWords)
+                                }
+                            }
                             val committed = ManualLyricsSelectionStore.commit(
                                 context.applicationContext, song, request.searchMode, result,
                                 manual = searchOrigin == LyricsSearchOrigin.Manual,

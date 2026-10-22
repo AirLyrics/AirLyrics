@@ -7,8 +7,9 @@ import android.content.Context
  *
  * Uses the OpenCC *tw2s* chain (Traditional Chinese, Taiwan standard → Simplified Chinese):
  *
- *  1. `TWVariantsRevPhrases` plus the inverse of `TWVariants`, so variant characters such as
- *     著→着 are converted while 著名/著作 stay untouched (the phrase wins the longest match);
+ *  1. `TWVariantsRevPhrases` plus the inverse of `TWVariants`, so the traditional variant of the
+ *     continuative particle (U+8457 -> U+7740) is converted while dictionary phrases such as the
+ *      "famous/works" compounds stay untouched (the phrase wins the longest match);
  *  2. `TSPhrases` plus `TSCharacters`.
  *
  * Only the dictionaries are bundled, not the OpenCC engine: lyrics are short strings, so a
@@ -63,7 +64,8 @@ object ChineseText {
             val twVariants = runCatching { readPairs(open("$ASSET_DIR/TWVariants.txt")) }
                 .getOrDefault(emptyList())
             val inverted = buildMap {
-                // TWVariants maps 着→著; t2s needs the reverse direction.
+                // TWVariants maps the simplified form to the traditional variant; t2s needs the
+                // reverse direction.
                 twVariants.forEach { (source, target) ->
                     if (source.length == 1 && target.isNotEmpty() && target[0] !in this) {
                         put(target[0], source)
@@ -121,9 +123,10 @@ object ChineseText {
         val converted = comparable(toSimplified(original))
         val target = comparable(toSimplified(translation))
         if (converted == target) return true
-        // Translators occasionally pick a different but equivalent orthography for one word
-        // (甚么/什么, 著/着, 祇/只). Accept a few same-length substitutions on long lines; short
-        // lines must match exactly, otherwise a real rewrite like 我愛你/我恨你 slips through.
+        // Translators occasionally pick a different but equivalent orthography for one word (for
+        // example U+4EC0/U+7740 written where the reference table keeps the other variant).
+        // Accept a few same-length substitutions on long lines; short lines must match exactly,
+        // otherwise a real rewrite that flips one character slips through.
         if (converted.length != target.length || converted.length < 8) return false
         val allowed = maxOf(1, converted.length / 12)
         var differences = 0
@@ -136,7 +139,8 @@ object ChineseText {
     private fun comparable(text: String): String {
         val stripped = buildString(text.length) {
             text.forEach { character ->
-                if (character.isWhitespace() || character in "，。！？、；：,.!?;:·…—") return@forEach
+                if (character.isWhitespace() ||
+                character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014") return@forEach
                 append(character)
             }
         }

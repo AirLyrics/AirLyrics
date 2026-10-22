@@ -45,6 +45,12 @@ pub(crate) fn resolve_alias(
 
     let candidates = fetch_candidates(title)?;
     let picked = pick_candidate(duration_ms?, &candidates)?;
+    // Duration alone cannot tell same-titled recordings by different acts apart, and a wrong
+    // alias would be re-confirmed by the confidence pass (it scores against the alias itself).
+    // Only register the mapping when the candidate's artist credibly matches the player's.
+    if !artist_matches(artist, &picked.artists) {
+        return None;
+    }
     Some(AliasEntry {
         original_title: title.to_owned(),
         original_artist: artist.to_owned(),
@@ -54,6 +60,27 @@ pub(crate) fn resolve_alias(
         source: "qq:smartbox".to_owned(),
         confidence: ALIAS_CONFIDENCE,
     })
+}
+
+/// Accepts the candidate only when its artist credibly matches the player's artist, so a
+/// same-titled recording by another act cannot seed a wrong alias. The two sides are usually
+/// written in different scripts, so this is a conservative normalised containment check rather
+/// than an equality test; unresolvable pairs return `false` and no alias is registered.
+fn artist_matches(query_artist: &str, candidate_artists: &str) -> bool {
+    fn normalise(value: &str) -> String {
+        value
+            .chars()
+            .filter(|character| character.is_alphanumeric())
+            .flat_map(|character| character.to_lowercase())
+            .collect()
+    }
+
+    let query = normalise(query_artist);
+    let candidate = normalise(candidate_artists);
+    if query.is_empty() || candidate.is_empty() {
+        return false;
+    }
+    candidate.contains(&query) || query.contains(&candidate)
 }
 
 /// Chooses the candidate whose running time is closest to the player's, within the window.
@@ -163,7 +190,7 @@ async fn fetch_detail(client: &Client, mid: &str) -> Result<Option<QqCandidate>,
     }))
 }
 
-fn has_cjk(value: &str) -> bool {
+pub(crate) fn has_cjk(value: &str) -> bool {
     value.chars().any(|c| {
         matches!(
             c as u32,
@@ -234,5 +261,20 @@ mod tests {
     fn a_cjk_title_needs_no_resolution() {
         assert!(has_cjk("不該"));
         assert!(!has_cjk("Shouldn't Be (feat. a-mei)"));
+    }
+
+    #[test]
+    fn artist_gate_accepts_matching_scripts() {
+        assert!(artist_matches("Jay Chou", "周杰伦/Jay Chou"));
+        assert!(artist_matches("周杰伦", "周杰伦"));
+        assert!(artist_matches("Taylor Swift", "taylor  swift"));
+    }
+
+    #[test]
+    fn artist_gate_rejects_unresolvable_scripts() {
+        // Same title, same duration, but the acts cannot be tied together: refuse.
+        assert!(!artist_matches("Jay Chou", "莫叫姐姐"));
+        assert!(!artist_matches("", "周杰伦"));
+        assert!(!artist_matches("Jay Chou", ""));
     }
 }

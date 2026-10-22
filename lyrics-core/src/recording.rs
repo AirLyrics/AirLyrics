@@ -73,11 +73,37 @@ pub(crate) fn markers(value: &str) -> VersionMarkers {
     let lowered = value.to_lowercase();
     let mut found = VersionMarkers::default();
     for (needle, apply) in MARKERS {
-        if lowered.contains(needle) {
+        if contains_marker(&lowered, needle) {
             apply(&mut found);
         }
     }
     found
+}
+
+/// Substring matching would flag ordinary words: the album `Recovery` contains `cover`, the
+/// title `Democracy` contains `demo`. Require the needle to sit on non-alphanumeric bounds.
+fn contains_marker(lowered: &str, needle: &str) -> bool {
+    let mut cursor = 0;
+    while let Some(offset) = lowered[cursor..].find(needle) {
+        let start = cursor + offset;
+        let end = start + needle.len();
+        let before_ok = lowered[..start]
+            .chars()
+            .next_back()
+            .is_none_or(|character| !character.is_alphanumeric());
+        // CJK has no word boundaries, so only the Latin needles get a trailing check.
+        let ascii_needle = needle.is_ascii();
+        let after_ok = !ascii_needle
+            || lowered[end..]
+                .chars()
+                .next()
+                .is_none_or(|character| !character.is_alphanumeric());
+        if before_ok && after_ok {
+            return true;
+        }
+        cursor = end;
+    }
+    false
 }
 
 /// True when the two metadata sets disagree about the recording version. A missing marker on
@@ -100,4 +126,24 @@ pub(crate) fn duration_close(
 ) -> Option<bool> {
     let (left, right) = (left.filter(|ms| *ms > 0)?, right.filter(|ms| *ms > 0)?);
     Some(left.abs_diff(right) <= tolerance_ms)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ordinary_words_are_not_mistaken_for_markers() {
+        assert!(!contains_marker("recovery", "cover"));
+        assert!(!contains_marker("democracy", "demo"));
+        assert!(!contains_marker("my girl (deluxe)", "girl live"));
+    }
+
+    #[test]
+    fn marked_versions_are_recognised() {
+        assert!(contains_marker("(cover version)", "cover"));
+        assert!(contains_marker("live at the bowl", "live"));
+        assert!(contains_marker("demo tape", "demo"));
+        assert!(contains_marker("伴奏版", "伴奏"));
+    }
 }
