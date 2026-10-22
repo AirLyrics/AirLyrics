@@ -252,7 +252,6 @@
     <string name="ui_grant_usage_access">Otorgar acceso de uso</string>
     <string name="ui_orange">Naranja</string>
     <string name="ui_original_only">Solo original</string>
-    <string name="ui_auto_language">Automático (según el idioma)</string>
     <string name="ui_original_translation">Original + traducción</string>
     <string name="ui_overlay">Superposición</string>
     <string name="ui_overlay_and_notification_permissions">Permisos e idioma</string>

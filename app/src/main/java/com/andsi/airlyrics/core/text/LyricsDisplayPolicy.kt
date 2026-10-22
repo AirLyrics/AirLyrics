@@ -2,19 +2,17 @@ package com.andsi.airlyrics.core.text
 
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
-import com.andsi.airlyrics.core.text.ChineseText
 
 /**
  * Turns a parsed lyric line into the text the floating window shows.
  *
- * [LyricsContentDisplayMode.AUTO] adapts to the lyric's own language instead of forcing one
- * layout on every song:
+ * The three content modes are literal: [LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION] shows
+ * the original and, when one exists, the translation underneath.
  *
- * - Chinese original with a translation: show the translated line only, in simplified Chinese.
- *   Typical case: a traditional-Chinese lyric with a simplified translation — the duplicate
- *   script adds nothing, so the reader sees one clean line.
- * - Non-Chinese original with a translation: keep the original and show the translation under it.
- * - No translation: show the original, whatever its script.
+ * The script preference only decides which copy of a *duplicate* line to keep: when a lyric ships
+ * the same sentence twice, once in traditional and once in simplified characters, the reader does
+ * not need both. It never rewrites a line that exists in a single script — a traditional-only
+ * lyric stays traditional, whatever the preference says.
  */
 object LyricsDisplayPolicy {
 
@@ -30,16 +28,9 @@ object LyricsDisplayPolicy {
     ): Rendered {
         val text = original.trim()
         val translated = translation.orEmpty().trim()
-        val isConversion = translated.isNotBlank() &&
-            ChineseText.isScriptConversion(text, translated)
-
         return when (contentMode) {
             LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION ->
-                Rendered(text, translated.takeIf { it.isNotBlank() })
-
-            LyricsContentDisplayMode.AUTO -> renderAuto(
-                text, translated, isConversion, scriptPreference
-            )
+                renderOriginalWithTranslation(text, translated, scriptPreference)
 
             LyricsContentDisplayMode.ORIGINAL_ONLY -> Rendered(text)
 
@@ -47,44 +38,39 @@ object LyricsDisplayPolicy {
         }
     }
 
-    private fun renderAuto(
+    private fun renderOriginalWithTranslation(
         original: String,
         translation: String,
-        isConversion: Boolean,
         preference: LyricsScriptPreference
     ): Rendered {
-        if (translation.isBlank()) {
-            // No translation at all: the preference can still simplify the original, which is
-            // the common case for Chinese songs Apple ships without a zh-Hans translation.
-            return when (preference) {
-                LyricsScriptPreference.SIMPLIFIED -> Rendered(ChineseText.toSimplified(original))
-                LyricsScriptPreference.TRADITIONAL, LyricsScriptPreference.NONE -> Rendered(original)
-            }
-        }
+        if (translation.isBlank()) return Rendered(original)
         if (original.isBlank()) return Rendered(translation)
-        // The preference only chooses between two copies of the same line written in different
-        // scripts. A real translation says something else, so both lines are always shown.
-        if (!isConversion) return Rendered(original, translation)
-        return when (preference) {
-            LyricsScriptPreference.SIMPLIFIED ->
-                Rendered(simplifiedVariant(original, translation))
-
-            LyricsScriptPreference.TRADITIONAL ->
-                Rendered(traditionalVariant(original, translation))
-
-            LyricsScriptPreference.NONE -> Rendered(original, translation)
-        }
+        // A real translation says something else, so both lines stay. Only a duplicate pair — the
+        // same sentence in two scripts — can collapse into a single line.
+        if (preference == LyricsScriptPreference.NONE) return Rendered(original, translation)
+        if (!ChineseText.isScriptConversion(original, translation)) return Rendered(original, translation)
+        return Rendered(
+            when (preference) {
+                LyricsScriptPreference.SIMPLIFIED -> simplifiedCopy(original, translation)
+                LyricsScriptPreference.TRADITIONAL -> traditionalCopy(original, translation)
+                LyricsScriptPreference.NONE -> original
+            }
+        )
     }
 
-    private fun simplifiedVariant(original: String, translation: String): String =
-        if (ChineseText.containsTraditional(translation)) {
-            ChineseText.toSimplified(original)
-        } else {
-            translation
-        }
+    /** Keeps an existing simplified copy; a traditional-only line is left untouched. */
+    private fun simplifiedCopy(original: String, translation: String): String = when {
+        !ChineseText.containsTraditional(translation) -> translation
+        !ChineseText.containsTraditional(original) -> original
+        else -> original
+    }
 
-    private fun traditionalVariant(original: String, translation: String): String =
-        if (ChineseText.containsTraditional(original)) original else translation
+    /** Keeps an existing traditional copy; a simplified-only line is left untouched. */
+    private fun traditionalCopy(original: String, translation: String): String = when {
+        ChineseText.containsTraditional(original) -> original
+        ChineseText.containsTraditional(translation) -> translation
+        else -> original
+    }
 
     fun join(rendered: Rendered): String {
         val primary = rendered.primary.takeIf { it.isNotBlank() }.orEmpty()

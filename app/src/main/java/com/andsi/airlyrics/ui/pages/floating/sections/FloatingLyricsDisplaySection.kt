@@ -2,10 +2,6 @@ package com.andsi.airlyrics.ui.pages.floating.sections
 
 import android.graphics.Typeface
 import android.view.Gravity
-import android.transition.AutoTransition
-import android.transition.TransitionManager
-import android.view.View
-import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
@@ -22,6 +18,7 @@ import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
+import com.andsi.airlyrics.ui.state.FloatingPanelId
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
 internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = with(host) {
@@ -31,17 +28,26 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
             trackedFloatingTile(
                 id = FloatingPanelId.CONTENT,
                 title = getString(R.string.ui_content),
-                subtitle = if (contentDisplayMode() == LyricsContentDisplayMode.AUTO) {
-                    getString(R.string.ui_auto_language) + " · " +
-                        localizedScriptPreferenceTitle(scriptPreference())
-                } else {
-                    localizedLyricsContentModeTitle(contentDisplayMode())
-                },
+                subtitle = localizedLyricsContentModeTitle(contentDisplayMode()) + " · " +
+                    localizedScriptPreferenceTitle(scriptPreference()),
                 iconRes = R.drawable.ic_air_subtitles,
                 onClick = { tile ->
                     openPanel(tile, getString(R.string.ui_content), "") {
-                        val scriptLabel = normalText(this@with, getString(R.string.ui_script_preference))
-                        val scriptGrid = liveOptionGrid(
+                        addView(liveOptionGrid(
+                            LyricsContentDisplayMode.entries.map { mode ->
+                                KeyedOptionItem(
+                                    key = mode.key,
+                                    title = localizedLyricsContentModeTitle(mode),
+                                    selected = mode == contentDisplayMode(),
+                                    action = {
+                                        setLyricsContentDisplayMode(mode)
+                                        applyLyricsDisplaySettingsChanged()
+                                    }
+                                )
+                            }
+                        ))
+                        addView(normalText(this@with, getString(R.string.ui_script_preference)))
+                        addView(liveOptionGrid(
                             LyricsScriptPreference.entries.map { preference ->
                                 KeyedOptionItem(
                                     key = preference.key,
@@ -53,45 +59,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                                     }
                                 )
                             }
-                        )
-                        val panelContent = this
-                        fun syncScriptVisibility(animate: Boolean = false) {
-                            val visible = if (contentDisplayMode() == LyricsContentDisplayMode.AUTO) {
-                                View.VISIBLE
-                            } else {
-                                View.GONE
-                            }
-                            if (visible == View.GONE) {
-                                focusOverlay?.requestFocus()
-                            }
-                            if (animate && scriptLabel.visibility != visible) {
-                                // Animate the bubble height instead of snapping it, otherwise the
-                                // panel flashes every time the sub-modes appear or disappear.
-                                TransitionManager.beginDelayedTransition(
-                                    panelContent,
-                                    AutoTransition().setDuration(140L)
-                                )
-                            }
-                            scriptLabel.visibility = visible
-                            scriptGrid.visibility = visible
-                        }
-                        addView(liveOptionGrid(
-                            LyricsContentDisplayMode.entries.map { mode ->
-                                KeyedOptionItem(
-                                    key = mode.key,
-                                    title = localizedLyricsContentModeTitle(mode),
-                                    selected = mode == contentDisplayMode(),
-                                    action = {
-                                        setLyricsContentDisplayMode(mode)
-                                        applyLyricsDisplaySettingsChanged()
-                                        syncScriptVisibility(animate = true)
-                                    }
-                                )
-                            }
                         ))
-                        addView(scriptLabel)
-                        addView(scriptGrid)
-                        syncScriptVisibility()
                     }
                 }
             ),

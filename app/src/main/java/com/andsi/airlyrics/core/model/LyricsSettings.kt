@@ -38,13 +38,11 @@ enum class PlainLyricsSearchSource(val key: String, val supportsWordTiming: Bool
 enum class LyricsContentDisplayMode(val key: String) {
     ORIGINAL_WITH_TRANSLATION("original_with_translation"),
     ORIGINAL_ONLY("original_only"),
-    TRANSLATION_ONLY("translation_only"),
-
-    /** Follows the lyric's own language and the script preference picked for auto mode. */
-    AUTO("auto");
+    TRANSLATION_ONLY("translation_only");
 
     companion object {
-        val default: LyricsContentDisplayMode = AUTO
+        /** The stored "auto" value of earlier versions falls back here. */
+        val default: LyricsContentDisplayMode = ORIGINAL_WITH_TRANSLATION
 
         fun fromKey(key: String?): LyricsContentDisplayMode {
             return entries.firstOrNull { it.key == key } ?: default
@@ -53,12 +51,11 @@ enum class LyricsContentDisplayMode(val key: String) {
 }
 
 /**
- * Which Chinese script to prefer when a lyric offers both a traditional original and a
- * simplified translation.
+ * Which copy to keep when a lyric ships the same sentence twice, once per script.
  *
- * [SIMPLIFIED] shows the simplified text whenever one exists; [TRADITIONAL] keeps the original
- * script and drops a translation that is only the same line in simplified characters; [NONE]
- * leaves both lines untouched.
+ * The preference never rewrites a single line: [SIMPLIFIED] keeps the simplified copy of a
+ * duplicate pair, [TRADITIONAL] keeps the traditional one, and [NONE] leaves both lines alone.
+ * A lyric that only exists in traditional characters stays traditional.
  */
 enum class LyricsScriptPreference(val key: String) {
     SIMPLIFIED("simplified"),
@@ -66,7 +63,7 @@ enum class LyricsScriptPreference(val key: String) {
     NONE("none");
 
     companion object {
-        val default: LyricsScriptPreference = SIMPLIFIED
+        val default: LyricsScriptPreference = NONE
 
         fun fromKey(key: String?): LyricsScriptPreference {
             return entries.firstOrNull { it.key == key } ?: default

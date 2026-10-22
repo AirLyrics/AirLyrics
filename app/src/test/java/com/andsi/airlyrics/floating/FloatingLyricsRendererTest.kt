@@ -151,11 +151,12 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
-    fun autoTraditionalTranslation_highlightsTheDisplayedSimplifiedLine() {
+    fun translatedDuplicatePair_highlightsTheSimplifiedLine() {
+        ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
         val textView = TextView(context).apply { setTextColor(Color.WHITE) }
         val renderer = renderer(
             textView = textView,
-            contentMode = LyricsContentDisplayMode.AUTO,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             wordByWordEnabled = true,
             highlightColor = Color.MAGENTA
         )
@@ -189,12 +190,12 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
-    fun autoWithoutTranslation_highlightsTheConvertedLine() {
+    fun aLineWithoutTranslation_staysTraditional() {
         ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
         val textView = TextView(context).apply { setTextColor(Color.WHITE) }
         val renderer = renderer(
             textView = textView,
-            contentMode = LyricsContentDisplayMode.AUTO,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             wordByWordEnabled = true,
             highlightColor = Color.MAGENTA
         )
@@ -218,16 +219,16 @@ class FloatingLyricsRendererTest {
             emptyText = "empty"
         )
 
-        assertEquals("苏三说", textView.text.toString())
-        assertTrue((textView.text as Spanned).highlightSpans().isNotEmpty())
+        assertEquals("蘇三說", textView.text.toString())
     }
 
     @Test
-    fun autoTraditionalTranslationWithoutTranslatedTokens_highlightsConvertedTokens() {
+    fun translatedDuplicatePairWithoutTranslatedTokens_showsAPlainSimplifiedLine() {
+        ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
         val textView = TextView(context)
         val renderer = renderer(
             textView = textView,
-            contentMode = LyricsContentDisplayMode.AUTO,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             wordByWordEnabled = true,
             highlightColor = Color.MAGENTA
         )
@@ -241,7 +242,7 @@ class FloatingLyricsRendererTest {
         )
 
         assertEquals("苏三说", textView.text.toString())
-        assertTrue((textView.text as Spanned).highlightSpans().isNotEmpty())
+        assertTrue((textView.text as Spanned).highlightSpans().isEmpty())
     }
 
     @Test

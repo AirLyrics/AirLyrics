@@ -24,21 +24,21 @@ class LyricsDisplayPolicyTest {
     }
 
     @Test
-    fun `simplified preference converts the original when there is no translation`() {
+    fun `a traditional line without a translation is never converted`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "我愛你 這是我心裡的話",
             translation = null,
             scriptPreference = LyricsScriptPreference.SIMPLIFIED
         )
-        assertEquals("我爱你 这是我心里的话", rendered.primary)
+        assertEquals("我愛你 這是我心裡的話", rendered.primary)
         assertNull(rendered.secondary)
     }
 
     @Test
-    fun `simplified preference shows one line for a script conversion`() {
+    fun `simplified preference keeps the simplified copy of a duplicate pair`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "我喜歡你 這是我心裡的話",
             translation = "我喜欢你 这是我心里的话",
             scriptPreference = LyricsScriptPreference.SIMPLIFIED
@@ -48,20 +48,20 @@ class LyricsDisplayPolicyTest {
     }
 
     @Test
-    fun `simplified preference converts a traditional translation`() {
+    fun `simplified preference leaves a traditional duplicate alone`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "我喜歡你",
             translation = "我喜歡你",
             scriptPreference = LyricsScriptPreference.SIMPLIFIED
         )
-        assertEquals("我喜欢你", rendered.primary)
+        assertEquals("我喜歡你", rendered.primary)
     }
 
     @Test
     fun `a real translation is always shown next to the original`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "我喜歡你",
             translation = "我中意你",
             scriptPreference = LyricsScriptPreference.SIMPLIFIED
@@ -71,9 +71,9 @@ class LyricsDisplayPolicyTest {
     }
 
     @Test
-    fun `traditional preference drops a translation that only changes the script`() {
+    fun `traditional preference keeps the traditional copy of a duplicate pair`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "我喜歡你",
             translation = "我喜欢你",
             scriptPreference = LyricsScriptPreference.TRADITIONAL
@@ -85,7 +85,7 @@ class LyricsDisplayPolicyTest {
     @Test
     fun `traditional preference keeps a real translation`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "我喜歡你",
             translation = "我中意你",
             scriptPreference = LyricsScriptPreference.TRADITIONAL
@@ -95,9 +95,9 @@ class LyricsDisplayPolicyTest {
     }
 
     @Test
-    fun `no conversion keeps both lines even when they only differ by script`() {
+    fun `no preference keeps both lines even when they only differ by script`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "我喜歡你",
             translation = "我喜欢你",
             scriptPreference = LyricsScriptPreference.NONE
@@ -109,7 +109,7 @@ class LyricsDisplayPolicyTest {
     @Test
     fun `a non chinese line keeps the original with the translation`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             original = "I love you in the morning light",
             translation = "我在晨光里爱着你"
         )
@@ -118,12 +118,11 @@ class LyricsDisplayPolicyTest {
     }
 
     @Test
-    fun `a line without translation keeps its original`() {
+    fun `original only ignores the translation`() {
         val rendered = LyricsDisplayPolicy.render(
-            LyricsContentDisplayMode.AUTO,
+            LyricsContentDisplayMode.ORIGINAL_ONLY,
             original = "我喜歡你",
-            translation = null,
-            scriptPreference = LyricsScriptPreference.TRADITIONAL
+            translation = "我喜欢你"
         )
         assertEquals("我喜歡你", rendered.primary)
         assertNull(rendered.secondary)
@@ -138,7 +137,7 @@ class LyricsDisplayPolicyTest {
         val text = PlainLyricsDisplayFormatter.format(
             plainLines = lines,
             currentIndex = 0,
-            contentMode = LyricsContentDisplayMode.AUTO,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             scriptPreference = LyricsScriptPreference.SIMPLIFIED,
             lineMode = LyricsLineDisplayMode.CURRENT_ONLY
         )
@@ -151,7 +150,7 @@ class LyricsDisplayPolicyTest {
         val text = PlainLyricsDisplayFormatter.format(
             plainLines = lines,
             currentIndex = 0,
-            contentMode = LyricsContentDisplayMode.AUTO,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
             scriptPreference = LyricsScriptPreference.SIMPLIFIED,
             lineMode = LyricsLineDisplayMode.CURRENT_ONLY
         )

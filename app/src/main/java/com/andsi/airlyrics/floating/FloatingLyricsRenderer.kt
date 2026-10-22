@@ -300,17 +300,7 @@ class FloatingLyricsRenderer(
                             positionMs,
                             wordByWordLine.translatedSegments
                         )
-                    showsTranslationOnly -> {
-                        // No translation shipped: the simplified line is a per-character rewrite
-                        // of the original, so the original token timings still apply.
-                        val converted = wordByWordLine.segments
-                            .map { it.copy(text = ChineseText.toSimplified(it.text)) }
-                        if (converted.joinToString("") { it.text } == rendered.primary) {
-                            wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs, converted)
-                        } else {
-                            rendered.primary
-                        }
-                    }
+                    showsTranslationOnly -> rendered.primary
                     else -> wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs)
                 }
             }

@@ -59,7 +59,6 @@ internal fun lyricsContentModeTitleRes(mode: LyricsContentDisplayMode): Int = wh
     LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> R.string.ui_original_translation
     LyricsContentDisplayMode.ORIGINAL_ONLY -> R.string.ui_original_only
     LyricsContentDisplayMode.TRANSLATION_ONLY -> R.string.ui_translation_only
-    LyricsContentDisplayMode.AUTO -> R.string.ui_auto_language
 }
 
 internal fun Context.localizedScriptPreferenceTitle(preference: LyricsScriptPreference): String =

@@ -189,33 +189,18 @@ internal class LyricsRepositoryEngine(
             }
             val wordByWordLyricsEnabled = settings.wordByWordLyricsEnabled
 
-            val automaticLookup = searchOrigin == LyricsSearchOrigin.Automatic
-            // A cached match that fails the guard is stale. Automatic lookups must not silently
-            // replace it: the user notices the mismatch and re-searches manually, so imported or
-            // user-approved lyrics are never overwritten behind their back.
-            val cachedInfo = LyricsStorage.getLocalPlainLyricsInfo(appContext, title, artist, durationMs)
-            val cachedAlias = SongAliasStore.read(
-                appContext,
-                SongIdentity(title, artist, album, durationMs)
-            )?.aliasTitle
-            val staleCache = cachedInfo != null && !CachedMatchGuard.isTrusted(
-                playedTitle = title,
-                cachedMatchedTitle = cachedInfo.matchedTitle.orEmpty(),
-                aliasTitle = cachedAlias
-            )
             val local = if (!bypassLocal) localPlainLyricsProvider.fetch(request).getOrThrow()?.let {
                 attachLocalWordByWordLyricsIfAvailable(appContext, it, title, artist, durationMs, wordByWordLyricsEnabled)
             } else null
+            // Existing lyrics — imported, edited or downloaded earlier — are never touched by an
+            // automatic lookup: no online search, no word-timing upgrade and no cache correction.
+            // A wrong match is the user's call, so only an explicit search replaces them.
+            if (local != null && searchOrigin == LyricsSearchOrigin.Automatic) return@runCatching local
             val onlineAllowed = ignoreAutoSearchSetting || settings.autoSearchOnline
             val wordSources = if (wordByWordLyricsEnabled) settings.plainLyricsSearchSources.distinct().filter {
                 onlinePlainLyricsProviders[it]?.supportsWordTiming == true
             } else emptyList()
             val seekWords = wordSources.isNotEmpty()
-            // Imported or user-approved lyrics are never replaced; an auto-downloaded cache may
-            // still be upgraded with word timing. A stale cache is not auto-corrected at all.
-            if (local != null && (local.manualLocal || !seekWords ||
-                    local.wordByWordLines.isNotEmpty())) return@runCatching local
-            if (local == null && staleCache && automaticLookup) return@runCatching null
             if (!bypassLocal && seekWords) {
                 for (source in wordSources) {
                     val cached = cachedOnlineLyricsReader(onlinePlainLyricsProviders.getValue(source), request)
@@ -267,11 +252,6 @@ internal class LyricsRepositoryEngine(
             }
             if (onlinePlainLyricsResult == null && sources.all { it in wordSources } && wordLookupError != null && local == null) throw wordLookupError
             cancellationToken?.throwIfCancellationRequested()
-            if (local != null && onlinePlainLyricsResult != null &&
-                onlinePlainLyricsResult.wordByWordLines.isEmpty()
-            ) {
-                return@runCatching local
-            }
             onlinePlainLyricsResult?.let { result ->
                 val committed = commit(result)
                 if (forceSaveOnline) committed else

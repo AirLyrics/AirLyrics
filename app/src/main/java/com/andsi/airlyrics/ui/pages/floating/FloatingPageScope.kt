@@ -322,12 +322,8 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_opacity), fontOpacitySubtitle(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_shadow_stroke), host.getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
         updateFloatingTileSubtitle(host.getString(R.string.ui_window_layout), host.getString(R.string.ui_width) + " ${latestStyle.maxWidthPercent}%")
-        val contentSubtitle = if (contentDisplayMode() == LyricsContentDisplayMode.AUTO) {
-            host.getString(R.string.ui_auto_language) + " · " +
-                host.localizedScriptPreferenceTitle(scriptPreference())
-        } else {
-            host.localizedLyricsContentModeTitle(contentDisplayMode())
-        }
+        val contentSubtitle = host.localizedLyricsContentModeTitle(contentDisplayMode()) + " · " +
+            host.localizedScriptPreferenceTitle(scriptPreference())
         updateFloatingTileSubtitle(host.getString(R.string.ui_content), contentSubtitle)
         updateFloatingTileSubtitle(host.getString(R.string.ui_line_range), host.localizedLyricsLineModeTitle(lineDisplayMode()))
         updateFloatingTileSubtitle(host.getString(R.string.ui_text_alignment), localizedGravityTitle(latestStyle.gravity))

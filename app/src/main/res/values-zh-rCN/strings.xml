@@ -252,7 +252,6 @@
     <string name="ui_grant_usage_access">授予使用情况访问权限</string>
     <string name="ui_orange">橙</string>
     <string name="ui_original_only">仅原文</string>
-    <string name="ui_auto_language">自动（中文只显译文）</string>
     <string name="ui_original_translation">原文 + 翻译</string>
     <string name="ui_overlay">悬浮窗权限</string>
     <string name="ui_overlay_and_notification_permissions">权限与语言</string>

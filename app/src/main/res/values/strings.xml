@@ -252,7 +252,6 @@
     <string name="ui_grant_usage_access">Grant usage access</string>
     <string name="ui_orange">Orange</string>
     <string name="ui_original_only">Original only</string>
-    <string name="ui_auto_language">Auto (follow lyric language)</string>
     <string name="ui_original_translation">Original + translation</string>
     <string name="ui_overlay">Overlay</string>
     <string name="ui_overlay_and_notification_permissions">Permissions and language</string>
