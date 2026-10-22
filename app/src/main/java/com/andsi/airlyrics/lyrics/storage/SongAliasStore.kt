@@ -3,6 +3,7 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.util.AtomicFile
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.CachedMatchGuard
 import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
@@ -116,5 +117,33 @@ internal object SongAliasStore {
         val array = JSONArray()
         aliases.forEach { alias -> array.put(alias.toJson()) }
         return array.toString()
+    }
+
+    /**
+     * Persists the catalogue alias for an online match, so the next lookup for the same
+     * recording is trusted instead of being re-verified (or wrongly invalidated).
+     */
+    fun rememberCatalogueAlias(
+        context: Context,
+        song: SongIdentity,
+        matchedTitle: String,
+        matchedArtist: String
+    ) {
+        if (matchedTitle.isBlank()) return
+        if (CachedMatchGuard.isTrusted(song.title, matchedTitle, null)) return
+        save(
+            context,
+            song,
+            Alias(
+                originalTitle = song.title,
+                originalArtist = song.artist,
+                originalArtistAliases = listOf(song.artist),
+                aliasTitle = matchedTitle,
+                aliasArtist = matchedArtist,
+                source = SOURCE_CATALOGUE,
+                confidence = 0.85,
+                confirmedAt = System.currentTimeMillis()
+            )
+        )
     }
 }

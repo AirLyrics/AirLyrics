@@ -120,10 +120,17 @@ internal fun createAppleLoginPage(activity: MainUiHost): View = with(activity) c
     }
     root.addView(statusView)
 
+    // One token is enough; and once the page is gone nothing may navigate or touch the WebView.
+    var captured = false
+    var destroyed = false
+
     fun finishWithToken(token: String) {
+        if (destroyed || captured) return
+        captured = true
         statusView.text = getString(R.string.ui_apple_verifying)
         activity.activity.lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) { AppleMusicAccount.completeLogin(activity, token) }
+            if (destroyed) return@launch
             result.fold(
                 onSuccess = {
                     statusView.text = getString(R.string.ui_apple_logged_in_as, it.storefront.uppercase())
@@ -150,6 +157,7 @@ internal fun createAppleLoginPage(activity: MainUiHost): View = with(activity) c
         webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
+                if (destroyed || captured) return
                 if (!url.contains("music.apple.com")) return
                 activity.activity.lifecycleScope.launch {
                     AppleMusicLoginCapture.capture(view)?.let(::finishWithToken)
@@ -159,8 +167,21 @@ internal fun createAppleLoginPage(activity: MainUiHost): View = with(activity) c
         loadUrl("https://music.apple.com/cn/login")
     }
     root.addView(webView)
+    root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) {}
+
+        override fun onViewDetachedFromWindow(v: View) {
+            // Leaving the page must stop every pending capture and free the WebView; repeated
+            // visits used to pile up live WebViews.
+            destroyed = true
+            webView.stopLoading()
+            webView.removeAllViews()
+            webView.destroy()
+        }
+    })
 
     root.addView(actionButton(activity, getString(R.string.ui_apple_login_capture)) {
+        if (destroyed || captured) return@actionButton
         activity.activity.lifecycleScope.launch {
             val token = AppleMusicLoginCapture.capture(webView)
             if (token == null) {
