@@ -101,13 +101,19 @@ object ApplePlainLyricsProvider : LyricsProvider {
         val json = JSONObject(jsonText)
         val errorType = json.optString("error_type").takeIf { it.isNotBlank() }
         if (!json.optBoolean("ok", false)) {
-            if (errorType == "NeedCredential") {
-                throw LyricsLookupException(
-                    id, name, LyricsLookupErrorType.NeedCredential,
-                    json.optString("error", "Invalid Apple Music credentials")
-                )
+            if (errorType == "NotFound") return null
+            val type = when (errorType) {
+                "NetworkError" -> LyricsLookupErrorType.NetworkError
+                "ParseError" -> LyricsLookupErrorType.ParseError
+                "NativeError" -> LyricsLookupErrorType.NativeError
+                "NeedCredential" -> LyricsLookupErrorType.NeedCredential
+                else -> LyricsLookupErrorType.NativeError
             }
-            return null
+            throw LyricsLookupException(
+                id, name, type,
+                json.optString("error").takeIf { it.isNotBlank() }
+                    ?: "Invalid Apple Music native response: error_type=$errorType"
+            )
         }
         val lrc = json.optString("lrc").takeIf { it.isNotBlank() }
             ?: translatedLrc(json)

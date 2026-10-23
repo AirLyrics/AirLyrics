@@ -235,27 +235,25 @@ internal class LyricsRepositoryEngine(
                 cancellationToken?.throwIfCancellationRequested()
                 onInterimResult?.invoke(local)
             }
-            val prefetched = mutableMapOf<PlainLyricsSearchSource, LyricsProviderResult?>()
-            var wordLookupError: Throwable? = null
+            val prefetched = mutableMapOf<PlainLyricsSearchSource, Result<LyricsProviderResult?>>()
             for (source in wordSources) {
                 val result = try {
                     onlinePlainLyricsProviders.getValue(source).fetch(request).getOrThrow()
                 } catch (e: Exception) {
                     cancellationToken?.throwIfCancellationRequested()
                     if (e is CancellationException) throw e
-                    wordLookupError = e
-                    prefetched[source] = null
+                    prefetched[source] = Result.failure(e)
                     continue
                 }
                 cancellationToken?.throwIfCancellationRequested()
-                prefetched[source] = result
+                prefetched[source] = Result.success(result)
                 if (result?.wordByWordLines?.isNotEmpty() == true) return@runCatching commit(result)
             }
             // A local line-only result must not stop the ordinary source pass: a word-capable
             // provider may have returned a usable line-only result (for example Apple lyrics).
             // Keep local as the final fallback after configured online sources are exhausted.
             val sources = settings.plainLyricsSearchSources
-            val lineFallback = prefetched.values.firstOrNull { it != null }
+            val lineFallback = prefetched.values.firstNotNullOfOrNull { it.getOrNull() }
             val onlinePlainLyricsResult = try {
                 // Word timing is an optional capability. Once the word-capable prefetch has
                 // failed to produce timed words, resolve the ordinary result strictly in the
@@ -268,7 +266,6 @@ internal class LyricsRepositoryEngine(
                 if (lineFallback == null) throw error
                 lineFallback
             }
-            if (onlinePlainLyricsResult == null && sources.all { it in wordSources } && wordLookupError != null && local == null) throw wordLookupError
             cancellationToken?.throwIfCancellationRequested()
             onlinePlainLyricsResult?.let { result ->
                 val committed = commit(result)
@@ -281,9 +278,10 @@ internal class LyricsRepositoryEngine(
     private fun findOnlinePlainLyrics(
         sources: List<PlainLyricsSearchSource>,
         request: PlainLyricsSearchRequest,
-        preloaded: Map<PlainLyricsSearchSource, LyricsProviderResult?> = emptyMap()
+        preloaded: Map<PlainLyricsSearchSource, Result<LyricsProviderResult?>> = emptyMap()
     ): LyricsProviderResult? {
         val orderedSources = sources.distinct()
+        var lookupError: Throwable? = null
         for ((index, source) in orderedSources.withIndex()) {
             request.cancellationToken?.throwIfCancellationRequested()
             val provider = checkNotNull(onlinePlainLyricsProviders[source]) {
@@ -298,7 +296,7 @@ internal class LyricsRepositoryEngine(
             )
 
             val result = try {
-                if (source in preloaded) preloaded[source] else provider.fetch(request).getOrThrow()
+                (preloaded[source] ?: provider.fetch(request)).getOrThrow()
             } catch (error: Throwable) {
                 request.cancellationToken?.throwIfCancellationRequested()
                 if (error is CancellationException) {
@@ -312,7 +310,10 @@ internal class LyricsRepositoryEngine(
                     error = error,
                     debug = BuildConfig.DEBUG
                 )
-                if (provider.continueOnFailure && index < orderedSources.lastIndex) continue
+                if (provider.continueOnFailure) {
+                    lookupError = error
+                    continue
+                }
                 throw error
             }
 
@@ -337,6 +338,7 @@ internal class LyricsRepositoryEngine(
             )
             return result
         }
+        lookupError?.let { throw it }
         return null
     }
 

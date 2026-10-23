@@ -596,6 +596,31 @@ class LyricsRepositoryEngineTest {
         assertEquals(1, provider.calls)
     }
 
+    @Test
+    fun appleFailuresRemainAvailableAcrossWordPrefetchAndFallback() {
+        for (wordsEnabled in listOf(false, true)) {
+            for (outcome in listOf("success", "miss", "cancel")) {
+                val failure = if (outcome == "cancel") CancellationException("cancelled") else
+                    LyricsLookupException("apple", "Apple Music", LyricsLookupErrorType.ParseError, "bad response")
+                val apple = FakePlainLyricsProvider("apple", Result.failure(failure))
+                val fallback = result("lrclib", "[00:01.00]fallback")
+                val other = FakePlainLyricsProvider("lrclib", Result.success(if (outcome == "success") fallback else null))
+                val logger = RecordingLogger()
+                val engine = engine(
+                    onlineProviders = mapOf(PlainLyricsSearchSource.APPLE to apple, PlainLyricsSearchSource.LRCLIB to other),
+                    settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.APPLE, PlainLyricsSearchSource.LRCLIB), wordByWordLyricsEnabled = wordsEnabled),
+                    lookupLogger = logger
+                )
+                val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180000)
+                if (outcome == "success") assertSame(fallback, found.getOrThrow())
+                else assertSame(failure, found.exceptionOrNull())
+                assertEquals(1, apple.calls)
+                assertEquals(if (outcome == "cancel") 0 else 1, other.calls)
+                assertEquals(if (outcome == "cancel") 0 else 1, logger.failures)
+            }
+        }
+    }
+
     private fun spicyResult() = result("spicy", "[00:01.00]word").copy(
         wordByWordLines = listOf(WordByWordLine(1000, 2000, "word", listOf(WordByWordSegment("word", 1000, 2000)))),
         access = LyricsAccess(1, Long.MAX_VALUE, "key", com.andsi.airlyrics.core.model.LyricsAttribution("Spicy Lyrics", emptyList()))
@@ -664,7 +689,8 @@ class LyricsRepositoryEngineTest {
         ) : this(id, { response })
 
         override val name: String = id
-        override var supportsWordTiming: Boolean = id == "spicy"
+        override var supportsWordTiming: Boolean = id == "spicy" || id == "apple"
+        override val continueOnFailure: Boolean = id == "apple"
         private val requests = mutableListOf<PlainLyricsSearchRequest>()
         val calls: Int
             get() = requests.size

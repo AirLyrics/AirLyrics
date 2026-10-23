@@ -414,6 +414,7 @@ pub(crate) fn fetch(
                             developer_token,
                             storefront,
                             lookup_id,
+                            API,
                         ),
                     )
                     .await
@@ -425,12 +426,17 @@ pub(crate) fn fetch(
         })
     })();
 
+    resolve_result(result)
+}
+
+fn resolve_result(result: Result<Value, String>) -> Value {
     match result {
         Ok(value) => value,
         Err(error) if error == "NeedCredential" => {
             failure("NeedCredential", "Apple Music 账号未登录")
         }
         Err(error) if error == "NetworkError" => failure("NetworkError", "Apple Music 请求超时"),
+        Err(error) if error == "ParseError" => failure("ParseError", error),
         Err(error) if error == "Cancelled" => failure("Cancelled", error),
         Err(error) => failure("NativeError", error),
     }
@@ -446,8 +452,12 @@ async fn resolve(
     developer_token: &str,
     storefront: &str,
     lookup_id: jni::sys::jlong,
+    api: &str,
 ) -> Result<Value, String> {
     crate::check_lookup_cancelled(lookup_id)?;
+    #[cfg(test)]
+    let client = crate::test_http::client();
+    #[cfg(not(test))]
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()
@@ -473,7 +483,7 @@ async fn resolve(
     }
     .trim()
     .to_string();
-    let search_url = format!("{API}/v1/catalog/{storefront}/search");
+    let search_url = format!("{api}/v1/catalog/{storefront}/search");
     let response = headers(client.get(&search_url))
         .query(&[("term", term.as_str()), ("types", "songs"), ("limit", "10")])
         .send()
@@ -528,7 +538,7 @@ async fn resolve(
     let candidate = &candidates[index];
 
     crate::check_lookup_cancelled(lookup_id)?;
-    let song_url = format!("{}/v1/catalog/{}/songs/{}", API, storefront, candidate.id);
+    let song_url = format!("{}/v1/catalog/{}/songs/{}", api, storefront, candidate.id);
     let response = headers(client.get(&song_url))
         .query(&[
             ("include", "syllable-lyrics,lyrics"),
@@ -538,6 +548,9 @@ async fn resolve(
         .send()
         .await
         .map_err(|_| "NetworkError".to_string())?;
+    if response.status().as_u16() == 401 || response.status().as_u16() == 403 {
+        return Ok(failure("NeedCredential", "Apple Music 凭据无效或已过期"));
+    }
     if !response.status().is_success() {
         return Ok(failure(
             "NetworkError",
@@ -604,6 +617,53 @@ async fn resolve(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    const SEARCH_HIT: &str = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"results\":{\"songs\":{\"data\":[{\"id\":\"1\",\"attributes\":{\"name\":\"Song\",\"artistName\":\"Artist\",\"durationInMillis\":180000}}]}}}";
+
+    #[tokio::test]
+    async fn search_and_details_classify_http_and_parse_failures() {
+        for details in [false, true] {
+            for (response, expected) in [
+                (
+                    "HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\n\r\n",
+                    "NeedCredential",
+                ),
+                (
+                    "HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n",
+                    "NeedCredential",
+                ),
+                (
+                    "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n",
+                    "NetworkError",
+                ),
+                (
+                    "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\ninvalid json",
+                    "ParseError",
+                ),
+            ] {
+                let responses = if details {
+                    vec![SEARCH_HIT, response]
+                } else {
+                    vec![response]
+                };
+                let server = crate::test_http::Server::new(responses);
+                let result = resolve(
+                    "Song",
+                    "Artist",
+                    "",
+                    180000,
+                    "user",
+                    "developer",
+                    "us",
+                    0,
+                    &server.url,
+                )
+                .await;
+                assert_eq!(resolve_result(result)["error_type"], expected);
+                server.finish();
+            }
+        }
+    }
 
     const SAMPLE: &str = r#"<tt xmlns="http://www.w3.org/ns/ttml" itunes:timing="Word" xml:lang="zh-Hant">
 <body><div><p begin="22.186" end="26.552" itunes:key="L1"><span begin="22.186" end="23.000">攔路雨</span><span begin="23.000" end="26.552">偏似雪花</span></p>

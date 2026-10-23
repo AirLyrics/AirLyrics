@@ -7,6 +7,24 @@ import org.junit.Test
 
 class ApplePlainLyricsProviderTest {
     @Test
+    fun failedNativeResponsesPreserveClassificationAndMessage() {
+        for (nativeType in listOf("NotFound", "NetworkError", "ParseError", "NativeError", "NeedCredential", "Unexpected", "")) {
+            val response = org.json.JSONObject().put("ok", false).put("error", "original message")
+            if (nativeType.isNotEmpty()) response.put("error_type", nativeType)
+            val parsed = runCatching { ApplePlainLyricsProvider.parse(response.toString(), "", "", "", 0) }
+            if (nativeType == "NotFound") {
+                assertTrue(parsed.isSuccess)
+                assertEquals(null, parsed.getOrThrow())
+            } else {
+                val error = parsed.exceptionOrNull() as com.andsi.airlyrics.lyrics.LyricsLookupException
+                val expected = if (nativeType in listOf("Unexpected", "")) "NativeError" else nativeType
+                assertEquals(expected, error.errorType.name)
+                assertEquals("original message", error.detailMessage)
+            }
+        }
+    }
+
+    @Test
     fun translatedLrc_isAttachedToEachWordByWordLine() {
         ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
         val json = """
