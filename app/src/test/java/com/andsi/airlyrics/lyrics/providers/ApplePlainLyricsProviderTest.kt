@@ -213,9 +213,17 @@ class ApplePlainLyricsProviderTest {
     }
 
     @Test
-    fun phraseAcrossTokens_doesNotReuseTimingWithoutMatchingConsumedText() {
+    fun phraseAcrossTokens_reusesTimingWhenTheConversionKeepsLength() {
+        // 甦醒/瞭解 split across tokens: the line-level conversion is authoritative when the
+        // character count is preserved, so the tokens keep their timings.
         ChineseText.installTableForTest(emptyMap(), phrases = mapOf("甲乙" to "丙丁"))
-        assertTrue(translatedSegmentsFor("甲乙", "丙丁").isEmpty())
+        assertEquals(listOf("丙", "丁"), translatedSegmentsFor("甲乙", "丙丁").map { it.text })
+    }
+
+    @Test
+    fun phraseAcrossTokens_doesNotReuseTimingWhenTheLengthChanges() {
+        ChineseText.installTableForTest(emptyMap(), phrases = mapOf("甲乙" to "丙丁戊"))
+        assertTrue(translatedSegmentsFor("甲乙", "丙丁戊").isEmpty())
     }
 
     private fun translatedSegmentsFor(original: String, translation: String) =

@@ -274,10 +274,32 @@ object ApplePlainLyricsProvider : LyricsProvider {
         // Consume against whatever the display text is: the full translation when the tokens also
         // carry the echo, otherwise only its spoken part.
         val targetText = if (tokensCarryEcho) translatedText else spokenTranslation
+        // Convert the whole line once and slice by boundaries: a phrase such as 甦醒 or 瞭解 can
+        // be split across tokens, and converting each token alone would leave it untranslated.
+        val (convertedSource, boundaries) = ChineseText.simplifiedBoundaries(source)
+        var sourceOffset = 0
         val mapped = mutableListOf<WordByWordSegment>()
         var cursor = 0
         for (segment in timed) {
-            val target = ChineseText.normalizedForm(segment.text)
+            val segmentStart = sourceOffset
+            val segmentEnd = segmentStart + segment.text.length
+            sourceOffset = segmentEnd
+            val boundaryStart = boundaries.getOrNull(segmentStart) ?: -1
+            val boundaryEnd = boundaries.getOrNull(segmentEnd) ?: -1
+            val target = when {
+                boundaryStart >= 0 && boundaryEnd in boundaryStart..convertedSource.length ->
+                    ChineseText.normalizedForm(convertedSource.substring(boundaryStart, boundaryEnd))
+                // A phrase split across tokens (甦|醒) has no interior boundary; when the
+                // conversion keeps the character count, slice by length instead of giving up.
+                boundaryStart >= 0 && convertedSource.length == source.length ->
+                    ChineseText.normalizedForm(
+                        convertedSource.substring(
+                            boundaryStart,
+                            minOf(boundaryStart + segment.text.length, convertedSource.length)
+                        )
+                    )
+                else -> ChineseText.normalizedForm(segment.text)
+            }
             if (target.isEmpty()) continue
             val consumed = StringBuilder()
             var matched = 0
