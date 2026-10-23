@@ -258,18 +258,22 @@ object ApplePlainLyricsProvider : LyricsProvider {
         // When the translation carries the echo too (it is sung, not an annotation), every timed
         // segment takes part. When only the original has it, the echo must not consume characters.
         val spokenTranslation = ChineseText.stripPerformanceRepeat(translatedText)
-        // Compare raw lengths: comparisonForm() strips the echo itself, so it cannot tell them apart.
-        val translationKeepsEcho = spokenTranslation.length != translatedText.length
+        // The echo can sit on only one side: Apple may keep it in the translation while the timed
+        // tokens carry just a stray bracket, or the other way round. Decide from what the tokens
+        // actually contain instead of comparing raw lengths.
+        val sourceForm = ChineseText.normalizedForm(source)
+        val tokensCarryEcho = sourceForm != ChineseText.normalizedForm(spokenTranslation) &&
+            sourceForm == ChineseText.normalizedForm(translatedText)
         val spoken = ChineseText.stripPerformanceRepeat(source)
         val timed = when {
-            translationKeepsEcho -> segments
+            tokensCarryEcho -> segments
             spoken.length == source.length -> segments
             else -> prefixSegments(segments, spoken.length)
         }
-        // Consume against whatever the display text is: the full translation when it also sings
-        // the echo, otherwise only its spoken part.
-        val targetText = if (translationKeepsEcho) translatedText else spokenTranslation
         if (timed.isEmpty()) return null
+        // Consume against whatever the display text is: the full translation when the tokens also
+        // carry the echo, otherwise only its spoken part.
+        val targetText = if (tokensCarryEcho) translatedText else spokenTranslation
         val mapped = mutableListOf<WordByWordSegment>()
         var cursor = 0
         for (segment in timed) {
