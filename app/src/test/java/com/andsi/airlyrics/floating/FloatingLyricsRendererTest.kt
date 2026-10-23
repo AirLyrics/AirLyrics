@@ -317,7 +317,7 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
-    fun translatedDuplicatePairWithoutTranslatedTokens_showsAPlainSimplifiedLine() {
+    fun translatedDuplicatePairWithoutTranslatedTokens_mapsTheScriptConversion() {
         ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
         val textView = TextView(context)
         val renderer = renderer(
@@ -336,7 +336,9 @@ class FloatingLyricsRendererTest {
         )
 
         assertEquals("苏三说", textView.text.toString())
-        assertTrue((textView.text as Spanned).highlightSpans().isEmpty())
+        // No stored per-token translation: the script conversion is one-to-one, so the original
+        // timings are sliced onto the displayed translation instead of dropping the highlight.
+        assertTrue((textView.text as Spanned).highlightSpans().isNotEmpty())
     }
 
     @Test

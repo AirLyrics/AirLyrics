@@ -300,22 +300,42 @@ class FloatingLyricsRenderer(
                             positionMs,
                             wordByWordLine.translatedSegments
                         )
+                    // A copy saved before the translator timings existed carries no translated
+                    // segments. When the shown line is only a script conversion of the original,
+                    // the original tokens still describe it, so map them instead of dropping the
+                    // highlight for ever (automatic lookup never rewrites saved lyrics).
+                    showsTranslationOnly &&
+                        ChineseText.isScriptConversion(original, rendered.primary) -> {
+                        val fallback = proportionalSegments(wordByWordLine, rendered.primary)
+                        if (fallback != null) {
+                            wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs, fallback)
+                        } else {
+                            rendered.primary
+                        }
+                    }
                     showsTranslationOnly -> rendered.primary
                     else -> wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs)
                 }
             }
             rendered.secondary?.takeIf { it.isNotBlank() }?.let { secondary ->
-                renderedLines += if (wordByWordLine != null &&
-                    wordByWordLine.translatedSegments.isNotEmpty()
-                ) {
-                    wordByWordLineSpan(
+                val translatedSegments = wordByWordLine?.translatedSegments.orEmpty()
+                renderedLines += when {
+                    wordByWordLine == null -> secondary
+                    translatedSegments.isNotEmpty() -> wordByWordLineSpan(
                         wordByWordLine,
                         secondary,
                         positionMs,
-                        wordByWordLine.translatedSegments
+                        translatedSegments
                     )
-                } else {
-                    secondary
+                    ChineseText.isScriptConversion(original, secondary) -> {
+                        val fallback = proportionalSegments(wordByWordLine, secondary)
+                        if (fallback != null) {
+                            wordByWordLineSpan(wordByWordLine, secondary, positionMs, fallback)
+                        } else {
+                            secondary
+                        }
+                    }
+                    else -> secondary
                 }
             }
         }
@@ -414,6 +434,39 @@ class FloatingLyricsRenderer(
             LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> listOf(currentIndex - 1, currentIndex, currentIndex + 1)
         }
         return indexes.filter { it in currentWordByWordLines.indices }
+    }
+
+    /**
+     * A stored copy written before per-token translations existed has no translated segments.
+     * When the shown text is the same length as the token text (a pure script conversion), every
+     * character maps one to one, so the original timings can be sliced onto the shown text.
+     */
+    private fun proportionalSegments(
+        wordByWordLine: WordByWordLine,
+        displayText: String
+    ): List<WordByWordSegment>? {
+        if (displayText.isEmpty() || displayText.any { it.isWhitespace() }) return null
+        val spokenCharacters = wordByWordLine.segments.sumOf { segment ->
+            segment.text.count { character -> !character.isWhitespace() }
+        }
+        if (spokenCharacters != displayText.length) return null
+        var offset = 0
+        val mapped = mutableListOf<WordByWordSegment>()
+        for (segment in wordByWordLine.segments) {
+            val length = segment.text.count { character -> !character.isWhitespace() }
+            if (length == 0) continue
+            val end = (offset + length).coerceAtMost(displayText.length)
+            if (end <= offset) continue
+            mapped += WordByWordSegment(
+                text = displayText.substring(offset, end),
+                startMs = segment.startMs,
+                endMs = segment.endMs
+            )
+            offset = end
+        }
+        return mapped.takeIf {
+            it.isNotEmpty() && it.joinToString("") { segment -> segment.text } == displayText
+        }
     }
 
     private fun wordByWordLineSpan(
