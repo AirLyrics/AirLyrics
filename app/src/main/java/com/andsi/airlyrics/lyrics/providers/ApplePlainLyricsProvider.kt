@@ -255,41 +255,48 @@ object ApplePlainLyricsProvider : LyricsProvider {
         if (!ChineseText.isScriptConversion(source, translatedText)) {
             return null
         }
-        // The echoed tail is not present in the translation, so it must not consume characters;
-        // keep the segments that cover the sentence itself and leave the echo unmapped.
-        val spoken = ChineseText.stripPerformanceRepeat(source)
-        val timed = if (spoken.length == source.length) segments else prefixSegments(segments, spoken.length)
-        if (timed.isEmpty()) return null
-        // The translation may carry its own echo ("…睡得着（睡得着）"); it is not sung with
-        // separate timing, so map against the spoken part only.
+        // When the translation carries the echo too (it is sung, not an annotation), every timed
+        // segment takes part. When only the original has it, the echo must not consume characters.
         val spokenTranslation = ChineseText.stripPerformanceRepeat(translatedText)
+        // Compare raw lengths: comparisonForm() strips the echo itself, so it cannot tell them apart.
+        val translationKeepsEcho = spokenTranslation.length != translatedText.length
+        val spoken = ChineseText.stripPerformanceRepeat(source)
+        val timed = when {
+            translationKeepsEcho -> segments
+            spoken.length == source.length -> segments
+            else -> prefixSegments(segments, spoken.length)
+        }
+        // Consume against whatever the display text is: the full translation when it also sings
+        // the echo, otherwise only its spoken part.
+        val targetText = if (translationKeepsEcho) translatedText else spokenTranslation
+        if (timed.isEmpty()) return null
         val mapped = mutableListOf<WordByWordSegment>()
         var cursor = 0
         for (segment in timed) {
-            val target = ChineseText.comparisonForm(segment.text)
+            val target = ChineseText.normalizedForm(segment.text)
             if (target.isEmpty()) continue
             val consumed = StringBuilder()
             var matched = 0
             // Punctuation and spaces may be present on either side; they never consume a token
             // character, so a translation with an extra space still maps onto the original timing.
-            while (matched < target.length && cursor < spokenTranslation.length) {
-                val character = spokenTranslation[cursor]
+            while (matched < target.length && cursor < targetText.length) {
+                val character = targetText[cursor]
                 consumed.append(character)
                 cursor++
                 if (!isIgnorable(character)) matched++
             }
             if (matched != target.length ||
-                ChineseText.comparisonForm(consumed.toString()) != target
+                ChineseText.normalizedForm(consumed.toString()) != target
             ) return null
             mapped += segment.copy(text = consumed.toString())
         }
-        while (cursor < spokenTranslation.length && isIgnorable(spokenTranslation[cursor])) {
+        while (cursor < targetText.length && isIgnorable(targetText[cursor])) {
             if (mapped.isEmpty()) return null
             val last = mapped.removeAt(mapped.lastIndex)
-            mapped += last.copy(text = last.text + spokenTranslation[cursor])
+            mapped += last.copy(text = last.text + targetText[cursor])
             cursor++
         }
-        return if (cursor == spokenTranslation.length) mapped else null
+        return if (cursor == targetText.length) mapped else null
     }
 
     private fun translatedLrc(json: JSONObject): String? =

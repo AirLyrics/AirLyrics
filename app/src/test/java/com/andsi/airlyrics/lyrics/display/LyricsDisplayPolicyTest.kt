@@ -230,4 +230,5 @@ class LyricsDisplayPolicyTest {
         assertEquals("看不见你的笑 我怎么睡得著", rendered.primary)
         assertNull(rendered.secondary)
     }
+
 }

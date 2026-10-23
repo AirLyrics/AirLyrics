@@ -180,6 +180,20 @@ object ChineseText {
     }
 
     /**
+     * Script and spacing normalisation without echo handling. Used for token-sized comparisons
+     * inside a line, where a trailing bracket belongs to the token rather than marking an echo.
+     */
+    fun normalizedForm(text: String): String {
+        var value = comparable(toSimplified(text))
+        repeat(2) {
+            val next = comparable(toSimplified(value))
+            if (next == value) return value
+            value = next
+        }
+        return value
+    }
+
+    /**
      * Comparison-only form: simplified, script-folded, whitespace/punctuation removed, and the
      * singer's echoed tail dropped. Cleaning comes before the echo scan so a space or bracket
      * inside the echo ("…阻礙 的阻礙") cannot hide the repeat.
@@ -195,6 +209,24 @@ object ChineseText {
             value = next
         }
         return value
+    }
+
+    /**
+     * Drops a trailing echo annotation from text that will be *shown*, but only when the
+     * parenthetical repeats the end of the line ("...睡得著 (睡得著)") or the line repeats its own
+     * tail ("...會繞會繞"). A genuine annotation such as "(Live)" stays.
+     */
+    fun withoutPerformanceEcho(text: String): String {
+        var value = text.trim()
+        val trailing = Regex("(.*?)\\s*[（(]([^（）()]{1,24})[）)]\\s*$").matchEntire(value)
+        if (trailing != null) {
+            val head = trailing.groupValues[1].trim()
+            val inner = comparable(trailing.groupValues[2])
+            if (head.isNotEmpty() && inner.isNotEmpty() && comparable(head).endsWith(inner)) {
+                value = head
+            }
+        }
+        return if (comparable(value).isNotEmpty()) value else text.trim()
     }
 
     private fun comparable(text: String): String {
