@@ -59,6 +59,25 @@ class LyricsDisplayPolicyTest {
     }
 
     @Test
+    fun `simplified preference dedupes a line with a repeated performance tail`() {
+        ChineseText.installTableForTest(
+            mapOf(
+                '這' to '这', '裡' to '里', '說' to '说', '愛' to '爱', '誰' to '谁', '歡' to '欢',
+                '時' to '时', '間' to '间', '個' to '个', '夢' to '梦', '話' to '话', '樣' to '样',
+                '見' to '见', '妳' to '你', '麼' to '么', '著' to '着', '會' to '会', '繞' to '绕'
+            )
+        )
+        val rendered = LyricsDisplayPolicy.render(
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
+            original = "看不見妳的笑 我怎麼睡得著(睡得著)",
+            translation = "看不见你的笑 我怎么睡得着",
+            scriptPreference = LyricsScriptPreference.SIMPLIFIED
+        )
+        assertEquals("看不见你的笑 我怎么睡得着", rendered.primary)
+        assertNull(rendered.secondary)
+    }
+
+    @Test
     fun `a real translation is always shown next to the original`() {
         val rendered = LyricsDisplayPolicy.render(
             LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,

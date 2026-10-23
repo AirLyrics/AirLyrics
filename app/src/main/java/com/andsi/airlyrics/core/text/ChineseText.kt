@@ -133,9 +133,30 @@ object ChineseText {
      */
     fun isScriptConversion(original: String, translation: String): Boolean {
         if (original.isBlank() || translation.isBlank()) return false
-        val converted = comparable(toSimplified(original))
-        val target = comparable(toSimplified(translation))
+        val converted = comparable(toSimplified(stripPerformanceRepeat(original)))
+        val target = comparable(toSimplified(stripPerformanceRepeat(translation)))
         return converted == target
+    }
+
+    /**
+     * Drops a repeated tail that singers add for emphasis, so it cannot make a script duplicate
+     * look like a real translation: "…睡得著(睡得著)", "…還是會繞會繞", "…是一種解藥解藥".
+     *
+     * Only the comparison uses this — the displayed line keeps everything the artist sang.
+     */
+    internal fun stripPerformanceRepeat(text: String): String {
+        var value = text.trim()
+        value = value.replace(Regex("\\s*[（(][^（）()]{1,24}[）)]\\s*$"), "").trim()
+        val length = value.length
+        // The repeated block must be at least two characters; single-character echoes ("想想")
+        // are ordinary words far more often than performance repeats.
+        for (unit in (length / 2) downTo 2) {
+            val tail = value.substring(length - unit)
+            if (value.regionMatches(length - 2 * unit, tail, 0, unit)) {
+                return value.substring(0, length - unit).trim()
+            }
+        }
+        return value
     }
 
     private fun comparable(text: String): String {

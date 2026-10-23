@@ -93,6 +93,29 @@ class ChineseTextTest {
     }
 
     @Test
+    fun scriptConversion_ignoresARepeatedPerformanceTail() {
+        install()
+        // Singers echo the tail ("…會繞會繞", "…睡得著(睡得著)"); the translation does not.
+        assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著(蓋著)", "苏产绣盖着"))
+        assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著", "苏产绣盖着"))
+        assertTrue(ChineseText.isScriptConversion("蓋著蓋著", "盖着"))
+    }
+
+    @Test
+    fun scriptConversion_stillRejectsARealRewriteThatCarriesARepeatedTail() {
+        install()
+        assertFalse(ChineseText.isScriptConversion("我今天真的很想你(想你)", "我今天真的很想他"))
+    }
+
+    @Test
+    fun stripPerformanceRepeat_onlyTrimsTrailingEchoes() {
+        assertEquals("會繞", ChineseText.stripPerformanceRepeat("會繞會繞"))
+        assertEquals("我怎麼睡得著", ChineseText.stripPerformanceRepeat("我怎麼睡得著(睡得著)"))
+        assertEquals("我想想", ChineseText.stripPerformanceRepeat("我想想"))
+        assertEquals("我愛你", ChineseText.stripPerformanceRepeat("我愛你"))
+    }
+
+    @Test
     fun containsTraditional_respectsProtectedPhrasesAndUnloadedTables() {
         install()
         assertFalse(ChineseText.containsTraditional("著作"))
