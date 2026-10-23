@@ -90,42 +90,32 @@ object LyricsRepository {
                     lookupLogger = AndroidLyricsLookupLogger,
                     commitOnlineResult = { request, result ->
                         lease.commit {
-                            if (searchOrigin == LyricsSearchOrigin.Automatic) {
-                                // The network request may have outlived the lookup that started it:
-                                // re-check inside the storage lock so lyrics imported (or otherwise
-                                // written) while the request was in flight are never overwritten.
-                                val appeared = LocalPlainLyricsProvider.fetch(request).getOrNull()
-                                if (appeared != null) {
-                                    val cachedWords = if (settings.wordByWordLyricsEnabled) {
-                                        LyricsStorage.readWordByWordLyrics(
-                                            context = context.applicationContext,
-                                            title = title,
-                                            artist = artist,
-                                            duration = durationMs
-                                        )
-                                    } else emptyList()
-                                    return@commit if (cachedWords.isEmpty()) appeared
-                                    else appeared.copy(wordByWordLines = cachedWords)
+                            LyricsStorage.withStorageLock storage@ {
+                                if (searchOrigin == LyricsSearchOrigin.Automatic) {
+                                    // The network request may have outlived the lookup that started it:
+                                    // re-check inside the storage lock so lyrics imported (or otherwise
+                                    // written) while the request was in flight are never overwritten.
+                                    val appeared = LocalPlainLyricsProvider.fetch(request).getOrNull()
+                                    if (appeared != null) {
+                                        val cachedWords = if (settings.wordByWordLyricsEnabled) {
+                                            LyricsStorage.readWordByWordLyrics(
+                                                context = context.applicationContext,
+                                                title = title,
+                                                artist = artist,
+                                                duration = durationMs
+                                            )
+                                        } else emptyList()
+                                        return@storage if (cachedWords.isEmpty()) appeared
+                                        else appeared.copy(wordByWordLines = cachedWords)
+                                    }
                                 }
-                            }
-                            val committed = ManualLyricsSelectionStore.commit(
-                                context.applicationContext, song, request.searchMode, result,
-                                manual = searchOrigin == LyricsSearchOrigin.Manual,
-                                savePlain = settings.autoSaveLocal || forceSaveOnline
-                            )
-                            if (result.wordByWordLines.isNotEmpty()) {
-                                LyricsStorage.saveWordByWordLyrics(
-                                    context = context.applicationContext,
-                                    title = title,
-                                    artist = artist,
-                                    duration = durationMs,
-                                    wordByWordLines = result.wordByWordLines,
-                                    album = album,
-                                    wordByWordProvider = result.plainProviderId,
-                                    overwrite = true
+                                val committed = ManualLyricsSelectionStore.commit(
+                                    context.applicationContext, song, request.searchMode, result,
+                                    manual = searchOrigin == LyricsSearchOrigin.Manual,
+                                    savePlain = settings.autoSaveLocal || forceSaveOnline
                                 )
+                                committed
                             }
-                            committed
                         }
                     }
                 ).findLyrics(
@@ -141,7 +131,10 @@ object LyricsRepository {
                     onInterimResult = onInterimResult,
                     searchMode = searchMode,
                     searchOrigin = searchOrigin
-                ).getOrThrow().also { token.throwIfCancellationRequested() }
+                ).getOrThrow().let { result ->
+                    token.throwIfCancellationRequested()
+                    if (!settings.wordByWordLyricsEnabled) result?.copy(wordByWordLines = emptyList()) else result
+                }
             } finally {
                 if (existing == null) lease.close()
             }
@@ -350,7 +343,8 @@ internal class LyricsRepositoryEngine(
         durationMs: Long,
         enabled: Boolean
     ): LyricsProviderResult {
-        if (!enabled || result.access != null || result.selectedManually) return result
+        if (!enabled) return if (result.wordByWordLines.isEmpty()) result else result.copy(wordByWordLines = emptyList())
+        if (result.access != null || result.selectedManually) return result
 
         val cachedWordByWordLines = wordByWordLyricsReader.read(
             context = context,
