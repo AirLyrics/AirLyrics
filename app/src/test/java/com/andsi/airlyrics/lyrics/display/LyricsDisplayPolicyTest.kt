@@ -214,4 +214,20 @@ class LyricsDisplayPolicyTest {
         org.junit.Assert.assertTrue(ChineseText.containsTraditional("看著这部著作"))
     }
 
+
+    @Test
+    fun `simplified preference keeps a zh-Hans copy that still has one traditional particle`() {
+        ChineseText.installTableForTest(
+            mapOf('見' to '见', '妳' to '你', '麼' to '么', '著' to '着', '說' to '说',
+                '們' to '们', '賴' to '赖', '礙' to '碍')
+        )
+        val rendered = LyricsDisplayPolicy.render(
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
+            original = "看不見妳的笑 我怎麼睡得著",
+            translation = "看不见你的笑 我怎么睡得著",
+            scriptPreference = LyricsScriptPreference.SIMPLIFIED
+        )
+        assertEquals("看不见你的笑 我怎么睡得著", rendered.primary)
+        assertNull(rendered.secondary)
+    }
 }

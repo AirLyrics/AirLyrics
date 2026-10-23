@@ -62,6 +62,10 @@ object LyricsDisplayPolicy {
     private fun simplifiedCopy(original: String, translation: String): String = when {
         !ChineseText.containsTraditional(translation) -> translation
         !ChineseText.containsTraditional(original) -> original
+        // A zh-Hans translation may still keep a character such as 著 that tw2s only folds in
+        // phrases; it is still the simplified copy when it carries fewer of them.
+        ChineseText.traditionalCharacterCount(translation) <
+            ChineseText.traditionalCharacterCount(original) -> translation
         else -> original
     }
 

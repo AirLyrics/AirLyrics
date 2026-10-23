@@ -270,6 +270,14 @@ object ChineseText {
     /** True when the phrase-aware traditional→simplified conversion changes the text. */
     fun containsTraditional(text: String): Boolean = toSimplified(text) != text
 
+    /**
+     * How many Han characters would change under tw2s. Phrase protection still applies to the
+     * whole string ([containsTraditional]); this count only ranks two copies of the same line.
+     */
+    fun traditionalCharacterCount(text: String): Int = text.count { character ->
+        isHan(character) && toSimplified(character.toString()) != character.toString()
+    }
+
     /** True when the text has any alphabetic content at all. */
     fun hasLetters(text: String): Boolean = text.any { it.isLetter() }
 
