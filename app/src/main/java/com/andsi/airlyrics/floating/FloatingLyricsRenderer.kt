@@ -425,7 +425,10 @@ class FloatingLyricsRenderer(
         if (text.isBlank()) return ""
 
         val sourceText = displaySegments.joinToString("") { it.text }.trim()
-        val segments = if (sourceText != text && (ChineseText.toSimplified(sourceText) != sourceText ||
+        val segments = if (sourceText != text &&
+            sourceText.filterNot { it.isWhitespace() } == text.filterNot { it.isWhitespace() }) {
+            mapDisplaySegments(sourceText, text, displaySegments) ?: return text
+        } else if (sourceText != text && (ChineseText.toSimplified(sourceText) != sourceText ||
                 ChineseText.toSimplified(text) != text)) {
             if (displaySegments === wordByWordLine.segments &&
                 sourceText != wordByWordOriginalText(wordByWordLine)) return text
@@ -479,6 +482,24 @@ class FloatingLyricsRenderer(
     ): List<WordByWordSegment>? {
         // Require complete, ordered coverage. Do not guess punctuation, missing tokens or offsets.
         if (segments.joinToString("") { it.text } != source) return null
+        // Apple can omit spaces at token boundaries (especially before a sung echo).
+        // Slice the complete display string, retaining every token's original time range.
+        if (source.filterNot { it.isWhitespace() } == display.filterNot { it.isWhitespace() }) {
+            var cursor = 0
+            val mapped = segments.map { segment ->
+                val start = cursor
+                for (character in segment.text.filterNot { it.isWhitespace() }) {
+                    while (cursor < display.length && display[cursor].isWhitespace()) cursor++
+                    if (cursor >= display.length || display[cursor] != character) return null
+                    cursor++
+                }
+                segment.copy(text = display.substring(start, cursor))
+            }.toMutableList()
+            if (mapped.isEmpty()) return null
+            val last = mapped.last()
+            mapped[mapped.lastIndex] = last.copy(text = last.text + display.substring(cursor))
+            return mapped
+        }
         val (converted, sourceBoundaries) = ChineseText.simplifiedBoundaries(source)
         val (convertedDisplay, displayBoundaries) = ChineseText.simplifiedBoundaries(display)
         if (converted != convertedDisplay) return null
