@@ -1,5 +1,8 @@
 package com.andsi.airlyrics.ui.pages.floating
 
+import com.andsi.airlyrics.floating.FloatingLyricsTextView
+import com.andsi.airlyrics.floating.SpicyLyricsSpan
+
 import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
@@ -43,6 +46,13 @@ internal fun MainUiHost.createFloatingPreviewCard(
     fun renderText(compact: Boolean) {
         val end = fullText.indexOf('\n').takeIf { it >= 0 } ?: fullText.length
         lyricView.text = if (compact) fullText.subSequence(0, end) else fullText
+        (lyricView as? FloatingLyricsTextView)?.let { view ->
+            val spans = (view.text as? android.text.Spanned)?.getSpans(0, view.text.length,
+                SpicyLyricsSpan::class.java).orEmpty()
+            val endMs = spans.maxOfOrNull { it.timing.endMs } ?: 0L
+            val started = android.os.SystemClock.uptimeMillis()
+            view.updateSpicyPlayback(if (endMs > 0) ({ (android.os.SystemClock.uptimeMillis() - started) % (endMs + 1000) }) else null, true)
+        }
         displayedCompact = compact
     }
 

@@ -446,4 +446,7 @@
     <string name="ui_batch_export_failed">匯出失敗，請嘗試其他儲存位置。</string>
     <string name="ui_batch_export_restricted">不支援匯出</string>
     <string name="ui_batch_deselect_all">取消全選</string>
+    <string name="ui_word_animation">逐字動效</string>
+    <string name="ui_animation_classic">經典</string>
+    <string name="ui_animation_spicy">Spicy</string>
 </resources>

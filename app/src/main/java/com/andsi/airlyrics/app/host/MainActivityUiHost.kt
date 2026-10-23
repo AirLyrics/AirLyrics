@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.floating.FloatingLyricsTextView
+
 import com.andsi.airlyrics.app.interaction.DraftReaderContent
 import com.andsi.airlyrics.app.interaction.LyricsDraftStore
 import com.andsi.airlyrics.app.interaction.MainOperationConfirmations
@@ -7,6 +9,7 @@ import com.andsi.airlyrics.app.interaction.toOperationTarget
 import com.andsi.airlyrics.ui.model.OperationConfirmations
 import com.andsi.airlyrics.ui.model.ReaderContent
 
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.media.session.MediaController
@@ -285,7 +288,7 @@ internal class MainActivityUiHost(
     }
 
     override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {
-        return TextView(this).apply {
+        return FloatingLyricsTextView(this).apply {
             this.text = text
             val params = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -362,6 +365,8 @@ internal class MainActivityUiHost(
     override fun lyricsContentDisplayMode(): LyricsContentDisplayMode = LyricsSettingsStore.getContentDisplayMode(this)
     override fun lyricsLineDisplayMode(): LyricsLineDisplayMode = LyricsSettingsStore.getLineDisplayMode(this)
     override fun lyricsSwitchAnimationMode(): LyricsSwitchAnimationMode = LyricsSettingsStore.getSwitchAnimationMode(this)
+    override fun wordByWordAnimationMode() = LyricsSettingsStore.getWordByWordAnimationMode(this)
+    override fun setWordByWordAnimationMode(mode: WordByWordAnimationMode) = LyricsSettingsStore.setWordByWordAnimationMode(this, mode)
     override fun wordByWordLyricsEnabled(): Boolean = LyricsSettingsStore.isWordByWordLyricsEnabled(this)
     override fun setLyricsContentDisplayMode(mode: LyricsContentDisplayMode) = LyricsSettingsStore.setContentDisplayMode(this, mode)
     override fun setLyricsLineDisplayMode(mode: LyricsLineDisplayMode) = LyricsSettingsStore.setLineDisplayMode(this, mode)

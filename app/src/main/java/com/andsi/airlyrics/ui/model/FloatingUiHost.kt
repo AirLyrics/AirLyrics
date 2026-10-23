@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.model
 
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
@@ -64,6 +65,8 @@ internal interface FloatingUiHost {
     fun lyricsContentDisplayMode(): LyricsContentDisplayMode
     fun lyricsLineDisplayMode(): LyricsLineDisplayMode
     fun lyricsSwitchAnimationMode(): LyricsSwitchAnimationMode
+    fun wordByWordAnimationMode(): WordByWordAnimationMode
+    fun setWordByWordAnimationMode(mode: WordByWordAnimationMode)
     fun wordByWordLyricsEnabled(): Boolean
     fun setLyricsContentDisplayMode(mode: LyricsContentDisplayMode)
     fun setLyricsLineDisplayMode(mode: LyricsLineDisplayMode)

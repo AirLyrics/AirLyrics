@@ -448,4 +448,7 @@ Word-timed TTML:
     <string name="ui_batch_export_failed">Export failed. Try another location.</string>
     <string name="ui_batch_export_restricted">Export unavailable</string>
     <string name="ui_batch_deselect_all">Deselect all</string>
+    <string name="ui_word_animation">Word animation</string>
+    <string name="ui_animation_classic">Classic</string>
+    <string name="ui_animation_spicy">Spicy</string>
 </resources>

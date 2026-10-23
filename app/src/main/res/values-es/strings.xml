@@ -450,4 +450,7 @@ TTML de tiempo por palabra:
     <string name="ui_batch_export_failed">No se pudo exportar. Prueba otra ubicación.</string>
     <string name="ui_batch_export_restricted">Exportación no disponible</string>
     <string name="ui_batch_deselect_all">Deseleccionar todo</string>
+    <string name="ui_word_animation">Animación por palabra</string>
+    <string name="ui_animation_classic">Clásica</string>
+    <string name="ui_animation_spicy">Spicy</string>
 </resources>

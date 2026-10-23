@@ -53,6 +53,7 @@ open class FloatingLyricsService : Service() {
         contentModeProvider = { LyricsSettingsStore.getContentDisplayMode(this) },
         lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
         switchAnimationModeProvider = { LyricsSettingsStore.getSwitchAnimationMode(this) },
+        wordByWordAnimationModeProvider = { LyricsSettingsStore.getWordByWordAnimationMode(this) },
         wordByWordLyricsEnabledProvider = { LyricsSettingsStore.isWordByWordLyricsEnabled(this) },
         wordByWordHighlightColorProvider = {
             val style = FloatingLyricsStyleStore.getStyle(this)
