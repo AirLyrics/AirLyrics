@@ -15,7 +15,6 @@ import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
-import kotlin.math.abs
 
 /**
  * Apple Music lyrics: line-level LRC plus Apple's own word timings and subtitle translations.
@@ -142,7 +141,9 @@ object ApplePlainLyricsProvider : LyricsProvider {
             val startMs: Long,
             val endMs: Long,
             val text: String,
-            val segments: List<WordByWordSegment>
+            val segments: List<WordByWordSegment>,
+            val hasTranslatedText: Boolean,
+            val translatedText: String
         )
 
         val raws = buildList {
@@ -171,28 +172,32 @@ object ApplePlainLyricsProvider : LyricsProvider {
                         startMs = line.optLong("start_ms"),
                         endMs = line.optLong("end_ms"),
                         text = text,
-                        segments = segments
+                        segments = segments,
+                        hasTranslatedText = line.has("translated_text"),
+                        translatedText = if (line.isNull("translated_text")) ""
+                            else normalizeCjkSpacing(line.optString("translated_text"))
                     )
                 )
             }
         }
         if (raws.isEmpty()) return emptyList()
 
-        // Apple's translated_lrc mirrors the original lines one to one. When the counts match,
-        // pair by position: a line that starts after an instrumental break can be several hundred
-        // milliseconds off, and a pure nearest-time match would drop its translation.
-        val paired = if (translations.size == raws.size) {
-            raws.indices.map { translations[it].text }
-        } else {
-            raws.map { raw ->
-                translations.minByOrNull { abs(it.timeMs - raw.startMs) }
-                    ?.takeIf { abs(it.timeMs - raw.startMs) <= 1_000L }
-                    ?.text.orEmpty()
-            }
-        }
+        // Rust LRC timestamps truncate to 10ms. Legacy payloads are safe only when both
+        // sides have a unique line in that bucket, including original lines without words.
+        val translationsByTime = translations.groupBy { it.timeMs / 10 }
+        val rawsByTime = raws.groupBy { it.startMs / 10 }
+        val originalsByTime = LrcParser.parse(json.optString("lrc"))
+            .filterNot { it.isMetadata }.groupBy { it.timeMs / 10 }
 
-        return raws.mapIndexed { index, raw ->
-            val translatedText = paired[index]
+        return raws.map { raw ->
+            val bucket = raw.startMs / 10
+            val translatedText = if (raw.hasTranslatedText) raw.translatedText else {
+                translationsByTime[bucket]?.singleOrNull()
+                    ?.takeIf {
+                        rawsByTime[bucket]?.size == 1 &&
+                            originalsByTime[bucket]?.size == 1
+                    }?.text.orEmpty()
+            }
             WordByWordLine(
                 startMs = raw.startMs,
                 endMs = raw.endMs,

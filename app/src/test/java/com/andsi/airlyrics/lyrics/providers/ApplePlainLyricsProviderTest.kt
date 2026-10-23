@@ -6,6 +6,59 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ApplePlainLyricsProviderTest {
+    private fun translationsFor(
+        starts: List<Long>,
+        translatedLrc: String,
+        fields: List<String> = List(starts.size) { "" },
+        originalStarts: List<Long> = starts
+    ): List<String> {
+        val words = starts.mapIndexed { index, start ->
+            """{"start_ms":$start,"end_ms":${start + 500},"text":"line$index",
+                "segments":[{"text":"line$index","start_ms":$start,"end_ms":${start + 500}}]${fields[index]}}"""
+        }.joinToString(",")
+        val originalLrc = originalStarts.joinToString("\n") { start ->
+            "[00:${(start / 1000).toString().padStart(2, '0')}.${(start % 1000).toString().padStart(3, '0')}]original"
+        }
+        val json = org.json.JSONObject().put("ok", true).put("lrc", originalLrc)
+            .put("translated_lrc", translatedLrc).put("word_by_word", org.json.JSONArray("[$words]"))
+        return ApplePlainLyricsProvider.parse(json.toString(), "", "", "", 0)!!
+            .wordByWordLines.map { it.translatedText }
+    }
+
+    @Test
+    fun equalCountsDoNotPairShiftedTranslations() {
+        assertEquals(listOf("", "second"), translationsFor(
+            listOf(1000, 2000), "[00:02.00]second\n[00:03.00]third",
+            originalStarts = listOf(1000, 2000, 3000)
+        ))
+    }
+
+    @Test
+    fun explicitTranslationAndNullOverrideLegacyFallback() {
+        assertEquals(listOf("", "direct"), translationsFor(
+            listOf(1000, 2000), "[00:01.00]wrong\n[00:02.00]wrong",
+            listOf(",\"translated_text\":null", ",\"translated_text\":\"direct\"")
+        ))
+    }
+
+    @Test
+    fun legacyUniqueTimesAllowOnlyTenMillisecondTruncation() {
+        assertEquals(listOf("first", "second", ""), translationsFor(
+            listOf(1009, 2000, 3000), "[00:01.00]first\n[00:02.00]second\n[00:02.99]outside"
+        ))
+    }
+
+    @Test
+    fun duplicateTimesAndTruncationCollisionsStayEmpty() {
+        assertEquals(listOf(""), translationsFor(listOf(1000), "[00:01.00]a\n[00:01.00]b"))
+        for (starts in listOf(listOf(1000L, 1000L), listOf(1001L, 1009L))) {
+            assertEquals(listOf("", ""), translationsFor(starts, "[00:01.00]single"))
+        }
+        assertEquals(listOf(""), translationsFor(
+            listOf(1001), "[00:01.00]single", originalStarts = listOf(1001, 1009)
+        ))
+    }
+
     @Test
     fun failedNativeResponsesPreserveClassificationAndMessage() {
         for (nativeType in listOf("NotFound", "NetworkError", "ParseError", "NativeError", "NeedCredential", "Unexpected", "")) {
@@ -54,7 +107,7 @@ class ApplePlainLyricsProviderTest {
     }
 
     @Test
-    fun translatedLrc_pairsByPositionWhenLineTimesDrift() {
+    fun translatedLrc_leavesUnverifiedTimeDriftEmpty() {
         ChineseText.installTableForTest(mapOf('愛' to '爱', '你' to '你', '越' to '越', '久' to '久', '我' to '我', '被' to '被', '動' to '动'))
         val json = """
             {
@@ -74,8 +127,8 @@ class ApplePlainLyricsProviderTest {
         val line = ApplePlainLyricsProvider.parse(json, "被動", "伍佰", "", 240000)
             ?.wordByWordLines?.single()
 
-        assertEquals("爱你越久我越被动", line?.translatedText)
-        assertEquals("爱你越久我越被动", line?.translatedSegments?.joinToString("") { it.text })
+        assertEquals("", line?.translatedText)
+        assertTrue(line?.translatedSegments.orEmpty().isEmpty())
     }
 
     @Test

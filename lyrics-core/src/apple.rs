@@ -281,7 +281,9 @@ pub(crate) fn to_lrc(lines: &[Line]) -> String {
 fn to_translated_lrc(lines: &[Line], translations: &HashMap<String, String>) -> Option<String> {
     let mut out = String::new();
     for line in lines {
-        let key = line.key.as_ref()?;
+        let Some(key) = line.key.as_ref() else {
+            continue;
+        };
         let Some(text) = translations.get(key) else {
             continue;
         };
@@ -296,7 +298,7 @@ fn to_translated_lrc(lines: &[Line], translations: &HashMap<String, String>) -> 
     }
 }
 
-fn word_by_word_json(lines: &[Line]) -> Value {
+fn word_by_word_json(lines: &[Line], translations: &HashMap<String, String>) -> Value {
     Value::Array(
         lines
             .iter()
@@ -306,6 +308,7 @@ fn word_by_word_json(lines: &[Line]) -> Value {
                     "start_ms": line.start_ms,
                     "end_ms": line.end_ms,
                     "text": line.text,
+                    "translated_text": line.key.as_ref().and_then(|key| translations.get(key)).map(|text| text.trim()),
                     "segments": line.words.iter().map(|word| json!({
                         "text": word.text,
                         "start_ms": word.start_ms,
@@ -609,7 +612,7 @@ async fn resolve(
         "lrc": lrc,
         "translated_lrc": translated_lrc,
         "merged_lrc": Value::Null,
-        "word_by_word": word_by_word_json(&parsed.lines),
+        "word_by_word": word_by_word_json(&parsed.lines, &parsed.translations),
         "album_query": album,
     }))
 }
@@ -688,6 +691,77 @@ mod tests {
         assert!(lrc.starts_with("[00:22.18]攔路雨偏似雪花"));
         let translated = to_translated_lrc(&parsed.lines, &parsed.translations).unwrap();
         assert!(translated.contains("[00:22.18]拦路雨偏似雪花"));
+    }
+
+    const PARTIAL_TRANSLATIONS: &str = r#"<tt><body><div>
+<p begin="1.009" end="2" itunes:key="L1"><span begin="1.009" end="2">one</span></p>
+<p begin="2.019" end="3" itunes:key="L2"><span begin="2.019" end="3">two</span></p>
+<p begin="3.029" end="4" itunes:key="L3">three</p>
+</div></body><head><translations><translation type="subtitle" xml:lang="zh-Hans">
+<text for="L2">二</text><text for="L3">三</text>
+</translation></translations></head></tt>"#;
+
+    #[test]
+    fn word_translations_follow_keys_instead_of_filtered_positions() {
+        let parsed = parse_ttml(PARTIAL_TRANSLATIONS);
+        let words = word_by_word_json(&parsed.lines, &parsed.translations);
+        assert_eq!(words.as_array().unwrap().len(), 2);
+        assert!(words[0].get("translated_text").unwrap().is_null());
+        assert_eq!(words[1]["translated_text"], "二");
+        assert_eq!(
+            to_translated_lrc(&parsed.lines, &parsed.translations).as_deref(),
+            Some("[00:02.01]二\n[00:03.02]三\n")
+        );
+    }
+
+    #[test]
+    fn missing_keys_skip_only_the_affected_line() {
+        for missing in 0..3 {
+            let mut parsed = parse_ttml(PARTIAL_TRANSLATIONS);
+            parsed.translations.insert("L1".into(), "一".into());
+            parsed.lines[missing].key = None;
+            let expected = ["[00:01.00]一\n", "[00:02.01]二\n", "[00:03.02]三\n"]
+                .iter()
+                .enumerate()
+                .filter_map(|(index, text)| (index != missing).then_some(*text))
+                .collect::<String>();
+            assert_eq!(
+                to_translated_lrc(&parsed.lines, &parsed.translations),
+                Some(expected)
+            );
+            let words = word_by_word_json(&parsed.lines, &parsed.translations);
+            for index in 0..2 {
+                if index == missing {
+                    assert!(words[index]["translated_text"].is_null());
+                } else {
+                    assert_eq!(words[index]["translated_text"], ["一", "二"][index]);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn no_valid_translation_returns_none() {
+        let mut parsed = parse_ttml(PARTIAL_TRANSLATIONS);
+        assert_eq!(to_translated_lrc(&parsed.lines, &HashMap::new()), None);
+        assert!(word_by_word_json(&parsed.lines, &HashMap::new())
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|line| line["translated_text"].is_null()));
+        for line in &mut parsed.lines {
+            line.key = None;
+        }
+        assert_eq!(to_translated_lrc(&parsed.lines, &parsed.translations), None);
+        assert!(word_by_word_json(&parsed.lines, &parsed.translations)
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|line| line["translated_text"].is_null()));
+        assert_eq!(
+            resolve_result(Err("ParseError".into()))["error_type"],
+            "ParseError"
+        );
     }
 
     #[test]
