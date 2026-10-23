@@ -15,7 +15,11 @@ class ChineseTextTest {
         '絲' to '丝',
         '乾' to '干',
         '擁' to '拥',
-        '麼' to '么'
+        '麼' to '么',
+        '說' to '说',
+        '們' to '们',
+        '賴' to '赖',
+        '礙' to '碍'
     )
     private val variants = mapOf('著' to '着')
     private val variantPhrases = mapOf(
@@ -99,6 +103,28 @@ class ChineseTextTest {
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著(蓋著)", "苏产绣盖着"))
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著", "苏产绣盖着"))
         assertTrue(ChineseText.isScriptConversion("蓋著蓋著", "盖着"))
+        // Broken parenthetical echo: the sung span only kept the closing bracket.
+        assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著)", "苏产绣盖着"))
+    }
+
+    @Test
+    fun scriptConversion_handlesTheEchoedAppleLine() {
+        install()
+        // Real line from Apple's word-timed lyrics for 彩虹; the translation drops the echo.
+        assertTrue(
+            ChineseText.isScriptConversion(
+                "妳說依賴是我們的阻礙的阻礙)",
+                "你说依赖是我们的阻碍"
+            )
+        )
+    }
+
+    @Test
+    fun stripPerformanceRepeat_handlesAnUnbalancedEchoBracket() {
+        assertEquals(
+            "妳說依賴是我們的阻礙",
+            ChineseText.stripPerformanceRepeat("妳說依賴是我們的阻礙的阻礙)")
+        )
     }
 
     @Test

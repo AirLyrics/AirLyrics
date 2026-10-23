@@ -133,9 +133,7 @@ object ChineseText {
      */
     fun isScriptConversion(original: String, translation: String): Boolean {
         if (original.isBlank() || translation.isBlank()) return false
-        val converted = comparable(toSimplified(stripPerformanceRepeat(original)))
-        val target = comparable(toSimplified(stripPerformanceRepeat(translation)))
-        return converted == target
+        return comparisonForm(original) == comparisonForm(translation)
     }
 
     /**
@@ -146,7 +144,10 @@ object ChineseText {
      */
     internal fun stripPerformanceRepeat(text: String): String {
         var value = text.trim()
+        // A parenthetical echo can lose its opening bracket when the parser only keeps the sung
+        // span ("…的阻礙的阻礙)"), so drop complete groups first, then stray closers.
         value = value.replace(Regex("\\s*[（(][^（）()]{1,24}[）)]\\s*$"), "").trim()
+        value = value.trimEnd(')', '）', ' ', '\u3000').trim()
         val length = value.length
         // The repeated block must be at least two characters; single-character echoes ("想想")
         // are ordinary words far more often than performance repeats.
@@ -155,19 +156,45 @@ object ChineseText {
             if (value.regionMatches(length - 2 * unit, tail, 0, unit)) {
                 return value.substring(0, length - unit).trim()
             }
+            // The echo often repeats the tail behind a particle whose opening bracket was lost:
+            // "…是我們的阻礙" + "(的阻礙)" arrives as "…阻礙的阻礙".
+            if (length - 2 * unit - 1 >= 0) {
+                val particle = value[length - unit - 1]
+                if ((particle == '\u7684' || particle == '\u5730' || particle == '\u5F97') &&
+                    value.regionMatches(length - 2 * unit - 1, tail, 0, unit)
+                ) {
+                    return value.substring(0, length - unit - 1).trim()
+                }
+            }
         }
         return value
     }
+
+    /** Comparison-only form: echo-free, script-folded, whitespace and punctuation removed. */
+    fun comparisonForm(text: String): String = comparable(toSimplified(stripPerformanceRepeat(text)))
 
     private fun comparable(text: String): String {
         val stripped = buildString(text.length) {
             text.forEach { character ->
                 if (character.isWhitespace() ||
                 character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014") return@forEach
-                append(character)
+                append(foldComparisonVariant(character))
             }
         }
         return stripped
+    }
+
+    /**
+     * Characters that OpenCC's tw2s tables do not fold but that lyric translators regularly swap.
+     * Folding is symmetric on both sides and comparison-only, so the displayed text keeps the
+     * exact characters the lyric shipped with.
+     */
+    private fun foldComparisonVariant(character: Char): Char = when (character) {
+        '\u59B3' -> '\u4F60'   // 妳 -> 你
+        '\u7942' -> '\u4ED6'   // 祂 -> 他
+        '\u7260' -> '\u5B83'   // 牠 -> 它
+        '\u8457' -> '\u7740'   // 著 -> 着 (lyric usage; tw2s only covers a few phrases)
+        else -> character
     }
 
     private fun convert(text: String, stage: Stage, boundaries: IntArray? = null): String {

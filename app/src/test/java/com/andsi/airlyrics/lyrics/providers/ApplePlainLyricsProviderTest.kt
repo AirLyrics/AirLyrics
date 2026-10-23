@@ -237,4 +237,25 @@ class ApplePlainLyricsProviderTest {
                 )).toString(), "", "", "", 0
         )!!.wordByWordLines.single().translatedSegments
 
+
+    @Test
+    fun repeatedLineReusesTheTranslationCarriedByItsOtherOccurrence() {
+        ChineseText.installTableForTest(
+            mapOf('說' to '说', '們' to '们', '賴' to '赖', '礙' to '碍')
+        )
+        val words = """
+            [{"start_ms":1000,"end_ms":3000,"text":"妳說依賴是我們的阻礙",
+              "segments":[{"text":"妳說依賴是我們的阻礙","start_ms":1000,"end_ms":3000}],
+              "translated_text":"你说依赖是我们的阻碍"},
+             {"start_ms":5000,"end_ms":7000,"text":"妳說依賴是我們的阻礙的阻礙)",
+              "segments":[{"text":"妳說依賴是我們的阻礙的阻礙)","start_ms":5000,"end_ms":7000}]}]
+        """.trimIndent()
+        val json = org.json.JSONObject().put("ok", true)
+            .put("lrc", "[00:01.00]original\n[00:05.00]original")
+            .put("translated_lrc", "[00:01.00]你说依赖是我们的阻碍")
+            .put("word_by_word", org.json.JSONArray(words))
+        val lines = ApplePlainLyricsProvider.parse(json.toString(), "", "", "", 0)!!.wordByWordLines
+        assertEquals("你说依赖是我们的阻碍", lines[1].translatedText)
+        assertTrue(lines[1].translatedSegments.isNotEmpty())
+    }
 }

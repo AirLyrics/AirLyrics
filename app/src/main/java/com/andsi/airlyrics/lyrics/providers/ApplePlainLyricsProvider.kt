@@ -182,6 +182,18 @@ object ApplePlainLyricsProvider : LyricsProvider {
         }
         if (raws.isEmpty()) return emptyList()
 
+        // A line the singer repeats often carries the translation only once (Apple keys each
+        // occurrence separately). Reuse it when the sentence is identical after dropping the
+        // performance echo and folding scripts, and only when every candidate agrees.
+        fun comparisonKey(text: String): String = ChineseText.comparisonForm(text)
+        val reusableTranslations = raws
+            .mapNotNull { raw ->
+                raw.translatedText.takeIf { it.isNotBlank() }
+                    ?.let { comparisonKey(raw.text) to it }
+            }
+            .groupBy({ it.first }, { it.second })
+            .mapValues { (_, values) -> values.distinct() }
+
         // Rust LRC timestamps truncate to 10ms. Legacy payloads are safe only when both
         // sides have a unique line in that bucket, including original lines without words.
         val translationsByTime = translations.groupBy { it.timeMs / 10 }
@@ -196,7 +208,9 @@ object ApplePlainLyricsProvider : LyricsProvider {
                     ?.takeIf {
                         rawsByTime[bucket]?.size == 1 &&
                             originalsByTime[bucket]?.size == 1
-                    }?.text.orEmpty()
+                    }?.text
+                    ?: reusableTranslations[comparisonKey(raw.text)]?.singleOrNull()
+                    ?: ""
             }
             WordByWordLine(
                 startMs = raw.startMs,
@@ -237,13 +251,19 @@ object ApplePlainLyricsProvider : LyricsProvider {
         segments: List<WordByWordSegment>
     ): List<WordByWordSegment>? {
         if (segments.isEmpty()) return null
-        if (!ChineseText.isScriptConversion(segments.joinToString("") { it.text }, translatedText)) {
+        val source = segments.joinToString("") { it.text }
+        if (!ChineseText.isScriptConversion(source, translatedText)) {
             return null
         }
+        // The echoed tail is not present in the translation, so it must not consume characters;
+        // keep the segments that cover the sentence itself and leave the echo unmapped.
+        val spoken = ChineseText.stripPerformanceRepeat(source)
+        val timed = if (spoken.length == source.length) segments else prefixSegments(segments, spoken.length)
+        if (timed.isEmpty()) return null
         val mapped = mutableListOf<WordByWordSegment>()
         var cursor = 0
-        for (segment in segments) {
-            val target = comparable(ChineseText.toSimplified(segment.text))
+        for (segment in timed) {
+            val target = ChineseText.comparisonForm(segment.text)
             if (target.isEmpty()) continue
             val consumed = StringBuilder()
             var matched = 0
@@ -256,7 +276,7 @@ object ApplePlainLyricsProvider : LyricsProvider {
                 if (!isIgnorable(character)) matched++
             }
             if (matched != target.length ||
-                comparable(ChineseText.toSimplified(consumed.toString())) != target
+                ChineseText.comparisonForm(consumed.toString()) != target
             ) return null
             mapped += segment.copy(text = consumed.toString())
         }
@@ -292,6 +312,27 @@ object ApplePlainLyricsProvider : LyricsProvider {
     private fun isIgnorable(character: Char): Boolean =
         character.isWhitespace() ||
         character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014"
+
+    /** The leading segments whose text covers [limit] UTF-16 units; the last one is truncated. */
+    private fun prefixSegments(
+        segments: List<WordByWordSegment>,
+        limit: Int
+    ): List<WordByWordSegment> {
+        val out = mutableListOf<WordByWordSegment>()
+        var count = 0
+        for (segment in segments) {
+            if (count >= limit) break
+            val remaining = limit - count
+            if (segment.text.length <= remaining) {
+                out += segment
+                count += segment.text.length
+            } else {
+                out += segment.copy(text = segment.text.substring(0, remaining))
+                break
+            }
+        }
+        return out
+    }
 
     /** Whitespace and punctuation differ between scripts; they must not block the comparison. */
     private fun comparable(text: String): String = text.filterNot(::isIgnorable)
