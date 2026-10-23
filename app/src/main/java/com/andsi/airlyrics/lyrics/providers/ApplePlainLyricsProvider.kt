@@ -255,7 +255,9 @@ object ApplePlainLyricsProvider : LyricsProvider {
                 cursor++
                 if (!isIgnorable(character)) matched++
             }
-            if (matched != target.length) return null
+            if (matched != target.length ||
+                comparable(ChineseText.toSimplified(consumed.toString())) != target
+            ) return null
             mapped += segment.copy(text = consumed.toString())
         }
         while (cursor < translatedText.length && isIgnorable(translatedText[cursor])) {

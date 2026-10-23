@@ -156,4 +156,43 @@ class LyricsDisplayPolicyTest {
         )
         assertEquals("Hello\n你好", text)
     }
+    @Test
+    fun `single character rewrites keep both lines`() {
+        for (translation in listOf("我今天真的很想他", "我今天真的不想你")) {
+            val rendered = LyricsDisplayPolicy.render(
+                LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
+                original = "我今天真的很想你",
+                translation = translation,
+                scriptPreference = LyricsScriptPreference.SIMPLIFIED
+            )
+            assertEquals("我今天真的很想你", rendered.primary)
+            assertEquals(translation, rendered.secondary)
+        }
+    }
+
+    @Test
+    fun `real dictionaries respect protected zhe phrases and convert the particle`() {
+        val directory = listOf(
+            java.io.File("src/main/assets/opencc"),
+            java.io.File("app/src/main/assets/opencc")
+        ).first { it.isDirectory }
+        ChineseText.resetForTest()
+        ChineseText.loadFromDirectory(directory)
+        for ((preference, expected) in listOf(
+            LyricsScriptPreference.SIMPLIFIED to "这部著作",
+            LyricsScriptPreference.TRADITIONAL to "這部著作"
+        )) {
+            val rendered = LyricsDisplayPolicy.render(
+                LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
+                original = "這部著作",
+                translation = "这部著作",
+                scriptPreference = preference
+            )
+            assertEquals(expected, rendered.primary)
+            assertNull(rendered.secondary)
+        }
+        assertEquals("看着这部著作", ChineseText.toSimplified("看著這部著作"))
+        org.junit.Assert.assertTrue(ChineseText.containsTraditional("看著这部著作"))
+    }
+
 }

@@ -204,4 +204,37 @@ class ApplePlainLyricsProviderTest {
         // 真实翻译无法逐字对齐：不给时间轴，UI 走“原文+译文”且译文不高亮。
         assertTrue(translated.isEmpty())
     }
+    @Test
+    fun singleCharacterRewrites_haveNoWordTiming() {
+        ChineseText.installTableForTest(emptyMap())
+        for (translation in listOf("我今天真的很想他", "我今天真的不想你")) {
+            assertTrue(translatedSegmentsFor("我今天真的很想你", translation).isEmpty())
+        }
+    }
+
+    @Test
+    fun phraseAcrossTokens_doesNotReuseTimingWithoutMatchingConsumedText() {
+        ChineseText.installTableForTest(emptyMap(), phrases = mapOf("甲乙" to "丙丁"))
+        assertTrue(translatedSegmentsFor("甲乙", "丙丁").isEmpty())
+    }
+
+    private fun translatedSegmentsFor(original: String, translation: String) =
+        ApplePlainLyricsProvider.parse(
+            org.json.JSONObject()
+                .put("ok", true)
+                .put("lrc", "[00:01.00]$original")
+                .put("translated_lrc", "[00:01.00]$translation")
+                .put("word_by_word", org.json.JSONArray().put(
+                    org.json.JSONObject()
+                        .put("start_ms", 1000).put("end_ms", 2000).put("text", original)
+                        .put("segments", org.json.JSONArray().apply {
+                            original.forEachIndexed { index, character ->
+                                put(org.json.JSONObject().put("text", character.toString())
+                                    .put("start_ms", 1000 + index * 100)
+                                    .put("end_ms", 1100 + index * 100))
+                            }
+                        })
+                )).toString(), "", "", "", 0
+        )!!.wordByWordLines.single().translatedSegments
+
 }

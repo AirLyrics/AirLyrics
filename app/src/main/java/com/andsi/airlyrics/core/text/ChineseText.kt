@@ -122,18 +122,7 @@ object ChineseText {
         if (original.isBlank() || translation.isBlank()) return false
         val converted = comparable(toSimplified(original))
         val target = comparable(toSimplified(translation))
-        if (converted == target) return true
-        // Translators occasionally pick a different but equivalent orthography for one word (for
-        // example U+4EC0/U+7740 written where the reference table keeps the other variant).
-        // Accept a few same-length substitutions on long lines; short lines must match exactly,
-        // otherwise a real rewrite that flips one character slips through.
-        if (converted.length != target.length || converted.length < 8) return false
-        val allowed = maxOf(1, converted.length / 12)
-        var differences = 0
-        for (index in converted.indices) {
-            if (converted[index] != target[index] && ++differences > allowed) return false
-        }
-        return true
+        return converted == target
     }
 
     private fun comparable(text: String): String {
@@ -192,12 +181,8 @@ object ChineseText {
     /** True when the text carries Han characters (Chinese script). */
     fun containsHan(text: String): Boolean = text.any(::isHan)
 
-    /** True when at least one Han character has a traditional→simplified mapping. */
-    fun containsTraditional(text: String): Boolean = text.any { character ->
-        if (!isHan(character)) return@any false
-        val mapped = tsStage.chars[character] ?: twStage.chars[character]
-        mapped != null && mapped != character.toString()
-    }
+    /** True when the phrase-aware traditional→simplified conversion changes the text. */
+    fun containsTraditional(text: String): Boolean = toSimplified(text) != text
 
     /** True when the text has any alphabetic content at all. */
     fun hasLetters(text: String): Boolean = text.any { it.isLetter() }

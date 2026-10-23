@@ -61,9 +61,9 @@ class ChineseTextTest {
     }
 
     @Test
-    fun scriptConversion_acceptsShenMeWrittenWithShi() {
+    fun scriptConversion_rejectsVariantsWithoutDictionarySupport() {
         install()
-        assertTrue(
+        assertFalse(
             ChineseText.isScriptConversion("但缺乏你我又擁有甚麼", "但缺乏你我又拥有什么")
         )
     }
@@ -85,4 +85,20 @@ class ChineseTextTest {
         install()
         assertFalse(ChineseText.isScriptConversion("但缺乏你我又擁有甚麼", "但我从来没有真正拥有过什么"))
     }
+    @Test
+    fun scriptConversion_rejectsSingleCharacterRewritesInLongLines() {
+        install()
+        assertFalse(ChineseText.isScriptConversion("我今天真的很想你", "我今天真的很想他"))
+        assertFalse(ChineseText.isScriptConversion("我今天真的很想你", "我今天真的不想你"))
+    }
+
+    @Test
+    fun containsTraditional_respectsProtectedPhrasesAndUnloadedTables() {
+        install()
+        assertFalse(ChineseText.containsTraditional("著作"))
+        assertTrue(ChineseText.containsTraditional("蓋著我"))
+        ChineseText.resetForTest()
+        assertFalse(ChineseText.containsTraditional("蓋著我"))
+    }
+
 }
