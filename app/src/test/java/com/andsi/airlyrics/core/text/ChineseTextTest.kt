@@ -105,6 +105,8 @@ class ChineseTextTest {
         assertTrue(ChineseText.isScriptConversion("蓋著蓋著", "盖着"))
         // Broken parenthetical echo: the sung span only kept the closing bracket.
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著)", "苏产绣盖着"))
+        // A space inside the echo must not hide it.
+        assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著 蓋著", "苏产绣盖着"))
     }
 
     @Test

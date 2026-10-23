@@ -170,8 +170,13 @@ object ChineseText {
         return value
     }
 
-    /** Comparison-only form: echo-free, script-folded, whitespace and punctuation removed. */
-    fun comparisonForm(text: String): String = comparable(toSimplified(stripPerformanceRepeat(text)))
+    /**
+     * Comparison-only form: simplified, script-folded, whitespace/punctuation removed, and the
+     * singer's echoed tail dropped. Cleaning comes before the echo scan so a space or bracket
+     * inside the echo ("…阻礙 的阻礙") cannot hide the repeat.
+     */
+    fun comparisonForm(text: String): String =
+        comparable(stripPerformanceRepeat(comparable(toSimplified(text))))
 
     private fun comparable(text: String): String {
         val stripped = buildString(text.length) {
