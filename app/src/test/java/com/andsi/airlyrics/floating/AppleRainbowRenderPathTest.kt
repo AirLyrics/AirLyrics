@@ -74,24 +74,6 @@ class AppleRainbowRenderPathTest : LyricsStorageTestBase() {
         checkRendering("repository ordinary saved LRC", automaticLookup(), true)
     }
 
-    @Test
-    fun legacySavedPayload_missingTargetTokensShadowsFreshProviderAndDoesNotHighlight() {
-        // Models a legacy stored result, not a claim that these are the device's actual bytes.
-        // Other lines retain timing, explaining how a single line can fail after upgrades.
-        val legacy = fresh.copy(wordByWordLines = fresh.wordByWordLines.map {
-            if (it.startMs == 63_849L) it.copy(translatedSegments = emptyList()) else it
-        })
-        ManualLyricsSelectionStore.commit(context, song, LyricsSearchMode.Original, legacy, true, true)
-        val selected = requireNotNull(ManualLyricsSelectionStore.read(context, song)).result
-        assertTrue(selected.wordByWordLines.first { it.startMs == 63_849L }.translatedSegments.isEmpty())
-        checkRendering("legacy manual selection", automaticLookup(), true)
-        ManualLyricsSelectionStore.forget(context, song)
-        checkRendering("legacy ordinary saved LRC", automaticLookup(), true)
-        // An explicit choice replaces the saved document; automatic lookup above does not.
-        ManualLyricsSelectionStore.commit(context, song, LyricsSearchMode.Original, fresh, true, true)
-        checkRendering("explicit replacement", automaticLookup(), true)
-    }
-
     private fun automaticLookup(): LyricsProviderResult {
         var calls = 0
         val provider = object : PlainLyricsProvider {

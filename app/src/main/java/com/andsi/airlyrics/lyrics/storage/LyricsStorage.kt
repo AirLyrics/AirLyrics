@@ -225,7 +225,6 @@ object LyricsStorage {
     }
 
     fun readPlainLyrics(context: Context, title: String, artist: String, duration: Long): String? = withStorageLock {
-        LyricsIndexStore.find(context, title, artist, duration)?.let { AppleStoredLyricsRepair.repair(context, it) }
         ManualLyricsSelectionStore.read(context, SongIdentity(title, artist, durationMs = duration))?.result?.plainLrc
             ?: PlainLyricsStorageOps.readPlainLyrics(context, title, artist, duration)
             ?: SpicyLyricsCache.forContext(context).read(SpicyLyricsCache.key(title, artist, duration))?.plainLrc
@@ -322,7 +321,6 @@ object LyricsStorage {
         ManualLyricsSelectionStore.read(context, SongIdentity(title, artist, durationMs = duration))?.let {
             return@withStorageLock it.result.wordByWordLines
         }
-        LyricsIndexStore.find(context, title, artist, duration)?.let { AppleStoredLyricsRepair.repair(context, it) }
         WordByWordLyricsStorageOps.readWordByWordLyrics(context, title, artist, duration)
     }
 
@@ -490,26 +488,9 @@ object LyricsStorage {
 
     fun pruneOnlineCache(context: Context) = SpicyLyricsCache.forContext(context).prune()
 
-    /** "著著)" / "到到)" — an echo whose opening bracket was lost by an old build. */
-    internal fun hasLostEchoBracket(text: String): Boolean {
-        val trimmed = text.trim()
-        if (!trimmed.contains(')') && !trimmed.contains('\uFF09')) return false
-        if (trimmed.contains('(') || trimmed.contains('\uFF08')) return false
-        val lastChar = trimmed.last()
-        if (lastChar != ')' && lastChar != '\uFF09') return false
-        val beforeBracket = trimmed.dropLast(1)
-        if (beforeBracket.length < 2) return false
-        // The echo repeats the tail of the line: "睡得著著", "抱不到到", "繞是會繞".
-        val longest = beforeBracket.length / 2
-        return (1..longest).any { length ->
-            beforeBracket.endsWith(beforeBracket.substring(beforeBracket.length - 2 * length, beforeBracket.length - length))
-        }
-    }
-
     fun scheduleCacheMaintenance(context: Context) {
         val app = context.applicationContext
         Thread({
-            runCatching { withStorageLock { LyricsIndexStore.read(app).forEach { AppleStoredLyricsRepair.repair(app, it) } } }
             runCatching { pruneOnlineCache(app) }
         }, "AirLyrics-CacheCleanup").apply { isDaemon = true }.start()
         val scheduler = app.getSystemService(android.app.job.JobScheduler::class.java)

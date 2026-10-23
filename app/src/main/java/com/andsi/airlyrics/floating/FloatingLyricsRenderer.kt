@@ -300,19 +300,6 @@ class FloatingLyricsRenderer(
                             positionMs,
                             wordByWordLine.translatedSegments
                         )
-                    // A copy saved before the translator timings existed carries no translated
-                    // segments. When the shown line is only a script conversion of the original,
-                    // the original tokens still describe it, so map them instead of dropping the
-                    // highlight for ever (automatic lookup never rewrites saved lyrics).
-                    showsTranslationOnly &&
-                        ChineseText.isScriptConversion(original, rendered.primary) -> {
-                        val fallback = proportionalSegments(wordByWordLine, rendered.primary)
-                        if (fallback != null) {
-                            wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs, fallback)
-                        } else {
-                            rendered.primary
-                        }
-                    }
                     showsTranslationOnly -> rendered.primary
                     else -> wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs)
                 }
@@ -327,14 +314,6 @@ class FloatingLyricsRenderer(
                         positionMs,
                         translatedSegments
                     )
-                    ChineseText.isScriptConversion(original, secondary) -> {
-                        val fallback = proportionalSegments(wordByWordLine, secondary)
-                        if (fallback != null) {
-                            wordByWordLineSpan(wordByWordLine, secondary, positionMs, fallback)
-                        } else {
-                            secondary
-                        }
-                    }
                     else -> secondary
                 }
             }
@@ -436,15 +415,6 @@ class FloatingLyricsRenderer(
         return indexes.filter { it in currentWordByWordLines.indices }
     }
 
-    /** Reuse verified script-conversion timing, including whitespace and sung echoes. */
-    private fun proportionalSegments(
-        wordByWordLine: WordByWordLine,
-        displayText: String
-    ): List<WordByWordSegment>? {
-        return com.andsi.airlyrics.lyrics.providers.ApplePlainLyricsProvider
-            .conversionSegments(displayText, wordByWordLine.segments)
-    }
-
     private fun wordByWordLineSpan(
         wordByWordLine: WordByWordLine,
         displayText: String,
@@ -459,7 +429,13 @@ class FloatingLyricsRenderer(
                 ChineseText.toSimplified(text) != text)) {
             if (displaySegments === wordByWordLine.segments &&
                 sourceText != wordByWordOriginalText(wordByWordLine)) return text
-            mapDisplaySegments(sourceText, text, displaySegments) ?: return text
+            val mapped = if (displaySegments === wordByWordLine.translatedSegments) {
+                com.andsi.airlyrics.lyrics.providers.ApplePlainLyricsProvider
+                    .conversionSegments(text, displaySegments)
+            } else {
+                mapDisplaySegments(sourceText, text, displaySegments)
+            }
+            mapped ?: return text
         } else {
             displaySegments
         }
