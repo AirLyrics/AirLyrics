@@ -19,7 +19,9 @@ class ChineseTextTest {
         '說' to '说',
         '們' to '们',
         '賴' to '赖',
-        '礙' to '碍'
+        '礙' to '碍',
+        '見' to '见',
+        '覺' to '觉'
     )
     private val variants = mapOf('著' to '着')
     private val variantPhrases = mapOf(
@@ -107,6 +109,13 @@ class ChineseTextTest {
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著)", "苏产绣盖着"))
         // A space inside the echo must not hide it.
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著 蓋著", "苏产绣盖着"))
+        // One-character echo whose bracket survived on the original side only.
+        assertTrue(
+            ChineseText.isScriptConversion(
+                "看不見妳的笑 我怎麼睡得著著)",
+                "看不见你的笑 我怎么睡得着（睡得着）"
+            )
+        )
     }
 
     @Test

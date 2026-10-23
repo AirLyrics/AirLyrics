@@ -144,6 +144,9 @@ object ChineseText {
      */
     internal fun stripPerformanceRepeat(text: String): String {
         var value = text.trim()
+        // A bracket anywhere is evidence of an echo; it also allows a one-character repeat
+        // ("…睡得着着)") that would otherwise read as an ordinary word ("想想").
+        val hadBracket = value.any { it == '(' || it == ')' || it == '\uFF08' || it == '\uFF09' }
         // A parenthetical echo can lose its opening bracket when the parser only keeps the sung
         // span ("…的阻礙的阻礙)"), so drop complete groups first, then stray closers.
         value = value.replace(Regex("\\s*[（(][^（）()]{1,24}[）)]\\s*$"), "").trim()
@@ -151,7 +154,7 @@ object ChineseText {
         val length = value.length
         // The repeated block must be at least two characters; single-character echoes ("想想")
         // are ordinary words far more often than performance repeats.
-        for (unit in (length / 2) downTo 2) {
+        for (unit in (length / 2) downTo if (hadBracket) 1 else 2) {
             val tail = value.substring(length - unit)
             if (value.regionMatches(length - 2 * unit, tail, 0, unit)) {
                 return value.substring(0, length - unit).trim()
