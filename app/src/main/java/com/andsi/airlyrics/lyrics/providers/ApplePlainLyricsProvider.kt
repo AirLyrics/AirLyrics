@@ -325,7 +325,7 @@ object ApplePlainLyricsProvider : LyricsProvider {
 
     private fun isIgnorable(character: Char): Boolean =
         character.isWhitespace() ||
-        character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014"
+        character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014\uFF08\uFF09()\u3010\u3011[]"
 
     /** The leading segments whose text covers [limit] UTF-16 units; the last one is truncated. */
     private fun prefixSegments(

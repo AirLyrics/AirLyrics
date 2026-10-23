@@ -39,8 +39,8 @@ class AppleLyricsAuditTest {
         check(songs.isNotEmpty()) { "No native.json under $root" }
 
         val summary = StringBuilder()
-            .append("| 歌曲 | 行数 | 有译文 | 折叠 | 双行 | 无译文 | 逐字段缺失 |\n")
-            .append("|---|---|---|---|---|---|---|\n")
+            .append("| 歌曲 | 行数 | 有译文 | 折叠 | 双行 | 无译文 | 逐字段缺失 | 映射不全 |\n")
+            .append("|---|---|---|---|---|---|---|---|\n")
         withDictionaries {
             for (song in songs) {
                 val rows = auditPayload(File(song, "native.json"), File(song, "trace.json"), File(output, song.name))
@@ -49,9 +49,14 @@ class AppleLyricsAuditTest {
                 val distinct = rows.count { it.getString("reason") == "distinct_translation_kept" }
                 val missing = rows.count { it.getString("reason") == "no_translation" }
                 val noSegments = rows.count {
-                    it.getBoolean("isScriptConversion") && it.getInt("translatedSegments") == 0
+                    it.getBoolean("hasWordTiming") && it.getBoolean("isScriptConversion") &&
+                        it.getInt("translatedSegments") == 0
                 }
-                summary.append("| ${song.name} | ${rows.size} | $translated | $collapsed | $distinct | $missing | $noSegments |\n")
+                val partial = rows.count {
+                    it.getBoolean("hasWordTiming") && it.getBoolean("isScriptConversion") &&
+                        it.getInt("translatedSegments") in 1 until it.getInt("segmentCount")
+                }
+                summary.append("| ${song.name} | ${rows.size} | $translated | $collapsed | $distinct | $missing | $noSegments | $partial |\n")
             }
         }
         output.mkdirs()
@@ -125,6 +130,8 @@ class AppleLyricsAuditTest {
                 .put("comparisonForm", JSONObject().put("text", ChineseText.comparisonForm(line.text))
                     .put("translation", ChineseText.comparisonForm(translation)))
                 .put("isScriptConversion", conversion)
+                .put("hasWordTiming", word != null)
+                .put("segmentCount", word?.segments?.size ?: 0)
                 .put("translatedSegments", word?.translatedSegments?.size ?: 0)
                 .put("primary", simplified.get("primary")).put("secondary", simplified.get("secondary"))
                 .put("NONE", render(LyricsScriptPreference.NONE))

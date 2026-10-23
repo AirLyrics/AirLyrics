@@ -157,24 +157,25 @@ object ChineseText {
         // emptied: only strip a trailing group that follows some other text.
         value = value.replace(Regex("(?<=.)\\s*[（(][^（）()]{1,24}[）)]\\s*$"), "").trim()
         value = value.trimEnd(')', '）', ' ', '\u3000').trim()
-        // Spaces inside the echo must not hide the repeat; the comparison never needs them.
-        value = value.replace(Regex("\\s+"), "")
-        val length = value.length
+        // Spaces inside the echo must not hide the repeat. Detect on a compact copy, but return
+        // the original text when there is no echo: callers use its length for timing.
+        val compact = value.replace(Regex("\\s+"), "")
+        val length = compact.length
         // The repeated block must be at least two characters; single-character echoes ("想想")
         // are ordinary words far more often than performance repeats.
         for (unit in (length / 2) downTo if (hadBracket) 1 else 2) {
-            val tail = value.substring(length - unit)
-            if (value.regionMatches(length - 2 * unit, tail, 0, unit)) {
-                return value.substring(0, length - unit)
+            val tail = compact.substring(length - unit)
+            if (compact.regionMatches(length - 2 * unit, tail, 0, unit)) {
+                return compact.substring(0, length - unit)
             }
             // The echo often repeats the tail behind a particle whose opening bracket was lost:
             // "…是我們的阻礙" + "(的阻礙)" arrives as "…阻礙的阻礙".
             if (length - 2 * unit - 1 >= 0) {
-                val particle = value[length - unit - 1]
+                val particle = compact[length - unit - 1]
                 if ((particle == '\u7684' || particle == '\u5730' || particle == '\u5F97') &&
-                    value.regionMatches(length - 2 * unit - 1, tail, 0, unit)
+                    compact.regionMatches(length - 2 * unit - 1, tail, 0, unit)
                 ) {
-                    return value.substring(0, length - unit - 1)
+                    return compact.substring(0, length - unit - 1)
                 }
             }
         }
