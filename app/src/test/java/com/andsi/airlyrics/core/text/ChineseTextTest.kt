@@ -131,6 +131,17 @@ class ChineseTextTest {
     }
 
     @Test
+    fun comparisonIgnoresBracketsThatOnlyOneSideCarries() {
+        install()
+        // Apple's timed tokens may keep ")" while the annotation's "(" sits outside any span.
+        assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著)", "苏产绣盖着（盖着）"))
+        assertEquals(
+            ChineseText.normalizedForm("蓋著)"),
+            ChineseText.normalizedForm("盖着")
+        )
+    }
+
+    @Test
     fun stripPerformanceRepeat_handlesAnUnbalancedEchoBracket() {
         assertEquals(
             "妳說依賴是我們的阻礙",

@@ -157,13 +157,15 @@ object ChineseText {
         // emptied: only strip a trailing group that follows some other text.
         value = value.replace(Regex("(?<=.)\\s*[（(][^（）()]{1,24}[）)]\\s*$"), "").trim()
         value = value.trimEnd(')', '）', ' ', '\u3000').trim()
+        // Spaces inside the echo must not hide the repeat; the comparison never needs them.
+        value = value.replace(Regex("\\s+"), "")
         val length = value.length
         // The repeated block must be at least two characters; single-character echoes ("想想")
         // are ordinary words far more often than performance repeats.
         for (unit in (length / 2) downTo if (hadBracket) 1 else 2) {
             val tail = value.substring(length - unit)
             if (value.regionMatches(length - 2 * unit, tail, 0, unit)) {
-                return value.substring(0, length - unit).trim()
+                return value.substring(0, length - unit)
             }
             // The echo often repeats the tail behind a particle whose opening bracket was lost:
             // "…是我們的阻礙" + "(的阻礙)" arrives as "…阻礙的阻礙".
@@ -172,7 +174,7 @@ object ChineseText {
                 if ((particle == '\u7684' || particle == '\u5730' || particle == '\u5F97') &&
                     value.regionMatches(length - 2 * unit - 1, tail, 0, unit)
                 ) {
-                    return value.substring(0, length - unit - 1).trim()
+                    return value.substring(0, length - unit - 1)
                 }
             }
         }
@@ -199,7 +201,9 @@ object ChineseText {
      * inside the echo ("…阻礙 的阻礙") cannot hide the repeat.
      */
     fun comparisonForm(text: String): String {
-        var value = comparable(stripPerformanceRepeat(comparable(toSimplified(text))))
+        // Strip the echo on the raw text first: it needs the brackets as evidence, and the
+        // comparison form itself treats brackets as punctuation.
+        var value = comparable(toSimplified(stripPerformanceRepeat(text)))
         // Some simplified characters have their own mapping (么 -> 幺), so a single pass is not a
         // fixed point: converting a line and a segment that was already simplified could land on
         // different characters. Converge both sides the same way.
@@ -236,7 +240,7 @@ object ChineseText {
                 // They are invisible but break character-by-character comparison.
                 if (Character.getType(character) == Character.FORMAT.toInt()) return@forEach
                 if (character.isWhitespace() ||
-                character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014") return@forEach
+                character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014\uFF08\uFF09()\u3010\u3011[]") return@forEach
                 append(foldComparisonVariant(character))
             }
         }
