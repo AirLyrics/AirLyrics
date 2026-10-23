@@ -133,7 +133,11 @@ object ChineseText {
      */
     fun isScriptConversion(original: String, translation: String): Boolean {
         if (original.isBlank() || translation.isBlank()) return false
-        return comparisonForm(original) == comparisonForm(translation)
+        val left = comparisonForm(original)
+        val right = comparisonForm(translation)
+        // Punctuation-only or annotation-only lines carry no comparable text; never treat two of
+        // them as the same sentence.
+        return left.isNotEmpty() && right.isNotEmpty() && left == right
     }
 
     /**
@@ -149,7 +153,9 @@ object ChineseText {
         val hadBracket = value.any { it == '(' || it == ')' || it == '\uFF08' || it == '\uFF09' }
         // A parenthetical echo can lose its opening bracket when the parser only keeps the sung
         // span ("…的阻礙的阻礙)"), so drop complete groups first, then stray closers.
-        value = value.replace(Regex("\\s*[（(][^（）()]{1,24}[）)]\\s*$"), "").trim()
+        // A line that is nothing but a parenthetical annotation ("(一步兩步…牽手)") must not be
+        // emptied: only strip a trailing group that follows some other text.
+        value = value.replace(Regex("(?<=.)\\s*[（(][^（）()]{1,24}[）)]\\s*$"), "").trim()
         value = value.trimEnd(')', '）', ' ', '\u3000').trim()
         val length = value.length
         // The repeated block must be at least two characters; single-character echoes ("想想")
@@ -178,12 +184,25 @@ object ChineseText {
      * singer's echoed tail dropped. Cleaning comes before the echo scan so a space or bracket
      * inside the echo ("…阻礙 的阻礙") cannot hide the repeat.
      */
-    fun comparisonForm(text: String): String =
-        comparable(stripPerformanceRepeat(comparable(toSimplified(text))))
+    fun comparisonForm(text: String): String {
+        var value = comparable(stripPerformanceRepeat(comparable(toSimplified(text))))
+        // Some simplified characters have their own mapping (么 -> 幺), so a single pass is not a
+        // fixed point: converting a line and a segment that was already simplified could land on
+        // different characters. Converge both sides the same way.
+        repeat(2) {
+            val next = comparable(toSimplified(value))
+            if (next == value) return value
+            value = next
+        }
+        return value
+    }
 
     private fun comparable(text: String): String {
         val stripped = buildString(text.length) {
             text.forEach { character ->
+                // Apple occasionally wraps a line with bidi marks (LRM/RLM/embedding controls).
+                // They are invisible but break character-by-character comparison.
+                if (Character.getType(character) == Character.FORMAT.toInt()) return@forEach
                 if (character.isWhitespace() ||
                 character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014") return@forEach
                 append(foldComparisonVariant(character))
@@ -202,6 +221,7 @@ object ChineseText {
         '\u7942' -> '\u4ED6'   // 祂 -> 他
         '\u7260' -> '\u5B83'   // 牠 -> 它
         '\u8457' -> '\u7740'   // 著 -> 着 (lyric usage; tw2s only covers a few phrases)
+        '\u8367' -> '\u8424'   // 荧 -> 萤 (荧幕/萤幕 are the same word in different standards)
         else -> character
     }
 
