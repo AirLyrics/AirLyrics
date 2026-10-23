@@ -40,6 +40,7 @@ object LyricsStorage {
     const val SOURCE_PROVIDER_CACHE = "provider_cache"
     const val SOURCE_MANUAL_IMPORT = "manual_import"
     const val SOURCE_DOWNLOADED = "downloaded"
+    private const val LEGACY_WORD_BRACKET_MIGRATION = "legacy-word-brackets-v1"
     // Persisted compatibility contract. Do not change the serialized value.
     const val SOURCE_WORD_BY_WORD_FALLBACK = "karaoke_fallback"
     const val SOURCE_LEGACY = "legacy"
@@ -488,9 +489,35 @@ object LyricsStorage {
 
     fun pruneOnlineCache(context: Context) = SpicyLyricsCache.forContext(context).prune()
 
+    /**
+     * Builds before 1.0 could store a performance echo with its opening bracket stripped
+     * ("著著)" instead of "著(睡得著)"). Those documents can never line up with the translation
+     * again, and an automatic lookup never replaces saved lyrics, so drop the affected
+     * downloaded copies once; the next playback fetches them again.
+     */
+    private fun purgeUnbalancedWordLyrics(context: Context) {
+        val prefs = context.getSharedPreferences("lyrics_migration", Context.MODE_PRIVATE)
+        if (prefs.getBoolean(LEGACY_WORD_BRACKET_MIGRATION, false)) return
+        LyricsIndexStore.read(context).forEach { entry ->
+            if (entry.wordByWordFile.isBlank() || entry.wordByWordProvider == "local") return@forEach
+            val json = LyricsFileStore.readManagedLyrics(context, entry.wordByWordFile) ?: return@forEach
+            val unbalanced = WordByWordLyricsJsonCodec.parseWordByWordLinesJson(json).any { line ->
+                val joined = line.segments.joinToString("") { it.text }
+                joined.count { it == ')' || it == '\uFF09' } > joined.count { it == '(' || it == '\uFF08' }
+            }
+            if (unbalanced) {
+                runCatching { deleteLocalLyrics(context, entry.title, entry.artist, entry.durationMs) }
+            }
+        }
+        prefs.edit().putBoolean(LEGACY_WORD_BRACKET_MIGRATION, true).apply()
+    }
+
     fun scheduleCacheMaintenance(context: Context) {
         val app = context.applicationContext
-        Thread({ runCatching { pruneOnlineCache(app) } }, "AirLyrics-CacheCleanup").apply { isDaemon = true }.start()
+        Thread({
+            runCatching { purgeUnbalancedWordLyrics(app) }
+            runCatching { pruneOnlineCache(app) }
+        }, "AirLyrics-CacheCleanup").apply { isDaemon = true }.start()
         val scheduler = app.getSystemService(android.app.job.JobScheduler::class.java)
         val job = android.app.job.JobInfo.Builder(7301, android.content.ComponentName(app, SpicyCacheCleanupService::class.java))
             .setPeriodic(24 * 60 * 60 * 1000L).build()
