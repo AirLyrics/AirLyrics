@@ -37,6 +37,26 @@ class ChineseTextTest {
     private fun install() = ChineseText.installTableForTest(chars, variants, variantPhrases, phrases)
 
     @Test
+    fun normalizedForm_foldsEveryComparisonVariantWithoutDictionarySupport() {
+        ChineseText.resetForTest()
+        listOf('妳' to '你', '祂' to '他', '牠' to '它', '著' to '着', '荧' to '萤')
+            .forEach { (source, target) ->
+                assertEquals(target.toString(), ChineseText.normalizedForm(source.toString()))
+                assertEquals(target.toString(), ChineseText.normalizedForm(target.toString()))
+                assertEquals(source.toString(), ChineseText.toSimplified(source.toString()))
+            }
+        assertEquals("A我", ChineseText.normalizedForm("A我"))
+    }
+
+    @Test
+    fun stripPerformanceRepeat_handlesEveryEchoParticle() {
+        listOf('的', '地', '得').forEach { particle ->
+            assertEquals("前阻礙", ChineseText.stripPerformanceRepeat("前阻礙${particle}阻礙"))
+        }
+        assertEquals("前阻礙他阻礙", ChineseText.stripPerformanceRepeat("前阻礙他阻礙"))
+    }
+
+    @Test
     fun t2s_convertsTheVariantCharacterZhe() {
         install()
         assertEquals(

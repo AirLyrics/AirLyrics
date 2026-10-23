@@ -172,7 +172,7 @@ object ChineseText {
             // "…是我們的阻礙" + "(的阻礙)" arrives as "…阻礙的阻礙".
             if (length - 2 * unit - 1 >= 0) {
                 val particle = compact[length - unit - 1]
-                if ((particle == '\u7684' || particle == '\u5730' || particle == '\u5F97') &&
+                if ((particle.code == 0x7684 || particle.code == 0x5730 || particle.code == 0x5F97) &&
                     compact.regionMatches(length - 2 * unit - 1, tail, 0, unit)
                 ) {
                     return compact.substring(0, length - unit - 1)
@@ -253,12 +253,12 @@ object ChineseText {
      * Folding is symmetric on both sides and comparison-only, so the displayed text keeps the
      * exact characters the lyric shipped with.
      */
-    private fun foldComparisonVariant(character: Char): Char = when (character) {
-        '\u59B3' -> '\u4F60'   // 妳 -> 你
-        '\u7942' -> '\u4ED6'   // 祂 -> 他
-        '\u7260' -> '\u5B83'   // 牠 -> 它
-        '\u8457' -> '\u7740'   // 著 -> 着 (lyric usage; tw2s only covers a few phrases)
-        '\u8367' -> '\u8424'   // 荧 -> 萤 (荧幕/萤幕 are the same word in different standards)
+    private fun foldComparisonVariant(character: Char): Char = when (character.code) {
+        0x59B3 -> 0x4F60.toChar()   // 妳 -> 你
+        0x7942 -> 0x4ED6.toChar()   // 祂 -> 他
+        0x7260 -> 0x5B83.toChar()   // 牠 -> 它
+        0x8457 -> 0x7740.toChar()   // 著 -> 着 (lyric usage; tw2s only covers a few phrases)
+        0x8367 -> 0x8424.toChar()   // 荧 -> 萤 (荧幕/萤幕 are the same word in different standards)
         else -> character
     }
 
