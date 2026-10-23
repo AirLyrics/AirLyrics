@@ -36,6 +36,61 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
+    fun scriptMappedTokens_preserveWaitingAndOriginalTiming() {
+        ChineseText.installTableForTest(mapOf('愛' to '爱', '說' to '说'))
+        val view = TextView(context)
+        val renderer = renderer(textView = view, wordByWordEnabled = true)
+        renderer.parseAndShow(
+            plainLrc = "[00:01.00]爱说",
+            wordByWordLines = listOf(WordByWordLine(1_000L, 12_000L, "愛說", listOf(
+                WordByWordSegment("愛", 8_000L, 9_000L),
+                WordByWordSegment("說", 10_000L, 11_000L)
+            ))), emptyText = "empty"
+        )
+        for (position in listOf(3_000L, 7_999L, 8_000L, 12_001L)) {
+            renderer.updatePlayback(position, false)
+            renderer.tick()
+            assertEquals("爱说", view.text.toString())
+            assertTrue("position=$position", view.text.highlightSpans().isEmpty())
+        }
+        renderer.updatePlayback(8_500L, false)
+        renderer.tick()
+        val span = view.text.highlightSpans().single()
+        assertEquals(0, (view.text as Spanned).getSpanStart(span))
+        assertEquals(1, (view.text as Spanned).getSpanEnd(span))
+    }
+
+    @Test
+    fun scriptMapping_usesWholePhrasesAndValidUnicodeBoundaries() {
+        ChineseText.installTableForTest(
+            mapOf('著' to '着', '愛' to '爱'),
+            phrases = mapOf("著作" to "著作", "愛愛" to "爱爱", "甲乙" to "丙")
+        )
+        val cases = listOf(
+            Triple("著作爱", listOf("著", "作", "愛"), true),
+            Triple("爱，爱😀", listOf("愛", "，", "愛", "😀"), true),
+            Triple("丙爱", listOf("甲", "乙", "愛"), false),
+            Triple("爱说", listOf("愛"), false),
+            Triple("爱😀", listOf("愛", "\uD83D", "\uDE00"), false),
+            Triple("爱爱", listOf("愛", "愛"), true)
+        )
+        for ((display, tokens, reliable) in cases) {
+            val view = TextView(context)
+            val renderer = renderer(textView = view, wordByWordEnabled = true)
+            renderer.updatePlayback(1_500L, false)
+            renderer.parseAndShow(
+                plainLrc = "[00:01.00]$display",
+                wordByWordLines = listOf(WordByWordLine(1_000L, 5_000L,
+                    tokens.joinToString(""), tokens.mapIndexed { index, token ->
+                        WordByWordSegment(token, 1_000L + index * 1_000L, 2_000L + index * 1_000L)
+                    })), emptyText = "empty"
+            )
+            assertEquals(display, view.text.toString())
+            assertEquals(display, reliable, view.text.highlightSpans().isNotEmpty())
+        }
+    }
+
+    @Test
     fun updatePlayback_ignoresSmallStaleBacktrackWhilePlaying() {
         var now = 10_000L
         val renderer = renderer(uptimeMillisProvider = { now })

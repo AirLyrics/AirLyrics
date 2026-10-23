@@ -412,7 +412,18 @@ class FloatingLyricsRenderer(
         val text = displayText.trim()
         if (text.isBlank()) return ""
 
-        val progress = wordByWordHighlightProgress(wordByWordLine, text, positionMs, displaySegments)
+        val sourceText = displaySegments.joinToString("") { it.text }.trim()
+        val segments = if (sourceText != text && (ChineseText.toSimplified(sourceText) != sourceText ||
+                ChineseText.toSimplified(text) != text)) {
+            if (displaySegments === wordByWordLine.segments &&
+                sourceText != wordByWordOriginalText(wordByWordLine)) return text
+            mapDisplaySegments(sourceText, text, displaySegments) ?: return text
+        } else {
+            displaySegments
+        }
+        val progress = wordByWordHighlightProgress(
+            wordByWordLine, text, positionMs, segments, clearAtLineEnd = segments !== displaySegments
+        )
         val span = SpannableString(text)
         if (progress.completedEnd > 0 || progress.hasActiveCharacter) {
             val highlightColor = wordByWordHighlightColorProvider()
@@ -441,6 +452,33 @@ class FloatingLyricsRenderer(
             }
         }
         return span
+    }
+
+    private fun mapDisplaySegments(
+        source: String,
+        display: String,
+        segments: List<WordByWordSegment>
+    ): List<WordByWordSegment>? {
+        // Require complete, ordered coverage. Do not guess punctuation, missing tokens or offsets.
+        if (segments.joinToString("") { it.text } != source) return null
+        val (converted, sourceBoundaries) = ChineseText.simplifiedBoundaries(source)
+        val (convertedDisplay, displayBoundaries) = ChineseText.simplifiedBoundaries(display)
+        if (converted != convertedDisplay) return null
+        val reverse = displayBoundaries.withIndex().filter { it.value >= 0 }
+            .groupBy({ it.value }, { it.index })
+        var offset = 0
+        var previousEndMs = Long.MIN_VALUE
+        return segments.map { segment ->
+            if (segment.startMs < previousEndMs || segment.endMs <= segment.startMs) return null
+            previousEndMs = segment.endMs
+            val start = sourceBoundaries[offset]
+            offset += segment.text.length
+            val end = sourceBoundaries[offset]
+            val displayStart = reverse[start]?.singleOrNull() ?: return null
+            val displayEnd = reverse[end]?.singleOrNull() ?: return null
+            if (start < 0 || end <= start || displayEnd <= displayStart) return null
+            segment.copy(text = display.substring(displayStart, displayEnd))
+        }
     }
 
     private fun wordByWordOriginalText(wordByWordLine: WordByWordLine): String {

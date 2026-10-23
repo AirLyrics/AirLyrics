@@ -112,6 +112,19 @@ object ChineseText {
         return convert(convert(text, twStage), tsStage)
     }
 
+    /** Source UTF-16 boundaries mapped through both full-text, phrase-aware stages.
+     * Interior boundaries of length-changing replacements are deliberately unavailable.
+     */
+    internal fun simplifiedBoundaries(text: String): Pair<String, IntArray> {
+        val first = IntArray(text.length + 1) { -1 }
+        val intermediate = convert(text, twStage, first)
+        val second = IntArray(intermediate.length + 1) { -1 }
+        val result = convert(intermediate, tsStage, second)
+        return result to IntArray(first.size) { index ->
+            first[index].takeIf { it >= 0 }?.let { second[it] } ?: -1
+        }
+    }
+
     /**
      * True when [translation] is just [original] rewritten in simplified characters.
      *
@@ -136,9 +149,24 @@ object ChineseText {
         return stripped
     }
 
-    private fun convert(text: String, stage: Stage): String {
-        if (stage.phrases.isEmpty() && stage.chars.isEmpty()) return text
+    private fun convert(text: String, stage: Stage, boundaries: IntArray? = null): String {
         val builder = StringBuilder(text.length)
+        fun appendMapped(start: Int, end: Int, replacement: String) {
+            val outputStart = builder.length
+            boundaries?.set(start, outputStart)
+            if (text.codePointCount(start, end) == replacement.codePointCount(0, replacement.length)) {
+                var source = start
+                var target = 0
+                while (source < end) {
+                    source += Character.charCount(text.codePointAt(source))
+                    target += Character.charCount(replacement.codePointAt(target))
+                    boundaries?.set(source, outputStart + target)
+                }
+            }
+            builder.append(replacement)
+            boundaries?.set(end, builder.length)
+        }
+        boundaries?.set(0, 0)
         var index = 0
         while (index < text.length) {
             var matched = false
@@ -147,7 +175,7 @@ object ChineseText {
                 for (length in limit downTo 2) {
                     val replacement = stage.phrases[text.substring(index, index + length)]
                     if (replacement != null) {
-                        builder.append(replacement)
+                        appendMapped(index, index + length, replacement)
                         index += length
                         matched = true
                         break
@@ -159,8 +187,10 @@ object ChineseText {
                 // Some entries are a single character with several candidate values; the first
                 // one is the documented default and must win over the plain character table.
                 val single = stage.phrases[character.toString()]
-                builder.append(single ?: stage.chars[character] ?: character.toString())
-                index++
+                val width = Character.charCount(text.codePointAt(index))
+                appendMapped(index, index + width,
+                    single ?: stage.chars[character] ?: text.substring(index, index + width))
+                index += width
             }
         }
         return builder.toString()

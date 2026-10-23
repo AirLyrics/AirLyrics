@@ -22,13 +22,14 @@ internal fun wordByWordHighlightProgress(
     line: WordByWordLine,
     displayText: String,
     positionMs: Long,
-    displaySegments: List<WordByWordSegment> = line.segments
+    displaySegments: List<WordByWordSegment> = line.segments,
+    clearAtLineEnd: Boolean = false
 ): WordByWordHighlightProgress {
     if (displayText.isBlank() || positionMs <= line.startMs) {
         return WordByWordHighlightProgress()
     }
     if (positionMs >= line.endMs) {
-        return WordByWordHighlightProgress(completedEnd = displayText.length)
+        return WordByWordHighlightProgress(completedEnd = if (clearAtLineEnd) 0 else displayText.length)
     }
 
     var searchStart = 0
