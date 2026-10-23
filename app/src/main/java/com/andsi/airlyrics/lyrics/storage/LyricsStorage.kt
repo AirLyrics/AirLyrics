@@ -489,6 +489,22 @@ object LyricsStorage {
 
     fun pruneOnlineCache(context: Context) = SpicyLyricsCache.forContext(context).prune()
 
+    /** "著著)" / "到到)" — an echo whose opening bracket was lost by an old build. */
+    internal fun hasLostEchoBracket(text: String): Boolean {
+        val trimmed = text.trim()
+        if (!trimmed.contains(')') && !trimmed.contains('\uFF09')) return false
+        if (trimmed.contains('(') || trimmed.contains('\uFF08')) return false
+        val lastChar = trimmed.last()
+        if (lastChar != ')' && lastChar != '\uFF09') return false
+        val beforeBracket = trimmed.dropLast(1)
+        if (beforeBracket.length < 2) return false
+        // The echo repeats the tail of the line: "睡得著著", "抱不到到", "繞是會繞".
+        val longest = beforeBracket.length / 2
+        return (1..longest).any { length ->
+            beforeBracket.endsWith(beforeBracket.substring(beforeBracket.length - 2 * length, beforeBracket.length - length))
+        }
+    }
+
     /**
      * Builds before 1.0 could store a performance echo with its opening bracket stripped
      * ("著著)" instead of "著(睡得著)"). Those documents can never line up with the translation
@@ -499,13 +515,22 @@ object LyricsStorage {
         val prefs = context.getSharedPreferences("lyrics_migration", Context.MODE_PRIVATE)
         if (prefs.getBoolean(LEGACY_WORD_BRACKET_MIGRATION, false)) return
         LyricsIndexStore.read(context).forEach { entry ->
-            if (entry.wordByWordFile.isBlank() || entry.wordByWordProvider == "local") return@forEach
-            val json = LyricsFileStore.readManagedLyrics(context, entry.wordByWordFile) ?: return@forEach
-            val unbalanced = WordByWordLyricsJsonCodec.parseWordByWordLinesJson(json).any { line ->
-                val joined = line.segments.joinToString("") { it.text }
-                joined.count { it == ')' || it == '\uFF09' } > joined.count { it == '(' || it == '\uFF08' }
+            val corrupted = run {
+                val wordJson = entry.wordByWordFile
+                    .takeIf { it.isNotBlank() }
+                    ?.let { LyricsFileStore.readManagedLyrics(context, it) }
+                if (wordJson != null) {
+                    WordByWordLyricsJsonCodec.parseWordByWordLinesJson(wordJson).any { line ->
+                        hasLostEchoBracket(line.segments.joinToString("") { it.text })
+                    }
+                } else {
+                    val plain = entry.plainFile
+                        .takeIf { it.isNotBlank() }
+                        ?.let { LyricsFileStore.readManagedLyrics(context, it) }
+                    plain != null && plain.lineSequence().any { hasLostEchoBracket(it) }
+                }
             }
-            if (unbalanced) {
+            if (corrupted) {
                 runCatching { deleteLocalLyrics(context, entry.title, entry.artist, entry.durationMs) }
             }
         }
