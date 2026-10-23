@@ -1647,3 +1647,8 @@ mod netease_tests {
 
 #[cfg(test)]
 mod test_http;
+
+/// Offline Apple audit entry point: native protocol payload and per-line parser trace.
+pub fn audit_apple_ttml(ttml: &str) -> (serde_json::Value, serde_json::Value) {
+    apple::parse_native(ttml)
+}

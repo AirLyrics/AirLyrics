@@ -260,6 +260,9 @@ object ApplePlainLyricsProvider : LyricsProvider {
         val spoken = ChineseText.stripPerformanceRepeat(source)
         val timed = if (spoken.length == source.length) segments else prefixSegments(segments, spoken.length)
         if (timed.isEmpty()) return null
+        // The translation may carry its own echo ("…睡得着（睡得着）"); it is not sung with
+        // separate timing, so map against the spoken part only.
+        val spokenTranslation = ChineseText.stripPerformanceRepeat(translatedText)
         val mapped = mutableListOf<WordByWordSegment>()
         var cursor = 0
         for (segment in timed) {
@@ -269,8 +272,8 @@ object ApplePlainLyricsProvider : LyricsProvider {
             var matched = 0
             // Punctuation and spaces may be present on either side; they never consume a token
             // character, so a translation with an extra space still maps onto the original timing.
-            while (matched < target.length && cursor < translatedText.length) {
-                val character = translatedText[cursor]
+            while (matched < target.length && cursor < spokenTranslation.length) {
+                val character = spokenTranslation[cursor]
                 consumed.append(character)
                 cursor++
                 if (!isIgnorable(character)) matched++
@@ -280,13 +283,13 @@ object ApplePlainLyricsProvider : LyricsProvider {
             ) return null
             mapped += segment.copy(text = consumed.toString())
         }
-        while (cursor < translatedText.length && isIgnorable(translatedText[cursor])) {
+        while (cursor < spokenTranslation.length && isIgnorable(spokenTranslation[cursor])) {
             if (mapped.isEmpty()) return null
             val last = mapped.removeAt(mapped.lastIndex)
-            mapped += last.copy(text = last.text + translatedText[cursor])
+            mapped += last.copy(text = last.text + spokenTranslation[cursor])
             cursor++
         }
-        return if (cursor == translatedText.length) mapped else null
+        return if (cursor == spokenTranslation.length) mapped else null
     }
 
     private fun translatedLrc(json: JSONObject): String? =

@@ -22,6 +22,10 @@ struct Word {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Line {
+    source_index: usize,
+    begin: Option<String>,
+    end: Option<String>,
+    raw_text: String,
     key: Option<String>,
     start_ms: u64,
     end_ms: u64,
@@ -33,6 +37,7 @@ pub(crate) struct Line {
 pub(crate) struct ParsedTtml {
     lines: Vec<Line>,
     translations: HashMap<String, String>,
+    translation_misses: HashMap<String, &'static str>,
 }
 
 fn time_regex() -> &'static Regex {
@@ -107,7 +112,7 @@ fn strip_tags_raw(value: &str) -> String {
 /// Parses Apple's lyric TTML into timed lines, word spans and per-line translations.
 pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
     let mut parsed = ParsedTtml::default();
-    for paragraph in paragraph_regex().captures_iter(ttml) {
+    for (source_index, paragraph) in paragraph_regex().captures_iter(ttml).enumerate() {
         let attributes = paragraph.get(1).map(|m| m.as_str()).unwrap_or_default();
         let body = paragraph.get(2).map(|m| m.as_str()).unwrap_or_default();
         let key = key_regex()
@@ -142,7 +147,18 @@ pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
         if text.trim().is_empty() {
             continue;
         }
+        let timing = time_regex().captures(attributes);
         parsed.lines.push(Line {
+            source_index,
+            begin: timing
+                .as_ref()
+                .and_then(|c| c.get(1))
+                .map(|m| m.as_str().to_owned()),
+            end: timing
+                .as_ref()
+                .and_then(|c| c.get(2))
+                .map(|m| m.as_str().to_owned()),
+            raw_text: strip_tags(body),
             key,
             start_ms: line_start,
             end_ms: line_end.max(line_start),
@@ -181,6 +197,10 @@ pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
             let text = strip_tags(entry.get(2).map(|m| m.as_str()).unwrap_or_default());
             if !key.is_empty() && !text.is_empty() {
                 parsed.translations.insert(key.to_string(), text);
+            } else if !key.is_empty() {
+                parsed
+                    .translation_misses
+                    .insert(key.to_string(), "empty_translation_discarded");
             }
         }
     }
@@ -594,32 +614,97 @@ async fn resolve(
         }));
     };
 
-    let parsed = parse_ttml(&ttml);
-    if parsed.lines.is_empty() {
-        return Ok(failure("ParseError", "TTML 里没有可解析的歌词行"));
+    let (mut result, _) = parse_native(&ttml);
+    if result["ok"] == true {
+        for (key, value) in [
+            ("id", json!(candidate.id)),
+            ("title", json!(candidate.title)),
+            ("artist", json!(candidate.artist)),
+            ("album", json!(candidate.album)),
+            ("duration_ms", json!(candidate.duration_ms)),
+            ("album_query", json!(album)),
+        ] {
+            result[key] = value;
+        }
     }
-    let lrc = to_lrc(&parsed.lines);
-    let translated_lrc = to_translated_lrc(&parsed.lines, &parsed.translations);
+    Ok(result)
+}
 
-    Ok(json!({
-        "ok": true,
-        "source": "apple",
-        "id": candidate.id,
-        "title": candidate.title,
-        "artist": candidate.artist,
-        "album": candidate.album,
-        "duration_ms": candidate.duration_ms,
-        "lrc": lrc,
-        "translated_lrc": translated_lrc,
-        "merged_lrc": Value::Null,
-        "word_by_word": word_by_word_json(&parsed.lines, &parsed.translations),
-        "album_query": album,
-    }))
+/// Shared offline/network TTML conversion. Trace fields describe the parser output, not UI policy.
+pub(crate) fn parse_native(ttml: &str) -> (Value, Value) {
+    let parsed = parse_ttml(ttml);
+    let has_translation_blocks = translation_regex().is_match(ttml);
+    let trace = parsed
+        .lines
+        .iter()
+        .enumerate()
+        .map(|(index, line)| {
+            let translation = line
+                .key
+                .as_ref()
+                .and_then(|key| parsed.translations.get(key));
+            let reason = if line.key.is_none() {
+                "missing_line_key"
+            } else if translation.is_some() {
+                "matched_by_key"
+            } else if !has_translation_blocks {
+                "no_translation_blocks"
+            } else {
+                parsed
+                    .translation_misses
+                    .get(line.key.as_deref().unwrap_or_default())
+                    .copied()
+                    .unwrap_or("key_absent_from_selected_translation_blocks")
+            };
+            json!({
+                "lineIndex": index + 1, "sourceIndex": line.source_index + 1,
+                "key": line.key, "begin": line.begin, "end": line.end,
+                "startMs": line.start_ms, "endMs": line.end_ms,
+                "rawText": line.raw_text, "echoText": line.text,
+                "translatedText": translation,
+                "translationState": if line.words.is_empty() { "missing" }
+                    else if translation.is_some() { "value" } else { "null" },
+                "reason": reason,
+            })
+        })
+        .collect::<Vec<_>>();
+    let result = if parsed.lines.is_empty() {
+        failure("ParseError", "TTML 里没有可解析的歌词行")
+    } else {
+        json!({
+            "ok": true, "source": "apple",
+            "lrc": to_lrc(&parsed.lines),
+            "translated_lrc": to_translated_lrc(&parsed.lines, &parsed.translations),
+            "merged_lrc": Value::Null,
+            "word_by_word": word_by_word_json(&parsed.lines, &parsed.translations),
+        })
+    };
+    (result, json!(trace))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn audit_trace_preserves_non_word_lines_and_source_indices() {
+        let (native, trace) = parse_native(
+            r#"<tt><body>
+            <p>untimed</p>
+            <p begin="1" end="2" itunes:key="L2">plain</p>
+            <p begin="3" end="4" itunes:key="L3"><span begin="3" end="4">word(echo)</span></p>
+            </body><translation xml:lang="zh-Hans"><text for="L2">译文</text>
+            <text for="L3"></text></translation></tt>"#,
+        );
+        assert_eq!(native["word_by_word"].as_array().unwrap().len(), 1);
+        assert_eq!(trace.as_array().unwrap().len(), 2);
+        assert_eq!(trace[0]["sourceIndex"], 2);
+        assert_eq!(trace[0]["translationState"], "missing");
+        assert_eq!(trace[1]["rawText"], "word(echo)");
+        assert_eq!(trace[1]["translationState"], "null");
+        assert_eq!(trace[1]["reason"], "empty_translation_discarded");
+        assert!(native["word_by_word"][0]["translated_text"].is_null());
+    }
 
     const SEARCH_HIT: &str = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"results\":{\"songs\":{\"data\":[{\"id\":\"1\",\"attributes\":{\"name\":\"Song\",\"artistName\":\"Artist\",\"durationInMillis\":180000}}]}}}";
 
