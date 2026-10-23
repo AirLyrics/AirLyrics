@@ -245,6 +245,45 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
+    fun twoLineMode_highlightsTheTranslationLine() {
+        ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
+        val textView = TextView(context).apply { setTextColor(Color.WHITE) }
+        val renderer = renderer(
+            textView = textView,
+            contentMode = LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
+            wordByWordEnabled = true,
+            highlightColor = Color.MAGENTA,
+            scriptPreference = LyricsScriptPreference.NONE
+        )
+        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+
+        val translated = "苏三说"
+        val line = WordByWordLine(
+            startMs = 1_000L,
+            endMs = 2_000L,
+            text = "蘇三說",
+            segments = listOf(WordByWordSegment("蘇三說", 1_000L, 2_000L)),
+            translatedText = translated,
+            translatedSegments = translated.mapIndexed { index, character ->
+                val start = 1_000L + 1_000L * index / translated.length
+                WordByWordSegment(character.toString(), start, start + 333L)
+            }
+        )
+
+        renderer.parseAndShow(
+            plainLrc = "[00:01.00]蘇三說",
+            translatedLrc = "[00:01.00]苏三说",
+            wordByWordLines = listOf(line),
+            emptyText = "empty"
+        )
+
+        assertEquals("蘇三說\n苏三说", textView.text.toString())
+        val text = textView.text as Spanned
+        val lineStart = "蘇三說".length + 1
+        assertTrue(text.highlightSpans().any { text.getSpanStart(it) >= lineStart })
+    }
+
+    @Test
     fun aLineWithoutTranslation_staysTraditional() {
         ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
         val textView = TextView(context).apply { setTextColor(Color.WHITE) }

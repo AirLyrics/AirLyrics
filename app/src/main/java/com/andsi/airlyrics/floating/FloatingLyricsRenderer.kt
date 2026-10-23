@@ -304,7 +304,20 @@ class FloatingLyricsRenderer(
                     else -> wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs)
                 }
             }
-            rendered.secondary?.takeIf { it.isNotBlank() }?.let { renderedLines += it }
+            rendered.secondary?.takeIf { it.isNotBlank() }?.let { secondary ->
+                renderedLines += if (wordByWordLine != null &&
+                    wordByWordLine.translatedSegments.isNotEmpty()
+                ) {
+                    wordByWordLineSpan(
+                        wordByWordLine,
+                        secondary,
+                        positionMs,
+                        wordByWordLine.translatedSegments
+                    )
+                } else {
+                    secondary
+                }
+            }
         }
 
         if (renderedLines.isEmpty()) {
