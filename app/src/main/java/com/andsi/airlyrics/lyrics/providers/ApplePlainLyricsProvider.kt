@@ -246,7 +246,7 @@ object ApplePlainLyricsProvider : LyricsProvider {
     }
 
     /** Reuses the original token times when the translation is a pure script conversion. */
-    private fun conversionSegments(
+    internal fun conversionSegments(
         translatedText: String,
         segments: List<WordByWordSegment>
     ): List<WordByWordSegment>? {

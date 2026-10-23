@@ -436,37 +436,13 @@ class FloatingLyricsRenderer(
         return indexes.filter { it in currentWordByWordLines.indices }
     }
 
-    /**
-     * A stored copy written before per-token translations existed has no translated segments.
-     * When the shown text is the same length as the token text (a pure script conversion), every
-     * character maps one to one, so the original timings can be sliced onto the shown text.
-     */
+    /** Reuse verified script-conversion timing, including whitespace and sung echoes. */
     private fun proportionalSegments(
         wordByWordLine: WordByWordLine,
         displayText: String
     ): List<WordByWordSegment>? {
-        if (displayText.isEmpty() || displayText.any { it.isWhitespace() }) return null
-        val spokenCharacters = wordByWordLine.segments.sumOf { segment ->
-            segment.text.count { character -> !character.isWhitespace() }
-        }
-        if (spokenCharacters != displayText.length) return null
-        var offset = 0
-        val mapped = mutableListOf<WordByWordSegment>()
-        for (segment in wordByWordLine.segments) {
-            val length = segment.text.count { character -> !character.isWhitespace() }
-            if (length == 0) continue
-            val end = (offset + length).coerceAtMost(displayText.length)
-            if (end <= offset) continue
-            mapped += WordByWordSegment(
-                text = displayText.substring(offset, end),
-                startMs = segment.startMs,
-                endMs = segment.endMs
-            )
-            offset = end
-        }
-        return mapped.takeIf {
-            it.isNotEmpty() && it.joinToString("") { segment -> segment.text } == displayText
-        }
+        return com.andsi.airlyrics.lyrics.providers.ApplePlainLyricsProvider
+            .conversionSegments(displayText, wordByWordLine.segments)
     }
 
     private fun wordByWordLineSpan(
