@@ -1,7 +1,7 @@
 //! Apple Music catalogue search and syllable (word-timed) lyrics.
 //!
 //! Uses the web-player API: a developer token plus the listener's media user token. Never log either.
-use crate::matching::{is_confident_early_match, score_candidate, MatchMetadata};
+use crate::matching::MatchMetadata;
 use regex::Regex;
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -357,7 +357,7 @@ struct Candidate {
     duration_ms: u64,
 }
 
-fn pick_candidate(
+fn select_candidate(
     candidates: &[Candidate],
     title: &str,
     artist: &str,
@@ -384,11 +384,8 @@ fn pick_candidate(
                 album: &candidate.album,
                 duration_ms: Some(candidate.duration_ms),
             };
-            let score = score_candidate(query, metadata)?;
-            if !is_confident_early_match(&score) {
-                return None;
-            }
-            Some((index, difference, score.total))
+            let assessment = crate::confidence::assess(query, metadata)?;
+            Some((index, difference, assessment.score.total))
         })
         .collect();
     // The match score is the primary signal; the duration difference only breaks ties. A
@@ -550,7 +547,7 @@ async fn resolve(
         })
         .collect();
 
-    let Some(index) = pick_candidate(&candidates, title, artist, album, duration_ms) else {
+    let Some(index) = select_candidate(&candidates, title, artist, album, duration_ms) else {
         return Ok(json!({
             "ok": false,
             "source": "apple",
@@ -882,6 +879,80 @@ mod tests {
         assert!(words[0]["segments"].as_array().unwrap().len() > 1);
     }
 
+    fn catalogue_candidate(title: &str, artist: &str, duration_ms: u64) -> Candidate {
+        Candidate {
+            id: "test-track".into(),
+            title: title.into(),
+            artist: artist.into(),
+            album: "Studio Album".into(),
+            duration_ms,
+        }
+    }
+
+    #[test]
+    fn rejects_live_and_remix_candidates_even_with_matching_duration() {
+        for variant in ["Song (Live)", "Song (Remix)"] {
+            let candidates = [
+                catalogue_candidate(variant, "Artist", 200_000),
+                catalogue_candidate("Song", "Artist", 201_000),
+            ];
+            assert_eq!(
+                select_candidate(&candidates, "Song", "Artist", "Studio Album", 200_000),
+                Some(1),
+                "{variant}"
+            );
+            assert_eq!(
+                select_candidate(&candidates[..1], "Song", "Artist", "Studio Album", 200_000),
+                None,
+                "{variant}"
+            );
+        }
+    }
+
+    #[test]
+    fn cross_script_candidate_requires_strong_artist_and_matching_duration() {
+        // The localized annotation supplies title evidence while the full query and
+        // candidate still differ in script. Duration alone must not corroborate it.
+        let mut candidate = catalogue_candidate("Sunny Day", "无关歌手", 200_000);
+        assert_eq!(
+            select_candidate(
+                std::slice::from_ref(&candidate),
+                "Sunny Day (晴天)",
+                "周杰伦",
+                "",
+                200_000
+            ),
+            None
+        );
+        candidate.artist = "周杰伦".into();
+        assert_eq!(
+            select_candidate(
+                std::slice::from_ref(&candidate),
+                "Sunny Day (晴天)",
+                "周杰伦",
+                "",
+                200_000
+            ),
+            Some(0)
+        );
+        candidate.duration_ms = 202_500;
+        assert_eq!(
+            select_candidate(&[candidate], "Sunny Day (晴天)", "周杰伦", "", 200_000),
+            None
+        );
+    }
+
+    #[test]
+    fn selects_exact_match_within_duration_window() {
+        for duration_ms in [200_000, 202_500] {
+            let candidates = [catalogue_candidate("Song", "Artist", duration_ms)];
+            assert_eq!(
+                select_candidate(&candidates, "Song", "Artist", "Studio Album", 200_000),
+                Some(0)
+            );
+        }
+    }
+
     #[test]
     fn rejects_candidates_outside_the_duration_window() {
         let candidates = vec![Candidate {
@@ -889,8 +960,8 @@ mod tests {
             title: "晴天".into(),
             artist: "周杰伦".into(),
             album: "".into(),
-            duration_ms: 269_000,
+            duration_ms: 202_501,
         }];
-        assert!(pick_candidate(&candidates, "晴天", "周杰伦", "", 200_000).is_none());
+        assert!(select_candidate(&candidates, "晴天", "周杰伦", "", 200_000).is_none());
     }
 }
