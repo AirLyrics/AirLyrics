@@ -6,6 +6,7 @@ import androidx.annotation.StringRes
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 
@@ -36,6 +37,7 @@ internal fun plainLyricsSourceTitleRes(plainLyricsSearchSource: PlainLyricsSearc
         PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch
         PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
         PlainLyricsSearchSource.SPICY -> if (!com.andsi.airlyrics.core.model.LyricsSourceCapability.spicyConfigured(com.andsi.airlyrics.BuildConfig.SPICY_CLIENT_KEY)) R.string.provider_spicy_unavailable else R.string.provider_spicy
+        PlainLyricsSearchSource.APPLE -> R.string.provider_apple
     }
 
 @StringRes
@@ -45,7 +47,8 @@ internal fun plainLyricsSourceCompactTitleRes(plainLyricsSearchSource: PlainLyri
         PlainLyricsSearchSource.NETEASE -> R.string.provider_netease_compact
         PlainLyricsSearchSource.MUSIXMATCH -> R.string.provider_musixmatch_compact
         PlainLyricsSearchSource.LRCLIB -> R.string.provider_lrclib
-        PlainLyricsSearchSource.SPICY -> R.string.provider_spicy_name
+        PlainLyricsSearchSource.SPICY -> R.string.provider_spicy
+        PlainLyricsSearchSource.APPLE -> R.string.provider_apple
     }
 
 internal fun Context.localizedLyricsContentModeTitle(mode: LyricsContentDisplayMode): String =
@@ -56,6 +59,16 @@ internal fun lyricsContentModeTitleRes(mode: LyricsContentDisplayMode): Int = wh
     LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> R.string.ui_original_translation
     LyricsContentDisplayMode.ORIGINAL_ONLY -> R.string.ui_original_only
     LyricsContentDisplayMode.TRANSLATION_ONLY -> R.string.ui_translation_only
+}
+
+internal fun Context.localizedScriptPreferenceTitle(preference: LyricsScriptPreference): String =
+    getString(scriptPreferenceTitleRes(preference))
+
+@StringRes
+internal fun scriptPreferenceTitleRes(preference: LyricsScriptPreference): Int = when (preference) {
+    LyricsScriptPreference.SIMPLIFIED -> R.string.ui_script_simplified
+    LyricsScriptPreference.TRADITIONAL -> R.string.ui_script_traditional
+    LyricsScriptPreference.NONE -> R.string.ui_script_none
 }
 
 internal fun Context.localizedLyricsLineModeTitle(mode: LyricsLineDisplayMode): String =

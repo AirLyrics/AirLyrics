@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "original_title": "Radio Love Song",
+      "original_artist": "Karen Mok",
+      "original_artist_aliases": [
+        "Karen Mok",
+        "莫文蔚",
+        "Karen Mok 莫文蔚",
+        "Karen Joy Morris"
+      ],
+      "alias_title": "电台情歌",
+      "alias_artist": "莫文蔚",
+      "source": "user",
+      "confidence": 0.95
+    },
+    {
+      "original_title": "Shouldn't Be (feat. a-mei)",
+      "original_artist": "Jay Chou",
+      "original_artist_aliases": [
+        "Jay Chou",
+        "周杰倫",
+        "周杰伦"
+      ],
+      "alias_title": "不該",
+      "alias_artist": "周杰倫",
+      "source": "catalogue",
+      "confidence": 0.9
+    },
+    {
+      "original_title": "My Daughter, Your Highness",
+      "original_artist": "Jay Chou",
+      "original_artist_aliases": [
+        "Jay Chou",
+        "周杰倫",
+        "周杰伦"
+      ],
+      "alias_title": "女兒殿下",
+      "alias_artist": "周杰倫",
+      "source": "catalogue",
+      "confidence": 0.9
+    }
+  ]
+}

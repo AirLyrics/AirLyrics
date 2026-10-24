@@ -35,8 +35,8 @@ object LocalPlainLyricsProvider : PlainLyricsProvider {
                 plainProviderId = id,
                 plainProviderName = name,
                 plainLrc = plainLrc,
-                matchedTitle = request.title,
-                matchedArtist = request.artist,
+                matchedTitle = info?.matchedTitle?.takeIf { it.isNotBlank() } ?: request.title,
+                matchedArtist = info?.matchedArtist?.takeIf { it.isNotBlank() } ?: request.artist,
                 matchedAlbum = request.album,
                 matchedDurationMs = request.durationMs,
                 manualLocal = info?.plainSource != LyricsStorage.SOURCE_DOWNLOADED

@@ -2,6 +2,7 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
@@ -17,6 +18,7 @@ object LyricsSettingsStore {
     private const val KEY_AUTO_SEARCH_ONLINE = "auto_search_online"
     private const val KEY_AUTO_SAVE_LOCAL = "auto_save_local"
     private const val KEY_CONTENT_DISPLAY_MODE = "content_display_mode"
+    private const val KEY_SCRIPT_PREFERENCE = "script_preference"
     private const val KEY_LINE_DISPLAY_MODE = "line_display_mode"
     private const val KEY_SWITCH_ANIMATION_MODE = "switch_animation_mode"
     // Persisted compatibility contract. Do not change the serialized value.
@@ -108,12 +110,20 @@ object LyricsSettingsStore {
 
     fun getContentDisplayMode(context: Context): LyricsContentDisplayMode {
         val value = store(context).getString(KEY_CONTENT_DISPLAY_MODE, LyricsContentDisplayMode.default.key)
-
         return LyricsContentDisplayMode.fromKey(value)
     }
 
     fun setContentDisplayMode(context: Context, mode: LyricsContentDisplayMode) {
         store(context).setString(KEY_CONTENT_DISPLAY_MODE, mode.key)
+    }
+
+    fun getScriptPreference(context: Context): LyricsScriptPreference {
+        val value = store(context).getString(KEY_SCRIPT_PREFERENCE, LyricsScriptPreference.default.key)
+        return LyricsScriptPreference.fromKey(value)
+    }
+
+    fun setScriptPreference(context: Context, preference: LyricsScriptPreference) {
+        store(context).setString(KEY_SCRIPT_PREFERENCE, preference.key)
     }
 
     fun getLineDisplayMode(context: Context): LyricsLineDisplayMode {
@@ -150,6 +160,7 @@ object LyricsSettingsStore {
             autoSearchOnline = isAutoSearchOnlineEnabled(context),
             autoSaveLocal = isAutoSaveLocalEnabled(context),
             contentDisplayMode = getContentDisplayMode(context),
+            scriptPreference = getScriptPreference(context),
             lineDisplayMode = getLineDisplayMode(context),
             switchAnimationMode = getSwitchAnimationMode(context),
             wordByWordLyricsEnabled = isWordByWordLyricsEnabled(context)

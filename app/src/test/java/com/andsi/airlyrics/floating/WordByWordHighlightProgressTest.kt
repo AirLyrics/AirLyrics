@@ -91,6 +91,29 @@ class WordByWordHighlightProgressTest {
         assertEquals(0.5f, progress.activeFraction, 0.00001f)
     }
 
+    @Test
+    fun mappedSegments_preserveWaitsGapsAndLineEnd() {
+        val line = WordByWordLine(1_000L, 12_000L, "愛說", listOf(
+            WordByWordSegment("愛", 8_000L, 9_000L),
+            WordByWordSegment("說", 10_000L, 11_000L)
+        ))
+        val mapped = line.segments.mapIndexed { index, segment ->
+            segment.copy(text = "爱说"[index].toString())
+        }
+        for (position in listOf(3_000L, 7_999L, 8_000L, 12_000L, 13_000L)) {
+            val waiting = wordByWordHighlightProgress(
+                line, "爱说", position, mapped, clearAtLineEnd = true
+            )
+            assertEquals(0, waiting.completedEnd)
+            assertFalse(waiting.hasActiveCharacter)
+        }
+        val gap = wordByWordHighlightProgress(line, "爱说", 9_500L, mapped)
+        assertEquals(1, gap.completedEnd)
+        assertFalse(gap.hasActiveCharacter)
+        val active = wordByWordHighlightProgress(line, "爱说", 8_500L, mapped)
+        assertEquals(0.5f, active.activeFraction, 0.00001f)
+    }
+
     private fun progressAt(
         text: String,
         positionMs: Long,

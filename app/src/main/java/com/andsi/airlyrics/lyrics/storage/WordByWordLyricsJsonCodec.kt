@@ -13,6 +13,8 @@ internal object WordByWordLyricsJsonCodec {
     private const val KEY_END_MS = "endMs"
     private const val KEY_TEXT = "text"
     private const val KEY_SEGMENTS = "tokens"
+    private const val KEY_TRANSLATED_TEXT = "translatedText"
+    private const val KEY_TRANSLATED_SEGMENTS = "translatedTokens"
 
     data class WordByWordLyricsDocument(
         val wordByWordLines: List<WordByWordLine>,
@@ -70,6 +72,7 @@ internal object WordByWordLyricsJsonCodec {
                 put(KEY_START_MS, line.startMs)
                 put(KEY_END_MS, line.endMs)
                 put(KEY_TEXT, line.text)
+                if (line.translatedText.isNotBlank()) put(KEY_TRANSLATED_TEXT, line.translatedText)
                 if (line.isBackground) put("background", true)
                 put(KEY_SEGMENTS, JSONArray().apply {
                     line.segments.forEach { segment ->
@@ -80,6 +83,9 @@ internal object WordByWordLyricsJsonCodec {
                         })
                     }
                 })
+                if (line.translatedSegments.isNotEmpty()) {
+                    put(KEY_TRANSLATED_SEGMENTS, segmentsToJson(line.translatedSegments))
+                }
             })
         }
         return array
@@ -108,7 +114,15 @@ internal object WordByWordLyricsJsonCodec {
                     }
                 }
 
-                if (segments.isNotEmpty()) add(WordByWordLine(startMs, endMs, text, segments, line.optBoolean("background")))
+                if (segments.isNotEmpty()) add(WordByWordLine(
+                    startMs = startMs,
+                    endMs = endMs,
+                    text = text,
+                    segments = segments,
+                    translatedText = line.optString(KEY_TRANSLATED_TEXT, ""),
+                    translatedSegments = parseSegments(line.optJSONArray(KEY_TRANSLATED_SEGMENTS), startMs, endMs),
+                    isBackground = line.optBoolean("background")
+                ))
             }
         }.sortedBy { it.startMs }
     }
@@ -120,6 +134,31 @@ internal object WordByWordLyricsJsonCodec {
             for (index in 0 until array.length()) {
                 val metadataLine = array.optString(index, "").trim()
                 if (metadataLine.isNotBlank()) add(metadataLine)
+            }
+        }
+    }
+
+    private fun segmentsToJson(segments: List<WordByWordSegment>): JSONArray = JSONArray().apply {
+        segments.forEach { segment ->
+            put(JSONObject().apply {
+                put(KEY_TEXT, segment.text)
+                put(KEY_START_MS, segment.startMs)
+                put(KEY_END_MS, segment.endMs)
+            })
+        }
+    }
+
+    private fun parseSegments(array: JSONArray?, startMs: Long, endMs: Long): List<WordByWordSegment> {
+        if (array == null) return emptyList()
+        return buildList {
+            for (index in 0 until array.length()) {
+                val segment = array.optJSONObject(index) ?: continue
+                val text = segment.optString(KEY_TEXT, "")
+                val segmentStart = segment.optLong(KEY_START_MS, -1L)
+                val segmentEnd = segment.optLong(KEY_END_MS, -1L)
+                if (text.isNotBlank() && segmentStart in startMs until segmentEnd && segmentEnd <= endMs + 1L) {
+                    add(WordByWordSegment(text, segmentStart, segmentEnd))
+                }
             }
         }
     }

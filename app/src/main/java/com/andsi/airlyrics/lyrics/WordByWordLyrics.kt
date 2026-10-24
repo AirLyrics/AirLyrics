@@ -5,7 +5,9 @@ data class WordByWordLine(
     val endMs: Long,
     val text: String,
     val segments: List<WordByWordSegment> = emptyList(),
-    val isBackground: Boolean = false
+    val isBackground: Boolean = false,
+    val translatedText: String = "",
+    val translatedSegments: List<WordByWordSegment> = emptyList()
 )
 
 data class WordByWordSegment(
