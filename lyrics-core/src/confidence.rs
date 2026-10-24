@@ -5,7 +5,8 @@
 //! never sufficient on its own when no independent evidence corroborates it.
 use crate::aliases::AliasHit;
 use crate::matching::{
-    different_scripts, score_candidate, score_metadata_alias, MatchMetadata, MatchScore,
+    different_scripts, score_candidate, score_metadata_alias, text_similarity, MatchMetadata,
+    MatchScore,
 };
 use crate::recording::duration_close;
 
@@ -63,6 +64,7 @@ impl Thresholds {
 #[derive(Clone, Copy, Debug, Default)]
 pub(crate) struct Evidence {
     pub(crate) title_similarity: f64,
+    pub(crate) alias_title_similarity: Option<f64>,
     pub(crate) artist_similarity: Option<f64>,
     pub(crate) album_similarity: Option<f64>,
     pub(crate) duration_close: Option<bool>,
@@ -133,6 +135,7 @@ pub(crate) fn evaluate_with(
             candidate.duration_ms,
             thresholds.duration_tolerance_ms,
         ),
+        alias_title_similarity: alias.map(|hit| text_similarity(&hit.title, candidate.title)),
         alias_hit: alias.is_some(),
         version_conflict: crate::recording::version_conflict(&query, &candidate),
         cross_script,
@@ -240,11 +243,18 @@ pub(crate) fn decide(
         return Decision::Review;
     }
 
-    let title_ok = evidence.title_similarity >= thresholds.accept_title || evidence.alias_hit;
+    let alias_title_ok = evidence.alias_hit
+        && evidence
+            .alias_title_similarity
+            .is_some_and(|v| v >= thresholds.accept_title);
+    let title_ok = evidence.title_similarity >= thresholds.accept_title
+        || evidence
+            .alias_title_similarity
+            .is_some_and(|v| v >= thresholds.accept_title);
     // Cross-script pairs cannot be established by text similarity: they need both a strong
     // performer match and a matching running time, unless a confirmed alias is in play.
     let cross_script_ok = !evidence.cross_script
-        || evidence.alias_hit
+        || alias_title_ok
         || (evidence
             .artist_similarity
             .is_some_and(|v| v >= thresholds.strong_artist)
@@ -443,6 +453,43 @@ mod tests {
             evaluate_with(lookup, right, Some(&hit), &Thresholds::default()).decision,
             Decision::Accept
         );
+    }
+
+    #[test]
+    fn alias_presence_does_not_accept_an_unrelated_title_with_strong_evidence() {
+        let candidate = MatchMetadata {
+            title: "我太傻",
+            ..query()
+        };
+        let evaluation = evaluate_with(query(), candidate, Some(&alias()), &Thresholds::default());
+        assert!(evaluation.score.unwrap().total >= Thresholds::default().accept_total);
+        assert_ne!(evaluation.decision, Decision::Accept);
+        assert!(evaluation.evidence.alias_title_similarity.unwrap() < 0.85);
+    }
+
+    #[test]
+    fn matching_alias_title_can_relax_cross_script_title_check() {
+        let candidate = MatchMetadata {
+            title: "电台情歌",
+            ..query()
+        };
+        let evaluation = evaluate_with(query(), candidate, Some(&alias()), &Thresholds::default());
+        assert_eq!(evaluation.evidence.alias_title_similarity, Some(1.0));
+        assert_eq!(evaluation.decision, Decision::Accept);
+    }
+
+    #[test]
+    fn no_alias_preserves_direct_title_requirement() {
+        for (title, accepted) in [("Radio Love Song", true), ("Completely Unrelated", false)] {
+            let evaluation = evaluate_with(
+                query(),
+                MatchMetadata { title, ..query() },
+                None,
+                &Thresholds::default(),
+            );
+            assert_eq!(evaluation.evidence.alias_title_similarity, None);
+            assert_eq!(evaluation.decision == Decision::Accept, accepted);
+        }
     }
 
     #[test]

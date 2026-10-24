@@ -163,65 +163,104 @@ pub(crate) fn pick_alias(
 
 /// Ask each storefront, best effort: learn the localized artist spelling, and return the first
 /// title alias the evidence supports.
+#[derive(Default)]
+pub(crate) struct DiscoveryOutcome {
+    alias: Option<AliasEntry>,
+    cancelled: bool,
+    transient_error: bool,
+}
+
+impl DiscoveryOutcome {
+    fn check_cancelled(&mut self, lookup_id: jni::sys::jlong) -> bool {
+        self.cancelled |= crate::check_lookup_cancelled(lookup_id).is_err();
+        self.cancelled
+    }
+
+    fn record<T>(&mut self, result: Result<T, String>) -> Option<T> {
+        match result {
+            Ok(value) => Some(value),
+            Err(_) => {
+                self.transient_error = true;
+                None
+            }
+        }
+    }
+}
+
 pub(crate) fn discover_and_register(
     query: MatchMetadata<'_>,
     backend: &dyn CatalogueBackend,
     lookup_id: jni::sys::jlong,
-) -> Option<AliasEntry> {
+) -> DiscoveryOutcome {
+    let mut outcome = DiscoveryOutcome::default();
     if query.artist.trim().is_empty() {
-        return None;
+        return outcome;
     }
-    // Learn the recording's exact running time from the player's own storefront: the app's
-    // reported duration can be rounded, and pairing storefronts is millisecond-sensitive.
-    let anchored_duration = SOURCE_STOREFRONTS
-        .iter()
-        .find_map(|storefront| {
-            backend
-                .search_track(query.title, query.artist, storefront)
-                .ok()
-                .flatten()
-        })
-        .and_then(|track| track.duration_ms);
-    let anchored = anchored_duration
-        .map(|duration| MatchMetadata {
-            duration_ms: Some(duration),
-            ..query
-        })
-        .unwrap_or(query);
+    let mut anchored_duration = None;
+    for storefront in SOURCE_STOREFRONTS {
+        if outcome.check_cancelled(lookup_id) {
+            return outcome;
+        }
+        let result = backend.search_track(query.title, query.artist, storefront);
+        let track = outcome.record(result).flatten();
+        if outcome.check_cancelled(lookup_id) {
+            return outcome;
+        }
+        if let Some(track) = track {
+            anchored_duration = track.duration_ms;
+            break;
+        }
+    }
+    let anchored = MatchMetadata {
+        duration_ms: anchored_duration.or(query.duration_ms),
+        ..query
+    };
 
     for storefront in STOREFRONTS {
-        if crate::check_lookup_cancelled(lookup_id).is_err() {
-            return None;
+        if outcome.check_cancelled(lookup_id) {
+            return outcome;
         }
-        let Ok(Some(artist)) = backend.search_artist(query.artist, storefront) else {
+        let result = backend.search_artist(query.artist, storefront);
+        let artist = outcome.record(result).flatten();
+        if outcome.check_cancelled(lookup_id) {
+            return outcome;
+        }
+        let Some(artist) = artist else {
             continue;
         };
-        // The catalogue mapping romanized → localized performer is itself useful: it steers the
-        // lyrics search away from cover acts even when no localized title can be confirmed.
         if has_cjk(&artist.name) && !has_cjk(query.artist) {
             crate::aliases::register_artist_alias(query.artist, &artist.name);
         }
-        let tracks = artist
-            .id
-            .as_deref()
-            .and_then(|id| backend.search_artist_songs(id, storefront).ok())
-            .filter(|tracks| !tracks.is_empty())
-            .or_else(|| backend.search_songs(&artist.name, storefront).ok());
+        let mut tracks = None;
+        if let Some(id) = artist.id.as_deref() {
+            tracks = outcome.record(backend.search_artist_songs(id, storefront));
+            if outcome.check_cancelled(lookup_id) {
+                return outcome;
+            }
+        }
+        if tracks.as_ref().is_none_or(|tracks| tracks.is_empty()) {
+            tracks = outcome.record(backend.search_songs(&artist.name, storefront));
+            if outcome.check_cancelled(lookup_id) {
+                return outcome;
+            }
+        }
         let Some(tracks) = tracks else {
             continue;
         };
-        let window = match anchored_duration {
-            Some(_) => ANCHORED_WINDOW_MS,
-            None => UNANCHORED_WINDOW_MS,
+        let window = if anchored_duration.is_some() {
+            ANCHORED_WINDOW_MS
+        } else {
+            UNANCHORED_WINDOW_MS
         };
         if let Some(entry) = pick_alias(anchored, &tracks, window) {
-            return Some(AliasEntry {
+            outcome.alias = Some(AliasEntry {
                 source: format!("catalogue:itunes-{storefront}"),
                 ..entry
             });
+            return outcome;
         }
     }
-    None
+    outcome
 }
 
 /// Registers a discovered alias for later lookups in this process, at most once per recording.
@@ -274,18 +313,52 @@ pub(crate) fn ensure_registered(
                      // The storefront catalogue is authoritative when it can pair the recording, but it keeps the
                      // same English title for many CJK releases. QQ Music's public smart-box knows the Chinese
                      // release title, which is what the NetEase / LRCLIB searches actually need.
-    let discovered = discover_and_register(query, &backend, lookup_id)
-        .or_else(|| crate::qq::resolve_alias(title, artist, duration_ms));
-
-    if let Ok(mut cache) = cache().lock() {
-        if cache.len() > 512 {
-            cache.clear();
-        }
-        cache.insert(key, Instant::now());
-    }
+    let discovered = discover_with_fallback(query, &backend, lookup_id, &key, || {
+        crate::qq::resolve_alias(title, artist, duration_ms)
+    });
     if let Some(entry) = discovered {
         crate::aliases::register(entry);
     }
+}
+
+/// Shared orchestration so cancellation, fallback and cache policy can be tested offline.
+fn discover_with_fallback(
+    query: MatchMetadata<'_>,
+    backend: &dyn CatalogueBackend,
+    lookup_id: jni::sys::jlong,
+    key: &str,
+    fallback: impl FnOnce() -> Option<AliasEntry>,
+) -> Option<AliasEntry> {
+    if cache()
+        .lock()
+        .expect("discovery cache")
+        .get(key)
+        .is_some_and(|at| at.elapsed() < CACHE_TTL)
+    {
+        return None;
+    }
+    let mut outcome = discover_and_register(query, backend, lookup_id);
+    if outcome.check_cancelled(lookup_id) {
+        return None;
+    }
+    if outcome.alias.is_none() {
+        if outcome.check_cancelled(lookup_id) {
+            return None;
+        }
+        outcome.alias = fallback();
+    }
+    if outcome.check_cancelled(lookup_id) {
+        return None;
+    }
+    if !outcome.transient_error {
+        if let Ok(mut cache) = cache().lock() {
+            if cache.len() > 512 {
+                cache.clear();
+            }
+            cache.insert(key.to_owned(), Instant::now());
+        }
+    }
+    outcome.alias
 }
 
 fn cache() -> &'static Mutex<HashMap<String, Instant>> {
@@ -504,6 +577,128 @@ mod tests {
         }
     }
 
+    struct WalkBackend {
+        calls: std::cell::Cell<usize>,
+        cancel_id: Option<i64>,
+        fail: bool,
+        hit: bool,
+    }
+
+    impl CatalogueBackend for WalkBackend {
+        fn search_track(
+            &self,
+            _: &str,
+            _: &str,
+            _: &str,
+        ) -> Result<Option<CatalogueTrack>, String> {
+            self.calls.set(self.calls.get() + 1);
+            if self.fail {
+                Err("HTTP 503 / transport failure".to_owned())
+            } else if self.hit {
+                Ok(cyndi_catalogue().own)
+            } else {
+                Ok(None)
+            }
+        }
+
+        fn search_artist(&self, _: &str, _: &str) -> Result<Option<CatalogueArtist>, String> {
+            self.calls.set(self.calls.get() + 1);
+            if let Some(id) = self.cancel_id {
+                crate::cancel_lookup(id);
+            }
+            if self.hit {
+                Ok(Some(CatalogueArtist {
+                    name: "王心凌".to_owned(),
+                    id: None,
+                }))
+            } else {
+                Ok(None)
+            }
+        }
+
+        fn search_songs(&self, _: &str, _: &str) -> Result<Vec<CatalogueTrack>, String> {
+            self.calls.set(self.calls.get() + 1);
+            Ok(cyndi_catalogue().tracks)
+        }
+    }
+
+    fn walk_backend() -> WalkBackend {
+        WalkBackend {
+            calls: std::cell::Cell::new(0),
+            cancel_id: None,
+            fail: false,
+            hit: false,
+        }
+    }
+
+    #[test]
+    fn cancelled_walk_skips_qq_and_cache_and_later_retries() {
+        let id = i64::MAX - 840;
+        let mut backend = walk_backend();
+        backend.cancel_id = Some(id);
+        let key = "discovery-test-cancelled";
+        let fallback = std::cell::Cell::new(0);
+        let run = || {
+            discover_with_fallback(cyndi_query(), &backend, id, key, || {
+                fallback.set(fallback.get() + 1);
+                None
+            })
+        };
+        assert!(run().is_none());
+        assert_eq!(backend.calls.get(), 3);
+        assert_eq!(fallback.get(), 0);
+        assert!(!cache().lock().unwrap().contains_key(key));
+        crate::clear_lookup(id);
+        assert!(run().is_none());
+        assert_eq!(backend.calls.get(), 6);
+        crate::clear_lookup(id);
+    }
+
+    #[test]
+    fn transient_backend_error_is_not_cached() {
+        let mut backend = walk_backend();
+        backend.fail = true;
+        let key = "discovery-test-transient";
+        for _ in 0..2 {
+            assert!(discover_with_fallback(cyndi_query(), &backend, 0, key, || None).is_none());
+            assert!(!cache().lock().unwrap().contains_key(key));
+        }
+        assert_eq!(backend.calls.get(), 10);
+    }
+
+    #[test]
+    fn empty_catalogue_uses_qq_and_caches_attempt() {
+        let backend = walk_backend();
+        let key = "discovery-test-empty";
+        let fallback = std::cell::Cell::new(0);
+        for _ in 0..2 {
+            assert!(discover_with_fallback(cyndi_query(), &backend, 0, key, || {
+                fallback.set(fallback.get() + 1);
+                None
+            })
+            .is_none());
+        }
+        assert_eq!(backend.calls.get(), 5);
+        assert_eq!(fallback.get(), 1);
+        assert!(cache().lock().unwrap().remove(key).is_some());
+    }
+
+    #[test]
+    fn normal_catalogue_hit_returns_alias_and_caches_attempt() {
+        let mut backend = walk_backend();
+        backend.hit = true;
+        let key = "discovery-test-hit";
+        let alias =
+            discover_with_fallback(cyndi_query(), &backend, 0, key, || panic!("unexpected QQ"));
+        assert_eq!(alias.unwrap().alias_title, "大眠");
+        let calls = backend.calls.get();
+        assert!(
+            discover_with_fallback(cyndi_query(), &backend, 0, key, || panic!("cached")).is_none()
+        );
+        assert_eq!(backend.calls.get(), calls);
+        assert!(cache().lock().unwrap().remove(key).is_some());
+    }
+
     /// Real storefront data: the US entry "The Big Sleep" and the TW entry 《大眠》 are the same
     /// master (239,671 ms). 王心凌《這就是愛》is only 71 ms away — so only an exact pairing is
     /// allowed to decide.
@@ -532,7 +727,9 @@ mod tests {
 
     #[test]
     fn the_localized_title_of_the_same_master_is_discovered() {
-        let alias = discover_and_register(cyndi_query(), &cyndi_catalogue(), 0).expect("alias");
+        let alias = discover_and_register(cyndi_query(), &cyndi_catalogue(), 0)
+            .alias
+            .expect("alias");
         assert_eq!(alias.alias_title, "大眠");
         assert_eq!(alias.alias_artist.as_deref(), Some("王心凌"));
         assert_eq!(alias.original_title, "The Big Sleep");
@@ -558,14 +755,18 @@ mod tests {
     #[test]
     fn anchor_equal_to_player_duration_rejects_candidate_100_ms_off() {
         let catalogue = catalogue_with_candidate_100_ms_off();
-        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0)
+            .alias
+            .is_none());
     }
 
     #[test]
     fn anchor_without_duration_accepts_candidate_100_ms_off() {
         let mut catalogue = catalogue_with_candidate_100_ms_off();
         catalogue.own.as_mut().expect("catalogue entry").duration_ms = None;
-        let alias = discover_and_register(cyndi_query(), &catalogue, 0).expect("alias");
+        let alias = discover_and_register(cyndi_query(), &catalogue, 0)
+            .alias
+            .expect("alias");
         assert_eq!(alias.alias_title, "大眠");
     }
 
@@ -576,7 +777,7 @@ mod tests {
             duration_ms: Some(239_800),
             ..cyndi_query()
         };
-        assert!(discover_and_register(query, &catalogue, 0).is_none());
+        assert!(discover_and_register(query, &catalogue, 0).alias.is_none());
     }
 
     #[test]
@@ -590,7 +791,9 @@ mod tests {
                 track("另一個歌", "王心凌", 239_680),
             ],
         };
-        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0)
+            .alias
+            .is_none());
     }
 
     #[test]
@@ -604,7 +807,9 @@ mod tests {
                 track("心電心", "王心凌", 230_000),
             ],
         };
-        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0)
+            .alias
+            .is_none());
     }
 
     #[test]
@@ -624,7 +829,7 @@ mod tests {
             album: "",
             duration_ms: Some(242_000),
         };
-        assert!(discover_and_register(query, &catalogue, 0).is_none());
+        assert!(discover_and_register(query, &catalogue, 0).alias.is_none());
     }
 
     #[test]
@@ -633,7 +838,9 @@ mod tests {
             artist: "",
             ..cyndi_query()
         };
-        assert!(discover_and_register(no_artist, &cyndi_catalogue(), 0).is_none());
+        assert!(discover_and_register(no_artist, &cyndi_catalogue(), 0)
+            .alias
+            .is_none());
     }
 
     #[test]
@@ -644,7 +851,9 @@ mod tests {
             duration_ms: None,
             ..cyndi_query()
         };
-        let alias = discover_and_register(no_duration, &cyndi_catalogue(), 0).expect("alias");
+        let alias = discover_and_register(no_duration, &cyndi_catalogue(), 0)
+            .alias
+            .expect("alias");
         assert_eq!(alias.alias_title, "大眠");
     }
 
@@ -656,7 +865,11 @@ mod tests {
             album: "",
             duration_ms: Some(239_671),
         };
-        assert!(discover_and_register(already_localized, &cyndi_catalogue(), 0).is_none());
+        assert!(
+            discover_and_register(already_localized, &cyndi_catalogue(), 0)
+                .alias
+                .is_none()
+        );
     }
 
     #[test]
@@ -670,7 +883,9 @@ mod tests {
                 track("BEAUTY", "王心凌", 210_000),
             ],
         };
-        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0)
+            .alias
+            .is_none());
     }
 
     #[test]
@@ -696,7 +911,7 @@ mod tests {
             crate::aliases::localized_artist("Jay Chou").as_deref(),
             Some("周杰倫")
         );
-        if let Some(alias) = alias {
+        if let Some(alias) = alias.alias {
             assert_eq!(alias.alias_title, "不該");
         }
         crate::aliases::clear_artist_aliases();
@@ -712,7 +927,9 @@ mod tests {
             album: "",
             duration_ms: Some(239_671),
         };
-        let alias = discover_and_register(query, &backend, 0).expect("live alias");
+        let alias = discover_and_register(query, &backend, 0)
+            .alias
+            .expect("live alias");
         println!("live alias: {alias:?}");
         assert_eq!(alias.alias_title, "大眠");
     }
