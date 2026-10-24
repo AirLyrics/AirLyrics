@@ -173,7 +173,7 @@ pub(crate) fn discover_and_register(
     }
     // Learn the recording's exact running time from the player's own storefront: the app's
     // reported duration can be rounded, and pairing storefronts is millisecond-sensitive.
-    let anchored = SOURCE_STOREFRONTS
+    let anchored_duration = SOURCE_STOREFRONTS
         .iter()
         .find_map(|storefront| {
             backend
@@ -181,7 +181,8 @@ pub(crate) fn discover_and_register(
                 .ok()
                 .flatten()
         })
-        .and_then(|track| track.duration_ms)
+        .and_then(|track| track.duration_ms);
+    let anchored = anchored_duration
         .map(|duration| MatchMetadata {
             duration_ms: Some(duration),
             ..query
@@ -209,10 +210,9 @@ pub(crate) fn discover_and_register(
         let Some(tracks) = tracks else {
             continue;
         };
-        let window = if anchored.duration_ms == query.duration_ms {
-            UNANCHORED_WINDOW_MS
-        } else {
-            ANCHORED_WINDOW_MS
+        let window = match anchored_duration {
+            Some(_) => ANCHORED_WINDOW_MS,
+            None => UNANCHORED_WINDOW_MS,
         };
         if let Some(entry) = pick_alias(anchored, &tracks, window) {
             return Some(AliasEntry {
@@ -541,6 +541,42 @@ mod tests {
             alias.confidence < 1.0,
             "an alias is a hint, not a confirmation"
         );
+    }
+
+    fn catalogue_with_candidate_100_ms_off() -> FakeCatalogue {
+        FakeCatalogue {
+            artist: Some("王心凌"),
+            own: Some(track("The Big Sleep", "Cyndi Wang", 239_700)),
+            tracks: vec![
+                track("大眠", "王心凌", 239_800),
+                track("這就是愛", "王心凌", 200_000),
+                track("別說", "王心凌", 210_000),
+            ],
+        }
+    }
+
+    #[test]
+    fn anchor_equal_to_player_duration_rejects_candidate_100_ms_off() {
+        let catalogue = catalogue_with_candidate_100_ms_off();
+        assert!(discover_and_register(cyndi_query(), &catalogue, 0).is_none());
+    }
+
+    #[test]
+    fn anchor_without_duration_accepts_candidate_100_ms_off() {
+        let mut catalogue = catalogue_with_candidate_100_ms_off();
+        catalogue.own.as_mut().expect("catalogue entry").duration_ms = None;
+        let alias = discover_and_register(cyndi_query(), &catalogue, 0).expect("alias");
+        assert_eq!(alias.alias_title, "大眠");
+    }
+
+    #[test]
+    fn anchor_different_from_player_duration_rejects_candidate_100_ms_off() {
+        let catalogue = catalogue_with_candidate_100_ms_off();
+        let query = MatchMetadata {
+            duration_ms: Some(239_800),
+            ..cyndi_query()
+        };
+        assert!(discover_and_register(query, &catalogue, 0).is_none());
     }
 
     #[test]
