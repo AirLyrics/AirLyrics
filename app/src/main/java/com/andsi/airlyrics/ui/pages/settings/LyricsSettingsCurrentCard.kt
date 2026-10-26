@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.StringRes
-import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.ui.components.TextDisplayPolicy
 import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.R
@@ -78,6 +77,10 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             body.addView(smallHint(activity, getString(R.string.ui_offset_per_song_hint)))
         }
 
+        body.addView(actionButton(activity, getString(R.string.search_lyrics)) {
+            uiActions.openLyricsSearch()
+        })
+
         body.addView(actionButton(activity, getString(R.string.ui_import_lyrics_for_current_song)) {
             uiActions.importLyricsForCurrentMedia()
         })
@@ -120,27 +123,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             })
         }
 
-        if (!state.hasLocalWordByWordLyrics) {
-            body.addView(actionButton(activity, getString(R.string.ui_search_online_again)) {
-                activity.confirmOperation(
-                    action = ConfirmationAction.Search(state.operationTarget ?: return@actionButton),
-                    title = getString(R.string.ui_search_online_again_confirm),
-                    message = getString(R.string.ui_search_online_replace_cache_msg),
-                    positiveText = getString(R.string.ui_search)
-                )
-            })
-            body.addView(actionButton(activity, getString(R.string.ui_search_international_title)) {
-                activity.confirmOperation(
-                    action = ConfirmationAction.Search(
-                        state.operationTarget ?: return@actionButton,
-                        LyricsSearchMode.International
-                    ),
-                    title = getString(R.string.ui_search_international_title),
-                    message = getString(R.string.ui_search_online_replace_cache_msg),
-                    positiveText = getString(R.string.ui_search)
-                )
-            })
-        }
+
     }
 
     fun populate(

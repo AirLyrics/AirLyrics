@@ -1,5 +1,9 @@
 package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.app.search.LyricsSearchActivity
+import com.andsi.airlyrics.media.CurrentMediaReader
+import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.ui.components.playTinyPulse
@@ -7,6 +11,10 @@ import com.andsi.airlyrics.ui.model.MainUiActions
 
 internal fun MainGraph.createMainUiActions(): MainUiActions {
     return MainUiActions(
+        openLyricsSearch = {
+            CurrentMediaReader.readSelectedCurrentMedia(activity, MediaSourceStore.getSelectedPackage(activity))
+                ?.toSongIdentity()?.let { LyricsSearchActivity.open(activity, it) }
+        },
         selectPage = viewModel::selectPage,
         openSettingsSubPage = viewModel::openSettingsSubPage,
         setSavedLyricsSearchOpen = viewModel::setSavedLyricsSearchOpen,

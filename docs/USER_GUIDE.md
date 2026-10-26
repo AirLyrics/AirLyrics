@@ -66,9 +66,13 @@ checks other related candidates if the first one has no synchronized lyrics. Onl
 valid timeline are used; to improve the hit rate, the returned version, artist tags, or duration may
 not exactly match the current track. If you need more accurate lyrics, just adjust them yourself.
 
-- **Search with international title** is mainly meant to fix incorrect matches for non-English songs
-  (especially Japanese and Korean), since these songs use English spellings on the lyrics sources.
-  If you cannot find the right lyrics, you can try this feature.
+### Manual Lyrics Search
+
+In **Settings > Lyrics > Current song lyrics**, tap **Search lyrics**. Edit the title, artist or album,
+choose sources, and search. Swipe between sources, open a result to preview it, then tap **Apply lyrics**.
+The reset icon at the end of each edited field restores its original value.
+Searching and previewing leave existing lyrics intact; applying uses the song shown at the top of the window.
+
 - Uninstalling AirLyrics also deletes the default lyrics folder. To use a custom folder, select it
   through the system file picker.
 

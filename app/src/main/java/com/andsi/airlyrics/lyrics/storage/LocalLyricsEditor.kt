@@ -69,7 +69,7 @@ internal object LocalLyricsEditor {
             if (entry != null) {
                 val now = System.currentTimeMillis()
                 val updated = LyricsIndexStore.read(context).map { indexed ->
-                    if (indexed.key == entry.key) indexed.copy(updatedAt = now) else indexed
+                    if (indexed.key == entry.key) indexed.copy(updatedAt = now, plainSource = LyricsStorage.SOURCE_MANUAL_EDIT, plainProvider = "local") else indexed
                 }
                 if (!LyricsIndexStore.write(context, updated)) {
                     return@withStorageLock LyricsStorage.LocalLyricsUpdateResult(saved = false)

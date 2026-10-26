@@ -35,7 +35,7 @@ internal object ManualLyricsSelectionStore {
             val doc = JSONObject(String(bytes, Charsets.UTF_8))
             if (doc.getString("directory") != LyricsStoragePaths.getLyricsDirRawPath(context)) return@runCatching null
             val local = PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, song.title, song.artist, song.durationMs)
-            if (local != null && local.plainSource in setOf(LyricsStorage.SOURCE_MANUAL_IMPORT, LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK)
+            if (local != null && local.plainSource in setOf(LyricsStorage.SOURCE_MANUAL_IMPORT, LyricsStorage.SOURCE_MANUAL_EDIT, LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK)
                 && local.updatedAt > doc.getLong("selectedAt")) return@runCatching null
             if (doc.getString("kind") == "spicy") {
                 val cache = SpicyLyricsCache.forContext(context)

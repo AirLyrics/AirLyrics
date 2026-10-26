@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only the source picker: its content draws the rounded surface. -->
+    <style name="ThemeOverlay.AirLyrics.LyricsSources" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Widget.AirLyrics.LyricsSources</item>
+    </style>
+    <style name="Widget.AirLyrics.LyricsSources" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="shapeAppearance">@null</item>
+        <item name="shapeAppearanceOverlay">@null</item>
+        <item name="backgroundTint">@null</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:elevation">0dp</item>
+    </style>
+</resources>

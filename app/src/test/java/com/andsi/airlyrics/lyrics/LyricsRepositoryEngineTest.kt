@@ -529,6 +529,17 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
+    fun manuallySelectedEmptyLyricsSuppressAutomaticAndWordFallbacks() {
+        val empty = result("local", "").copy(manualLocal = true, selectedManually = true)
+        val spicy = FakePlainLyricsProvider("spicy", Result.success(spicyResult()))
+        val engine = engine(local = FakePlainLyricsProvider("local", Result.success(empty)),
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to spicy),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true))
+        assertSame(empty, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
+        assertEquals(0, spicy.calls)
+    }
+
+    @Test
     fun spicyErrorKeepsExistingDownloadedResult() {
         val plain = result("local", "[00:01.00]ordinary")
         val engine = engine(local = FakePlainLyricsProvider("local", Result.success(plain)),

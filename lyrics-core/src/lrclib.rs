@@ -206,6 +206,8 @@ struct ApiTrack {
     instrumental: Option<bool>,
     #[serde(default)]
     synced_lyrics: Option<String>,
+    #[serde(default)]
+    plain_lyrics: Option<String>,
 }
 
 #[derive(Debug)]
@@ -1234,6 +1236,7 @@ mod tests {
             duration: Some(duration),
             instrumental: Some(false),
             synced_lyrics: synced_lyrics.map(str::to_string),
+            plain_lyrics: None,
         }
     }
 
@@ -1807,5 +1810,113 @@ mod tests {
             .unwrap();
         assert_eq!(result.id.as_deref(), Some("1"));
         assert!(backend.search_calls.lock().unwrap().is_empty());
+    }
+}
+
+pub(crate) fn manual(
+    request: &crate::manual::Request,
+    lookup: i64,
+) -> Result<serde_json::Value, String> {
+    use crate::manual::{ranked, Track};
+    let run = || -> Result<serde_json::Value, LrclibError> {
+        let mut schedule = acquire_request_schedule(lookup)?;
+        enforce_request_schedule(&mut schedule, lookup)?;
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|_| LrclibError::native("runtime"))?;
+        let mut retry = None;
+        let t = &request.track;
+        let result = runtime.block_on(async {
+            let req = if request.operation == "search" {
+                let mut req = client()?.get(LRCLIB_SEARCH_URL);
+                if !t.title.is_empty() {
+                    req = req.query(&[("track_name", &t.title)]);
+                }
+                if !t.artist.is_empty() {
+                    req = req.query(&[("artist_name", &t.artist)]);
+                }
+                if !t.album.is_empty() {
+                    req = req.query(&[("album_name", &t.album)]);
+                }
+                req
+            } else {
+                let id =
+                    t.id.parse::<u64>()
+                        .map_err(|_| LrclibError::parse("invalid track ID"))?;
+                client()?.get(format!("{LRCLIB_GET_URL}/{id}"))
+            };
+            let body = fetch_response_body(req, lookup, &mut retry)
+                .await?
+                .ok_or_else(|| LrclibError::not_found("track unavailable"))?;
+            if request.operation == "search" {
+                let tracks: Vec<ApiTrack> = serde_json::from_str(&body)
+                    .map_err(|_| LrclibError::parse("invalid candidates"))?;
+                let tracks = tracks
+                    .into_iter()
+                    .map(|v| Track {
+                        id: v.id.to_string(),
+                        title: v.track_name.unwrap_or_default(),
+                        artist: v.artist_name.unwrap_or_default(),
+                        album: v.album_name.unwrap_or_default(),
+                        duration_ms: v
+                            .duration
+                            .and_then(duration_seconds_to_ms)
+                            .unwrap_or_default(),
+                        score: 0.0,
+                    })
+                    .collect();
+                Ok(serde_json::json!({"ok":true,"candidates":ranked(tracks,t)}))
+            } else {
+                let v: ApiTrack =
+                    serde_json::from_str(&body).map_err(|_| LrclibError::parse("invalid track"))?;
+                manual_track_content(v, t)
+            }
+        });
+        schedule.next_request_at = Some(Instant::now() + LRCLIB_REQUEST_INTERVAL);
+        if let Some((delay, status)) = retry {
+            schedule.retry_after_until = Some(Instant::now() + delay);
+            schedule.retry_after_status = Some(status);
+        }
+        result
+    };
+    run().map_err(|e| e.error_type().to_owned())
+}
+
+fn manual_track_content(v: ApiTrack, t: &crate::manual::Track) -> Result<serde_json::Value, LrclibError> {
+    if v.id.to_string() != t.id {
+        return Err(LrclibError::parse("track ID mismatch"));
+    }
+    if v.synced_lyrics.as_deref().is_none_or(|text| text.trim().is_empty())
+        && v.plain_lyrics.as_deref().is_none_or(|text| text.trim().is_empty())
+    {
+        return Ok(crate::manual::unavailable(crate::manual::UnavailableReason::SourceEmpty));
+    }
+    let Some(lrc) = v.synced_lyrics.and_then(normalize_usable_lrc) else {
+        return Ok(crate::manual::unavailable(crate::manual::UnavailableReason::NoTimeline));
+    };
+    Ok(t.lyrics("lrclib-rust", lrc, None))
+}
+
+#[cfg(test)]
+mod manual_tests {
+    use super::*;
+    #[test]
+    fn manual_reasons_preserve_instrumental_timing_and_identity() {
+        let t = crate::manual::Track { id: "1".into(), title: "Song".into(), artist: "".into(), album: "".into(), duration_ms: 0, score: 0.0 };
+        for (body, reason) in [
+            (r#"{"id":1,"instrumental":true}"#, "source_empty"),
+            (r#"{"id":1}"#, "source_empty"),
+            (r#"{"id":1,"plainLyrics":"Untimed lyrics"}"#, "no_timeline"),
+            (r#"{"id":1,"syncedLyrics":"untimed"}"#, "no_timeline"),
+            (r#"{"id":1,"syncedLyrics":"[00:01.00]"}"#, "no_timeline"),
+        ] {
+            let v = serde_json::from_str(body).unwrap();
+            assert_eq!(manual_track_content(v, &t).unwrap()["reason"], reason);
+        }
+        let v = serde_json::from_str(r#"{"id":1,"syncedLyrics":"[00:01.00]Hello"}"#).unwrap();
+        assert!(manual_track_content(v, &t).unwrap()["lrc"].as_str().unwrap().contains("Hello"));
+        let v = serde_json::from_str(r#"{"id":2,"instrumental":true}"#).unwrap();
+        assert_eq!(manual_track_content(v, &t).unwrap_err().error_type(), "ParseError");
     }
 }

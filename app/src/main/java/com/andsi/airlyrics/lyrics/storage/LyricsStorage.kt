@@ -39,6 +39,7 @@ object LyricsStorage {
 
     const val SOURCE_PROVIDER_CACHE = "provider_cache"
     const val SOURCE_MANUAL_IMPORT = "manual_import"
+    const val SOURCE_MANUAL_EDIT = "manual_edit"
     const val SOURCE_DOWNLOADED = "downloaded"
     // Persisted compatibility contract. Do not change the serialized value.
     const val SOURCE_WORD_BY_WORD_FALLBACK = "karaoke_fallback"
