@@ -276,10 +276,6 @@ private fun createAppleLoginPanel(activity: MainUiHost, onSignedIn: () -> Unit):
             override fun onPageFinished(view: WebView, url: String) {
                 if (destroyed || captured || android.net.Uri.parse(url).host != "music.apple.com") return
                 status.isVisible = false
-                captureJob?.cancel()
-                captureJob = activity.activity.lifecycleScope.launch {
-                    AppleMusicLoginCapture.capture(view)?.let(::finishWithToken)
-                }
             }
         }
         loadUrl("https://music.apple.com/cn/login")
