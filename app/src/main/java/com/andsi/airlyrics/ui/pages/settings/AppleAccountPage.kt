@@ -18,6 +18,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.core.graphics.ColorUtils
+import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import com.andsi.airlyrics.R
@@ -274,7 +275,7 @@ private fun createAppleLoginPanel(activity: MainUiHost, onSignedIn: () -> Unit):
             }
 
             override fun onPageFinished(view: WebView, url: String) {
-                if (destroyed || captured || android.net.Uri.parse(url).host != "music.apple.com") return
+                if (destroyed || captured || url.toUri().host != "music.apple.com") return
                 status.isVisible = false
             }
         }
