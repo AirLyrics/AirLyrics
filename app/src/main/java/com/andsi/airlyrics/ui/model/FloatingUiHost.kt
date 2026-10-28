@@ -45,6 +45,13 @@ internal interface FloatingUiHost {
     fun displayScopeSummary(): String
     fun hasUsageStatsAccess(): Boolean
     fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView
+    fun updateFloatingPreviewText(view: TextView, text: CharSequence)
+    fun applyAnimatedFloatingPreviewHighlight(
+        text: android.text.SpannableStringBuilder,
+        currentLine: String,
+        start: Int,
+        color: Int
+    )
     fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle)
     fun applyFloatingPreset(preset: String)
     fun applyFloatingStyle(style: FloatingLyricsStyle)

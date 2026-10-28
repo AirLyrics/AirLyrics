@@ -289,7 +289,7 @@ internal class MainActivityUiHost(
 
     override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {
         return FloatingLyricsTextView(this).apply {
-            this.text = text
+            updateFloatingPreviewText(this, text)
             val params = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -299,6 +299,16 @@ internal class MainActivityUiHost(
             applyFloatingPreviewStyle(style)
         }
     }
+
+    override fun updateFloatingPreviewText(view: TextView, text: CharSequence) =
+        updatePreviewLyricsText(view, text)
+
+    override fun applyAnimatedFloatingPreviewHighlight(
+        text: android.text.SpannableStringBuilder,
+        currentLine: String,
+        start: Int,
+        color: Int
+    ) = applyPreviewLyricsHighlight(text, currentLine, start, color)
 
     override fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle) {
         val thumbnailTextSizeSp = previewTextSizeSp(style.textSizeSp, lyricsLineDisplayMode())

@@ -1,10 +1,6 @@
 package com.andsi.airlyrics.ui.pages.floating
 
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
-import com.andsi.airlyrics.lyrics.WordByWordSegment
-import com.andsi.airlyrics.lyrics.WordByWordLine
-import com.andsi.airlyrics.floating.spicyTimings
-import com.andsi.airlyrics.floating.SpicyLyricsSpan
 
 import com.andsi.airlyrics.ui.state.FloatingPanelId
 import com.andsi.airlyrics.ui.state.undoChangesTo
@@ -233,17 +229,12 @@ internal class FloatingPageScope(
                 .coerceAtLeast(1)
                 .coerceAtMost(currentLine.original.length)
             if (currentLineStart >= 0 && host.wordByWordAnimationMode() == WordByWordAnimationMode.SPICY) {
-                val words = Regex("\\S+").findAll(currentLine.original).toList()
-                var time = 0L
-                val segments = words.mapIndexed { index, word ->
-                    val duration = if (index == words.lastIndex) 1800L else 450L
-                    WordByWordSegment(word.value, time, time + duration).also { time += duration }
-                }
-                val line = WordByWordLine(0L, time, currentLine.original, segments)
-                for (timing in spicyTimings(line, currentLine.original)) {
-                    result.setSpan(SpicyLyricsSpan(timing, AirColorUtils.multiplyAlpha(previewStyle.wordByWordHighlightColor, Color.alpha(previewStyle.textColor))),
-                        currentLineStart + timing.start, currentLineStart + timing.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                }
+                host.applyAnimatedFloatingPreviewHighlight(
+                    result,
+                    currentLine.original,
+                    currentLineStart,
+                    AirColorUtils.multiplyAlpha(previewStyle.wordByWordHighlightColor, Color.alpha(previewStyle.textColor))
+                )
             } else if (currentLineStart >= 0) {
                 result.setSpan(
                     ForegroundColorSpan(
