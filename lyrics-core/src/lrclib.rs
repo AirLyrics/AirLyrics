@@ -1883,17 +1883,28 @@ pub(crate) fn manual(
     run().map_err(|e| e.error_type().to_owned())
 }
 
-fn manual_track_content(v: ApiTrack, t: &crate::manual::Track) -> Result<serde_json::Value, LrclibError> {
+fn manual_track_content(
+    v: ApiTrack,
+    t: &crate::manual::Track,
+) -> Result<serde_json::Value, LrclibError> {
     if v.id.to_string() != t.id {
         return Err(LrclibError::parse("track ID mismatch"));
     }
-    if v.synced_lyrics.as_deref().is_none_or(|text| text.trim().is_empty())
-        && v.plain_lyrics.as_deref().is_none_or(|text| text.trim().is_empty())
+    if v.synced_lyrics
+        .as_deref()
+        .is_none_or(|text| text.trim().is_empty())
+        && v.plain_lyrics
+            .as_deref()
+            .is_none_or(|text| text.trim().is_empty())
     {
-        return Ok(crate::manual::unavailable(crate::manual::UnavailableReason::SourceEmpty));
+        return Ok(crate::manual::unavailable(
+            crate::manual::UnavailableReason::SourceEmpty,
+        ));
     }
     let Some(lrc) = v.synced_lyrics.and_then(normalize_usable_lrc) else {
-        return Ok(crate::manual::unavailable(crate::manual::UnavailableReason::NoTimeline));
+        return Ok(crate::manual::unavailable(
+            crate::manual::UnavailableReason::NoTimeline,
+        ));
     };
     Ok(t.lyrics("lrclib-rust", lrc, None))
 }
@@ -1903,7 +1914,14 @@ mod manual_tests {
     use super::*;
     #[test]
     fn manual_reasons_preserve_instrumental_timing_and_identity() {
-        let t = crate::manual::Track { id: "1".into(), title: "Song".into(), artist: "".into(), album: "".into(), duration_ms: 0, score: 0.0 };
+        let t = crate::manual::Track {
+            id: "1".into(),
+            title: "Song".into(),
+            artist: "".into(),
+            album: "".into(),
+            duration_ms: 0,
+            score: 0.0,
+        };
         for (body, reason) in [
             (r#"{"id":1,"instrumental":true}"#, "source_empty"),
             (r#"{"id":1}"#, "source_empty"),
@@ -1915,8 +1933,14 @@ mod manual_tests {
             assert_eq!(manual_track_content(v, &t).unwrap()["reason"], reason);
         }
         let v = serde_json::from_str(r#"{"id":1,"syncedLyrics":"[00:01.00]Hello"}"#).unwrap();
-        assert!(manual_track_content(v, &t).unwrap()["lrc"].as_str().unwrap().contains("Hello"));
+        assert!(manual_track_content(v, &t).unwrap()["lrc"]
+            .as_str()
+            .unwrap()
+            .contains("Hello"));
         let v = serde_json::from_str(r#"{"id":2,"instrumental":true}"#).unwrap();
-        assert_eq!(manual_track_content(v, &t).unwrap_err().error_type(), "ParseError");
+        assert_eq!(
+            manual_track_content(v, &t).unwrap_err().error_type(),
+            "ParseError"
+        );
     }
 }

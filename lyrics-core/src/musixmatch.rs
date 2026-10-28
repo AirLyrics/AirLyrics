@@ -2333,7 +2333,9 @@ pub(crate) async fn manual(
             client.track_subtitle(TrackId::TrackId(id), SubtitleFormat::Lrc, None, None),
             lookup,
             "manual track.subtitle",
-        ).await {
+        )
+        .await
+        {
             Ok(subtitle) => subtitle,
             Err(error) => return manual_subtitle_error(error),
         };
@@ -2364,13 +2366,17 @@ pub(crate) async fn manual(
 // Missing subtitles are an empty manual choice; transport/access failures are not.
 fn manual_subtitle_error(error: LookupFailure) -> Result<serde_json::Value, String> {
     if error.kind == FailureKind::NotFound {
-        Ok(crate::manual::unavailable(crate::manual::UnavailableReason::SourceEmpty))
+        Ok(crate::manual::unavailable(
+            crate::manual::UnavailableReason::SourceEmpty,
+        ))
     } else {
         Err(error.to_string())
     }
 }
 
-fn manual_subtitle(subtitle: Subtitle) -> Result<FetchedSubtitle, crate::manual::UnavailableReason> {
+fn manual_subtitle(
+    subtitle: Subtitle,
+) -> Result<FetchedSubtitle, crate::manual::UnavailableReason> {
     let reason = if subtitle.subtitle_body.trim().is_empty() {
         crate::manual::UnavailableReason::SourceEmpty
     } else {
@@ -2393,10 +2399,17 @@ mod manual_tests {
 
     #[test]
     fn failed_manual_subtitle_requests_do_not_become_empty_content() {
-        for kind in [FailureKind::Cancelled, FailureKind::NeedCredential,
-            FailureKind::RateLimited, FailureKind::Restricted, FailureKind::Http,
-            FailureKind::Network, FailureKind::Parse, FailureKind::Unknown,
-            FailureKind::BudgetExhausted] {
+        for kind in [
+            FailureKind::Cancelled,
+            FailureKind::NeedCredential,
+            FailureKind::RateLimited,
+            FailureKind::Restricted,
+            FailureKind::Http,
+            FailureKind::Network,
+            FailureKind::Parse,
+            FailureKind::Unknown,
+            FailureKind::BudgetExhausted,
+        ] {
             let error = LookupFailure::new(kind, "manual track.subtitle", "request failed");
             assert!(manual_subtitle_error(error).is_err(), "{kind:?}");
         }
@@ -2404,9 +2417,11 @@ mod manual_tests {
 
     #[test]
     fn manual_empty_body_and_invalid_timing_are_distinct() {
-        for (body, reason) in [("", crate::manual::UnavailableReason::SourceEmpty),
+        for (body, reason) in [
+            ("", crate::manual::UnavailableReason::SourceEmpty),
             ("untimed", crate::manual::UnavailableReason::NoTimeline),
-            ("[00:01.00]", crate::manual::UnavailableReason::NoTimeline)] {
+            ("[00:01.00]", crate::manual::UnavailableReason::NoTimeline),
+        ] {
             let subtitle: Subtitle = serde_json::from_value(serde_json::json!({"subtitle_id":1,"subtitle_length":180,"updated_time":"2024-01-01T00:00:00Z","subtitle_body":body})).unwrap();
             assert_eq!(manual_subtitle(subtitle).err(), Some(reason));
         }

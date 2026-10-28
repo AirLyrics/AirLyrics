@@ -705,7 +705,9 @@ pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Resul
                 .await,
         )
         .await?;
-        if response["Status"].as_u64() == Some(200) && response["Body"]["id"].as_str() != Some(t.id.as_str()) {
+        if response["Status"].as_u64() == Some(200)
+            && response["Body"]["id"].as_str() != Some(t.id.as_str())
+        {
             return Err(err("ParseError"));
         }
         if let Some(reason) = manual_unavailable_reason(&response)? {
@@ -715,10 +717,12 @@ pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Resul
     }
 }
 
-fn manual_unavailable_reason(response: &Value) -> Result<Option<crate::manual::UnavailableReason>, String> {
+fn manual_unavailable_reason(
+    response: &Value,
+) -> Result<Option<crate::manual::UnavailableReason>, String> {
     use crate::manual::UnavailableReason;
     match response["Status"].as_u64() {
-        Some(200) => {},
+        Some(200) => {}
         Some(404) => return Ok(Some(UnavailableReason::Unknown)),
         Some(401) => return Err(err("NeedCredential")),
         Some(403) => return Err(err("RestrictedLyrics")),
@@ -726,11 +730,15 @@ fn manual_unavailable_reason(response: &Value) -> Result<Option<crate::manual::U
         Some(_) => return Err(err("HttpError")),
         None => return Err(err("ParseError")),
     }
-    let kind = response["Body"]["Type"].as_str().ok_or_else(|| err("ParseError"))?;
+    let kind = response["Body"]["Type"]
+        .as_str()
+        .ok_or_else(|| err("ParseError"))?;
     if !matches!(kind, "Line" | "Syllable") {
         return Ok(Some(UnavailableReason::UnsupportedFormat));
     }
-    let content = response["Body"]["Content"].as_array().ok_or_else(|| err("ParseError"))?;
+    let content = response["Body"]["Content"]
+        .as_array()
+        .ok_or_else(|| err("ParseError"))?;
     if content.is_empty() {
         return Ok(Some(UnavailableReason::SourceEmpty));
     }
@@ -756,18 +764,46 @@ mod manual_tests {
     fn manual_content_reasons_do_not_swallow_errors() {
         for (response, expected) in [
             (json!({"Status":404}), Some(UnavailableReason::Unknown)),
-            (json!({"Status":200,"Body":{"Type":"Static"}}), Some(UnavailableReason::UnsupportedFormat)),
-            (json!({"Status":200,"Body":{"Type":"Line","Content":[]}}), Some(UnavailableReason::SourceEmpty)),
-            (json!({"Status":200,"Body":{"Type":"Line","Content":[{"Type":"Instrumental"}]}}), Some(UnavailableReason::SourceEmpty)),
-            (json!({"Status":200,"Body":{"Type":"Line","Content":[{"Type":"Vocal"}]}}), None),
-        ] { assert_eq!(manual_unavailable_reason(&response).unwrap(), expected); }
-        for (status, error) in [(401,"NeedCredential"),(403,"RestrictedLyrics"),(429,"RateLimited"),(500,"HttpError")] {
-            assert_eq!(manual_unavailable_reason(&json!({"Status":status})).unwrap_err(), error);
+            (
+                json!({"Status":200,"Body":{"Type":"Static"}}),
+                Some(UnavailableReason::UnsupportedFormat),
+            ),
+            (
+                json!({"Status":200,"Body":{"Type":"Line","Content":[]}}),
+                Some(UnavailableReason::SourceEmpty),
+            ),
+            (
+                json!({"Status":200,"Body":{"Type":"Line","Content":[{"Type":"Instrumental"}]}}),
+                Some(UnavailableReason::SourceEmpty),
+            ),
+            (
+                json!({"Status":200,"Body":{"Type":"Line","Content":[{"Type":"Vocal"}]}}),
+                None,
+            ),
+        ] {
+            assert_eq!(manual_unavailable_reason(&response).unwrap(), expected);
         }
-        for response in [json!({}), json!({"Status":200,"Body":{}}),
+        for (status, error) in [
+            (401, "NeedCredential"),
+            (403, "RestrictedLyrics"),
+            (429, "RateLimited"),
+            (500, "HttpError"),
+        ] {
+            assert_eq!(
+                manual_unavailable_reason(&json!({"Status":status})).unwrap_err(),
+                error
+            );
+        }
+        for response in [
+            json!({}),
+            json!({"Status":200,"Body":{}}),
             json!({"Status":200,"Body":{"Type":"Line","Content":{}}}),
-            json!({"Status":200,"Body":{"Type":"Line","Content":[{}]}})] {
-            assert_eq!(manual_unavailable_reason(&response).unwrap_err(), "ParseError");
+            json!({"Status":200,"Body":{"Type":"Line","Content":[{}]}}),
+        ] {
+            assert_eq!(
+                manual_unavailable_reason(&response).unwrap_err(),
+                "ParseError"
+            );
         }
     }
 }

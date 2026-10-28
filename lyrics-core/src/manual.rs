@@ -172,11 +172,25 @@ async fn netease(request: &Request, lookup: i64) -> Result<Value, String> {
 }
 
 fn netease_content(track: &Track, response: LyricResp) -> Value {
-    let has_text = response.lrc.as_ref().is_some_and(|v| !v.lyric.trim().is_empty())
-        || response.tlyric.as_ref().is_some_and(|v| !v.lyric.trim().is_empty());
+    let has_text = response
+        .lrc
+        .as_ref()
+        .is_some_and(|v| !v.lyric.trim().is_empty())
+        || response
+            .tlyric
+            .as_ref()
+            .is_some_and(|v| !v.lyric.trim().is_empty());
     match candidate_lyrics(response) {
-        Some(lyrics) => track.lyrics("netease-rust", lyrics.lrc.unwrap_or(lyrics.merged_lrc), lyrics.translated_lrc),
-        None => unavailable(if has_text { UnavailableReason::NoTimeline } else { UnavailableReason::SourceEmpty }),
+        Some(lyrics) => track.lyrics(
+            "netease-rust",
+            lyrics.lrc.unwrap_or(lyrics.merged_lrc),
+            lyrics.translated_lrc,
+        ),
+        None => unavailable(if has_text {
+            UnavailableReason::NoTimeline
+        } else {
+            UnavailableReason::SourceEmpty
+        }),
     }
 }
 
@@ -195,22 +209,58 @@ mod tests {
     }
     #[test]
     fn netease_empty_and_unusable_timing_are_distinct() {
-        for (body, reason) in [("", "source_empty"), ("untimed", "no_timeline"), ("[00:01.00]", "no_timeline")] {
-            let response = LyricResp { code: 200, lrc: Some(ncmapi::types::Lyric { version: 1, lyric: body.into() }), ..LyricResp::default() };
-            assert_eq!(netease_content(&track("1", "Song"), response)["reason"], reason);
+        for (body, reason) in [
+            ("", "source_empty"),
+            ("untimed", "no_timeline"),
+            ("[00:01.00]", "no_timeline"),
+        ] {
+            let response = LyricResp {
+                code: 200,
+                lrc: Some(ncmapi::types::Lyric {
+                    version: 1,
+                    lyric: body.into(),
+                }),
+                ..LyricResp::default()
+            };
+            assert_eq!(
+                netease_content(&track("1", "Song"), response)["reason"],
+                reason
+            );
         }
-        let response = LyricResp { code: 200, lrc: Some(ncmapi::types::Lyric { version: 1, lyric: "[00:01.00]Hello".into() }), ..LyricResp::default() };
-        assert!(netease_content(&track("1", "Song"), response)["lrc"].as_str().unwrap().contains("Hello"));
+        let response = LyricResp {
+            code: 200,
+            lrc: Some(ncmapi::types::Lyric {
+                version: 1,
+                lyric: "[00:01.00]Hello".into(),
+            }),
+            ..LyricResp::default()
+        };
+        assert!(netease_content(&track("1", "Song"), response)["lrc"]
+            .as_str()
+            .unwrap()
+            .contains("Hello"));
     }
     #[test]
     fn only_missing_fetch_content_is_an_empty_preview() {
-        let request = |operation| json!({
-            "provider":"netease", "operation":operation,
-            "track":{"id":"42","title":"Song","artist":"","album":"","duration_ms":0}
-        }).to_string();
-        assert_eq!(error_response(&request("fetch"), "NotFound")["reason"], "unknown");
+        let request = |operation| {
+            json!({
+                "provider":"netease", "operation":operation,
+                "track":{"id":"42","title":"Song","artist":"","album":"","duration_ms":0}
+            })
+            .to_string()
+        };
+        assert_eq!(
+            error_response(&request("fetch"), "NotFound")["reason"],
+            "unknown"
+        );
         assert_eq!(error_response(&request("search"), "NotFound")["ok"], false);
-        for error in ["NetworkError", "NeedCredential", "RateLimited", "ParseError", "RestrictedLyrics"] {
+        for error in [
+            "NetworkError",
+            "NeedCredential",
+            "RateLimited",
+            "ParseError",
+            "RestrictedLyrics",
+        ] {
             let response = error_response(&request("fetch"), error);
             assert_eq!(response["ok"], false);
             assert_eq!(response["error_type"], error);

@@ -22,8 +22,8 @@ mod diagnostics;
 mod international;
 mod lrc;
 mod lrclib;
-mod matching;
 mod manual;
+mod matching;
 mod musixmatch;
 #[cfg(test)]
 mod native_result_contract_tests;
