@@ -23,7 +23,6 @@ enum class PlainLyricsSearchSource(val key: String, val supportsWordTiming: Bool
     SPICY("spicy", supportsWordTiming = true);
 
     companion object {
-        val default: PlainLyricsSearchSource = NETEASE
         val onlineSources: List<PlainLyricsSearchSource> = listOf(NETEASE, MUSIXMATCH, LRCLIB, SPICY)
 
         fun fromKeyOrNull(key: String?): PlainLyricsSearchSource? {

@@ -40,7 +40,7 @@ object LyricsSettingsStore {
         return legacySource
             ?.takeIf { it in PlainLyricsSearchSource.onlineSources }
             ?.let(::listOf)
-            ?: listOf(PlainLyricsSearchSource.default)
+            ?: emptyList()
     }
 
     fun setPlainLyricsSearchSources(
@@ -93,8 +93,8 @@ object LyricsSettingsStore {
         preferences.edit {
             putBoolean(KEY_AUTO_SEARCH_ONLINE, enabled)
             if (enabled && !hasPersistedSourceSelection) {
-                putString(KEY_PLAIN_LYRICS_SOURCE_ORDER, PlainLyricsSearchSource.default.key)
-                putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.default.key)
+                putString(KEY_PLAIN_LYRICS_SOURCE_ORDER, "")
+                putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.LOCAL_ONLY.key)
             }
         }
     }
