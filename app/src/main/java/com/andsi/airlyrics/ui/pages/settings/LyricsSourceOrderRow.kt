@@ -47,6 +47,9 @@ internal class LyricsSourceOptionButton(
     compactTitle: String,
     private val spicyConfigured: () -> Boolean = { com.andsi.airlyrics.core.model.LyricsSourceCapability.spicyConfigured(com.andsi.airlyrics.BuildConfig.SPICY_CLIENT_KEY) }
 ) : FrameLayout(host) {
+    private var selectedPriority: Int? = null
+    private val sourceTooltip = LyricsSourceTooltip(host, this)
+
     private val titleView = TextView(host).apply {
         text = compactTitle
         gravity = Gravity.CENTER
@@ -78,6 +81,10 @@ internal class LyricsSourceOptionButton(
         clipChildren = false
         clipToPadding = false
         enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
+        setOnLongClickListener {
+            sourceTooltip.show(contentDescription)
+            true
+        }
 
         contentRow.addView(
             priorityLabel,
@@ -107,16 +114,15 @@ internal class LyricsSourceOptionButton(
 
     fun render(
         selectedPriority: Int?,
-        fullTitle: String
+        fullTitle: String,
+        deferHighlight: Boolean = false
     ) {
+        this.selectedPriority = selectedPriority
         val configured = source != PlainLyricsSearchSource.SPICY || spicyConfigured()
         isEnabled = configured || selectedPriority != null
         alpha = if (configured) 1f else 0.5f
         val selected = selectedPriority != null
-        isSelected = selected
         contentDescription = fullTitle
-        tooltipText = fullTitle
-        titleView.setTextColor(if (selected) host.colorOnAccent else host.colorText)
         priorityLabel.apply {
             text = selectedPriority?.let {
                 String.format(resources.configuration.locales[0], "%d", it)
@@ -126,14 +132,6 @@ internal class LyricsSourceOptionButton(
         titleView.layoutParams = (titleView.layoutParams as LinearLayout.LayoutParams).apply {
             marginStart = host.dp(if (selected) AirUiTokens.Space.Sm else 0)
         }
-        background = GradientDrawable().apply {
-            cornerRadius = host.dp(AirUiTokens.Radius.Md).toFloat()
-            setColor(if (selected) host.colorAccent else host.colorSurfaceLight)
-            setStroke(
-                host.dp(if (selected) AirUiTokens.Stroke.Selected else AirUiTokens.Stroke.Hairline),
-                if (selected) host.colorAccentLight else host.colorStroke
-            )
-        }
         ViewCompat.setStateDescription(
             this,
             if (selectedPriority != null) {
@@ -142,6 +140,30 @@ internal class LyricsSourceOptionButton(
                 host.getString(R.string.ui_lyrics_source_not_selected_state)
             }
         )
+        applySelectionHighlight(selected && (!deferHighlight || isSelected))
+    }
+
+    internal fun settleSelectionHighlight() {
+        applySelectionHighlight(selectedPriority != null)
+    }
+
+    private fun applySelectionHighlight(selected: Boolean) {
+        isSelected = selected
+        titleView.setTextColor(if (selected) host.colorOnAccent else host.colorText)
+        // Reserve the final priority width before moving, without showing it early.
+        priorityLabel.visibility = when {
+            selectedPriority == null -> GONE
+            selected -> VISIBLE
+            else -> INVISIBLE
+        }
+        background = GradientDrawable().apply {
+            cornerRadius = host.dp(AirUiTokens.Radius.Md).toFloat()
+            setColor(if (selected) host.colorAccent else host.colorSurfaceLight)
+            setStroke(
+                host.dp(if (selected) AirUiTokens.Stroke.Selected else AirUiTokens.Stroke.Hairline),
+                if (selected) host.colorAccentLight else host.colorStroke
+            )
+        }
     }
 }
 
@@ -193,6 +215,8 @@ internal class LyricsSourceOrderRow(
             prepareButtonLayout(orderedButtons)
             if (!animate || !ValueAnimator.areAnimatorsEnabled()) {
                 cancelPendingReorder(settle = true)
+            } else if (reorderAnimator == null && pendingPreDrawListener == null) {
+                settleButtons()
             }
             return
         }
@@ -320,6 +344,7 @@ internal class LyricsSourceOrderRow(
         for (index in 0 until sourceStrip.childCount) {
             sourceStrip.getChildAt(index).translationX = 0f
             sourceStrip.getChildAt(index).translationY = 0f
+            (sourceStrip.getChildAt(index) as LyricsSourceOptionButton).settleSelectionHighlight()
         }
     }
 }

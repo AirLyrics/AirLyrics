@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.search
 import android.annotation.SuppressLint
 import android.animation.ValueAnimator
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -18,7 +19,6 @@ import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.lyrics.localizedPlainLyricsProviderName
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
 import java.util.Locale
 
 /** Source keys own pages; positions are never used as request identities. */
@@ -29,11 +29,15 @@ internal class LyricsSourcePages(
     private val session: LyricsSearchSession,
     private val errorText: (Throwable) -> String
 ) : LinearLayout(context) {
-    private val tabs = TabLayout(context)
+    private val tabs = object : TabLayout(context) {
+        override fun selectTab(tab: Tab?, updateIndicator: Boolean) {
+            // Clicks update the destination; the pager owns movement and visual selection.
+            super.selectTab(tab, false)
+        }
+    }
     private val pager = ViewPager2(context)
     private var sources = emptyList<PlainLyricsSearchSource>()
     private var results = emptyMap<PlainLyricsSearchSource, SourceResults>()
-    private var mediator: TabLayoutMediator? = null
     private val pages = PageAdapter()
 
     init {
@@ -49,11 +53,31 @@ internal class LyricsSourcePages(
         })
         tabs.isTabIndicatorFullWidth = false
         tabs.tabIndicatorAnimationMode = TabLayout.INDICATOR_ANIMATION_MODE_ELASTIC
+        // A pressed ripple would highlight the destination before the indicator arrives.
+        tabs.tabRippleColor = null
+        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                if (pager.currentItem != tab.position) {
+                    pager.setCurrentItem(tab.position, ValueAnimator.areAnimatorsEnabled())
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab) = Unit
+            override fun onTabReselected(tab: TabLayout.Tab) = onTabSelected(tab)
+        })
         addView(tabs, LayoutParams(-1, -2))
         pager.adapter = pages
         pager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 sources.getOrNull(position)?.let { session.activeSource = it }
+                if (pager.scrollState == ViewPager2.SCROLL_STATE_IDLE) settleTabSelection()
+            }
+
+            override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
+                tabs.setScrollPosition(position, positionOffset, false)
+            }
+
+            override fun onPageScrollStateChanged(state: Int) {
+                if (state == ViewPager2.SCROLL_STATE_IDLE) settleTabSelection()
             }
         })
         addView(pager, LayoutParams(-1, 0, 1f))
@@ -65,7 +89,6 @@ internal class LyricsSourcePages(
         results = next
         if (keys != sources) {
             val selected = session.activeSource
-            mediator?.detach()
             val previousKeys = sources
             sources = keys
             androidx.recyclerview.widget.DiffUtil.calculateDiff(object : androidx.recyclerview.widget.DiffUtil.Callback() {
@@ -75,23 +98,38 @@ internal class LyricsSourcePages(
                     previousKeys[oldItemPosition] == keys[newItemPosition]
                 override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) = false
             }).dispatchUpdatesTo(pages)
-            mediator = TabLayoutMediator(tabs, pager, true, ValueAnimator.areAnimatorsEnabled()) { tab, index ->
-                tab.customView = sourceTab(sources[index])
-                tab.contentDescription = tabDescription(sources[index])
-            }.also { it.attach() }
+            tabs.removeAllTabs()
+            sources.forEach { source ->
+                tabs.addTab(tabs.newTab().apply {
+                    customView = sourceTab(source)
+                    contentDescription = tabDescription(source)
+                }, false)
+            }
             val index = sources.indexOf(selected).coerceAtLeast(0)
-            if (sources.isNotEmpty()) pager.setCurrentItem(index, false)
+            if (sources.isNotEmpty()) {
+                pager.setCurrentItem(index, false)
+                settleTabSelection()
+            }
         } else {
             sources.forEachIndexed { index, source ->
                 if (previous[source] != next[source]) {
                     tabs.getTabAt(index)?.let { tab ->
-                        tab.customView = sourceTab(source)
+                        ((tab.customView as? LinearLayout)?.getChildAt(0) as? TextView)?.text = label(source)
+                        // Updating accessibility text also refreshes Material's selected state.
+                        val wasSelected = tab.view.isSelected
                         tab.contentDescription = tabDescription(source)
+                        tab.view.isSelected = wasSelected
                     }
                     pages.notifyItemChanged(index)
                 }
             }
         }
+    }
+
+    private fun settleTabSelection() {
+        val tab = tabs.getTabAt(pager.currentItem) ?: return
+        tabs.selectTab(tab, false)
+        tabs.setScrollPosition(tab.position, 0f, true)
     }
 
     private fun label(source: PlainLyricsSearchSource): String {
@@ -101,12 +139,12 @@ internal class LyricsSourcePages(
             result?.error != null -> context.getString(R.string.search_failed)
             else -> result?.candidates?.size?.toString().orEmpty()
         }
-        val name=context.localizedPlainLyricsProviderName(source.key)
-        return if(suffix.isEmpty()) name else name + "  ·  " + suffix
+        val name = context.localizedPlainLyricsProviderName(source.key)
+        return if (suffix.isEmpty()) name else "$name  ·  $suffix"
     }
 
     private fun tabDescription(source: PlainLyricsSearchSource): String =
-        if(results[source]?.loading==true) label(source)+" · "+context.getString(R.string.ui_loading) else label(source)
+        if (results[source]?.loading == true) "${label(source)} · ${context.getString(R.string.ui_loading)}" else label(source)
 
     private fun sourceTab(source: PlainLyricsSearchSource): View = LinearLayout(context).apply {
         gravity=Gravity.CENTER_VERTICAL
@@ -115,7 +153,11 @@ internal class LyricsSourcePages(
         addView(TextView(context).apply {
             text=label(source)
             textSize=14f
-            setTextColor(palette.textStrong)
+            isDuplicateParentStateEnabled = true
+            setTextColor(ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_selected), intArrayOf()),
+                intArrayOf(palette.textStrong, palette.textMuted)
+            ))
         })
     }
 
@@ -228,6 +270,6 @@ internal class LyricsSourcePages(
         }
     }
 
-    fun dispose() { mediator?.detach() }
+    fun dispose() { tabs.clearOnTabSelectedListeners() }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

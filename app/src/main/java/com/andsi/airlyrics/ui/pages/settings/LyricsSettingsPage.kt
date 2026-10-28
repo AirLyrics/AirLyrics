@@ -141,7 +141,8 @@ internal fun createLyricsSourceOrderCard(
                 val selectedIndex = selectedSources.indexOf(source)
                 button.render(
                     selectedPriority = (selectedIndex + 1).takeIf { selectedIndex >= 0 },
-                    fullTitle = localizedPlainLyricsSourceTitle(source)
+                    fullTitle = localizedPlainLyricsSourceTitle(source),
+                    deferHighlight = animateOrder
                 )
             }
             val displayedSources = orderedLyricsSourceOptions(

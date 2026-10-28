@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import android.animation.AnimatorSet
 import android.animation.ValueAnimator
 import android.content.Context
 import android.os.Looper
@@ -302,7 +303,9 @@ class LyricsSourceOrderCardTest {
         activity.setContentView(card)
         measureAndLayout(card, host.dp(280))
 
-        card.requireSourceButton(PlainLyricsSearchSource.LRCLIB).performClick()
+        val target = card.requireSourceButton(PlainLyricsSearchSource.LRCLIB)
+        target.performClick()
+        assertFalse("Destination must not highlight before layout", target.isSelected)
         measureAndLayout(card, host.dp(280))
         sourceRow.viewTreeObserver.dispatchOnPreDraw()
 
@@ -319,9 +322,83 @@ class LyricsSourceOrderCardTest {
             assertTrue(sourceRow.sourceButtons().any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
         }
 
+        assertFalse("Destination must not highlight while moving", target.isSelected)
         advancePastSourceReorder()
+        assertPriorityButton(target, host, 2)
 
         assertTrue(sourceRow.sourceButtons().all { it.translationX == 0f && it.translationY == 0f })
+    }
+
+    @Test
+    fun sourceCard_reversingSelectionDuringMotionDoesNotApplyStaleHighlight() {
+        val activity = launchActivity()
+        val host = activity.graph.uiHost
+        val card = createLyricsSourceOrderCard(
+            host, host.lyricsSettingsState().copy(selectedPlainLyricsSources = emptyList())
+        )
+        val row = card.requireSourceOrderRow()
+        activity.setContentView(card)
+        measureAndLayout(card, host.dp(280))
+        val target = card.requireSourceButton(PlainLyricsSearchSource.LRCLIB)
+        target.performClick()
+        measureAndLayout(card, host.dp(280))
+        row.viewTreeObserver.dispatchOnPreDraw()
+        org.robolectric.util.ReflectionHelpers.getField<AnimatorSet>(row, "reorderAnimator")
+                .currentPlayTime = 80L
+        target.performClick()
+        measureAndLayout(card, host.dp(280))
+        row.viewTreeObserver.dispatchOnPreDraw()
+        advancePastSourceReorder()
+        assertUnselectedButton(target, host)
+        assertTrue(row.sourceButtons().all { it.translationX == 0f && it.translationY == 0f })
+    }
+
+    @Test
+    fun sourceCard_disabledAnimationsHighlightImmediately() {
+        setAnimationScale(0f)
+        val activity = launchActivity()
+        val host = activity.graph.uiHost
+        val card = createLyricsSourceOrderCard(
+            host, host.lyricsSettingsState().copy(selectedPlainLyricsSources = emptyList())
+        )
+        activity.setContentView(card)
+        measureAndLayout(card, host.dp(280))
+        val target = card.requireSourceButton(PlainLyricsSearchSource.LRCLIB)
+        target.performClick()
+        assertPriorityButton(target, host, 1)
+    }
+
+    @Test
+    fun sourceCard_longPressShowsThemedTooltipWithoutChangingSelection() {
+        val selected = listOf(PlainLyricsSearchSource.NETEASE)
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, selected)
+        val activity = launchActivity()
+        val host = activity.graph.uiHost
+        val card = createLyricsSourceOrderCard(host, host.lyricsSettingsState())
+        activity.setContentView(card)
+        measureAndLayout(card, host.dp(360))
+        shadowOf(Looper.getMainLooper()).idle()
+        val target = card.requireSourceButton(PlainLyricsSearchSource.LRCLIB)
+        val order = card.requireSourceOrderRow().displayedSources()
+        val application = shadowOf(activity.application)
+
+        assertEquals(null, target.tooltipText)
+        assertTrue(target.performLongClick())
+        val popup = requireNotNull(application.latestPopupWindow)
+        assertTrue(popup.isShowing)
+        assertFalse(popup.isFocusable)
+        assertTrue(popup.contentView.hasText(host.localizedPlainLyricsSourceTitle(target.source)))
+        assertEquals(selected, LyricsSettingsStore.getPlainLyricsSearchSources(context))
+        assertEquals(order, card.requireSourceOrderRow().displayedSources())
+        assertFalse(target.isSelected)
+        assertTrue(host.auxiliaryDialogs.isEmpty())
+
+        target.performLongClick()
+        assertFalse(popup.isShowing)
+        val replacement = requireNotNull(application.latestPopupWindow)
+        assertTrue(replacement.isShowing)
+        shadowOf(Looper.getMainLooper()).idleFor(3, TimeUnit.SECONDS)
+        assertFalse(replacement.isShowing)
     }
 
     @Test
@@ -415,12 +492,23 @@ class LyricsSourceOrderCardTest {
             PlainLyricsSearchSource.MUSIXMATCH,
             PlainLyricsSearchSource.SPICY
         ).map(buttons::getValue)
+        val target = buttons.getValue(PlainLyricsSearchSource.LRCLIB)
+        target.render(1, host.localizedPlainLyricsSourceTitle(target.source), deferHighlight = true)
         row.setSourceOrder(animatedOrder, animate = true)
         measureAndLayout(row, host.dp(280))
         row.viewTreeObserver.dispatchOnPreDraw()
         assertEquals(animatedOrder.map { it.source }, row.displayedSources())
         if (expectMotion) {
             assertTrue(animatedOrder.any { abs(it.translationX) > 0.5f || abs(it.translationY) > 0.5f })
+        }
+
+        if (expectMotion) {
+            assertFalse(target.isSelected)
+            org.robolectric.util.ReflectionHelpers.getField<AnimatorSet>(row, "reorderAnimator")
+                .currentPlayTime = 80L
+            assertFalse("Highlight must wait for the moving tile", target.isSelected)
+        } else {
+            assertTrue(target.isSelected)
         }
 
         val latestOrder = listOf(
@@ -438,6 +526,7 @@ class LyricsSourceOrderCardTest {
 
         advancePastSourceReorder()
 
+        assertTrue(target.isSelected)
         assertEquals(latestOrder.map { it.source }, row.displayedSources())
         assertTrue(latestOrder.all { it.translationX == 0f && it.translationY == 0f })
     }
