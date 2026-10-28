@@ -371,20 +371,6 @@ object ApplePlainLyricsProvider : LyricsProvider {
         return out
     }
 
-    /** Whitespace and punctuation differ between scripts; they must not block the comparison. */
-    private fun comparable(text: String): String = text.filterNot(::isIgnorable)
-
-    private fun splitByCodePoint(text: String): List<String> {
-        val characters = mutableListOf<String>()
-        var index = 0
-        while (index < text.length) {
-            val next = index + Character.charCount(text.codePointAt(index))
-            characters += text.substring(index, next)
-            index = next
-        }
-        return characters
-    }
-
     private fun key(title: String, artist: String, durationMs: Long) =
         "$title\u0000$artist\u0000$durationMs"
 }
