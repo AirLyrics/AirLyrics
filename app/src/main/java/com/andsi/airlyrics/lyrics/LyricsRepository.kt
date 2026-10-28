@@ -2,16 +2,19 @@ package com.andsi.airlyrics.lyrics
 
 import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.lyrics.providers.InternationalTitleResolver
+import com.andsi.airlyrics.lyrics.providers.SongAliasNative
 import android.content.Context
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.providers.SpicyLyricsProvider
+import com.andsi.airlyrics.lyrics.providers.ApplePlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.LocalPlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.LrclibPlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.MusixmatchPlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.NeteasePlainLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.lyrics.storage.SongAliasStore
 import com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
@@ -31,7 +34,8 @@ object LyricsRepository {
         PlainLyricsSearchSource.NETEASE to NeteasePlainLyricsProvider,
         PlainLyricsSearchSource.MUSIXMATCH to MusixmatchPlainLyricsProvider,
         PlainLyricsSearchSource.LRCLIB to LrclibPlainLyricsProvider,
-        PlainLyricsSearchSource.SPICY to SpicyLyricsProvider
+        PlainLyricsSearchSource.SPICY to SpicyLyricsProvider,
+        PlainLyricsSearchSource.APPLE to ApplePlainLyricsProvider
     )
 
     fun findLyrics(
@@ -71,6 +75,7 @@ object LyricsRepository {
         onInterimResult: ((LyricsProviderResult) -> Unit)? = null
     ): Result<LyricsProviderResult?> {
         val song = SongIdentity(title, artist, album, durationMs)
+        registerConfirmedAliases(context.applicationContext, song)
         val token = cancellationToken ?: LyricsLookupCancellationToken(song.storageKey(), 0L)
         val existing = LyricsSearchCoordinator.current(token)
         return runCatching {
@@ -85,11 +90,32 @@ object LyricsRepository {
                     lookupLogger = AndroidLyricsLookupLogger,
                     commitOnlineResult = { request, result ->
                         lease.commit {
-                            ManualLyricsSelectionStore.commit(
-                                context.applicationContext, song, request.searchMode, result,
-                                manual = searchOrigin == LyricsSearchOrigin.Manual,
-                                savePlain = settings.autoSaveLocal || forceSaveOnline
-                            )
+                            LyricsStorage.withStorageLock storage@ {
+                                if (searchOrigin == LyricsSearchOrigin.Automatic) {
+                                    // The network request may have outlived the lookup that started it:
+                                    // re-check inside the storage lock so lyrics imported (or otherwise
+                                    // written) while the request was in flight are never overwritten.
+                                    val appeared = LocalPlainLyricsProvider.fetch(request).getOrNull()
+                                    if (appeared != null) {
+                                        val cachedWords = if (settings.wordByWordLyricsEnabled) {
+                                            LyricsStorage.readWordByWordLyrics(
+                                                context = context.applicationContext,
+                                                title = title,
+                                                artist = artist,
+                                                duration = durationMs
+                                            )
+                                        } else emptyList()
+                                        return@storage if (cachedWords.isEmpty()) appeared
+                                        else appeared.copy(wordByWordLines = cachedWords)
+                                    }
+                                }
+                                val committed = ManualLyricsSelectionStore.commit(
+                                    context.applicationContext, song, request.searchMode, result,
+                                    manual = searchOrigin == LyricsSearchOrigin.Manual,
+                                    savePlain = settings.autoSaveLocal || forceSaveOnline
+                                )
+                                committed
+                            }
                         }
                     }
                 ).findLyrics(
@@ -103,11 +129,26 @@ object LyricsRepository {
                     ignoreAutoSearchSetting = ignoreAutoSearchSetting,
                     cancellationToken = token,
                     onInterimResult = onInterimResult,
-                    searchMode = searchMode
-                ).getOrThrow().also { token.throwIfCancellationRequested() }
+                    searchMode = searchMode,
+                    searchOrigin = searchOrigin
+                ).getOrThrow().let { result ->
+                    token.throwIfCancellationRequested()
+                    if (!settings.wordByWordLyricsEnabled) result?.copy(wordByWordLines = emptyList()) else result
+                }
             } finally {
                 if (existing == null) lease.close()
             }
+        }
+    }
+
+    /**
+     * Reuse a mapping the user already confirmed for this recording. The native engine only sees
+     * aliases that are registered explicitly; nothing is guessed from the English title.
+     */
+    private fun registerConfirmedAliases(context: Context, song: SongIdentity) {
+        val alias = runCatching { SongAliasStore.read(context, song) }.getOrNull() ?: return
+        runCatching {
+            SongAliasNative.registerJson(SongAliasStore.toNativeJson(listOf(alias)))
         }
     }
 }
@@ -133,6 +174,7 @@ internal class LyricsRepositoryEngine(
         ignoreAutoSearchSetting: Boolean = false,
         cancellationToken: LyricsLookupCancellationToken? = null,
         searchMode: LyricsSearchMode = LyricsSearchMode.Original,
+        searchOrigin: LyricsSearchOrigin = LyricsSearchOrigin.Automatic,
         onInterimResult: ((LyricsProviderResult) -> Unit)? = null
     ): Result<LyricsProviderResult?> {
         val appContext = context.applicationContext
@@ -161,12 +203,15 @@ internal class LyricsRepositoryEngine(
             val local = if (!bypassLocal) localPlainLyricsProvider.fetch(request).getOrThrow()?.let {
                 attachLocalWordByWordLyricsIfAvailable(appContext, it, title, artist, durationMs, wordByWordLyricsEnabled)
             } else null
+            // Existing lyrics — imported, edited or downloaded earlier — are never touched by an
+            // automatic lookup: no online search, no word-timing upgrade and no cache correction.
+            // A wrong match is the user's call, so only an explicit search replaces them.
+            if (local != null && searchOrigin == LyricsSearchOrigin.Automatic) return@runCatching local
             val onlineAllowed = ignoreAutoSearchSetting || settings.autoSearchOnline
             val wordSources = if (wordByWordLyricsEnabled) settings.plainLyricsSearchSources.distinct().filter {
                 onlinePlainLyricsProviders[it]?.supportsWordTiming == true
             } else emptyList()
             val seekWords = wordSources.isNotEmpty()
-            if (local != null && (local.manualLocal || !seekWords || local.wordByWordLines.isNotEmpty())) return@runCatching local
             if (!bypassLocal && seekWords) {
                 for (source in wordSources) {
                     val cached = cachedOnlineLyricsReader(onlinePlainLyricsProviders.getValue(source), request)
@@ -183,48 +228,53 @@ internal class LyricsRepositoryEngine(
                 cancellationToken?.throwIfCancellationRequested()
                 onInterimResult?.invoke(local)
             }
-            val prefetched = mutableMapOf<PlainLyricsSearchSource, LyricsProviderResult?>()
-            var wordLookupError: Throwable? = null
+            val prefetched = mutableMapOf<PlainLyricsSearchSource, Result<LyricsProviderResult?>>()
             for (source in wordSources) {
                 val result = try {
                     onlinePlainLyricsProviders.getValue(source).fetch(request).getOrThrow()
                 } catch (e: Exception) {
                     cancellationToken?.throwIfCancellationRequested()
                     if (e is CancellationException) throw e
-                    wordLookupError = e
-                    prefetched[source] = null
+                    prefetched[source] = Result.failure(e)
                     continue
                 }
                 cancellationToken?.throwIfCancellationRequested()
-                prefetched[source] = result
+                prefetched[source] = Result.success(result)
                 if (result?.wordByWordLines?.isNotEmpty() == true) return@runCatching commit(result)
             }
-            if (seekWords && local != null) return@runCatching local
-            val lineFallback = prefetched.values.firstOrNull { it != null }
+            // A local line-only result must not stop the ordinary source pass: a word-capable
+            // provider may have returned a usable line-only result (for example Apple lyrics).
+            // Keep local as the final fallback after configured online sources are exhausted.
             val sources = settings.plainLyricsSearchSources
+            val lineFallback = prefetched.values.firstNotNullOfOrNull { it.getOrNull() }
             val onlinePlainLyricsResult = try {
-                findOnlinePlainLyrics(sources, request, prefetched) ?: lineFallback
+                // Word timing is an optional capability. Once the word-capable prefetch has
+                // failed to produce timed words, resolve the ordinary result strictly in the
+                // user's configured source order; an Apple line-only hit is still a valid Apple
+                // hit and must not be silently demoted.
+                findOnlinePlainLyrics(sources, request, prefetched)
             } catch (error: Exception) {
                 cancellationToken?.throwIfCancellationRequested()
-                if (error is CancellationException || lineFallback == null) throw error
+                if (error is CancellationException) throw error
+                if (lineFallback == null) throw error
                 lineFallback
             }
-            if (onlinePlainLyricsResult == null && sources.all { it in wordSources } && wordLookupError != null) throw wordLookupError
             cancellationToken?.throwIfCancellationRequested()
             onlinePlainLyricsResult?.let { result ->
                 val committed = commit(result)
                 if (forceSaveOnline) committed else
                     attachLocalWordByWordLyricsIfAvailable(appContext, committed, title, artist, durationMs, wordByWordLyricsEnabled)
-            }
+            } ?: local
         }
     }
 
     private fun findOnlinePlainLyrics(
         sources: List<PlainLyricsSearchSource>,
         request: PlainLyricsSearchRequest,
-        preloaded: Map<PlainLyricsSearchSource, LyricsProviderResult?> = emptyMap()
+        preloaded: Map<PlainLyricsSearchSource, Result<LyricsProviderResult?>> = emptyMap()
     ): LyricsProviderResult? {
         val orderedSources = sources.distinct()
+        var lookupError: Throwable? = null
         for ((index, source) in orderedSources.withIndex()) {
             request.cancellationToken?.throwIfCancellationRequested()
             val provider = checkNotNull(onlinePlainLyricsProviders[source]) {
@@ -239,7 +289,7 @@ internal class LyricsRepositoryEngine(
             )
 
             val result = try {
-                if (source in preloaded) preloaded[source] else provider.fetch(request).getOrThrow()
+                (preloaded[source] ?: provider.fetch(request)).getOrThrow()
             } catch (error: Throwable) {
                 request.cancellationToken?.throwIfCancellationRequested()
                 if (error is CancellationException) {
@@ -253,7 +303,10 @@ internal class LyricsRepositoryEngine(
                     error = error,
                     debug = BuildConfig.DEBUG
                 )
-                if (provider.continueOnFailure && index < orderedSources.lastIndex) continue
+                if (provider.continueOnFailure) {
+                    lookupError = error
+                    continue
+                }
                 throw error
             }
 
@@ -278,6 +331,7 @@ internal class LyricsRepositoryEngine(
             )
             return result
         }
+        lookupError?.let { throw it }
         return null
     }
 
@@ -289,7 +343,8 @@ internal class LyricsRepositoryEngine(
         durationMs: Long,
         enabled: Boolean
     ): LyricsProviderResult {
-        if (!enabled || result.access != null || result.selectedManually) return result
+        if (!enabled) return if (result.wordByWordLines.isEmpty()) result else result.copy(wordByWordLines = emptyList())
+        if (result.access != null || result.selectedManually) return result
 
         val cachedWordByWordLines = wordByWordLyricsReader.read(
             context = context,
@@ -368,8 +423,32 @@ private object AndroidLocalPlainLyricsSaver : LocalPlainLyricsSaver {
             album = album,
             plainSource = LyricsStorage.SOURCE_DOWNLOADED,
             plainProvider = plainLyricsResult.plainProviderId,
-            overwrite = true
+            overwrite = true,
+            matchedTitle = plainLyricsResult.matchedTitle,
+            matchedArtist = plainLyricsResult.matchedArtist,
+            matchedDurationMs = plainLyricsResult.matchedDurationMs
         )
+        // Remember how this song's foreign-language title maps to what the source returned, so the
+        // cache is trusted next time instead of being re-verified (or wrongly invalidated).
+        val matchedTitle = plainLyricsResult.matchedTitle
+        if (matchedTitle.isNotBlank() &&
+            !CachedMatchGuard.isTrusted(title, matchedTitle, null)
+        ) {
+            SongAliasStore.save(
+                context,
+                SongIdentity(title, artist, album, durationMs),
+                SongAliasStore.Alias(
+                    originalTitle = title,
+                    originalArtist = artist,
+                    originalArtistAliases = listOf(artist),
+                    aliasTitle = matchedTitle,
+                    aliasArtist = plainLyricsResult.matchedArtist,
+                    source = SongAliasStore.SOURCE_CATALOGUE,
+                    confidence = 0.85,
+                    confirmedAt = System.currentTimeMillis()
+                )
+            )
+        }
     }
 }
 

@@ -54,6 +54,11 @@ internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
         typeface = Typeface.DEFAULT_BOLD
         setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ControlV), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ControlV))
         applyOptionButtonState(this, item.title, item.selected)
+        // Option chips are touch targets, not keyboard targets. Taking focus makes Android run a
+        // focus search (and requestChildRectangleOnScreen) on every tap, which scrolls whichever
+        // scroll container is behind the panel.
+        isFocusable = false
+        isFocusableInTouchMode = false
         enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
         setOnClickListener {
             item.action()

@@ -22,11 +22,13 @@ import com.andsi.airlyrics.i18n.localizedFloatingFontWeightTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
+import com.andsi.airlyrics.i18n.localizedScriptPreferenceTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.pageContainer
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
@@ -183,6 +185,7 @@ internal class FloatingPageScope(
     }
 
     internal fun contentDisplayMode() = host.lyricsContentDisplayMode()
+    internal fun scriptPreference() = host.lyricsScriptPreference()
 
     internal fun lineDisplayMode() = host.lyricsLineDisplayMode()
 
@@ -209,7 +212,8 @@ internal class FloatingPageScope(
         return formattedPreviewLyrics(
             mode = contentDisplayMode(),
             lines = visiblePreviewLyricLines(),
-            textColor = previewStyle.textColor
+            textColor = previewStyle.textColor,
+            scriptPreference = scriptPreference()
         )
     }
 
@@ -220,7 +224,8 @@ internal class FloatingPageScope(
             formattedPreviewLyrics(
                 mode = contentDisplayMode(),
                 lines = visibleLines,
-                textColor = previewStyle.textColor
+                textColor = previewStyle.textColor,
+                scriptPreference = scriptPreference()
             )
         )
         if (contentDisplayMode() != LyricsContentDisplayMode.TRANSLATION_ONLY) {
@@ -326,7 +331,9 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_opacity), fontOpacitySubtitle(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_shadow_stroke), host.getString(R.string.ui_radius) + " ${latestStyle.shadowRadius.toInt()}")
         updateFloatingTileSubtitle(host.getString(R.string.ui_window_layout), host.getString(R.string.ui_width) + " ${latestStyle.maxWidthPercent}%")
-        updateFloatingTileSubtitle(host.getString(R.string.ui_content), host.localizedLyricsContentModeTitle(contentDisplayMode()))
+        val contentSubtitle = host.localizedLyricsContentModeTitle(contentDisplayMode()) + " · " +
+            host.localizedScriptPreferenceTitle(scriptPreference())
+        updateFloatingTileSubtitle(host.getString(R.string.ui_content), contentSubtitle)
         updateFloatingTileSubtitle(host.getString(R.string.ui_line_range), host.localizedLyricsLineModeTitle(lineDisplayMode()))
         updateFloatingTileSubtitle(host.getString(R.string.ui_text_alignment), localizedGravityTitle(latestStyle.gravity))
         updateFloatingTileSubtitle(host.getString(R.string.ui_lyrics_offset), host.uiActions.currentLyricsOffsetSummary())
@@ -357,7 +364,10 @@ internal class FloatingPageScope(
     internal fun applyLyricsDisplaySettingsChanged() {
         renderFloatingPreview(style())
         refreshFloatingSettingTiles()
-        host.notifyFloatingStyleChanged()
+        // Content/text settings never change window geometry, so only ask the overlay to
+        // re-render its text. Re-applying the style also updates the window layout and shows up
+        // as a flash while a panel is open.
+        host.notifyFloatingTextChanged()
     }
 
     internal fun applyLyricsAnimationSettingsChanged() {

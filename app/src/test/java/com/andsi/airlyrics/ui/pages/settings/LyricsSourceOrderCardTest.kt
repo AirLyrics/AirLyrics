@@ -193,7 +193,8 @@ class LyricsSourceOrderCardTest {
                 PlainLyricsSearchSource.NETEASE,
                 PlainLyricsSearchSource.LRCLIB,
                 PlainLyricsSearchSource.MUSIXMATCH,
-                PlainLyricsSearchSource.SPICY
+                PlainLyricsSearchSource.SPICY,
+                PlainLyricsSearchSource.APPLE
             ),
             sourceRow.displayedSources()
         )
@@ -207,13 +208,13 @@ class LyricsSourceOrderCardTest {
             PlainLyricsSearchSource.MUSIXMATCH
         )
         assertEquals(allSources, LyricsSettingsStore.getPlainLyricsSearchSources(context))
-        assertEquals(allSources + PlainLyricsSearchSource.SPICY, sourceRow.displayedSources())
+        assertEquals(allSources + PlainLyricsSearchSource.SPICY + PlainLyricsSearchSource.APPLE, sourceRow.displayedSources())
         allSources.forEachIndexed { index, source ->
             assertPriorityButton(originalButtons.getValue(source), host, index + 1)
         }
         card = createLyricsSourceOrderCard(host, host.lyricsSettingsState())
         sourceRow = card.requireSourceOrderRow()
-        assertEquals(allSources + PlainLyricsSearchSource.SPICY, sourceRow.displayedSources())
+        assertEquals(allSources + PlainLyricsSearchSource.SPICY + PlainLyricsSearchSource.APPLE, sourceRow.displayedSources())
         allSources.forEachIndexed { index, source ->
             assertPriorityButton(card.requireSourceButton(source), host, index + 1)
         }
@@ -229,7 +230,8 @@ class LyricsSourceOrderCardTest {
                 PlainLyricsSearchSource.LRCLIB,
                 PlainLyricsSearchSource.MUSIXMATCH,
                 PlainLyricsSearchSource.NETEASE,
-                PlainLyricsSearchSource.SPICY
+                PlainLyricsSearchSource.SPICY,
+                PlainLyricsSearchSource.APPLE
             ),
             sourceRow.displayedSources()
         )
@@ -244,7 +246,8 @@ class LyricsSourceOrderCardTest {
                 PlainLyricsSearchSource.MUSIXMATCH,
                 PlainLyricsSearchSource.NETEASE,
                 PlainLyricsSearchSource.LRCLIB,
-                PlainLyricsSearchSource.SPICY
+                PlainLyricsSearchSource.SPICY,
+                PlainLyricsSearchSource.APPLE
             ),
             sourceRow.displayedSources()
         )
@@ -283,7 +286,8 @@ class LyricsSourceOrderCardTest {
                 PlainLyricsSearchSource.LRCLIB,
                 PlainLyricsSearchSource.NETEASE,
                 PlainLyricsSearchSource.MUSIXMATCH,
-                PlainLyricsSearchSource.SPICY
+                PlainLyricsSearchSource.SPICY,
+                PlainLyricsSearchSource.APPLE
             ),
             card.requireSourceOrderRow().displayedSources()
         )
@@ -314,7 +318,8 @@ class LyricsSourceOrderCardTest {
                 PlainLyricsSearchSource.NETEASE,
                 PlainLyricsSearchSource.LRCLIB,
                 PlainLyricsSearchSource.MUSIXMATCH,
-                PlainLyricsSearchSource.SPICY
+                PlainLyricsSearchSource.SPICY,
+                PlainLyricsSearchSource.APPLE
             ),
             sourceRow.displayedSources()
         )
@@ -415,7 +420,10 @@ class LyricsSourceOrderCardTest {
 
         measureAndLayout(card, host.dp(280))
 
-        assertEquals(4, sourceRow.sourceButtons().size)
+        val cardLayout = card as ViewGroup
+        assertEquals(2, cardLayout.childCount)
+        assertSame(sourceRow, cardLayout.getChildAt(1))
+        assertEquals(5, sourceRow.sourceButtons().size)
         assertTrue(sourceRow.getChildAt(0).width > sourceRow.width)
         val buttons = PlainLyricsSearchSource.onlineSources.map { source ->
             card.requireSourceButton(source)
@@ -452,7 +460,8 @@ class LyricsSourceOrderCardTest {
 
         val page = createSettingsHomePage(host)
         val titles = listOf(R.string.ui_netease_cloud_music, R.string.provider_musixmatch, R.string.provider_lrclib,
-            if (com.andsi.airlyrics.lyrics.providers.SpicyLyricsProvider.isConfigured) R.string.provider_spicy else R.string.provider_spicy_unavailable)
+            if (com.andsi.airlyrics.lyrics.providers.SpicyLyricsProvider.isConfigured) R.string.provider_spicy else R.string.provider_spicy_unavailable,
+            R.string.provider_apple)
             .map(host::getString)
         val expectedSummary = "${android.icu.text.ListFormatter.getInstance(host.resources.configuration.locales[0]).format(titles)} · ${host.getString(R.string.ui_auto_save)}"
 
@@ -490,7 +499,8 @@ class LyricsSourceOrderCardTest {
             PlainLyricsSearchSource.LRCLIB,
             PlainLyricsSearchSource.NETEASE,
             PlainLyricsSearchSource.MUSIXMATCH,
-            PlainLyricsSearchSource.SPICY
+            PlainLyricsSearchSource.SPICY,
+            PlainLyricsSearchSource.APPLE
         ).map(buttons::getValue)
         val target = buttons.getValue(PlainLyricsSearchSource.LRCLIB)
         target.render(1, host.localizedPlainLyricsSourceTitle(target.source), deferHighlight = true)
@@ -515,7 +525,8 @@ class LyricsSourceOrderCardTest {
             PlainLyricsSearchSource.MUSIXMATCH,
             PlainLyricsSearchSource.LRCLIB,
             PlainLyricsSearchSource.NETEASE,
-            PlainLyricsSearchSource.SPICY
+            PlainLyricsSearchSource.SPICY,
+            PlainLyricsSearchSource.APPLE
         ).map(buttons::getValue)
         row.setSourceOrder(latestOrder, animate = true)
         measureAndLayout(row, host.dp(280))

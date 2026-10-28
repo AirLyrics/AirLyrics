@@ -26,6 +26,7 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
         FloatingServiceCommand.ToggleAdjustModeFromNotification -> toggleAdjustModeFromNotification()
         FloatingServiceCommand.ApplyAutoHideSettings -> applyAutoHideSettings()
         FloatingServiceCommand.ApplyDisplayScope -> applyDisplayScopeSetting()
+        FloatingServiceCommand.RefreshText -> renderer.refresh()
         FloatingServiceCommand.ApplyStyle -> {
             val applied = windowController.applyStyle()
             if (applied) renderer.refresh()

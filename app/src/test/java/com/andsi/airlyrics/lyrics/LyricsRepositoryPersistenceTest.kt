@@ -164,6 +164,116 @@ class LyricsRepositoryPersistenceTest {
         }
     }
 
+    private val appleWords = listOf(WordByWordLine(1000, 2000, "hello",
+        listOf(WordByWordSegment("hello", 1000, 2000))))
+    private fun appleResult(text: String = "hello") = LyricsProviderResult("apple", "Apple",
+        "[00:01.00]$text", "[00:01.00]你好", appleWords)
+
+    private fun lookupApple(result: LyricsProviderResult = appleResult(), auto: Boolean = false,
+        force: Boolean = false, manual: Boolean = false, enabled: Boolean = true,
+        beforeFetch: (() -> Unit)? = null): Result<LyricsProviderResult?> {
+        val provider = object : PlainLyricsProvider {
+            override val id = "apple"
+            override val name = "Apple"
+            override val supportsWordTiming = true
+            override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
+                beforeFetch?.invoke()
+                return Result.success(result)
+            }
+        }
+        return LyricsRepository.findLyricsWithProviders(
+            context, mapOf(PlainLyricsSearchSource.NETEASE to provider),
+            onlineAutoSaveSettings().copy(autoSaveLocal = auto, wordByWordLyricsEnabled = enabled),
+            STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS, bypassLocal = true,
+            forceSaveOnline = force,
+            searchOrigin = if (manual) LyricsSearchOrigin.Manual else LyricsSearchOrigin.Automatic)
+    }
+
+    private fun durableState(): Map<String, List<Byte>> = context.let {
+        val roots = listOf(com.andsi.airlyrics.lyrics.storage.LyricsStoragePaths.fallbackLyricsDir(it),
+            java.io.File(it.noBackupFilesDir, "lyrics-selections"))
+        roots.flatMap { root -> root.walkTopDown().filter { it.isFile }.map { file ->
+            file.absolutePath to file.readBytes().toList()
+        }.toList() }.toMap()
+    }
+
+    @Test
+    fun appleCommitFailuresRestoreAllFilesAndFirstSaveLeavesNothing() {
+        for (existing in listOf(false, true)) for (step in listOf("wordFile", "wordIndex", "selection")) {
+            resetLyricsStorage(context)
+            if (existing) lookupApple(manual = true).getOrThrow()
+            val before = durableState()
+            com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore.beforeCommitStep = {
+                if (it == step) {
+                    // Model a failed write that has already truncated its target.
+                    val song = com.andsi.airlyrics.core.model.SongIdentity(STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS)
+                    when (step) {
+                        "wordFile" -> assertTrue(LyricsFileStore.writeManagedLyrics(context,
+                            com.andsi.airlyrics.lyrics.storage.LyricsFileNaming.managedWordByWordFileName(song), "partial"))
+                        "wordIndex" -> assertTrue(LyricsIndexStore.write(context, emptyList()))
+                        "selection" -> {
+                            val target = java.io.File(java.io.File(context.noBackupFilesDir, "lyrics-selections"),
+                                song.copy(durationMs = 0L).storageKey() + ".json")
+                            target.parentFile!!.mkdirs()
+                            target.writeText("partial")
+                        }
+                    }
+                    error("Injected $step failure")
+                }
+            }
+            try {
+                assertTrue(lookupApple(appleResult("replacement"), manual = true).isFailure)
+                assertEquals(before, durableState())
+            } finally {
+                com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore.beforeCommitStep = null
+            }
+        }
+    }
+
+    @Test
+    fun appleAutomaticPersistenceUsesBothSettingsAndManualAlwaysPersists() {
+        for (auto in listOf(false, true)) for (force in listOf(false, true)) {
+            resetLyricsStorage(context)
+            val before = durableState()
+            assertEquals(appleWords, lookupApple(auto = auto, force = force).getOrThrow()!!.wordByWordLines)
+            if (!auto && !force) assertEquals(before, durableState())
+            else {
+                assertNotNull(LyricsStorage.readPlainLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS))
+                assertEquals(appleWords, LyricsStorage.readWordByWordLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS))
+            }
+        }
+        resetLyricsStorage(context)
+        lookupApple(manual = true).getOrThrow()
+        assertNotNull(LyricsStorage.readPlainLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS))
+        assertTrue(lookupApple(enabled = false).getOrThrow()!!.wordByWordLines.isEmpty())
+        assertEquals(appleWords, lookupApple().getOrThrow()!!.wordByWordLines)
+    }
+
+    @Test
+    fun localLyricsAppearingDuringSearchProtectsAllPersistence() {
+        val old = appleResult("imported")
+        var expected: Map<String, List<Byte>>? = null
+        val found = lookupApple(auto = true, beforeFetch = {
+            LyricsStorage.savePlainLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS,
+                old.plainLrc, plainSource = LyricsStorage.SOURCE_MANUAL_IMPORT)
+            expected = durableState()
+        }).getOrThrow()!!
+        assertEquals(old.plainLrc, found.plainLrc)
+        assertEquals(expected, durableState())
+        assertTrue(found.wordByWordLines.isEmpty())
+    }
+
+    @Test
+    fun supersededAutomaticRequestCannotOverwriteManualSelection() {
+        var expected: Map<String, List<Byte>>? = null
+        val late = lookupApple(auto = true, beforeFetch = {
+            lookupApple(appleResult("manual winner"), manual = true).getOrThrow()
+            expected = durableState()
+        })
+        assertTrue(late.isFailure)
+        assertEquals(expected, durableState())
+    }
+
     private fun onlineAutoSaveSettings(): LyricsSettings {
         return LyricsSettings(
             plainLyricsSearchSources = listOf(PlainLyricsSearchSource.NETEASE),

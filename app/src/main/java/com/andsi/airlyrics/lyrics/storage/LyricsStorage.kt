@@ -121,7 +121,10 @@ object LyricsStorage {
         val plainProvider: String,
         val updatedAt: Long,
         val indexKey: String = "",
-        val album: String = ""
+        val album: String = "",
+        val matchedTitle: String = "",
+        val matchedArtist: String = "",
+        val matchedDurationMs: Long = 0L
     ) {
         val friendlyTitle: String
             get() = if (title.isNotBlank()) {
@@ -237,7 +240,10 @@ object LyricsStorage {
         album: String = "",
         plainSource: String = SOURCE_DOWNLOADED,
         plainProvider: String = "local",
-        overwrite: Boolean = true
+        overwrite: Boolean = true,
+        matchedTitle: String = "",
+        matchedArtist: String = "",
+        matchedDurationMs: Long = 0L
     ): Boolean = withStorageLock {
         if (plainProvider == "spicy") return@withStorageLock false
         val saved = PlainLyricsStorageOps.savePlainLyrics(
@@ -249,7 +255,10 @@ object LyricsStorage {
             album = album,
             plainSource = plainSource,
             plainProvider = plainProvider,
-            overwrite = overwrite
+            overwrite = overwrite,
+            matchedTitle = matchedTitle,
+            matchedArtist = matchedArtist,
+            matchedDurationMs = matchedDurationMs
         )
         if (saved) markContentChanged()
         saved
@@ -482,7 +491,9 @@ object LyricsStorage {
 
     fun scheduleCacheMaintenance(context: Context) {
         val app = context.applicationContext
-        Thread({ runCatching { pruneOnlineCache(app) } }, "AirLyrics-CacheCleanup").apply { isDaemon = true }.start()
+        Thread({
+            runCatching { pruneOnlineCache(app) }
+        }, "AirLyrics-CacheCleanup").apply { isDaemon = true }.start()
         val scheduler = app.getSystemService(android.app.job.JobScheduler::class.java)
         val job = android.app.job.JobInfo.Builder(7301, android.content.ComponentName(app, SpicyCacheCleanupService::class.java))
             .setPeriodic(24 * 60 * 60 * 1000L).build()

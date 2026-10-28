@@ -19,6 +19,7 @@ internal sealed class FloatingServiceCommand {
     object ApplyAutoHideSettings : FloatingServiceCommand()
     object ApplyDisplayScope : FloatingServiceCommand()
     object ApplyStyle : FloatingServiceCommand()
+    object RefreshText : FloatingServiceCommand()
     object ReloadLyrics : FloatingServiceCommand()
     data class ApplyLyricsOffset(val offsetMs: Long) : FloatingServiceCommand()
     data class SelectMediaSource(val packageName: String?) : FloatingServiceCommand()
@@ -55,6 +56,7 @@ internal sealed class FloatingServiceCommand {
             ApplyAutoHideSettings -> ACTION_APPLY_AUTO_HIDE_SETTINGS
             ApplyDisplayScope -> ACTION_APPLY_DISPLAY_SCOPE
             ApplyStyle -> ACTION_APPLY_STYLE
+            RefreshText -> ACTION_REFRESH_TEXT
             ReloadLyrics -> ACTION_RELOAD_LYRICS
             is ApplyLyricsOffset -> ACTION_APPLY_LYRICS_OFFSET
             is SelectMediaSource -> ACTION_SELECT_MEDIA_SOURCE
@@ -82,6 +84,7 @@ internal sealed class FloatingServiceCommand {
         private const val ACTION_APPLY_DISPLAY_SCOPE =
             "com.andsi.airlyrics.APPLY_DISPLAY_SCOPE"
         private const val ACTION_APPLY_STYLE = "com.andsi.airlyrics.APPLY_STYLE"
+        private const val ACTION_REFRESH_TEXT = "com.andsi.airlyrics.REFRESH_TEXT"
         private const val ACTION_RELOAD_LYRICS = "com.andsi.airlyrics.RELOAD_LYRICS"
         private const val ACTION_APPLY_LYRICS_OFFSET = "com.andsi.airlyrics.APPLY_LYRICS_OFFSET"
         private const val ACTION_SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
@@ -107,6 +110,7 @@ internal sealed class FloatingServiceCommand {
                 LEGACY_ACTION_APPLY_AUTO_HIDE_WHEN_PAUSED -> ApplyAutoHideSettings
                 ACTION_APPLY_DISPLAY_SCOPE -> ApplyDisplayScope
                 ACTION_APPLY_STYLE -> ApplyStyle
+                ACTION_REFRESH_TEXT -> RefreshText
                 ACTION_RELOAD_LYRICS -> ReloadLyrics
                 ACTION_APPLY_LYRICS_OFFSET -> ApplyLyricsOffset(
                     intent.getLongExtra(EXTRA_LYRICS_OFFSET_MS, 0L)

@@ -2,6 +2,7 @@ package com.andsi.airlyrics.floating
 
 import android.icu.text.BreakIterator
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import java.util.Locale
 
 /** UTF-16 ranges; character splitting always follows ICU extended grapheme boundaries. */
@@ -12,11 +13,15 @@ internal data class SpicyTiming(
     val letterIndex: Int = 0, val letterCount: Int = 1
 )
 
-internal fun spicyTimings(line: WordByWordLine, text: String): List<SpicyTiming> {
+internal fun spicyTimings(
+    line: WordByWordLine,
+    text: String,
+    displaySegments: List<WordByWordSegment> = line.segments
+): List<SpicyTiming> {
     val iterator = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }
     val result = mutableListOf<SpicyTiming>()
     var cursor = 0
-    for (segment in line.segments) {
+    for (segment in displaySegments) {
         val word = segment.text.trim()
         if (word.isEmpty()) continue
         val start = text.indexOf(word, cursor)

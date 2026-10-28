@@ -6,6 +6,9 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import com.andsi.airlyrics.ui.state.confirmOperation
 import com.andsi.airlyrics.ui.model.ConfirmationAction
+import com.andsi.airlyrics.apple.AppleMusicSessionStore
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
+import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceCompactTitle
@@ -47,6 +50,23 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
     )
 
     container.addView(createLyricsSourceOrderCard(activity, settings))
+
+    container.addView(
+        card(activity) {
+            isFocusable = true
+            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+            setOnClickListener {
+                uiActions.openSettingsSubPage(SettingsSubPage.APPLE_ACCOUNT)
+            }
+            addView(adaptiveHeader(
+                bigText(activity, getString(R.string.ui_apple_account)),
+                endIcon = airIconView(R.drawable.ic_air_chevron_right, colorAccent)
+            ))
+            addView(normalText(activity, AppleMusicSessionStore.load(activity)
+                ?.let { getString(R.string.ui_apple_logged_in_as, it.storefront.uppercase()) }
+                ?: getString(R.string.ui_apple_not_logged_in)))
+        }
+    )
 
     container.addView(
         card(activity) {
@@ -102,10 +122,10 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
         recentLyricsCard.refreshContent()
     }
 
-    listOf("heading", "current", "search", "sources", "directory", "recent", "delete").forEachIndexed { index, name ->
+    listOf("heading", "current", "search", "sources", "apple_account", "directory", "recent", "delete").forEachIndexed { index, name ->
         container.getChildAt(index).setTag(R.id.interaction_anchor, "lyrics.settings.$name")
     }
-    return com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1, 5), "scroll.SETTINGS.LYRICS")
+    return com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1, 6), "scroll.SETTINGS.LYRICS")
 }
 
 internal fun createLyricsSourceOrderCard(

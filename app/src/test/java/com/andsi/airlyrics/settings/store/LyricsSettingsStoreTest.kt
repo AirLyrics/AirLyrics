@@ -3,6 +3,7 @@ package com.andsi.airlyrics.settings.store
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
@@ -32,9 +33,21 @@ class LyricsSettingsStoreTest {
         assertTrue(settings.autoSearchOnline)
         assertTrue(settings.autoSaveLocal)
         assertEquals(LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION, settings.contentDisplayMode)
+        assertEquals(LyricsScriptPreference.NONE, settings.scriptPreference)
         assertEquals(LyricsLineDisplayMode.CURRENT_ONLY, settings.lineDisplayMode)
         assertEquals(LyricsSwitchAnimationMode.FADE, settings.switchAnimationMode)
         assertFalse(settings.wordByWordLyricsEnabled)
+    }
+
+    @Test
+    fun getSettings_migratesTheRemovedAutoMode() {
+        context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE).edit()
+            .putString("content_display_mode", "auto")
+            .commit()
+
+        val settings = LyricsSettingsStore.getSettings(context)
+
+        assertEquals(LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION, settings.contentDisplayMode)
     }
 
     @Test

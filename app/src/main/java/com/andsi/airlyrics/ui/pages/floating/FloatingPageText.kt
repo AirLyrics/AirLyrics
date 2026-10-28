@@ -11,6 +11,8 @@ import android.widget.TextView
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
+import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import kotlin.math.roundToInt
@@ -74,43 +76,29 @@ internal fun opacityPercentToAlpha(percent: Int): Int {
 internal fun formattedPreviewLyrics(
     mode: LyricsContentDisplayMode,
     lines: List<FloatingPreviewLyricLine>,
-    textColor: Int
+    textColor: Int,
+    scriptPreference: LyricsScriptPreference = LyricsScriptPreference.default
 ): CharSequence {
     val result = SpannableStringBuilder()
     lines.forEachIndexed { lineIndex, line ->
         if (lineIndex > 0) result.append('\n')
-        when (mode) {
-            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
-                result.appendPreviewLine(
-                    text = line.original,
-                    relativeSize = if (line.isCurrent) 1f else 0.80f,
-                    alphaFactor = if (line.isCurrent) 1f else 0.58f,
-                    bold = line.isCurrent,
-                    textColor = textColor
-                )
-                result.append('\n')
-                result.appendPreviewLine(
-                    text = line.translation,
-                    relativeSize = if (line.isCurrent) 0.76f else 0.64f,
-                    alphaFactor = if (line.isCurrent) 0.72f else 0.42f,
-                    bold = false,
-                    textColor = textColor
-                )
-            }
-
-            LyricsContentDisplayMode.ORIGINAL_ONLY -> result.appendPreviewLine(
-                text = line.original,
+        val rendered = LyricsDisplayPolicy.render(mode, line.original, line.translation, scriptPreference)
+        if (rendered.primary.isNotBlank()) {
+            result.appendPreviewLine(
+                text = rendered.primary,
                 relativeSize = if (line.isCurrent) 1f else 0.80f,
                 alphaFactor = if (line.isCurrent) 1f else 0.58f,
                 bold = line.isCurrent,
                 textColor = textColor
             )
-
-            LyricsContentDisplayMode.TRANSLATION_ONLY -> result.appendPreviewLine(
-                text = line.translation,
-                relativeSize = if (line.isCurrent) 1f else 0.80f,
-                alphaFactor = if (line.isCurrent) 1f else 0.58f,
-                bold = line.isCurrent,
+        }
+        rendered.secondary?.takeIf { it.isNotBlank() }?.let { secondary ->
+            if (result.isNotEmpty()) result.append('\n')
+            result.appendPreviewLine(
+                text = secondary,
+                relativeSize = if (line.isCurrent) 0.76f else 0.64f,
+                alphaFactor = if (line.isCurrent) 0.72f else 0.42f,
+                bold = false,
                 textColor = textColor
             )
         }

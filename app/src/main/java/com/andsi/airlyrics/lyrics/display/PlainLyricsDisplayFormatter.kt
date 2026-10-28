@@ -2,6 +2,8 @@ package com.andsi.airlyrics.lyrics.display
 
 import com.andsi.airlyrics.lyrics.parser.LrcLine
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
+import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 
 /**
@@ -17,6 +19,7 @@ object PlainLyricsDisplayFormatter {
         plainLines: List<LrcLine>,
         currentIndex: Int,
         contentMode: LyricsContentDisplayMode,
+        scriptPreference: LyricsScriptPreference = LyricsScriptPreference.default,
         lineMode: LyricsLineDisplayMode,
         noTranslationText: String = NO_TRANSLATION_TEXT
     ): String {
@@ -28,7 +31,7 @@ object PlainLyricsDisplayFormatter {
         if (indexes.isEmpty()) return ""
 
         val renderedLines = indexes.mapNotNull { index ->
-            renderPlainLine(plainLines[index], contentMode).takeIf { it.isNotBlank() }
+            renderPlainLine(plainLines[index], contentMode, scriptPreference).takeIf { it.isNotBlank() }
         }
 
         if (renderedLines.isNotEmpty()) {
@@ -51,24 +54,17 @@ object PlainLyricsDisplayFormatter {
         }
     }
 
-    private fun renderPlainLine(plainLine: LrcLine, contentMode: LyricsContentDisplayMode): String {
+    private fun renderPlainLine(
+        plainLine: LrcLine,
+        contentMode: LyricsContentDisplayMode,
+        scriptPreference: LyricsScriptPreference
+    ): String {
         val original = plainLine.text.trim()
         val translation = plainLine.translation.orEmpty().trim()
         if (plainLine.isMetadata) return original
 
-        return when (contentMode) {
-            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
-                buildList {
-                    if (original.isNotBlank()) add(original)
-                    if (plainLine.hasTranslation()) add(translation)
-                }.joinToString("\n")
-            }
-
-            LyricsContentDisplayMode.ORIGINAL_ONLY -> original
-
-            LyricsContentDisplayMode.TRANSLATION_ONLY -> {
-                if (plainLine.hasTranslation()) translation else ""
-            }
-        }
+        return LyricsDisplayPolicy.join(
+            LyricsDisplayPolicy.render(contentMode, original, translation, scriptPreference)
+        )
     }
 }

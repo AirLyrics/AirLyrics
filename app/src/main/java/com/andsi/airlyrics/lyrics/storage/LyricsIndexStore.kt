@@ -45,7 +45,10 @@ internal object LyricsIndexStore {
                     plainProvider = obj.optString("provider", "local"),
                     wordByWordProvider = obj.optString(WORD_BY_WORD_PROVIDER_JSON_FIELD),
                     createdAt = obj.optLong("createdAt"),
-                    updatedAt = obj.optLong("updatedAt")
+                    updatedAt = obj.optLong("updatedAt"),
+                    matchedTitle = obj.optString("matchedTitle", ""),
+                    matchedArtist = obj.optString("matchedArtist", ""),
+                    matchedDurationMs = obj.optLong("matchedDurationMs", 0L)
                 )
             }.filter { it.key.isNotBlank() && (it.plainFile.isNotBlank() || it.wordByWordFile.isNotBlank()) }
         }.getOrDefault(emptyList())
@@ -67,6 +70,9 @@ internal object LyricsIndexStore {
                 put(WORD_BY_WORD_PROVIDER_JSON_FIELD, entry.wordByWordProvider)
                 put("createdAt", entry.createdAt)
                 put("updatedAt", entry.updatedAt)
+                if (entry.matchedTitle.isNotBlank()) put("matchedTitle", entry.matchedTitle)
+                if (entry.matchedArtist.isNotBlank()) put("matchedArtist", entry.matchedArtist)
+                if (entry.matchedDurationMs > 0L) put("matchedDurationMs", entry.matchedDurationMs)
             })
         }
 

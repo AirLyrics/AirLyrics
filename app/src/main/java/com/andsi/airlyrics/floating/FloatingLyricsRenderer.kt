@@ -13,10 +13,14 @@ import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
 import com.andsi.airlyrics.lyrics.display.PlainLyricsDisplayFormatter
 import com.andsi.airlyrics.lyrics.parser.LrcLine
+import com.andsi.airlyrics.core.text.ChineseText
+import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
@@ -33,6 +37,7 @@ internal enum class ParsedLyricsAvailability {
 class FloatingLyricsRenderer(
     private val textViewProvider: () -> TextView?,
     private val contentModeProvider: () -> LyricsContentDisplayMode = { LyricsContentDisplayMode.default },
+    private val scriptPreferenceProvider: () -> LyricsScriptPreference = { LyricsScriptPreference.default },
     private val lineModeProvider: () -> LyricsLineDisplayMode = { LyricsLineDisplayMode.default },
     private val switchAnimationModeProvider: () -> LyricsSwitchAnimationMode = { LyricsSwitchAnimationMode.default },
     private val wordByWordLyricsEnabledProvider: () -> Boolean = { false },
@@ -96,7 +101,12 @@ class FloatingLyricsRenderer(
         updateSpicyPlayback()
     }
 
-    private data class SpicyCacheKey(val line: WordByWordLine, val text: String, val color: Int)
+    private data class SpicyCacheKey(
+        val line: WordByWordLine,
+        val text: String,
+        val segments: List<WordByWordSegment>,
+        val color: Int
+    )
     private val spicyTextCache = object : LinkedHashMap<SpicyCacheKey, CharSequence>(8, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<SpicyCacheKey, CharSequence>?) = size > 8
     }
@@ -263,6 +273,7 @@ class FloatingLyricsRenderer(
             plainLines = currentPlainLines,
             currentIndex = index,
             contentMode = contentModeProvider(),
+            scriptPreference = scriptPreferenceProvider(),
             lineMode = lineModeProvider(),
             noTranslationText = noTranslationTextProvider()
         )
@@ -295,34 +306,38 @@ class FloatingLyricsRenderer(
             val isCurrent = index == currentIndex
             val wordByWordLine = if (isCurrent) findWordByWordLineForPlainLine(line, positionMs) else null
 
-            when (contentMode) {
-                LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION -> {
-                    val block = SpannableStringBuilder()
-                    if (original.isNotBlank()) {
-                        block.append(
-                            if (wordByWordLine != null) wordByWordLineSpan(wordByWordLine, original, positionMs)
-                            else original
+            val rendered = LyricsDisplayPolicy.render(
+                contentMode, original, translation, scriptPreferenceProvider()
+            )
+            if (rendered.primary.isNotBlank()) {
+                // When the preferred script replaces the line with its translation, keep the
+                // translation's own timing; otherwise the original tokens stay authoritative.
+                val showsTranslationOnly = contentMode == LyricsContentDisplayMode.TRANSLATION_ONLY ||
+                    (rendered.secondary == null && rendered.primary.trim() != original.trim())
+                renderedLines += when {
+                    wordByWordLine == null -> rendered.primary
+                    showsTranslationOnly && wordByWordLine.translatedSegments.isNotEmpty() ->
+                        wordByWordLineSpan(
+                            wordByWordLine,
+                            rendered.primary,
+                            positionMs,
+                            wordByWordLine.translatedSegments
                         )
-                    }
-                    if (line.hasTranslation()) {
-                        if (block.isNotEmpty()) block.append('\n')
-                        block.append(translation)
-                    }
-                    if (block.isNotBlankText()) renderedLines += block
+                    showsTranslationOnly -> rendered.primary
+                    else -> wordByWordLineSpan(wordByWordLine, rendered.primary, positionMs)
                 }
-
-                LyricsContentDisplayMode.ORIGINAL_ONLY -> {
-                    if (original.isNotBlank()) {
-                        renderedLines += if (wordByWordLine != null) {
-                            wordByWordLineSpan(wordByWordLine, original, positionMs)
-                        } else {
-                            original
-                        }
-                    }
-                }
-
-                LyricsContentDisplayMode.TRANSLATION_ONLY -> {
-                    if (line.hasTranslation()) renderedLines += translation
+            }
+            rendered.secondary?.takeIf { it.isNotBlank() }?.let { secondary ->
+                val translatedSegments = wordByWordLine?.translatedSegments.orEmpty()
+                renderedLines += when {
+                    wordByWordLine == null -> secondary
+                    translatedSegments.isNotEmpty() -> wordByWordLineSpan(
+                        wordByWordLine,
+                        secondary,
+                        positionMs,
+                        translatedSegments
+                    )
+                    else -> secondary
                 }
             }
         }
@@ -364,6 +379,19 @@ class FloatingLyricsRenderer(
                         isTextCompatible(plainLine.text, wordByWordOriginalText(candidate))
                 }
         }
+
+        // Apple/other providers can normalize punctuation or split whitespace differently between
+        // the line LRC and the word-timed payload. When both payloads carry the same line start,
+        // the timestamp is the stronger identity than a long-text comparison. Keep a narrow
+        // timestamp fallback so long lines do not lose karaoke rendering while still avoiding a
+        // neighboring line accidentally matching.
+        currentWordByWordLines
+            .filter { kotlin.math.abs(it.startMs - plainLine.timeMs) <= 120L }
+            .minByOrNull { kotlin.math.abs(it.startMs - plainLine.timeMs) }
+            ?.takeIf { candidate ->
+                isTextCompatible(plainLine.text, wordByWordOriginalText(candidate))
+            }
+            ?.let { return it }
 
         val aroundPosition = currentWordByWordLines
             .filter { positionMs in (it.startMs - 350L)..(it.endMs + 700L) }
@@ -413,21 +441,43 @@ class FloatingLyricsRenderer(
     private fun wordByWordLineSpan(
         wordByWordLine: WordByWordLine,
         displayText: String,
-        positionMs: Long
+        positionMs: Long,
+        displaySegments: List<WordByWordSegment> = wordByWordLine.segments
     ): CharSequence {
         val text = displayText.trim()
         if (text.isBlank()) return ""
 
+        val sourceText = displaySegments.joinToString("") { it.text }.trim()
+        val segments = if (sourceText != text &&
+            sourceText.filterNot { it.isWhitespace() } == text.filterNot { it.isWhitespace() }) {
+            mapDisplaySegments(sourceText, text, displaySegments) ?: return text
+        } else if (sourceText != text && (ChineseText.toSimplified(sourceText) != sourceText ||
+                ChineseText.toSimplified(text) != text)) {
+            if (displaySegments === wordByWordLine.segments &&
+                sourceText != wordByWordOriginalText(wordByWordLine)) return text
+            val mapped = if (displaySegments === wordByWordLine.translatedSegments) {
+                com.andsi.airlyrics.lyrics.providers.ApplePlainLyricsProvider
+                    .conversionSegments(text, displaySegments)
+            } else {
+                mapDisplaySegments(sourceText, text, displaySegments)
+            }
+            mapped ?: return text
+        } else {
+            displaySegments
+        }
+
         if (usesSpicy()) {
-            val key = SpicyCacheKey(wordByWordLine, text, wordByWordHighlightColorProvider())
+            val key = SpicyCacheKey(wordByWordLine, text, segments, wordByWordHighlightColorProvider())
             spicyTextCache[key]?.let { return it }
-            val timings = spicyTimings(wordByWordLine, text)
+            val timings = spicyTimings(wordByWordLine, text, segments)
             if (timings.isNotEmpty()) return SpannableString(text).apply {
                 for (timing in timings) setSpan(SpicyLyricsSpan(timing, wordByWordHighlightColorProvider()),
                     timing.start, timing.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }.also { spicyTextCache[key] = it }
         }
-        val progress = wordByWordHighlightProgress(wordByWordLine, text, positionMs)
+        val progress = wordByWordHighlightProgress(
+            wordByWordLine, text, positionMs, segments, clearAtLineEnd = segments !== displaySegments
+        )
         val span = SpannableString(text)
         if (progress.completedEnd > 0 || progress.hasActiveCharacter) {
             val highlightColor = wordByWordHighlightColorProvider()
@@ -458,6 +508,51 @@ class FloatingLyricsRenderer(
         return span
     }
 
+    private fun mapDisplaySegments(
+        source: String,
+        display: String,
+        segments: List<WordByWordSegment>
+    ): List<WordByWordSegment>? {
+        // Require complete, ordered coverage. Do not guess punctuation, missing tokens or offsets.
+        if (segments.joinToString("") { it.text } != source) return null
+        // Apple can omit spaces at token boundaries (especially before a sung echo).
+        // Slice the complete display string, retaining every token's original time range.
+        if (source.filterNot { it.isWhitespace() } == display.filterNot { it.isWhitespace() }) {
+            var cursor = 0
+            val mapped = segments.map { segment ->
+                val start = cursor
+                for (character in segment.text.filterNot { it.isWhitespace() }) {
+                    while (cursor < display.length && display[cursor].isWhitespace()) cursor++
+                    if (cursor >= display.length || display[cursor] != character) return null
+                    cursor++
+                }
+                segment.copy(text = display.substring(start, cursor))
+            }.toMutableList()
+            if (mapped.isEmpty()) return null
+            val last = mapped.last()
+            mapped[mapped.lastIndex] = last.copy(text = last.text + display.substring(cursor))
+            return mapped
+        }
+        val (converted, sourceBoundaries) = ChineseText.simplifiedBoundaries(source)
+        val (convertedDisplay, displayBoundaries) = ChineseText.simplifiedBoundaries(display)
+        if (converted != convertedDisplay) return null
+        val reverse = displayBoundaries.withIndex().filter { it.value >= 0 }
+            .groupBy({ it.value }, { it.index })
+        var offset = 0
+        var previousEndMs = Long.MIN_VALUE
+        return segments.map { segment ->
+            if (segment.startMs < previousEndMs || segment.endMs <= segment.startMs) return null
+            previousEndMs = segment.endMs
+            val start = sourceBoundaries[offset]
+            offset += segment.text.length
+            val end = sourceBoundaries[offset]
+            val displayStart = reverse[start]?.singleOrNull() ?: return null
+            val displayEnd = reverse[end]?.singleOrNull() ?: return null
+            if (start < 0 || end <= start || displayEnd <= displayStart) return null
+            segment.copy(text = display.substring(displayStart, displayEnd))
+        }
+    }
+
     private fun wordByWordOriginalText(wordByWordLine: WordByWordLine): String {
         return wordByWordLine.text
             .replace(" / ", "\n")
@@ -469,7 +564,7 @@ class FloatingLyricsRenderer(
     }
 
     private fun normalizeWordByWordMatchText(text: String): String {
-        return text.lowercase()
+        return ChineseText.toSimplified(text).lowercase()
             .replace(Regex("""[^\p{L}\p{N}]"""), "")
             .trim()
     }

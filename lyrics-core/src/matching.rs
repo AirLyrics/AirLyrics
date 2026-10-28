@@ -187,7 +187,7 @@ fn has_cjk(value: &str) -> bool {
         .any(|c| matches!(c, '\u{3040}'..='\u{30ff}' | '\u{3400}'..='\u{9fff}'))
 }
 
-fn different_scripts(left: &str, right: &str) -> bool {
+pub(crate) fn different_scripts(left: &str, right: &str) -> bool {
     has_cjk(left) != has_cjk(right)
         && left.chars().any(char::is_alphabetic)
         && right.chars().any(char::is_alphabetic)
@@ -250,10 +250,27 @@ fn title_variants(title: &str) -> Vec<String> {
 /// Version markers stay in the original metadata used for scoring, even when a broader
 /// search omits them. API adapters must not invent their own title variants.
 pub(crate) fn build_search_queries(title: &str, artist: &str) -> Vec<SearchQuery> {
-    let titles = title_variants(title);
-    let artist = non_empty(clean_query_part(artist));
     let mut queries = Vec::new();
     let mut seen = HashSet::new();
+    // A confirmed cross-language alias is the only way a romanized title can reach its
+    // localized catalogue entry, so alias lookup terms come before every relaxed variant.
+    for (alias_title, alias_artist) in crate::aliases::search_queries(title, artist) {
+        push_unique_query(
+            &mut queries,
+            &mut seen,
+            &alias_title,
+            alias_artist.as_deref(),
+        );
+    }
+    let titles = title_variants(title);
+    let artist = non_empty(clean_query_part(artist));
+    // A romanized performer name reaches covers first; its localized spelling reaches the
+    // original, so those variants are searched before the romanized ones.
+    if let Some(localized) = artist.as_deref().and_then(crate::aliases::localized_artist) {
+        for title in &titles {
+            push_unique_query(&mut queries, &mut seen, title, Some(&localized));
+        }
+    }
     if let Some(artist) = artist.as_deref() {
         for title in &titles {
             push_unique_query(&mut queries, &mut seen, title, Some(artist));
@@ -272,7 +289,9 @@ pub(crate) fn build_search_keywords(title: &str, artist: &str, album: &str) -> V
     let title = clean_query_part(title);
     let artist = clean_query_part(artist);
     let album = clean_query_part(album);
-    let mut keywords = Vec::new();
+    // A confirmed cross-language alias is the only way a romanized query can reach a localized
+    // catalogue entry, so its keywords are searched before any relaxed variant.
+    let mut keywords = crate::aliases::search_keywords(&title, &artist);
     if !title.is_empty() && !artist.is_empty() && !album.is_empty() {
         keywords.push(format!("{title} {album} {artist}"));
     }
@@ -521,15 +540,30 @@ fn title_similarity(query_title: &str, candidate_title: &str) -> f64 {
 
 fn compare_artists(left: &str, right: &str) -> Option<f64> {
     let full = compare_optional_text(left, right)?;
-    Some(
-        left.split([';', ',', '、', '，'])
-            .flat_map(|left| {
-                right
-                    .split([';', ',', '、', '，'])
-                    .map(move |right| text_similarity(left, right))
-            })
-            .fold(full, f64::max),
-    )
+    let text_score = left
+        .split([';', ',', '、', '，'])
+        .flat_map(|left| {
+            right
+                .split([';', ',', '、', '，'])
+                .map(move |right| text_similarity(left, right))
+        })
+        .fold(full, f64::max);
+    // A catalogue-learned romanization of the same performer is a known identity, not a text
+    // guess: "Jay Chou" and "周杰倫" are the same artist even though no character matches.
+    // Compare through the same traditional→simplified normalization the scorer uses, so a
+    // catalogue spelling (周杰倫) still matches the lyrics source's (周杰伦).
+    let normalized_right = match_text(right);
+    let normalized_left = match_text(left);
+    let learned_alias = crate::aliases::localized_artist(left).is_some_and(|localized| {
+        text_similarity(&match_text(&localized), &normalized_right) >= 0.90
+    }) || crate::aliases::localized_artist(right).is_some_and(|localized| {
+        text_similarity(&match_text(&localized), &normalized_left) >= 0.90
+    });
+    Some(if learned_alias {
+        text_score.max(1.0)
+    } else {
+        text_score
+    })
 }
 
 fn compare_optional_text(left: &str, right: &str) -> Option<f64> {
@@ -916,6 +950,26 @@ fn dice_coefficient(left: &str, right: &str) -> f64 {
 
 fn non_empty(value: String) -> Option<String> {
     (!value.is_empty()).then_some(value)
+}
+
+#[cfg(test)]
+mod artist_alias_tests {
+    use super::*;
+
+    #[test]
+    fn a_learned_localized_artist_counts_as_the_same_performer() {
+        crate::aliases::clear_artist_aliases();
+        assert_eq!(compare_artists("Jay Chou", "周杰倫"), Some(0.0));
+
+        crate::aliases::register_artist_alias("Jay Chou", "周杰倫");
+        assert_eq!(compare_artists("Jay Chou", "周杰倫"), Some(1.0));
+        // The lyrics source may spell it in simplified characters.
+        assert_eq!(compare_artists("Jay Chou", "周杰伦"), Some(1.0));
+
+        // An unrelated cover act still scores zero.
+        assert_eq!(compare_artists("Jay Chou", "李鑫ya"), Some(0.0));
+        crate::aliases::clear_artist_aliases();
+    }
 }
 
 #[cfg(test)]

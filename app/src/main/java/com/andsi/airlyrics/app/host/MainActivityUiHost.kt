@@ -35,6 +35,7 @@ import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
@@ -373,6 +374,9 @@ internal class MainActivityUiHost(
     override fun applyFloatingCornerRadius(radiusDp: Int) = graph.floatingController.applyCornerRadius(radiusDp)
     override fun applyFloatingWordByWordHighlightColor(color: Int) = graph.floatingController.applyWordByWordHighlightColor(color)
     override fun lyricsContentDisplayMode(): LyricsContentDisplayMode = LyricsSettingsStore.getContentDisplayMode(this)
+    override fun lyricsScriptPreference(): LyricsScriptPreference =
+        LyricsSettingsStore.getScriptPreference(this)
+
     override fun lyricsLineDisplayMode(): LyricsLineDisplayMode = LyricsSettingsStore.getLineDisplayMode(this)
     override fun lyricsSwitchAnimationMode(): LyricsSwitchAnimationMode = LyricsSettingsStore.getSwitchAnimationMode(this)
     override fun wordByWordAnimationMode() = LyricsSettingsStore.getWordByWordAnimationMode(this)
@@ -380,9 +384,14 @@ internal class MainActivityUiHost(
     override fun wordByWordLyricsEnabled(): Boolean = LyricsSettingsStore.isWordByWordLyricsEnabled(this)
     override fun setLyricsContentDisplayMode(mode: LyricsContentDisplayMode) = LyricsSettingsStore.setContentDisplayMode(this, mode)
     override fun setLyricsLineDisplayMode(mode: LyricsLineDisplayMode) = LyricsSettingsStore.setLineDisplayMode(this, mode)
+    override fun setLyricsScriptPreference(preference: LyricsScriptPreference) {
+        LyricsSettingsStore.setScriptPreference(this, preference)
+    }
+
     override fun setLyricsSwitchAnimationMode(mode: LyricsSwitchAnimationMode) = LyricsSettingsStore.setSwitchAnimationMode(this, mode)
     override fun setWordByWordLyricsEnabled(enabled: Boolean) = LyricsSettingsStore.setWordByWordLyricsEnabled(this, enabled)
     override fun notifyFloatingStyleChanged() = graph.floatingController.notifyStyleChanged()
+    override fun notifyFloatingTextChanged() = graph.floatingController.notifyTextChanged()
 
     override fun settingsHomeHeader(): View = settingsHomeHeaderImpl()
     override fun settingsBackHeader(title: String, subtitle: String, titleAction: View?, inlineTitleAction: View?): View =

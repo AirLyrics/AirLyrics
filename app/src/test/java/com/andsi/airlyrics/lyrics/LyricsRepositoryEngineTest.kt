@@ -40,6 +40,24 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
+    fun findLyrics_keepsLocalPlainWhenOnlineOnlyReturnsPlain() {
+        val local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]local")))
+        val spicy = FakePlainLyricsProvider("spicy", Result.success(result("spicy", "[00:01.00]online")))
+        val engine = engine(
+            local = local,
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to spicy),
+            settings = settings(
+                plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY),
+                wordByWordLyricsEnabled = true
+            )
+        )
+
+        val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180_000L).getOrThrow()
+
+        assertEquals("local", found?.plainProviderId)
+    }
+
+    @Test
     fun findLyrics_emptySourceOrderDoesNotCallOnlineProvider() {
         val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))
         val engine = engine(
@@ -499,7 +517,7 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun spicyUpgradeShowsInterimThenReplacesWholePayloadWithoutExportSave() {
+    fun automaticLookupKeepsLocalLyricsInsteadOfUpgradingThem() {
         val plain = result("local", "[00:01.00]ordinary", "[00:01.00]translation")
         val spicy = spicyResult()
         val saver = RecordingPlainLyricsSaver()
@@ -511,9 +529,8 @@ class LyricsRepositoryEngineTest {
             localPlainLyricsSaver = saver
         )
         val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180000, forceSaveOnline = true, onInterimResult = interim::add).getOrThrow()
-        assertSame(spicy, found)
-        assertEquals(listOf(plain), interim)
-        assertNull(found?.translatedLrc)
+        assertSame(plain, found)
+        assertTrue(interim.isEmpty())
         assertTrue(saver.saved.isEmpty())
     }
 
@@ -549,14 +566,15 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun cachedWordsUpgradeDownloadedPlainWithoutNetwork() {
+    fun localLyricsAreNotUpgradedWithCachedWordTiming() {
+        val plain = result("local", "[00:01.00]old")
         val spicy = spicyResult()
         val online = FakePlainLyricsProvider("spicy", Result.failure(AssertionError("Network must not run")))
-        val engine = engine(local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]old"))),
+        val engine = engine(local = FakePlainLyricsProvider("local", Result.success(plain)),
             onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to online),
             settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY), wordByWordLyricsEnabled = true, autoSearchOnline = false),
             cachedOnlineLyricsReader = { _, _ -> spicy })
-        assertSame(spicy, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
+        assertSame(plain, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
         assertEquals(0, online.calls)
     }
 
@@ -580,14 +598,38 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
-    fun wordUpgradeUsesProviderCapabilityRatherThanSourceName() {
+    fun wordLookupUsesProviderCapabilityRatherThanSourceName() {
         val words = spicyResult().copy(plainProviderId = "future")
         val provider = FakePlainLyricsProvider("future", Result.success(words)).apply { supportsWordTiming = true }
         val engine = engine(onlineProviders = mapOf(PlainLyricsSearchSource.LRCLIB to provider),
-            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.LRCLIB), wordByWordLyricsEnabled = true),
-            local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]cached"))))
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.LRCLIB), wordByWordLyricsEnabled = true))
         assertSame(words, engine.findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow())
         assertEquals(1, provider.calls)
+    }
+
+    @Test
+    fun appleFailuresRemainAvailableAcrossWordPrefetchAndFallback() {
+        for (wordsEnabled in listOf(false, true)) {
+            for (outcome in listOf("success", "miss", "cancel")) {
+                val failure = if (outcome == "cancel") CancellationException("cancelled") else
+                    LyricsLookupException("apple", "Apple Music", LyricsLookupErrorType.ParseError, "bad response")
+                val apple = FakePlainLyricsProvider("apple", Result.failure(failure))
+                val fallback = result("lrclib", "[00:01.00]fallback")
+                val other = FakePlainLyricsProvider("lrclib", Result.success(if (outcome == "success") fallback else null))
+                val logger = RecordingLogger()
+                val engine = engine(
+                    onlineProviders = mapOf(PlainLyricsSearchSource.APPLE to apple, PlainLyricsSearchSource.LRCLIB to other),
+                    settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.APPLE, PlainLyricsSearchSource.LRCLIB), wordByWordLyricsEnabled = wordsEnabled),
+                    lookupLogger = logger
+                )
+                val found = engine.findLyrics(context, "Song", "Artist", durationMs = 180000)
+                if (outcome == "success") assertSame(fallback, found.getOrThrow())
+                else assertSame(failure, found.exceptionOrNull())
+                assertEquals(1, apple.calls)
+                assertEquals(if (outcome == "cancel") 0 else 1, other.calls)
+                assertEquals(if (outcome == "cancel") 0 else 1, logger.failures)
+            }
+        }
     }
 
     private fun spicyResult() = result("spicy", "[00:01.00]word").copy(
@@ -658,7 +700,8 @@ class LyricsRepositoryEngineTest {
         ) : this(id, { response })
 
         override val name: String = id
-        override var supportsWordTiming: Boolean = id == "spicy"
+        override var supportsWordTiming: Boolean = id == "spicy" || id == "apple"
+        override val continueOnFailure: Boolean = id == "apple"
         private val requests = mutableListOf<PlainLyricsSearchRequest>()
         val calls: Int
             get() = requests.size

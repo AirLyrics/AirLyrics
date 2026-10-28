@@ -6,6 +6,7 @@ import android.widget.TextView
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 
@@ -70,14 +71,17 @@ internal interface FloatingUiHost {
     fun applyFloatingCornerRadius(radiusDp: Int)
     fun applyFloatingWordByWordHighlightColor(color: Int)
     fun lyricsContentDisplayMode(): LyricsContentDisplayMode
+    fun lyricsScriptPreference(): LyricsScriptPreference
     fun lyricsLineDisplayMode(): LyricsLineDisplayMode
     fun lyricsSwitchAnimationMode(): LyricsSwitchAnimationMode
     fun wordByWordAnimationMode(): WordByWordAnimationMode
     fun setWordByWordAnimationMode(mode: WordByWordAnimationMode)
     fun wordByWordLyricsEnabled(): Boolean
     fun setLyricsContentDisplayMode(mode: LyricsContentDisplayMode)
+    fun setLyricsScriptPreference(preference: LyricsScriptPreference)
     fun setLyricsLineDisplayMode(mode: LyricsLineDisplayMode)
     fun setLyricsSwitchAnimationMode(mode: LyricsSwitchAnimationMode)
     fun setWordByWordLyricsEnabled(enabled: Boolean)
     fun notifyFloatingStyleChanged()
+    fun notifyFloatingTextChanged()
 }

@@ -1,5 +1,3 @@
-#[cfg(test)]
-use crate::matching::EARLY_ACCEPT_SCORE;
 use crate::{
     begin_lookup_cancellation, check_lookup_cancelled,
     diagnostics::LookupTrace,
@@ -28,7 +26,11 @@ const LRCLIB_QUEUE_WAIT_TIMEOUT: Duration = Duration::from_secs(8);
 const LRCLIB_GATE_POLL_INTERVAL: Duration = Duration::from_millis(25);
 const LRCLIB_CANCELLATION_POLL_INTERVAL: Duration = Duration::from_millis(50);
 const LRCLIB_REQUEST_INTERVAL: Duration = Duration::from_millis(250);
-const LRCLIB_MAX_INLINE_503_RETRY_AFTER: Duration = Duration::from_secs(3);
+const LRCLIB_MAX_INLINE_503_RETRY_AFTER: Duration = Duration::from_secs(5);
+/// An overloaded LRCLIB often answers 503 without a `Retry-After` header; retry a couple of times
+/// anyway, otherwise one busy moment turns into "no lyrics" for that song.
+const LRCLIB_MAX_INLINE_503_RETRIES: u8 = 2;
+const LRCLIB_INLINE_503_BACKOFF: Duration = Duration::from_millis(1200);
 const LRCLIB_DEFAULT_RETRY_AFTER: Duration = Duration::from_secs(60);
 const LRCLIB_MAX_RETRY_AFTER: Duration = Duration::from_secs(24 * 60 * 60);
 const LRCLIB_MAX_REQUESTS: usize = 5;
@@ -216,6 +218,9 @@ struct ScoredApiTrack {
     match_score: MatchScore,
     confident_early_match: bool,
     duration_delta_ms: u64,
+    /// True when only a confirmed alias could establish this candidate.
+    alias_used: bool,
+    decision: crate::confidence::Decision,
 }
 
 #[derive(Default)]
@@ -226,12 +231,15 @@ struct SearchCandidateStats {
     rejected_instrumental: usize,
     rejected_lyrics: usize,
     rejected_title: usize,
+    rejected_low_confidence: usize,
 }
 
 enum SearchCandidateRejection {
     Instrumental,
     NoUsableLyrics,
     Title,
+    /// Passed the title gate but not the confidence policy: not enough independent evidence.
+    LowConfidence,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -657,9 +665,73 @@ async fn fetch_search_tracks(
     observed_retry_after: &mut Option<(Duration, StatusCode)>,
 ) -> Result<Vec<ApiTrack>, LrclibError> {
     check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
+    let mut tracks = search_by_fields(
+        query,
+        track_name,
+        artist_name,
+        lookup_id,
+        observed_retry_after,
+    )
+    .await?;
+
+    // LRCLIB's field search is relevance-ranked and only returns a handful of rows, which can hide
+    // the right recording for CJK titles (e.g. "不該" with several fan uploads). When no candidate is
+    // close to the played duration, ask again with free text, which ranks differently, and merge.
+    let has_close_duration = query.duration_ms.is_some_and(|target_ms| {
+        tracks.iter().any(|track| {
+            track
+                .duration
+                .map(|seconds| ((seconds * 1000.0) - target_ms as f64).abs() <= 1500.0)
+                .unwrap_or(false)
+        })
+    });
+    if !has_close_duration {
+        // Prefer the played artist spelling: LRCLIB indexes Latin artist names more reliably than
+        // the localised ones the lyrics source uses.
+        let artist_for_text = if query.artist.trim().is_empty() {
+            artist_name.unwrap_or_default()
+        } else {
+            query.artist.as_str()
+        };
+        if !artist_for_text.trim().is_empty() {
+            let text = format!("{track_name} {artist_for_text}");
+            if let Ok(mut extra) = search_by_text(&text, lookup_id, observed_retry_after).await {
+                tracks.retain(|track| !extra.iter().any(|other| other.id == track.id));
+                tracks.append(&mut extra);
+            }
+        }
+    }
+
+    Ok(tracks)
+}
+
+async fn search_by_fields(
+    query: &LookupQuery,
+    track_name: &str,
+    artist_name: Option<&str>,
+    lookup_id: jni::sys::jlong,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
+) -> Result<Vec<ApiTrack>, LrclibError> {
+    check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
     let request = client()?
         .get(LRCLIB_SEARCH_URL)
         .query(&query.search_query(track_name, artist_name));
+    let Some(body) = fetch_response_body(request, lookup_id, observed_retry_after).await? else {
+        return Ok(Vec::new());
+    };
+
+    serde_json::from_str(&body).map_err(|error| {
+        LrclibError::parse(format!("failed to decode LRCLIB search response: {error}"))
+    })
+}
+
+async fn search_by_text(
+    text: &str,
+    lookup_id: jni::sys::jlong,
+    observed_retry_after: &mut Option<(Duration, StatusCode)>,
+) -> Result<Vec<ApiTrack>, LrclibError> {
+    check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
+    let request = client()?.get(LRCLIB_SEARCH_URL).query(&[("q", text)]);
     let Some(body) = fetch_response_body(request, lookup_id, observed_retry_after).await? else {
         return Ok(Vec::new());
     };
@@ -675,9 +747,11 @@ async fn fetch_response_body(
     observed_retry_after: &mut Option<(Duration, StatusCode)>,
 ) -> Result<Option<String>, LrclibError> {
     let mut request = request;
-    let mut retried_503 = false;
+    let mut retried_503: u8 = 0;
     loop {
-        let retry_request = (!retried_503).then(|| request.try_clone()).flatten();
+        let retry_request = (retried_503 < LRCLIB_MAX_INLINE_503_RETRIES)
+            .then(|| request.try_clone())
+            .flatten();
         let response = await_reqwest(request.send(), lookup_id).await?;
         check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
 
@@ -699,17 +773,19 @@ async fn fetch_response_body(
             *observed_retry_after = Some((retry_after, status));
         }
         if status == StatusCode::SERVICE_UNAVAILABLE {
-            if let (Some(next_request), Some(delay)) = (retry_request, retry_after) {
+            let delay =
+                retry_after.unwrap_or(LRCLIB_INLINE_503_BACKOFF * u32::from(1 + retried_503));
+            if let Some(next_request) = retry_request {
                 if delay <= LRCLIB_MAX_INLINE_503_RETRY_AFTER {
                     wait_between_requests(lookup_id, delay.max(LRCLIB_REQUEST_INTERVAL)).await?;
                     request = next_request;
-                    retried_503 = true;
+                    retried_503 += 1;
                     continue;
                 }
             }
         }
         if response_disposition(status, retry_after)? == ResponseDisposition::NotFound {
-            if retried_503 {
+            if retried_503 > 0 {
                 *observed_retry_after = None;
             }
             return Ok(None);
@@ -717,7 +793,7 @@ async fn fetch_response_body(
 
         let body = await_reqwest(response.text(), lookup_id).await?;
         check_lookup_cancelled(lookup_id).map_err(LrclibError::native)?;
-        if retried_503 {
+        if retried_503 > 0 {
             *observed_retry_after = None;
         }
         return Ok(Some(body));
@@ -856,7 +932,7 @@ fn trace_lrclib_search(
     trace.event(
         "search",
         format_args!(
-            "round={} outcome=ok artistFilter={} requestMs={} returned={} accepted={} duplicate={} rejectedInstrumental={} rejectedLyrics={} rejectedTitle={} pool={} topScore={} topTitleScore={} topArtistScore={} topEarly={} requestsUsed={}",
+            "round={} outcome=ok artistFilter={} requestMs={} returned={} accepted={} duplicate={} rejectedInstrumental={} rejectedLyrics={} rejectedTitle={} rejectedLowConfidence={} pool={} topScore={} topTitleScore={} topArtistScore={} topEarly={} topAliasUsed={} topDecision={:?} requestsUsed={}",
             round,
             artist_filter,
             started.elapsed().as_millis(),
@@ -866,6 +942,7 @@ fn trace_lrclib_search(
             stats.rejected_instrumental,
             stats.rejected_lyrics,
             stats.rejected_title,
+            stats.rejected_low_confidence,
             candidates.len(),
             format_lrclib_score(best.map(|candidate| candidate.match_score.total)),
             format_lrclib_score(best.map(|candidate| candidate.match_score.title_similarity)),
@@ -873,6 +950,8 @@ fn trace_lrclib_search(
                 best.and_then(|candidate| candidate.match_score.artist_similarity)
             ),
             best.is_some_and(|candidate| candidate.confident_early_match),
+            best.is_some_and(|candidate| candidate.alias_used),
+            best.map(|candidate| candidate.decision),
             request_count,
         ),
     );
@@ -937,6 +1016,7 @@ fn add_search_candidates(
             Err(SearchCandidateRejection::Instrumental) => stats.rejected_instrumental += 1,
             Err(SearchCandidateRejection::NoUsableLyrics) => stats.rejected_lyrics += 1,
             Err(SearchCandidateRejection::Title) => stats.rejected_title += 1,
+            Err(SearchCandidateRejection::LowConfidence) => stats.rejected_low_confidence += 1,
         }
     }
     stats
@@ -995,8 +1075,31 @@ fn score_track_with_reason(
         album: track.album_name.as_deref().unwrap_or_default(),
         duration_ms: candidate_duration_ms,
     };
-    let match_score = score_candidate(query.match_metadata(), candidate_metadata)
-        .ok_or(SearchCandidateRejection::Title)?;
+    let Some(assessment) = crate::confidence::assess(query.match_metadata(), candidate_metadata)
+    else {
+        // Distinguish "not even the same song" from "same song, not enough evidence".
+        let Some(title_score) = score_candidate(query.match_metadata(), candidate_metadata) else {
+            return Err(SearchCandidateRejection::Title);
+        };
+        crate::review::park(
+            &crate::review::query_key(&query.title, &query.artist, query.duration_ms),
+            crate::review::ParkedCandidate {
+                title: candidate_metadata.title.to_owned(),
+                artist: candidate_metadata.artist.to_owned(),
+                album: candidate_metadata.album.to_owned(),
+                duration_ms: candidate_duration_ms,
+                provider: "lrclib",
+                score: title_score.total,
+                reason: crate::confidence::rejection_reason(
+                    query.match_metadata(),
+                    candidate_metadata,
+                ),
+                alias_hit: crate::aliases::lookup(&query.title, &query.artist).is_some(),
+            },
+        );
+        return Err(SearchCandidateRejection::LowConfidence);
+    };
+    let match_score = assessment.score;
     let confident_early_match = is_confident_early_match(&match_score);
     let track_duration_ms = track.duration.and_then(duration_seconds_to_ms);
     let duration_delta_ms = query
@@ -1011,6 +1114,8 @@ fn score_track_with_reason(
         match_score,
         confident_early_match,
         duration_delta_ms,
+        alias_used: assessment.alias_used,
+        decision: assessment.decision,
     })
 }
 
@@ -1323,7 +1428,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn full_fallback_runs_all_query_rounds_then_returns_related_low_score() {
+    async fn full_fallback_runs_all_query_rounds_then_reports_no_match() {
         let query = LookupQuery::new(
             "Contract Song (Live)",
             "Contract Artist",
@@ -1354,11 +1459,13 @@ mod tests {
         );
         let mut observed_retry_after = None;
 
-        let result = fetch_with_fallback_backend(&backend, &query, 0, &mut observed_retry_after)
-            .await
-            .expect("final related candidate");
+        let result =
+            fetch_with_fallback_backend(&backend, &query, 0, &mut observed_retry_after).await;
 
-        assert_eq!(result.id.as_deref(), Some("30"));
+        assert!(
+            result.is_err(),
+            "no corroborated candidate exists, so the lookup must report a miss"
+        );
         assert_eq!(*backend.metadata_calls.lock().unwrap(), 1);
         assert_eq!(
             *backend.search_calls.lock().unwrap(),
@@ -1378,7 +1485,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn full_fallback_keeps_usable_candidate_when_later_round_fails() {
+    async fn rejected_candidate_does_not_stop_the_search_and_later_failure_is_reported() {
         let query = query();
         let backend = FakeLrclibBackend::new(
             [Ok(None)],
@@ -1395,11 +1502,14 @@ mod tests {
         );
         let mut observed_retry_after = None;
 
-        let result = fetch_with_fallback_backend(&backend, &query, 0, &mut observed_retry_after)
-            .await
-            .expect("retained usable lyrics");
+        let result =
+            fetch_with_fallback_backend(&backend, &query, 0, &mut observed_retry_after).await;
 
-        assert_eq!(result.id.as_deref(), Some("31"));
+        assert!(
+            result.is_err(),
+            "the only candidate carries no corroborating evidence, so the lookup reports a miss"
+        );
+        // The rejected candidate did not stop the broader rounds from running.
         assert_eq!(backend.search_calls.lock().unwrap().len(), 2);
     }
 
@@ -1553,7 +1663,121 @@ mod tests {
     }
 
     #[test]
-    fn final_selection_accepts_related_candidate_below_early_threshold() {
+    fn review_candidates_are_parked_and_not_used_as_lyrics() {
+        let _guard = crate::review::test_lock();
+        crate::review::clear();
+        let query = query();
+        let track = usable_search_track(50, "Contract Song", "Unrelated Performer", "", 500.0);
+
+        assert!(
+            score_search_track(track, &query).is_none(),
+            "a title-only candidate must not be used as lyrics"
+        );
+
+        let parsed: serde_json::Value =
+            serde_json::from_str(&crate::review::take_json()).expect("parked payload");
+        let candidates = parsed["candidates"].as_array().expect("candidates");
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0]["title"], serde_json::json!("Contract Song"));
+        assert_eq!(candidates[0]["provider"], serde_json::json!("lrclib"));
+        assert_eq!(candidates[0]["reason"], serde_json::json!("weak_evidence"));
+    }
+
+    #[test]
+    fn a_live_variant_is_parked_with_a_version_conflict_reason() {
+        let _guard = crate::review::test_lock();
+        crate::review::clear();
+        let query = query();
+        let track = usable_search_track(51, "Contract Song (Live)", "Contract Artist", "", 123.5);
+
+        assert!(score_search_track(track, &query).is_none());
+
+        let parsed: serde_json::Value =
+            serde_json::from_str(&crate::review::take_json()).expect("parked payload");
+        let candidates = parsed["candidates"].as_array().expect("candidates");
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(
+            candidates[0]["reason"],
+            serde_json::json!("version_conflict")
+        );
+    }
+
+    #[tokio::test]
+    async fn radio_love_song_english_lookalike_is_never_selected() {
+        // The reported failure: Apple Music shows "Radio Love Song - Karen Mok" (莫文蔚《电台情歌》)
+        // and an unrelated English song with a similar title must not be shown.
+        let query =
+            LookupQuery::new("Radio Love Song", "Karen Mok", "", Some(242_000)).expect("query");
+        let lookalike = || {
+            vec![usable_search_track(
+                40,
+                "Radio Love Songs",
+                "The Highways",
+                "Long Drives",
+                214.0,
+            )]
+        };
+        let backend = FakeLrclibBackend::new(
+            [Ok(None)],
+            [
+                Ok(lookalike()),
+                Ok(lookalike()),
+                Ok(lookalike()),
+                Ok(lookalike()),
+            ],
+        );
+        let mut observed_retry_after = None;
+
+        let result =
+            fetch_with_fallback_backend(&backend, &query, 0, &mut observed_retry_after).await;
+
+        assert!(
+            result.is_err(),
+            "a title-only English lookalike must never be auto-selected"
+        );
+    }
+
+    #[tokio::test]
+    async fn radio_love_song_alias_selects_the_localized_release() {
+        let query =
+            LookupQuery::new("Radio Love Song", "Karen Mok", "", Some(242_000)).expect("query");
+        let backend = FakeLrclibBackend::new(
+            [Ok(None)],
+            [
+                // The alias keywords are searched first and reach the Chinese release.
+                Ok(vec![usable_search_track(
+                    41,
+                    "电台情歌",
+                    "莫文蔚",
+                    "",
+                    241.0,
+                )]),
+                Ok(vec![usable_search_track(
+                    40,
+                    "Radio Love Songs",
+                    "The Highways",
+                    "Long Drives",
+                    214.0,
+                )]),
+                Ok(Vec::new()),
+                Ok(Vec::new()),
+            ],
+        );
+        let mut observed_retry_after = None;
+
+        let result = fetch_with_fallback_backend(&backend, &query, 0, &mut observed_retry_after)
+            .await
+            .expect("alias lookup finds the localized release");
+
+        assert_eq!(result.id.as_deref(), Some("41"));
+        assert_eq!(
+            backend.search_calls.lock().unwrap().first().cloned(),
+            Some(("电台情歌".to_string(), Some("莫文蔚".to_string())))
+        );
+    }
+
+    #[test]
+    fn title_only_candidate_is_never_selected() {
         let query = query();
         let track = usable_search_track(
             8,
@@ -1562,11 +1786,26 @@ mod tests {
             "Unrelated Release",
             500.0,
         );
-        let scored = score_search_track(track, &query).expect("title-related candidate");
-        assert!(scored.match_score.total < EARLY_ACCEPT_SCORE);
+
+        assert!(
+            score_search_track(track, &query).is_none(),
+            "a title-only coincidence must not enter the candidate pool"
+        );
+    }
+
+    #[test]
+    fn final_selection_accepts_corroborated_candidate() {
+        let query = query();
+        let track = usable_search_track(
+            8,
+            "Contract Song",
+            "Contract Artist",
+            "Other Release",
+            123.5,
+        );
+        let scored = score_search_track(track, &query).expect("corroborated candidate");
         let mut candidates = vec![scored];
 
-        assert!(take_best_candidate(&mut candidates, true).is_none());
         assert_eq!(
             take_best_candidate(&mut candidates, false).map(|track| track.id),
             Some(8)
@@ -1574,7 +1813,7 @@ mod tests {
     }
 
     #[test]
-    fn version_and_large_duration_differences_only_lower_ranking() {
+    fn live_variant_with_duration_mismatch_is_not_selected() {
         let track = usable_search_track(
             9,
             "Contract Song (Live)",
@@ -1583,7 +1822,10 @@ mod tests {
             300.0,
         );
 
-        assert!(score_search_track(track, &query()).is_some());
+        assert!(
+            score_search_track(track, &query()).is_none(),
+            "a live recording must not stand in for the studio version"
+        );
     }
 
     #[test]
@@ -1602,7 +1844,13 @@ mod tests {
     #[test]
     fn broader_search_error_does_not_discard_a_usable_candidate() {
         let candidate = score_search_track(
-            usable_search_track(11, "Contract Song", "Unrelated Performer", "", 500.0),
+            usable_search_track(
+                11,
+                "Contract Song",
+                "Contract Artist",
+                "Contract Album",
+                123.5,
+            ),
             &query(),
         )
         .expect("candidate");
