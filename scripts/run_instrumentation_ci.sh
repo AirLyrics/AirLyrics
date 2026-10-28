@@ -18,6 +18,8 @@ mkdir -p app/build/test-diagnostics
 collect_diagnostics() {
   local result=$?
   adb logcat -d > app/build/test-diagnostics/logcat.txt 2>&1 || true
+  adb shell dumpsys input_method > app/build/test-diagnostics/input-method.txt 2>&1 || true
+  adb shell dumpsys window > app/build/test-diagnostics/windows.txt 2>&1 || true
   return "$result"
 }
 trap collect_diagnostics EXIT

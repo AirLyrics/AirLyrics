@@ -25,11 +25,47 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.lyrics.providers.ManualLyricsNative
 import org.json.JSONObject
 import org.junit.Assert.*
+import org.junit.Before
+import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class LyricsSearchInstrumentedTest {
+    private lateinit var originalSources: List<PlainLyricsSearchSource>
+
+    @Before fun configureSearchSources() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        originalSources = LyricsSettingsStore.getPlainLyricsSearchSources(context)
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, listOf(PlainLyricsSearchSource.NETEASE))
+    }
+
+    @After fun restoreSearchSources() {
+        if (::originalSources.isInitialized) {
+            LyricsSettingsStore.setPlainLyricsSearchSources(
+                InstrumentationRegistry.getInstrumentation().targetContext, originalSources
+            )
+        }
+    }
+
+    @Test fun searchStaysDisabledWithoutSelectedSourcesAcrossRecreation() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, emptyList())
+        val intent = Intent(context, LyricsSearchActivity::class.java)
+            .putExtra("search.title", "Song").putExtra("search.artist", "Artist")
+        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
+            fun assertDisabled() = scenario.onActivity { activity ->
+                val button = descendants(activity.findViewById(android.R.id.content))
+                    .filterIsInstance<com.google.android.material.button.MaterialButton>()
+                    .single { it.text.toString() == activity.getString(R.string.ui_search) }
+                assertFalse("Search requires a selected source", button.isEnabled)
+            }
+            assertDisabled()
+            scenario.recreate()
+            assertDisabled()
+        }
+    }
+
     @Test fun manualJniRejectsUnknownProviderAndMissingCredentialsWithoutNetwork() {
         val request=JSONObject().put("operation","search").put("provider","unknown")
             .put("track",JSONObject().put("id","").put("title","Song").put("artist","Artist").put("album","").put("duration_ms",200000))
@@ -63,7 +99,8 @@ class LyricsSearchInstrumentedTest {
                 assertEquals("Edited query",fields[0].text.toString())
                 assertEquals("Edited artist",fields[1].text.toString())
                 assertTrue(views.filterIsInstance<TextView>().any { it.text.toString().contains("Original song") })
-                assertTrue(views.filterIsInstance<TextView>().any { it.text==activity.getString(R.string.ui_search) && it.isEnabled })
+                assertTrue("Search must remain enabled with an edited query and a configured source",
+                    views.filterIsInstance<TextView>().any { it.text.toString()==activity.getString(R.string.ui_search) && it.isEnabled })
             }
             for (orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)) {
                 scenario.onActivity { it.requestedOrientation = orientation }
