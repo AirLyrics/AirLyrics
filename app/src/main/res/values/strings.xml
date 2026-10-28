@@ -337,9 +337,6 @@ Word-timed TTML:
     <string name="ui_scale_fade">Scale fade</string>
     <string name="ui_search">Search</string>
     <string name="ui_search_saved_lyrics_hint">Search songs, artists, or sources</string>
-    <string name="ui_search_online_again">Search online</string>
-    <string name="ui_search_online_replace_cache_msg">Saves the result as plain lyrics, replacing any local copy</string>
-    <string name="ui_search_online_again_confirm">Search online?</string>
     <string name="ui_search_strategy">Search strategy</string>
     <string name="ui_searching_lyrics">Searching for lyrics</string>
     <string name="ui_searching_online_again">Trying original-title search…</string>
@@ -435,7 +432,6 @@ Word-timed TTML:
     <string name="ui_script_traditional">Traditional Chinese</string>
     <string name="ui_script_none">No conversion</string>
     <string name="provider_spicy_name">Spicy Lyrics</string>
-    <string name="ui_search_international_title">Search with international title</string>
     <string name="ui_searching_international_title">Trying international-title search…</string>
     <string name="ui_batch_selected">Selected: %1$d</string>
     <string name="ui_batch_select_item">Select %1$s</string>

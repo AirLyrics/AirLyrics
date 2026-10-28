@@ -636,3 +636,174 @@ mod tests {
         assert!(candidate(&track("Unrelated", "Alan Walker", 212626), query).is_none());
     }
 }
+
+pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Result<Value, String> {
+    if !key.starts_with("sl_pk_") {
+        return Err(err("NeedCredential"));
+    }
+    if *COOLDOWN
+        .get_or_init(|| Mutex::new(0))
+        .lock()
+        .map_err(|_| err("NativeError"))?
+        > now()
+    {
+        return Err(err("RateLimited"));
+    }
+    let client = Client::builder()
+        .user_agent(UA)
+        .timeout(Duration::from_secs(10))
+        .connect_timeout(Duration::from_secs(5))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|_| err("NativeError"))?;
+    let t = &request.track;
+    if request.operation == "search" {
+        let mut access = token(&client).await?;
+        let term = format!("{} {} {}", t.title, t.artist, t.album);
+        let data = search(&client, &mut access, term.trim()).await?;
+        let items = data["data"]["searchV2"]["tracksV2"]["items"]
+            .as_array()
+            .ok_or_else(|| err("ParseError"))?;
+        let tracks = items
+            .iter()
+            .filter_map(|item| {
+                let v = &item["item"]["data"];
+                let id = v["uri"].as_str()?.strip_prefix("spotify:track:")?;
+                if id.len() != 22 || !id.bytes().all(|b| b.is_ascii_alphanumeric()) {
+                    return None;
+                }
+                Some(crate::manual::Track {
+                    id: id.into(),
+                    title: v["name"].as_str()?.into(),
+                    artist: v["artists"]["items"]
+                        .as_array()?
+                        .iter()
+                        .filter_map(|a| a["profile"]["name"].as_str())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    album: v["albumOfTrack"]["name"]
+                        .as_str()
+                        .unwrap_or_default()
+                        .into(),
+                    duration_ms: v["duration"]["totalMilliseconds"]
+                        .as_u64()
+                        .unwrap_or_default(),
+                    score: 0.0,
+                })
+            })
+            .collect();
+        Ok(json!({"ok":true,"candidates":crate::manual::ranked(tracks,t)}))
+    } else {
+        if t.id.len() != 22 || !t.id.bytes().all(|b| b.is_ascii_alphanumeric()) {
+            return Err(err("ParseError"));
+        }
+        let response = json_response(
+            client
+                .get(format!("https://api.spicylyrics.org/v1/lyrics/{}", t.id))
+                .bearer_auth(key)
+                .send()
+                .await,
+        )
+        .await?;
+        if response["Status"].as_u64() == Some(200)
+            && response["Body"]["id"].as_str() != Some(t.id.as_str())
+        {
+            return Err(err("ParseError"));
+        }
+        if let Some(reason) = manual_unavailable_reason(&response)? {
+            return Ok(crate::manual::unavailable(reason));
+        }
+        Ok(json!({"ok":true,"track":t,"response":response}))
+    }
+}
+
+fn manual_unavailable_reason(
+    response: &Value,
+) -> Result<Option<crate::manual::UnavailableReason>, String> {
+    use crate::manual::UnavailableReason;
+    match response["Status"].as_u64() {
+        Some(200) => {}
+        Some(404) => return Ok(Some(UnavailableReason::Unknown)),
+        Some(401) => return Err(err("NeedCredential")),
+        Some(403) => return Err(err("RestrictedLyrics")),
+        Some(429) => return Err(err("RateLimited")),
+        Some(_) => return Err(err("HttpError")),
+        None => return Err(err("ParseError")),
+    }
+    let kind = response["Body"]["Type"]
+        .as_str()
+        .ok_or_else(|| err("ParseError"))?;
+    if !matches!(kind, "Line" | "Syllable") {
+        return Ok(Some(UnavailableReason::UnsupportedFormat));
+    }
+    let content = response["Body"]["Content"]
+        .as_array()
+        .ok_or_else(|| err("ParseError"))?;
+    if content.is_empty() {
+        return Ok(Some(UnavailableReason::SourceEmpty));
+    }
+    for line in content {
+        if !line.is_object() || !line["Type"].is_string() {
+            return Err(err("ParseError"));
+        }
+    }
+    if content.iter().all(|line| line["Type"] == "Instrumental") {
+        return Ok(Some(UnavailableReason::SourceEmpty));
+    }
+    if !content.iter().any(|line| line["Type"] == "Vocal") {
+        return Ok(Some(UnavailableReason::NoUsableLines));
+    }
+    Ok(None)
+}
+
+#[cfg(test)]
+mod manual_tests {
+    use super::*;
+    use crate::manual::UnavailableReason;
+    #[test]
+    fn manual_content_reasons_do_not_swallow_errors() {
+        for (response, expected) in [
+            (json!({"Status":404}), Some(UnavailableReason::Unknown)),
+            (
+                json!({"Status":200,"Body":{"Type":"Static"}}),
+                Some(UnavailableReason::UnsupportedFormat),
+            ),
+            (
+                json!({"Status":200,"Body":{"Type":"Line","Content":[]}}),
+                Some(UnavailableReason::SourceEmpty),
+            ),
+            (
+                json!({"Status":200,"Body":{"Type":"Line","Content":[{"Type":"Instrumental"}]}}),
+                Some(UnavailableReason::SourceEmpty),
+            ),
+            (
+                json!({"Status":200,"Body":{"Type":"Line","Content":[{"Type":"Vocal"}]}}),
+                None,
+            ),
+        ] {
+            assert_eq!(manual_unavailable_reason(&response).unwrap(), expected);
+        }
+        for (status, error) in [
+            (401, "NeedCredential"),
+            (403, "RestrictedLyrics"),
+            (429, "RateLimited"),
+            (500, "HttpError"),
+        ] {
+            assert_eq!(
+                manual_unavailable_reason(&json!({"Status":status})).unwrap_err(),
+                error
+            );
+        }
+        for response in [
+            json!({}),
+            json!({"Status":200,"Body":{}}),
+            json!({"Status":200,"Body":{"Type":"Line","Content":{}}}),
+            json!({"Status":200,"Body":{"Type":"Line","Content":[{}]}}),
+        ] {
+            assert_eq!(
+                manual_unavailable_reason(&response).unwrap_err(),
+                "ParseError"
+            );
+        }
+    }
+}

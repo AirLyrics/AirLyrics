@@ -36,8 +36,7 @@ translations. AirLyrics converts them to the single-line form automatically.
 
 ## Word-by-word LRC
 
-For local word-by-word LRC imports, each original lyric line must include
-both a line timestamp and word timestamps:
+In enhanced LRC, each original lyric line includes a line timestamp and word timestamps:
 
 ```lrc
 [00:12.34]<00:12.34>I <00:12.60>love <00:12.95>you
@@ -55,6 +54,16 @@ For the current song's import options, remove existing lyrics before importing t
 **Import and replace** in **Saved lyrics** can replace the type directly. After importing word-by-word lyrics,
 AirLyrics automatically generates and synchronizes a plain LRC; edit or remove the word-by-word
 lyrics instead of the generated file.
+
+LDDC's verbatim LRC and enhanced LRC can both be imported through the word-by-word option. Batch imports detect them automatically:
+
+```lrc
+[00:01.000]你[00:01.500]好[00:02.000]
+[00:01.000]<00:01.000>你<00:01.500>好<00:02.000>
+```
+
+These are two representations of the same line. Keep the final end timestamp in square-tag verbatim LRC. Word pauses and millisecond timing are preserved.
+For multilingual lines with the same start time, put the original first, then translations and romanization. Translations and romanization are merged into the plain lyrics.
 
 ## TTML
 
@@ -170,10 +179,10 @@ Plain LRC also supports these forms:
 
 Additional word-timed LRC rules:
 
-- Each original line needs a line tag `[…]` and at least one word tag `<…>` followed by text. Segments starting before the line timestamp are ignored.
+- Enhanced LRC needs a line tag `[…]` and word tags `<…>`; verbatim LRC uses square tags throughout and ends with a timestamp. Word times must not precede the line start or run backwards.
 - Put each original line on its own row; do not duplicate a word-timed passage with multiple line tags. Put translations on separate plain LRC rows with the same line timestamp.
 - Keep spaces between words in the text, for example `<00:12.34>I <00:12.60>love <00:12.95>you`.
-- An empty trailing tag does not set the end time. Use TTML `end` or `dur` when explicit word end times are needed.
+- An empty trailing tag sets the preceding word’s end time. Consecutive end/start tags preserve pauses. Without an end tag, the next line start or a 400 ms fallback is used.
 
 ### TTML Timing and Structure
 

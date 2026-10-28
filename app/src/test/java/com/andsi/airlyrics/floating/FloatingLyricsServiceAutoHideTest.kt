@@ -86,6 +86,33 @@ class FloatingLyricsServiceAutoHideTest {
     }
 
     @Test
+    fun manuallySelectedEmptyAndUnparseableLyricsTriggerAutoHide() {
+        val service = createVisibleService()
+        val media = media(isPlaying = true)
+        service.currentMedia = media
+        FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(service, true)
+
+        for (content in listOf("", "   ", "text without timing", "[00:01.00]", "[ar:Metadata only]")) {
+            service.resetLyricsAvailability()
+            service.applyLyricsResult(
+                Result.success(LyricsProviderResult(
+                    plainProviderId = "local",
+                    plainProviderName = "Local lyrics",
+                    plainLrc = content,
+                    manualLocal = true,
+                    selectedManually = true
+                )), media
+            )
+            assertEquals(LyricsAvailability.UNAVAILABLE, service.lyricsAvailability)
+            assertTrue(service.unavailableLyricsAutoHidePending)
+            assertTrue(service.windowController.isVisible)
+            ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS, TimeUnit.MILLISECONDS)
+            assertFalse(service.windowController.isVisible)
+            assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.activeAutoHideReasons)
+        }
+    }
+
+    @Test
     fun manualShow_suppressesUnavailableLyricsUntilTheSongChanges() {
         val service = createVisibleService()
         val firstMedia = media(title = "First", isPlaying = true)

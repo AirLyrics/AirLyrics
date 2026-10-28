@@ -133,24 +133,32 @@ class MainActivityRotationInstrumentedTest {
                         })
                     })
                 }
-                instrumentation.waitForIdleSync()
-                awaitActivity(scenario) {
-                    editor.requestFocus()
+                // A resumed Activity does not imply that the dialog owns window focus yet.
+                awaitActivity(scenario, "Editor dialog did not gain window focus", ready = {
+                    editor.isAttachedToWindow && editor.isShown && editor.hasWindowFocus() &&
+                        editor.width > 0 && editor.height > 0 && !editor.isLayoutRequested
+                }) {
+                    assertTrue("Editor must accept focus", editor.requestFocus())
+                }
+                awaitActivity(scenario, "Editor did not establish an input connection", ready = {
+                    editor.hasFocus() && editor.hasWindowFocus() &&
+                        it.getSystemService(android.view.inputmethod.InputMethodManager::class.java).isActive(editor)
+                }) {
                     WindowCompat.getInsetsController(editorDialog.window!!, editor).show(WindowInsetsCompat.Type.ime())
                 }
-                var keyboardVisible = false
-                val deadline = System.nanoTime() + 10_000_000_000L
-                while (!keyboardVisible && System.nanoTime() < deadline) {
-                    SystemClock.sleep(100)
-                    instrumentation.waitForIdleSync()
-                    awaitActivity(scenario) {
-                        keyboardVisible = ViewCompat.getRootWindowInsets(editor)?.isVisible(WindowInsetsCompat.Type.ime()) == true
+                var lastImeBottom = -1
+                var stableSince = 0L
+                awaitActivity(scenario, "Keyboard insets did not become visible and settle", ready = {
+                    val insets = ViewCompat.getRootWindowInsets(editor)
+                    val bottom = insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom ?: 0
+                    val now = SystemClock.uptimeMillis()
+                    if (bottom != lastImeBottom || editorDialog.window!!.decorView.isLayoutRequested) {
+                        lastImeBottom = bottom
+                        stableSince = now
                     }
-                }
-                assertTrue("The keyboard must actually be visible", keyboardVisible)
-                // IME visibility can precede its final inset/layout dispatch.
-                SystemClock.sleep(700)
-                instrumentation.waitForIdleSync()
+                    insets?.isVisible(WindowInsetsCompat.Type.ime()) == true && bottom > 0 &&
+                        now - stableSince >= 300
+                }) {}
                 awaitActivity(scenario) {
                     // Very short windows scroll the whole form, including its actions.
                     descendants(editorDialog.window!!.decorView).filterIsInstance<androidx.core.widget.NestedScrollView>()

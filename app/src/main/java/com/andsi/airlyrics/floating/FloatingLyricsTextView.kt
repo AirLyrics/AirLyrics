@@ -4,6 +4,9 @@ import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
+import android.os.SystemClock
+import android.view.View
+import android.view.Gravity
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
@@ -19,6 +22,85 @@ import kotlin.math.roundToInt
  */
 internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(context),
     LyricsTextAnimationTarget {
+
+    private val spicyDrawing = SpicyLyricsDrawing(this)
+    private val spicyBasePaint = android.text.TextPaint()
+    private var spicyPosition: (() -> Long)? = null
+    private var spicyPlaying = false
+    private var spicyRequestedPosition: Long? = null
+    private val spicyFrame = object : Runnable {
+        override fun run() {
+            if (spicyPosition == null || !spicyPlaying || !isShown || windowVisibility != VISIBLE || !isAttachedToWindow) return
+            invalidate()
+            postOnAnimation(this)
+        }
+    }
+
+    internal fun updateSpicyPlayback(position: (() -> Long)?, playing: Boolean) {
+        val changed = (spicyPosition == null) != (position == null)
+        val requestedPosition = position?.invoke()
+        val needsRedraw = changed || playing != spicyPlaying || requestedPosition != spicyRequestedPosition
+        spicyRequestedPosition = requestedPosition
+        spicyPosition = position
+        spicyPlaying = playing
+        removeCallbacks(spicyFrame)
+        if (position == null) spicyDrawing.reset()
+        else if (playing && isShown && windowVisibility == VISIBLE && isAttachedToWindow) postOnAnimation(spicyFrame)
+        if (changed) requestLayout()
+        if (needsRedraw) invalidate()
+    }
+
+    private fun spicyInset(): Int = if (spicyPosition != null) kotlin.math.ceil(textSize * .24f).toInt() else 0
+    override fun getCompoundPaddingLeft() = super.getCompoundPaddingLeft() + spicyInset()
+    override fun getCompoundPaddingRight() = super.getCompoundPaddingRight() + spicyInset()
+    override fun getCompoundPaddingTop() = super.getCompoundPaddingTop() + spicyInset()
+    override fun getCompoundPaddingBottom() = super.getCompoundPaddingBottom() + spicyInset()
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        // Called by TextView's constructor, before Kotlin fields are initialized.
+        if (spicyPosition != null) updateSpicyPlayback(spicyPosition, spicyPlaying)
+    }
+
+    override fun onWindowVisibilityChanged(visibility: Int) {
+        super.onWindowVisibilityChanged(visibility)
+        if (spicyPosition != null) updateSpicyPlayback(spicyPosition, spicyPlaying)
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        updateSpicyPlayback(spicyPosition, spicyPlaying)
+    }
+
+    // Called inside onDraw: draw() would recurse and redraw the stationary bubble background.
+    @android.annotation.SuppressLint("WrongCall")
+    private fun drawLyrics(canvas: Canvas) {
+        val position = spicyPosition
+        if (position == null) {
+            super.onDraw(canvas)
+            return
+        }
+        spicyDrawing.prepare()
+        // TextView may pass its own paint to CharacterStyle. The temporary ink mask
+        // must not permanently clear the user's shadow (or leak transparent paint).
+        spicyBasePaint.set(paint)
+        try {
+            super.onDraw(canvas)
+        } finally {
+            paint.set(spicyBasePaint)
+        }
+        val textLayout = layout ?: return
+        val space = height - compoundPaddingTop - compoundPaddingBottom - textLayout.height
+        val verticalOffset = when (gravity and Gravity.VERTICAL_GRAVITY_MASK) {
+            Gravity.BOTTOM -> space
+            Gravity.CENTER_VERTICAL -> space / 2
+            else -> 0
+        }.coerceAtLeast(0)
+        canvas.withSave {
+            translate(compoundPaddingLeft.toFloat(), (extendedPaddingTop + verticalOffset).toFloat())
+            spicyDrawing.draw(this, position(), SystemClock.uptimeMillis())
+        }
+    }
 
     internal var onWindowConfigurationChanged: (() -> Unit)? = null
 
@@ -113,7 +195,7 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
                 height / 2f
             )
             if (lyricContentAlpha >= REST_ALPHA) {
-                super.onDraw(this)
+                drawLyrics(this)
             } else {
                 val layerSaveCount = saveLayerAlpha(
                     0f,
@@ -122,13 +204,15 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
                     height.toFloat(),
                     (lyricContentAlpha * 255f).roundToInt()
                 )
-                super.onDraw(this)
+                drawLyrics(this)
                 restoreToCount(layerSaveCount)
             }
         }
     }
 
     override fun onDetachedFromWindow() {
+        removeCallbacks(spicyFrame)
+        spicyDrawing.reset()
         cancelLyricsTextAnimation()
         setLyricsTextAnimationState(
             alpha = REST_ALPHA,

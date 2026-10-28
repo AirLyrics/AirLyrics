@@ -92,4 +92,4 @@ Set `airlyrics.spicy.clientKey` in an untracked `local.properties` or user Gradl
 
 Manual imports take priority over cached and online lyrics. Selected providers run in priority order and share title, artist, duration and album scoring. Queries broaden when needed, so a match may be a different recording. Spicy searches Spotify for candidates before fetching lyrics; line timing can remain available when word timing is missing.
 
-International title search first tries to resolve an international title, then uses the same matching flow. It preserves the original song identity for storage. See `lyrics-core/src/matching.rs` and the [matching documentation](lyrics-matching.md).
+The shared matching rules live in `lyrics-core/src/matching.rs` and are described in the [matching documentation](lyrics-matching.md).

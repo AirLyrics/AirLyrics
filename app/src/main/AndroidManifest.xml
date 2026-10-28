@@ -41,6 +41,9 @@
 
         <service android:name=".lyrics.storage.SpicyCacheCleanupService" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="false" />
 
+        <activity android:name=".app.search.LyricsSearchActivity" android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <activity
             android:name=".app.MainActivity"
             android:exported="true">

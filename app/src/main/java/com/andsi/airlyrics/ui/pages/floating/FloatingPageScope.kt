@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.pages.floating
 
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
+
 import com.andsi.airlyrics.ui.state.FloatingPanelId
 import com.andsi.airlyrics.ui.state.undoChangesTo
 import com.andsi.airlyrics.ui.state.restoreFields
@@ -231,7 +233,14 @@ internal class FloatingPageScope(
             val highlightedCharacters = (currentLine.original.length / 2)
                 .coerceAtLeast(1)
                 .coerceAtMost(currentLine.original.length)
-            if (currentLineStart >= 0) {
+            if (currentLineStart >= 0 && host.wordByWordAnimationMode() == WordByWordAnimationMode.SPICY) {
+                host.applyAnimatedFloatingPreviewHighlight(
+                    result,
+                    currentLine.original,
+                    currentLineStart,
+                    AirColorUtils.multiplyAlpha(previewStyle.wordByWordHighlightColor, Color.alpha(previewStyle.textColor))
+                )
+            } else if (currentLineStart >= 0) {
                 result.setSpan(
                     ForegroundColorSpan(
                         AirColorUtils.multiplyAlpha(

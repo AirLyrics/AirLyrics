@@ -38,4 +38,22 @@ class BatchLyricsDocumentReaderTest {
         assertTrue(BatchLyricsDocumentReader.parse("file.ttml", plain, LyricsDocumentFormat.TTML).document!!.words.isEmpty())
         assertEquals(2, BatchLyricsDocumentReader.parse("file.ttml", words, LyricsDocumentFormat.TTML).document!!.words.single().segments.size)
     }
+    @Test fun verbatimLrcUsesSameWordParserAsSingleImport() {
+        val text = "[ti:Song]\n[00:01.00]你[00:01.50]好[00:02.00]"
+        val single = LyricsImportParsers.parseWordByWord(LyricsDocumentFormat.LRC, text)
+            as LyricsTextParseResult.Success
+        val batch = BatchLyricsDocumentReader.parse("Song.lrc", text, LyricsDocumentFormat.LRC).document!!
+        assertEquals(single.value.wordByWordLines, batch.words)
+        assertEquals(single.value.plainLrc, batch.plainLrc)
+        assertEquals(2000L, batch.words.single().endMs)
+    }
+
+    @Test fun ordinaryMultipleTagsRemainPlainAndBrokenVerbatimIsRejected() {
+        for (text in listOf("[00:01.00][00:03.00]chorus", "[00:01.00]first[00:03.00]second")) {
+            assertTrue(BatchLyricsDocumentReader.parse("Song.lrc", text, LyricsDocumentFormat.LRC).document!!.words.isEmpty())
+        }
+        assertEquals(BatchLyricsDocumentReader.Failure.INVALID,
+            BatchLyricsDocumentReader.parse("Song.lrc", "[00:02.00]bad[00:01.00]", LyricsDocumentFormat.LRC).failure)
+    }
+
 }

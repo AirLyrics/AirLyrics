@@ -24,6 +24,7 @@ mod discovery;
 mod international;
 mod lrc;
 mod lrclib;
+mod manual;
 mod matching;
 mod musixmatch;
 #[cfg(test)]

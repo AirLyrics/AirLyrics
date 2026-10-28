@@ -337,9 +337,6 @@ TTML de tiempo por palabra:
     <string name="ui_scale_fade">Desvanecido con escala</string>
     <string name="ui_search">Buscar</string>
     <string name="ui_search_saved_lyrics_hint">Buscar canciones, artistas o fuentes</string>
-    <string name="ui_search_online_again">Buscar en línea</string>
-    <string name="ui_search_online_replace_cache_msg">Guarda el resultado como letras simples, reemplazando cualquier copia local</string>
-    <string name="ui_search_online_again_confirm">¿Buscar en línea?</string>
     <string name="ui_search_strategy">Estrategia de búsqueda</string>
     <string name="ui_searching_lyrics">Buscando letras</string>
     <string name="ui_searching_online_again">Buscando con el título original…</string>
@@ -436,7 +433,6 @@ TTML de tiempo por palabra:
     <string name="provider_spicy_name">Spicy Lyrics</string>
     <string name="ui_spicy_expiry">Caduca el %1$s</string>
     <string name="ui_lyrics_expired">La letra ha caducado</string>
-    <string name="ui_search_international_title">Buscar con título internacional</string>
     <string name="ui_searching_international_title">Buscando con el título internacional…</string>
     <string name="ui_batch_selected">Seleccionados: %1$d</string>
     <string name="ui_batch_select_item">Seleccionar %1$s</string>

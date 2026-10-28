@@ -15,6 +15,7 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.text.ChineseText
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
@@ -88,6 +89,84 @@ class FloatingLyricsRendererTest {
             assertEquals(display, view.text.toString())
             assertEquals(display, reliable, view.text.highlightSpans().isNotEmpty())
         }
+    }
+
+    @Test
+    fun spicyUsesMappedScriptTiming() {
+        ChineseText.installTableForTest(mapOf('愛' to '爱', '說' to '说'))
+        try {
+            val view = FloatingLyricsTextView(context)
+            val renderer = FloatingLyricsRenderer(
+                textViewProvider = { view },
+                wordByWordLyricsEnabledProvider = { true },
+                wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY }
+            )
+            renderer.updatePlayback(8_500L, false)
+            renderer.parseAndShow("[00:01.00]爱说", wordByWordLines = listOf(
+                WordByWordLine(1_000L, 12_000L, "愛說", listOf(
+                    WordByWordSegment("愛", 8_000L, 9_000L),
+                    WordByWordSegment("說", 10_000L, 11_000L)
+                ))
+            ), emptyText = "")
+            val text = view.text as Spanned
+            val spans = text.getSpans(0, text.length, SpicyLyricsSpan::class.java)
+            assertEquals("爱说", text.toString())
+            assertEquals(listOf(8_000L, 10_000L), spans.map { it.timing.startMs })
+            assertEquals(listOf(0, 1), spans.map { text.getSpanStart(it) })
+        } finally {
+            ChineseText.resetForTest()
+        }
+    }
+
+    @Test
+    fun spicyTranslationUsesItsOwnTiming() {
+        val view = FloatingLyricsTextView(context)
+        val renderer = FloatingLyricsRenderer(
+            textViewProvider = { view },
+            contentModeProvider = { LyricsContentDisplayMode.TRANSLATION_ONLY },
+            wordByWordLyricsEnabledProvider = { true },
+            wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY }
+        )
+        renderer.updatePlayback(1_500L, false)
+        renderer.parseAndShow("[00:01.00]Hello", translatedLrc = "[00:01.00]你好",
+            wordByWordLines = listOf(WordByWordLine(1_000L, 5_000L, "Hello",
+                listOf(WordByWordSegment("Hello", 1_000L, 1_800L)),
+                translatedText = "你好",
+                translatedSegments = listOf(WordByWordSegment("你好", 3_000L, 3_800L))
+            )), emptyText = "")
+        val text = view.text as Spanned
+        assertEquals("你好", text.toString())
+        val timing = text.getSpans(0, text.length, SpicyLyricsSpan::class.java).single().timing
+        assertEquals(3_000L, timing.startMs)
+        assertEquals(3_800L, timing.endMs)
+    }
+
+    @Test
+    fun spicyCacheSeparatesIdenticalOriginalAndTranslationTextWithDifferentTiming() {
+        val view = FloatingLyricsTextView(context)
+        val renderer = FloatingLyricsRenderer(
+            textViewProvider = { view },
+            wordByWordLyricsEnabledProvider = { true },
+            wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY }
+        )
+        val line = WordByWordLine(1_000L, 5_000L, "Hello",
+            listOf(WordByWordSegment("Hello", 1_000L, 1_800L)),
+            translatedText = "Hello",
+            translatedSegments = listOf(WordByWordSegment("Hello", 3_000L, 3_800L)))
+        renderer.updatePlayback(1_500L, false)
+        renderer.parseAndShow("[00:01.00]Hello", wordByWordLines = listOf(line), emptyText = "")
+        // Exercise the render cache directly: the LRC parser deduplicates identical translations.
+        val render = FloatingLyricsRenderer::class.java.getDeclaredMethod(
+            "wordByWordLineSpan", WordByWordLine::class.java, String::class.java,
+            Long::class.javaPrimitiveType, List::class.java
+        ).apply { isAccessible = true }
+        fun timing(segments: List<WordByWordSegment>): SpicyTiming {
+            val text = render.invoke(renderer, line, "Hello", 1_500L, segments) as Spanned
+            return text.getSpans(0, text.length, SpicyLyricsSpan::class.java).single().timing
+        }
+        assertEquals(1_000L, timing(line.segments).startMs)
+        assertEquals(3_000L, timing(line.translatedSegments).startMs)
+        assertEquals(1_000L, timing(line.segments).startMs)
     }
 
     @Test

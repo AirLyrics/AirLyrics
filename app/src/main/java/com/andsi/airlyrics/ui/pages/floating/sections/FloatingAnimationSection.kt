@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.pages.floating.sections
 
 import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
@@ -53,6 +54,15 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
                                 applyWordByWordLyricsChanged(false)
                             }
                         )))
+                        addView(floatingSectionTitle(getString(R.string.ui_word_animation)))
+                        addView(liveOptionGrid(WordByWordAnimationMode.entries.map { mode ->
+                            KeyedOptionItem(mode.key,
+                                getString(if (mode == WordByWordAnimationMode.CLASSIC) R.string.ui_animation_classic else R.string.ui_animation_spicy),
+                                wordByWordAnimationMode() == mode) {
+                                setWordByWordAnimationMode(mode)
+                                applyLyricsDisplaySettingsChanged()
+                            }
+                        }))
                     }
                 }
             ),

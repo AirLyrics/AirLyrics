@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.settings.store
 
 import android.content.Context
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
@@ -20,6 +21,7 @@ object LyricsSettingsStore {
     private const val KEY_CONTENT_DISPLAY_MODE = "content_display_mode"
     private const val KEY_SCRIPT_PREFERENCE = "script_preference"
     private const val KEY_LINE_DISPLAY_MODE = "line_display_mode"
+    private const val KEY_WORD_BY_WORD_ANIMATION_MODE = "word_by_word_animation_mode"
     private const val KEY_SWITCH_ANIMATION_MODE = "switch_animation_mode"
     // Persisted compatibility contract. Do not change the serialized value.
     private const val KEY_WORD_BY_WORD_LYRICS_ENABLED = "karaoke_lyrics_enabled"
@@ -40,7 +42,7 @@ object LyricsSettingsStore {
         return legacySource
             ?.takeIf { it in PlainLyricsSearchSource.onlineSources }
             ?.let(::listOf)
-            ?: listOf(PlainLyricsSearchSource.default)
+            ?: emptyList()
     }
 
     fun setPlainLyricsSearchSources(
@@ -93,8 +95,8 @@ object LyricsSettingsStore {
         preferences.edit {
             putBoolean(KEY_AUTO_SEARCH_ONLINE, enabled)
             if (enabled && !hasPersistedSourceSelection) {
-                putString(KEY_PLAIN_LYRICS_SOURCE_ORDER, PlainLyricsSearchSource.default.key)
-                putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.default.key)
+                putString(KEY_PLAIN_LYRICS_SOURCE_ORDER, "")
+                putString(KEY_PLAIN_LYRICS_SOURCE, PlainLyricsSearchSource.LOCAL_ONLY.key)
             }
         }
     }
@@ -154,6 +156,13 @@ object LyricsSettingsStore {
         store(context).setBoolean(KEY_WORD_BY_WORD_LYRICS_ENABLED, enabled)
     }
 
+    fun getWordByWordAnimationMode(context: Context): WordByWordAnimationMode =
+        WordByWordAnimationMode.fromKey(store(context).getString(KEY_WORD_BY_WORD_ANIMATION_MODE))
+
+    fun setWordByWordAnimationMode(context: Context, mode: WordByWordAnimationMode) {
+        store(context).setString(KEY_WORD_BY_WORD_ANIMATION_MODE, mode.key)
+    }
+
     fun getSettings(context: Context): LyricsSettings {
         return LyricsSettings(
             plainLyricsSearchSources = getPlainLyricsSearchSources(context),
@@ -163,7 +172,8 @@ object LyricsSettingsStore {
             scriptPreference = getScriptPreference(context),
             lineDisplayMode = getLineDisplayMode(context),
             switchAnimationMode = getSwitchAnimationMode(context),
-            wordByWordLyricsEnabled = isWordByWordLyricsEnabled(context)
+            wordByWordLyricsEnabled = isWordByWordLyricsEnabled(context),
+            wordByWordAnimationMode = getWordByWordAnimationMode(context)
         )
     }
 

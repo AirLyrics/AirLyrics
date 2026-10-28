@@ -23,6 +23,7 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal enum class ParsedLyricsAvailability {
@@ -42,7 +43,8 @@ class FloatingLyricsRenderer(
     private val wordByWordLyricsEnabledProvider: () -> Boolean = { false },
     private val wordByWordHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) },
     private val noTranslationTextProvider: () -> String = { "No translation for this lyric" },
-    private val uptimeMillisProvider: () -> Long = { SystemClock.uptimeMillis() }
+    private val uptimeMillisProvider: () -> Long = { SystemClock.uptimeMillis() },
+    private val wordByWordAnimationModeProvider: () -> WordByWordAnimationMode = { WordByWordAnimationMode.CLASSIC }
 ) {
     private var access: LyricsAccess? = null
 
@@ -96,9 +98,29 @@ class FloatingLyricsRenderer(
         }
         currentIsPlaying = isPlaying
         lastPositionUpdateUptimeMs = nowUptimeMs
+        updateSpicyPlayback()
+    }
+
+    private data class SpicyCacheKey(
+        val line: WordByWordLine,
+        val text: String,
+        val segments: List<WordByWordSegment>,
+        val color: Int
+    )
+    private val spicyTextCache = object : LinkedHashMap<SpicyCacheKey, CharSequence>(8, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<SpicyCacheKey, CharSequence>?) = size > 8
+    }
+    private val spicyClock: () -> Long = { getEstimatedPositionMs() }
+    private fun usesSpicy() = isWordByWordActive() && wordByWordAnimationModeProvider() == WordByWordAnimationMode.SPICY && textViewProvider() is FloatingLyricsTextView
+    private fun updateSpicyPlayback() {
+        val view = textViewProvider() as? FloatingLyricsTextView ?: return
+        val active = usesSpicy() && (view.text as? Spanned)?.getSpans(0, view.text.length, SpicyLyricsSpan::class.java)?.isNotEmpty() == true
+        view.updateSpicyPlayback(if (active) spicyClock else null, currentIsPlaying)
     }
 
     fun clear() {
+        spicyTextCache.clear()
+        (textViewProvider() as? FloatingLyricsTextView)?.updateSpicyPlayback(null, false)
         setLyricsAccess(null)
         currentPlainLines = emptyList()
         currentWordByWordLines = emptyList()
@@ -182,6 +204,7 @@ class FloatingLyricsRenderer(
     }
 
     fun refresh() {
+        spicyTextCache.clear()
         if (expireIfNeeded()) return
         val text = if (currentPlainLines.isEmpty() && currentWordByWordLines.isEmpty()) {
             currentMessage?.invoke() ?: return
@@ -289,8 +312,8 @@ class FloatingLyricsRenderer(
             if (rendered.primary.isNotBlank()) {
                 // When the preferred script replaces the line with its translation, keep the
                 // translation's own timing; otherwise the original tokens stay authoritative.
-                val showsTranslationOnly = rendered.secondary == null &&
-                    rendered.primary.trim() != original.trim()
+                val showsTranslationOnly = contentMode == LyricsContentDisplayMode.TRANSLATION_ONLY ||
+                    (rendered.secondary == null && rendered.primary.trim() != original.trim())
                 renderedLines += when {
                     wordByWordLine == null -> rendered.primary
                     showsTranslationOnly && wordByWordLine.translatedSegments.isNotEmpty() ->
@@ -442,6 +465,16 @@ class FloatingLyricsRenderer(
         } else {
             displaySegments
         }
+
+        if (usesSpicy()) {
+            val key = SpicyCacheKey(wordByWordLine, text, segments, wordByWordHighlightColorProvider())
+            spicyTextCache[key]?.let { return it }
+            val timings = spicyTimings(wordByWordLine, text, segments)
+            if (timings.isNotEmpty()) return SpannableString(text).apply {
+                for (timing in timings) setSpan(SpicyLyricsSpan(timing, wordByWordHighlightColorProvider()),
+                    timing.start, timing.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }.also { spicyTextCache[key] = it }
+        }
         val progress = wordByWordHighlightProgress(
             wordByWordLine, text, positionMs, segments, clearAtLineEnd = segments !== displaySegments
         )
@@ -585,6 +618,7 @@ class FloatingLyricsRenderer(
         resetTextAnimationState(view)
         view.text = credited(text)
         lastRenderedText = text.toString()
+        updateSpicyPlayback()
     }
 
     private fun setTextWithOptionalAnimation(text: CharSequence) {
@@ -592,6 +626,16 @@ class FloatingLyricsRenderer(
         val isWordByWordTick = wordByWordLyricsEnabledProvider() && currentWordByWordLines.isNotEmpty()
         if (!isWordByWordTick && textKey == lastRenderedText) return
 
+        if (usesSpicy() && textKey == lastRenderedText) {
+            val view = textViewProvider()!!
+            val old = view.text as? Spanned
+            val next = text as? Spanned
+            val oldSpans = old?.getSpans(0, old.length, SpicyLyricsSpan::class.java).orEmpty()
+            val nextSpans = next?.getSpans(0, next.length, SpicyLyricsSpan::class.java).orEmpty()
+            if (oldSpans.isNotEmpty() && oldSpans.size == nextSpans.size && oldSpans.indices.all {
+                oldSpans[it].timing == nextSpans[it].timing && oldSpans[it].highlight == nextSpans[it].highlight && old!!.getSpanStart(oldSpans[it]) == next!!.getSpanStart(nextSpans[it])
+            }) { updateSpicyPlayback(); return }
+        }
         val mode = switchAnimationModeProvider()
         if (isWordByWordTick || lastRenderedText == null) {
             setTextImmediately(text)

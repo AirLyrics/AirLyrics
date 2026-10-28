@@ -2283,3 +2283,137 @@ mod tests {
         );
     }
 }
+
+pub(crate) async fn manual(
+    request: &crate::manual::Request,
+    lookup: i64,
+) -> Result<serde_json::Value, String> {
+    use crate::manual::{ranked, Track as ManualTrack};
+    let client = get_client()?;
+    let t = &request.track;
+    if request.operation == "search" {
+        let mut query = client
+            .track_search()
+            .q_track(&t.title)
+            .s_track_rating(SortOrder::Desc);
+        if !t.artist.is_empty() {
+            query = query.q_artist(&t.artist);
+        }
+        let tracks = await_api(query.send(30, 1), lookup, "manual track.search")
+            .await
+            .map_err(|e| e.to_string())?;
+        let tracks = tracks
+            .into_iter()
+            .map(|v| ManualTrack {
+                id: v.track_id.to_string(),
+                title: v.track_name,
+                artist: v.artist_name,
+                album: v.album_name,
+                duration_ms: (v.track_length as u64) * 1000,
+                score: 0.0,
+            })
+            .collect();
+        Ok(serde_json::json!({"ok":true,"candidates":ranked(tracks,t)}))
+    } else {
+        let id = t.id.parse::<u64>().map_err(|_| "ParseError")?;
+        // Exact ID only: neither commontrack nor matcher may substitute another recording.
+        let subtitle = match await_api(
+            client.track_subtitle(TrackId::TrackId(id), SubtitleFormat::Lrc, None, None),
+            lookup,
+            "manual track.subtitle",
+        )
+        .await
+        {
+            Ok(subtitle) => subtitle,
+            Err(error) => return manual_subtitle_error(error),
+        };
+        let subtitle = match manual_subtitle(subtitle) {
+            Ok(subtitle) => subtitle,
+            Err(reason) => return Ok(crate::manual::unavailable(reason)),
+        };
+        let translated = if request.language.is_empty() {
+            None
+        } else {
+            match await_api(
+                client.track_lyrics_translation(TrackId::TrackId(id), &request.language),
+                lookup,
+                "manual translation",
+            )
+            .await
+            {
+                Ok(list) => translation_list_to_lrc(&subtitle.lrc, &list),
+                Err(e) if e.kind == FailureKind::Cancelled => return Err(e.to_string()),
+                Err(_) => None,
+            }
+        };
+        Ok(t.lyrics("musixmatch-rust", subtitle.lrc, translated))
+    }
+}
+
+// This endpoint looks up lyrics for the selected ID, not the existence of the song.
+// Missing subtitles are an empty manual choice; transport/access failures are not.
+fn manual_subtitle_error(error: LookupFailure) -> Result<serde_json::Value, String> {
+    if error.kind == FailureKind::NotFound {
+        Ok(crate::manual::unavailable(
+            crate::manual::UnavailableReason::SourceEmpty,
+        ))
+    } else {
+        Err(error.to_string())
+    }
+}
+
+fn manual_subtitle(
+    subtitle: Subtitle,
+) -> Result<FetchedSubtitle, crate::manual::UnavailableReason> {
+    let reason = if subtitle.subtitle_body.trim().is_empty() {
+        crate::manual::UnavailableReason::SourceEmpty
+    } else {
+        crate::manual::UnavailableReason::NoTimeline
+    };
+    validate_subtitle(subtitle, "manual track.subtitle").map_err(|_| reason)
+}
+
+#[cfg(test)]
+mod manual_tests {
+    use super::*;
+    #[test]
+    fn missing_manual_subtitle_is_selectable_empty_content() {
+        let error = LookupFailure::from_api("manual track.subtitle", MusixmatchApiError::NotFound);
+        let response = manual_subtitle_error(error).unwrap();
+        assert_eq!(response["ok"], true);
+        assert_eq!(response["content_state"], "empty");
+        assert_eq!(response["reason"], "source_empty");
+    }
+
+    #[test]
+    fn failed_manual_subtitle_requests_do_not_become_empty_content() {
+        for kind in [
+            FailureKind::Cancelled,
+            FailureKind::NeedCredential,
+            FailureKind::RateLimited,
+            FailureKind::Restricted,
+            FailureKind::Http,
+            FailureKind::Network,
+            FailureKind::Parse,
+            FailureKind::Unknown,
+            FailureKind::BudgetExhausted,
+        ] {
+            let error = LookupFailure::new(kind, "manual track.subtitle", "request failed");
+            assert!(manual_subtitle_error(error).is_err(), "{kind:?}");
+        }
+    }
+
+    #[test]
+    fn manual_empty_body_and_invalid_timing_are_distinct() {
+        for (body, reason) in [
+            ("", crate::manual::UnavailableReason::SourceEmpty),
+            ("untimed", crate::manual::UnavailableReason::NoTimeline),
+            ("[00:01.00]", crate::manual::UnavailableReason::NoTimeline),
+        ] {
+            let subtitle: Subtitle = serde_json::from_value(serde_json::json!({"subtitle_id":1,"subtitle_length":180,"updated_time":"2024-01-01T00:00:00Z","subtitle_body":body})).unwrap();
+            assert_eq!(manual_subtitle(subtitle).err(), Some(reason));
+        }
+        let subtitle: Subtitle = serde_json::from_value(serde_json::json!({"subtitle_id":1,"subtitle_length":180,"updated_time":"2024-01-01T00:00:00Z","subtitle_body":"[00:01.00]Hello"})).unwrap();
+        assert!(manual_subtitle(subtitle).is_ok());
+    }
+}

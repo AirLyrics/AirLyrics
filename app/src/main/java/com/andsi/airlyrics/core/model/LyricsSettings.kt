@@ -10,7 +10,8 @@ data class LyricsSettings(
     val scriptPreference: LyricsScriptPreference = LyricsScriptPreference.default,
     val lineDisplayMode: LyricsLineDisplayMode = LyricsLineDisplayMode.default,
     val switchAnimationMode: LyricsSwitchAnimationMode = LyricsSwitchAnimationMode.default,
-    val wordByWordLyricsEnabled: Boolean = false
+    val wordByWordLyricsEnabled: Boolean = false,
+    val wordByWordAnimationMode: WordByWordAnimationMode = WordByWordAnimationMode.CLASSIC
 )
 
 /** An online lookup source. Local lyrics are always checked first. */
@@ -24,7 +25,6 @@ enum class PlainLyricsSearchSource(val key: String, val supportsWordTiming: Bool
     APPLE("apple", supportsWordTiming = true);
 
     companion object {
-        val default: PlainLyricsSearchSource = NETEASE
         val onlineSources: List<PlainLyricsSearchSource> = listOf(NETEASE, MUSIXMATCH, LRCLIB, SPICY, APPLE)
 
         fun fromKeyOrNull(key: String?): PlainLyricsSearchSource? {
@@ -100,5 +100,13 @@ enum class LyricsSwitchAnimationMode(val key: String) {
         fun fromKey(key: String?): LyricsSwitchAnimationMode {
             return entries.firstOrNull { it.key == key } ?: default
         }
+    }
+}
+
+/** Independent of line-switch animation and the word timing availability switch. */
+enum class WordByWordAnimationMode(val key: String) {
+    CLASSIC("classic"), SPICY("spicy");
+    companion object {
+        fun fromKey(key: String?): WordByWordAnimationMode = entries.firstOrNull { it.key == key } ?: CLASSIC
     }
 }

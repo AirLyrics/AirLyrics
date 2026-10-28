@@ -42,7 +42,7 @@ internal fun MainUiHost.createFloatingPreviewCard(
 
     fun renderText(compact: Boolean) {
         val end = fullText.indexOf('\n').takeIf { it >= 0 } ?: fullText.length
-        lyricView.text = if (compact) fullText.subSequence(0, end) else fullText
+        updateFloatingPreviewText(lyricView, if (compact) fullText.subSequence(0, end) else fullText)
         displayedCompact = compact
     }
 
