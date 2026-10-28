@@ -5,6 +5,14 @@ object AppleLyricsNative {
         LyricsNativeLibrary.ensureLoaded()
     }
 
+    external fun requestManualJson(
+        request: String,
+        mediaUserToken: String,
+        developerToken: String,
+        storefront: String,
+        lookupId: Long
+    ): String
+
     external fun fetchLyricsJson(
         title: String,
         artist: String,

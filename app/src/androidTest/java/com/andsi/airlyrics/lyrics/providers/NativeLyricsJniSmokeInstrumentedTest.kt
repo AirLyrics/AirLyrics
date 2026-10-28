@@ -120,6 +120,21 @@ class NativeLyricsJniSmokeInstrumentedTest {
         }
     }
 
+    @Test
+    fun appleManualBindingRejectsMissingCredentialsOffline() {
+        val lookupId = Long.MAX_VALUE - 107L
+        try {
+            for (operation in listOf("search", "fetch")) {
+                val request = """{"provider":"apple","operation":"$operation","track":{"id":"42","title":"Song","artist":"Artist","album":"","duration_ms":1000}}"""
+                val result = JSONObject(AppleLyricsNative.requestManualJson(request, "", "", "us", lookupId))
+                assertFalse(result.getBoolean("ok"))
+                assertEquals("NeedCredential", result.getString("error_type"))
+            }
+        } finally {
+            LyricsNativeCancellation.clearLookup(lookupId)
+        }
+    }
+
     private fun fetchNeteasePlainLyricsValidation(lookupId: Long): NativePlainLyricsJsonResult {
         return parseNativePlainLyricsResult(
             NeteaseLyricsNative.fetchBestLyricsJson(

@@ -12,14 +12,18 @@ import org.json.JSONObject
 import org.json.JSONException
 
 internal data class LyricsCandidate(val source: PlainLyricsSearchSource, val id: String,
-    val song: SongIdentity, val score: Double)
+    val song: SongIdentity, val score: Double, val storefront: String? = null)
 
 /** Network reads stay separate from the explicit, transactional user selection. */
 internal class ManualLyricsSearch(
     private val context: Context,
     private val nativeCall: (String, LyricsLookupCancellationToken) -> String = { request, token ->
-        withNativeLyricsCancellation(token) { lookup ->
-            ManualLyricsNative.requestJson(request, BuildConfig.SPICY_CLIENT_KEY, lookup)
+        if (JSONObject(request).getString("provider") == PlainLyricsSearchSource.APPLE.key) {
+            AppleManualLyricsRequest.execute(context, request, token)
+        } else {
+            withNativeLyricsCancellation(token) { lookup ->
+                ManualLyricsNative.requestJson(request, BuildConfig.SPICY_CLIENT_KEY, lookup)
+            }
         }
     }
 ) {
@@ -29,13 +33,13 @@ internal class ManualLyricsSearch(
         return (0 until array.length()).map { index ->
             val item = array.getJSONObject(index)
             LyricsCandidate(source, item.getString("id"), SongIdentity(item.getString("title"),
-                item.getString("artist"), item.getString("album"), item.optLong("duration_ms")), item.optDouble("score", 0.0))
+                item.getString("artist"), item.getString("album"), item.optLong("duration_ms")), item.optDouble("score", 0.0), item.optString("storefront").takeIf { it.isNotBlank() })
         }.distinctBy { it.id }
     }
 
     fun fetch(candidate: LyricsCandidate, target: SongIdentity, token: LyricsLookupCancellationToken): ManualLyricsFetchResult {
         try {
-            val response = request(candidate.source, "fetch", candidate.id, candidate.song, token)
+            val response = request(candidate.source, "fetch", candidate.id, candidate.song, token, candidate.storefront)
             if (response.optString("content_state") == "empty") {
                 val reason = LyricsUnavailableReason.fromWire(response.optString("reason"))
                 return if (reason == LyricsUnavailableReason.SOURCE_EMPTY || reason == LyricsUnavailableReason.INSTRUMENTAL)
@@ -64,6 +68,15 @@ internal class ManualLyricsSearch(
                 else ManualLyricsFetchResult.Unavailable(reason ?: LyricsUnavailableReason.NO_USABLE_LINES)
             }
             val t = candidate.song
+            if (candidate.source == PlainLyricsSearchSource.APPLE) {
+                require(response.getString("id") == candidate.id) { "Candidate identity mismatch" }
+                val lyrics = ApplePlainLyricsProvider.parse(raw, t.title, t.artist, t.album, t.durationMs)
+                val reason = lyrics?.manualUnavailableReason()
+                return if (lyrics != null && reason == null &&
+                    (lyrics.plainLrc.isNotBlank() || !lyrics.translatedLrc.isNullOrBlank()))
+                    ManualLyricsFetchResult.Available(lyrics)
+                else ManualLyricsFetchResult.Unavailable(reason ?: LyricsUnavailableReason.NO_USABLE_LINES)
+            }
             val parsed = NativePlainLyricsResultParser.parse(raw, candidate.source.key, t.title,t.artist,t.album,t.durationMs)
             require(parsed.id == candidate.id) { "Candidate identity mismatch" }
             val lrc = parsed.primaryPlainLrc()
@@ -114,11 +127,12 @@ internal class ManualLyricsSearch(
     }
 
     private fun request(source: PlainLyricsSearchSource, operation: String, id: String, song: SongIdentity,
-        token: LyricsLookupCancellationToken): JSONObject {
+        token: LyricsLookupCancellationToken, storefront: String? = null): JSONObject {
         val request = JSONObject().put("provider",source.key).put("operation",operation)
             .put("language",context.resources.configuration.locales[0]?.language.orEmpty())
             .put("track",JSONObject().put("id",id).put("title",song.title).put("artist",song.artist)
                 .put("album",song.album).put("duration_ms",song.durationMs))
+        storefront?.let { request.put("storefront", it) }
         token.throwIfCancellationRequested()
         val raw = nativeCall(request.toString(), token)
         token.throwIfCancellationRequested()

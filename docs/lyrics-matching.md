@@ -55,6 +55,13 @@ limits can be smaller. Fetch uses exactly the selected ID: Musixmatch does not u
 fallback, LRCLIB verifies the returned ID, and Spicy validates the response recording ID. Search and preview
 never persist song lyrics; Spicy preview payloads retain their original access/expiry policy.
 
+Apple uses `AppleLyricsNative.requestManualJson` with credentials passed separately from the request.
+Manual catalogue search requests up to 25 candidates without the automatic confidence or duration gates.
+Each candidate carries its storefront; preview fetches that exact catalogue ID in that storefront and
+checks the response ID. Missing lyrics remain unavailable. The existing Apple parser preserves word timing
+and translations, and the normal manual selection transaction saves them together for later playback.
+An Apple account is required for both search and preview; credentials are read again for each operation.
+
 Applying obtains a manual commit lease, rechecks protected file revisions under the storage lock, and
 uses `ManualLyricsSelectionStore` to save and publish a target-specific change. Imported, edited and legacy
 local text require explicit replacement confirmation. Edited plain files now carry `manual_edit` provenance.

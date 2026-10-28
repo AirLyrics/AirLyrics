@@ -222,6 +222,29 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNati
 }
 
 #[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_AppleLyricsNative_requestManualJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    request: JString,
+    user: JString,
+    developer: JString,
+    storefront: JString,
+    lookup_id: jni::sys::jlong,
+) -> jstring {
+    let request = jstring_to_string(&mut env, request);
+    let user = jstring_to_string(&mut env, user);
+    let developer = jstring_to_string(&mut env, developer);
+    let storefront = jstring_to_string(&mut env, storefront);
+    let result = std::panic::catch_unwind(|| {
+        apple::manual(&request, &user, &developer, &storefront, lookup_id)
+    })
+    .unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError"}));
+    env.new_string(result.to_string())
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
+}
+
+#[no_mangle]
 pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_AppleLyricsNative_fetchLyricsJson(
     mut env: JNIEnv,
     _this: JObject,

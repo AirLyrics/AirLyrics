@@ -106,6 +106,7 @@ object ApplePlainLyricsProvider : LyricsProvider {
                 "ParseError" -> LyricsLookupErrorType.ParseError
                 "NativeError" -> LyricsLookupErrorType.NativeError
                 "NeedCredential" -> LyricsLookupErrorType.NeedCredential
+                "RateLimited" -> LyricsLookupErrorType.RateLimited
                 else -> LyricsLookupErrorType.NativeError
             }
             throw LyricsLookupException(

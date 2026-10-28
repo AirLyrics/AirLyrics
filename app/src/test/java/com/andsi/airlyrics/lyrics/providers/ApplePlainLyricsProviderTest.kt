@@ -61,7 +61,7 @@ class ApplePlainLyricsProviderTest {
 
     @Test
     fun failedNativeResponsesPreserveClassificationAndMessage() {
-        for (nativeType in listOf("NotFound", "NetworkError", "ParseError", "NativeError", "NeedCredential", "Unexpected", "")) {
+        for (nativeType in listOf("NotFound", "NetworkError", "ParseError", "NativeError", "NeedCredential", "RateLimited", "Unexpected", "")) {
             val response = org.json.JSONObject().put("ok", false).put("error", "original message")
             if (nativeType.isNotEmpty()) response.put("error_type", nativeType)
             val parsed = runCatching { ApplePlainLyricsProvider.parse(response.toString(), "", "", "", 0) }

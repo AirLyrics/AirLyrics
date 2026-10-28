@@ -130,6 +130,42 @@ class LyricsSearchInstrumentedTest {
             }
         }
     }
+    @Test fun appleCandidateAndWordTranslationPreviewSurviveRecreation() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, listOf(PlainLyricsSearchSource.APPLE))
+        val song = SongIdentity("Apple manual preview", "Artist", "Album", 200000)
+        val candidate = LyricsCandidate(PlainLyricsSearchSource.APPLE, "42", song, 0.9, "tr")
+        val raw = """{"ok":true,"id":"42","lrc":"[00:01.00]Hello","translated_lrc":"[00:01.00]你好",
+            "word_by_word":[{"start_ms":1000,"end_ms":2000,"text":"Hello","translated_text":"你好",
+            "segments":[{"text":"Hello","start_ms":1000,"end_ms":2000}]}]}"""
+        val search = com.andsi.airlyrics.lyrics.search.ManualLyricsSearch(context) { _, _ -> raw }
+        val result = search.fetch(candidate, song, com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken(song.storageKey(), 1))
+            as com.andsi.airlyrics.lyrics.search.ManualLyricsFetchResult.Available
+        val intent = Intent(context, LyricsSearchActivity::class.java)
+            .putExtra("search.title", song.title).putExtra("search.artist", song.artist)
+        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
+            scenario.onActivity { activity ->
+                val session = session(activity)
+                assertTrue(session.sourceOrder.contains(PlainLyricsSearchSource.APPLE))
+                state(session).value = session.state.value.copy(
+                    results = mapOf(PlainLyricsSearchSource.APPLE to SourceResults(candidates = listOf(candidate))),
+                    previewCandidate = candidate, preview = SearchPreview(candidate, result.lyrics)
+                )
+            }
+            instrumentation.waitForIdleSync()
+            scenario.recreate()
+            instrumentation.waitForIdleSync()
+            scenario.onActivity { activity ->
+                assertEquals("tr", session(activity).state.value.previewCandidate?.storefront)
+                val texts = descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
+                assertTrue(texts.any { it.text == activity.getString(R.string.search_word_lyrics) })
+                assertTrue(texts.any { it.text.toString().contains("你好") })
+                assertTrue(texts.any { it.text == activity.getString(R.string.search_apply) && it.isEnabled })
+            }
+        }
+    }
+
     @Test fun sourcePagesAndEmptyPreviewSurviveRecreation() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val context=instrumentation.targetContext

@@ -456,7 +456,9 @@ fn resolve_result(result: Result<Value, String>) -> Value {
             failure("NeedCredential", "Apple Music 账号未登录")
         }
         Err(error) if error == "NetworkError" => failure("NetworkError", "Apple Music 请求超时"),
-        Err(error) if error == "ParseError" => failure("ParseError", error),
+        Err(error) if matches!(error.as_str(), "ParseError" | "NotFound" | "RateLimited") => {
+            failure(&error, &error)
+        }
         Err(error) if error == "Cancelled" => failure("Cancelled", error),
         Err(error) => failure("NativeError", error),
     }
@@ -474,157 +476,305 @@ async fn resolve(
     lookup_id: jni::sys::jlong,
     api: &str,
 ) -> Result<Value, String> {
-    crate::check_lookup_cancelled(lookup_id)?;
-    #[cfg(test)]
-    let client = crate::test_http::client();
-    #[cfg(not(test))]
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(15))
-        .build()
-        .map_err(|_| "NativeError".to_string())?;
-    let headers = |request: reqwest::RequestBuilder| {
+    let client = AppleClient::new(media_user_token, developer_token, storefront, api)?;
+    let candidates = client.search(title, artist, album, 10, lookup_id).await?;
+    let Some(index) = select_candidate(&candidates, title, artist, album, duration_ms) else {
+        return Ok(failure("NotFound", "Apple catalogue has no reliable match"));
+    };
+    client
+        .lyrics(&candidates[index], album, lookup_id, false)
+        .await
+}
+
+struct AppleClient<'a> {
+    client: reqwest::Client,
+    user: &'a str,
+    developer: &'a str,
+    storefront: &'a str,
+    api: &'a str,
+}
+
+impl<'a> AppleClient<'a> {
+    fn new(
+        user: &'a str,
+        developer: &'a str,
+        storefront: &'a str,
+        api: &'a str,
+    ) -> Result<Self, String> {
+        let storefront = if storefront.trim().is_empty() {
+            "us"
+        } else {
+            storefront.trim()
+        };
+        if storefront.len() != 2 || !storefront.bytes().all(|b| b.is_ascii_lowercase()) {
+            return Err("ParseError".into());
+        }
+        #[cfg(test)]
+        let client = crate::test_http::client();
+        #[cfg(not(test))]
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(15))
+            .build()
+            .map_err(|_| "NativeError")?;
+        Ok(Self {
+            client,
+            user,
+            developer,
+            storefront,
+            api,
+        })
+    }
+
+    fn headers(&self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         request
-            .header("Authorization", format!("Bearer {developer_token}"))
-            .header("media-user-token", media_user_token)
+            .header("Authorization", format!("Bearer {}", self.developer))
+            .header("media-user-token", self.user)
             .header("Origin", "https://music.apple.com")
             .header("User-Agent", UA)
             .header("Accept", "application/json")
-    };
-
-    let storefront = if storefront.trim().is_empty() {
-        "us"
-    } else {
-        storefront.trim()
-    };
-    let term = if album.trim().is_empty() {
-        format!("{title} {artist}")
-    } else {
-        format!("{title} {artist} {album}")
     }
-    .trim()
-    .to_string();
-    let search_url = format!("{api}/v1/catalog/{storefront}/search");
-    let response = headers(client.get(&search_url))
-        .query(&[("term", term.as_str()), ("types", "songs"), ("limit", "10")])
-        .send()
-        .await
-        .map_err(|_| "NetworkError".to_string())?;
-    if response.status().as_u16() == 401 || response.status().as_u16() == 403 {
-        return Ok(failure("NeedCredential", "Apple Music 凭据无效或已过期"));
-    }
-    if !response.status().is_success() {
-        return Ok(failure(
-            "NetworkError",
-            format!("Apple 搜索 HTTP {}", response.status()),
-        ));
-    }
-    let body: Value = response
-        .json()
-        .await
-        .map_err(|_| "ParseError".to_string())?;
 
-    let songs = body
-        .pointer("/results/songs/data")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-    let candidates: Vec<Candidate> = songs
-        .iter()
-        .filter_map(|song| {
-            let id = song.get("id")?.as_str()?.to_string();
-            let attributes = song.get("attributes")?;
-            Some(Candidate {
-                id,
-                title: attributes.get("name")?.as_str()?.to_string(),
-                artist: attributes.get("artistName")?.as_str()?.to_string(),
-                album: attributes
-                    .get("albumName")
-                    .and_then(Value::as_str)
-                    .unwrap_or_default()
-                    .to_string(),
-                duration_ms: attributes.get("durationInMillis")?.as_u64()?,
-            })
-        })
-        .collect();
-
-    let Some(index) = select_candidate(&candidates, title, artist, album, duration_ms) else {
-        return Ok(json!({
-            "ok": false,
-            "source": "apple",
-            "error_type": "NotFound",
-            "error": "Apple 目录没有可靠匹配",
-        }));
-    };
-    let candidate = &candidates[index];
-
-    crate::check_lookup_cancelled(lookup_id)?;
-    let song_url = format!("{}/v1/catalog/{}/songs/{}", api, storefront, candidate.id);
-    let response = headers(client.get(&song_url))
-        .query(&[
-            ("include", "syllable-lyrics,lyrics"),
-            ("extend", "ttmlLocalizations"),
-            ("l", "zh-Hans"),
-        ])
-        .send()
-        .await
-        .map_err(|_| "NetworkError".to_string())?;
-    if response.status().as_u16() == 401 || response.status().as_u16() == 403 {
-        return Ok(failure("NeedCredential", "Apple Music 凭据无效或已过期"));
-    }
-    if !response.status().is_success() {
-        return Ok(failure(
-            "NetworkError",
-            format!("Apple 歌词 HTTP {}", response.status()),
-        ));
-    }
-    let body: Value = response
-        .json()
-        .await
-        .map_err(|_| "ParseError".to_string())?;
-    let relationships = body
-        .pointer("/data/0/relationships")
-        .cloned()
-        .unwrap_or(Value::Null);
-    let ttml = ["syllable-lyrics", "lyrics"]
-        .iter()
-        .find_map(|key| {
-            relationships
-                .pointer(&format!("/{key}/data/0/attributes"))
-                .and_then(|attributes| {
-                    attributes
-                        .get("ttmlLocalizations")
-                        .or_else(|| attributes.get("ttml"))
-                })
-                .and_then(Value::as_str)
-        })
-        .map(str::to_string);
-
-    let Some(ttml) = ttml else {
-        return Ok(json!({
-            "ok": false,
-            "source": "apple",
-            "id": candidate.id,
-            "title": candidate.title,
-            "artist": candidate.artist,
-            "error_type": "NotFound",
-            "error": "该歌曲没有可用歌词",
-        }));
-    };
-
-    let (mut result, _) = parse_native(&ttml);
-    if result["ok"] == true {
-        for (key, value) in [
-            ("id", json!(candidate.id)),
-            ("title", json!(candidate.title)),
-            ("artist", json!(candidate.artist)),
-            ("album", json!(candidate.album)),
-            ("duration_ms", json!(candidate.duration_ms)),
-            ("album_query", json!(album)),
-        ] {
-            result[key] = value;
+    async fn search(
+        &self,
+        title: &str,
+        artist: &str,
+        album: &str,
+        limit: usize,
+        lookup_id: i64,
+    ) -> Result<Vec<Candidate>, String> {
+        crate::check_lookup_cancelled(lookup_id)?;
+        let term = if album.trim().is_empty() {
+            format!("{title} {artist}")
+        } else {
+            format!("{title} {artist} {album}")
         }
+        .trim()
+        .to_string();
+        let search_url = format!("{}/v1/catalog/{}/search", self.api, self.storefront);
+        let response = self
+            .headers(self.client.get(&search_url))
+            .query(&[
+                ("term", term.as_str()),
+                ("types", "songs"),
+                ("limit", limit.to_string().as_str()),
+            ])
+            .send()
+            .await
+            .map_err(|_| "NetworkError".to_string())?;
+        check_status(&response)?;
+        let body: Value = response
+            .json()
+            .await
+            .map_err(|_| "ParseError".to_string())?;
+
+        let songs = body
+            .pointer("/results/songs/data")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let candidates: Vec<Candidate> = songs
+            .iter()
+            .filter_map(|song| {
+                let id = song.get("id")?.as_str()?.to_string();
+                let attributes = song.get("attributes")?;
+                Some(Candidate {
+                    id,
+                    title: attributes.get("name")?.as_str()?.to_string(),
+                    artist: attributes.get("artistName")?.as_str()?.to_string(),
+                    album: attributes
+                        .get("albumName")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
+                    duration_ms: attributes.get("durationInMillis")?.as_u64()?,
+                })
+            })
+            .collect();
+
+        Ok(candidates)
     }
-    Ok(result)
+
+    async fn lyrics(
+        &self,
+        candidate: &Candidate,
+        album: &str,
+        lookup_id: i64,
+        manual: bool,
+    ) -> Result<Value, String> {
+        if candidate.id.is_empty() || !candidate.id.bytes().all(|b| b.is_ascii_digit()) {
+            return Err("ParseError".into());
+        }
+        crate::check_lookup_cancelled(lookup_id)?;
+        let song_url = format!(
+            "{}/v1/catalog/{}/songs/{}",
+            self.api, self.storefront, candidate.id
+        );
+        let response = self
+            .headers(self.client.get(&song_url))
+            .query(&[
+                ("include", "syllable-lyrics,lyrics"),
+                ("extend", "ttmlLocalizations"),
+                ("l", "zh-Hans"),
+            ])
+            .send()
+            .await
+            .map_err(|_| "NetworkError".to_string())?;
+        check_status(&response)?;
+        let body: Value = response
+            .json()
+            .await
+            .map_err(|_| "ParseError".to_string())?;
+        if manual
+            && body.pointer("/data/0/id").and_then(Value::as_str) != Some(candidate.id.as_str())
+        {
+            return Err("ParseError".into());
+        }
+        let relationships = body
+            .pointer("/data/0/relationships")
+            .cloned()
+            .unwrap_or(Value::Null);
+        let ttml = ["syllable-lyrics", "lyrics"]
+            .iter()
+            .find_map(|key| {
+                relationships
+                    .pointer(&format!("/{key}/data/0/attributes"))
+                    .and_then(|attributes| {
+                        attributes
+                            .get("ttmlLocalizations")
+                            .or_else(|| attributes.get("ttml"))
+                    })
+                    .and_then(Value::as_str)
+            })
+            .map(str::to_string);
+
+        let Some(ttml) = ttml else {
+            return Ok(json!({
+                "ok": false,
+                "source": "apple",
+                "id": candidate.id,
+                "title": candidate.title,
+                "artist": candidate.artist,
+                "error_type": "NotFound",
+                "error": "该歌曲没有可用歌词",
+            }));
+        };
+
+        let (mut result, _) = parse_native(&ttml);
+        if manual && result["ok"] != true {
+            return Ok(crate::manual::unavailable(
+                crate::manual::UnavailableReason::NoUsableLines,
+            ));
+        }
+        if result["ok"] == true {
+            for (key, value) in [
+                ("id", json!(candidate.id)),
+                ("title", json!(candidate.title)),
+                ("artist", json!(candidate.artist)),
+                ("album", json!(candidate.album)),
+                ("duration_ms", json!(candidate.duration_ms)),
+                ("album_query", json!(album)),
+            ] {
+                result[key] = value;
+            }
+        }
+        Ok(result)
+    }
+}
+
+fn check_status(response: &reqwest::Response) -> Result<(), String> {
+    match response.status().as_u16() {
+        200..=299 => Ok(()),
+        401 | 403 => Err("NeedCredential".into()),
+        404 => Err("NotFound".into()),
+        429 => Err("RateLimited".into()),
+        _ => Err("NetworkError".into()),
+    }
+}
+
+/// Manual choices are ranked, never filtered by the automatic acceptance policy.
+pub(crate) fn manual(
+    raw: &str,
+    user: &str,
+    developer: &str,
+    storefront: &str,
+    lookup_id: i64,
+) -> Value {
+    let result = (|| -> Result<Value, String> {
+        let _guard = crate::begin_lookup_cancellation(lookup_id)?;
+        if user.trim().is_empty() || developer.trim().is_empty() {
+            return Err("NeedCredential".into());
+        }
+        let request: crate::manual::Request =
+            serde_json::from_str(raw).map_err(|_| "ParseError")?;
+        if request.provider != "apple" || !matches!(request.operation.as_str(), "search" | "fetch")
+        {
+            return Err("ParseError".into());
+        }
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|_| "NativeError")?;
+        runtime.block_on(async {
+            crate::await_with_cancellation(
+                async {
+                    tokio::time::timeout(
+                        Duration::from_secs(20),
+                        manual_request(&request, user, developer, storefront, lookup_id, API),
+                    )
+                    .await
+                    .map_err(|_| "NetworkError".to_string())?
+                },
+                lookup_id,
+            )
+            .await?
+        })
+    })();
+    resolve_result(result)
+}
+
+async fn manual_request(
+    request: &crate::manual::Request,
+    user: &str,
+    developer: &str,
+    storefront: &str,
+    lookup_id: i64,
+    api: &str,
+) -> Result<Value, String> {
+    let client = AppleClient::new(user, developer, storefront, api)?;
+    let track = &request.track;
+    if request.operation == "search" {
+        let candidates = client
+            .search(&track.title, &track.artist, &track.album, 25, lookup_id)
+            .await?;
+        let tracks = candidates
+            .into_iter()
+            .map(|c| crate::manual::Track {
+                id: c.id,
+                title: c.title,
+                artist: c.artist,
+                album: c.album,
+                duration_ms: c.duration_ms,
+                score: 0.0,
+            })
+            .collect();
+        let mut candidates =
+            serde_json::to_value(crate::manual::ranked(tracks, track)).map_err(|_| "ParseError")?;
+        for candidate in candidates.as_array_mut().ok_or("ParseError")? {
+            candidate["storefront"] = json!(client.storefront);
+        }
+        Ok(json!({"ok":true,"candidates":candidates}))
+    } else {
+        let candidate = Candidate {
+            id: track.id.clone(),
+            title: track.title.clone(),
+            artist: track.artist.clone(),
+            album: track.album.clone(),
+            duration_ms: track.duration_ms,
+        };
+        client
+            .lyrics(&candidate, &track.album, lookup_id, true)
+            .await
+    }
 }
 
 /// Shared offline/network TTML conversion. Trace fields describe the parser output, not UI policy.
@@ -701,6 +851,161 @@ mod tests {
         assert_eq!(trace[1]["translationState"], "null");
         assert_eq!(trace[1]["reason"], "empty_translation_discarded");
         assert!(native["word_by_word"][0]["translated_text"].is_null());
+    }
+
+    fn manual_input(operation: &str) -> crate::manual::Request {
+        serde_json::from_value(json!({"provider":"apple","operation":operation,
+            "track":{"id":"42","title":"Song","artist":"Artist","album":"","duration_ms":180000}}))
+        .unwrap()
+    }
+
+    fn http_json(body: Value) -> &'static str {
+        Box::leak(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{body}").into_boxed_str())
+    }
+
+    fn details(id: &str, ttml: Option<&str>) -> Value {
+        let relationships = ttml
+            .map(|text| json!({"syllable-lyrics":{"data":[{"attributes":{"ttml":text}}]}}))
+            .unwrap_or(json!({}));
+        json!({"data":[{"id":id,"relationships":relationships}]})
+    }
+
+    #[tokio::test]
+    async fn manual_search_keeps_variants_and_weak_matches_and_ranks_and_deduplicates() {
+        let songs: Vec<Value> = [("2", "Unrelated", 240000), ("3", "Song (Live)", 200000), ("1", "Song", 180000), ("1", "Song", 180000)]
+            .into_iter().map(|(id, name, duration)| json!({"id":id,"attributes":{"name":name,"artistName":"Artist","durationInMillis":duration}})).collect();
+        let server = crate::test_http::Server::new(vec![http_json(
+            json!({"results":{"songs":{"data":songs}}}),
+        )]);
+        let result = manual_request(
+            &manual_input("search"),
+            "user",
+            "developer",
+            "tr",
+            0,
+            &server.url,
+        )
+        .await
+        .unwrap();
+        let candidates = result["candidates"].as_array().unwrap();
+        assert_eq!(candidates.len(), 3);
+        assert_eq!(candidates[0]["id"], "1");
+        assert!(candidates.iter().all(|c| c["storefront"] == "tr"));
+        let requests = server.requests();
+        assert_eq!(requests.len(), 1);
+        assert!(requests[0].contains("/v1/catalog/tr/search?"));
+        assert!(requests[0].contains("limit=25"));
+        server.finish();
+    }
+
+    #[tokio::test]
+    async fn manual_fetch_uses_exact_id_and_keeps_words_and_translation() {
+        let server = crate::test_http::Server::new(vec![http_json(details("42", Some(SAMPLE)))]);
+        let result = manual_request(
+            &manual_input("fetch"),
+            "user",
+            "developer",
+            "hk",
+            0,
+            &server.url,
+        )
+        .await
+        .unwrap();
+        assert_eq!(result["ok"], true);
+        assert_eq!(result["id"], "42");
+        assert!(!result["word_by_word"].as_array().unwrap().is_empty());
+        assert!(!result["translated_lrc"].as_str().unwrap().is_empty());
+        let requests = server.requests();
+        assert_eq!(requests.len(), 1);
+        assert!(requests[0].contains("/v1/catalog/hk/songs/42?"));
+        server.finish();
+    }
+
+    #[tokio::test]
+    async fn manual_fetch_rejects_wrong_identity_and_unusable_content() {
+        for (body, error, reason) in [
+            (details("99", Some(SAMPLE)), Some("ParseError"), None),
+            (details("42", None), None, Some("NotFound")),
+            (
+                details("42", Some("<tt><p>untimed</p></tt>")),
+                None,
+                Some("no_usable_lines"),
+            ),
+        ] {
+            let server = crate::test_http::Server::new(vec![http_json(body)]);
+            let result = manual_request(
+                &manual_input("fetch"),
+                "user",
+                "developer",
+                "us",
+                0,
+                &server.url,
+            )
+            .await;
+            if let Some(error) = error {
+                assert_eq!(result.unwrap_err(), error);
+            } else {
+                let result = result.unwrap();
+                assert_eq!(
+                    result["reason"].as_str().or(result["error_type"].as_str()),
+                    reason
+                );
+            }
+            server.finish();
+        }
+    }
+
+    #[tokio::test]
+    async fn manual_http_errors_are_classified_for_search_and_fetch() {
+        for operation in ["search", "fetch"] {
+            for (status, expected) in [
+                (401, "NeedCredential"),
+                (403, "NeedCredential"),
+                (404, "NotFound"),
+                (429, "RateLimited"),
+                (500, "NetworkError"),
+            ] {
+                let response = Box::leak(
+                    format!("HTTP/1.1 {status} Error\r\nContent-Length: 0\r\n\r\n")
+                        .into_boxed_str(),
+                );
+                let server = crate::test_http::Server::new(vec![response]);
+                let result = manual_request(
+                    &manual_input(operation),
+                    "user",
+                    "developer",
+                    "us",
+                    0,
+                    &server.url,
+                )
+                .await;
+                assert_eq!(result.unwrap_err(), expected);
+                server.finish();
+            }
+        }
+    }
+
+    #[test]
+    fn manual_validation_and_cancellation_do_not_require_network() {
+        let raw = json!({"provider":"apple","operation":"search","track":{"id":"","title":"Song","artist":"Artist","album":"","duration_ms":0}}).to_string();
+        assert_eq!(
+            manual(&raw, "", "developer", "us", 0)["error_type"],
+            "NeedCredential"
+        );
+        assert_eq!(
+            manual(
+                &raw.replace("search", "invalid"),
+                "user",
+                "developer",
+                "us",
+                0
+            )["error_type"],
+            "ParseError"
+        );
+        let lookup = 849182;
+        crate::cancel_lookup(lookup);
+        assert_eq!(manual(&raw, "user", "developer", "us", lookup)["ok"], false);
+        crate::clear_lookup(lookup);
     }
 
     const SEARCH_HIT: &str = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"results\":{\"songs\":{\"data\":[{\"id\":\"1\",\"attributes\":{\"name\":\"Song\",\"artistName\":\"Artist\",\"durationInMillis\":180000}}]}}}";

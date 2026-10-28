@@ -3,12 +3,13 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use std::time::{Duration, Instant};
 
 pub(crate) struct Server {
     pub(crate) url: String,
+    requests: Arc<Mutex<Vec<String>>>,
     stop: Arc<AtomicBool>,
     worker: Option<std::thread::JoinHandle<()>>,
 }
@@ -20,6 +21,8 @@ impl Server {
         let url = format!("http://{}", listener.local_addr().unwrap());
         let stop = Arc::new(AtomicBool::new(false));
         let stopped = stop.clone();
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let captured = requests.clone();
         let worker = std::thread::spawn(move || {
             let deadline = Instant::now() + Duration::from_secs(5);
             for response in responses {
@@ -53,6 +56,9 @@ impl Server {
                         reader.read_line(&mut line).expect("request headers") > 0,
                         "Missing complete headers within 16 KiB"
                     );
+                    if line.starts_with("GET ") {
+                        captured.lock().unwrap().push(line.clone());
+                    }
                     if line == "\r\n" {
                         break;
                     }
@@ -62,9 +68,14 @@ impl Server {
         });
         Self {
             url,
+            requests,
             stop,
             worker: Some(worker),
         }
+    }
+
+    pub(crate) fn requests(&self) -> Vec<String> {
+        self.requests.lock().unwrap().clone()
     }
 
     pub(crate) fn finish(mut self) {
