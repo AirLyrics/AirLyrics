@@ -43,6 +43,11 @@
     <string name="ui_accent_color">强调色</string>
     <string name="ui_accent_color_option">%1$s强调色</string>
     <string name="ui_accent_color_selected">%1$s强调色，已选择</string>
+    <string name="ui_button_style">按钮风格</string>
+    <string name="ui_button_style_solid">实心</string>
+    <string name="ui_button_style_transparent">透明</string>
+    <string name="ui_choose_button_style">选择按钮风格，当前为%1$s</string>
+    <string name="ui_button_style_selected">%1$s，已选择</string>
     <string name="ui_applied">已生效</string>
     <string name="ui_auto_hide">自动隐藏</string>
     <string name="ui_auto_hide_when_paused">乐曲暂停时</string>

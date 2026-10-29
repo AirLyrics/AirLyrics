@@ -8,10 +8,10 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.andsi.airlyrics.ui.components.adaptiveHeader
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.platform.AppNavigator
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.components.adaptiveHeader
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
@@ -21,12 +21,11 @@ import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
+import com.andsi.airlyrics.ui.pages.settings.appearanceControlBackground
 import com.andsi.airlyrics.ui.pages.settings.createSettingsAppearanceHeader
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorIconOnAccent
-import com.andsi.airlyrics.ui.theme.colorStroke
-import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
@@ -115,11 +114,7 @@ internal fun MainUiHost.themeToggleButtonImpl(): View {
         layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.ThemeToggleSize), dp(AirUiTokens.Layout.ThemeToggleSize)).apply {
             setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
         }
-        background = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(colorSurfaceLight)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-        }
+        background = appearanceControlBackground()
         elevation = dp(AirUiTokens.Space.Xxs).toFloat()
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {

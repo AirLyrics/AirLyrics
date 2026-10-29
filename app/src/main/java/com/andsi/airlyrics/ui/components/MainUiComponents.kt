@@ -14,6 +14,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
+import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
@@ -109,7 +110,7 @@ internal fun actionButton(activity: MainUiHost, text: String, onClick: () -> Uni
         )
         params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
         layoutParams = params
-        activity.styleAirTonalButton(this)
+        activity.styleAirTonalButton(this, AirTonalButtonTone.PRIMARY)
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             onClick()
@@ -135,7 +136,15 @@ internal fun dangerActionButton(activity: MainUiHost, text: String, onClick: () 
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        activity.styleAirTonalButton(this, AirTonalButtonTone.DANGER)
+        activity.styleAirTonalButton(
+            this,
+            AirTonalButtonTone.DANGER,
+            radiusDp = if (activity.buttonStyle() == ButtonStyle.SOLID) {
+                AirUiTokens.Radius.Pill
+            } else {
+                AirUiTokens.Radius.Md
+            }
+        )
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             onClick()
@@ -155,7 +164,7 @@ internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String
                 typeface = Typeface.DEFAULT_BOLD
                 minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
                 setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
-                activity.styleAirTonalButton(this)
+                activity.styleAirTonalButton(this, AirTonalButtonTone.PRIMARY)
                 enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
                 setOnClickListener {
                     pair.second()

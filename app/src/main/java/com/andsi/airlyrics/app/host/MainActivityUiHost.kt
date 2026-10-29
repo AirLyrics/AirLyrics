@@ -33,6 +33,7 @@ import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.platform.AppNightMode
 import com.andsi.airlyrics.app.render.MainActivityViewRefs
 import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
@@ -171,6 +172,7 @@ internal class MainActivityUiHost(
     override fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     override fun isDarkTheme(): Boolean = ThemeSettingsStore.isDark(this)
     override fun themeAccent(): ThemeAccent = ThemeSettingsStore.getAccent(this)
+    override fun buttonStyle(): ButtonStyle = ThemeSettingsStore.getButtonStyle(this)
 
     override fun getActiveMediaControllers(): List<MediaController> = graph.mediaSourceController.getActiveControllers()
     override fun mediaPageState(): MediaPageState {
@@ -568,6 +570,13 @@ internal class MainActivityUiHost(
         if (accent == themeAccent()) return
         applyPaletteChange {
             ThemeSettingsStore.setAccent(this, accent)
+        }
+    }
+
+    fun selectButtonStyle(style: ButtonStyle) {
+        if (style == buttonStyle()) return
+        applyPaletteChange {
+            ThemeSettingsStore.setButtonStyle(this, style)
         }
     }
 

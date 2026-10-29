@@ -145,7 +145,7 @@ internal class LyricsSourceOptionButton(
 
     private fun applySelectionHighlight(selected: Boolean) {
         isSelected = selected
-        val tone = if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
+        val tone = if (selected) AirTonalButtonTone.SOURCE_SELECTED else AirTonalButtonTone.DEFAULT
         val style = host.airTonalButtonStyle(tone)
         titleView.setTextColor(style.textColor)
         priorityLabel.setTextColor(style.textColor)

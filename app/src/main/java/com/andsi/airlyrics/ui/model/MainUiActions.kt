@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.ui.model
 
 import android.view.View
+import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.ui.navigation.Page
@@ -14,6 +15,7 @@ internal data class MainUiActions(
     val setMediaRefreshState: (RefreshState) -> Unit,
     val toggleThemeMode: () -> Unit,
     val selectThemeAccent: (ThemeAccent) -> Unit,
+    val selectButtonStyle: (ButtonStyle) -> Unit,
     val toggleFloatingFromNav: () -> Unit,
     val showFloatingLyrics: () -> Unit,
     val hideFloatingLyrics: () -> Unit,

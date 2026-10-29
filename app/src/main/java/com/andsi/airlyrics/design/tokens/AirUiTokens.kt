@@ -110,6 +110,8 @@ object AirUiTokens {
         const val DialogCloseSize = 36
         const val ThemeToggleSize = 42
         const val ThemeAccentDotSize = 18
+        const val ThemeButtonStyleGlyphWidth = 22
+        const val ThemeButtonStyleGlyphHeight = 14
         const val ThemeAccentSwatchSize = 38
         const val ThemeAccentTouchSize = 48
         const val ThemePickerSlideDistance = 8

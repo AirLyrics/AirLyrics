@@ -22,6 +22,7 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
         setMediaRefreshState = viewModel::setMediaRefreshState,
         toggleThemeMode = uiHost::toggleThemeMode,
         selectThemeAccent = uiHost::selectThemeAccent,
+        selectButtonStyle = uiHost::selectButtonStyle,
         toggleFloatingFromNav = ::toggleFloatingFromNav,
         showFloatingLyrics = ::showFloatingLyrics,
         hideFloatingLyrics = ::hideFloatingLyrics,

@@ -43,6 +43,11 @@
     <string name="ui_accent_color">Color de acento</string>
     <string name="ui_accent_color_option">Color de acento %1$s</string>
     <string name="ui_accent_color_selected">Color de acento %1$s, seleccionado</string>
+    <string name="ui_button_style">Estilo de botones</string>
+    <string name="ui_button_style_solid">Sólido</string>
+    <string name="ui_button_style_transparent">Transparente</string>
+    <string name="ui_choose_button_style">Elegir estilo de botones; actual: %1$s</string>
+    <string name="ui_button_style_selected">%1$s, seleccionado</string>
     <string name="ui_applied">Aplicado</string>
     <string name="ui_auto_save">Guardado automático</string>
     <string name="ui_auto_hide">Ocultar automáticamente</string>

@@ -2,6 +2,7 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import android.content.res.Configuration
+import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.core.prefs.prefs
 
@@ -10,6 +11,7 @@ object ThemeSettingsStore {
     private const val PREF_NAME = "app_theme"
     private const val KEY_DARK_MODE = "dark_mode"
     private const val KEY_ACCENT = "accent"
+    private const val KEY_BUTTON_STYLE = "button_style"
 
     private fun store(context: Context) = prefs(context, PREF_NAME)
 
@@ -42,5 +44,12 @@ object ThemeSettingsStore {
 
     fun setAccent(context: Context, accent: ThemeAccent) {
         store(context).setString(KEY_ACCENT, accent.preferenceValue)
+    }
+
+    fun getButtonStyle(context: Context): ButtonStyle =
+        ButtonStyle.fromPreferenceValue(store(context).getString(KEY_BUTTON_STYLE))
+
+    fun setButtonStyle(context: Context, style: ButtonStyle) {
+        store(context).setString(KEY_BUTTON_STYLE, style.preferenceValue)
     }
 }

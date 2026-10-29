@@ -2,6 +2,7 @@ package com.andsi.airlyrics.settings.store
 
 import android.content.Context
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.i18n.LanguageSettingsStore
 import java.util.Locale
@@ -64,6 +65,32 @@ class SimpleSettingsStoresTest : SettingsStoreTestBase() {
             .commit()
 
         assertEquals(ThemeAccent.DEFAULT, ThemeSettingsStore.getAccent(context))
+    }
+
+    @Test
+    fun themeSettingsStore_buttonStyleDefaultsToTransparentAndPersists() {
+        assertEquals(ButtonStyle.TRANSPARENT, ThemeSettingsStore.getButtonStyle(context))
+
+        ThemeSettingsStore.setButtonStyle(context, ButtonStyle.SOLID)
+        assertEquals(ButtonStyle.SOLID, ThemeSettingsStore.getButtonStyle(context))
+        assertEquals(
+            ButtonStyle.SOLID.preferenceValue,
+            context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+                .getString("button_style", null)
+        )
+
+        ThemeSettingsStore.setButtonStyle(context, ButtonStyle.TRANSPARENT)
+        assertEquals(ButtonStyle.TRANSPARENT, ThemeSettingsStore.getButtonStyle(context))
+    }
+
+    @Test
+    fun themeSettingsStore_unknownButtonStyleFallsBackToTransparent() {
+        context.getSharedPreferences("app_theme", Context.MODE_PRIVATE)
+            .edit()
+            .putString("button_style", "future-style")
+            .commit()
+
+        assertEquals(ButtonStyle.TRANSPARENT, ThemeSettingsStore.getButtonStyle(context))
     }
 
     @Test

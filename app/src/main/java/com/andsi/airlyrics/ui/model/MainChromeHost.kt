@@ -4,6 +4,7 @@ import android.os.Handler
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
@@ -28,4 +29,5 @@ internal interface MainChromeHost {
     fun dp(value: Int): Int
     fun isDarkTheme(): Boolean
     fun themeAccent(): ThemeAccent
+    fun buttonStyle(): ButtonStyle
 }
