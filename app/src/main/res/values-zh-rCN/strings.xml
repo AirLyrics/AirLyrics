@@ -29,7 +29,7 @@
     <string name="provider_netease_compact">网易云</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">关于</string>
-    <string name="ui_active_players">活跃媒体</string>
+    <string name="ui_active_players">可选播放器</string>
     <string name="ui_adjustment_mode">调整模式</string>
     <string name="ui_advance_0_1s">提前 0.1s</string>
     <string name="ui_advance_1s">提前 1s</string>
@@ -50,7 +50,7 @@
     <string name="ui_button_style_selected">%1$s，已选择</string>
     <string name="ui_applied">已生效</string>
     <string name="ui_auto_hide">自动隐藏</string>
-    <string name="ui_auto_hide_when_paused">乐曲暂停时</string>
+    <string name="ui_auto_hide_when_paused">暂停播放时</string>
     <string name="ui_auto_hide_when_lyrics_unavailable">未找到可用歌词时</string>
     <string name="ui_auto_save">自动保存</string>
     <string name="ui_auto_save_off">自动保存：关闭</string>
@@ -179,7 +179,7 @@
     <string name="ui_language">语言</string>
     <string name="ui_left">左对齐</string>
     <string name="ui_like_it">如果你喜欢这个项目</string>
-    <string name="ui_line_range">显示范围</string>
+    <string name="ui_line_range">显示的歌词行</string>
     <string name="ui_local">本地歌词</string>
     <string name="ui_local_word_by_word_lyrics">本地逐字歌词</string>
     <string name="ui_local_word_by_word_lyrics_title">本地逐字歌词</string>
@@ -198,7 +198,7 @@
     <string name="ui_lyrics_import_failed">导入歌词失败</string>
     <string name="ui_lyrics_import_empty_error">导入的歌词为空</string>
     <string name="ui_lyrics_not_found">未找到歌词</string>
-    <string name="ui_lyrics_removed_auto_search_paused">歌词已被移除</string>
+    <string name="ui_lyrics_removed_auto_search_paused">歌词已移除，当前歌曲暂不自动搜索</string>
     <string name="ui_lyrics_offset">歌词偏移</string>
     <string name="ui_offset_per_song_hint">仅对当前歌曲生效</string>
     <string name="ui_lyrics_save_folder">歌词保存目录</string>
@@ -206,7 +206,7 @@
     <string name="ui_lyrics_folder_permission_failed">无法持续访问此目录，请选择其他目录</string>
     <string name="ui_lyrics_folder_write_failed">无法写入此目录，请选择其他目录</string>
     <string name="ui_lyrics_save_folder_set">已设置歌词保存目录</string>
-    <string name="ui_plain_lyrics_source">歌词搜索来源</string>
+    <string name="ui_plain_lyrics_source">歌词来源</string>
     <string name="ui_lyrics_source_selected_priority_state">已选择，优先级 %1$d</string>
     <string name="ui_lyrics_source_not_selected_state">未选择</string>
     <string name="ui_max_width">最大宽度</string>
@@ -342,9 +342,9 @@
     <string name="ui_scale_fade">轻微缩放</string>
     <string name="ui_search">搜索</string>
     <string name="ui_search_saved_lyrics_hint">搜索歌曲、歌手或来源</string>
-    <string name="ui_search_strategy">搜索策略</string>
+    <string name="ui_search_strategy">搜索与保存</string>
     <string name="ui_searching_lyrics">正在查找歌词</string>
-    <string name="ui_searching_online_again">正在尝试原文搜索…</string>
+    <string name="ui_searching_online_again">正在搜索歌词…</string>
     <string name="ui_settings">设置</string>
     <string name="ui_settings_back_label">设置</string>
     <string name="ui_shadow">阴影</string>
@@ -436,7 +436,7 @@
     <string name="ui_script_traditional">繁体优先</string>
     <string name="ui_script_none">不处理</string>
     <string name="provider_spicy_name">Spicy Lyrics</string>
-    <string name="ui_searching_international_title">正在尝试国际标题搜索…</string>
+    <string name="ui_searching_international_title">正在尝试其他方式搜索歌词…</string>
     <string name="ui_batch_selected">已选择：%1$d</string>
     <string name="ui_batch_select_item">选择 %1$s</string>
     <string name="ui_batch_replace">导入并替换</string>
@@ -477,7 +477,7 @@
     <string name="search_more">更多条件</string>
     <string name="search_sources">歌词源</string>
     <string name="search_apply">应用歌词</string>
-    <string name="search_previous_song">正在为上一首歌曲搜索</string>
+    <string name="search_previous_song">正在为之前的歌曲搜索</string>
     <string name="search_switch_target">切换到当前歌曲</string>
     <string name="search_empty">无搜索结果</string>
     <string name="search_retry">重试</string>

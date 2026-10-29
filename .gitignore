@@ -16,7 +16,8 @@ lyrics-core/target/
 *.iml
 
 # Local AI tools
-/.agents/skills/impeccable/
+/.agents/skills/
+/skills-lock.json
 /.impeccable/config.local.json
 
 # OS

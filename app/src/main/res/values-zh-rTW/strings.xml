@@ -29,7 +29,7 @@
     <string name="provider_netease_compact">網易雲</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">關於</string>
-    <string name="ui_active_players">使用中的播放器</string>
+    <string name="ui_active_players">可選播放器</string>
     <string name="ui_adjustment_mode">調整模式</string>
     <string name="ui_advance_0_1s">提前 0.1s</string>
     <string name="ui_advance_1s">提前 1s</string>
@@ -50,7 +50,7 @@
     <string name="ui_button_style_selected">%1$s，已選擇</string>
     <string name="ui_applied">已生效</string>
     <string name="ui_auto_hide">自動隱藏</string>
-    <string name="ui_auto_hide_when_paused">樂曲暫停時</string>
+    <string name="ui_auto_hide_when_paused">暫停播放時</string>
     <string name="ui_auto_hide_when_lyrics_unavailable">未找到可用歌詞時</string>
     <string name="ui_auto_save">自動儲存</string>
     <string name="ui_auto_save_off">自動儲存：關閉</string>
@@ -179,7 +179,7 @@
     <string name="ui_language">語言</string>
     <string name="ui_left">左對齊</string>
     <string name="ui_like_it">如果你喜歡這個專案</string>
-    <string name="ui_line_range">顯示範圍</string>
+    <string name="ui_line_range">顯示的歌詞行</string>
     <string name="ui_local">本機歌詞</string>
     <string name="ui_local_word_by_word_lyrics">本機逐字歌詞</string>
     <string name="ui_local_word_by_word_lyrics_title">本機逐字歌詞</string>
@@ -198,7 +198,7 @@
     <string name="ui_lyrics_import_failed">匯入歌詞失敗</string>
     <string name="ui_lyrics_import_empty_error">匯入的歌詞為空</string>
     <string name="ui_lyrics_not_found">未找到歌詞</string>
-    <string name="ui_lyrics_removed_auto_search_paused">歌詞已被移除</string>
+    <string name="ui_lyrics_removed_auto_search_paused">歌詞已移除，暫不自動搜尋這首歌的歌詞</string>
     <string name="ui_lyrics_offset">歌詞偏移</string>
     <string name="ui_offset_per_song_hint">僅對目前歌曲生效</string>
     <string name="ui_lyrics_save_folder">歌詞儲存資料夾</string>
@@ -342,9 +342,9 @@
     <string name="ui_scale_fade">輕微縮放</string>
     <string name="ui_search">搜尋</string>
     <string name="ui_search_saved_lyrics_hint">搜尋歌曲、歌手或來源</string>
-    <string name="ui_search_strategy">搜尋策略</string>
+    <string name="ui_search_strategy">搜尋與儲存</string>
     <string name="ui_searching_lyrics">正在查詢歌詞</string>
-    <string name="ui_searching_online_again">正在嘗試原文搜尋…</string>
+    <string name="ui_searching_online_again">正在搜尋歌詞…</string>
     <string name="ui_settings">設定</string>
     <string name="ui_settings_back_label">設定</string>
     <string name="ui_shadow">陰影</string>
@@ -436,7 +436,7 @@
     <string name="ui_script_traditional">繁體優先</string>
     <string name="ui_script_none">不處理</string>
     <string name="provider_spicy_name">Spicy Lyrics</string>
-    <string name="ui_searching_international_title">正在嘗試國際標題搜尋…</string>
+    <string name="ui_searching_international_title">正在改用其他方式搜尋歌詞…</string>
     <string name="ui_batch_selected">已選取：%1$d</string>
     <string name="ui_batch_select_item">選取 %1$s</string>
     <string name="ui_batch_replace">匯入並取代</string>
@@ -477,7 +477,7 @@
     <string name="search_more">更多條件</string>
     <string name="search_sources">歌詞來源</string>
     <string name="search_apply">套用歌詞</string>
-    <string name="search_previous_song">正在為上一首歌曲搜尋</string>
+    <string name="search_previous_song">正在搜尋先前歌曲的歌詞</string>
     <string name="search_switch_target">切換到目前歌曲</string>
     <string name="search_empty">沒有搜尋結果</string>
     <string name="search_retry">重試</string>

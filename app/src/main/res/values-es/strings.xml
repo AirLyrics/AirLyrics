@@ -29,7 +29,7 @@
     <string name="provider_netease_compact">NetEase</string>
     <string name="ui_title_subtitle">%1$s\n%2$s</string>
     <string name="ui_about">Acerca de</string>
-    <string name="ui_active_players">Medios activos</string>
+    <string name="ui_active_players">Reproductores disponibles</string>
     <string name="ui_adjustment_mode">Modo de ajuste</string>
     <string name="ui_advance_0_1s">Adelantar 0.1s</string>
     <string name="ui_advance_1s">Adelantar 1s</string>
@@ -198,7 +198,7 @@
     <string name="ui_lyrics_import_failed">Falló la importación de letras</string>
     <string name="ui_lyrics_import_empty_error">Las letras importadas están vacías</string>
     <string name="ui_lyrics_not_found">Letras no encontradas</string>
-    <string name="ui_lyrics_removed_auto_search_paused">Letras eliminadas</string>
+    <string name="ui_lyrics_removed_auto_search_paused">Letras eliminadas. No se buscarán automáticamente para esta canción.</string>
     <string name="ui_lyrics_offset">Desfase de letras</string>
     <string name="ui_offset_per_song_hint">Guardado solo para esta canción</string>
     <string name="ui_lyrics_save_folder">Carpeta de guardado de letras</string>
@@ -342,9 +342,9 @@ TTML de tiempo por palabra:
     <string name="ui_scale_fade">Desvanecido con escala</string>
     <string name="ui_search">Buscar</string>
     <string name="ui_search_saved_lyrics_hint">Buscar canciones, artistas o fuentes</string>
-    <string name="ui_search_strategy">Estrategia de búsqueda</string>
+    <string name="ui_search_strategy">Búsqueda y guardado</string>
     <string name="ui_searching_lyrics">Buscando letras</string>
-    <string name="ui_searching_online_again">Buscando con el título original…</string>
+    <string name="ui_searching_online_again">Buscando letras…</string>
     <string name="ui_settings">Ajustes</string>
     <string name="ui_settings_back_label">Ajustes</string>
     <string name="ui_shadow">Sombra</string>
@@ -438,7 +438,7 @@ TTML de tiempo por palabra:
     <string name="provider_spicy_name">Spicy Lyrics</string>
     <string name="ui_spicy_expiry">Caduca el %1$s</string>
     <string name="ui_lyrics_expired">La letra ha caducado</string>
-    <string name="ui_searching_international_title">Buscando con el título internacional…</string>
+    <string name="ui_searching_international_title">Probando otra forma de buscar letras…</string>
     <string name="ui_batch_selected">Seleccionados: %1$d</string>
     <string name="ui_batch_select_item">Seleccionar %1$s</string>
     <string name="ui_batch_replace">Importar y reemplazar</string>
@@ -481,7 +481,7 @@ TTML de tiempo por palabra:
     <string name="search_more">Más filtros</string>
     <string name="search_sources">Fuentes</string>
     <string name="search_apply">Aplicar letra</string>
-    <string name="search_previous_song">Buscando para la canción anterior</string>
+    <string name="search_previous_song">Buscando letras de una canción anterior</string>
     <string name="search_switch_target">Cambiar a la canción actual</string>
     <string name="search_empty">Sin resultados</string>
     <string name="search_retry">Reintentar</string>
