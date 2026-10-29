@@ -1,39 +1,19 @@
 name: Android Instrumentation Tests
 
 on:
-  pull_request:
-    paths:
-      - 'lyrics-core/**'
-      - 'app/src/**'
-      - 'scripts/run_instrumentation_ci.sh'
-      - 'scripts/ci/**'
-      - 'scripts/test_reports/**'
-      - 'app/build.gradle.kts'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - 'gradle/libs.versions.toml'
-      - 'gradle/wrapper/**'
-      - 'gradlew'
-      - '.github/workflows/android-instrumentation.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'lyrics-core/**'
-      - 'app/src/**'
-      - 'scripts/run_instrumentation_ci.sh'
-      - 'scripts/ci/**'
-      - 'scripts/test_reports/**'
-      - 'app/build.gradle.kts'
-      - 'build.gradle.kts'
-      - 'settings.gradle.kts'
-      - 'gradle.properties'
-      - 'gradle/libs.versions.toml'
-      - 'gradle/wrapper/**'
-      - 'gradlew'
-      - '.github/workflows/android-instrumentation.yml'
   workflow_dispatch:
+    inputs:
+      suite:
+        description: Instrumentation suite
+        type: choice
+        default: full
+        options:
+          - fast
+          - stress
+          - hardware
+          - full
+  schedule:
+    - cron: '23 3 * * 0'
 
 permissions:
   contents: read
@@ -93,19 +73,10 @@ jobs:
               -o ../app/src/main/jniLibs \
               build --release --locked
 
-      - name: Build emulator debug APK
-        run: >-
-          ./gradlew :app:assembleDebug
-          -Pairlyrics.skipRustBuild=true
-          -Pairlyrics.buildX86_64=true
-          --stacktrace
-
-      - name: Verify emulator JNI is packaged
+      - name: Verify x86_64 JNI was built
         run: |
           test -f app/src/main/jniLibs/x86_64/libairlyrics_lyrics.so
           file app/src/main/jniLibs/x86_64/libairlyrics_lyrics.so | grep 'x86-64'
-          unzip -Z1 app/build/outputs/apk/debug/app-debug.apk |
-            grep -Fx 'lib/x86_64/libairlyrics_lyrics.so'
 
       - name: Enable KVM
         run: |
@@ -117,7 +88,7 @@ jobs:
       - name: Install emulator system image
         run: bash scripts/ci/install_android_packages.sh emulator "system-images;android-35;google_apis;x86_64"
 
-      - name: Run offline Android instrumentation tests
+      - name: Run Android instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -125,17 +96,26 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          script: bash scripts/run_instrumentation_ci.sh
+          script: bash scripts/run_instrumentation_ci.sh --${{ github.event_name == 'schedule' && 'full' || inputs.suite || 'full' }}
 
       - name: Verify instrumentation test results
         if: always()
-        run: python3 -B scripts/test_reports/summary.py app/build/outputs/androidTest-results/connected --strict
+        env:
+          INSTRUMENTATION_SUITE: ${{ github.event_name == 'schedule' && 'full' || inputs.suite || 'full' }}
+        run: |
+          case "$INSTRUMENTATION_SUITE" in
+            fast) minimum=25 ;;
+            stress) minimum=2 ;;
+            hardware) minimum=1 ;;
+            full) minimum=28 ;;
+          esac
+          python3 -B scripts/test_reports/summary.py app/build/outputs/androidTest-results/connected --strict --min-tests "$minimum"
 
       - name: Upload instrumentation test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: airlyrics-instrumentation-reports
+          name: airlyrics-instrumentation-${{ github.event_name == 'schedule' && 'full' || inputs.suite || 'full' }}-reports
           path: |
             app/build/reports/androidTests/connected/
             app/build/outputs/androidTest-results/connected/

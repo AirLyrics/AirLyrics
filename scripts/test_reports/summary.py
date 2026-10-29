@@ -26,6 +26,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('root')
     parser.add_argument('--strict', action='store_true', help='Require nonzero tests and no failures/errors/skips')
+    parser.add_argument('--min-tests', type=int, default=0, help='Require at least this many test cases')
     args = parser.parse_args()
     totals, lines = summarize(args.root)
     output = f"Test results ({args.root}): {totals}\n" + '\n'.join(lines) + '\n'
@@ -35,6 +36,8 @@ def main():
             report.write(output)
     if args.strict and (not totals['tests'] or any(totals[k] for k in ('failures', 'errors', 'skipped'))):
         raise SystemExit('Tests did not complete cleanly; see XML and diagnostics')
+    if totals['tests'] < args.min_tests:
+        raise SystemExit(f"Only {totals['tests']} tests ran; expected at least {args.min_tests}")
 
 
 if __name__ == '__main__':

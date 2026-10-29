@@ -1,24 +1,40 @@
 package com.andsi.airlyrics.floating
 
+import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Rect
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.view.Gravity
+import android.view.PixelCopy
 import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.platform.io.PlatformTestStorageRegistry
+import com.andsi.airlyrics.test.ExtendedInstrumentationTest
+import com.andsi.airlyrics.test.HardwareFrameTest
+import com.andsi.airlyrics.test.InstrumentationFailureDiagnostics
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.Rule
 import org.junit.runner.RunWith
-import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 @androidx.test.filters.SdkSuppress(minSdkVersion = 29)
+@ExtendedInstrumentationTest
+@HardwareFrameTest
 @RunWith(AndroidJUnit4::class)
 class SpicyLyricsInstrumentedTest {
+    @get:Rule val diagnostics = InstrumentationFailureDiagnostics()
+
     @Test fun hardwareFramesAnimateAndPauseWithoutRelayout() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -52,7 +68,7 @@ class SpicyLyricsInstrumentedTest {
             scenario.onActivity { layout = view.layout; text = view.text; renderer.updatePlayback(900, false) }
             instrumentation.waitForIdleSync()
             val middle = screenshot(view, "spicy-middle.png")
-            assertFalse(initial.sameAs(middle))
+            assertFalse("Paused Spicy position must change the committed frame", initial.sameAs(middle))
             scenario.onActivity {
                 renderer.tick()
                 assertSame(text, view.text)
@@ -61,7 +77,7 @@ class SpicyLyricsInstrumentedTest {
             }
             instrumentation.waitForIdleSync()
             val paused = screenshot(view, "spicy-paused.png")
-            assertTrue(middle.sameAs(paused))
+            assertTrue("Paused polling must preserve the committed frame", middle.sameAs(paused))
             scenario.onActivity {
                 renderer.tick()
                 assertFalse("Paused media polling must not invalidate text", view.isDirty)
@@ -74,7 +90,7 @@ class SpicyLyricsInstrumentedTest {
             scenario.onActivity { view.postDelayed({ latch.countDown() }, 350) }
             assertTrue(latch.await(2, java.util.concurrent.TimeUnit.SECONDS))
             val next = screenshot(view, "spicy-next.png")
-            assertFalse(playing.sameAs(next))
+            assertFalse("Playing Spicy position must advance in committed frames", playing.sameAs(next))
             scenario.onActivity { view.visibility = View.GONE; renderer.clear() }
             listOf(initial, middle, paused, playing, next).forEach(Bitmap::recycle)
         }
@@ -82,24 +98,49 @@ class SpicyLyricsInstrumentedTest {
 
     private fun screenshot(view: FloatingLyricsTextView, name: String): Bitmap {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val location = IntArray(2)
-        val committed = java.util.concurrent.CountDownLatch(1)
-        var top = 0
-        var height = 0
+        var ready = false
+        val deadline = SystemClock.uptimeMillis() + 5_000L
+        while (!ready && SystemClock.uptimeMillis() < deadline) {
+            instrumentation.runOnMainSync {
+                ready = view.isAttachedToWindow && view.isShown && view.hasWindowFocus() &&
+                    view.width > 0 && view.height > 0 && !view.isLayoutRequested
+            }
+            if (!ready) SystemClock.sleep(50)
+        }
+        assertTrue("$name: lyric window did not gain focus and finish layout", ready)
+        val committed = CountDownLatch(1)
+        lateinit var source: Rect
         instrumentation.runOnMainSync {
-            view.getLocationOnScreen(location)
-            height = (view.layout.height + view.compoundPaddingTop + view.compoundPaddingBottom + 100).coerceAtMost(view.height)
-            top = (view.height - height) / 2
+            check(view.isAttachedToWindow && view.isShown && view.hasWindowFocus()) {
+                "$name: lyric window lost focus before capture"
+            }
+            val location = IntArray(2).also(view::getLocationInWindow)
+            val height = (view.layout.height + view.compoundPaddingTop + view.compoundPaddingBottom + 100)
+                .coerceAtMost(view.height)
+            val top = (view.height - height) / 2
+            source = Rect(location[0], location[1] + top, location[0] + view.width,
+                location[1] + top + height)
             view.viewTreeObserver.registerFrameCommitCallback { committed.countDown() }
             view.invalidate()
         }
-        assertTrue("A hardware frame must commit before capture", committed.await(5, java.util.concurrent.TimeUnit.SECONDS))
-        val screen = instrumentation.uiAutomation.takeScreenshot()
-        val crop = Bitmap.createBitmap(screen, location[0], location[1] + top, view.width, height)
-        if (screen !== crop) screen.recycle()
-        File(instrumentation.targetContext.getExternalFilesDir(null), name).outputStream().use {
-            crop.compress(Bitmap.CompressFormat.PNG, 100, it)
+        assertTrue("$name: lyric window did not commit a hardware frame", committed.await(5, TimeUnit.SECONDS))
+        val bitmap = Bitmap.createBitmap(source.width(), source.height(), Bitmap.Config.ARGB_8888)
+        val copied = CountDownLatch(1)
+        var result = -1
+        PixelCopy.request((view.context as Activity).window, source, bitmap, {
+            result = it
+            copied.countDown()
+        }, Handler(Looper.getMainLooper()))
+        try {
+            assertTrue("$name: PixelCopy did not finish", copied.await(5, TimeUnit.SECONDS))
+            assertEquals("$name: PixelCopy failed", PixelCopy.SUCCESS, result)
+            PlatformTestStorageRegistry.getInstance().openOutputFile(name).use {
+                check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+            }
+            return bitmap
+        } catch (failure: Throwable) {
+            bitmap.recycle()
+            throw failure
         }
-        return crop
     }
 }

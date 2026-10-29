@@ -53,8 +53,13 @@ If your changes affect lyrics parsing, local lyrics storage, lyrics import, Andr
 permissions, or SAF folder behavior, also run this check on a real device or emulator:
 
 ```bash
-./gradlew :app:connectedDebugAndroidTest -Pairlyrics.skipRustBuild=true
+bash scripts/run_instrumentation_ci.sh --fast
 ```
+
+`--fast` runs 25 core device tests on demand. Use `--full` for all 28 offline tests,
+or `--stress` and `--hardware` for the two extended groups. The full suite runs
+weekly; the Android Instrumentation Tests workflow also offers manual suite selection.
+PR and push checks do not start an emulator. See [instrumentation test suites](instrumentation-tests.md).
 
 Note: `connectedDebugAndroidTest` may uninstall or overwrite the AirLyrics app already installed on
 the device. Please make sure the test device can safely lose its existing app data. A test device or

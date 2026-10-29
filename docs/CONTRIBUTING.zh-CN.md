@@ -49,8 +49,13 @@ cargo test
 请额外在真机或模拟器上运行：
 
 ```bash
-./gradlew :app:connectedDebugAndroidTest -Pairlyrics.skipRustBuild=true
+bash scripts/run_instrumentation_ci.sh --fast
 ```
+
+`--fast` 可按需运行 25 项核心设备测试。`--full` 运行全部 28 项离线测试；
+`--stress` 和 `--hardware` 可分别运行两组扩展测试。完整测试每周自动运行，
+Android Instrumentation Tests 工作流也支持手动选择测试组。PR 和 push 检查不会启动模拟器。
+详见[设备测试分组](instrumentation-tests.md)。
 
 注意：`connectedDebugAndroidTest` 可能会卸载或覆盖设备上已安装的 AirLyrics。
 运行前请确认测试设备上的数据可以被清除，建议使用测试机或模拟器。

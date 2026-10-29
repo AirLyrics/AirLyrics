@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.os.SystemClock
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -13,6 +14,10 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.andsi.airlyrics.test.InstrumentationFailureDiagnostics
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.search.LyricsCandidate
@@ -28,10 +33,12 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.After
 import org.junit.Test
+import org.junit.Rule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class LyricsSearchInstrumentedTest {
+    @get:Rule val diagnostics = InstrumentationFailureDiagnostics()
     private lateinit var originalSources: List<PlainLyricsSearchSource>
 
     @Before fun configureSearchSources() {
@@ -239,7 +246,39 @@ class LyricsSearchInstrumentedTest {
                     .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
                 assertEquals(0,appBar.bottom)
             }
-            val metrics=context.resources.displayMetrics
+            // Input events are targeted at this app's UID. The injection point must
+            // remain inside the visible pager, clear of the IME and system bars.
+            scenario.onActivity { activity ->
+                WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+                    .hide(WindowInsetsCompat.Type.ime())
+            }
+            var swipe: Triple<Float, Float, Float>? = null
+            val focusDeadline = SystemClock.uptimeMillis() + 10_000L
+            while (swipe == null && SystemClock.uptimeMillis() < focusDeadline) {
+                scenario.onActivity { activity ->
+                    val decor = activity.window.decorView
+                    val insets = ViewCompat.getRootWindowInsets(decor)
+                    val pager = descendants(activity.findViewById(android.R.id.content))
+                        .filterIsInstance<ViewPager2>().single()
+                    val pagerBounds = Rect()
+                    val windowBounds = Rect()
+                    if (decor.hasWindowFocus() && pager.isShown && !pager.isLayoutRequested &&
+                        insets?.isVisible(WindowInsetsCompat.Type.ime()) != true &&
+                        pager.getGlobalVisibleRect(pagerBounds) && decor.getGlobalVisibleRect(windowBounds)) {
+                        val bars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+                        val top = maxOf(pagerBounds.top, windowBounds.top + (bars?.top ?: 0))
+                        val bottom = minOf(pagerBounds.bottom, windowBounds.bottom - (bars?.bottom ?: 0))
+                        if (bottom - top >= 120) {
+                            swipe = Triple(pagerBounds.exactCenterX(),
+                                top + (bottom - top) * .30f, top + (bottom - top) * .80f)
+                        }
+                    }
+                }
+                if (swipe == null) SystemClock.sleep(50)
+            }
+            val (x, startY, endY) = requireNotNull(swipe) {
+                "LyricsSearch pager did not gain a focused, unobscured touch region"
+            }
             val downTime=SystemClock.uptimeMillis()
             for(step in 0..20) {
                 val action=when(step) {
@@ -248,13 +287,30 @@ class LyricsSearchInstrumentedTest {
                     else -> android.view.MotionEvent.ACTION_MOVE
                 }
                 val event=android.view.MotionEvent.obtain(downTime,SystemClock.uptimeMillis(),action,
-                    metrics.widthPixels*0.5f,metrics.heightPixels*(0.3f+0.6f*step/20),0)
-                instrumentation.sendPointerSync(event)
-                event.recycle()
+                    x,startY+(endY-startY)*step/20,0)
+                try {
+                    instrumentation.sendPointerSync(event)
+                } catch (failure: Throwable) {
+                    diagnostics.captureNow(failure)
+                    throw failure
+                } finally {
+                    event.recycle()
+                }
                 SystemClock.sleep(20)
             }
             instrumentation.waitForIdleSync()
-            SystemClock.sleep(300)
+            var expanded = false
+            val expansionDeadline = SystemClock.uptimeMillis() + 5_000L
+            while (!expanded && SystemClock.uptimeMillis() < expansionDeadline) {
+                scenario.onActivity { activity ->
+                    val appBar=descendants(activity.findViewById(android.R.id.content))
+                        .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
+                    expanded = appBar.top == 0 &&
+                        descendants(appBar).filterIsInstance<EditText>().take(2).all { it.isShown }
+                }
+                if (!expanded) SystemClock.sleep(50)
+            }
+            assertTrue("Source pager swipe did not expand the search controls", expanded)
             scenario.onActivity { activity ->
                 val appBar=descendants(activity.findViewById(android.R.id.content))
                     .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
