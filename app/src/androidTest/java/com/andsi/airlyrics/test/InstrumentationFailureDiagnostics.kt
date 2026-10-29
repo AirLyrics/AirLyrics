@@ -95,7 +95,7 @@ class InstrumentationFailureDiagnostics : TestWatcher() {
         instrumentation.runOnMainSync {
             val monitor = ActivityLifecycleMonitorRegistry.getInstance()
             snapshot = buildString {
-                for (stage in Stage.values()) {
+                for (stage in Stage.entries) {
                     for (activity in monitor.getActivitiesInStage(stage)) {
                         val decor = activity.window?.decorView
                         appendLine(

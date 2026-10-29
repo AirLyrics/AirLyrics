@@ -10,7 +10,6 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import androidx.test.core.app.ApplicationProvider
-import com.andsi.airlyrics.lyrics.storage.LyricsFileStore
 import java.io.File
 import java.io.FileNotFoundException
 import org.junit.After
@@ -65,9 +64,10 @@ class BatchLyricsDocumentReadTest {
         assertNull(result.document)
     }
     @Test fun oversizedInputIsRejectedWithoutChangingSource() {
-        java.io.RandomAccessFile(provider.file, "rw").use { it.setLength(LyricsFileStore.MAX_IMPORTED_LYRICS_BYTES.toLong() + 1) }
+        val maxBytes = 64
+        java.io.RandomAccessFile(provider.file, "rw").use { it.setLength(maxBytes.toLong() + 1) }
         val length = provider.file.length()
-        val result = BatchLyricsDocumentReader.read(context, uri)
+        val result = BatchLyricsDocumentReader.read(context, uri, maxBytes)
         assertEquals(BatchLyricsDocumentReader.Failure.TOO_LARGE, result.failure)
         assertNull(result.document)
         assertEquals(length, provider.file.length())

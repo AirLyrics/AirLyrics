@@ -86,9 +86,9 @@ class SpicyLyricsInstrumentedTest {
             instrumentation.waitForIdleSync()
             val playing = screenshot(view, "spicy-playing.png")
             // Wait for real display frames, with a bounded wait independent of media polling.
-            val latch = java.util.concurrent.CountDownLatch(1)
+            val latch = CountDownLatch(1)
             scenario.onActivity { view.postDelayed({ latch.countDown() }, 350) }
-            assertTrue(latch.await(2, java.util.concurrent.TimeUnit.SECONDS))
+            assertTrue(latch.await(2, TimeUnit.SECONDS))
             val next = screenshot(view, "spicy-next.png")
             assertFalse("Playing Spicy position must advance in committed frames", playing.sameAs(next))
             scenario.onActivity { view.visibility = View.GONE; renderer.clear() }

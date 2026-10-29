@@ -28,14 +28,14 @@ internal object BatchLyricsDocumentReader {
     enum class Failure { READ, TOO_LARGE, INVALID }
     data class Result(val name: String, val document: BatchLyricsDocument? = null, val failure: Failure? = null, val fingerprint: String = "")
 
-    fun read(context: Context, uri: Uri): Result {
+    fun read(context: Context, uri: Uri, maxBytes: Int = LyricsFileStore.MAX_IMPORTED_LYRICS_BYTES): Result {
         val name = runCatching {
             context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
                 if (it.moveToFirst()) it.getString(0) else null
             }
         }.getOrNull() ?: uri.lastPathSegment.orEmpty()
         return runCatching {
-            when (val read = LyricsFileStore.readTextFromUriWithResult(context, uri)) {
+            when (val read = LyricsFileStore.readTextFromUriWithResult(context, uri, maxBytes)) {
                 LyricsFileStore.ReadTextResult.TooLarge -> Result(name, failure = Failure.TOO_LARGE)
                 LyricsFileStore.ReadTextResult.Failed -> Result(name, failure = Failure.READ)
                 is LyricsFileStore.ReadTextResult.Success -> parse(name, read.text, LyricsFormatDetector.detect(context, uri, read.text)).copy(

@@ -100,7 +100,7 @@ class MainActivityRotationInstrumentedTest {
             animationScales.keys.forEach { shell("settings put global $it 0") }
             shell("settings put secure show_ime_with_hard_keyboard 1")
             shell("cmd window user-rotation lock 0")
-            awaitRotationState("0", "0", "lock 0")
+            awaitRotationState("0", "lock 0")
             shell("wm density 160")
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 val taskId = scenarioTaskId(scenario)
@@ -205,7 +205,8 @@ class MainActivityRotationInstrumentedTest {
                 shell(if (hardwareKeyboard == "null") "settings delete secure show_ime_with_hard_keyboard" else "settings put secure show_ime_with_hard_keyboard $hardwareKeyboard")
                 shell("wm size ${size ?: "reset"}")
                 shell("wm density ${density ?: "reset"}")
-                restoreSetting("font_scale", fontScale)
+                shell(if (fontScale == "null" || fontScale.isBlank())
+                    "settings delete system font_scale" else "settings put system font_scale $fontScale")
                 restoreRotationState(rotation, rotationMode)
                 awaitSystemState(size, density, fontScale, rotation, autoRotation, rotationMode,
                     animationScales, hardwareKeyboard)
@@ -243,16 +244,16 @@ class MainActivityRotationInstrumentedTest {
             // Complete this transition before changing the mode. Back-to-back
             // WindowManager commands can apply out of order while it handles
             // the display changes made by this test.
-            awaitRotationState(rotation, "0", "lock $rotation")
+            awaitRotationState(rotation, "lock $rotation")
         }
         if (shell("cmd window user-rotation").trim() != rotationMode) {
             shell("cmd window user-rotation $rotationMode")
         }
     }
 
-    private fun awaitRotationState(rotation: String, autoRotation: String, mode: String) {
+    private fun awaitRotationState(rotation: String, mode: String) {
         val expected = mapOf("user_rotation" to rotation,
-            "accelerometer_rotation" to autoRotation, "rotation_mode" to mode)
+            "accelerometer_rotation" to "0", "rotation_mode" to mode)
         var observed = emptyMap<String, String>()
         val deadline = SystemClock.uptimeMillis() + 10_000L
         while (SystemClock.uptimeMillis() < deadline) {
@@ -353,10 +354,6 @@ class MainActivityRotationInstrumentedTest {
     private fun shell(command: String): String = ParcelFileDescriptor.AutoCloseInputStream(
         InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command)
     ).bufferedReader().use { it.readText() }
-
-    private fun restoreSetting(key: String, value: String) {
-        shell(if (value == "null" || value.isBlank()) "settings delete system $key" else "settings put system $key $value")
-    }
 
     private fun descendants(view: View): List<View> = listOf(view) + if (view is ViewGroup) (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList()
 }
