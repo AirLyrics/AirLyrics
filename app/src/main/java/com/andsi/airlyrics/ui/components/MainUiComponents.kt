@@ -17,7 +17,6 @@ import androidx.appcompat.widget.SwitchCompat
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
-import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -102,7 +101,7 @@ internal fun actionButton(activity: MainUiHost, text: String, onClick: () -> Uni
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorOnAccent)
+        minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
         setPadding(dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
@@ -110,10 +109,7 @@ internal fun actionButton(activity: MainUiHost, text: String, onClick: () -> Uni
         )
         params.setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
         layoutParams = params
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-            setColor(colorAccent)
-        }
+        activity.styleAirTonalButton(this)
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             onClick()
@@ -128,7 +124,7 @@ internal fun dangerActionButton(activity: MainUiHost, text: String, onClick: () 
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorDanger)
+        minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
         setPadding(
             dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
             dp(AirUiTokens.Space.Lg),
@@ -139,11 +135,7 @@ internal fun dangerActionButton(activity: MainUiHost, text: String, onClick: () 
             ViewGroup.LayoutParams.WRAP_CONTENT,
             ViewGroup.LayoutParams.WRAP_CONTENT
         )
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
-            setColor(colorSurfaceLight)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorDanger)
-        }
+        activity.styleAirTonalButton(this, AirTonalButtonTone.DANGER)
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             onClick()
@@ -161,12 +153,9 @@ internal fun horizontalButtons(activity: MainUiHost, vararg buttons: Pair<String
                 gravity = Gravity.CENTER
                 textSize = AirUiTokens.TextSize.Button
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorOnAccent)
+                minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
                 setPadding(dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-                    setColor(colorAccent)
-                }
+                activity.styleAirTonalButton(this)
                 enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
                 setOnClickListener {
                     pair.second()
@@ -191,8 +180,8 @@ internal fun settingRow(
     }
     val valueView = TextView(activity).apply {
         text = value
-        textSize = AirUiTokens.TextSize.BodySmall
-        setTextColor(colorTextMuted)
+        textSize = AirUiTokens.TextSize.Body
+        setTextColor(colorText)
         gravity = Gravity.START
         if (valuePolicy == TextDisplayPolicy.SingleLineSummary) bindReadOnlyText(this, name)
     }
@@ -203,10 +192,10 @@ internal fun settingRow(
         valueView = if (valuePolicy == TextDisplayPolicy.ExpandableSummary) expandableText(valueView) else valueView,
         trailingView = trailingView,
         horizontalGapPx = dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs),
-        verticalGapPx = dp(AirUiTokens.Space.Sm),
+        verticalGapPx = dp(AirUiTokens.Space.Lg),
         trailingGapPx = dp(AirUiTokens.Space.Xl)
     ).apply {
-        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Sm))
+        setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Xl))
     }
 }
 

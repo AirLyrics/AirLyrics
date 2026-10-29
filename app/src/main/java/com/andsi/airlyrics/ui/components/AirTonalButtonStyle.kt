@@ -1,0 +1,80 @@
+package com.andsi.airlyrics.ui.components
+
+import android.graphics.drawable.GradientDrawable
+import android.view.View
+import android.widget.TextView
+import androidx.core.graphics.ColorUtils
+import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorDanger
+import com.andsi.airlyrics.ui.theme.colorStroke
+import com.andsi.airlyrics.ui.theme.colorSurfaceLight
+import com.andsi.airlyrics.ui.theme.colorTextStrong
+
+internal enum class AirTonalButtonTone {
+    DEFAULT,
+    SELECTED,
+    DANGER
+}
+
+internal data class AirTonalButtonStyle(
+    val fillColor: Int,
+    val strokeColor: Int,
+    val textColor: Int,
+    val strokeWidthDp: Int
+)
+
+private data class AirTonalButtonToneSpec(
+    val fillTint: Float,
+    val strokeTint: Float,
+    val textColor: Int,
+    val strokeWidthDp: Int
+)
+
+/** Shared tonal surface and text colors for actions and selection controls. */
+internal fun MainUiHost.airTonalButtonStyle(tone: AirTonalButtonTone): AirTonalButtonStyle {
+    val dark = isDarkTheme()
+    val spec = when (tone) {
+        AirTonalButtonTone.DEFAULT -> AirTonalButtonToneSpec(
+            if (dark) AirUiTokens.Button.DefaultFillDark else AirUiTokens.Button.DefaultFillLight,
+            if (dark) AirUiTokens.Button.DefaultStrokeDark else AirUiTokens.Button.DefaultStrokeLight,
+            colorTextStrong,
+            AirUiTokens.Stroke.Hairline
+        )
+        AirTonalButtonTone.SELECTED -> AirTonalButtonToneSpec(
+            if (dark) AirUiTokens.Button.SelectedFillDark else AirUiTokens.Button.SelectedFillLight,
+            if (dark) AirUiTokens.Button.SelectedStrokeDark else AirUiTokens.Button.SelectedStrokeLight,
+            colorTextStrong,
+            AirUiTokens.Stroke.Selected
+        )
+        AirTonalButtonTone.DANGER -> AirTonalButtonToneSpec(
+            if (dark) AirUiTokens.Button.DangerFillDark else AirUiTokens.Button.DangerFillLight,
+            AirUiTokens.Button.DangerStroke,
+            colorDanger,
+            AirUiTokens.Stroke.Hairline
+        )
+    }
+    val tintColor = if (tone == AirTonalButtonTone.DANGER) colorDanger else colorAccent
+    val baseColor = colorSurfaceLight
+    return AirTonalButtonStyle(
+        fillColor = ColorUtils.blendARGB(baseColor, tintColor, spec.fillTint),
+        strokeColor = ColorUtils.blendARGB(colorStroke, tintColor, spec.strokeTint),
+        textColor = spec.textColor,
+        strokeWidthDp = spec.strokeWidthDp
+    )
+}
+
+internal fun MainUiHost.styleAirTonalButton(
+    view: View,
+    tone: AirTonalButtonTone = AirTonalButtonTone.DEFAULT,
+    radiusDp: Int = AirUiTokens.Radius.Md
+) {
+    val style = airTonalButtonStyle(tone)
+    view.background = GradientDrawable().apply {
+        cornerRadius = dp(radiusDp).toFloat()
+        setColor(style.fillColor)
+        setStroke(dp(style.strokeWidthDp), style.strokeColor)
+    }
+    (view as? TextView)?.setTextColor(style.textColor)
+}

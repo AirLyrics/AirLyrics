@@ -1,9 +1,11 @@
 package com.andsi.airlyrics.app.host
 
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.airTonalButtonStyle
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.R
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -13,13 +15,6 @@ import com.andsi.airlyrics.ui.components.setAirStartIcon
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.OptionItem
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorAccentLight
-import com.andsi.airlyrics.ui.theme.colorOnAccent
-import com.andsi.airlyrics.ui.theme.colorIconOnAccent
-import com.andsi.airlyrics.ui.theme.colorStroke
-import com.andsi.airlyrics.ui.theme.colorSurfaceLight
-import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun MainUiHost.optionGridImpl(items: List<OptionItem>): LinearLayout {
@@ -69,15 +64,12 @@ internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {
 
 internal fun MainUiHost.applyOptionButtonStateImpl(button: TextView, title: String, selected: Boolean) {
     button.text = title
-    button.setTextColor(if (selected) colorOnAccent else colorText)
+    val tone = if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
+    val style = airTonalButtonStyle(tone)
     button.setAirStartIcon(
         host = this,
         iconRes = R.drawable.ic_air_check.takeIf { selected },
-        tint = if (selected) colorIconOnAccent else colorText
+        tint = style.textColor
     )
-    button.background = GradientDrawable().apply {
-        cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-        setColor(if (selected) colorAccent else colorSurfaceLight)
-        setStroke(dp(AirUiTokens.Stroke.Hairline), if (selected) colorAccentLight else colorStroke)
-    }
+    styleAirTonalButton(button, tone)
 }

@@ -1,11 +1,5 @@
 package com.andsi.airlyrics.ui.pages.floating
 
-import com.andsi.airlyrics.core.model.WordByWordAnimationMode
-
-import com.andsi.airlyrics.ui.state.FloatingPanelId
-import com.andsi.airlyrics.ui.state.undoChangesTo
-import com.andsi.airlyrics.ui.state.restoreFields
-import androidx.core.view.doOnLayout
 import android.graphics.Color
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -15,21 +9,23 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnLayout
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
+import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.i18n.localizedFloatingFontFamilyTitle
 import com.andsi.airlyrics.i18n.localizedFloatingFontWeightTitle
+import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
 import com.andsi.airlyrics.i18n.localizedFloatingPresetTitle
 import com.andsi.airlyrics.i18n.localizedLyricsContentModeTitle
 import com.andsi.airlyrics.i18n.localizedLyricsLineModeTitle
-import com.andsi.airlyrics.i18n.localizedScriptPreferenceTitle
-import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
-import com.andsi.airlyrics.core.model.FloatingLyricsStyle
-import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
-import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
-import com.andsi.airlyrics.core.model.LyricsScriptPreference
-import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.i18n.localizedOffsetDescription
+import com.andsi.airlyrics.i18n.localizedScriptPreferenceTitle
 import com.andsi.airlyrics.ui.components.pageContainer
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -38,7 +34,9 @@ import com.andsi.airlyrics.ui.pages.floating.sections.addAppearanceSection
 import com.andsi.airlyrics.ui.pages.floating.sections.addBehaviorSection
 import com.andsi.airlyrics.ui.pages.floating.sections.addLyricsDisplaySection
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
-import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.ui.state.FloatingPanelId
+import com.andsi.airlyrics.ui.state.restoreFields
+import com.andsi.airlyrics.ui.state.undoChangesTo
 
 internal class FloatingPageScope(
     internal val host: MainUiHost
@@ -323,7 +321,7 @@ internal class FloatingPageScope(
     internal fun refreshFloatingSettingTiles() {
         val latestStyle = style()
         updateFloatingTileSubtitle(host.getString(R.string.ui_skin_preset), localizedPresetTitle(latestStyle.presetName))
-        updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), AirColorUtils.colorSummary(latestStyle.textColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_text_color), compactColorSummary(latestStyle.textColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_background_bubble), host.getString(if (latestStyle.backgroundEnabled) R.string.ui_on else R.string.ui_off))
         updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${latestStyle.textSizeSp.toInt()} sp")
         updateFloatingTileSubtitle(host.getString(R.string.ui_font), fontFamilySubtitle(latestStyle.fontFamily))
@@ -339,7 +337,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_lyrics_offset), host.uiActions.currentLyricsOffsetSummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_switch_animation), host.localizedLyricsSwitchAnimationTitle(switchAnimationMode()))
         updateFloatingTileSubtitle(host.getString(R.string.ui_word_by_word_lyrics), wordByWordLyricsSubtitle())
-        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), AirColorUtils.colorSummary(latestStyle.wordByWordHighlightColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), compactColorSummary(latestStyle.wordByWordHighlightColor))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
         updateFloatingTileSubtitle(
             host.getString(R.string.ui_auto_hide),

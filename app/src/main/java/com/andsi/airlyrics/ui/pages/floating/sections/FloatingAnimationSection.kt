@@ -8,9 +8,9 @@ import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
+import com.andsi.airlyrics.ui.pages.floating.compactColorSummary
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
-import com.andsi.airlyrics.core.color.AirColorUtils
 
 internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_animation)))
@@ -69,7 +69,7 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
             trackedFloatingTile(
                 id = FloatingPanelId.HIGHLIGHT_COLOR,
                 title = getString(R.string.ui_highlight_color),
-                subtitle = AirColorUtils.colorSummary(style().wordByWordHighlightColor),
+                subtitle = compactColorSummary(style().wordByWordHighlightColor),
                 iconRes = R.drawable.ic_air_highlight,
                 onClick = { tile ->
                     openPanel(

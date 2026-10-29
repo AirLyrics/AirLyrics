@@ -26,8 +26,7 @@ import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
 import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorAccentMint
+import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -42,7 +41,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
         text = ""
         textSize = AirUiTokens.TextSize.Caption
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorAccentMint)
+        setTextColor(colorAccentText)
         gravity = Gravity.CENTER_VERTICAL
     }
 
@@ -161,7 +160,7 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             })
             addView(airIconView(
                 iconRes = R.drawable.ic_air_refresh,
-                tint = colorAccent,
+                tint = colorAccentText,
                 contentDescription = getString(R.string.ui_refresh_media_status)
             ).apply {
                 layoutParams = LinearLayout.LayoutParams(

@@ -11,6 +11,7 @@ import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.alphaToOpacityPercent
+import com.andsi.airlyrics.ui.pages.floating.compactColorSummary
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.opacityPercentToAlpha
 import com.andsi.airlyrics.ui.pages.floating.openPanel
@@ -46,7 +47,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
             trackedFloatingTile(
                 id = FloatingPanelId.TEXT_COLOR,
                 title = getString(R.string.ui_text_color),
-                subtitle = AirColorUtils.colorSummary(style().textColor),
+                subtitle = compactColorSummary(style().textColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
                     openPanel(

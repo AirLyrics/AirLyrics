@@ -21,7 +21,7 @@ internal object AirLyricsTheme {
         danger = Color.rgb(198, 40, 40),
         textStrong = Color.rgb(91, 67, 76),
         text = Color.rgb(122, 94, 105),
-        textMuted = Color.rgb(166, 132, 142)
+        textMuted = Color.rgb(138, 104, 117)
     )
 
     private val darkPalette = AirLyricsPalette(

@@ -21,6 +21,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.layout.WindowLayoutSpec
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
@@ -30,14 +31,13 @@ import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.state.confirmOperation
 import com.andsi.airlyrics.ui.state.restoreOperationConfirmation
 import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
-import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorDanger
-import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -224,17 +224,30 @@ private fun MainActivityUiHost.showLocalLyricsEditorDialog(session: EditorSessio
             }
             addView(LinearLayout(this@showLocalLyricsEditorDialog).apply {
                 orientation = LinearLayout.VERTICAL
-                val check = localLyricsDialogButton(getString(R.string.ui_check_format), LocalLyricsDialogActionStyle.ACCENT_TEXT) {
+                val check = localLyricsDialogButton(
+                    getString(R.string.ui_check_format),
+                    LocalLyricsDialogActionStyle.DEFAULT,
+                    horizontalPaddingDp = AirUiTokens.Space.Sm
+                ) {
                     capture(); editorSession.check()
                 }
                 buttons += check
                 addView(check)
                 addView(AdaptiveGridLayout(this@showLocalLyricsEditorDialog, 2,
                     dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Lg), fillCells = false).apply {
-                    val cancel = localLyricsDialogButton(getString(R.string.ui_cancel), LocalLyricsDialogActionStyle.TEXT) {
+                    val cancel = localLyricsDialogButton(
+                        getString(R.string.ui_cancel),
+                        LocalLyricsDialogActionStyle.DEFAULT,
+                        horizontalPaddingDp = AirUiTokens.Space.Xl
+                    ) {
                         editorSession.cancel(); dialog.dismiss()
                     }
-                    val save = localLyricsDialogButton(getString(R.string.ui_save_changes), LocalLyricsDialogActionStyle.PRIMARY, AirUiTokens.Space.Lg) {
+                    val save = localLyricsDialogButton(
+                        getString(R.string.ui_save_changes),
+                        LocalLyricsDialogActionStyle.SELECTED,
+                        marginStartDp = AirUiTokens.Space.Lg,
+                        horizontalPaddingDp = AirUiTokens.Space.Xl + AirUiTokens.Space.Lg
+                    ) {
                         capture(); editorSession.save()
                     }
                     buttons += cancel; buttons += save
@@ -267,15 +280,15 @@ private fun MainActivityUiHost.showWordByWordLyricsFormatErrorDialog(invalidLine
 }
 
 private enum class LocalLyricsDialogActionStyle {
-    ACCENT_TEXT,
-    TEXT,
-    PRIMARY
+    DEFAULT,
+    SELECTED
 }
 
 private fun MainActivityUiHost.localLyricsDialogButton(
     text: String,
     style: LocalLyricsDialogActionStyle,
     marginStartDp: Int = 0,
+    horizontalPaddingDp: Int = AirUiTokens.Space.Xl + AirUiTokens.Space.Lg,
     onClick: () -> Unit
 ): TextView {
     return TextView(this).apply {
@@ -283,22 +296,15 @@ private fun MainActivityUiHost.localLyricsDialogButton(
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        setTextColor(
-            when (style) {
-                LocalLyricsDialogActionStyle.ACCENT_TEXT -> colorAccent
-                LocalLyricsDialogActionStyle.TEXT -> colorTextStrong
-                LocalLyricsDialogActionStyle.PRIMARY -> colorOnAccent
-            }
-        )
-        val horizontalPadding = when (style) {
-            LocalLyricsDialogActionStyle.ACCENT_TEXT -> AirUiTokens.Space.Sm
-            LocalLyricsDialogActionStyle.TEXT -> AirUiTokens.Space.Xl
-            LocalLyricsDialogActionStyle.PRIMARY -> AirUiTokens.Space.Xl + AirUiTokens.Space.Lg
+        val tone = if (style == LocalLyricsDialogActionStyle.SELECTED) {
+            AirTonalButtonTone.SELECTED
+        } else {
+            AirTonalButtonTone.DEFAULT
         }
         setPadding(
-            dp(horizontalPadding),
+            dp(horizontalPaddingDp),
             dp(AirUiTokens.Space.Xxl),
-            dp(horizontalPadding),
+            dp(horizontalPaddingDp),
             dp(AirUiTokens.Space.Xxl)
         )
         minHeight = dp(AirUiTokens.Layout.IconTouchSize)
@@ -308,14 +314,7 @@ private fun MainActivityUiHost.localLyricsDialogButton(
         ).apply {
             setMargins(dp(marginStartDp), 0, 0, 0)
         }
-        background = if (style == LocalLyricsDialogActionStyle.PRIMARY) {
-            GradientDrawable().apply {
-                cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
-                setColor(colorAccent)
-            }
-        } else {
-            null
-        }
+        styleAirTonalButton(this, tone)
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener { onClick() }
     }

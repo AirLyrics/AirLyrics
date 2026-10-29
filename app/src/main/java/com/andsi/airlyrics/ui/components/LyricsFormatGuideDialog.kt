@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.components
 
 import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import android.app.Dialog
-import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -15,8 +14,6 @@ import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -88,11 +85,11 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
 
     fun updateTab(tab: TextView, selected: Boolean) {
         tab.isSelected = selected
-        tab.setTextColor(if (selected) colorOnAccent else colorTextMuted)
-        tab.background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Sm).toFloat()
-            setColor(if (selected) colorAccent else Color.TRANSPARENT)
-        }
+        styleAirTonalButton(
+            tab,
+            if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT,
+            radiusDp = AirUiTokens.Radius.Sm
+        )
     }
 
     fun selectPage(page: LyricsFormatGuidePage) {

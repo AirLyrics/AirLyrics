@@ -21,7 +21,8 @@ import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.scroll
 import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.statusPill
-import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
+import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -119,7 +120,7 @@ private fun MainUiHost.githubIconButton(activity: MainUiHost): View {
 
         addView(ImageView(activity).apply {
             setImageResource(R.drawable.ic_air_github)
-            setColorFilter(colorAccent)
+            setColorFilter(colorAccentText)
             scaleType = ImageView.ScaleType.CENTER
             layoutParams = FrameLayout.LayoutParams(dp(AboutTokens.GITHUB_ICON_SIZE_DP), dp(AboutTokens.GITHUB_ICON_SIZE_DP), Gravity.CENTER)
             contentDescription = "GitHub"
@@ -134,7 +135,7 @@ private fun MainUiHost.changeLogButton(): View {
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorAccent)
+        minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
         setPadding(dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -143,11 +144,7 @@ private fun MainUiHost.changeLogButton(): View {
             gravity = Gravity.CENTER_HORIZONTAL
             setMargins(0, 0, 0, dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         }
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
-            setColor(colorSurfaceLight)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
-        }
+        styleAirTonalButton(this)
         isClickable = true
         isFocusable = true
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale + 0.01f)
@@ -208,7 +205,7 @@ private fun MainUiHost.changelogDialogButton(
         gravity = Gravity.CENTER
         textSize = AirUiTokens.TextSize.Button
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorAccent)
+        minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
         setPadding(dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_HORIZONTAL_PADDING_DP), dp(AboutTokens.CHANGE_LOG_VERTICAL_PADDING_DP))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -217,11 +214,7 @@ private fun MainUiHost.changelogDialogButton(
             gravity = Gravity.CENTER_HORIZONTAL
             setMargins(0, dp(AirUiTokens.Space.Xl), 0, 0)
         }
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
-            setColor(colorSurfaceLight)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
-        }
+        styleAirTonalButton(this)
         isClickable = true
         isFocusable = true
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale + 0.01f)

@@ -27,11 +27,8 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
-import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -348,7 +345,7 @@ private fun MainUiHost.dialogButton(
         textSize = AirUiTokens.TextSize.Body
         typeface = Typeface.DEFAULT_BOLD
         gravity = Gravity.CENTER
-        setTextColor(if (primary) colorOnAccent else colorTextStrong)
+        val tone = if (primary) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
         setPadding(dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.Xxl))
         layoutParams = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -356,15 +353,7 @@ private fun MainUiHost.dialogButton(
         ).apply {
             setMargins(dp(AirUiTokens.Space.Xl), 0, 0, 0)
         }
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
-            if (primary) {
-                setColor(colorAccent)
-            } else {
-                setColor(colorSurfaceLight)
-                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-            }
-        }
+        styleAirTonalButton(this, tone)
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener { onClick() }
     }

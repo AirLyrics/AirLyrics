@@ -15,21 +15,21 @@ import android.widget.AbsListView
 import android.widget.ListView
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.airIconView
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.pageContainer
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -214,16 +214,8 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
             })
         }
     }
-    fun styleButton(button: TextView, color: Int, emphasis: Boolean) {
-        button.setTextColor(color)
-        button.background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-            setColor(ColorUtils.blendARGB(colorSurfaceLight, color, if (emphasis) 0.18f else 0.06f))
-            setStroke(
-                dp(AirUiTokens.Stroke.Hairline),
-                ColorUtils.setAlphaComponent(color, if (emphasis) 64 else 41)
-            )
-        }
+    fun styleButton(button: TextView, tone: AirTonalButtonTone) {
+        activity.styleAirTonalButton(button, tone)
     }
     val selectedCount = normalText(activity, getString(R.string.ui_batch_selected, selection.size))
     val selectionControls = batchButtons(
@@ -237,15 +229,15 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         },
         getString(R.string.ui_cancel) to { endSelection() }
     )
-    styleButton(selectionControls.getChildAt(0) as TextView, colorAccent, emphasis = false)
-    styleButton(selectionControls.getChildAt(1) as TextView, colorTextStrong, emphasis = false)
+    styleButton(selectionControls.getChildAt(0) as TextView, AirTonalButtonTone.DEFAULT)
+    styleButton(selectionControls.getChildAt(1) as TextView, AirTonalButtonTone.DEFAULT)
     refreshSelectAll = {
         val visibleKeys = adapter.keys
         (selectionControls.getChildAt(0) as TextView).apply {
             text = getString(if (visibleKeys.isNotEmpty() && visibleKeys.all { it in selection })
                 R.string.ui_batch_deselect_all else R.string.ui_select_all)
             isEnabled = selecting && visibleKeys.isNotEmpty()
-            alpha = if (isEnabled) 1f else 0.5f
+            alpha = if (isEnabled) 1f else AirUiTokens.Button.DisabledAlpha
         }
     }
     val selectionActions = batchButtons(
@@ -260,7 +252,10 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         }
     )
     for (index in 0 until selectionActions.childCount) {
-        styleButton(selectionActions.getChildAt(index) as TextView, if (index == 2) colorDanger else colorAccent, emphasis = true)
+        styleButton(
+            selectionActions.getChildAt(index) as TextView,
+            if (index == 2) AirTonalButtonTone.DANGER else AirTonalButtonTone.SELECTED
+        )
     }
     selectionBar.addView(selectedCount)
     selectionBar.addView(selectionControls)

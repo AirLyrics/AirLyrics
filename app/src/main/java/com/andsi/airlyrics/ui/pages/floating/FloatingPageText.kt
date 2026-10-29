@@ -15,6 +15,7 @@ import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import java.util.Locale
 import kotlin.math.roundToInt
 
 internal data class FloatingPreviewLyricLine(
@@ -68,6 +69,10 @@ internal fun previewTextSizeSp(
 internal fun alphaToOpacityPercent(alpha: Int): Int {
     return (alpha.coerceIn(0, 255) * 100f / 255f).roundToInt()
 }
+
+/** Compact tile value; the expanded controls still show each RGB channel. */
+internal fun compactColorSummary(color: Int): String =
+    String.format(Locale.ROOT, "#%06X · A%d", color and 0x00FFFFFF, Color.alpha(color))
 
 internal fun opacityPercentToAlpha(percent: Int): Int {
     return (percent.coerceIn(0, 100) * 255f / 100f).roundToInt()

@@ -19,17 +19,13 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.airTonalButtonStyle
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorAccentLight
-import com.andsi.airlyrics.ui.theme.colorOnAccent
-import com.andsi.airlyrics.ui.theme.colorStroke
-import com.andsi.airlyrics.ui.theme.colorSurfaceLight
-import com.andsi.airlyrics.ui.theme.colorText
+import com.andsi.airlyrics.ui.theme.colorTextStrong
 
 internal fun orderedLyricsSourceOptions(
     selectedSources: List<PlainLyricsSearchSource>,
@@ -64,7 +60,7 @@ internal class LyricsSourceOptionButton(
         textSize = AirUiTokens.TextSize.Tiny
         typeface = Typeface.DEFAULT
         includeFontPadding = false
-        setTextColor(AirColorUtils.withAlpha(host.colorOnAccent, PRIORITY_LABEL_ALPHA))
+        setTextColor(host.colorTextStrong)
         visibility = GONE
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
@@ -120,7 +116,7 @@ internal class LyricsSourceOptionButton(
         this.selectedPriority = selectedPriority
         val configured = source != PlainLyricsSearchSource.SPICY || spicyConfigured()
         isEnabled = configured || selectedPriority != null
-        alpha = if (configured) 1f else 0.5f
+        alpha = if (configured) 1f else AirUiTokens.Button.DisabledAlpha
         val selected = selectedPriority != null
         contentDescription = fullTitle
         priorityLabel.apply {
@@ -149,7 +145,10 @@ internal class LyricsSourceOptionButton(
 
     private fun applySelectionHighlight(selected: Boolean) {
         isSelected = selected
-        titleView.setTextColor(if (selected) host.colorOnAccent else host.colorText)
+        val tone = if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
+        val style = host.airTonalButtonStyle(tone)
+        titleView.setTextColor(style.textColor)
+        priorityLabel.setTextColor(style.textColor)
         // Reserve the final priority width before moving, without showing it early.
         priorityLabel.visibility = when {
             selectedPriority == null -> GONE
@@ -158,16 +157,11 @@ internal class LyricsSourceOptionButton(
         }
         background = GradientDrawable().apply {
             cornerRadius = host.dp(AirUiTokens.Radius.Md).toFloat()
-            setColor(if (selected) host.colorAccent else host.colorSurfaceLight)
-            setStroke(
-                host.dp(if (selected) AirUiTokens.Stroke.Selected else AirUiTokens.Stroke.Hairline),
-                if (selected) host.colorAccentLight else host.colorStroke
-            )
+            setColor(style.fillColor)
+            setStroke(host.dp(style.strokeWidthDp), style.strokeColor)
         }
     }
 }
-
-private const val PRIORITY_LABEL_ALPHA = 160
 
 @SuppressLint("ViewConstructor")
 internal class LyricsSourceOrderRow(

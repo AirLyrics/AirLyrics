@@ -37,6 +37,21 @@ object AirUiTokens {
         const val Selected = 2
     }
 
+    object Button {
+        const val DefaultFillLight = 0.10f
+        const val DefaultFillDark = 0.14f
+        const val SelectedFillLight = 0.24f
+        const val SelectedFillDark = 0.28f
+        const val DefaultStrokeLight = 0.38f
+        const val DefaultStrokeDark = 0.42f
+        const val SelectedStrokeLight = 0.70f
+        const val SelectedStrokeDark = 0.72f
+        const val DangerFillLight = 0.04f
+        const val DangerFillDark = 0.03f
+        const val DangerStroke = 0.58f
+        const val DisabledAlpha = 0.5f
+    }
+
     object TextSize {
         const val Tiny = 11f
         const val Caption = 12f

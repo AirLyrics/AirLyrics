@@ -12,7 +12,7 @@ import com.andsi.airlyrics.ui.components.label
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccentLight
+import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
@@ -28,7 +28,7 @@ internal fun MainUiHost.mediaSourceCardImpl(controller: MediaController, selecte
         val appName = getAppName(controller.packageName)
         val state = getPlaybackStateText(controller.playbackState?.state)
 
-        addView(label(activity, getString(if (selected) R.string.ui_connected else R.string.ui_available), if (selected) colorAccentLight else colorTextMuted).apply {
+        addView(label(activity, getString(if (selected) R.string.ui_connected else R.string.ui_available), if (selected) colorAccentText else colorTextMuted).apply {
             tag = "media_source_status:${controller.packageName}"
         })
         addView(expandableText(bigText(activity, appName)))

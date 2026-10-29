@@ -28,9 +28,9 @@ internal class SettingTileLayout(private val host: MainUiHost, item: FloatingSet
     }
     private val summaryView = InlineOverflowTextView(host).apply {
         text = item.subtitle
-        textSize = AirUiTokens.TextSize.Caption
+        textSize = AirUiTokens.TextSize.BodySmall
         setTextColor(host.colorTextMuted)
-        setPadding(0, host.dp(AirUiTokens.Space.Sm), 0, 0)
+        setPadding(0, host.dp(AirUiTokens.Space.Lg), 0, 0)
         // Keep the view even for an initially empty value: it may be updated later.
         item.onSubtitleViewCreated?.invoke(this)
     }

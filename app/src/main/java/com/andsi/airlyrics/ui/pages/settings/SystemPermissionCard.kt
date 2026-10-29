@@ -21,7 +21,7 @@ import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.state.showPersistentInfo
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -143,10 +143,10 @@ private fun permissionEntryRow(
     val status = TextView(this).apply {
         text = if (entry.granted) "" else entry.status
         textSize = AirUiTokens.TextSize.BodySmall
-        setTextColor(if (entry.settingsAvailable) colorAccent else colorTextMuted)
+        setTextColor(if (entry.settingsAvailable) colorAccentText else colorTextMuted)
     }
     val icon = if (entry.granted || entry.settingsAvailable) {
-        airIconView(if (entry.granted) R.drawable.ic_air_check else R.drawable.ic_air_chevron_right, colorAccent).apply {
+        airIconView(if (entry.granted) R.drawable.ic_air_check else R.drawable.ic_air_chevron_right, colorAccentText).apply {
             layoutParams = ViewGroup.LayoutParams(dp(AirUiTokens.Layout.IconSize), dp(AirUiTokens.Layout.IconSize))
         }
     } else null
@@ -199,7 +199,7 @@ private fun permissionHelpButton(
             includeFontPadding = false
             textSize = AirUiTokens.TextSize.Tiny
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorAccent)
+            setTextColor(colorAccentText)
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL

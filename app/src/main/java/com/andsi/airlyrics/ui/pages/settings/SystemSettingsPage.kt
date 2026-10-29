@@ -7,7 +7,6 @@ import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
 import com.andsi.airlyrics.R
 
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -16,12 +15,8 @@ import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.*
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorOnAccent
-import com.andsi.airlyrics.ui.theme.colorIconOnAccent
-import com.andsi.airlyrics.ui.theme.colorStroke
-import com.andsi.airlyrics.ui.theme.colorSurfaceLight
-import com.andsi.airlyrics.ui.theme.colorTextStrong
+import com.andsi.airlyrics.ui.theme.colorAccentText
+import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.applyAirThemeTint
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
@@ -76,28 +71,22 @@ private fun statusPopupsMuteCard(activity: MainUiHost): View = with(activity) st
 
 private fun languageChoiceCard(activity: MainUiHost): View = with(activity) languageChoiceCard@ {
     return card(activity) {
-        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardH))
+        setPadding(dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardV), dp(AirUiTokens.Space.CardH), dp(AirUiTokens.Space.CardV))
         isClickable = true
         isFocusable = true
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener { showLanguageDialog(activity) }
 
-        val labelView = TextView(activity).apply {
-            setText(R.string.ui_language)
-            textSize = AirUiTokens.TextSize.PageTitle - 4f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
-        }
+        val labelView = bigText(activity, getString(R.string.ui_language))
 
         val valueView = TextView(activity).apply {
             text = languageSettingsState().displayName
-            textSize = AirUiTokens.TextSize.Button
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorAccent)
+            textSize = AirUiTokens.TextSize.Body
+            setTextColor(colorText)
             gravity = Gravity.START
         }
 
-        val chevron = airIconView(R.drawable.ic_air_chevron_right, colorAccent).apply {
+        val chevron = airIconView(R.drawable.ic_air_chevron_right, colorAccentText).apply {
             layoutParams = ViewGroup.LayoutParams(
                 dp(AirUiTokens.Layout.IconSize),
                 dp(AirUiTokens.Layout.IconSize)
@@ -170,11 +159,13 @@ private fun LinearLayout.addLanguageOption(
         text = title
         textSize = AirUiTokens.TextSize.Button
         typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-        setTextColor(if (selected) activity.colorOnAccent else activity.colorTextStrong)
+        val tone = if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
+        val style = activity.airTonalButtonStyle(tone)
+        setTextColor(style.textColor)
         setAirStartIcon(
             host = activity,
             iconRes = R.drawable.ic_air_check.takeIf { selected },
-            tint = if (selected) activity.colorIconOnAccent else activity.colorTextStrong
+            tint = style.textColor
         )
         gravity = Gravity.CENTER_VERTICAL
         setPadding(activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV), activity.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg), activity.dp(AirUiTokens.Space.ControlV))
@@ -184,11 +175,7 @@ private fun LinearLayout.addLanguageOption(
         )
         params.setMargins(0, activity.dp(AirUiTokens.Space.Xxl), 0, 0)
         layoutParams = params
-        background = GradientDrawable().apply {
-            cornerRadius = activity.dp(AirUiTokens.Radius.Md).toFloat()
-            setColor(if (selected) activity.colorAccent else activity.colorSurfaceLight)
-            setStroke(activity.dp(AirUiTokens.Stroke.Hairline), if (selected) activity.colorAccent else activity.colorStroke)
-        }
+        activity.styleAirTonalButton(this, tone)
         enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
         setOnClickListener {
             onSelect(mode)

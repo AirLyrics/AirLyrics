@@ -49,6 +49,7 @@ internal class SettingsPanelHeader(
                 text = subtitle
                 textSize = AirUiTokens.TextSize.BodySmall
                 setTextColor(host.colorTextMuted)
+                setPadding(0, host.dp(AirUiTokens.Space.Sm), 0, 0)
             })
         }, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         if (onReset != null) {

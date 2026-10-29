@@ -16,6 +16,7 @@ import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
 import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_behavior)))
@@ -154,7 +155,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                                 uiActions.toggleDisplayScope()
                             }.apply {
                                 isEnabled = canToggle
-                                alpha = if (canToggle) 1f else 0.48f
+                                alpha = if (canToggle) 1f else AirUiTokens.Button.DisabledAlpha
                             }
                         )
                     }

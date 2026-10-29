@@ -15,6 +15,10 @@ lyrics-core/target/
 .idea/
 *.iml
 
+# Local AI tools
+/.agents/skills/impeccable/
+/.impeccable/config.local.json
+
 # OS
 .DS_Store
 Thumbs.db

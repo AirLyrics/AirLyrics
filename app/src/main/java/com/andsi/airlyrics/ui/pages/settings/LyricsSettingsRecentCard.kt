@@ -20,8 +20,7 @@ import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorAccentMint
+import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -36,7 +35,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
         text = ""
         textSize = AirUiTokens.TextSize.Caption
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorAccentMint)
+        setTextColor(colorAccentText)
         gravity = Gravity.CENTER_VERTICAL
     }
     var closeHeaderHint: () -> Unit = {}
@@ -78,7 +77,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                     setText(R.string.ui_now_playing)
                     textSize = AirUiTokens.TextSize.Tiny
                     typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(colorAccent)
+                    setTextColor(colorAccentText)
                     setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
                 })
                 addView(TextView(activity).apply {
@@ -138,11 +137,11 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                     setText(R.string.ui_view_all)
                     textSize = AirUiTokens.TextSize.Body
                     typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(colorAccent)
+                    setTextColor(colorAccentText)
                 })
                 addView(airIconView(
                     iconRes = R.drawable.ic_air_chevron_right,
-                    tint = colorAccent
+                    tint = colorAccentText
                 ).apply {
                     layoutParams = LinearLayout.LayoutParams(
                         dp(AirUiTokens.Layout.IconSize),
@@ -214,7 +213,7 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                 }
             }
         }
-        val refresh = airIconView(R.drawable.ic_air_refresh, colorAccent, getString(R.string.ui_refresh_media_status)).apply {
+        val refresh = airIconView(R.drawable.ic_air_refresh, colorAccentText, getString(R.string.ui_refresh_media_status)).apply {
             layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.IconTouchSize), dp(AirUiTokens.Layout.IconTouchSize))
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
             setOnClickListener {

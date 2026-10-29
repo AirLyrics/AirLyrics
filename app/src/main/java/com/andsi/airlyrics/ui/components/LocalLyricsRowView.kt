@@ -42,7 +42,7 @@ internal class LocalLyricsRowView(
             text = badgeText
             textSize = AirUiTokens.TextSize.Tiny
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(host.colorAccent)
+            setTextColor(host.colorAccentText)
             setPadding(0, 0, 0, host.dp(AirUiTokens.Space.Sm))
         })
         title.textSize = AirUiTokens.TextSize.Body
@@ -50,7 +50,7 @@ internal class LocalLyricsRowView(
         title.setTextColor(host.colorTextStrong)
         subtitle.textSize = AirUiTokens.TextSize.Caption
         subtitle.typeface = Typeface.DEFAULT_BOLD
-        subtitle.setTextColor(host.colorAccentMint)
+        subtitle.setTextColor(host.colorAccentText)
         subtitle.setPadding(0, host.dp(AirUiTokens.Space.Sm), 0, 0)
         meta.textSize = AirUiTokens.TextSize.Caption
         meta.setTextColor(host.colorTextMuted)

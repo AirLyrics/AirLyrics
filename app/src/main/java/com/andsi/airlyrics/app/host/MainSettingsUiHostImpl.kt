@@ -23,6 +23,7 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
 import com.andsi.airlyrics.ui.pages.settings.createSettingsAppearanceHeader
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -56,7 +57,7 @@ internal fun MainUiHost.settingsBackHeaderImpl(
                     parentPage?.let(uiActions.openSettingsSubPage)
                 }
             }
-            addView(airIconView(R.drawable.ic_air_arrow_back, colorAccent).apply {
+            addView(airIconView(R.drawable.ic_air_arrow_back, colorAccentText).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     dp(AirUiTokens.Layout.IconSize),
                     dp(AirUiTokens.Layout.IconSize)
@@ -70,7 +71,7 @@ internal fun MainUiHost.settingsBackHeaderImpl(
                 })
                 textSize = AirUiTokens.TextSize.Body
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(colorAccent)
+                setTextColor(colorAccentText)
                 setPadding(dp(AirUiTokens.Space.Lg), 0, 0, 0)
                 layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
             })
@@ -108,7 +109,7 @@ internal fun MainUiHost.themeToggleButtonImpl(): View {
     )
     return airIconView(
         iconRes = if (darkTheme) R.drawable.ic_air_light_mode else R.drawable.ic_air_dark_mode,
-        tint = colorAccent,
+        tint = colorAccentText,
         contentDescription = contentDescription
     ).apply {
         layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.ThemeToggleSize), dp(AirUiTokens.Layout.ThemeToggleSize)).apply {
@@ -166,11 +167,11 @@ internal fun MainUiHost.settingsCategoryCardImpl(
             addView(smallHint(activity, status))
         })
 
-        addView(airIconView(R.drawable.ic_air_chevron_right, colorAccent).apply {
+        addView(airIconView(R.drawable.ic_air_chevron_right, colorAccentText).apply {
             layoutParams = LinearLayout.LayoutParams(
                 dp(AirUiTokens.Layout.IconSize),
                 dp(AirUiTokens.Layout.IconSize)
-            )
+            ).apply { marginStart = dp(AirUiTokens.Space.Xl) }
         })
     }
 }
