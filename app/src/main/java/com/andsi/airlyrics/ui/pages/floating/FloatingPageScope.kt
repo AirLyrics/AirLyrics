@@ -3,7 +3,6 @@ package com.andsi.airlyrics.ui.pages.floating
 import android.graphics.Color
 import android.text.SpannableStringBuilder
 import android.text.Spanned
-import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -16,7 +15,9 @@ import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
+import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
+import com.andsi.airlyrics.floating.SpicyLyricsSpan
 import com.andsi.airlyrics.i18n.localizedFloatingFontFamilyTitle
 import com.andsi.airlyrics.i18n.localizedFloatingFontWeightTitle
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
@@ -57,6 +58,9 @@ internal class FloatingPageScope(
     internal val panelOpeners = mutableMapOf<FloatingPanelId, () -> Unit>()
 
     internal var previewHandle: FloatingPreviewCardHandle? = null
+    private var previewSwitchLoop: FloatingPreviewSwitchLoop? = null
+    private var previewClassicLoop: FloatingPreviewClassicLoop? = null
+    private var previewStyleForAnimation: FloatingLyricsStyle? = null
     internal var focusOverlay: FrameLayout? = null
     internal var activeBubble: LinearLayout? = null
     internal var selectedTileView: View? = null
@@ -80,12 +84,37 @@ internal class FloatingPageScope(
                 setFloatingPreviewExpanded(expanded)
             },
             style = ::style,
-            lineDisplayMode = ::lineDisplayMode,
             isWordByWordLyricsEnabled = ::wordByWordLyricsEnabled,
             plainPreviewText = { previewLyricsText(style()) },
-            wordByWordPreviewText = { wordByWordPreviewText(style()) }
+            wordByWordPreviewText = { wordByWordPreviewText(style()) },
+            onVisibilityChanged = ::syncPreviewAnimations
         )
         previewHandle = createdPreviewHandle
+        previewClassicLoop = FloatingPreviewClassicLoop(
+            view = createdPreviewHandle.lyricTextView,
+            sampleLine = {
+                currentPreviewLyricLine().original.takeIf {
+                    wordByWordLyricsEnabled() &&
+                        host.wordByWordAnimationMode() == WordByWordAnimationMode.CLASSIC &&
+                        contentDisplayMode() != LyricsContentDisplayMode.TRANSLATION_ONLY
+                }
+            },
+            highlightColor = {
+                val previewStyle = previewStyleForAnimation ?: style()
+                AirColorUtils.multiplyAlpha(
+                    previewStyle.wordByWordHighlightColor,
+                    Color.alpha(previewStyle.textColor)
+                )
+            }
+        )
+        previewSwitchLoop = FloatingPreviewSwitchLoop(
+            view = createdPreviewHandle.lyricTextView,
+            shouldAnimate = {
+                switchAnimationMode() != LyricsSwitchAnimationMode.NONE &&
+                    !hasAnimatedWordPreview()
+            },
+            play = ::playPreviewSwitchAnimation
+        )
         createdPreviewHandle.cardView.setTag(R.id.interaction_anchor, "floating.preview")
         root.addView(createdPreviewHandle.cardView)
 
@@ -228,27 +257,12 @@ internal class FloatingPageScope(
         )
         if (contentDisplayMode() != LyricsContentDisplayMode.TRANSLATION_ONLY) {
             val currentLineStart = result.toString().indexOf(currentLine.original)
-            val highlightedCharacters = (currentLine.original.length / 2)
-                .coerceAtLeast(1)
-                .coerceAtMost(currentLine.original.length)
             if (currentLineStart >= 0 && host.wordByWordAnimationMode() == WordByWordAnimationMode.SPICY) {
                 host.applyAnimatedFloatingPreviewHighlight(
                     result,
                     currentLine.original,
                     currentLineStart,
                     AirColorUtils.multiplyAlpha(previewStyle.wordByWordHighlightColor, Color.alpha(previewStyle.textColor))
-                )
-            } else if (currentLineStart >= 0) {
-                result.setSpan(
-                    ForegroundColorSpan(
-                        AirColorUtils.multiplyAlpha(
-                            previewStyle.wordByWordHighlightColor,
-                            Color.alpha(previewStyle.textColor)
-                        )
-                    ),
-                    currentLineStart,
-                    currentLineStart + highlightedCharacters,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
                 )
             }
         }
@@ -369,7 +383,8 @@ internal class FloatingPageScope(
     }
 
     internal fun applyLyricsAnimationSettingsChanged() {
-        playPreviewSwitchAnimation()
+        if (!hasAnimatedWordPreview()) playPreviewSwitchAnimation()
+        syncPreviewAnimations()
         refreshFloatingSettingTiles()
         host.notifyFloatingStyleChanged()
     }
@@ -436,7 +451,7 @@ internal class FloatingPageScope(
     }
 
     private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {
-        previewHandle?.updateLineMode?.invoke(lineDisplayMode())
+        previewStyleForAnimation = latestStyle
         previewHandle?.updateText?.invoke(if (wordByWordLyricsEnabled()) {
                 wordByWordPreviewText(latestStyle)
             } else {
@@ -448,6 +463,18 @@ internal class FloatingPageScope(
             }
         }
         previewHandle?.bodyView?.requestLayout()
+        syncPreviewAnimations()
+    }
+
+    private fun hasAnimatedWordPreview(): Boolean {
+        if (previewClassicLoop?.hasTarget == true) return true
+        val text = previewHandle?.lyricTextView?.text as? Spanned ?: return false
+        return text.getSpans(0, text.length, SpicyLyricsSpan::class.java).isNotEmpty()
+    }
+
+    private fun syncPreviewAnimations() {
+        previewClassicLoop?.sync()
+        previewSwitchLoop?.sync()
     }
 
 }

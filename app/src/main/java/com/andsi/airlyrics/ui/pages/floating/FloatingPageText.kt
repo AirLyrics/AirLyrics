@@ -39,15 +39,6 @@ internal fun MainUiHost.floatingSectionTitle(title: CharSequence): TextView {
     }
 }
 
-internal fun previewMaxLines(mode: LyricsLineDisplayMode): Int {
-    return when (mode) {
-        LyricsLineDisplayMode.CURRENT_ONLY -> 2
-        LyricsLineDisplayMode.PREVIOUS_AND_CURRENT,
-        LyricsLineDisplayMode.CURRENT_AND_NEXT -> 4
-        LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> 6
-    }
-}
-
 /**
  * Maps the real floating-window size to a stable thumbnail size. More visible
  * lyric blocks use a smaller range so changing the setting never takes over the page.

@@ -34,6 +34,10 @@ internal object FloatingPageTokens {
     const val PREVIEW_SCALE_FADE_MS = 180L
     const val PREVIEW_SLIDE_Y_DP = 8
     const val PREVIEW_SCALE_START = 0.96f
+    const val PREVIEW_LOOP_START_DELAY_MS = 600L
+    const val PREVIEW_LOOP_INTERVAL_MS = 3_200L
+    const val PREVIEW_CLASSIC_FILL_MS = 2_800L
+    const val PREVIEW_CLASSIC_CYCLE_MS = 3_600L
 
     const val OFFSET_STATUS_TEXT_SP = 15f
     const val OFFSET_STATUS_PADDING_TOP_DP = 2

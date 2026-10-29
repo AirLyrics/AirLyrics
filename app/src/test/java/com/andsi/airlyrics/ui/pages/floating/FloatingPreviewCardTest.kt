@@ -5,12 +5,12 @@ import android.graphics.Color
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.app.MainActivity
-import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -45,7 +45,6 @@ class FloatingPreviewCardTest {
         }
         val handle = host.createFloatingPreviewCard(
             isExpanded = { true }, setExpanded = { writes++ }, style = { host.floatingStyle() },
-            lineDisplayMode = { LyricsLineDisplayMode.CURRENT_ONLY },
             isWordByWordLyricsEnabled = { false }, plainPreviewText = { full }, wordByWordPreviewText = { full }
         )
         fun measure() {
@@ -83,7 +82,6 @@ class FloatingPreviewCardTest {
             isExpanded = { true },
             setExpanded = {},
             style = { previewStyle },
-            lineDisplayMode = { LyricsLineDisplayMode.CURRENT_ONLY },
             isWordByWordLyricsEnabled = { false },
             plainPreviewText = { "Preview" },
             wordByWordPreviewText = { "Preview" }
@@ -93,5 +91,36 @@ class FloatingPreviewCardTest {
         assertEquals(Color.WHITE, handle.lyricTextView.currentTextColor)
         assertEquals(host.colorTextMuted, toggle.currentTextColor)
         assertNotEquals(previewStyle.textColor, toggle.currentTextColor)
+    }
+
+    @Test
+    fun expandedPreviewKeepsTranslationVisibleAfterMultilineOriginal() {
+        val activity = Robolectric.buildActivity(MainActivity::class.java).setup()
+            .also { activityController = it }.get()
+        val host = activity.graph.uiHost
+        host.windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(640f, 700f, 1f)
+        val full = "これは歌詞プレビューの一行\nです\nThis is a lyric preview"
+        val handle = host.createFloatingPreviewCard(
+            isExpanded = { true },
+            setExpanded = {},
+            style = { host.floatingStyle() },
+            isWordByWordLyricsEnabled = { false },
+            plainPreviewText = { full },
+            wordByWordPreviewText = { full }
+        )
+        val width = android.view.View.MeasureSpec.makeMeasureSpec(180, android.view.View.MeasureSpec.EXACTLY)
+        val height = android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
+        handle.cardView.measure(width, height)
+        handle.cardView.layout(0, 0, 180, handle.cardView.measuredHeight)
+
+        val textLayout = checkNotNull(handle.lyricTextView.layout)
+        val translationLine = textLayout.getLineForOffset(full.indexOf("This is"))
+        assertTrue(
+            "translationLine=$translationLine lineCount=${textLayout.lineCount} " +
+                "viewWidth=${handle.lyricTextView.width} layoutWidth=${textLayout.width} " +
+                "text=${handle.lyricTextView.text}",
+            translationLine >= 2
+        )
+        assertEquals(0, textLayout.getEllipsisCount(translationLine))
     }
 }

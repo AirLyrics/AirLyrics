@@ -4,12 +4,12 @@ import android.graphics.Typeface
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
-import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.softLayoutTransition
@@ -20,7 +20,6 @@ internal data class FloatingPreviewCardHandle(
     val lyricTextView: TextView,
     val bodyView: View,
     val updateText: (CharSequence) -> Unit,
-    val updateLineMode: (LyricsLineDisplayMode) -> Unit,
     val updateFold: (Boolean) -> Unit
 )
 
@@ -28,10 +27,10 @@ internal fun MainUiHost.createFloatingPreviewCard(
     isExpanded: () -> Boolean,
     setExpanded: (Boolean) -> Unit,
     style: () -> FloatingLyricsStyle,
-    lineDisplayMode: () -> LyricsLineDisplayMode,
     isWordByWordLyricsEnabled: () -> Boolean,
     plainPreviewText: () -> CharSequence,
-    wordByWordPreviewText: () -> CharSequence
+    wordByWordPreviewText: () -> CharSequence,
+    onVisibilityChanged: () -> Unit = {}
 ): FloatingPreviewCardHandle {
     lateinit var handle: FloatingPreviewCardHandle
     lateinit var lyricView: TextView
@@ -60,11 +59,37 @@ internal fun MainUiHost.createFloatingPreviewCard(
     }
 
     val card = object : LinearLayout(this) {
+        private val scrollListener = ViewTreeObserver.OnScrollChangedListener(onVisibilityChanged)
+        private var scrollObserver: ViewTreeObserver? = null
+
+        override fun onAttachedToWindow() {
+            super.onAttachedToWindow()
+            scrollObserver = viewTreeObserver.also { it.addOnScrollChangedListener(scrollListener) }
+            onVisibilityChanged()
+        }
+
+        override fun onDetachedFromWindow() {
+            scrollObserver?.takeIf { it.isAlive }?.removeOnScrollChangedListener(scrollListener)
+            scrollObserver = null
+            super.onDetachedFromWindow()
+            onVisibilityChanged()
+        }
+
+        override fun onVisibilityAggregated(isVisible: Boolean) {
+            super.onVisibilityAggregated(isVisible)
+            onVisibilityChanged()
+        }
+
+        override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+            super.onLayout(changed, left, top, right, bottom)
+            if (changed) onVisibilityChanged()
+        }
+
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
             val compact = windowLayout.compact
             val abbreviated = compact && !compactExpanded
             if (displayedCompact != abbreviated) renderText(abbreviated)
-            val lines = if (abbreviated) 1 else previewMaxLines(lineDisplayMode())
+            val lines = if (abbreviated) 1 else Int.MAX_VALUE
             if (lyricView.maxLines != lines) lyricView.maxLines = lines
             lyricView.visibility = if (compact || isExpanded()) VISIBLE else GONE
             val expanded = if (compact) compactExpanded else isExpanded()
@@ -91,7 +116,7 @@ internal fun MainUiHost.createFloatingPreviewCard(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 1f
             )
-            maxLines = previewMaxLines(lineDisplayMode())
+            maxLines = Int.MAX_VALUE
             includeFontPadding = false
         }
         addView(lyricView)
@@ -120,10 +145,6 @@ internal fun MainUiHost.createFloatingPreviewCard(
             fullText = text
             renderText(windowLayout.compact && !compactExpanded)
         },
-        updateLineMode = { mode ->
-            lyricView.maxLines = previewMaxLines(mode)
-            lyricView.requestLayout()
-        },
         updateFold = { expanded ->
             lyricView.visibility = if (expanded) View.VISIBLE else View.GONE
             toggleView.text = if (expanded) "⌃" else "⌄"
@@ -131,6 +152,7 @@ internal fun MainUiHost.createFloatingPreviewCard(
                 if (expanded) R.string.ui_collapse_preview else R.string.ui_expand_preview
             )
             card.requestLayout()
+            onVisibilityChanged()
         }
     )
     handle.updateFold(isExpanded())
