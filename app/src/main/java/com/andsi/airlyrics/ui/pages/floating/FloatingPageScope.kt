@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.pages.floating
 
 import android.graphics.Color
 import android.text.SpannableStringBuilder
-import android.text.Spanned
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -17,7 +16,6 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
-import com.andsi.airlyrics.floating.SpicyLyricsSpan
 import com.andsi.airlyrics.i18n.localizedFloatingFontFamilyTitle
 import com.andsi.airlyrics.i18n.localizedFloatingFontWeightTitle
 import com.andsi.airlyrics.i18n.localizedFloatingGravityTitle
@@ -105,7 +103,8 @@ internal class FloatingPageScope(
                     previewStyle.wordByWordHighlightColor,
                     Color.alpha(previewStyle.textColor)
                 )
-            }
+            },
+            progressForLine = host::classicPreviewProgressForLine
         )
         previewSwitchLoop = FloatingPreviewSwitchLoop(
             view = createdPreviewHandle.lyricTextView,
@@ -468,8 +467,8 @@ internal class FloatingPageScope(
 
     private fun hasAnimatedWordPreview(): Boolean {
         if (previewClassicLoop?.hasTarget == true) return true
-        val text = previewHandle?.lyricTextView?.text as? Spanned ?: return false
-        return text.getSpans(0, text.length, SpicyLyricsSpan::class.java).isNotEmpty()
+        val view = previewHandle?.lyricTextView ?: return false
+        return host.hasAnimatedFloatingPreviewHighlight(view)
     }
 
     private fun syncPreviewAnimations() {

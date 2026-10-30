@@ -50,7 +50,9 @@ import com.andsi.airlyrics.i18n.lyrics.localizedLocalLyricsType
 import com.andsi.airlyrics.i18n.lyrics.localizedLocalPlainLyricsSource
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
+import com.andsi.airlyrics.media.MediaArtwork
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.mediaArtwork
 import com.andsi.airlyrics.media.resolveMediaSongMetadata
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
@@ -64,6 +66,7 @@ import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
 import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
 import com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
+import com.andsi.airlyrics.ui.model.FloatingPreviewHighlightProgress
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.model.LanguageOptionUiItem
@@ -182,12 +185,15 @@ internal class MainActivityUiHost(
         val selectedPackage = MediaSourceStore.getSelectedPackage(this)
         val selectedController = CurrentMediaReader.bestController(controllers, selectedPackage)
         val song = selectedController?.let { resolveMediaSongMetadata(it.packageName, it.metadata) }
+        val artwork = selectedController?.metadata.mediaArtwork()
         return MediaPageState(
             controllers = controllers,
             selectedPackage = selectedPackage,
             selectedController = selectedController,
             selectedTitle = song?.title,
-            selectedArtist = song?.artist
+            selectedArtist = song?.artist,
+            selectedArtworkBitmap = (artwork as? MediaArtwork.BitmapImage)?.bitmap,
+            selectedArtworkUri = (artwork as? MediaArtwork.UriImage)?.uri
         )
     }
     override fun getAppName(packageName: String): String = graph.mediaSourceController.getAppName(packageName)
@@ -305,6 +311,15 @@ internal class MainActivityUiHost(
 
     override fun updateFloatingPreviewText(view: TextView, text: CharSequence) =
         updatePreviewLyricsText(view, text)
+
+    override fun hasAnimatedFloatingPreviewHighlight(view: TextView): Boolean =
+        hasAnimatedPreviewLyricsHighlight(view)
+
+    override fun animateFloatingPreviewText(view: TextView, durationMs: Long, offsetY: Float, scale: Float) =
+        animatePreviewLyricsText(view, durationMs, offsetY, scale)
+
+    override fun classicPreviewProgressForLine(lineText: String): (Long) -> FloatingPreviewHighlightProgress =
+        createClassicPreviewProgress(lineText)
 
     override fun applyAnimatedFloatingPreviewHighlight(
         text: android.text.SpannableStringBuilder,

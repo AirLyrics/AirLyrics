@@ -3,10 +3,8 @@ package com.andsi.airlyrics.ui.pages.floating
 import android.animation.ValueAnimator
 import android.graphics.Rect
 import android.view.View
-import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
-import com.andsi.airlyrics.floating.LyricsTextAnimationTarget
 
 /** Replays line-switch motion only while the sample lyric is on screen. */
 internal class FloatingPreviewSwitchLoop(
@@ -53,9 +51,6 @@ internal class FloatingPreviewSwitchLoop(
 
 internal fun FloatingPageScope.playPreviewSwitchAnimation() {
     val view = previewHandle?.lyricTextView ?: return
-    val target = view as? LyricsTextAnimationTarget
-    view.animate().cancel()
-    target?.cancelLyricsTextAnimation()
 
     val duration: Long
     val offset: Float
@@ -83,29 +78,5 @@ internal fun FloatingPageScope.playPreviewSwitchAnimation() {
         }
     }
 
-    val animate = duration > 0L && ValueAnimator.areAnimatorsEnabled()
-    val alpha = if (animate) 0f else 1f
-    if (target != null) {
-        view.alpha = 1f
-        view.translationY = 0f
-        view.scaleX = 1f
-        view.scaleY = 1f
-        target.setLyricsTextAnimationState(alpha, offset, scale, scale)
-        if (animate) target.animateLyricsTextToRest(duration, DecelerateInterpolator())
-    } else {
-        view.alpha = alpha
-        view.translationY = offset
-        view.scaleX = scale
-        view.scaleY = scale
-        if (animate) {
-            view.animate()
-                .alpha(1f)
-                .translationY(0f)
-                .scaleX(1f)
-                .scaleY(1f)
-                .setDuration(duration)
-                .setInterpolator(DecelerateInterpolator())
-                .start()
-        }
-    }
+    host.animateFloatingPreviewText(view, duration, offset, scale)
 }

@@ -9,15 +9,14 @@ import android.view.View
 import android.view.animation.LinearInterpolator
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
-import com.andsi.airlyrics.floating.wordByWordHighlightProgress
-import com.andsi.airlyrics.lyrics.WordByWordLine
-import com.andsi.airlyrics.lyrics.WordByWordSegment
+import com.andsi.airlyrics.ui.model.FloatingPreviewHighlightProgress
 
 /** Advances the Classic karaoke color across the current sample line. */
 internal class FloatingPreviewClassicLoop(
     private val view: TextView,
     private val sampleLine: () -> String?,
     private val highlightColor: () -> Int,
+    private val progressForLine: (String) -> (Long) -> FloatingPreviewHighlightProgress,
     private val isVisible: () -> Boolean = {
         view.isAttachedToWindow && view.isShown && view.windowVisibility == View.VISIBLE &&
             view.getGlobalVisibleRect(Rect())
@@ -52,7 +51,9 @@ internal class FloatingPreviewClassicLoop(
             line = nextLine
             lineStart = nextStart
             color = nextColor
-            highlighter = ClassicPreviewHighlighter(nextText, nextLine, nextStart, nextColor, view.currentTextColor)
+            highlighter = ClassicPreviewHighlighter(
+                nextText, nextStart, nextColor, view.currentTextColor, progressForLine(nextLine)
+            )
         }
 
         if (ValueAnimator.areAnimatorsEnabled() && isVisible()) {
@@ -91,17 +92,11 @@ internal class FloatingPreviewClassicLoop(
 
 internal class ClassicPreviewHighlighter(
     private val text: Spannable,
-    private val lineText: String,
     private val lineStart: Int,
     private val highlightColor: Int,
-    private val baseColor: Int
+    private val baseColor: Int,
+    private val progressAt: (Long) -> FloatingPreviewHighlightProgress
 ) {
-    private val lyricLine = WordByWordLine(
-        startMs = 0L,
-        endMs = FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS,
-        text = lineText,
-        segments = listOf(WordByWordSegment(lineText, 0L, FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS))
-    )
     private var completedSpan: ForegroundColorSpan? = null
     private var activeSpan: ForegroundColorSpan? = null
     private var lastPositionMs: Long? = null
@@ -111,11 +106,7 @@ internal class ClassicPreviewHighlighter(
         if (lastPositionMs == effectivePositionMs) return
         removeSpans()
         lastPositionMs = effectivePositionMs
-        val progress = wordByWordHighlightProgress(
-            lyricLine,
-            lineText,
-            effectivePositionMs
-        )
+        val progress = progressAt(effectivePositionMs)
         if (progress.completedEnd > 0) {
             completedSpan = ForegroundColorSpan(highlightColor).also {
                 text.setSpan(it, lineStart, lineStart + progress.completedEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

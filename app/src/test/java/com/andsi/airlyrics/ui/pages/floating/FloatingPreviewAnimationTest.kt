@@ -7,6 +7,7 @@ import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.view.View
 import android.widget.TextView
+import com.andsi.airlyrics.app.host.createClassicPreviewProgress
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -24,7 +25,9 @@ class FloatingPreviewAnimationTest {
         val line = "歌词😀演示"
         val start = "上一行\n".length
         val text = SpannableStringBuilder("上一行\n${line}\n译文")
-        val highlighter = ClassicPreviewHighlighter(text, line, start, Color.RED, Color.WHITE)
+        val highlighter = ClassicPreviewHighlighter(
+            text, start, Color.RED, Color.WHITE, createClassicPreviewProgress(line)
+        )
 
         highlighter.renderAt(0L)
         assertTrue(text.getSpans(0, text.length, ForegroundColorSpan::class.java).isEmpty())
@@ -59,6 +62,7 @@ class FloatingPreviewAnimationTest {
             view = lyric,
             sampleLine = { line },
             highlightColor = { Color.RED },
+            progressForLine = ::createClassicPreviewProgress,
             isVisible = { false }
         )
 

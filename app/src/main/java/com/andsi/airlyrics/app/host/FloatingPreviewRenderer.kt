@@ -1,14 +1,20 @@
 package com.andsi.airlyrics.app.host
 
+import android.animation.ValueAnimator
 import android.os.SystemClock
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
 import com.andsi.airlyrics.floating.FloatingLyricsTextView
+import com.andsi.airlyrics.floating.LyricsTextAnimationTarget
 import com.andsi.airlyrics.floating.SpicyLyricsSpan
 import com.andsi.airlyrics.floating.spicyTimings
+import com.andsi.airlyrics.floating.wordByWordHighlightProgress
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
+import com.andsi.airlyrics.ui.model.FloatingPreviewHighlightProgress
+import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
 
 internal fun applyPreviewLyricsHighlight(
     text: SpannableStringBuilder,
@@ -43,4 +49,61 @@ internal fun updatePreviewLyricsText(view: TextView, text: CharSequence) {
         if (endMs > 0) ({ (SystemClock.uptimeMillis() - started) % (endMs + 1000) }) else null,
         true
     )
+}
+
+internal fun hasAnimatedPreviewLyricsHighlight(view: TextView): Boolean {
+    val text = view.text as? Spanned ?: return false
+    return text.getSpans(0, text.length, SpicyLyricsSpan::class.java).isNotEmpty()
+}
+
+internal fun animatePreviewLyricsText(view: TextView, durationMs: Long, offsetY: Float, scale: Float) {
+    val target = view as? LyricsTextAnimationTarget
+    view.animate().cancel()
+    target?.cancelLyricsTextAnimation()
+
+    val animate = durationMs > 0L && ValueAnimator.areAnimatorsEnabled()
+    val alpha = if (animate) 0f else 1f
+    if (target != null) {
+        view.alpha = 1f
+        view.translationY = 0f
+        view.scaleX = 1f
+        view.scaleY = 1f
+        target.setLyricsTextAnimationState(alpha, offsetY, scale, scale)
+        if (animate) target.animateLyricsTextToRest(durationMs, DecelerateInterpolator())
+    } else {
+        view.alpha = alpha
+        view.translationY = offsetY
+        view.scaleX = scale
+        view.scaleY = scale
+        if (animate) {
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setDuration(durationMs)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
+    }
+}
+
+internal fun createClassicPreviewProgress(lineText: String): (Long) -> FloatingPreviewHighlightProgress {
+    val fillDurationMs = FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS
+    val line = WordByWordLine(
+        startMs = 0L,
+        endMs = fillDurationMs,
+        text = lineText,
+        segments = listOf(WordByWordSegment(lineText, 0L, fillDurationMs))
+    )
+    return { positionMs ->
+        val progress = wordByWordHighlightProgress(line, lineText, positionMs)
+        FloatingPreviewHighlightProgress(
+            completedEnd = progress.completedEnd,
+            activeStart = progress.activeStart,
+            activeEnd = progress.activeEnd,
+            activeFraction = progress.activeFraction,
+            hasActiveCharacter = progress.hasActiveCharacter
+        )
+    }
 }

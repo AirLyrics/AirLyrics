@@ -16,6 +16,14 @@ internal data class FloatingFocusBubbleHandle(
     val updateResetAction: (Boolean, Boolean) -> Unit
 )
 
+internal data class FloatingPreviewHighlightProgress(
+    val completedEnd: Int,
+    val activeStart: Int,
+    val activeEnd: Int,
+    val activeFraction: Float,
+    val hasActiveCharacter: Boolean
+)
+
 internal interface FloatingUiHost {
     fun settingGrid(vararg items: FloatingSettingTile): LinearLayout
     fun floatingTile(item: FloatingSettingTile): LinearLayout
@@ -47,6 +55,9 @@ internal interface FloatingUiHost {
     fun hasUsageStatsAccess(): Boolean
     fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView
     fun updateFloatingPreviewText(view: TextView, text: CharSequence)
+    fun hasAnimatedFloatingPreviewHighlight(view: TextView): Boolean
+    fun animateFloatingPreviewText(view: TextView, durationMs: Long, offsetY: Float, scale: Float)
+    fun classicPreviewProgressForLine(lineText: String): (Long) -> FloatingPreviewHighlightProgress
     fun applyAnimatedFloatingPreviewHighlight(
         text: android.text.SpannableStringBuilder,
         currentLine: String,

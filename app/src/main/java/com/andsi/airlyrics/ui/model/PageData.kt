@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.ui.model
 
+import android.graphics.Bitmap
 import android.media.session.MediaController
+import android.net.Uri
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 
 internal data class MediaPageState(
@@ -8,7 +10,9 @@ internal data class MediaPageState(
     val selectedPackage: String?,
     val selectedController: MediaController?,
     val selectedTitle: String?,
-    val selectedArtist: String?
+    val selectedArtist: String?,
+    val selectedArtworkBitmap: Bitmap?,
+    val selectedArtworkUri: Uri?
 )
 
 internal data class CurrentMediaUiInfo(

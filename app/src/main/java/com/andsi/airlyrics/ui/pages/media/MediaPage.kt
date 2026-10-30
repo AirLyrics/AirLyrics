@@ -14,8 +14,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.media.MediaArtwork
-import com.andsi.airlyrics.media.mediaArtwork
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
@@ -48,12 +46,13 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
                     ?: getString(R.string.ui_unknown_artist)
                 val appName = getAppName(selectedController.packageName)
                 val state = getPlaybackStateText(selectedController.playbackState?.state)
-                val artwork = selectedController.metadata.mediaArtwork()
+                val artworkBitmap = pageState.selectedArtworkBitmap
+                val artworkUri = pageState.selectedArtworkUri
                 val titleView = expandableText(bigText(activity, title))
                 val artistView = expandableText(normalText(activity, "$artist · $appName"))
                 val statusView = statusPill(activity, state, selectedController.playbackState?.state == PlaybackState.STATE_PLAYING)
 
-                if (artwork == null) {
+                if (artworkBitmap == null && artworkUri == null) {
                     addView(titleView)
                     addView(artistView)
                     addView(statusView)
@@ -91,21 +90,18 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
                         })
                         addView(artworkView)
                     })
-                    when (artwork) {
-                        is MediaArtwork.BitmapImage -> {
-                            artworkView.setImageBitmap(artwork.bitmap)
-                            artworkView.visibility = View.VISIBLE
-                        }
-                        is MediaArtwork.UriImage -> {
-                            val generation = currentUiGeneration()
-                            val artworkSize = dp(MEDIA_ARTWORK_SIZE_DP)
-                            runOnAppIo {
-                                val bitmap = decodeMediaArtwork(activity, artwork.uri, artworkSize)
-                                if (bitmap != null) runOnStartedUi(generation) {
-                                    if (artworkView.isAttachedToWindow) {
-                                        artworkView.setImageBitmap(bitmap)
-                                        artworkView.visibility = View.VISIBLE
-                                    }
+                    if (artworkBitmap != null) {
+                        artworkView.setImageBitmap(artworkBitmap)
+                        artworkView.visibility = View.VISIBLE
+                    } else if (artworkUri != null) {
+                        val generation = currentUiGeneration()
+                        val artworkSize = dp(MEDIA_ARTWORK_SIZE_DP)
+                        runOnAppIo {
+                            val bitmap = decodeMediaArtwork(activity, artworkUri, artworkSize)
+                            if (bitmap != null) runOnStartedUi(generation) {
+                                if (artworkView.isAttachedToWindow) {
+                                    artworkView.setImageBitmap(bitmap)
+                                    artworkView.visibility = View.VISIBLE
                                 }
                             }
                         }
