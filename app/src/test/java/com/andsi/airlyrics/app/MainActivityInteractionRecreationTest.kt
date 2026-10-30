@@ -14,6 +14,7 @@ import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.ListView
 import android.widget.TextView
+import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.SongIdentity
@@ -24,6 +25,7 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.state.FloatingPanelId
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.io.File
 import org.junit.After
 import org.junit.Assert.*
@@ -103,37 +105,35 @@ class MainActivityInteractionRecreationTest {
         assertNull(activity.graph.viewModel.interactions.read("formatGuide"))
     }
 
-    @Test fun editingDraftAndSelectionRestoreAndCancelDoesNotSaveLyrics() {
-        val editor = openEditor()
-        editor.setText("[00:01.00]unsaved draft")
-        editor.setSelection(4, 9)
+    @Test fun editingDraftRestoresAndCancelDoesNotSaveLyrics() {
+        openEditor()
+        editFirstLine("unsaved draft")
+        assertEquals("[00:01.00]unsaved draft", activity.graph.uiHost.editorSession.state.value?.text)
         val oldDialog = latestDialog()
         controller.recreate(); settle()
-        await { latestDialogOrNull()?.let { descendants(it.window!!.decorView).any { v -> v is EditText } } == true }
-        val restored = descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().single()
+        await { editorRowOrNull()?.contentDescription == "[00:01.00], unsaved draft" }
         assertFalse(oldDialog.isShowing)
-        assertEquals("[00:01.00]unsaved draft", restored.text.toString())
-        assertEquals(4, restored.selectionStart)
-        assertEquals(9, restored.selectionEnd)
+        assertEquals("[00:01.00]unsaved draft", activity.graph.uiHost.editorSession.state.value?.text)
+        assertEquals("[00:01.00], unsaved draft", editorRow().contentDescription)
         button(latestDialog(), R.string.ui_cancel).performClick(); settle()
         assertNull(activity.graph.viewModel.interactions.read("editor"))
         assertTrue(LyricsStorage.readLocalLyricsItemText(activity, LyricsStorage.listAllLyrics(activity).single(), LyricsStorage.LocalLyricsEditTarget.PLAIN)!!.contains("original"))
     }
 
     @Test fun editorRestoresFromSavedInstanceStateIntoNewViewModel() {
-        val editor = openEditor()
-        editor.setText("[00:01.00]persistent draft")
-        editor.setSelection(12)
+        openEditor()
+        editFirstLine("persistent draft")
+        val draftId = activity.graph.uiHost.editorSession.state.value!!.id
         val oldModel = activity.graph.viewModel
         val saved = Bundle()
         controller.pause().saveInstanceState(saved).stop().destroy()
         controller = Robolectric.buildActivity(MainActivity::class.java).create(saved).start().resume().visible()
         await { activity.graph.uiHost.editorSession.state.value?.text == "[00:01.00]persistent draft" }
+        await { editorRowOrNull()?.contentDescription == "[00:01.00], persistent draft" }
         settle()
         assertNotSame(oldModel, activity.graph.viewModel)
-        val restored = descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().single()
-        assertEquals("[00:01.00]persistent draft", restored.text.toString())
-        assertEquals(12, restored.selectionStart)
+        assertEquals(draftId, activity.graph.uiHost.editorSession.state.value?.id)
+        assertEquals("[00:01.00], persistent draft", editorRow().contentDescription)
     }
 
     @Test fun rgbExpansionSurvivesRecreation() {
@@ -188,14 +188,28 @@ class MainActivityInteractionRecreationTest {
         assertEquals(setOf("previous.selection"), DisplayScopeStore.selectedPackages(context))
     }
 
-    private fun openEditor(): EditText {
+    private fun openEditor() {
         assertTrue(LyricsStorage.savePlainLyrics(context = context, title = "Song", artist = "Artist", duration = 180000L, album = "Album", plainLrc = "[00:01.00]original"))
         val host = activity.graph.uiHost
         host.localLyricsRow(host.savedLyricsState().lyrics.single()).performClick()
-        await { latestDialogOrNull()?.let { descendants(it.window!!.decorView).any { v -> v is EditText } } == true }
+        await { latestDialogOrNull() is BottomSheetDialog && editorRowOrNull() != null }
         settle()
-        return descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().single()
     }
+    private fun editFirstLine(lyric: String) {
+        editorRow().performClick(); settle()
+        button(latestDialog(), R.string.ui_edit_line).performClick()
+        await { descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().size == 2 }
+        descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>()
+            .single { it.contentDescription == activity.getString(R.string.ui_lyrics) }
+            .setText(lyric)
+        button(latestDialog(), R.string.ui_confirm_line).performClick()
+        await { activity.graph.uiHost.editorSession.state.value?.text == "[00:01.00]$lyric" }
+        settle()
+    }
+    private fun editorRowOrNull(): View? = latestDialogOrNull()?.window?.decorView
+        ?.let { descendants(it).filterIsInstance<RecyclerView>().singleOrNull() }
+        ?.findViewHolderForAdapterPosition(0)?.itemView
+    private fun editorRow(): View = requireNotNull(editorRowOrNull())
     private fun floatingPage() {
         activity.graph.viewModel.selectPage(Page.FLOATING)
         activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
