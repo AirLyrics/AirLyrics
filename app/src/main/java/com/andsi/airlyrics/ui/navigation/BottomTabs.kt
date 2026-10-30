@@ -146,8 +146,8 @@ private fun quickFloatingTabLabelRes(
 private fun quickFloatingTabIconRes(visible: Boolean, overlayPermissionGranted: Boolean): Int {
     return when {
         !overlayPermissionGranted -> R.drawable.ic_air_error
-        visible -> R.drawable.ic_air_close
-        else -> R.drawable.ic_air_music_note
+        visible -> R.drawable.ic_air_visibility_off
+        else -> R.drawable.ic_air_visibility
     }
 }
 

@@ -62,7 +62,7 @@ internal object FloatingServiceNotification {
             DisplayState.SHOWN -> {
                 builder.addAction(
                     NotificationCompat.Action.Builder(
-                        R.drawable.ic_air_visibility,
+                        R.drawable.ic_air_visibility_off,
                         context.getText(R.string.ui_hide),
                         serviceActionIntent(
                             context,
