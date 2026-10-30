@@ -3,6 +3,7 @@ package com.andsi.airlyrics.lyrics.storage
 import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
 import com.andsi.airlyrics.lyrics.providers.SpicyLyricsParser
 import com.andsi.airlyrics.lyrics.providers.spicyFixture
+import java.io.File
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Rule
@@ -17,6 +18,26 @@ class SpicyLyricsCacheTest {
     private var now = 1000L
     private val key = SpicyLyricsCache.key("Test", "Artist", 10000)
     private fun cache() = SpicyLyricsCache(folder.root) { now }
+
+    @Test fun localLyricsFileSizeReportsSpicyCacheDocumentSize() {
+        val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
+        val title = "Sized Spicy Lyrics"
+        val artist = "AndSi"
+        val duration = 184_000L
+        val cacheKey = SpicyLyricsCache.key(title, artist, duration)
+        val cache = SpicyLyricsCache.forContext(context)
+        try {
+            assertNotNull(cache.save(cacheKey, title, artist, "", duration, spicyFixture()))
+            val info = LyricsStorage.getLocalPlainLyricsInfo(context, title, artist, duration)!!
+            val cacheFile = File(context.noBackupFilesDir, "spicy-lyrics/$cacheKey.json")
+
+            assertEquals("spicy:$cacheKey", info.plainFileName)
+            assertTrue(cacheFile.length() > 0L)
+            assertEquals(cacheFile.length(), LyricsStorage.localLyricsFileSize(context, info.plainFileName))
+        } finally {
+            cache.delete(cacheKey)
+        }
+    }
 
     @Test fun editsPreserveRawMarksPreciseTimingsAndOriginalDeadline() {
         val cache = cache()

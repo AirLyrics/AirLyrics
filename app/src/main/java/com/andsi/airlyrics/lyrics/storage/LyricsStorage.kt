@@ -148,7 +148,13 @@ object LyricsStorage {
     }
 
     internal fun localLyricsFileSize(context: Context, relativeFile: String): Long = withStorageLock {
-        LyricsFileStore.storedLyricsFileSize(context, relativeFile)
+        if (relativeFile.startsWith(SpicyLyricsCache.PREFIX)) {
+            SpicyLyricsCache.forContext(context)
+                .item(relativeFile.removePrefix(SpicyLyricsCache.PREFIX))
+                ?.sizeBytes ?: 0L
+        } else {
+            LyricsFileStore.storedLyricsFileSize(context, relativeFile)
+        }
     }
 
     fun readLocalLyricsItemText(
