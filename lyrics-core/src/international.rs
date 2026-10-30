@@ -182,3 +182,25 @@ async fn discover(title: &str, artist: &str, album: &str, duration: u64) -> Resu
         None => json!({"reason": if us.is_err() { "network_error" } else { "no_title" }}),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn japanese_aria_prefers_nanatsukaze_catalogue_recording() {
+        let results = json!({"results": [
+            {"kind":"song", "trackId":1, "trackName":"アリア", "artistName":"Other artist",
+                "collectionName":"アリア - Single", "trackTimeMillis":226000},
+            {"kind":"song", "trackId":1819934506u64, "trackName":"アリア", "artistName":"ナナツカゼ",
+                "collectionName":"アリア - Single", "trackTimeMillis":226000},
+        ]});
+        let query = MatchMetadata {
+            title: "アリア",
+            artist: "ナナツカゼ",
+            album: "アリア",
+            duration_ms: Some(226000),
+        };
+        assert_eq!(best(&results, query).unwrap()["trackId"], 1819934506u64);
+    }
+}

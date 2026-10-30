@@ -13,6 +13,7 @@ import com.andsi.airlyrics.lyrics.search.LyricsUnavailableReason
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlin.math.abs
 
 internal enum class SearchQueryField {
     TITLE, ARTIST, ALBUM;
@@ -26,6 +27,7 @@ internal enum class SearchQueryField {
 
 internal interface LyricsSearchAccess {
     fun search(source: PlainLyricsSearchSource, query: SongIdentity, token: LyricsLookupCancellationToken): List<LyricsCandidate>
+    fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken): SongIdentity?
     fun fetch(candidate: LyricsCandidate, target: SongIdentity, token: LyricsLookupCancellationToken): ManualLyricsFetchResult
     fun protectedRevision(target: SongIdentity): String?
     fun apply(target: SongIdentity, result: LyricsProviderResult, token: LyricsLookupCancellationToken, approvedRevision: String?): Boolean
@@ -63,6 +65,8 @@ internal class LyricsSearchSession(
     private val mutable = MutableStateFlow(LyricsSearchState(target, sources = sources))
     val state = mutable.asStateFlow()
     private val requests = mutableMapOf<String, Pair<LyricsLookupCancellationToken, Job>>()
+    private var resolvingInternational = false
+    private var internationalQuery: SongIdentity? = null
     private var generation = 0L
     var resultsGeneration = 0L
         private set
@@ -93,6 +97,8 @@ internal class LyricsSearchSession(
     fun switchTarget(target: SongIdentity) {
         if (state.value.applying) return
         cancelAll()
+        resolvingInternational=false
+        internationalQuery=null
         activeSource=null
         resultsScroll=0
         resultsGeneration++
@@ -104,24 +110,105 @@ internal class LyricsSearchSession(
         val before=state.value
         if (before.applying || before.sources.isEmpty() || listOf(before.query.title,before.query.artist,before.query.album).all { it.isBlank() }) return
         cancelAll()
+        resolvingInternational=true
+        internationalQuery=null
         resultsScroll=0
         resultsGeneration++
         pagePositions.clear()
         mutable.value=before.copy(results=before.sources.associateWith { SourceResults(loading=true) },submittedQuery=before.query,
             preview=null,previewUnavailableReason=null,previewCandidate=null,previewLoading=false,error=null,confirmationRevision=null)
         before.sources.forEach { searchSource(it,before.query) }
+        launch("international-title", { access.resolveInternationalTitle(before.query,it) }, { resolved ->
+            finishInternationalResolution(before.sources,resolved)
+        }, {
+            finishInternationalResolution(before.sources,null)
+        })
     }
     fun retry(source: PlainLyricsSearchSource) {
         if (state.value.applying || source !in state.value.results) return
         val query=state.value.submittedQuery ?: return
         mutable.value=state.value.copy(results=state.value.results+(source to SourceResults(loading=true)))
         searchSource(source,query)
+        internationalQuery?.let { searchInternationalSource(source,it) }
     }
     private fun searchSource(source: PlainLyricsSearchSource, query: SongIdentity) {
         launch(source.key,{ access.search(source,query,it) }, { candidates ->
-            mutable.value=state.value.copy(results=state.value.results+(source to SourceResults(candidates=candidates.filter { it.source == source }.distinctBy { it.id }.sortedByDescending { it.score })))
-        }, { error -> mutable.value=state.value.copy(results=state.value.results+(source to SourceResults(error=error))) })
+            updateSource(source, source.key, candidates, null, original=true)
+        }, { error -> updateSource(source, source.key, emptyList(), error, original=true) })
     }
+    private fun finishInternationalResolution(sources: Set<PlainLyricsSearchSource>, resolved: SongIdentity?) {
+        resolvingInternational=false
+        internationalQuery=resolved
+        if (resolved != null) {
+            sources.forEach { searchInternationalSource(it,resolved) }
+        } else {
+            val results=state.value.results.toMutableMap()
+            sources.forEach { source ->
+                results[source]?.let { results[source]=it.copy(loading=sourcePending(source)) }
+            }
+            mutable.value=state.value.copy(results=results)
+        }
+    }
+    private fun searchInternationalSource(source: PlainLyricsSearchSource, query: SongIdentity) {
+        val key="international:${source.key}"
+        launch(key,{ access.search(source,query,it) }, { candidates ->
+            updateSource(source,key,candidates,null,original=false)
+        }, { error -> updateSource(source,key,emptyList(),error,original=false) })
+    }
+    private fun updateSource(source: PlainLyricsSearchSource, completedKey: String,
+        candidates: List<LyricsCandidate>, error: Throwable?, original: Boolean) {
+        val previous=state.value.results[source] ?: return
+        val ranked=candidates.filter { it.source == source }.distinctBy { it.id }.sortedByDescending { it.score }
+        val merged=if (original) (ranked+previous.candidates).distinctBy { it.id }
+            else (previous.candidates+ranked).distinctBy { it.id }
+        val ordered=rankMergedCandidates(merged)
+        val result=SourceResults(
+            loading=sourcePending(source,completedKey), candidates=ordered,
+            error=if (ordered.isNotEmpty()) null else previous.error ?: error
+        )
+        mutable.value=state.value.copy(results=state.value.results+(source to result))
+    }
+    private fun rankMergedCandidates(candidates: List<LyricsCandidate>): List<LyricsCandidate> {
+        val original=state.value.submittedQuery ?: return candidates
+        val alternative=internationalQuery ?: return candidates
+        // Provider scores describe separate queries. Compare song evidence across both titles,
+        // then keep each query's existing order for candidates with equal evidence.
+        return candidates.withIndex().sortedWith(
+            compareBy<IndexedValue<LyricsCandidate>> {
+                minOf(matchTier(it.value.song,original),matchTier(it.value.song,alternative))
+            }.thenBy { it.index }
+        ).map { it.value }
+    }
+    private fun matchTier(candidate: SongIdentity, query: SongIdentity): Int {
+        val title=SongIdentity.normalizeText(candidate.title)
+        val expectedTitle=SongIdentity.normalizeText(query.title)
+        val exactTitle=expectedTitle.isNotEmpty() && title==expectedTitle
+        val relatedTitle=expectedTitle.isNotEmpty() && listOf(" ("," - "," [","（","【").any {
+            title.startsWith(expectedTitle+it)
+        }
+        val expectedArtist=SongIdentity.normalizeText(query.artist)
+        val artist=expectedArtist.isNotEmpty() && candidate.artist.split(',', ';', '、', '，').any {
+            SongIdentity.normalizeText(it)==expectedArtist
+        }
+        val closeDuration=query.durationMs>0 && candidate.durationMs>0 &&
+            abs(candidate.durationMs-query.durationMs)<=10_000
+        return when {
+            exactTitle && artist && closeDuration -> 0
+            exactTitle && artist -> 1
+            relatedTitle && artist && closeDuration -> 2
+            relatedTitle && artist -> 3
+            exactTitle && closeDuration -> 4
+            artist && closeDuration -> 5
+            exactTitle -> 6
+            relatedTitle -> 7
+            else -> 8
+        }
+    }
+    private fun sourcePending(source: PlainLyricsSearchSource, completedKey: String? = null): Boolean =
+        // Callbacks run before launch removes their own request entry.
+        resolvingInternational || listOf(source.key,"international:${source.key}").any {
+            it != completedKey && it in requests
+        }
     fun preview(candidate: LyricsCandidate) {
         if (state.value.applying) return
         val target=state.value.target

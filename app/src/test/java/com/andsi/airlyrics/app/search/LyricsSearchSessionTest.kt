@@ -19,6 +19,12 @@ class LyricsSearchSessionTest {
     private val candidate = LyricsCandidate(source,"42",song.copy(title="Alias"),0.9)
     private class FakeAccess: LyricsSearchAccess {
         var searched: SongIdentity? = null
+        val searchQueries = mutableListOf<SongIdentity>()
+        val resolvedQueries = mutableListOf<SongIdentity>()
+        var internationalQuery: SongIdentity? = null
+        var failResolution = false
+        val searchResults = mutableMapOf<String,List<LyricsCandidate>>()
+        val failingTitles = mutableSetOf<String>()
         var fetchedTarget: SongIdentity? = null
         var appliedTarget: SongIdentity? = null
         var revision: String? = null
@@ -29,8 +35,15 @@ class LyricsSearchSessionTest {
         val failingSources = mutableSetOf<PlainLyricsSearchSource>()
         override fun search(source:PlainLyricsSearchSource,query:SongIdentity,token:LyricsLookupCancellationToken):List<LyricsCandidate> {
             searched=query
-            if(source in failingSources) error("offline")
-            return listOf(LyricsCandidate(source,"42",query,0.9))
+            searchQueries += query
+            if(source in failingSources || query.title in failingTitles) error("offline")
+            return searchResults[query.title]?.map { it.copy(source=source) }
+                ?: listOf(LyricsCandidate(source,"42",query,0.9))
+        }
+        override fun resolveInternationalTitle(query:SongIdentity,token:LyricsLookupCancellationToken):SongIdentity? {
+            resolvedQueries += query
+            if (failResolution) error("iTunes unavailable")
+            return internationalQuery
         }
         override fun fetch(candidate:LyricsCandidate,target:SongIdentity,token:LyricsLookupCancellationToken):ManualLyricsFetchResult {
             if (failPreview) error("offline")
@@ -45,12 +58,13 @@ class LyricsSearchSessionTest {
             return true
         }
     }
-    private fun TestScope.withSession(sources:Set<PlainLyricsSearchSource> = setOf(source),block: TestScope.(LyricsSearchSession,FakeAccess)->Unit) {
+    private fun TestScope.withSession(sources:Set<PlainLyricsSearchSource> = setOf(source),
+        target:SongIdentity = song, block: TestScope.(LyricsSearchSession,FakeAccess)->Unit) {
         val dispatcher=StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
             val access=FakeAccess()
-            block(LyricsSearchSession(song,sources,access,dispatcher),access)
+            block(LyricsSearchSession(target,sources,access,dispatcher),access)
         } finally { Dispatchers.resetMain() }
     }
     @Test fun editedQueryAndPreviewDoNotChangeBindingOrSave()=runTest {
@@ -121,11 +135,82 @@ class LyricsSearchSessionTest {
     }
     @Test fun newerSearchWinsBeforeQueuedOldWorkRuns()=runTest {
         withSession { session,access ->
+            access.internationalQuery=song.copy(title="International")
+            access.searchResults["Original"]=listOf(LyricsCandidate(source,"old",song,0.9))
+            access.searchResults["New query"]=listOf(LyricsCandidate(source,"new",song.copy(title="New query"),0.9))
+            access.searchResults["International"]=listOf(LyricsCandidate(source,"alias",song.copy(title="International"),1.0))
             session.search()
             session.editQuery("New query","Artist","")
             session.search();runCurrent()
-            assertEquals("New query",access.searched?.title)
-            assertEquals("New query",session.state.value.results[source]?.candidates?.single()?.song?.title)
+            assertEquals(listOf("New query"),access.resolvedQueries.map { it.title })
+            assertEquals(listOf("new","alias"),session.state.value.results[source]?.candidates?.map { it.id })
+        }
+    }
+
+    @Test fun internationalCandidatesMergeBySourceIdAfterOriginalRanking()=runTest {
+        withSession(setOf(source,PlainLyricsSearchSource.LRCLIB)) { session,access ->
+            val alternative=song.copy(title="International",artist="Other artist",album="Other album")
+            access.internationalQuery=alternative
+            access.searchResults[song.title]=(1..8).map { id ->
+                LyricsCandidate(source,id.toString(),song.copy(title="Original $id"),1.0-id/100.0)
+            }
+            access.searchResults[alternative.title]=(7..12).map { id ->
+                LyricsCandidate(source,id.toString(),alternative.copy(title="International $id"),2.0-id/100.0)
+            }
+            session.search();runCurrent()
+            assertEquals(listOf(song),access.resolvedQueries)
+            assertEquals(2,access.searchQueries.count { it == song })
+            assertEquals(2,access.searchQueries.count { it == alternative })
+            session.state.value.results.values.forEach { result ->
+                assertFalse(result.loading)
+                assertEquals((1..12).map(Int::toString),result.candidates.map { it.id })
+                assertEquals(song.copy(title="Original 7"),result.candidates[6].song)
+                assertEquals(alternative.copy(title="International 9"),result.candidates[8].song)
+            }
+        }
+    }
+
+    @Test fun ariaByNanatsukazeOutranksOtherSongsWithTheSameTitle()=runTest {
+        val original=SongIdentity("アリア","ナナツカゼ","アリア",226000)
+        val alternative=SongIdentity("Aria","Nanatsukaze","Aria - Single",226000)
+        withSession(target=original) { session,access ->
+            access.internationalQuery=alternative
+            access.searchResults[original.title]=(1..30).map { number ->
+                LyricsCandidate(source,"original-$number",original.copy(artist="Other $number"),0.99)
+            }
+            access.searchResults[alternative.title]=listOf(
+                LyricsCandidate(source,"international-other",alternative.copy(artist="Other"),0.99),
+                LyricsCandidate(source,"nanatsukaze-aria",alternative.copy(album="Aria"),0.4)
+            )
+            session.search();runCurrent()
+            assertEquals(listOf(original,alternative),access.searchQueries)
+            val candidates=session.state.value.results[source]!!.candidates
+            assertEquals(32,candidates.size)
+            assertEquals("nanatsukaze-aria",candidates.first().id)
+            assertEquals(alternative.copy(album="Aria"),candidates.first().song)
+        }
+    }
+
+    @Test fun failedInternationalResolutionKeepsOriginalCandidates()=runTest {
+        withSession { session,access ->
+            access.failResolution=true
+            session.search();runCurrent()
+            assertEquals(listOf(song),access.resolvedQueries)
+            assertEquals(listOf(song),access.searchQueries)
+            assertEquals(listOf("42"),session.state.value.results[source]?.candidates?.map { it.id })
+            assertFalse(session.state.value.results[source]!!.loading)
+            assertNull(session.state.value.results[source]?.error)
+        }
+    }
+
+    @Test fun internationalCandidatesRemainAvailableWhenOriginalSearchFails()=runTest {
+        withSession { session,access ->
+            val alternative=song.copy(title="International")
+            access.internationalQuery=alternative
+            access.failingTitles.add(song.title)
+            session.search();runCurrent()
+            assertEquals(alternative,session.state.value.results[source]?.candidates?.single()?.song)
+            assertNull(session.state.value.results[source]?.error)
         }
     }
 

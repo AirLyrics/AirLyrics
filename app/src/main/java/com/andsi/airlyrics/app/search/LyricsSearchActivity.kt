@@ -100,6 +100,7 @@ class LyricsSearchActivity : AppCompatActivity() {
                 val service=ManualLyricsSearch(app)
                 val access=object: LyricsSearchAccess {
                     override fun search(source:PlainLyricsSearchSource,query:SongIdentity,token:LyricsLookupCancellationToken)=service.search(source,query,token)
+                    override fun resolveInternationalTitle(query:SongIdentity,token:LyricsLookupCancellationToken)=service.resolveInternationalTitle(query,token)
                     override fun fetch(candidate:LyricsCandidate,target:SongIdentity,token:LyricsLookupCancellationToken)=service.fetch(candidate,target,token)
                     override fun protectedRevision(target:SongIdentity)=service.protectedRevision(target)
                     override fun apply(target:SongIdentity,result:LyricsProviderResult,token:LyricsLookupCancellationToken,approvedRevision:String?)=service.apply(target,result,token,approvedRevision)

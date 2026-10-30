@@ -135,6 +135,7 @@ internal class LyricsSourcePages(
     private fun label(source: PlainLyricsSearchSource): String {
         val result = results[source]
         val suffix = when {
+            result?.candidates?.isNotEmpty() == true -> result.candidates.size.toString()
             result?.loading == true -> ""
             result?.error != null -> context.getString(R.string.search_failed)
             else -> result?.candidates?.size?.toString().orEmpty()
@@ -186,11 +187,11 @@ internal class LyricsSourcePages(
             }
         }
         fun bind(key: PlainLyricsSearchSource) {
-            if (source != key) save()
+            save()
             source = key
             generation = session.resultsGeneration
             val result = results.getValue(key)
-            if (result.loading) session.pagePositions.remove(key)
+            if (result.loading && result.candidates.isEmpty()) session.pagePositions.remove(key)
             list.adapter = Rows(key, result)
             session.pagePositions[key]?.let { list.layoutManager?.onRestoreInstanceState(it) }
         }
@@ -247,9 +248,10 @@ internal class LyricsSourcePages(
         )
         override fun onBindViewHolder(holder: Row, position: Int) {
             val candidate = result.candidates.getOrNull(position)
-            holder.loading.visibility=if(result.loading) VISIBLE else GONE
-            holder.titleLine.visibility=if(result.loading) GONE else VISIBLE
-            holder.detail.visibility=if(result.loading) GONE else VISIBLE
+            val showLoading=result.loading && candidate==null
+            holder.loading.visibility=if(showLoading) VISIBLE else GONE
+            holder.titleLine.visibility=if(showLoading) GONE else VISIBLE
+            holder.detail.visibility=if(showLoading) GONE else VISIBLE
             holder.duration.text = candidate?.song?.durationMs?.takeIf { it > 0 }?.let {
                 String.format(Locale.ROOT, "%d:%02d", it / 60000, it / 1000 % 60)
             }.orEmpty()

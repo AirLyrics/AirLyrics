@@ -63,6 +63,23 @@ pub(crate) fn ranked(mut tracks: Vec<Track>, query: &Track) -> Vec<Track> {
     tracks
 }
 
+/// Album labels from catalogues often include release suffixes; title and artist make a
+/// better first search term while album and duration still contribute to candidate ranking.
+pub(crate) fn search_term(track: &Track) -> String {
+    let title = track.title.trim();
+    let artist = track.artist.trim();
+    let album = if title.is_empty() || artist.is_empty() {
+        track.album.trim()
+    } else {
+        ""
+    };
+    [title, artist, album]
+        .into_iter()
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 #[no_mangle]
 pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_ManualLyricsNative_requestJson(
     mut env: JNIEnv,
@@ -131,8 +148,8 @@ async fn netease(request: &Request, lookup: i64) -> Result<Value, String> {
     let api = NcmApi::new(false, "");
     let t = &request.track;
     if request.operation == "search" {
-        let keyword = format!("{} {} {}", t.title, t.artist, t.album);
-        let response = api.search_songs(keyword.trim()).await?;
+        let keyword = search_term(t);
+        let response = api.search_songs(&keyword).await?;
         if response.code != 200 {
             return Err(netease_api_code_error("search", response.code));
         }
@@ -280,6 +297,24 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].id, "1");
         assert_eq!(result[1].id, "2");
+    }
+
+    #[test]
+    fn international_manual_search_keeps_the_performer_without_single_suffix() {
+        let original = Track {
+            artist: "ナナツカゼ".into(),
+            album: "アリア".into(),
+            duration_ms: 226_000,
+            ..track("", "アリア")
+        };
+        let international = Track {
+            title: "Aria".into(),
+            artist: "Nanatsukaze".into(),
+            album: "Aria - Single".into(),
+            ..original.clone()
+        };
+        assert_eq!(search_term(&original), "アリア ナナツカゼ");
+        assert_eq!(search_term(&international), "Aria Nanatsukaze");
     }
     #[test]
     fn unknown_operation_and_provider_are_rejected() {

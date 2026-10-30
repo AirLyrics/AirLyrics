@@ -659,8 +659,8 @@ pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Resul
     let t = &request.track;
     if request.operation == "search" {
         let mut access = token(&client).await?;
-        let term = format!("{} {} {}", t.title, t.artist, t.album);
-        let data = search(&client, &mut access, term.trim()).await?;
+        let term = crate::manual::search_term(t);
+        let data = search(&client, &mut access, &term).await?;
         let items = data["data"]["searchV2"]["tracksV2"]["items"]
             .as_array()
             .ok_or_else(|| err("ParseError"))?;

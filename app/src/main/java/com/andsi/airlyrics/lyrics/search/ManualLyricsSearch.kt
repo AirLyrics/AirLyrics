@@ -37,6 +37,14 @@ internal class ManualLyricsSearch(
         }.distinctBy { it.id }
     }
 
+    fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken): SongIdentity? {
+        val resolved = InternationalTitleResolver.resolve(PlainLyricsSearchRequest(
+            context, query.title, query.artist, query.album, query.durationMs, token
+        ))
+        if (SongIdentity.normalizeText(resolved.title) == SongIdentity.normalizeText(query.title)) return null
+        return query.copy(title = resolved.title, artist = resolved.artist, album = resolved.album)
+    }
+
     fun fetch(candidate: LyricsCandidate, target: SongIdentity, token: LyricsLookupCancellationToken): ManualLyricsFetchResult {
         try {
             val response = request(candidate.source, "fetch", candidate.id, candidate.song, token, candidate.storefront)
