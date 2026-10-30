@@ -81,7 +81,7 @@ class FloatingPreviewAnimationTest {
     fun `preview loop runs only while lyric is visible and animation is enabled`() {
         val controller = Robolectric.buildActivity(Activity::class.java).setup().visible()
         val activity = controller.get()
-        try {
+        controller.use {
             val lyric = TextView(activity).apply { text = "Preview lyric" }
             activity.setContentView(lyric)
             val decor = activity.window.decorView
@@ -120,8 +120,6 @@ class FloatingPreviewAnimationTest {
             loop.sync()
             mainLooper.idleFor(FloatingPageTokens.PREVIEW_LOOP_INTERVAL_MS, TimeUnit.MILLISECONDS)
             assertEquals(3, plays)
-        } finally {
-            controller.close()
         }
     }
 }

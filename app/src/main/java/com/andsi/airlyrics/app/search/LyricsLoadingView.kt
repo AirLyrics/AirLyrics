@@ -48,7 +48,7 @@ internal class LyricsLoadingView(context: Context, palette: AirLyricsPalette) : 
     }
 
     private fun renderDots() {
-        text = SpannableString(label + "......").apply {
+        text = SpannableString("$label......").apply {
             setSpan(ForegroundColorSpan(dotColor), label.length, label.length + dots, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             if (dots < 6) {
                 setSpan(ForegroundColorSpan(Color.TRANSPARENT), label.length + dots, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

@@ -22,7 +22,7 @@ A cross-script title with insufficient text similarity requires a strong artist 
 | Musixmatch | Native matcher, then shared structured plan | Track results use common scoring; final subtitle matcher follows shared query variants, but exposes no candidate metadata to rescore |
 | Spicy | Shared free-text plan sent to Spotify | Common scoring; merge rounds, preserve relevance on ties, try at most four IDs for line/word lyrics |
 
-Transport deadlines, cancellation, rate-limit cooldowns, endpoint parameter names and lyric decoding stay with their providers. Do not force these protocols into a single network loop. Source-specific tie breakers may use native IDs or API relevance only after shared metadata scoring.
+Transport deadlines, cancellation, rate-limit cooldowns, endpoint parameter names and lyric decoding stay with their providers. Do not force these protocols into a single network loop. Source-specific tiebreakers may use native IDs or API relevance only after shared metadata scoring.
 
 ## Validation
 
@@ -66,7 +66,7 @@ Applying obtains a manual commit lease, rechecks protected file revisions under 
 uses `ManualLyricsSelectionStore` to save and publish a target-specific change. Imported, edited and legacy
 local text require explicit replacement confirmation. Edited plain files now carry `manual_edit` provenance.
 Independent word files survive replacement, but the selected version is loaded without attaching old word
-tracks. Failed or cancelled requests do not change the selection. Previously edited files without edit
+tracks. Failed or canceled requests do not change the selection. Previously edited files without edit
 provenance cannot be identified retroactively.
 
 Spicy preview data remains in memory until the chosen result is applied. The selection store records a

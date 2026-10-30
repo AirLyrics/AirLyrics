@@ -47,6 +47,9 @@ internal class LyricsSourceTooltip(
         val location = IntArray(2).also(anchor::getLocationOnScreen)
         val left = (location[0] + (anchor.width - label.measuredWidth) / 2)
             .coerceIn(frame.left + margin, maxOf(frame.left + margin, frame.right - margin - label.measuredWidth))
+        // START aligns to the anchor's right edge in RTL; keep the clamped screen position.
+        val xOffset = left - location[0] +
+            if (anchor.layoutDirection == View.LAYOUT_DIRECTION_RTL) label.measuredWidth - anchor.width else 0
         val gap = host.dp(8)
         val fitsAbove = location[1] - label.measuredHeight - gap >= frame.top
         val window = PopupWindow(label, label.measuredWidth, label.measuredHeight, false).apply {
@@ -70,9 +73,9 @@ internal class LyricsSourceTooltip(
         popup = window
         window.showAsDropDown(
             anchor,
-            left - location[0],
+            xOffset,
             if (fitsAbove) -anchor.height - label.measuredHeight - gap else gap,
-            android.view.Gravity.LEFT
+            android.view.Gravity.START
         )
         anchor.addOnAttachStateChangeListener(attachListener)
         observer.addOnScrollChangedListener(scrollListener)

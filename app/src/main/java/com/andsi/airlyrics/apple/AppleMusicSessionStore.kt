@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.apple
 
 import android.content.Context
+import androidx.core.content.edit
 
 data class AppleMusicSession(
     val mediaUserToken: String,
@@ -35,22 +36,16 @@ object AppleMusicSessionStore {
     }
 
     fun save(context: Context, session: AppleMusicSession) {
-        prefs(context).edit()
-            .putString(KEY_TOKEN, session.mediaUserToken)
-            .putString(KEY_STOREFRONT, session.storefront)
-            .putLong(KEY_SAVED_AT, session.savedAtEpochMs)
-            .apply()
-    }
-
-    fun updateStorefront(context: Context, storefront: String) {
-        prefs(context).edit().putString(KEY_STOREFRONT, storefront).apply()
+        prefs(context).edit {
+            putString(KEY_TOKEN, session.mediaUserToken)
+            putString(KEY_STOREFRONT, session.storefront)
+            putLong(KEY_SAVED_AT, session.savedAtEpochMs)
+        }
     }
 
     fun clear(context: Context) {
-        prefs(context).edit().clear().apply()
+        prefs(context).edit { clear() }
     }
-
-    fun hasSession(context: Context): Boolean = load(context) != null
 
     fun cachedDeveloperToken(context: Context, nowEpochSeconds: Long): String? {
         val token = prefs(context).getString(KEY_DEVELOPER_TOKEN, null) ?: return null
@@ -58,6 +53,6 @@ object AppleMusicSessionStore {
     }
 
     fun saveDeveloperToken(context: Context, token: String) {
-        prefs(context).edit().putString(KEY_DEVELOPER_TOKEN, token).apply()
+        prefs(context).edit { putString(KEY_DEVELOPER_TOKEN, token) }
     }
 }

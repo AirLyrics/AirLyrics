@@ -48,11 +48,11 @@ class AppleRainbowRenderPathTest : LyricsStorageTestBase() {
         assertTrue(progress.activeFraction > 0f)
         assertEquals(13, target.text.length)
         assertEquals(12, target.translatedText.length)
-        checkRendering("fresh", fresh, expectedHighlight = true)
+        checkRendering("fresh", fresh)
         val words = WordByWordLyricsJsonCodec.parseWordByWordLinesJson(
             WordByWordLyricsJsonCodec.wordByWordLinesToJson(fresh.wordByWordLines))
         assertEquals(fresh.wordByWordLines, words)
-        checkRendering("codec", fresh.copy(wordByWordLines = words), true)
+        checkRendering("codec", fresh.copy(wordByWordLines = words))
 
         assertTrue(LyricsStorage.saveWordByWordLyrics(context, song.title, song.artist,
             song.durationMs, words, wordByWordProvider = "apple"))
@@ -60,18 +60,19 @@ class AppleRainbowRenderPathTest : LyricsStorageTestBase() {
         checkRendering("merged LRC", fresh.copy(
             plainLrc = LrcParser.mergeOriginalAndTranslationForStorage(fresh.plainLrc, fresh.translatedLrc),
             translatedLrc = null,
-            wordByWordLines = LyricsStorage.readWordByWordLyrics(context, song.title, song.artist, song.durationMs)), true)
+            wordByWordLines = LyricsStorage.readWordByWordLyrics(context, song.title, song.artist, song.durationMs)))
 
-        ManualLyricsSelectionStore.commit(context, song, LyricsSearchMode.Original, fresh, true, true)
+        ManualLyricsSelectionStore.commit(context, song, LyricsSearchMode.Original, fresh,
+            manual = true, savePlain = true)
         val selected = requireNotNull(ManualLyricsSelectionStore.read(context, song)).result
         assertEquals(fresh.wordByWordLines, selected.wordByWordLines)
         assertEquals(fresh.plainLrc, selected.plainLrc)
         assertEquals(fresh.translatedLrc, selected.translatedLrc)
-        checkRendering("manual selection", selected, true)
-        checkRendering("repository manual selection", automaticLookup(), true)
+        checkRendering("manual selection", selected)
+        checkRendering("repository manual selection", automaticLookup())
 
         ManualLyricsSelectionStore.forget(context, song)
-        checkRendering("repository ordinary saved LRC", automaticLookup(), true)
+        checkRendering("repository ordinary saved LRC", automaticLookup())
     }
 
     private fun automaticLookup(): LyricsProviderResult {
@@ -91,14 +92,15 @@ class AppleRainbowRenderPathTest : LyricsStorageTestBase() {
         }
         val result = requireNotNull(LyricsRepository.findLyricsWithProviders(
             context, mapOf(PlainLyricsSearchSource.APPLE to provider),
-            LyricsSettings(listOf(PlainLyricsSearchSource.APPLE), true, true, wordByWordLyricsEnabled = true),
+            LyricsSettings(listOf(PlainLyricsSearchSource.APPLE),
+                autoSearchOnline = true, autoSaveLocal = true, wordByWordLyricsEnabled = true),
             song.title, song.artist, durationMs = song.durationMs).getOrThrow())
         assertEquals("saved lyrics must prevent both cache lookup and network fetch", 0, calls)
         return result
     }
 
-    private fun checkRendering(path: String, result: LyricsProviderResult, expectedHighlight: Boolean) {
-        // First occurrence, its neighbour, and the repeat with the parenthetical echo.
+    private fun checkRendering(path: String, result: LyricsProviderResult) {
+        // First occurrence, its neighbor, and the repeat with the parenthetical echo.
         for (position in listOf(66_400L, 72_000L, 144_200L)) {
             for (preference in listOf(LyricsScriptPreference.NONE, LyricsScriptPreference.SIMPLIFIED)) {
                 val view = TextView(context)
@@ -118,7 +120,7 @@ class AppleRainbowRenderPathTest : LyricsStorageTestBase() {
                 val highlight = ranges.any { it.first >= start && it.second > start }
                 println("RAINBOW path=$path position=$position script=$preference text=${text.toString().replace('\n', '|')} spans=$ranges")
                 assertTrue("missing translation: $text", text.contains(if (position == 72_000L) "你的声音" else "看不见"))
-                assertEquals("$path position=$position script=$preference", expectedHighlight || position != 66_400L, highlight)
+                assertTrue("$path position=$position script=$preference", highlight)
                 assertTrue(ranges.all { it.first >= 0 && it.second <= text.length })
             }
         }

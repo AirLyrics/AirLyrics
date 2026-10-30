@@ -47,15 +47,20 @@ object LyricsDisplayPolicy {
         if (original.isBlank()) return Rendered(translation)
         // A real translation says something else, so both lines stay. Only a duplicate pair — the
         // same sentence in two scripts — can collapse into a single line.
-        if (preference == LyricsScriptPreference.NONE) return Rendered(original, translation)
-        if (!ChineseText.isScriptConversion(original, translation)) return Rendered(original, translation)
-        return Rendered(
-            when (preference) {
-                LyricsScriptPreference.SIMPLIFIED -> simplifiedCopy(original, translation)
-                LyricsScriptPreference.TRADITIONAL -> traditionalCopy(original, translation)
-                LyricsScriptPreference.NONE -> original
+        return when (preference) {
+            LyricsScriptPreference.NONE -> Rendered(original, translation)
+            LyricsScriptPreference.SIMPLIFIED, LyricsScriptPreference.TRADITIONAL -> {
+                if (!ChineseText.isScriptConversion(original, translation)) {
+                    Rendered(original, translation)
+                } else {
+                    Rendered(if (preference == LyricsScriptPreference.SIMPLIFIED) {
+                        simplifiedCopy(original, translation)
+                    } else {
+                        traditionalCopy(original, translation)
+                    })
+                }
             }
-        )
+        }
     }
 
     /** Keeps an existing simplified copy; a traditional-only line is left untouched. */

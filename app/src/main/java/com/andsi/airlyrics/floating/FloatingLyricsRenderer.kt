@@ -548,7 +548,7 @@ class FloatingLyricsRenderer(
             val end = sourceBoundaries[offset]
             val displayStart = reverse[start]?.singleOrNull() ?: return null
             val displayEnd = reverse[end]?.singleOrNull() ?: return null
-            if (start < 0 || end <= start || displayEnd <= displayStart) return null
+            if (start !in 0 until end || displayEnd <= displayStart) return null
             segment.copy(text = display.substring(displayStart, displayEnd))
         }
     }

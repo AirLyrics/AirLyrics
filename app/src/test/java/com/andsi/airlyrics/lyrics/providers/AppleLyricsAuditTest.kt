@@ -21,12 +21,13 @@ class AppleLyricsAuditTest {
         val output = File(requireNotNull(System.getenv("AIRLYRICS_AUDIT_OUTPUT")) {
             "AIRLYRICS_AUDIT_OUTPUT is required"
         })
+        val nativeInput = requireNotNull(input)
         withDictionaries {
-            auditPayload(File(requireNotNull(input)), traceOf(requireNotNull(input)), output)
+            auditPayload(File(nativeInput), traceOf(nativeInput), output)
         }
     }
 
-    /** Audits every sub-directory that holds a native.json, plus summary.md. */
+    /** Audits every subdirectory that holds a native.json, plus summary.md. */
     @Test
     fun auditDirectory() {
         val directory = System.getenv("AIRLYRICS_AUDIT_DIR")

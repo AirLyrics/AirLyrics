@@ -29,7 +29,8 @@ class AppleWordByWordPersistenceTest : LyricsStorageTestBase() {
         val song = com.andsi.airlyrics.core.model.SongIdentity("Storage failure", "Artist", durationMs = 10000)
         val result = com.andsi.airlyrics.lyrics.LyricsProviderResult("apple", "Apple", "[00:22.18]old", wordByWordLines = lines)
         fun commit(value: com.andsi.airlyrics.lyrics.LyricsProviderResult) = ManualLyricsSelectionStore.commit(
-            context, song, com.andsi.airlyrics.core.model.LyricsSearchMode.Original, value, true, false)
+            context, song, com.andsi.airlyrics.core.model.LyricsSearchMode.Original, value,
+            manual = true, savePlain = false)
         commit(result)
         val before = ManualLyricsSelectionStore.read(context, song)
         val raw = (LyricsIndexStore.captureRaw(context) as LyricsIndexStore.RawSnapshot.Present).bytes.toList()
@@ -54,7 +55,8 @@ class AppleWordByWordPersistenceTest : LyricsStorageTestBase() {
         val result = com.andsi.airlyrics.lyrics.LyricsProviderResult("apple", "Apple",
             "[00:22.18]攔路雨偏似雪花", "[00:22.18]translation", lines)
         fun commit(value: com.andsi.airlyrics.lyrics.LyricsProviderResult) = ManualLyricsSelectionStore.commit(
-            context, song, com.andsi.airlyrics.core.model.LyricsSearchMode.Original, value, true, false)
+            context, song, com.andsi.airlyrics.core.model.LyricsSearchMode.Original, value,
+            manual = true, savePlain = false)
         commit(result)
         val restored = ManualLyricsSelectionStore.read(context, song)!!.result
         assertEquals(result.plainLrc, restored.plainLrc)
@@ -68,7 +70,7 @@ class AppleWordByWordPersistenceTest : LyricsStorageTestBase() {
         commit(result)
         val entry = LyricsIndexStore.find(context, song.title, song.artist, song.durationMs)!!
         val originalJson = LyricsFileStore.readManagedLyrics(context, entry.wordByWordFile)!!
-        assertTrue(LyricsFileStore.writeManagedLyrics(context, entry.wordByWordFile.substringAfterLast('/'), originalJson + " "))
+        assertTrue(LyricsFileStore.writeManagedLyrics(context, entry.wordByWordFile.substringAfterLast('/'), "$originalJson "))
         assertTrue(ManualLyricsSelectionStore.read(context, song)!!.result.wordByWordLines.isEmpty())
         commit(result)
         assertTrue(LyricsIndexStore.write(context, LyricsIndexStore.read(context).map {

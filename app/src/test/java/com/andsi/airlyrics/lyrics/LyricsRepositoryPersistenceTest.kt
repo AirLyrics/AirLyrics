@@ -189,10 +189,10 @@ class LyricsRepositoryPersistenceTest {
             searchOrigin = if (manual) LyricsSearchOrigin.Manual else LyricsSearchOrigin.Automatic)
     }
 
-    private fun durableState(): Map<String, List<Byte>> = context.let {
-        val roots = listOf(com.andsi.airlyrics.lyrics.storage.LyricsStoragePaths.fallbackLyricsDir(it),
-            java.io.File(it.noBackupFilesDir, "lyrics-selections"))
-        roots.flatMap { root -> root.walkTopDown().filter { it.isFile }.map { file ->
+    private fun durableState(): Map<String, List<Byte>> {
+        val roots = listOf(com.andsi.airlyrics.lyrics.storage.LyricsStoragePaths.fallbackLyricsDir(context),
+            java.io.File(context.noBackupFilesDir, "lyrics-selections"))
+        return roots.flatMap { root -> root.walkTopDown().filter { it.isFile }.map { file ->
             file.absolutePath to file.readBytes().toList()
         }.toList() }.toMap()
     }
