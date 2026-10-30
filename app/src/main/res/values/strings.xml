@@ -71,6 +71,13 @@
     <string name="ui_changelog">Changelog</string>
     <string name="ui_view_full_changelog">Full changelog</string>
     <string name="ui_check_format">Check format</string>
+    <string name="ui_edit_line">Edit</string>
+    <string name="ui_add_next_line">Add next line</string>
+    <string name="ui_confirm_line">Confirm</string>
+    <string name="ui_lyrics_time_hint">Time mm:ss.xx</string>
+    <string name="ui_lyrics_time_error">Enter time as mm:ss.xx</string>
+    <string name="ui_lyrics_seconds_error">Seconds must be between 00 and 59</string>
+    <string name="ui_lyrics_one_line_error">Use one timestamp per line</string>
     <string name="ui_chinese_simplified">简体中文</string>
     <string name="ui_chinese_traditional">繁體中文</string>
     <string name="ui_choose_import_type">Choose import type</string>

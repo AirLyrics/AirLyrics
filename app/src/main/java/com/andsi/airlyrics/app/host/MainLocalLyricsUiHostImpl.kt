@@ -109,7 +109,11 @@ internal fun MainActivityUiHost.observeEditorSession() {
                 }
                 if (binding?.id != session.id || binding?.dialog?.isShowing != true) {
                     binding?.dialog?.dismiss()
-                    binding = showLocalLyricsEditorDialog(session)
+                    binding = if (session.target == LyricsStorage.LocalLyricsEditTarget.PLAIN) {
+                        showLocalLyricsEditorSheet(session)
+                    } else {
+                        showLocalLyricsEditorDialog(session)
+                    }
                 }
                 binding?.setBusy?.invoke(session.busy)
                 restoreOperationConfirmation()
@@ -129,7 +133,7 @@ internal fun MainActivityUiHost.observeEditorSession() {
     }
 }
 
-private data class EditorDialogBinding(val id: String, val dialog: Dialog, val setBusy: (Boolean) -> Unit)
+internal data class EditorDialogBinding(val id: String, val dialog: Dialog, val setBusy: (Boolean) -> Unit)
 
 private fun MainActivityUiHost.showLocalLyricsEditorDialog(session: EditorSession): EditorDialogBinding {
     val item = session.item

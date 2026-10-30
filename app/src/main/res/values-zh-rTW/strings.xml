@@ -73,6 +73,13 @@
     <string name="ui_changelog">更新記錄</string>
     <string name="ui_view_full_changelog">完整更新記錄</string>
     <string name="ui_check_format">檢查格式</string>
+    <string name="ui_edit_line">編輯</string>
+    <string name="ui_add_next_line">新增下一行</string>
+    <string name="ui_confirm_line">確認</string>
+    <string name="ui_lyrics_time_hint">時間 mm:ss.xx</string>
+    <string name="ui_lyrics_time_error">請輸入 mm:ss.xx 格式的時間</string>
+    <string name="ui_lyrics_seconds_error">秒數必須介於 00～59</string>
+    <string name="ui_lyrics_one_line_error">每行只能有一個時間戳</string>
     <string name="ui_chinese_simplified">簡體中文</string>
     <string name="ui_chinese_traditional">繁體中文</string>
     <string name="ui_choose_import_type">選擇匯入類型</string>

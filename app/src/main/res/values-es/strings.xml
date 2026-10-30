@@ -73,6 +73,13 @@
     <string name="ui_changelog">Registro de cambios</string>
     <string name="ui_view_full_changelog">Registro de cambios completo</string>
     <string name="ui_check_format">Verificar formato</string>
+    <string name="ui_edit_line">Editar</string>
+    <string name="ui_add_next_line">Añadir línea</string>
+    <string name="ui_confirm_line">Confirmar</string>
+    <string name="ui_lyrics_time_hint">Tiempo mm:ss.xx</string>
+    <string name="ui_lyrics_time_error">Escribe el tiempo en formato mm:ss.xx</string>
+    <string name="ui_lyrics_seconds_error">Los segundos deben estar entre 00 y 59</string>
+    <string name="ui_lyrics_one_line_error">Usa una marca de tiempo por línea</string>
     <string name="ui_chinese_simplified">简体中文</string>
     <string name="ui_chinese_traditional">繁體中文</string>
     <string name="ui_choose_import_type">Elegir tipo de importación</string>
