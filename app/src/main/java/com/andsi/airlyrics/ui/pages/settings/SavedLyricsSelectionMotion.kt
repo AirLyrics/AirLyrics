@@ -18,6 +18,8 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+private const val SELECTION_PANEL_HEIGHT_END_PROGRESS = 0.7f
+
 /** A reversible progress value, settled on detach and when system animations are disabled. */
 internal class SavedLyricsSelectionMotion(
     private val owner: View,
@@ -126,7 +128,9 @@ internal class SavedLyricsSelectionPanel(host: MainUiHost, content: View) : Fram
         progress = value
         visibility = if (value > 0f) VISIBLE else GONE
         getChildAt(0).apply {
-            alpha = value
+            // Finish moving the layout before the rounded action buttons fade in.
+            alpha = ((value - SELECTION_PANEL_HEIGHT_END_PROGRESS) /
+                (1f - SELECTION_PANEL_HEIGHT_END_PROGRESS)).coerceIn(0f, 1f)
             translationY = (1f - value) * 12f * resources.displayMetrics.density
         }
         requestLayout()
@@ -134,6 +138,7 @@ internal class SavedLyricsSelectionPanel(host: MainUiHost, content: View) : Fram
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-        setMeasuredDimension(measuredWidth, (measuredHeight * progress).roundToInt())
+        val heightProgress = (progress / SELECTION_PANEL_HEIGHT_END_PROGRESS).coerceIn(0f, 1f)
+        setMeasuredDimension(measuredWidth, (measuredHeight * heightProgress).roundToInt())
     }
 }

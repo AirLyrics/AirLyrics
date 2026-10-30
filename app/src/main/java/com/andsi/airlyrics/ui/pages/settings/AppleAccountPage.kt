@@ -37,6 +37,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
+private const val LOGIN_PANEL_HEIGHT_END_PROGRESS = 0.7f
+
 internal fun createAppleAccountPage(activity: MainUiHost): View = with(activity) {
     val container = pageContainer(activity, animateChanges = false)
     container.addView(settingsBackHeader(getString(R.string.ui_apple_account)))
@@ -134,6 +136,7 @@ private fun createAppleAccountCard(activity: MainUiHost): View = with(activity) 
                 renderStatus()
                 setExpanded(false)
             }
+            panel!!.captureButton.alpha = 0f
             loginContainer.addView(panel!!.view)
         }
         login.setText(if (open) R.string.ui_cancel else R.string.ui_apple_login)
@@ -150,16 +153,35 @@ private fun createAppleAccountCard(activity: MainUiHost): View = with(activity) 
         } else 0
         loginContainer.isVisible = true
         val startAlpha = if (startHeight == 0) 0f else loginContainer.alpha
-        animator = ValueAnimator.ofInt(startHeight, targetHeight).apply {
+        val startCaptureAlpha = panel?.captureButton?.alpha ?: 0f
+        animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = AirUiTokens.Motion.ThemePickerExpandMs
             interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
             addUpdateListener {
-                loginContainer.layoutParams = loginContainer.layoutParams.apply { height = it.animatedValue as Int }
-                loginContainer.alpha = startAlpha + ((if (open) 1f else 0f) - startAlpha) * it.animatedFraction
+                val progress = it.animatedValue as Float
+                val heightProgress = if (open) {
+                    (progress / LOGIN_PANEL_HEIGHT_END_PROGRESS).coerceIn(0f, 1f)
+                } else {
+                    ((progress - (1f - LOGIN_PANEL_HEIGHT_END_PROGRESS)) /
+                        LOGIN_PANEL_HEIGHT_END_PROGRESS).coerceIn(0f, 1f)
+                }
+                loginContainer.layoutParams = loginContainer.layoutParams.apply {
+                    height = (startHeight + (targetHeight - startHeight) * heightProgress).toInt()
+                }
+                loginContainer.alpha = startAlpha + ((if (open) 1f else 0f) - startAlpha) * progress
+                val captureProgress = if (open) {
+                    ((progress - LOGIN_PANEL_HEIGHT_END_PROGRESS) /
+                        (1f - LOGIN_PANEL_HEIGHT_END_PROGRESS)).coerceIn(0f, 1f)
+                } else {
+                    (progress / (1f - LOGIN_PANEL_HEIGHT_END_PROGRESS)).coerceIn(0f, 1f)
+                }
+                panel?.captureButton?.alpha =
+                    startCaptureAlpha + ((if (open) 1f else 0f) - startCaptureAlpha) * captureProgress
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     animator = null
+                    panel?.captureButton?.alpha = if (open) 1f else 0f
                     loginContainer.isVisible = open
                     loginContainer.layoutParams = loginContainer.layoutParams.apply {
                         height = if (open) ViewGroup.LayoutParams.WRAP_CONTENT else 0
@@ -206,7 +228,7 @@ private fun createAppleAccountCard(activity: MainUiHost): View = with(activity) 
     }
 }
 
-private data class AppleLoginPanel(val view: View, val dispose: () -> Unit)
+private data class AppleLoginPanel(val view: View, val captureButton: View, val dispose: () -> Unit)
 
 /** Created on demand inside the account card; disposed after collapse or leaving the page. */
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
@@ -283,7 +305,7 @@ private fun createAppleLoginPanel(activity: MainUiHost, onSignedIn: () -> Unit):
     }
     root.addView(webView)
     root.addView(status)
-    root.addView(actionButton(activity, getString(R.string.ui_apple_login_capture)) {
+    val captureButton = actionButton(activity, getString(R.string.ui_apple_login_capture)) {
         if (destroyed || captured) return@actionButton
         captureJob?.cancel()
         captureJob = activity.activity.lifecycleScope.launch {
@@ -291,8 +313,9 @@ private fun createAppleLoginPanel(activity: MainUiHost, onSignedIn: () -> Unit):
             if (destroyed) return@launch
             if (token == null) showStatus(getString(R.string.ui_apple_login_not_found)) else finishWithToken(token)
         }
-    })
-    AppleLoginPanel(root) {
+    }
+    root.addView(captureButton)
+    AppleLoginPanel(root, captureButton) {
         if (!destroyed) {
             destroyed = true
             captureJob?.cancel()

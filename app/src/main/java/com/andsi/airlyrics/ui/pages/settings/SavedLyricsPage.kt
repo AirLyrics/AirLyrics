@@ -313,6 +313,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
             setColor(colorSurfaceLight)
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
+        clipToOutline = true
         addView(airIconView(
             iconRes = R.drawable.ic_air_search,
             tint = colorTextMuted

@@ -118,11 +118,12 @@ internal class SavedLyricsSearchIconView(
 internal class SavedLyricsSearchTransition(
     host: MainUiHost,
     private val icon: SavedLyricsSearchIconView,
-    private val searchBar: View,
+    private val searchBar: ViewGroup,
     private val expandedBottomMargin: Int,
     initiallyExpanded: Boolean
 ) {
     private val expandedHeight = host.dp(AirUiTokens.Layout.IconTouchSize)
+    private val contentRevealHeight = expandedHeight - host.dp(AirUiTokens.Space.Lg)
     private val slideDistance = host.dp(AirUiTokens.Space.Lg).toFloat()
     private var progress = if (initiallyExpanded) 1f else 0f
     private var targetExpanded = initiallyExpanded
@@ -201,13 +202,15 @@ internal class SavedLyricsSearchTransition(
         val clamped = progress.coerceIn(0f, 1f)
         val reveal = smoothSegment(clamped, 0f, 1f)
         val layoutParams = searchBar.layoutParams as LinearLayout.LayoutParams
+        val visibleHeight = (expandedHeight * clamped).roundToInt()
 
         icon.setMorphProgress(clamped)
         searchBar.visibility = if (clamped > 0f || targetExpanded) View.VISIBLE else View.GONE
         searchBar.alpha = reveal
+        setSearchContentAlpha(heightRevealContentAlpha(visibleHeight, contentRevealHeight, expandedHeight))
         searchBar.translationY = -slideDistance * (1f - reveal)
         searchBar.scaleX = lerp(SEARCH_BAR_REST_SCALE_X, 1f, reveal)
-        layoutParams.height = (expandedHeight * clamped).roundToInt()
+        layoutParams.height = visibleHeight
         layoutParams.bottomMargin = (expandedBottomMargin * clamped).roundToInt()
         searchBar.layoutParams = layoutParams
     }
@@ -216,12 +219,19 @@ internal class SavedLyricsSearchTransition(
         val layoutParams = searchBar.layoutParams as LinearLayout.LayoutParams
         icon.setMorphProgress(if (expanded) 1f else 0f)
         searchBar.alpha = if (expanded) 1f else 0f
+        setSearchContentAlpha(if (expanded) 1f else 0f)
         searchBar.translationY = if (expanded) 0f else -slideDistance
         searchBar.scaleX = if (expanded) 1f else SEARCH_BAR_REST_SCALE_X
         searchBar.visibility = if (expanded) View.VISIBLE else View.GONE
         layoutParams.height = if (expanded) ViewGroup.LayoutParams.WRAP_CONTENT else 0
         layoutParams.bottomMargin = if (expanded) expandedBottomMargin else 0
         searchBar.layoutParams = layoutParams
+    }
+
+    private fun setSearchContentAlpha(alpha: Float) {
+        for (index in 0 until searchBar.childCount) {
+            searchBar.getChildAt(index).alpha = alpha
+        }
     }
 
     private fun settleAtTarget() {

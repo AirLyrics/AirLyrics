@@ -136,6 +136,7 @@ private class SettingsAppearanceHeader(
         }
         pickerContainer.visibility = if (openMenu == AppearanceMenu.NONE) GONE else VISIBLE
         pickerContainer.alpha = if (openMenu == AppearanceMenu.NONE) 0f else 1f
+        pickerContent.alpha = if (openMenu == AppearanceMenu.NONE) 0f else 1f
         pickerContainer.translationY = 0f
         super.onDetachedFromWindow()
     }
@@ -225,6 +226,7 @@ private class SettingsAppearanceHeader(
                 setColor(host.colorCard)
                 setStroke(host.dp(AirUiTokens.Stroke.Hairline), host.colorStroke)
             }
+            clipToOutline = true
             addView(pickerContent)
         }
     }
@@ -395,7 +397,6 @@ private class SettingsAppearanceHeader(
         buttonStyleContent.visibility = if (menu == AppearanceMenu.BUTTON_STYLE) VISIBLE else INVISIBLE
         accentContent.alpha = if (menu == AppearanceMenu.ACCENT) 1f else 0f
         buttonStyleContent.alpha = if (menu == AppearanceMenu.BUTTON_STYLE) 1f else 0f
-        pickerContent.alpha = 1f
         setContentInteractive(menu)
     }
 
@@ -471,7 +472,8 @@ private class SettingsAppearanceHeader(
         val startHeight = if (wasHidden) 0 else {
             pickerContainer.layoutParams.height.takeIf { it >= 0 } ?: pickerContainer.height
         }
-        val targetHeight = if (expanded) measurePickerHeight() else 0
+        val fullHeight = measurePickerHeight()
+        val targetHeight = if (expanded) fullHeight else 0
         if (expanded) {
             pickerContainer.visibility = VISIBLE
             if (wasHidden) {
@@ -480,12 +482,16 @@ private class SettingsAppearanceHeader(
                     -host.dp(AirUiTokens.Layout.ThemePickerSlideDistance).toFloat()
             }
         }
+        pickerContent.alpha = heightRevealContentAlpha(
+            startHeight, fullHeight - pickerContainer.paddingBottom, fullHeight
+        )
         if (!isAttachedToWindow || !ValueAnimator.areAnimatorsEnabled()) {
             pickerContainer.layoutParams = pickerContainer.layoutParams.apply {
                 height = LayoutParams.WRAP_CONTENT
             }
             pickerContainer.visibility = if (expanded) VISIBLE else GONE
             pickerContainer.alpha = if (expanded) 1f else 0f
+            pickerContent.alpha = if (expanded) 1f else 0f
             pickerContainer.translationY = 0f
             return
         }
@@ -494,6 +500,9 @@ private class SettingsAppearanceHeader(
         val heightAnimator = ValueAnimator.ofInt(startHeight, targetHeight).apply {
             addUpdateListener { animation ->
                 animatedParams.height = animation.animatedValue as Int
+                pickerContent.alpha = heightRevealContentAlpha(
+                    animatedParams.height, fullHeight - pickerContainer.paddingBottom, fullHeight
+                )
                 pickerContainer.requestLayout()
             }
         }
@@ -519,6 +528,7 @@ private class SettingsAppearanceHeader(
                     pickerContainer.layoutParams = animatedParams.apply {
                         height = LayoutParams.WRAP_CONTENT
                     }
+                    pickerContent.alpha = if (expanded) 1f else 0f
                     if (!expanded) {
                         pickerContainer.visibility = GONE
                         pickerContainer.translationY = 0f
