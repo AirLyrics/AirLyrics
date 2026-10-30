@@ -30,7 +30,8 @@ internal data class MediaPlayerUiSnapshot(
 
 internal data class MediaUiSnapshot(
     val selectedPackage: String? = null,
-    val players: List<MediaPlayerUiSnapshot> = emptyList()
+    val players: List<MediaPlayerUiSnapshot> = emptyList(),
+    val selectedArtworkKey: String? = null
 )
 
 internal data class ForegroundUiSnapshot(

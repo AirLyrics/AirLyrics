@@ -8,6 +8,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.resolveMediaSongMetadata
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.mediaArtwork
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
@@ -47,8 +48,11 @@ internal class MainForegroundStateReader(
             .selectedControllersByPackage(CurrentMediaReader.getActiveControllers(appContext))
             .values
             .toList()
+        val selectedPackage = MediaSourceStore.getSelectedPackage(appContext)
         return MediaUiSnapshot(
-            selectedPackage = MediaSourceStore.getSelectedPackage(appContext),
+            selectedPackage = selectedPackage,
+            selectedArtworkKey = CurrentMediaReader.bestController(controllers, selectedPackage)
+                ?.metadata.mediaArtwork()?.refreshKey,
             players = controllers.map { controller ->
                 val song = resolveMediaSongMetadata(controller.packageName, controller.metadata)
                 MediaPlayerUiSnapshot(
