@@ -13,6 +13,8 @@ internal interface UiInvalidator {
         animateTabs: Boolean = true
     )
 
+    fun refreshMediaContent()
+
     /** Updates bottom navigation text, selection, and highlight without touching page content. */
     fun refreshTabs(animate: Boolean = true)
 

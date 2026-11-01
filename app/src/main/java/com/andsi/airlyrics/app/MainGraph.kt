@@ -474,7 +474,11 @@ internal class MainGraph(
             else -> null
         }
         if (rebuildReason != null) {
-            return UiRefreshPlan(rebuildReason = rebuildReason)
+            return UiRefreshPlan(
+                rebuildReason = rebuildReason,
+                refreshTabs = rebuildReason == PageRebuildReason.MEDIA_CONTENT_CHANGED &&
+                    (overlayPermissionChanged || floatingVisibilityChanged || floatingDesiredVisibilityChanged)
+            )
         }
 
         val lyricsPageMounted = latest.currentPage == Page.SETTINGS &&
@@ -567,6 +571,11 @@ internal class MainGraph(
     }
 
     private fun applyRefreshPlan(plan: UiRefreshPlan) {
+        if (plan.rebuildReason == PageRebuildReason.MEDIA_CONTENT_CHANGED) {
+            uiInvalidator.refreshMediaContent()
+            if (plan.refreshTabs) uiInvalidator.refreshTabs(animate = false)
+            return
+        }
         if (plan.rebuildReason != null) {
             uiInvalidator.rebuildCurrentPage(
                 animateContent = false,

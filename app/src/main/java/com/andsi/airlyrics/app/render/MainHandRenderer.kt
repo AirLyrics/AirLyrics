@@ -16,6 +16,9 @@ import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.updateTabs
 import com.andsi.airlyrics.ui.pages.floating.createFloatingPage
 import com.andsi.airlyrics.ui.pages.media.createMediaPage
+import com.andsi.airlyrics.ui.pages.media.MediaPageBinding
+import com.andsi.airlyrics.ui.pages.media.MediaArtworkMotionState
+import com.andsi.airlyrics.ui.pages.media.MediaPlayerEntranceMotion
 import com.andsi.airlyrics.ui.pages.settings.createSettingsPage
 import com.andsi.airlyrics.ui.theme.colorBackground
 
@@ -25,6 +28,9 @@ internal class MainHandRenderer(
 ) : UiInvalidator {
     private var renderedPage: Page = Page.MEDIA
     private var renderedSettingsSubPage = com.andsi.airlyrics.ui.navigation.SettingsSubPage.HOME
+    private val mediaPlayerEntrance = MediaPlayerEntranceMotion()
+    private val mediaArtworkMotion = MediaArtworkMotionState()
+    private var mediaPageBinding: MediaPageBinding? = null
 
     private val host
         get() = graph.uiHost
@@ -66,15 +72,25 @@ internal class MainHandRenderer(
             else -> true
         }
 
+        mediaPageBinding?.finish()
+        mediaPageBinding = null
         graph.viewRefs.clearPageRefs()
         container.removeAllViews()
+        if (state.currentPage != Page.MEDIA) mediaPlayerEntrance.finishActive()
         refreshTabs(animate = animateTabs)
         if (state.currentPage != Page.FLOATING) {
             host.floatingPanelBackHandler = null
         }
 
         val pageView = when (state.currentPage) {
-            Page.MEDIA -> createMediaPage(host, animateContent = animateContent)
+            Page.MEDIA -> {
+                val mediaState = host.mediaPageState()
+                if (mediaState.selectedController == null) mediaArtworkMotion.presented(null, null)
+                mediaPlayerEntrance.updatePackages(mediaState.controllers.mapTo(mutableSetOf()) { it.packageName })
+                createMediaPage(host, animateContent, mediaState, mediaPlayerEntrance, mediaArtworkMotion) {
+                    mediaPageBinding = it
+                }
+            }
             Page.FLOATING -> createFloatingPage(host)
             Page.SETTINGS -> createSettingsPage(host)
         }
@@ -87,6 +103,17 @@ internal class MainHandRenderer(
         renderedPage = state.currentPage
         renderedSettingsSubPage = state.settingsSubPage
 
+    }
+
+    override fun refreshMediaContent() {
+        if (state.currentPage != Page.MEDIA) return
+        val container = host.contentContainer ?: return
+        val latest = host.mediaPageState()
+        val binding = mediaPageBinding
+        if (renderedPage == Page.MEDIA && binding?.view?.parent === container && binding.update(latest)) {
+            return
+        }
+        rebuildCurrentPage(animateContent = false, animateTabs = false)
     }
 
     override fun refreshTabs(animate: Boolean) {

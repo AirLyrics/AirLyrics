@@ -168,6 +168,10 @@ internal class MainActivityUiHost(
         graph.uiInvalidator.rebuildCurrentPage(animateContent, animateTabs)
     }
 
+    override fun refreshMediaContent() {
+        graph.uiInvalidator.refreshMediaContent()
+    }
+
     override fun rebuildMainView() {
         graph.uiInvalidator.recreateMainView()
     }
@@ -207,7 +211,8 @@ internal class MainActivityUiHost(
     override fun dismissMessage() = graph.feedback.dismiss()
 
     override fun refreshMediaButton(): View = refreshMediaButtonImpl()
-    override fun mediaSourceCard(controller: MediaController, selected: Boolean): View = mediaSourceCardImpl(controller, selected)
+    override fun mediaSourceCard(controller: MediaController, selected: Boolean): com.andsi.airlyrics.ui.model.MediaSourceCardBinding =
+        mediaSourceCardImpl(controller, selected)
 
     override fun optionGrid(items: List<OptionItem>): LinearLayout = optionGridImpl(items)
     override fun liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout = liveOptionGridImpl(items)

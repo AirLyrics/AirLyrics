@@ -10,5 +10,12 @@ internal interface MediaUiHost {
     fun getPlaybackStateText(state: Int?): String
 
     fun refreshMediaButton(): View
-    fun mediaSourceCard(controller: MediaController, selected: Boolean): View
+    fun mediaSourceCard(controller: MediaController, selected: Boolean): MediaSourceCardBinding
+}
+
+internal interface MediaSourceCardBinding {
+    val view: View
+    val packageName: String
+    fun update(controller: MediaController, selected: Boolean)
+    fun finish()
 }

@@ -5,28 +5,88 @@ import com.andsi.airlyrics.R
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.drawable.GradientDrawable
 import android.media.session.PlaybackState
 import android.net.Uri
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.model.MediaPageState
+import com.andsi.airlyrics.ui.model.MediaSourceCardBinding
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.theme.*
 
-private const val MEDIA_ARTWORK_SIZE_DP = 72
+internal const val MEDIA_ARTWORK_SIZE_DP = 72
 
-internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = true): View  = with(activity) createMediaPage@ {
+internal class MediaPageBinding(
+    val view: View,
+    private val packages: Set<String>,
+    private val currentMedia: CurrentMediaBinding?,
+    private val players: List<MediaSourceCardBinding>
+) {
+    fun update(state: MediaPageState): Boolean {
+        if (state.controllers.mapTo(mutableSetOf()) { it.packageName } != packages ||
+            (state.selectedController != null) != (currentMedia != null)) return false
+        currentMedia?.update(state)
+        val controllers = state.controllers.associateBy { it.packageName }
+        players.forEach { card ->
+            val controller = controllers.getValue(card.packageName)
+            card.update(controller, controller.packageName == state.selectedPackage)
+        }
+        return true
+    }
+
+    fun finish() {
+        currentMedia?.finish()
+        players.forEach(MediaSourceCardBinding::finish)
+    }
+}
+
+internal class CurrentMediaBinding(
+    private val host: MainUiHost,
+    private val title: MediaRollingTextSlot,
+    private val artist: MediaRollingTextSlot,
+    private val status: MediaStatusMotion,
+    private val artwork: MediaArtworkSwap
+) {
+    fun update(state: MediaPageState) = with(host) {
+        val controller = state.selectedController ?: return@with
+        title.show(state.selectedTitle.orEmpty().ifBlank { getString(R.string.ui_unknown_song) })
+        val artistText = state.selectedArtist ?: getString(R.string.ui_unknown_artist)
+        val appName = getAppName(controller.packageName)
+        artist.show("$artistText · $appName", delayMs = 45L, stableSuffix = " · $appName")
+        val playing = controller.playbackState?.state == PlaybackState.STATE_PLAYING
+        status.show(getPlaybackStateText(controller.playbackState?.state), playing)
+        artwork.show(state.selectedArtworkBitmap, state.selectedArtworkUri,
+            "${controller.packageName}\u0000${state.selectedTitle}\u0000${state.selectedArtist}")
+    }
+
+    fun finish() {
+        title.finish()
+        artist.finish()
+        status.finish()
+        artwork.finish()
+    }
+}
+
+internal fun createMediaPage(
+    activity: MainUiHost,
+    animateContent: Boolean = true,
+    pageState: MediaPageState = activity.mediaPageState(),
+    playerEntrance: MediaPlayerEntranceMotion? = null,
+    artworkMotion: MediaArtworkMotionState = MediaArtworkMotionState(),
+    onBound: ((MediaPageBinding) -> Unit)? = null
+): View = with(activity) createMediaPage@ {
     val container = pageContainer(activity, animateChanges = animateContent)
-    val pageState = mediaPageState()
     val controllers = pageState.controllers
     val selectedPackage = pageState.selectedPackage
     val selectedController = pageState.selectedController
     val notificationAccessGranted = hasNotificationListenerAccess()
+    var currentMedia: CurrentMediaBinding? = null
+    val players = mutableListOf<MediaSourceCardBinding>()
 
     container.addView(
         sectionTitle(activity, 
@@ -48,65 +108,33 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
                 val state = getPlaybackStateText(selectedController.playbackState?.state)
                 val artworkBitmap = pageState.selectedArtworkBitmap
                 val artworkUri = pageState.selectedArtworkUri
-                val titleView = expandableText(bigText(activity, title))
-                val artistView = expandableText(normalText(activity, "$artist · $appName"))
+                val titleView = MediaRollingTextSlot(activity, bigText(activity, title), MediaRollingRole.TITLE)
+                val artistView = MediaRollingTextSlot(activity, normalText(activity, "$artist · $appName"))
                 val statusView = statusPill(activity, state, selectedController.playbackState?.state == PlaybackState.STATE_PLAYING)
-
-                if (artworkBitmap == null && artworkUri == null) {
-                    addView(titleView)
-                    addView(artistView)
-                    addView(statusView)
-                } else {
-                    val artworkView = ImageView(activity).apply {
-                        scaleType = ImageView.ScaleType.CENTER_CROP
-                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                        visibility = View.GONE
-                        background = GradientDrawable().apply {
-                            cornerRadius = dp(AirUiTokens.Radius.Sm).toFloat()
-                            setColor(colorCard)
-                        }
-                        clipToOutline = true
-                        layoutParams = LinearLayout.LayoutParams(
-                            dp(MEDIA_ARTWORK_SIZE_DP), dp(MEDIA_ARTWORK_SIZE_DP)
-                        ).apply {
-                            marginStart = dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs)
-                        }
-                    }
+                val statusMotion = MediaStatusMotion(activity, statusView,
+                    selectedController.playbackState?.state == PlaybackState.STATE_PLAYING)
+                val artworkView = MediaArtworkSwap(activity, artworkMotion)
+                addView(LinearLayout(activity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    layoutParams = LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
                     addView(LinearLayout(activity).apply {
-                        orientation = LinearLayout.HORIZONTAL
-                        gravity = Gravity.CENTER_VERTICAL
+                        orientation = LinearLayout.VERTICAL
                         layoutParams = LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            ViewGroup.LayoutParams.WRAP_CONTENT
+                            0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
                         )
-                        addView(LinearLayout(activity).apply {
-                            orientation = LinearLayout.VERTICAL
-                            layoutParams = LinearLayout.LayoutParams(
-                                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
-                            )
-                            addView(titleView)
-                            addView(artistView)
-                            addView(statusView)
-                        })
-                        addView(artworkView)
+                        addView(titleView)
+                        addView(artistView)
+                        addView(statusView)
                     })
-                    if (artworkBitmap != null) {
-                        artworkView.setImageBitmap(artworkBitmap)
-                        artworkView.visibility = View.VISIBLE
-                    } else if (artworkUri != null) {
-                        val generation = currentUiGeneration()
-                        val artworkSize = dp(MEDIA_ARTWORK_SIZE_DP)
-                        runOnAppIo {
-                            val bitmap = decodeMediaArtwork(activity, artworkUri, artworkSize)
-                            if (bitmap != null) runOnStartedUi(generation) {
-                                if (artworkView.isAttachedToWindow) {
-                                    artworkView.setImageBitmap(bitmap)
-                                    artworkView.visibility = View.VISIBLE
-                                }
-                            }
-                        }
-                    }
-                }
+                    addView(artworkView)
+                })
+                artworkView.show(artworkBitmap, artworkUri,
+                    "${selectedController.packageName}\u0000${pageState.selectedTitle}\u0000${pageState.selectedArtist}")
+                currentMedia = CurrentMediaBinding(activity, titleView, artistView, statusMotion, artworkView)
             } else {
                 addView(bigText(activity, getString(R.string.ui_no_media_detected_yet)))
                 val hintText = getString(
@@ -136,9 +164,23 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
         )
     } else {
         controllers.forEach { controller ->
-            container.addView(mediaSourceCard(controller, controller.packageName == selectedPackage).apply {
+            val source = mediaSourceCard(controller, controller.packageName == selectedPackage)
+            players += source
+            val sourceCard = source.view.apply {
                 setTag(R.id.interaction_anchor, "media.player.${controller.packageName}")
-            })
+            }
+            // Keep the press feedback on the card independent from its entrance transform.
+            val cardHolder = FrameLayout(activity).apply {
+                layoutParams = sourceCard.layoutParams
+                clipChildren = false
+                clipToPadding = false
+                addView(sourceCard, FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                ))
+            }
+            playerEntrance?.bind(controller.packageName, cardHolder, dp(AirUiTokens.Motion.MediaPlayerEnterRiseDp).toFloat())
+            container.addView(cardHolder)
         }
     }
 
@@ -149,10 +191,12 @@ internal fun createMediaPage(activity: MainUiHost, animateContent: Boolean = tru
     container.getChildAt(1).setTag(R.id.interaction_anchor, "media.current")
     container.getChildAt(3).setTag(R.id.interaction_anchor, "media.players.heading")
     container.getChildAt(container.childCount - 1).setTag(R.id.interaction_anchor, "media.refresh")
-    return com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1), "scroll.MEDIA.root")
+    val page = com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1), "scroll.MEDIA.root")
+    onBound?.invoke(MediaPageBinding(page, controllers.mapTo(mutableSetOf()) { it.packageName }, currentMedia, players))
+    return page
 }
 
-private fun decodeMediaArtwork(context: Context, uri: Uri, targetSize: Int): Bitmap? {
+internal fun decodeMediaArtwork(context: Context, uri: Uri, targetSize: Int): Bitmap? {
     return try {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         val resolver = context.contentResolver

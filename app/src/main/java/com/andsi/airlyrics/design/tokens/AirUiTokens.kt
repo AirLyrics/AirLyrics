@@ -83,6 +83,13 @@ object AirUiTokens {
         const val SnackbarExitMs = 240L
         const val ThemePickerExpandMs = 190L
         const val LyricsSourceReorderMs = 250L
+        const val MediaPlayerEnterMs = 400L
+        const val MediaPlayerEnterScale = 0.94f
+        const val MediaPlayerEnterRiseDp = 14
+        const val MediaTextSwapMs = 420L
+        const val MediaSecondaryTextSwapMs = 330L
+        const val MediaStatusSwapMs = 180L
+        const val MediaArtworkSwapMs = 340L
 
         const val PressAlpha = 0.88f
         const val DefaultPressScale = 0.97f

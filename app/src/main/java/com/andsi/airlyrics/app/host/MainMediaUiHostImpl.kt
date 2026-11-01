@@ -133,10 +133,7 @@ internal fun MainUiHost.startMediaRefreshFeedbackImpl(onStateChanged: () -> Unit
         onStateChanged()
         mediaRefreshHandler.postDelayed({
             if (currentPage == Page.MEDIA) {
-                rebuildCurrentPage(
-                    animateContent = false,
-                    animateTabs = false
-                )
+                refreshMediaContent()
             }
         }, AirUiTokens.Layout.MediaDoneRefreshMs)
     }, AirUiTokens.Layout.MediaRefreshingMs)
