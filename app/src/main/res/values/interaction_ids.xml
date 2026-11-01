@@ -1,4 +1,5 @@
 <resources>
     <item name="interaction_anchor" type="id" />
     <item name="interaction_loading" type="id" />
+    <item name="interaction_refresh_feedback_dismiss" type="id" />
 </resources>

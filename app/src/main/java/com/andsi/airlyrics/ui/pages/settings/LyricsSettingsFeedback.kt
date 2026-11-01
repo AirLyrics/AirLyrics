@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.TextView
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
@@ -17,9 +18,15 @@ internal data class RefreshableSettingsCard(
     val refreshContent: () -> Unit
 )
 
+private fun TextView.cancelPendingRefreshFeedback() {
+    (getTag(R.id.interaction_refresh_feedback_dismiss) as? Runnable)?.let(::removeCallbacks)
+    setTag(R.id.interaction_refresh_feedback_dismiss, null)
+    animate().cancel()
+}
+
 internal fun showInlineRefreshFeedback(feedback: TextView?, message: String) {
     feedback?.apply {
-        animate().cancel()
+        cancelPendingRefreshFeedback()
         text = message
         alpha = 1f
     }
@@ -33,16 +40,22 @@ internal fun playLocalRefreshFeedback(
     animateTarget: Boolean = true
 ) = with(activity) {
     feedback?.apply {
+        cancelPendingRefreshFeedback()
         text = message
         alpha = 0f
         animate().alpha(1f).setDuration(AirUiTokens.Motion.FeedbackInMs).withEndAction {
-            postDelayed({
-                animate()
-                    .alpha(0f)
-                    .setDuration(AirUiTokens.Motion.FeedbackOutMs)
-                    .withEndAction { text = "" }
-                    .start()
-            }, AirUiTokens.Motion.FeedbackHoldMs)
+            val dismiss = Runnable {
+                setTag(R.id.interaction_refresh_feedback_dismiss, null)
+                if (isAttachedToWindow) {
+                    animate()
+                        .alpha(0f)
+                        .setDuration(AirUiTokens.Motion.FeedbackOutMs)
+                        .withEndAction { text = "" }
+                        .start()
+                }
+            }
+            setTag(R.id.interaction_refresh_feedback_dismiss, dismiss)
+            postDelayed(dismiss, AirUiTokens.Motion.FeedbackHoldMs)
         }.start()
     }
 
