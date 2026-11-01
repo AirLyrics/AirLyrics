@@ -73,6 +73,8 @@ object AirUiTokens {
         const val PulseDownMs = 140L
         const val LayoutChangeMs = 170L
         const val PageEnterMs = 230L
+        const val PageExitMs = 120L
+        const val PageEnterDelayMs = 18L
         const val ChildEnterMs = 220L
         const val ChildDelayStepMs = 24L
         const val RefreshSpinMs = 420L
@@ -111,7 +113,7 @@ object AirUiTokens {
         const val OptionColumns = 2
         const val SwatchColumns = 3
         const val ChildEnterMaxIndex = 8
-        const val PageEnterDistance = 26
+        const val PageEnterDistance = 16
         const val ChildEnterDistance = 12
         const val StatusIconSize = 22
         const val DialogCloseSize = 36

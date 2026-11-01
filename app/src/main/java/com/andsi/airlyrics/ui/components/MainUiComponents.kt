@@ -293,18 +293,6 @@ internal fun spacer(activity: MainUiHost, height: Int): View  = with(activity) s
     }
 }
 
-internal fun animatePageEnter(activity: MainUiHost, view: View, fromRight: Boolean) = with(activity) animatePageEnter@ {
-    val distance = dp(AirUiTokens.Layout.PageEnterDistance).toFloat() * if (fromRight) 1f else -1f
-    view.alpha = 0f
-    view.translationX = distance
-    view.animate()
-        .alpha(AirUiTokens.Motion.RestAlpha)
-        .translationX(0f)
-        .setDuration(AirUiTokens.Motion.PageEnterMs)
-        .setInterpolator(DecelerateInterpolator())
-        .start()
-}
-
 internal fun animateChildrenCascade(activity: MainUiHost, root: View) = with(activity) animateChildrenCascade@ {
     val parent = root as? ViewGroup ?: return
     val delayStep = AirUiTokens.Motion.ChildDelayStepMs

@@ -212,6 +212,7 @@ internal class MainGraph(
         if (!uiStarted) return
 
         uiStarted = false
+        mainHandRenderer.finishPageTransition()
         stateObserverJob?.cancel()
         stateObserverJob = null
         effectObserverJob?.cancel()
@@ -577,9 +578,10 @@ internal class MainGraph(
             return
         }
         if (plan.rebuildReason != null) {
+            val pageNavigation = plan.rebuildReason == PageRebuildReason.PAGE_NAVIGATION
             uiInvalidator.rebuildCurrentPage(
-                animateContent = false,
-                animateTabs = false
+                animateContent = pageNavigation,
+                animateTabs = pageNavigation
             )
             return
         }

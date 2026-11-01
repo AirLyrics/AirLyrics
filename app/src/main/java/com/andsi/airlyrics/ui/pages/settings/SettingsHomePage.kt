@@ -7,7 +7,7 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceList
 
-internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity) createSettingsHomePage@ {
+internal fun createSettingsHomePage(activity: MainUiHost, animateChildren: Boolean = true): View  = with(activity) createSettingsHomePage@ {
     // The accent picker owns its height animation. A second CHANGING
     // LayoutTransition here would animate the same layout work twice.
     val container = pageContainer(activity, animateChanges = false)
@@ -56,5 +56,5 @@ internal fun createSettingsHomePage(activity: MainUiHost): View  = with(activity
         columnPolicy = GridColumnPolicy.Width(360)).apply {
         categories.forEach { addView(it) }
     })
-    return scroll(activity, container, maxWidthDp = 1200)
+    return scroll(activity, container, animateChildren = animateChildren, maxWidthDp = 1200)
 }

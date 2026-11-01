@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.navigation
 
 import com.andsi.airlyrics.R
 
+import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -83,7 +84,7 @@ internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) crea
     shell.addView(tabHighlight)
     shell.addView(bar)
     shell.addOnLayoutChangeListener { _, l, t, r, b, oldL, oldT, oldR, oldB ->
-        if (r - l != oldR - oldL || b - t != oldB - oldT) updateTabHighlight(activity)
+        if (r - l != oldR - oldL || b - t != oldB - oldT) updateTabHighlight(activity, animate = false)
     }
     return shell
 }
@@ -157,6 +158,7 @@ internal fun measureTabTextWidth(tab: TextView): Float {
 }
 
 internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = with(activity) updateTabs@ {
+    val motion = animate && ValueAnimator.areAnimatorsEnabled()
     tabViews.forEach { (page, view) ->
         val selected = page == currentPage
         val quickControlSelected = page == Page.FLOATING && selected
@@ -177,9 +179,11 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         }
         if (view.text.toString() != targetText || view.tag != targetIconRes) {
             view.animate().cancel()
-            view.alpha = AirUiTokens.Layout.TabTextSwapAlpha
-            view.scaleX = AirUiTokens.Layout.TabTextSwapScale
-            view.scaleY = AirUiTokens.Layout.TabTextSwapScale
+            if (motion) {
+                view.alpha = AirUiTokens.Layout.TabTextSwapAlpha
+                view.scaleX = AirUiTokens.Layout.TabTextSwapScale
+                view.scaleY = AirUiTokens.Layout.TabTextSwapScale
+            }
             view.text = targetText
             view.tag = targetIconRes
         }
@@ -194,7 +198,7 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         view.background = null
         val targetScale = AirUiTokens.Motion.RestScale
         val targetAlpha = if (selected) AirUiTokens.Motion.RestScale else AirUiTokens.Layout.TabUnselectedAlpha
-        if (animate) {
+        if (motion) {
             view.animate()
                 .scaleX(targetScale)
                 .scaleY(targetScale)
@@ -210,18 +214,21 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         }
     }
 
-    updateTabHighlight(activity)
+    updateTabHighlight(activity, animate = motion)
 }
 
-private fun updateTabHighlight(activity: MainUiHost) = with(activity) {
-    val selectedTab = tabViews[currentPage] ?: return@with
+private fun updateTabHighlight(activity: MainUiHost, animate: Boolean = true) = with(activity) {
+    val page = currentPage
+    val selectedTab = tabViews[page] ?: return@with
     selectedTab.post {
+        if (currentPage != page || !selectedTab.isAttachedToWindow) return@post
         val highlight = tabHighlight ?: return@post
+        if (!highlight.isAttachedToWindow) return@post
         val selectedSlot = selectedTab.parent as? View ?: selectedTab
         val textWidth = measureTabTextWidth(selectedTab)
-        val horizontalPadding = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingPadding) else dp(AirUiTokens.Layout.BottomTabDefaultPadding)
+        val horizontalPadding = if (page == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingPadding) else dp(AirUiTokens.Layout.BottomTabDefaultPadding)
         val targetWidth = (textWidth + horizontalPadding).coerceAtMost(selectedSlot.width.toFloat())
-        val baseHeight = if (currentPage == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingHeight) else dp(AirUiTokens.Layout.BottomTabDefaultHeight)
+        val baseHeight = if (page == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingHeight) else dp(AirUiTokens.Layout.BottomTabDefaultHeight)
         val targetHeight = maxOf(baseHeight, selectedTab.height).coerceAtMost(highlight.height).toFloat()
 
         val slotLocation = IntArray(2)
@@ -236,7 +243,7 @@ private fun updateTabHighlight(activity: MainUiHost) = with(activity) {
             targetCenterY = centerY,
             targetWidth = targetWidth,
             targetHeight = targetHeight,
-            animate = highlight.hasPosition
+            animate = animate && highlight.hasPosition
         )
     }
 }

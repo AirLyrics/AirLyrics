@@ -3,14 +3,14 @@ package com.andsi.airlyrics.app.render
 import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import com.andsi.airlyrics.ui.state.findInteractionScroll
 import com.andsi.airlyrics.ui.state.markInteractionAnchors
+import android.animation.ValueAnimator
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.isNotEmpty
 import com.andsi.airlyrics.app.MainGraph
-import com.andsi.airlyrics.ui.components.animatePageEnter
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.updateTabs
@@ -27,9 +27,9 @@ internal class MainHandRenderer(
     private val graph: MainGraph
 ) : UiInvalidator {
     private var renderedPage: Page = Page.MEDIA
-    private var renderedSettingsSubPage = com.andsi.airlyrics.ui.navigation.SettingsSubPage.HOME
     private val mediaPlayerEntrance = MediaPlayerEntranceMotion()
     private val mediaArtworkMotion = MediaArtworkMotionState()
+    private val pageTransition = MainPageTransition()
     private var mediaPageBinding: MediaPageBinding? = null
 
     private val host
@@ -39,6 +39,10 @@ internal class MainHandRenderer(
 
     fun createMainView(): View {
         val content = FrameLayout(host)
+        content.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) = pageTransition.cancel()
+        })
         host.contentContainer = content
         graph.viewRefs.feedbackAnchor = content
         return com.andsi.airlyrics.ui.layout.AdaptiveWindowLayout(host, content).apply {
@@ -58,24 +62,23 @@ internal class MainHandRenderer(
         animateTabs: Boolean
     ) {
         val container = host.contentContainer ?: return
+        pageTransition.cancel(settleIncoming = false)
         graph.beginPageRebuild()
         rememberRenderedPageScroll()
 
         val oldPage = renderedPage
-        val oldSubPage = renderedSettingsSubPage
-        val shouldAnimate = animateContent &&
-            container.isNotEmpty() &&
-            (state.currentPage != oldPage || state.settingsSubPage != oldSubPage)
-        val slideFromRight = when {
-            state.currentPage != oldPage -> state.currentPage.ordinal > oldPage.ordinal
-            state.currentPage == Page.SETTINGS -> state.settingsSubPage.ordinal > oldSubPage.ordinal
-            else -> true
-        }
+        val outgoingPage = container.getChildAt(container.childCount - 1)
+        val pageNavigation = animateContent && outgoingPage != null && state.currentPage != oldPage
+        val shouldAnimate = pageNavigation &&
+            container.isAttachedToWindow &&
+            ValueAnimator.areAnimatorsEnabled()
+        val slideFromRight = (state.currentPage.ordinal > oldPage.ordinal) !=
+            (container.layoutDirection == View.LAYOUT_DIRECTION_RTL)
 
         mediaPageBinding?.finish()
         mediaPageBinding = null
         graph.viewRefs.clearPageRefs()
-        container.removeAllViews()
+        if (!shouldAnimate) container.removeAllViews()
         if (state.currentPage != Page.MEDIA) mediaPlayerEntrance.finishActive()
         refreshTabs(animate = animateTabs)
         if (state.currentPage != Page.FLOATING) {
@@ -87,22 +90,28 @@ internal class MainHandRenderer(
                 val mediaState = host.mediaPageState()
                 if (mediaState.selectedController == null) mediaArtworkMotion.presented(null, null)
                 mediaPlayerEntrance.updatePackages(mediaState.controllers.mapTo(mutableSetOf()) { it.packageName })
-                createMediaPage(host, animateContent, mediaState, mediaPlayerEntrance, mediaArtworkMotion) {
+                createMediaPage(host, animateContent && !pageNavigation, mediaState, mediaPlayerEntrance, mediaArtworkMotion) {
                     mediaPageBinding = it
                 }
             }
             Page.FLOATING -> createFloatingPage(host)
-            Page.SETTINGS -> createSettingsPage(host)
+            Page.SETTINGS -> createSettingsPage(host, animateHomeChildren = !pageNavigation)
         }
 
         val scrollKey = "scroll.${state.currentPage.name}.${if (state.currentPage == Page.SETTINGS) state.settingsSubPage.name else "root"}"
         pageView.markInteractionAnchors(scrollKey)
         if (!pageView.hasResponsivePage()) pageView.findInteractionScroll()?.let { host.bindInteractionScroll(it, scrollKey) }
         container.addView(pageView)
-        if (shouldAnimate) animatePageEnter(host, pageView, slideFromRight)
+        if (shouldAnimate) {
+            pageTransition.start(
+                container = container,
+                outgoing = outgoingPage,
+                incoming = pageView,
+                fromRight = slideFromRight,
+                distance = host.dp(AirUiTokens.Layout.PageEnterDistance).toFloat()
+            )
+        }
         renderedPage = state.currentPage
-        renderedSettingsSubPage = state.settingsSubPage
-
     }
 
     override fun refreshMediaContent() {
@@ -141,6 +150,7 @@ internal class MainHandRenderer(
     }
 
     override fun recreateMainView() {
+        finishPageTransition()
         rememberRenderedPageScroll()
         graph.feedback.dismiss()
         host.auxiliaryRestoreJob?.cancel()
@@ -157,6 +167,10 @@ internal class MainHandRenderer(
 
     private fun rememberRenderedPageScroll() {
         host.interactionUi.capture()
+    }
+
+    fun finishPageTransition() {
+        pageTransition.cancel()
     }
 }
 
