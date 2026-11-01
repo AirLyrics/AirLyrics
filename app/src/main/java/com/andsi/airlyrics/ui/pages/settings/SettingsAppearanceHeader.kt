@@ -42,6 +42,8 @@ internal fun createSettingsAppearanceHeader(host: MainUiHost): View {
 
 internal enum class AppearanceMenu { NONE, ACCENT, BUTTON_STYLE }
 
+private const val APPEARANCE_MENU_KEY = "settings.home.appearanceMenu"
+
 internal class AppearanceMenuState {
     var openMenu: AppearanceMenu = AppearanceMenu.NONE
         private set
@@ -72,7 +74,10 @@ internal fun menuCrossfadeAlphas(
 private class SettingsAppearanceHeader(
     private val host: MainUiHost
 ) : LinearLayout(host) {
-    private val menuState = AppearanceMenuState()
+    private val menuState = AppearanceMenuState().apply {
+        val restored = host.interactions.read(APPEARANCE_MENU_KEY)?.getString("menu")
+        AppearanceMenu.entries.firstOrNull { it.name == restored && it != AppearanceMenu.NONE }?.let(::toggle)
+    }
     private val accentContent: LinearLayout = createAccentContent()
     private val buttonStyleContent: LinearLayout = createButtonStyleContent()
     private val contentTouchBlocker = View(host).apply {
@@ -120,6 +125,14 @@ private class SettingsAppearanceHeader(
         addView(host.adaptiveHeader(heading, controls))
 
         addView(pickerContainer)
+        menuState.openMenu.takeIf { it != AppearanceMenu.NONE }?.let { menu ->
+            showContent(menu)
+            pickerContainer.visibility = VISIBLE
+            pickerContainer.alpha = 1f
+            pickerContent.alpha = 1f
+            accentButton.background = host.appearanceControlBackground(menu == AppearanceMenu.ACCENT)
+            buttonStyleButton.background = host.appearanceControlBackground(menu == AppearanceMenu.BUTTON_STYLE)
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -369,6 +382,11 @@ private class SettingsAppearanceHeader(
     private fun toggleMenu(menu: AppearanceMenu) {
         val previous = menuState.openMenu
         val current = menuState.toggle(menu)
+        if (current == AppearanceMenu.NONE) {
+            host.interactions.remove(APPEARANCE_MENU_KEY)
+        } else {
+            host.interactions.write(APPEARANCE_MENU_KEY) { putString("menu", current.name) }
+        }
         accentButton.background = host.appearanceControlBackground(current == AppearanceMenu.ACCENT)
         buttonStyleButton.background = host.appearanceControlBackground(current == AppearanceMenu.BUTTON_STYLE)
 

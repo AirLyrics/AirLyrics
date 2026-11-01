@@ -50,6 +50,7 @@ import com.andsi.airlyrics.ui.feedback.SnackbarAirFeedback
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.navigation.SettingsNavigation
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
@@ -69,6 +70,7 @@ internal class MainGraph(
 
     private data class UiRefreshPlan(
         val rebuildReason: PageRebuildReason? = null,
+        val settingsNavigation: SettingsNavigation? = null,
         val refreshTabs: Boolean = false,
         val refreshFloatingChrome: Boolean = false,
         val refreshFloatingControls: Boolean = false,
@@ -428,7 +430,12 @@ internal class MainGraph(
             return UiRefreshPlan(rebuildReason = PageRebuildReason.PAGE_NAVIGATION)
         }
         if (previous.settingsSubPage != latest.settingsSubPage) {
-            return UiRefreshPlan(rebuildReason = PageRebuildReason.SETTINGS_NAVIGATION)
+            return UiRefreshPlan(
+                rebuildReason = PageRebuildReason.SETTINGS_NAVIGATION,
+                settingsNavigation = if (latest.currentPage == Page.SETTINGS) {
+                    SettingsNavigation.between(previous.settingsSubPage, latest.settingsSubPage)
+                } else null
+            )
         }
 
         val overlayPermissionChanged =
@@ -592,7 +599,9 @@ internal class MainGraph(
             val pageNavigation = plan.rebuildReason == PageRebuildReason.PAGE_NAVIGATION
             uiInvalidator.rebuildCurrentPage(
                 animateContent = pageNavigation,
-                animateTabs = pageNavigation
+                animateTabs = pageNavigation,
+                reason = plan.rebuildReason,
+                settingsNavigation = plan.settingsNavigation
             )
             return
         }

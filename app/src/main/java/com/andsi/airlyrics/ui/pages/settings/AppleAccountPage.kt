@@ -28,6 +28,7 @@ import com.andsi.airlyrics.apple.AppleMusicTokens
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorDanger
 import kotlinx.coroutines.Dispatchers
@@ -39,11 +40,11 @@ import kotlin.coroutines.resume
 
 private const val LOGIN_PANEL_HEIGHT_END_PROGRESS = 0.7f
 
-internal fun createAppleAccountPage(activity: MainUiHost): View = with(activity) {
+internal fun createAppleAccountPage(activity: MainUiHost, animateChildren: Boolean): View = with(activity) {
     val container = pageContainer(activity, animateChanges = false)
     container.addView(settingsBackHeader(getString(R.string.ui_apple_account)))
     container.addView(createAppleAccountCard(activity))
-    scroll(activity, container)
+    scroll(activity, container, animateChildren = animateChildren)
 }
 
 private fun createAppleAccountCard(activity: MainUiHost): View = with(activity) {
@@ -63,7 +64,15 @@ private fun createAppleAccountCard(activity: MainUiHost): View = with(activity) 
     lateinit var setExpanded: (Boolean) -> Unit
     lateinit var renderStatus: () -> Unit
     val backCallback = object : OnBackPressedCallback(false) {
-        override fun handleOnBackPressed() { setExpanded(false) }
+        override fun handleOnBackPressed() {
+            if (settingsSubPage == SettingsSubPage.APPLE_ACCOUNT) {
+                setExpanded(false)
+            } else {
+                // The leaving page remains attached briefly for its Pop animation.
+                isEnabled = false
+                activity.activity.onBackPressedDispatcher.onBackPressed()
+            }
+        }
     }
 
     val login = actionButton(activity, getString(R.string.ui_apple_login)) {

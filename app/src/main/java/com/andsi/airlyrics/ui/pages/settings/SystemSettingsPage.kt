@@ -20,7 +20,7 @@ import com.andsi.airlyrics.ui.theme.colorText
 import com.andsi.airlyrics.ui.theme.applyAirThemeTint
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
-internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activity) createSystemSettingsPage@ {
+internal fun createSystemSettingsPage(activity: MainUiHost, animateChildren: Boolean): View = with(activity) createSystemSettingsPage@ {
     val container = pageContainer(activity)
     container.addView(settingsBackHeader(getString(R.string.ui_system)))
 
@@ -29,7 +29,7 @@ internal fun createSystemSettingsPage(activity: MainUiHost): View  = with(activi
 
     container.addView(systemPermissionCard())
 
-    return scroll(activity, container)
+    return scroll(activity, container, animateChildren = animateChildren)
 }
 
 private fun statusPopupsMuteCard(activity: MainUiHost): View = with(activity) statusPopupsMuteCard@ {

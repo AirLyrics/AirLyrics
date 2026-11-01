@@ -30,12 +30,12 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 
 
-internal fun createAboutSettingsPage(activity: MainUiHost): View = with(activity) {
+internal fun createAboutSettingsPage(activity: MainUiHost, animateChildren: Boolean): View = with(activity) {
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
     container.addView(settingsBackHeader(getString(R.string.ui_about)))
     container.addView(aboutLogoHeader())
     container.addView(changeLogButton())
-    return scroll(activity, container)
+    return scroll(activity, container, animateChildren = animateChildren)
 }
 
 private fun MainUiHost.aboutLogoHeader(): View {

@@ -1,5 +1,8 @@
 package com.andsi.airlyrics.app.render
 
+import com.andsi.airlyrics.ui.navigation.SettingsNavigation
+import com.andsi.airlyrics.ui.refresh.PageRebuildReason
+
 /**
  * Small boundary for UI refresh requests from controllers.
  *
@@ -10,7 +13,9 @@ internal interface UiInvalidator {
     /** Recreates the current page tree. Use only when the visible structure changes. */
     fun rebuildCurrentPage(
         animateContent: Boolean = true,
-        animateTabs: Boolean = true
+        animateTabs: Boolean = true,
+        reason: PageRebuildReason? = null,
+        settingsNavigation: SettingsNavigation? = null
     )
 
     fun refreshMediaContent()
