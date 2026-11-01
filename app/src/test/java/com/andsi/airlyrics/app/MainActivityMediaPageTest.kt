@@ -220,6 +220,20 @@ class MainActivityMediaPageTest {
     }
 
     @Test
+    fun hardwareArtworkUsesSampledPixelsForItsRefreshKey() {
+        withPlayer("other.player") { host, _ ->
+            val pixels = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888).apply {
+                eraseColor(Color.MAGENTA)
+            }
+            val hardware = pixels.copy(Bitmap.Config.HARDWARE, false)
+
+            assertEquals(Bitmap.Config.HARDWARE, hardware.config)
+            assertEquals(pixels.mediaArtworkRefreshKey(),
+                host.mediaArtworkRefreshKey(hardware, "other.player\u0000Song\u0000Artist"))
+        }
+    }
+
+    @Test
     fun playerCardRemainsClickableInsideEntranceHolder() {
         withPlayer("other.player") { host, controller ->
             shadowOf(controller).setMetadata(metadata("Song", "Artist", null, null))

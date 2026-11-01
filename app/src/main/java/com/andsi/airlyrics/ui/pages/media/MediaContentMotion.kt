@@ -17,7 +17,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.media.mediaArtworkRefreshKey
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -200,13 +199,7 @@ internal class MediaArtworkSwap(
             cancelTransition()
             val generation = host.currentUiGeneration()
             host.runOnAppIo {
-                val key = try {
-                    bitmap.copy(Bitmap.Config.ARGB_8888, false)?.let { copy ->
-                        try { copy.mediaArtworkRefreshKey() } finally { copy.recycle() }
-                    }
-                } catch (_: RuntimeException) {
-                    null
-                } ?: bitmap.mediaArtworkRefreshKey(contentKey)
+                val key = host.mediaArtworkRefreshKey(bitmap, contentKey)
                 host.runOnStartedUi(generation) {
                     if (!disposed && requestId == id && pendingHardwareBitmap === bitmap) {
                         pendingHardwareBitmap = null
@@ -218,7 +211,7 @@ internal class MediaArtworkSwap(
             return
         }
         val key = when {
-            bitmap != null -> bitmap.mediaArtworkRefreshKey(contentKey)
+            bitmap != null -> host.mediaArtworkRefreshKey(bitmap, contentKey)
             uri != null -> "uri:$uri"
             else -> null
         }

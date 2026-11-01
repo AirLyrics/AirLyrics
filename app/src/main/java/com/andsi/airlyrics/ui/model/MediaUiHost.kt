@@ -1,11 +1,13 @@
 package com.andsi.airlyrics.ui.model
 
+import android.graphics.Bitmap
 import android.media.session.MediaController
 import android.view.View
 
 internal interface MediaUiHost {
     fun getActiveMediaControllers(): List<MediaController>
     fun mediaPageState(): MediaPageState
+    fun mediaArtworkRefreshKey(bitmap: Bitmap, contentKey: String): String
     fun getAppName(packageName: String): String
     fun getPlaybackStateText(state: Int?): String
 

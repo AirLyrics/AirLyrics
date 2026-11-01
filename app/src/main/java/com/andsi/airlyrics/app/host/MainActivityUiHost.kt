@@ -10,6 +10,7 @@ import com.andsi.airlyrics.ui.model.OperationConfirmations
 import com.andsi.airlyrics.ui.model.ReaderContent
 
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.media.session.MediaController
@@ -53,6 +54,7 @@ import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.MediaArtwork
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.mediaArtwork
+import com.andsi.airlyrics.media.mediaArtworkRefreshKey
 import com.andsi.airlyrics.media.resolveMediaSongMetadata
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
@@ -207,6 +209,16 @@ internal class MainActivityUiHost(
             selectedArtworkBitmap = (artwork as? MediaArtwork.BitmapImage)?.bitmap,
             selectedArtworkUri = (artwork as? MediaArtwork.UriImage)?.uri
         )
+    }
+    override fun mediaArtworkRefreshKey(bitmap: Bitmap, contentKey: String): String {
+        if (bitmap.config != Bitmap.Config.HARDWARE) return bitmap.mediaArtworkRefreshKey(contentKey)
+        return try {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false)?.let { copy ->
+                try { copy.mediaArtworkRefreshKey() } finally { copy.recycle() }
+            }
+        } catch (_: RuntimeException) {
+            null
+        } ?: bitmap.mediaArtworkRefreshKey(contentKey)
     }
     override fun getAppName(packageName: String): String = graph.mediaSourceController.getAppName(packageName)
     override fun getPlaybackStateText(state: Int?): String = graph.mediaSourceController.getPlaybackStateText(state)
