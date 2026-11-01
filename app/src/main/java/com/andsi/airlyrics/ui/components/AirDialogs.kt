@@ -1,5 +1,8 @@
 package com.andsi.airlyrics.ui.components
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import com.andsi.airlyrics.ui.layout.WindowLayoutSpec
 import com.andsi.airlyrics.R
@@ -46,14 +49,39 @@ private class AirAnimatedDialog(
     themeResId: Int
 ) : Dialog(context, themeResId) {
     var animatedContent: View? = null
+    var coordinatedDim = false
     var onUserDismiss: (() -> Unit)? = null
     var afterUserDismiss: (() -> Unit)? = null
     private var userDismissed = false
 
     private val exitTranslationYPx = DIALOG_EXIT_TRANSLATION_Y_DP * context.resources.displayMetrics.density
     private var dismissing = false
+    private var dimAnimator: ValueAnimator? = null
+    val isLeaving get() = dismissing
+
+    fun animateDimTo(amount: Float, durationMs: Long) {
+        val dialogWindow = window ?: return
+        dimAnimator?.cancel()
+        if (!ValueAnimator.areAnimatorsEnabled()) {
+            dialogWindow.setDimAmount(amount)
+            return
+        }
+        val startAmount = dialogWindow.attributes.dimAmount
+        dimAnimator = ValueAnimator.ofFloat(startAmount, amount).apply {
+            duration = durationMs
+            interpolator = if (amount > startAmount) DecelerateInterpolator() else AccelerateInterpolator()
+            addUpdateListener { dialogWindow.setDimAmount(it.animatedValue as Float) }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (dimAnimator === animation) dimAnimator = null
+                }
+            })
+            start()
+        }
+    }
 
     fun dismissImmediately() {
+        dimAnimator?.cancel()
         animatedContent?.animate()?.cancel()
         afterUserDismiss = null
         super.dismiss()
@@ -77,6 +105,13 @@ private class AirAnimatedDialog(
         }
 
         dismissing = true
+        if (coordinatedDim && !ValueAnimator.areAnimatorsEnabled()) {
+            dimAnimator?.cancel()
+            content.animate().cancel()
+            super.dismiss()
+            return
+        }
+        if (coordinatedDim) animateDimTo(0f, DIALOG_EXIT_MS)
         content.animate().cancel()
         content.animate()
             .alpha(0f)
@@ -146,13 +181,15 @@ internal fun MainUiHost.showAirDialog(
     scrollStateKey: String? = null,
     onNegative: () -> Unit = {},
     onUserDismiss: () -> Unit = {},
-    onPositive: () -> Unit = {}
+    onPositive: () -> Unit = {},
+    coordinatedDim: Boolean = false
 ): Dialog {
     val host = this
     // The dialog owns input in a separate window, so Activity feedback must leave first.
     dismissMessage()
     val dialog = AirAnimatedDialog(this, android.R.style.Theme_Translucent_NoTitleBar)
     dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+    dialog.coordinatedDim = coordinatedDim
 
     val panel = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -247,10 +284,11 @@ internal fun MainUiHost.showAirDialog(
     }
     scrollStateKey?.let { bindInteractionScroll(animatedContent, it) }
     animatedContent.apply {
-        alpha = 0f
-        scaleX = DIALOG_ENTER_START_SCALE
-        scaleY = DIALOG_ENTER_START_SCALE
-        translationY = dp(DIALOG_ENTER_TRANSLATION_Y_DP).toFloat()
+        val animateEntry = !coordinatedDim || ValueAnimator.areAnimatorsEnabled()
+        alpha = if (animateEntry) 0f else 1f
+        scaleX = if (animateEntry) DIALOG_ENTER_START_SCALE else 1f
+        scaleY = if (animateEntry) DIALOG_ENTER_START_SCALE else 1f
+        translationY = if (animateEntry) dp(DIALOG_ENTER_TRANSLATION_Y_DP).toFloat() else 0f
     }
 
     var safeLeft = 0
@@ -282,6 +320,11 @@ internal fun MainUiHost.showAirDialog(
     }
 
     dialog.window?.applyAirDialogSystemBars(host)
+    if (coordinatedDim) dialog.window?.apply {
+        setWindowAnimations(0)
+        addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        setDimAmount(0f)
+    }
     dialog.animatedContent = animatedContent
     dialog.setContentView(root)
     dialog.setOnCancelListener { onNegative() }
@@ -289,11 +332,24 @@ internal fun MainUiHost.showAirDialog(
         dialog.window?.apply {
             applyAirDialogSystemBars(host)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            setDimAmount(AirUiTokens.Layout.DialogDimAmount)
+            if (!coordinatedDim || !ValueAnimator.areAnimatorsEnabled()) {
+                setDimAmount(AirUiTokens.Layout.DialogDimAmount)
+            }
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
         root.post {
+            if (!dialog.isShowing || dialog.isLeaving) return@post
             ViewCompat.requestApplyInsets(root)
+            if (coordinatedDim) {
+                dialog.animateDimTo(AirUiTokens.Layout.DialogDimAmount, DIALOG_ENTER_MS)
+                if (!ValueAnimator.areAnimatorsEnabled()) {
+                    animatedContent.alpha = 1f
+                    animatedContent.scaleX = 1f
+                    animatedContent.scaleY = 1f
+                    animatedContent.translationY = 0f
+                    return@post
+                }
+            }
             animatedContent.animate()
                 .alpha(1f)
                 .scaleX(1f)

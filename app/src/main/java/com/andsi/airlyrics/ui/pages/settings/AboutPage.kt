@@ -1,15 +1,22 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ValueAnimator
 import android.app.Dialog
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnPreDraw
 import com.andsi.airlyrics.ui.state.rememberAuxiliaryDialog
 import com.andsi.airlyrics.ui.state.isAuxiliaryDialogShowing
 import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
@@ -30,15 +37,90 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 
 
+// Motion Prompt #002 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#002
+// Motion Prompt #005 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#005
+// Motion Prompt #049 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#049
 internal fun createAboutSettingsPage(activity: MainUiHost, animateChildren: Boolean): View = with(activity) {
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
+    val aboutHeader = aboutLogoHeader()
+    val changelogButton = changeLogButton()
     container.addView(settingsBackHeader(getString(R.string.ui_about)))
-    container.addView(aboutLogoHeader())
-    container.addView(changeLogButton())
-    return scroll(activity, container, animateChildren = animateChildren)
+    container.addView(aboutHeader)
+    container.addView(changelogButton)
+    val page = scroll(activity, container, animateChildren = false)
+    if (animateChildren) {
+        // The first child contains the interactive logo and its Easter Egg; leave it untouched.
+        revealAboutContent(page, aboutHeader.getChildAt(1), aboutHeader.getChildAt(2), changelogButton)
+    }
+    return page
 }
 
-private fun MainUiHost.aboutLogoHeader(): View {
+private fun MainUiHost.revealAboutContent(page: View, title: View, details: View, changelog: View) {
+    if (!ValueAnimator.areAnimatorsEnabled()) return
+    val titleOffset = dp(8).toFloat()
+    val contentOffset = dp(6).toFloat()
+    title.clipBounds = Rect()
+    title.translationY = titleOffset
+    details.alpha = 0f
+    details.translationY = contentOffset
+    changelog.alpha = 0f
+    changelog.translationY = contentOffset
+    var titleAnimator: ValueAnimator? = null
+
+    fun settle() {
+        titleAnimator?.cancel()
+        titleAnimator = null
+        title.clipBounds = null
+        title.translationY = 0f
+        listOf(details, changelog).forEach {
+            it.animate().cancel()
+            it.animate().setStartDelay(0L)
+            it.alpha = 1f
+            it.translationY = 0f
+        }
+    }
+
+    page.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) = Unit
+        override fun onViewDetachedFromWindow(v: View) = settle()
+    })
+    page.doOnPreDraw {
+        if (!page.isAttachedToWindow || !ValueAnimator.areAnimatorsEnabled() || title.height == 0) {
+            settle()
+            return@doOnPreDraw
+        }
+        titleAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+            startDelay = 95L
+            duration = 180L
+            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            addUpdateListener { animation ->
+                val progress = animation.animatedValue as Float
+                title.clipBounds = Rect(0, 0, title.width, (title.height * progress).toInt())
+                title.translationY = titleOffset * (1f - progress)
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    title.clipBounds = null
+                    title.translationY = 0f
+                    titleAnimator = null
+                }
+            })
+            start()
+        }
+        listOf(details, changelog).forEachIndexed { index, view ->
+            view.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setStartDelay(135L + index * 40L)
+                .setDuration(if (index == 0) 165L else 155L)
+                .setInterpolator(DecelerateInterpolator(1.2f))
+                .withEndAction { view.animate().setStartDelay(0L) }
+                .start()
+        }
+    }
+}
+
+private fun MainUiHost.aboutLogoHeader(): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -157,18 +239,59 @@ private fun MainUiHost.changeLogButton(): View {
 
 private fun MainUiHost.showUpdateLogDialog() {
     var dialog: Dialog? = null
+    var openFullLog = false
+    val bodyViews = mutableListOf<View>()
+    val prepareBodyView: (View) -> View = { view ->
+        if (ValueAnimator.areAnimatorsEnabled()) {
+            view.alpha = 0f
+            view.translationY = dp(6).toFloat()
+        }
+        bodyViews += view
+        view
+    }
     dialog = showAirDialog(
         title = getString(R.string.ui_whats_new),
         message = null,
         positiveText = getString(R.string.ui_ok),
+        coordinatedDim = true,
+        afterUserDismiss = { if (openFullLog) showFullUpdateLogDialog() },
         body = {
-            addView(changelogTextView(loadCurrentChangelogText()))
-            addView(changelogDialogButton(getString(R.string.ui_view_full_changelog)) {
+            addView(prepareBodyView(changelogTextView(loadCurrentChangelogText())))
+            addView(prepareBodyView(changelogDialogButton(getString(R.string.ui_view_full_changelog)) {
+                openFullLog = true
                 dialog?.dismiss()
-                showFullUpdateLogDialog()
-            })
+            }))
         }
     )
+    dialog.window?.decorView?.apply {
+        addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) {
+                bodyViews.forEach {
+                    it.animate().cancel()
+                    it.animate().setStartDelay(0L)
+                    it.alpha = 1f
+                    it.translationY = 0f
+                }
+            }
+        })
+        post {
+            if (!dialog.isShowing || !ValueAnimator.areAnimatorsEnabled()) {
+                bodyViews.forEach { it.alpha = 1f; it.translationY = 0f }
+                return@post
+            }
+            bodyViews.forEachIndexed { index, view ->
+                view.animate()
+                    .alpha(1f)
+                    .translationY(0f)
+                    .setStartDelay(65L + index * 45L)
+                    .setDuration(150L)
+                    .setInterpolator(DecelerateInterpolator(1.2f))
+                    .withEndAction { view.animate().setStartDelay(0L) }
+                    .start()
+            }
+        }
+    }
 }
 
 internal fun MainUiHost.showFullUpdateLogDialog() {
@@ -180,6 +303,7 @@ internal fun MainUiHost.showFullUpdateLogDialog() {
         onUserDismiss = { forgetAuxiliaryDialog("changelog") },
         message = null,
         positiveText = getString(R.string.ui_ok),
+        coordinatedDim = true,
         body = {
             addView(changelogTextView(loadChangelogText()))
         }

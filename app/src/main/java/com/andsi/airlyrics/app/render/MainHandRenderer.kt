@@ -14,6 +14,7 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsNavigation
+import com.andsi.airlyrics.ui.navigation.SettingsNavigationDirection
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.updateTabs
 import com.andsi.airlyrics.ui.pages.floating.createFloatingPage
@@ -116,7 +117,12 @@ internal class MainHandRenderer(
                 }
             }
             Page.FLOATING -> createFloatingPage(host)
-            Page.SETTINGS -> createSettingsPage(host, animateChildren = false)
+            Page.SETTINGS -> createSettingsPage(
+                host,
+                animateChildren = shouldAnimateSettings &&
+                    settingsRoute.to == SettingsSubPage.ABOUT &&
+                    settingsRoute.direction == SettingsNavigationDirection.PUSH
+            )
         }
 
         val scrollKey = "scroll.${state.currentPage.name}.${if (state.currentPage == Page.SETTINGS) state.settingsSubPage.name else "root"}"

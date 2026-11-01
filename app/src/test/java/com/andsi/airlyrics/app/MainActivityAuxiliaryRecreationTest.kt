@@ -10,6 +10,8 @@ import com.andsi.airlyrics.ui.components.showFullText
 import com.andsi.airlyrics.ui.state.restoreAuxiliaryDialogs
 import com.andsi.airlyrics.ui.state.confirmOperation
 import com.andsi.airlyrics.ui.model.ConfirmationAction
+import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -21,6 +23,34 @@ import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 class MainActivityAuxiliaryRecreationTest {
+    @Test fun changelogPreviewHandsOffToTheFullDialog() {
+        Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { controller ->
+            val activity = controller.get()
+            val host = activity.graph.uiHost
+            activity.graph.viewModel.selectPage(Page.SETTINGS)
+            activity.graph.viewModel.openSettingsSubPage(SettingsSubPage.ABOUT)
+            await {
+                descendants(activity.window.decorView).filterIsInstance<TextView>().any {
+                    it.text.toString() == activity.getString(R.string.ui_changelog) && it.hasOnClickListeners()
+                }
+            }
+            descendants(activity.window.decorView).filterIsInstance<TextView>()
+                .first { it.text.toString() == activity.getString(R.string.ui_changelog) && it.hasOnClickListeners() }
+                .performClick()
+            val preview = ShadowDialog.getLatestDialog()
+            descendants(preview.window!!.decorView).filterIsInstance<TextView>()
+                .first { it.text.toString() == activity.getString(R.string.ui_view_full_changelog) && it.hasOnClickListeners() }
+                .performClick()
+
+            ShadowLooper.idleMainLooper(400, TimeUnit.MILLISECONDS)
+            await { host.auxiliaryDialogs["changelog"]?.isShowing == true }
+            assertFalse(preview.isShowing)
+            host.auxiliaryDialogs["changelog"]!!.dismiss()
+            ShadowLooper.idleMainLooper(300, TimeUnit.MILLISECONDS)
+            assertNull(host.interactions.read("aux.changelog"))
+        }
+    }
+
     @Test fun longReaderRestoresOnlyOnceAndCancelDeletesItsFile() {
         Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { controller ->
             val text = "Long text 阅读内容 ".repeat(6000)
