@@ -11,6 +11,7 @@ import android.text.TextWatcher
 import android.text.method.LinkMovementMethod
 import android.view.animation.AnticipateInterpolator
 import android.view.animation.OvershootInterpolator
+import android.view.animation.PathInterpolator
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -61,12 +62,15 @@ class LyricsSearchActivity : AppCompatActivity() {
     private lateinit var artistInput: TextInputEditText
     private lateinit var albumInput: TextInputEditText
     private lateinit var albumField: TextInputLayout
+    private lateinit var albumSlot: FrameLayout
+    private lateinit var albumReveal: LyricsSearchReveal
     private lateinit var form: LinearLayout
     private lateinit var results: LyricsSourcePages
     private lateinit var appBar: AppBarLayout
     private lateinit var header: LinearLayout
     private lateinit var queryScroll: NestedScrollView
-    private lateinit var previewPanel: LinearLayout
+    private lateinit var previewPanel: LyricsSearchPreviewPanel
+    private lateinit var paneMotion: LyricsSearchPaneMotion
     private var pendingSourceFocus = false
     private lateinit var sourcesButton: MaterialButton
     private lateinit var headingTitle: TextView
@@ -77,7 +81,9 @@ class LyricsSearchActivity : AppCompatActivity() {
     private lateinit var scroll: ScrollView
     private lateinit var targetText: TextView
     private lateinit var feedback: TextView
+    private lateinit var feedbackReveal: LyricsSearchReveal
     private lateinit var loading: LyricsLoadingView
+    private lateinit var loadingReveal: LyricsSearchReveal
     private lateinit var switchButton: MaterialButton
     private lateinit var searchButton: MaterialButton
     private val queryFields = mutableMapOf<SearchQueryField,TextInputLayout>()
@@ -86,6 +92,9 @@ class LyricsSearchActivity : AppCompatActivity() {
     private var updating=false
     private var shownResults: Map<PlainLyricsSearchSource,SourceResults>?=null
     private var shownPreview: SearchPreview?=null
+    private var shownMore: Boolean?=null
+    private var shownBusy: Boolean?=null
+    private var shownFeedback: String?=null
     private var inPreview=false
     private var currentSong: SongIdentity?=null
     private var confirmation: AlertDialog?=null
@@ -243,7 +252,11 @@ class LyricsSearchActivity : AppCompatActivity() {
             layoutParams = LinearLayout.LayoutParams(-2, -2)
         })
         val album=input(R.string.search_album,SearchQueryField.ALBUM,R.string.search_restore_album);albumInput=album.first;albumField=album.second
-        form.addView(albumField)
+        albumSlot=FrameLayout(this).apply {
+            addView(albumField,FrameLayout.LayoutParams(-1,-2))
+        }
+        form.addView(albumSlot,LinearLayout.LayoutParams(-1,0))
+        albumReveal=LyricsSearchReveal(albumSlot,albumField,dp(8),240,dp(8).toFloat(),0.25f)
         sourcesButton=textAction(R.string.search_sources) {
             if (supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) == null) {
                 LyricsSourcesSheet.create(session.state.value.sources,session.sourceOrder)
@@ -277,14 +290,23 @@ class LyricsSearchActivity : AppCompatActivity() {
             it.setOnEditorActionListener { _,action,_ -> if(action==EditorInfo.IME_ACTION_SEARCH) { searchButton.performClick();true } else false }
         }
         feedback=text("").apply { accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }
-        header.addView(feedback)
+        val feedbackSlot=FrameLayout(this).apply { addView(feedback,FrameLayout.LayoutParams(-1,-2)) }
+        header.addView(feedbackSlot,LinearLayout.LayoutParams(-1,0))
+        // Motion Prompt #159 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#159
+        feedbackReveal=LyricsSearchReveal(feedbackSlot,feedback,0,150,dp(5).toFloat(),0.1f)
         loading=LyricsLoadingView(this,palette)
-        header.addView(loading,LinearLayout.LayoutParams(-1,-2))
+        val loadingSlot=FrameLayout(this).apply { addView(loading,FrameLayout.LayoutParams(-1,-2)) }
+        header.addView(loadingSlot,LinearLayout.LayoutParams(-1,0))
+        loadingReveal=LyricsSearchReveal(loadingSlot,loading,0,150,dp(4).toFloat(),0f)
         results=LyricsSourcePages(this,palette,session,::errorText)
         panel.addView(results,CoordinatorLayout.LayoutParams(-1,-1).apply {
             behavior=AppBarLayout.ScrollingViewBehavior()
         })
-        previewPanel=column().apply { setPadding(0,0,0,dp(12)) }
+        previewPanel=LyricsSearchPreviewPanel(this).apply {
+            orientation=LinearLayout.VERTICAL
+            setPadding(0,0,0,dp(12))
+            setBackgroundColor(palette.background)
+        }
         panel.addView(previewPanel,CoordinatorLayout.LayoutParams(-1,-1).apply {
             behavior=AppBarLayout.ScrollingViewBehavior()
         })
@@ -308,6 +330,16 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         previewPanel.addView(applyButton)
         scroll.setOnScrollChangeListener { _,_,y,_,_ -> if(inPreview) session.previewScroll=y }
+        paneMotion=LyricsSearchPaneMotion(results,previewPanel,dp(14).toFloat()) { previewSelected ->
+            if(!previewSelected) {
+                preview.animate().cancel()
+                preview.alpha=1f
+                preview.translationY=0f
+                preview.removeAllViews()
+                shownPreview=null
+                previewRetry.visibility=View.GONE
+            }
+        }
         setContentView(root)
     }
 
@@ -323,13 +355,16 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         sourcesButton.text=getString(R.string.search_sources_selected,state.sources.joinToString(" / ") { localizedPlainLyricsProviderName(it.key) })
         updating=false
-        albumField.visibility=if(state.moreConditions) View.VISIBLE else View.GONE
         val showPreview=state.previewCandidate!=null
         val changed=inPreview!=showPreview
         inPreview=showPreview
+        if(shownMore!=state.moreConditions) {
+            if(!state.moreConditions && albumInput.hasFocus()) albumInput.clearFocus()
+            albumReveal.setExpanded(state.moreConditions,shownMore!=null && !showPreview)
+            shownMore=state.moreConditions
+        }
         form.visibility=if(!showPreview) View.VISIBLE else View.GONE
         renderResetIcons(state)
-        previewPanel.visibility=if(showPreview) View.VISIBLE else View.GONE
         // Before searching there is no nested result list to bring a collapsed header back.
         // Keep the form in a bounded scroll view, including when the keyboard reduces the viewport.
         val queryOnly=!showPreview && state.results.isEmpty()
@@ -353,20 +388,9 @@ class LyricsSearchActivity : AppCompatActivity() {
             headerParams.scrollFlags=flags
             header.layoutParams=headerParams
         }
-        results.visibility=if(!showPreview && state.results.isNotEmpty()) View.VISIBLE else View.GONE
-        scroll.visibility=if(showPreview) View.VISIBLE else View.GONE
         if(changed) {
             val restoreCollapsed=session.resultsScroll>0
             appBar.setExpanded(showPreview || !restoreCollapsed,false)
-            val entering=if(showPreview) scroll else results
-            entering.animate().cancel()
-            entering.alpha=1f
-            entering.translationY=0f
-            if(ValueAnimator.areAnimatorsEnabled()) {
-                entering.alpha=0f
-                entering.translationY=dp(if(showPreview) 12 else -12).toFloat()
-                entering.animate().alpha(1f).translationY(0f).setDuration(200).start()
-            }
             if(showPreview) scroll.post { scroll.scrollTo(0,session.previewScroll) }
         }
         val title=state.previewCandidate?.song?.title ?: getString(R.string.search_lyrics)
@@ -377,24 +401,37 @@ class LyricsSearchActivity : AppCompatActivity() {
         previewDetails.text=state.previewCandidate?.let(::candidateDetails).orEmpty()
         previewRetry.visibility=if(showPreview && !state.previewLoading && state.preview==null) View.VISIBLE else View.GONE
         searchButton.isEnabled=!state.applying && state.sources.isNotEmpty() && listOf(state.query.title,state.query.artist,state.query.album).any { it.isNotBlank() }
-        applyButton.visibility=if(showPreview) View.VISIBLE else View.GONE
         applyButton.isEnabled=state.canApply
         applyButton.alpha=if(state.canApply) 1f else 0.38f
         val busy=state.applying || state.previewLoading
-        loading.visibility=if(busy) View.VISIBLE else View.GONE
+        loadingReveal.setExpanded(busy,shownBusy!=null)
+        shownBusy=busy
         loading.contentDescription=getString(R.string.ui_loading)
-        feedback.text=when {
+        val message=when {
             busy -> ""
             state.error!=null -> errorText(state.error)
             showPreview && state.preview==null -> getString(unavailableMessage(state.previewUnavailableReason))
             else -> ""
         }
-        feedback.visibility=if(feedback.text.isEmpty()) View.GONE else View.VISIBLE
+        val messageChanged=shownFeedback!=message
+        if(messageChanged && message.isNotEmpty()) {
+            if(shownFeedback!=null) feedbackReveal.prepareAnnouncement()
+            feedback.text=message
+            feedbackReveal.contentChanged()
+        }
+        feedbackReveal.setExpanded(message.isNotEmpty(),shownFeedback!=null)
+        shownFeedback=message
         renderTarget(state)
+        val hadRenderedResults=shownResults!=null
+        val hadResults=shownResults?.isNotEmpty()==true
         if(shownResults!=state.results) { shownResults=state.results;results.render(state.results) }
         if(pendingSourceFocus) appBar.post { focusSourcesIfReady() }
-        if(shownPreview!=state.preview) {
-            shownPreview=state.preview;preview.removeAllViews()
+        if(showPreview && shownPreview!=state.preview) {
+            shownPreview=state.preview
+            preview.animate().cancel()
+            preview.alpha=1f
+            preview.translationY=0f
+            preview.removeAllViews()
             state.preview?.takeIf { it.lyrics.plainLrc.isNotBlank() || !it.lyrics.translatedLrc.isNullOrBlank() }?.let { p ->
                 preview.addView(previewHeading(getString(if(p.lyrics.wordByWordLines.isEmpty()) R.string.search_line_lyrics else R.string.search_word_lyrics)))
                 p.lyrics.access?.attribution?.let { attribution ->
@@ -405,7 +442,21 @@ class LyricsSearchActivity : AppCompatActivity() {
                     preview.addView(previewHeading(getString(R.string.search_translation)))
                     preview.addView(text(translation).apply { setTextIsSelectable(true) })
                 }
+                if(preview.isAttachedToWindow && ValueAnimator.areAnimatorsEnabled()) {
+                    preview.alpha=0f
+                    preview.translationY=dp(7).toFloat()
+                    preview.animate().alpha(1f).translationY(0f).setDuration(185)
+                        .setInterpolator(PathInterpolator(0.2f,0f,0f,1f)).start()
+                }
             }
+        }
+        paneMotion.show(showPreview,state.results.isNotEmpty())
+        if(hadRenderedResults && !hadResults && state.results.isNotEmpty() && !showPreview &&
+            results.isAttachedToWindow && ValueAnimator.areAnimatorsEnabled()) {
+            results.alpha=0f
+            results.translationY=dp(8).toFloat()
+            results.animate().alpha(1f).translationY(0f).setDuration(180)
+                .setInterpolator(PathInterpolator(0.2f,0f,0f,1f)).start()
         }
         val revision=state.confirmationRevision
         if(revision!=confirmationRevision) {
@@ -551,7 +602,15 @@ class LyricsSearchActivity : AppCompatActivity() {
         if (::session.isInitialized) writeTarget(outState,session.state.value.target)
         super.onSaveInstanceState(outState)
     }
-    override fun onDestroy() { confirmation?.dismiss();if(::results.isInitialized) results.dispose();super.onDestroy() }
+    override fun onDestroy() {
+        confirmation?.dismiss()
+        if(::paneMotion.isInitialized) paneMotion.finish()
+        if(::albumReveal.isInitialized) albumReveal.finish()
+        if(::feedbackReveal.isInitialized) feedbackReveal.finish()
+        if(::loadingReveal.isInitialized) loadingReveal.finish()
+        if(::results.isInitialized) results.dispose()
+        super.onDestroy()
+    }
 
     companion object {
         internal fun open(context:Context,target:SongIdentity) {

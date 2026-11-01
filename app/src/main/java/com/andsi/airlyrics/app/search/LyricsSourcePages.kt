@@ -7,16 +7,23 @@ import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.PathInterpolator
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.doOnPreDraw
+import androidx.core.view.isVisible
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.lyrics.localizedPlainLyricsProviderName
+import com.andsi.airlyrics.lyrics.search.LyricsCandidate
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.tabs.TabLayout
 import java.util.Locale
@@ -39,6 +46,21 @@ internal class LyricsSourcePages(
     private var sources = emptyList<PlainLyricsSearchSource>()
     private var results = emptyMap<PlainLyricsSearchSource, SourceResults>()
     private val pages = PageAdapter()
+    private val mountedPages = mutableSetOf<Page>()
+    var blocksInteraction = false
+        set(value) {
+            if (field == value) return
+            field = value
+            mountedPages.forEach(Page::finish)
+        }
+
+    override fun onInterceptTouchEvent(event: MotionEvent): Boolean =
+        blocksInteraction || super.onInterceptTouchEvent(event)
+
+    // This pane only absorbs input while another pane is taking over; it has no click action.
+    @SuppressLint("ClickableViewAccessibility")
+    override fun onTouchEvent(event: MotionEvent): Boolean =
+        blocksInteraction || super.onTouchEvent(event)
 
     init {
         orientation = VERTICAL
@@ -91,7 +113,7 @@ internal class LyricsSourcePages(
             val selected = session.activeSource
             val previousKeys = sources
             sources = keys
-            androidx.recyclerview.widget.DiffUtil.calculateDiff(object : androidx.recyclerview.widget.DiffUtil.Callback() {
+            DiffUtil.calculateDiff(object : DiffUtil.Callback() {
                 override fun getOldListSize() = previousKeys.size
                 override fun getNewListSize() = keys.size
                 override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
@@ -162,38 +184,230 @@ internal class LyricsSourcePages(
         })
     }
 
-    private inner class Page(val list: RecyclerView) : RecyclerView.ViewHolder(list) {
-        var source: PlainLyricsSearchSource? = null
-        var generation = -1L
-        init {
-            list.layoutManager = LinearLayoutManager(context)
-            list.itemAnimator = null
-            list.addItemDecoration(androidx.recyclerview.widget.DividerItemDecoration(context, VERTICAL).apply {
+    private enum class SourceVisual { RESULTS, LOADING, EMPTY, ERROR }
+
+    // Motion Prompt #069 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#069
+    // Motion Prompt #072 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#072
+    // The status occupies the same first-row space; no shimmer or extra illustration is needed.
+    private inner class Page(val frame: FrameLayout) : RecyclerView.ViewHolder(frame) {
+        val list = RecyclerView(context).apply {
+            clipToPadding = false
+            setPadding(0, dp(12), 0, dp(24))
+            layoutManager = LinearLayoutManager(context)
+            itemAnimator = null
+            addItemDecoration(androidx.recyclerview.widget.DividerItemDecoration(context, VERTICAL).apply {
                 setDrawable(GradientDrawable().apply {
                     setColor(palette.surfaceLight)
                     setSize(1, dp(1))
                 })
             })
+        }
+        private val rows = Rows().also { list.adapter = it }
+        private val loading = LyricsLoadingView(context, palette)
+        private val messageTitle = TextView(context).apply {
+            textSize = 19f
+            setTextColor(palette.textStrong)
+            setTypeface(typeface, Typeface.BOLD)
+        }
+        private val messageDetail = TextView(context).apply {
+            textSize = 13f
+            setTextColor(palette.textMuted)
+        }
+        private val message = LinearLayout(context).apply {
+            orientation = VERTICAL
+            minimumHeight = dp(80)
+            setPadding(dp(4), dp(16), dp(4), dp(16))
+            addView(messageTitle)
+            addView(messageDetail, LayoutParams(-1, -2).apply { topMargin = dp(6) })
+            val selectable = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, selectable, true)
+            setBackgroundResource(selectable.resourceId)
+            isFocusable = true
+            setOnClickListener { if (visual != SourceVisual.RESULTS && visual != SourceVisual.LOADING)
+                source?.let(session::retry) }
+        }
+        private val status = FrameLayout(context).apply {
+            minimumHeight = dp(80)
+            addView(loading, FrameLayout.LayoutParams(-1, dp(80)))
+            addView(message, FrameLayout.LayoutParams(-1, -2))
+            visibility = GONE
+        }
+        var source: PlainLyricsSearchSource? = null
+        var generation = -1L
+        private var shownResult: SourceResults? = null
+        private var visual = SourceVisual.RESULTS
+        private var resetScrollOnResult = false
+
+        init {
+            frame.addView(list, FrameLayout.LayoutParams(-1, -1))
+            frame.addView(status, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
             list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     if (dy != 0) save()
                 }
             })
         }
+
         fun save() {
             if (generation != session.resultsGeneration) return
             source?.let { key ->
                 list.layoutManager?.onSaveInstanceState()?.let { session.pagePositions[key] = it }
             }
         }
+
         fun bind(key: PlainLyricsSearchSource) {
-            save()
+            val sameSource = source == key
+            val samePage = sameSource && generation == session.resultsGeneration
+            if (!samePage) save()
+            val previous = shownResult.takeIf { sameSource }
             source = key
             generation = session.resultsGeneration
             val result = results.getValue(key)
-            if (result.loading && result.candidates.isEmpty()) session.pagePositions.remove(key)
-            list.adapter = Rows(key, result)
-            session.pagePositions[key]?.let { list.layoutManager?.onRestoreInstanceState(it) }
+            shownResult = result
+            if (!samePage && result.loading && result.candidates.isEmpty()) resetScrollOnResult = true
+            val nextVisual = when {
+                result.candidates.isNotEmpty() -> SourceVisual.RESULTS
+                result.loading -> SourceVisual.LOADING
+                result.error != null -> SourceVisual.ERROR
+                else -> SourceVisual.EMPTY
+            }
+            val animate = sameSource && frame.isShown && !blocksInteraction &&
+                ValueAnimator.areAnimatorsEnabled()
+            val firstResults = animate && previous?.candidates?.isEmpty() == true &&
+                result.candidates.isNotEmpty()
+            val leavingResults = animate && previous?.candidates?.isNotEmpty() == true &&
+                result.loading && result.candidates.isEmpty()
+
+            list.animate().cancel()
+            list.translationY = 0f
+            rows.canOpen = result.candidates.isNotEmpty()
+            if (leavingResults) {
+                // Keep the old rows only for their 120 ms exit. They cannot open a stale preview.
+                list.animate().alpha(0f).translationY(-dp(4).toFloat()).setDuration(120)
+                    .withEndAction {
+                        if (shownResult === result) {
+                            rows.submit(key, emptyList())
+                            list.visibility = INVISIBLE
+                            list.scrollToPosition(0)
+                            resetScrollOnResult = false
+                        }
+                        list.alpha = 1f
+                        list.translationY = 0f
+                    }.start()
+            } else {
+                if (result.loading && result.candidates.isEmpty()) session.pagePositions.remove(key)
+                rows.submit(key, result.candidates)
+                list.visibility = if (result.candidates.isEmpty()) INVISIBLE else VISIBLE
+                list.alpha = if (firstResults) 0f else 1f
+                if (resetScrollOnResult && result.candidates.isNotEmpty()) {
+                    list.scrollToPosition(0)
+                    resetScrollOnResult = false
+                }
+                if (firstResults) revealFirstRows(result)
+            }
+            showStatus(nextVisual, result, animate)
+            if (!samePage && !leavingResults) {
+                session.pagePositions[key]?.let { list.layoutManager?.onRestoreInstanceState(it) }
+                    ?: list.scrollToPosition(0)
+            }
+            if (blocksInteraction) finish()
+        }
+
+        private fun revealFirstRows(result: SourceResults) {
+            list.doOnPreDraw {
+                list.alpha = 1f
+                if (shownResult !== result || !frame.isShown || blocksInteraction) return@doOnPreDraw
+                val first = (list.layoutManager as LinearLayoutManager).findFirstVisibleItemPosition()
+                if (first == RecyclerView.NO_POSITION) return@doOnPreDraw
+                for (index in 0 until 4) {
+                    val row = list.findViewHolderForAdapterPosition(first + index)?.itemView ?: continue
+                    row.animate().cancel()
+                    row.alpha = 0f
+                    row.translationY = dp(8).toFloat()
+                    row.animate().alpha(1f).translationY(0f).setStartDelay(index * 34L)
+                        .setDuration(190).setInterpolator(PathInterpolator(0.2f, 0f, 0f, 1f)).start()
+                }
+            }
+        }
+
+        private fun showStatus(next: SourceVisual, result: SourceResults, animate: Boolean) {
+            val previous = visual
+            visual = next
+            if (next != SourceVisual.RESULTS && next != SourceVisual.LOADING) {
+                messageTitle.text = if (next == SourceVisual.ERROR) errorText(result.error!!) else
+                    context.getString(R.string.search_empty)
+                messageDetail.text = context.getString(R.string.search_retry)
+            }
+            if (previous == next && status.isVisible) return
+            status.animate().cancel()
+            loading.animate().cancel()
+            message.animate().cancel()
+            if (next == SourceVisual.RESULTS) {
+                status.importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                if (animate && status.isVisible) {
+                    status.animate().alpha(0f).translationY(-dp(4).toFloat()).setDuration(110)
+                        .withEndAction { if (visual == SourceVisual.RESULTS) status.visibility = GONE }.start()
+                } else status.visibility = GONE
+                return
+            }
+            status.importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_AUTO
+            status.visibility = VISIBLE
+            val nextView = if (next == SourceVisual.LOADING) loading else message
+            val previousView = if (previous == SourceVisual.LOADING) loading else message
+            if (animate && previous != SourceVisual.RESULTS && previousView !== nextView) {
+                nextView.visibility = VISIBLE
+                nextView.alpha = 0f
+                nextView.translationY = dp(8).toFloat()
+                previousView.visibility = VISIBLE
+                previousView.alpha = 1f
+                previousView.animate().alpha(0f).setDuration(90).withEndAction {
+                    if (visual == next) previousView.visibility = GONE
+                }.start()
+                nextView.animate().alpha(1f).translationY(0f).setStartDelay(25)
+                    .setDuration(175).setInterpolator(PathInterpolator(0.2f, 0f, 0f, 1f)).start()
+            } else {
+                loading.visibility = if (next == SourceVisual.LOADING) VISIBLE else GONE
+                message.visibility = if (next == SourceVisual.LOADING) GONE else VISIBLE
+                nextView.alpha = 1f
+                nextView.translationY = 0f
+            }
+            if (previous == SourceVisual.RESULTS && animate) {
+                status.alpha = 0f
+                status.translationY = dp(8).toFloat()
+                status.animate().alpha(1f).translationY(0f).setDuration(180)
+                    .setInterpolator(PathInterpolator(0.2f, 0f, 0f, 1f)).start()
+            } else {
+                status.alpha = 1f
+                status.translationY = 0f
+            }
+        }
+
+        fun finish() {
+            list.animate().cancel()
+            for (index in 0 until list.childCount) {
+                list.getChildAt(index).apply {
+                    animate().cancel()
+                    alpha = 1f
+                    translationY = 0f
+                }
+            }
+            status.animate().cancel()
+            loading.animate().cancel()
+            message.animate().cancel()
+            list.alpha = 1f
+            list.translationY = 0f
+            list.visibility = if (shownResult?.candidates.isNullOrEmpty()) INVISIBLE else VISIBLE
+            status.alpha = 1f
+            status.translationY = 0f
+            loading.alpha = 1f
+            loading.translationY = 0f
+            message.alpha = 1f
+            message.translationY = 0f
+            // The preview owns the loading indicator during the handoff.
+            status.visibility = if (visual == SourceVisual.RESULTS ||
+                (blocksInteraction && visual == SourceVisual.LOADING)) GONE else VISIBLE
+            loading.visibility = if (visual == SourceVisual.LOADING) VISIBLE else GONE
+            message.visibility = if (visual == SourceVisual.EMPTY || visual == SourceVisual.ERROR) VISIBLE else GONE
         }
     }
 
@@ -201,20 +415,23 @@ internal class LyricsSourcePages(
         init { setHasStableIds(true) }
         override fun getItemId(position: Int) = sources[position].ordinal.toLong()
         override fun getItemCount() = sources.size
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Page(
-            RecyclerView(context).apply {
-                layoutParams = ViewGroup.LayoutParams(-1, -1)
-                clipToPadding = false
-                setPadding(0, dp(12), 0, dp(24))
-            }
-        )
-        override fun onBindViewHolder(holder: Page, position: Int) = holder.bind(sources[position])
-        override fun onViewRecycled(holder: Page) { holder.save(); holder.source = null }
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            Page(FrameLayout(context).apply { layoutParams = ViewGroup.LayoutParams(-1, -1) })
+                .also(mountedPages::add)
+        override fun onBindViewHolder(holder: Page, position: Int) {
+            mountedPages.add(holder)
+            holder.bind(sources[position])
+        }
+        override fun onViewRecycled(holder: Page) {
+            holder.save()
+            holder.finish()
+            holder.source = null
+            mountedPages.remove(holder)
+        }
     }
 
     private inner class Row(val box: LinearLayout) : RecyclerView.ViewHolder(box) {
-        val loading = LyricsLoadingView(context,palette)
-        val titleLine = LinearLayout(context).apply { gravity=Gravity.CENTER_VERTICAL }
+        val titleLine = LinearLayout(context).apply { gravity = Gravity.CENTER_VERTICAL }
         val heading = TextView(context).apply {
             textSize = 19f
             setTextColor(palette.textStrong)
@@ -226,52 +443,72 @@ internal class LyricsSourcePages(
             box.orientation = VERTICAL
             box.minimumHeight = dp(80)
             box.setPadding(dp(4), dp(16), dp(4), dp(16))
-            box.addView(loading,LayoutParams(-1,-2))
             titleLine.addView(heading, LayoutParams(0, -2, 1f))
             titleLine.addView(duration, LayoutParams(-2, -2).apply { marginStart = dp(16) })
             box.addView(titleLine)
             box.addView(detail, LayoutParams(-1, -2).apply { topMargin = dp(6) })
-            val background = android.util.TypedValue()
-            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, background, true)
-            box.setBackgroundResource(background.resourceId)
+            val selectable = android.util.TypedValue()
+            context.theme.resolveAttribute(android.R.attr.selectableItemBackground, selectable, true)
+            box.setBackgroundResource(selectable.resourceId)
             box.isFocusable = true
         }
     }
 
-    private inner class Rows(
-        val source: PlainLyricsSearchSource,
-        val result: SourceResults
-    ) : RecyclerView.Adapter<Row>() {
-        override fun getItemCount() = result.candidates.size.coerceAtLeast(1)
+    private inner class Rows : RecyclerView.Adapter<Row>() {
+        private var source: PlainLyricsSearchSource? = null
+        private var candidates = emptyList<LyricsCandidate>()
+        var canOpen = false
+        init { setHasStableIds(true) }
+        override fun getItemCount() = candidates.size
+        override fun getItemId(position: Int): Long {
+            val candidate = candidates[position]
+            var hash = -3750763034362895579L
+            candidate.id.forEach { hash = (hash xor it.code.toLong()) * 1099511628211L }
+            return hash xor (candidate.source.ordinal.toLong() shl 56)
+        }
+        fun submit(key: PlainLyricsSearchSource, next: List<LyricsCandidate>) {
+            val before = candidates
+            val beforeSource = source
+            if (beforeSource == key && before == next) return
+            source = key
+            candidates = next
+            DiffUtil.calculateDiff(object : DiffUtil.Callback() {
+                override fun getOldListSize() = before.size
+                override fun getNewListSize() = next.size
+                override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
+                    beforeSource == key && before[oldItemPosition].id == next[newItemPosition].id
+                override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
+                    before[oldItemPosition] == next[newItemPosition]
+            }).dispatchUpdatesTo(this@Rows)
+        }
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Row(
             LinearLayout(context).apply { layoutParams = RecyclerView.LayoutParams(-1, -2) }
         )
         override fun onBindViewHolder(holder: Row, position: Int) {
-            val candidate = result.candidates.getOrNull(position)
-            val showLoading=result.loading && candidate==null
-            holder.loading.visibility=if(showLoading) VISIBLE else GONE
-            holder.titleLine.visibility=if(showLoading) GONE else VISIBLE
-            holder.detail.visibility=if(showLoading) GONE else VISIBLE
-            holder.duration.text = candidate?.song?.durationMs?.takeIf { it > 0 }?.let {
+            val candidate = candidates[position]
+            holder.duration.text = candidate.song.durationMs.takeIf { it > 0 }?.let {
                 String.format(Locale.ROOT, "%d:%02d", it / 60000, it / 1000 % 60)
             }.orEmpty()
-            if (candidate != null) {
-                holder.heading.text = candidate.song.title
-                holder.detail.text = listOf(candidate.song.artist, candidate.song.album)
-                    .filter { it.isNotBlank() }.joinToString(" · ")
-                holder.box.setOnClickListener { session.preview(candidate) }
-            } else {
-                holder.heading.text = when {
-                    result.loading -> ""
-                    result.error != null -> errorText(result.error)
-                    else -> context.getString(R.string.search_empty)
-                }
-                holder.detail.text = if (result.loading) "" else context.getString(R.string.search_retry)
-                holder.box.setOnClickListener(if (result.loading) null else OnClickListener { session.retry(source) })
-            }
+            holder.heading.text = candidate.song.title
+            holder.detail.text = listOf(candidate.song.artist, candidate.song.album)
+                .filter { it.isNotBlank() }.joinToString(" · ")
+            holder.box.setOnClickListener { if (canOpen) session.preview(candidate) }
+        }
+        override fun onViewRecycled(holder: Row) {
+            holder.box.animate().cancel()
+            holder.box.alpha = 1f
+            holder.box.translationY = 0f
         }
     }
 
-    fun dispose() { tabs.clearOnTabSelectedListeners() }
+    override fun onDetachedFromWindow() {
+        mountedPages.forEach(Page::finish)
+        super.onDetachedFromWindow()
+    }
+
+    fun dispose() {
+        mountedPages.forEach(Page::finish)
+        tabs.clearOnTabSelectedListeners()
+    }
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
 }

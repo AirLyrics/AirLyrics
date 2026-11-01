@@ -365,11 +365,19 @@ class LyricsSearchInstrumentedTest {
                 session(activity).backToResults()
             }
             instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                assertNull(session(activity).state.value.previewUnavailableReason)
-                val texts=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
-                assertFalse(texts.any { it.isShown && it.text==activity.getString(R.string.search_no_timeline) })
+            var unavailableVisible=true
+            val exitDeadline=SystemClock.uptimeMillis()+2_000L
+            while(unavailableVisible && SystemClock.uptimeMillis()<exitDeadline) {
+                scenario.onActivity { activity ->
+                    assertNull(session(activity).state.value.previewUnavailableReason)
+                    unavailableVisible=descendants(activity.findViewById(android.R.id.content))
+                        .filterIsInstance<TextView>().any {
+                            it.isShown && it.text==activity.getString(R.string.search_no_timeline)
+                        }
+                }
+                if(unavailableVisible) SystemClock.sleep(25)
             }
+            assertFalse(unavailableVisible)
         }
     }
 
