@@ -3,11 +3,16 @@ package com.andsi.airlyrics.ui.navigation
 import com.andsi.airlyrics.R
 
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
+import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -129,6 +134,13 @@ internal fun addTab(
 
     tabViews[page] = tab
     slot.addView(tab)
+    slot.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) = Unit
+        override fun onViewDetachedFromWindow(v: View) {
+            removeQuickStatusLayer(slot)
+            tab.alpha = if (page == currentPage) AirUiTokens.Motion.RestScale else AirUiTokens.Layout.TabUnselectedAlpha
+        }
+    })
     parent.addView(slot)
 }
 
@@ -157,7 +169,11 @@ internal fun measureTabTextWidth(tab: TextView): Float {
     return (0 until layout.lineCount).maxOfOrNull(layout::getLineWidth) ?: 0f
 }
 
-internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = with(activity) updateTabs@ {
+internal fun updateTabs(
+    activity: MainUiHost,
+    animate: Boolean = true,
+    animateQuickStatus: Boolean = false
+): Unit = with(activity) updateTabs@ {
     val motion = animate && ValueAnimator.areAnimatorsEnabled()
     tabViews.forEach { (page, view) ->
         val selected = page == currentPage
@@ -177,9 +193,20 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         } else {
             null
         }
+        val slot = view.parent as? FrameLayout
+        val activeLayer = slot?.let(::findQuickStatusLayer)
+        val oldSource = activeLayer?.incoming ?: view
+        val oldIconRes = activeLayer?.incomingIconRes ?: view.tag as? Int
+        val textChanged = oldSource.text.toString() != targetText || oldIconRes != targetIconRes
+        val quickSwap = animateQuickStatus && quickControlSelected && textChanged &&
+            ValueAnimator.areAnimatorsEnabled() && view.isAttachedToWindow && view.width > 0 && slot != null
+        val keepQuickLayer = activeLayer != null && quickControlSelected && !textChanged &&
+            ValueAnimator.areAnimatorsEnabled()
+        val outgoing = if (quickSwap) copyQuickStatusLabel(activity, oldSource, oldIconRes) else null
+        if (slot != null && !keepQuickLayer) removeQuickStatusLayer(slot)
         if (view.text.toString() != targetText || view.tag != targetIconRes) {
             view.animate().cancel()
-            if (motion) {
+            if (motion && !quickSwap) {
                 view.alpha = AirUiTokens.Layout.TabTextSwapAlpha
                 view.scaleX = AirUiTokens.Layout.TabTextSwapScale
                 view.scaleY = AirUiTokens.Layout.TabTextSwapScale
@@ -198,7 +225,18 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         view.background = null
         val targetScale = AirUiTokens.Motion.RestScale
         val targetAlpha = if (selected) AirUiTokens.Motion.RestScale else AirUiTokens.Layout.TabUnselectedAlpha
-        if (motion) {
+        if (keepQuickLayer) {
+            view.animate().cancel()
+            view.scaleX = targetScale
+            view.scaleY = targetScale
+            view.alpha = 0f
+        } else if (quickSwap && outgoing != null) {
+            view.animate().cancel()
+            view.scaleX = targetScale
+            view.scaleY = targetScale
+            view.alpha = 0f
+            playQuickStatusSwap(activity, slot, view, outgoing, targetIconRes, targetAlpha)
+        } else if (motion) {
             view.animate()
                 .scaleX(targetScale)
                 .scaleY(targetScale)
@@ -214,7 +252,92 @@ internal fun updateTabs(activity: MainUiHost, animate: Boolean = true): Unit = w
         }
     }
 
-    updateTabHighlight(activity, animate = motion)
+    val quickStatusStillAnimating = tabViews[Page.FLOATING]?.parent
+        ?.let { it as? FrameLayout }
+        ?.let(::findQuickStatusLayer) != null
+    updateTabHighlight(activity, animate = motion || quickStatusStillAnimating || tabHighlight?.isAnimating == true ||
+        animateQuickStatus && ValueAnimator.areAnimatorsEnabled())
+}
+
+@SuppressLint("ViewConstructor")
+private class QuickStatusLayer(context: Context, val incoming: TextView, val incomingIconRes: Int?) : FrameLayout(context)
+
+private fun findQuickStatusLayer(slot: FrameLayout): QuickStatusLayer? =
+    (0 until slot.childCount).firstNotNullOfOrNull { slot.getChildAt(it) as? QuickStatusLayer }
+
+private fun removeQuickStatusLayer(slot: FrameLayout) {
+    findQuickStatusLayer(slot)?.let { layer ->
+        for (index in 0 until layer.childCount) layer.getChildAt(index).animate().cancel()
+        slot.removeView(layer)
+        slot.contentDescription = null
+    }
+}
+
+private fun copyQuickStatusLabel(activity: MainUiHost, source: TextView, iconRes: Int?): TextView =
+    TextView(activity).apply {
+        text = source.text
+        gravity = source.gravity
+        setTextSize(TypedValue.COMPLEX_UNIT_PX, source.textSize)
+        typeface = source.typeface
+        includeFontPadding = source.includeFontPadding
+        setLineSpacing(source.lineSpacingExtra, source.lineSpacingMultiplier)
+        setPadding(source.paddingLeft, source.paddingTop, source.paddingRight, source.paddingBottom)
+        setTextColor(source.currentTextColor)
+        setAirTopIcon(activity, iconRes, activity.colorIconOnAccent)
+        alpha = source.alpha
+        translationY = source.translationY
+        scaleX = source.scaleX
+        scaleY = source.scaleY
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.CENTER
+        )
+    }
+
+private fun playQuickStatusSwap(
+    activity: MainUiHost,
+    slot: FrameLayout,
+    tab: TextView,
+    outgoing: TextView,
+    incomingIconRes: Int?,
+    finalAlpha: Float
+) {
+    // Motion Prompt #060 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#060
+    // The control's label and icon hand off as one clipped state.
+    val incoming = copyQuickStatusLabel(activity, tab, incomingIconRes)
+    val layer = QuickStatusLayer(activity, incoming, incomingIconRes).apply {
+        layoutParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            tab.height,
+            Gravity.CENTER
+        )
+        clipChildren = true
+        clipToPadding = true
+        isClickable = false
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        addView(outgoing)
+        addView(incoming)
+    }
+    slot.addView(layer)
+    slot.contentDescription = tab.text
+    val travel = activity.dp(7).toFloat()
+    incoming.alpha = 0.35f
+    incoming.translationY = travel
+    incoming.scaleX = 0.97f
+    incoming.scaleY = 0.97f
+    outgoing.animate().alpha(0f).translationY(-travel)
+        .setDuration(115L).setInterpolator(AccelerateInterpolator()).start()
+    incoming.animate().alpha(finalAlpha).translationY(0f).scaleX(1f).scaleY(1f)
+        .setStartDelay(20L).setDuration(160L).setInterpolator(DecelerateInterpolator())
+        .withEndAction {
+            if (layer.parent === slot) {
+                slot.removeView(layer)
+                slot.contentDescription = null
+                tab.alpha = finalAlpha
+            }
+        }.start()
 }
 
 private fun updateTabHighlight(activity: MainUiHost, animate: Boolean = true) = with(activity) {

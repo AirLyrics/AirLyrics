@@ -11,7 +11,6 @@ import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS
-import android.view.animation.OvershootInterpolator
 import androidx.activity.OnBackPressedCallback
 import androidx.lifecycle.LifecycleDestroyedException
 import androidx.lifecycle.lifecycleScope
@@ -33,7 +32,6 @@ import com.andsi.airlyrics.app.viewmodel.MainUiEffect
 import com.andsi.airlyrics.app.viewmodel.MainViewModel
 import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
 import com.andsi.airlyrics.app.workflow.MainDisplayScopeWorkflow
-import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.floating.FloatingWindowRuntimeState
@@ -77,6 +75,8 @@ internal class MainGraph(
         val refreshFloatingDisplayScope: Boolean = false,
         val refreshLyricsContent: Boolean = false
     )
+
+    private var pendingQuickFloatingTarget: Boolean? = null
 
     val state: MainScreenState
         get() = viewModel.uiState.value
@@ -312,8 +312,10 @@ internal class MainGraph(
     }
 
     fun toggleFloatingFromNav() {
-        playFloatingNavToggleFeedback()
-        handleFloatingVisibilityOutcome(floatingController.toggleLyrics())
+        pendingQuickFloatingTarget = !state.quickFloatingDesiredVisible
+        val outcome = floatingController.toggleLyrics()
+        if (outcome != FloatingVisibilityOutcome.SUCCESS) pendingQuickFloatingTarget = null
+        handleFloatingVisibilityOutcome(outcome)
     }
 
     fun showFloatingLyrics() {
@@ -511,7 +513,16 @@ internal class MainGraph(
                         lyricsWorkflow::showOverwriteConfirmation
                     )
                 }
-                applyRefreshPlan(buildRefreshPlan(previous, latest))
+                val animateQuickStatus = previous.currentPage == Page.FLOATING &&
+                    latest.currentPage == Page.FLOATING &&
+                    previous.foreground.floating.desiredVisible != latest.foreground.floating.desiredVisible &&
+                    latest.foreground.floating.desiredVisible == pendingQuickFloatingTarget &&
+                    latest.foreground.permissions.overlayGranted
+                if (previous.foreground.floating.desiredVisible != latest.foreground.floating.desiredVisible ||
+                    latest.currentPage != Page.FLOATING) {
+                    pendingQuickFloatingTarget = null
+                }
+                applyRefreshPlan(buildRefreshPlan(previous, latest), animateQuickStatus)
             }
         }
     }
@@ -571,7 +582,7 @@ internal class MainGraph(
         }
     }
 
-    private fun applyRefreshPlan(plan: UiRefreshPlan) {
+    private fun applyRefreshPlan(plan: UiRefreshPlan, animateQuickStatus: Boolean) {
         if (plan.rebuildReason == PageRebuildReason.MEDIA_CONTENT_CHANGED) {
             uiInvalidator.refreshMediaContent()
             if (plan.refreshTabs) uiInvalidator.refreshTabs(animate = false)
@@ -587,7 +598,7 @@ internal class MainGraph(
         }
 
         if (plan.refreshFloatingChrome) {
-            uiInvalidator.refreshFloatingChrome()
+            uiInvalidator.refreshFloatingChrome(animateQuickStatus)
         } else if (plan.refreshTabs) {
             uiInvalidator.refreshTabs(animate = false)
         }
@@ -633,23 +644,6 @@ internal class MainGraph(
                 isEnabled = true
             }
         })
-    }
-
-    private fun playFloatingNavToggleFeedback() {
-        val selectedTab = uiHost.tabViews[Page.FLOATING]
-        selectedTab?.animate()
-            ?.scaleX(AirUiTokens.Layout.TabTextSwapScale)
-            ?.scaleY(AirUiTokens.Layout.TabTextSwapScale)
-            ?.setDuration(AirUiTokens.Layout.NavTapDownMs)
-            ?.withEndAction {
-                selectedTab.animate()
-                    .scaleX(AirUiTokens.Layout.TabQuickScale)
-                    .scaleY(AirUiTokens.Layout.TabQuickScale)
-                    .setDuration(AirUiTokens.Layout.NavTapUpMs)
-                    .setInterpolator(OvershootInterpolator(AirUiTokens.Layout.NavTapOvershoot))
-                    .start()
-            }
-            ?.start()
     }
 
 }

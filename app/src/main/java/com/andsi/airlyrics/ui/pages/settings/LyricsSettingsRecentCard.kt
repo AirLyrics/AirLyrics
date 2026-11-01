@@ -1,8 +1,10 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -15,9 +17,11 @@ import com.andsi.airlyrics.ui.components.bigText
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
+import com.andsi.airlyrics.ui.components.LocalLyricsRowView
 import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
+import com.andsi.airlyrics.ui.model.RecentLyricsUiState
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.theme.colorAccentText
@@ -39,60 +43,101 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
         gravity = Gravity.CENTER_VERTICAL
     }
     var closeHeaderHint: () -> Unit = {}
+    var cardView: LinearLayout? = null
+    var renderedState: RecentLyricsUiState? = null
+    var currentKey: String? = null
+    var currentView: View? = null
+    var currentItemBinding: LocalLyricsUiItem? = null
+    var fallbackMediaText: TextView? = null
+    var recentRows = emptyMap<String, Pair<LocalLyricsUiItem, LocalLyricsRowView>>()
+    val loadingView = normalText(activity, getString(R.string.ui_loading))
+    val emptyHint = normalText(activity, getString(R.string.ui_recent_lyrics_empty_hint))
+    listBody.addView(loadingView)
 
     lateinit var populateRecentLyrics: (Boolean, Boolean) -> Unit
 
-    fun renderLyricsList(
-        currentItem: LocalLyricsUiItem?,
-        recentLyrics: List<LocalLyricsUiItem>,
-        media: CurrentMediaUiInfo?,
-        showRefreshFeedback: Boolean
-    ) {
-        listBody.removeAllViews()
+    fun createRow(item: LocalLyricsUiItem, badgeText: String? = null): LocalLyricsRowView =
+        localLyricsRow(item, onLyricsChanged = { change ->
+            closeHeaderHint()
+            populateRecentLyrics(false, false)
+            if (change == LocalLyricsUiChange.SAVED) {
+                playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied), animateTarget = false)
+            }
+        }, badgeText = badgeText) as LocalLyricsRowView
 
-        if (currentItem != null) {
-            listBody.addView(localLyricsRow(currentItem, onLyricsChanged = { change ->
-                closeHeaderHint()
-                populateRecentLyrics(false, false)
-                if (change == LocalLyricsUiChange.SAVED) {
-                    playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
-                }
-            }, badgeText = getString(R.string.ui_now_playing)))
-        } else {
-            listBody.addView(LinearLayout(activity).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
-                layoutParams = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply {
-                    setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
-                }
-                background = GradientDrawable().apply {
-                    cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-                    setColor(colorSurfaceLight)
-                    setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
-                }
-                addView(TextView(activity).apply {
-                    setText(R.string.ui_now_playing)
-                    textSize = AirUiTokens.TextSize.Tiny
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(colorAccentText)
-                    setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
-                })
-                addView(TextView(activity).apply {
-                    text = media?.displayText ?: getString(R.string.ui_no_active_media_found_short)
-                    textSize = AirUiTokens.TextSize.Body
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(colorTextStrong)
-                })
-                addView(TextView(activity).apply {
-                    setText(R.string.ui_no_plain_lrc_bound_to_song)
-                    textSize = AirUiTokens.TextSize.Caption
-                    setTextColor(colorTextMuted)
-                    setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
-                })
-            })
+    fun createFallback(media: CurrentMediaUiInfo?): LinearLayout = LinearLayout(activity).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ).apply {
+            setMargins(0, dp(AirUiTokens.Space.Xxl), 0, 0)
+        }
+        background = GradientDrawable().apply {
+            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
+            setColor(colorSurfaceLight)
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+        }
+        addView(TextView(activity).apply {
+            setText(R.string.ui_now_playing)
+            textSize = AirUiTokens.TextSize.Tiny
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorAccentText)
+            setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
+        })
+        addView(TextView(activity).apply {
+            text = media?.displayText ?: getString(R.string.ui_no_active_media_found_short)
+            textSize = AirUiTokens.TextSize.Body
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorTextStrong)
+            fallbackMediaText = this
+        })
+        addView(TextView(activity).apply {
+            setText(R.string.ui_no_plain_lrc_bound_to_song)
+            textSize = AirUiTokens.TextSize.Caption
+            setTextColor(colorTextMuted)
+            setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
+        })
+    }
+
+    val viewAll = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.END or Gravity.CENTER_VERTICAL
+        minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
+        setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
+        isClickable = true
+        isFocusable = true
+        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+        setOnClickListener {
+            closeHeaderHint()
+            uiActions.openSettingsSubPage(SettingsSubPage.SAVED_LYRICS)
+        }
+        addView(TextView(activity).apply {
+            setText(R.string.ui_view_all)
+            textSize = AirUiTokens.TextSize.Body
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(colorAccentText)
+        })
+        addView(airIconView(R.drawable.ic_air_chevron_right, colorAccentText).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.IconSize), dp(AirUiTokens.Layout.IconSize)).apply {
+                setMargins(dp(AirUiTokens.Space.Sm), 0, 0, 0)
+            }
+        })
+    }
+
+    fun renderLyricsList(state: RecentLyricsUiState, showRefreshFeedback: Boolean) {
+        val currentItem = state.currentItem
+        val recentLyrics = state.recentLyrics
+        val previous = renderedState
+        fun refreshMessage(): String = if (recentLyrics.isNotEmpty()) {
+            getString(R.string.ui_refreshed) + " " + recentLyrics.size + " " + getString(R.string.ui_songs)
+        } else getString(R.string.ui_refreshed)
+        if (previous == state) {
+            if (showRefreshFeedback) {
+                playLocalRefreshFeedback(activity, listBody, feedback, refreshMessage(), animateTarget = false)
+            }
+            return
         }
 
         val otherRecentLyrics = recentLyrics.filterNot { item ->
@@ -104,83 +149,100 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                 currentItem.name == item.name
             }
         }
+        val nextCurrentKey = currentItem?.lyricsRowKey()
+        val nextRecentKeys = otherRecentLyrics.map(LocalLyricsUiItem::lyricsRowKey)
+        val previousRecentKeys = recentRows.keys.toList()
+        val fallbackChanged = currentItem == null && previous?.currentItem == null &&
+            previous?.media?.displayText != state.media?.displayText
+        val primaryChanged = currentKey != nextCurrentKey || fallbackChanged
+        val contentChanged = previous != null && (primaryChanged || previousRecentKeys != nextRecentKeys)
+        if (contentChanged) beginLyricsCardContentTransition(cardView)
+        else if (previous != null) beginLyricsCardLayoutTransition(cardView)
 
-        if (currentItem == null && otherRecentLyrics.isEmpty()) {
-            listBody.addView(normalText(activity, getString(R.string.ui_recent_lyrics_empty_hint)))
+        val nextCurrentView = if (currentItem != null) {
+            if (currentKey == nextCurrentKey && currentView is LocalLyricsRowView) {
+                (currentView as LocalLyricsRowView).also { if (currentItemBinding != currentItem) it.bind(currentItem) }
+            } else {
+                createRow(currentItem, getString(R.string.ui_now_playing))
+            }
+        } else if (!fallbackChanged && currentKey == null && currentView is LinearLayout) {
+            fallbackMediaText?.text = state.media?.displayText ?: getString(R.string.ui_no_active_media_found_short)
+            currentView as LinearLayout
         } else {
-            otherRecentLyrics.forEach { item ->
-                listBody.addView(localLyricsRow(item, onLyricsChanged = { change ->
-                    closeHeaderHint()
-                    populateRecentLyrics(false, false)
-                    if (change == LocalLyricsUiChange.SAVED) {
-                        playLocalRefreshFeedback(activity, listBody, feedback, getString(R.string.ui_applied))
-                    }
-                }))
+            createFallback(state.media)
+        }
+        if (contentChanged && currentView !== nextCurrentView) currentView?.animate()?.cancel()
+        currentKey = nextCurrentKey
+        currentView = nextCurrentView
+        currentItemBinding = currentItem
+
+        val nextRows = LinkedHashMap<String, Pair<LocalLyricsUiItem, LocalLyricsRowView>>()
+        otherRecentLyrics.forEach { item ->
+            val key = item.lyricsRowKey()
+            val old = recentRows[key]
+            val row = old?.let { previousRow ->
+                previousRow.second.also { if (previousRow.first != item) it.bind(item) }
+            } ?: createRow(item)
+            nextRows[key] = item to row
+        }
+        recentRows = nextRows
+
+        val desiredViews = buildList {
+            add(nextCurrentView)
+            if (currentItem == null && otherRecentLyrics.isEmpty()) add(emptyHint)
+            nextRows.values.forEach { add(it.second) }
+            if (currentItem != null || recentLyrics.isNotEmpty()) add(viewAll)
+        }
+        if (viewAll in desiredViews) {
+            viewAll.isClickable = true
+            viewAll.isFocusable = true
+            viewAll.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+        }
+        for (index in 0 until listBody.childCount) {
+            val oldView = listBody.getChildAt(index)
+            if (oldView !in desiredViews) {
+                oldView.isClickable = false
+                oldView.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
             }
         }
-
-        if (currentItem != null || recentLyrics.isNotEmpty()) {
-            listBody.addView(LinearLayout(activity).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.END or Gravity.CENTER_VERTICAL
-                minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
-                setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
-                isClickable = true
-                isFocusable = true
-                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                setOnClickListener {
-                    closeHeaderHint()
-                    uiActions.openSettingsSubPage(SettingsSubPage.SAVED_LYRICS)
-                }
-
-                addView(TextView(activity).apply {
-                    setText(R.string.ui_view_all)
-                    textSize = AirUiTokens.TextSize.Body
-                    typeface = Typeface.DEFAULT_BOLD
-                    setTextColor(colorAccentText)
-                })
-                addView(airIconView(
-                    iconRes = R.drawable.ic_air_chevron_right,
-                    tint = colorAccentText
-                ).apply {
-                    layoutParams = LinearLayout.LayoutParams(
-                        dp(AirUiTokens.Layout.IconSize),
-                        dp(AirUiTokens.Layout.IconSize)
-                    ).apply {
-                        setMargins(dp(AirUiTokens.Space.Sm), 0, 0, 0)
-                    }
-                })
-            })
+        desiredViews.forEachIndexed { index, view ->
+            if (listBody.getChildAt(index) !== view) {
+                if (view.parent === listBody) listBody.removeView(view)
+                listBody.addView(view, index)
+            }
+        }
+        while (listBody.childCount > desiredViews.size) {
+            listBody.getChildAt(listBody.childCount - 1).animate().cancel()
+            listBody.removeViewAt(listBody.childCount - 1)
+        }
+        renderedState = state
+        if (contentChanged && primaryChanged && ValueAnimator.areAnimatorsEnabled()) {
+            nextCurrentView.translationY = dp(6).toFloat()
+            nextCurrentView.animate().translationY(0f).setDuration(180L).start()
         }
 
         if (showRefreshFeedback) {
-            val message = if (recentLyrics.isNotEmpty()) {
-                getString(R.string.ui_refreshed) + " " + recentLyrics.size + " " + getString(R.string.ui_songs)
-            } else {
-                getString(R.string.ui_refreshed)
-            }
-            playLocalRefreshFeedback(activity, listBody, feedback, message)
+            playLocalRefreshFeedback(activity, listBody, feedback, refreshMessage(), animateTarget = false)
         }
     }
 
     populateRecentLyrics = { showRefreshFeedback, preserveContent ->
         if (showRefreshFeedback) {
             showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
-        } else if (!preserveContent) {
-            listBody.removeAllViews()
-            listBody.addView(normalText(activity, getString(R.string.ui_loading)))
+        } else if (!preserveContent && renderedState == null) {
+            loadingView.text = getString(R.string.ui_loading)
         }
 
         listBody.setTag(R.id.interaction_loading, true)
         loadRecentLyrics(force = showRefreshFeedback) { state ->
             listBody.setTag(R.id.interaction_loading, false)
-            renderLyricsList(state.currentItem, state.recentLyrics, state.media, showRefreshFeedback)
+            renderLyricsList(state, showRefreshFeedback)
         }
     }
 
     populateRecentLyrics(false, false)
 
-    val cardView = card(activity) {
+    val createdCard = card(activity) {
         val hintText = TextView(activity).apply {
             setText(R.string.ui_tap_to_preview_or_edit)
             textSize = AirUiTokens.TextSize.Caption
@@ -231,8 +293,11 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
         addView(hintText)
         addView(listBody)
     }
+    cardView = createdCard
     return RefreshableSettingsCard(
-        view = cardView,
+        view = createdCard,
         refreshContent = { populateRecentLyrics(false, true) }
     )
 }
+
+private fun LocalLyricsUiItem.lyricsRowKey(): String = indexKey.ifBlank { "root:$name" }

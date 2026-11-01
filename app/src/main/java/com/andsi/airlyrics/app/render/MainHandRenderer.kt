@@ -129,8 +129,8 @@ internal class MainHandRenderer(
         updateTabs(host, animate = animate)
     }
 
-    override fun refreshFloatingChrome() {
-        refreshTabs(animate = true)
+    override fun refreshFloatingChrome(animateQuickStatus: Boolean) {
+        updateTabs(host, animate = false, animateQuickStatus = animateQuickStatus)
         refreshFloatingControls()
     }
 

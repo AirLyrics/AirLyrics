@@ -46,6 +46,8 @@ class WaterTabHighlightView @JvmOverloads constructor(
     private var stretch = 0f
     var hasPosition = false
         private set
+    val isAnimating: Boolean
+        get() = animator?.isRunning == true
 
     fun setAccentColor(color: Int) {
         if (accentColor == color) return

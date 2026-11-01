@@ -19,7 +19,7 @@ internal interface UiInvalidator {
     fun refreshTabs(animate: Boolean = true)
 
     /** Updates floating-window visibility chrome: tabs plus current Floating page controls. */
-    fun refreshFloatingChrome()
+    fun refreshFloatingChrome(animateQuickStatus: Boolean = false)
 
     /** Updates lock/click-through labels inside the current Floating page, if it is mounted. */
     fun refreshFloatingControls()
