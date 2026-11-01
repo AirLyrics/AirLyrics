@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app.host
 
+import android.annotation.SuppressLint
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
@@ -15,6 +16,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import android.view.animation.PathInterpolator
 import android.view.inputmethod.InputMethodManager
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -118,6 +120,7 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
 
     val list = RecyclerView(this).apply {
         layoutManager = LinearLayoutManager(this@showLocalLyricsEditorSheet)
+        // Row editing and action disclosure notify independently; only explicit insertion animates.
         itemAnimator = null
         overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         setPadding(dp(6), dp(6), dp(6), dp(6))
@@ -140,17 +143,44 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     list.adapter = rows
     val maxListHeight = (resources.displayMetrics.heightPixels * 0.84f).toInt() - dp(220)
     var imeInset = 0
+    var listHeightAnimator: ValueAnimator? = null
     fun listHeight(): Int {
         val preferred = (rows.itemCount * dp(64)).coerceAtLeast(dp(86))
             .coerceAtMost(maxListHeight.coerceAtLeast(dp(86)))
         val available = resources.displayMetrics.heightPixels - imeInset - dp(220)
         return preferred.coerceAtMost(available.coerceAtLeast(dp(76)))
     }
-    fun updateListHeight() {
+    fun updateListHeight(animate: Boolean = false) {
         val height = listHeight()
-        if (list.layoutParams.height != height) {
+        val current = list.layoutParams.height
+        val previous = listHeightAnimator
+        listHeightAnimator = null
+        previous?.cancel()
+        if (current == height) return
+        if (!animate || !ValueAnimator.areAnimatorsEnabled() || !list.isAttachedToWindow) {
             list.layoutParams = list.layoutParams.apply { this.height = height }
+            return
         }
+        val motion = ValueAnimator.ofInt(current, height).apply {
+            duration = 235L
+            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            addUpdateListener { animation ->
+                val next = animation.animatedValue as Int
+                if (list.layoutParams.height != next) {
+                    list.layoutParams = list.layoutParams.apply { this.height = next }
+                }
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (listHeightAnimator === animation) {
+                        listHeightAnimator = null
+                        list.layoutParams = list.layoutParams.apply { this.height = height }
+                    }
+                }
+            })
+        }
+        listHeightAnimator = motion
+        motion.start()
     }
     content.addView(list, LinearLayout.LayoutParams(-1, listHeight()))
 
@@ -186,11 +216,17 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     footer.addView(save, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
     content.addView(footer, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
 
+    val entranceParts = listOf(header, list, footer)
+    if (ValueAnimator.areAnimatorsEnabled()) entranceParts.forEachIndexed { index, view ->
+        view.alpha = 0.72f
+        view.translationY = dp(6 + index * 2).toFloat()
+    }
+
     sheet.addView(overlay, FrameLayout.LayoutParams(-1, -1))
-    lineEditor = FloatingLineEditor(this, sheet, overlay, document, rows) {
+    lineEditor = FloatingLineEditor(this, sheet, overlay, document, rows) { inserted ->
         val text = document.serialize()
         editorSession.edit(text, 0, 0, list.computeVerticalScrollOffset())
-        updateListHeight()
+        updateListHeight(inserted)
     }
     closeLineEditor = lineEditor::close
     list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -228,19 +264,22 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
             outlineProvider = null
         }
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        sheet.translationY = dp(28).toFloat()
-        sheet.alpha = 0.9f
         if (ValueAnimator.areAnimatorsEnabled()) {
-            sheet.animate().translationY(0f).alpha(1f).setDuration(330)
-                .setInterpolator(OvershootInterpolator(0.55f)).start()
+            entranceParts.forEachIndexed { index, view ->
+                view.animate().alpha(1f).translationY(0f)
+                    .setStartDelay(index * 28L).setDuration(175L)
+                    .setInterpolator(PathInterpolator(0.2f, 0f, 0f, 1f)).start()
+            }
         } else {
-            sheet.translationY = 0f
-            sheet.alpha = 1f
+            entranceParts.forEach { it.alpha = 1f; it.translationY = 0f }
         }
         list.post { list.scrollBy(0, session.scrollY) }
         ViewCompat.requestApplyInsets(sheet)
     }
     dialog.setOnDismissListener {
+        listHeightAnimator?.cancel()
+        listHeightAnimator = null
+        entranceParts.forEach { it.animate().cancel() }
         lineEditor.dispose()
         interactionUi.forget(dialog)
         if (!interactionUi.releasing && !activity.isChangingConfigurations && !activity.isDestroyed &&
@@ -284,6 +323,7 @@ private class LrcRowsAdapter(
     private val onAction: (EditableLrcDocument.Row, View, Boolean) -> Unit
 ) : RecyclerView.Adapter<LrcRowsAdapter.RowHolder>() {
     private val visibleRows = document.rows.filter(EditableLrcDocument.Row::isVisible).toMutableList()
+    private val pendingInserted = mutableSetOf<EditableLrcDocument.Row>()
     private var list: RecyclerView? = null
     private var expanded: EditableLrcDocument.Row? = null
     var enabled = true
@@ -291,7 +331,10 @@ private class LrcRowsAdapter(
     override fun getItemCount(): Int = visibleRows.size
     override fun getItemViewType(position: Int): Int = if (visibleRows[position].isTimed) 1 else 0
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) { list = recyclerView }
-    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) { list = null }
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        pendingInserted.clear()
+        list = null
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RowHolder {
         val container = LinearLayout(host).apply {
@@ -306,7 +349,7 @@ private class LrcRowsAdapter(
                 setTextColor(host.colorTextMuted)
             }
             container.addView(raw, LinearLayout.LayoutParams(-1, -2))
-            return RowHolder(container, raw, null, null, null)
+            return RowHolder(InsertReveal(host, container), raw, null, null, null)
         }
         val line = LinearLayout(host).apply {
             gravity = Gravity.TOP
@@ -356,7 +399,7 @@ private class LrcRowsAdapter(
             old?.let(::refreshExpansion)
             if (expanded !== old) expanded?.let(::refreshExpansion)
         }
-        return RowHolder(container, lyric, time, reveal, actions)
+        return RowHolder(InsertReveal(host, container), lyric, time, reveal, actions)
     }
 
     private fun holderPosition(view: View): Int =
@@ -369,10 +412,12 @@ private class LrcRowsAdapter(
     }
 
     override fun onBindViewHolder(holder: RowHolder, position: Int) {
-        holder.bind(visibleRows[position], expanded === visibleRows[position])
+        val row = visibleRows[position]
+        holder.bind(row, expanded === row, pendingInserted.remove(row))
     }
 
     override fun onViewRecycled(holder: RowHolder) { holder.stopAnimation() }
+    override fun onViewDetachedFromWindow(holder: RowHolder) { holder.stopAnimation() }
 
     fun update(row: EditableLrcDocument.Row) {
         visibleRows.indexOf(row).takeIf { it >= 0 }?.let(::notifyItemChanged)
@@ -384,23 +429,61 @@ private class LrcRowsAdapter(
         if (documentIndex < 0 || visibleIndex < 0) return
         val added = document.insertAfter(documentIndex, timestamp, lyric)
         visibleRows.add(visibleIndex + 1, added)
+        val manager = list?.layoutManager as? LinearLayoutManager
+        val visibleInsert = manager != null && visibleIndex + 1 in
+            manager.findFirstVisibleItemPosition()..(manager.findLastVisibleItemPosition() + 1)
+        if (visibleInsert) pendingInserted += added
         notifyItemInserted(visibleIndex + 1)
+        if (visibleInsert) list?.handler?.postDelayed({ pendingInserted.remove(added) }, 400L)
     }
 
     class RowHolder(
-        container: LinearLayout,
+        private val insertion: InsertReveal,
         private val lyricView: TextView,
         private val timeView: TextView?,
         private val reveal: ActionReveal?,
         private val actions: View?
-    ) : RecyclerView.ViewHolder(container) {
+    ) : RecyclerView.ViewHolder(insertion) {
         private var animator: ValueAnimator? = null
-        fun bind(row: EditableLrcDocument.Row, expanded: Boolean) {
+        private var insertionAnimator: ValueAnimator? = null
+        private var startInsertion: Runnable? = null
+        fun bind(row: EditableLrcDocument.Row, expanded: Boolean, inserted: Boolean) {
             stopAnimation()
             lyricView.text = row.lyric
             timeView?.text = row.timestamp
-            itemView.contentDescription = if (row.isTimed) "${row.timestamp}, ${row.lyric}" else row.raw
+            insertion.setRowDescription(if (row.isTimed) "${row.timestamp}, ${row.lyric}" else row.raw)
             reveal?.showProgress(if (expanded) 1f else 0f)
+            if (inserted) {
+                insertion.showProgress(0f)
+                val start = Runnable {
+                    startInsertion = null
+                    animateInsertion()
+                }
+                startInsertion = start
+                itemView.post(start)
+            }
+        }
+
+        private fun animateInsertion() {
+            if (!itemView.isAttachedToWindow || !ValueAnimator.areAnimatorsEnabled()) {
+                insertion.showProgress(1f)
+                return
+            }
+            val motion = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 250L
+                interpolator = OvershootInterpolator(0.32f)
+                addUpdateListener { insertion.showProgress(it.animatedValue as Float) }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (insertionAnimator === animation) {
+                            insertionAnimator = null
+                            insertion.showProgress(1f)
+                        }
+                    }
+                })
+            }
+            insertionAnimator = motion
+            motion.start()
         }
 
         fun animateExpansion(open: Boolean) {
@@ -429,10 +512,45 @@ private class LrcRowsAdapter(
         }
 
         fun stopAnimation() {
+            startInsertion?.let(itemView::removeCallbacks)
+            startInsertion = null
+            insertionAnimator?.removeAllListeners()
+            insertionAnimator?.cancel()
+            insertionAnimator = null
+            insertion.showProgress(1f)
             animator?.removeAllListeners()
             animator?.cancel()
             animator = null
         }
+    }
+}
+
+/** The inserted row reveals its measured height, pushing its neighbours during the same motion. */
+@SuppressLint("ViewConstructor")
+private class InsertReveal(context: Context, private val content: LinearLayout) : FrameLayout(context) {
+    private var progress = 1f
+
+    init {
+        clipChildren = true
+        clipToPadding = true
+        addView(content, LayoutParams(-1, -2))
+    }
+
+    fun setRowDescription(description: String) { content.contentDescription = description }
+
+    fun showProgress(value: Float) {
+        if (progress == value) return
+        progress = value
+        content.alpha = (0.4f + value.coerceIn(0f, 1f) * 0.6f).coerceAtMost(1f)
+        content.translationY = (1f - value) * resources.displayMetrics.density * 8f
+        content.pivotY = 0f
+        content.scaleY = 1f + (value - 1f) * 0.015f
+        requestLayout()
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+        setMeasuredDimension(measuredWidth, (measuredHeight * progress.coerceIn(0f, 1f)).roundToInt())
     }
 }
 
@@ -488,7 +606,7 @@ private class FloatingLineEditor(
     private val overlay: FrameLayout,
     private val document: EditableLrcDocument,
     private val rows: LrcRowsAdapter,
-    private val onChanged: () -> Unit
+    private val onChanged: (Boolean) -> Unit
 ) {
     private var card: HeightBoundScrollView? = null
     private var anchor: View? = null
@@ -537,7 +655,7 @@ private class FloatingLineEditor(
                 document.update(document.rows.indexOf(row), tag, text)
                 rows.update(row)
             }
-            onChanged()
+            onChanged(insert)
             close()
         }.apply { makeCompact(host) }
         footer.addView(cancel)

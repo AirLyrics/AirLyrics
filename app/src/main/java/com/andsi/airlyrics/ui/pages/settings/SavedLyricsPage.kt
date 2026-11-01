@@ -15,6 +15,8 @@ import android.widget.AbsListView
 import android.widget.ListView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.animation.ValueAnimator
+import android.view.animation.PathInterpolator
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -28,6 +30,7 @@ import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.pageContainer
 import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
+import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -65,7 +68,10 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     var allLyrics = emptyList<LocalLyricsUiItem>()
     var searchableLyrics = emptyList<Pair<LocalLyricsUiItem, String>>()
     var lyricsLoaded = false
+    var deletionForNextRender = emptySet<String>()
+    var deferSelectionUi = false
     lateinit var populateSavedLyrics: (Boolean) -> Unit
+    lateinit var deletionRefresh: (Set<String>) -> Unit
     lateinit var updateSelectionUi: () -> Unit
     var refreshSelectAll: () -> Unit = {}
     lateinit var selectionAction: SavedLyricsSelectionIconView
@@ -99,10 +105,15 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         return true
     }
     val adapter = SavedLyricsListAdapter(activity, { selecting }, { it in selection }, ::toggleSelection,
-        { populateSavedLyrics(true) })
+        { change, key ->
+            if (change == LocalLyricsUiChange.DELETED) deletionForNextRender = setOf(key)
+            populateSavedLyrics(true)
+        })
     listBody.adapter = adapter
+    val deletionMotion = SavedLyricsDeletionMotion(activity, container, listBody, adapter)
     val scrollKey = "savedLyrics.list"
     var restoringScroll = true
+    var listScrollState = AbsListView.OnScrollListener.SCROLL_STATE_IDLE
     val savedScroll = interactions.read(scrollKey)
     fun captureScroll() {
         if (restoringScroll || !listBody.isAttachedToWindow || adapter.count == 0) return
@@ -116,7 +127,9 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     }
     listBody.setOnScrollListener(object : AbsListView.OnScrollListener {
         override fun onScrollStateChanged(view: AbsListView?, state: Int) {
+            listScrollState = state
             if (state == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL) restoringScroll = false
+            if (state != AbsListView.OnScrollListener.SCROLL_STATE_IDLE) deletionMotion.cancel()
         }
         override fun onScroll(view: AbsListView?, firstVisibleItem: Int, visibleItemCount: Int, totalItemCount: Int) = captureScroll()
     })
@@ -129,6 +142,8 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
             interactionUi.snapshot(listBody, ::captureScroll)
         }
         override fun onViewDetachedFromWindow(view: View) {
+            deletionMotion.cancel()
+            if (activity.savedLyricsDeletionRefresh === deletionRefresh) activity.savedLyricsDeletionRefresh = null
             interactionUi.forgetSnapshot(listBody)
             if (activity.savedLyricsSelectionBackHandler === backHandler) activity.savedLyricsSelectionBackHandler = null
         }
@@ -166,7 +181,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         }
     }
 
-    fun renderSavedLyrics() {
+    fun renderSavedLyrics(deletedKeys: Set<String> = emptySet()): Boolean {
         dragSelectionLayout?.cancelSelectionGesture()
         val terms = searchInput.text.toString()
             .trim()
@@ -175,7 +190,35 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
             .filter(String::isNotBlank)
 
         val visible = searchableLyrics.filter { (_, text) -> terms.all(text::contains) }.map { it.first }
-        adapter.submit(visible)
+        val deletionStarted = if (deletedKeys.isNotEmpty() &&
+            listScrollState == AbsListView.OnScrollListener.SCROLL_STATE_IDLE
+        ) {
+            deletionMotion.submit(visible, deletedKeys) { completed ->
+                if (deferSelectionUi) {
+                    deferSelectionUi = false
+                    updateSelectionUi()
+                }
+                val hint = when {
+                    emptyHint.isVisible -> emptyHint
+                    noSearchResultsHint.isVisible -> noSearchResultsHint
+                    else -> null
+                }
+                hint?.let {
+                    it.animate().cancel()
+                    if (completed && ValueAnimator.areAnimatorsEnabled()) {
+                        it.animate().alpha(1f).translationY(0f).setDuration(190L)
+                            .setInterpolator(PathInterpolator(0.2f, 0f, 0f, 1f)).start()
+                    } else {
+                        it.alpha = 1f
+                        it.translationY = 0f
+                    }
+                }
+            }
+        } else {
+            if (adapter.items != visible) deletionMotion.cancel()
+            adapter.submit(visible)
+            false
+        }
         if (lyricsLoaded && restoringScroll) {
             val index = visible.indexOfFirst { itemKey(it) == savedScroll?.getString("key") }
             val position = if (index >= 0) index else (savedScroll?.getInt("position") ?: 0).coerceIn(0, (visible.size - 1).coerceAtLeast(0))
@@ -192,7 +235,23 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         noSearchResultsHint.isVisible = lyricsLoaded &&
             allLyrics.isNotEmpty() &&
             visible.isEmpty()
+        val hint = when {
+            emptyHint.isVisible -> emptyHint
+            noSearchResultsHint.isVisible -> noSearchResultsHint
+            else -> null
+        }
+        if (hint != null && deletionStarted) {
+            hint.alpha = 0f
+            hint.translationY = dp(8).toFloat()
+        } else if (!deletionStarted && !deletionMotion.isActive) {
+            listOf(emptyHint, noSearchResultsHint).forEach {
+                it.animate().cancel()
+                it.alpha = 1f
+                it.translationY = 0f
+            }
+        }
         refreshSelectAll()
+        return deletionStarted
     }
 
     fun batchButtons(vararg buttons: Pair<String, () -> Unit>): LinearLayout = LinearLayout(activity).apply {
@@ -415,14 +474,24 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         loadSavedLyrics(force = preserveContent) { state ->
             allLyrics = state.lyrics
             searchableLyrics = allLyrics.map { it to it.savedLyricsSearchText() }
+            val wasSelecting = selecting
             selecting = interactions.read("savedLyricsSelection") != null
             if (!selecting) selection.clear()
             selection.retainAll(allLyrics.map(::itemKey).toSet())
             saveSelection()
             lyricsLoaded = true
             listBody.setTag(R.id.interaction_loading, false)
-            renderSavedLyrics()
-            updateSelectionUi()
+            val deleted = deletionForNextRender
+            deletionForNextRender = emptySet()
+            deferSelectionUi = (wasSelecting && !selecting && deleted.isNotEmpty()) ||
+                (deferSelectionUi && deletionMotion.isActive)
+            val animated = renderSavedLyrics(deleted)
+            if (deferSelectionUi && (animated || deletionMotion.isActive)) {
+                adapter.refresh(listBody, animate = false)
+            } else {
+                deferSelectionUi = false
+                updateSelectionUi()
+            }
         }
     }
 
@@ -458,8 +527,15 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     container.addView(emptyHint)
     container.addView(noSearchResultsHint)
     container.addView(listCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+    deletionRefresh = { keys ->
+        deletionForNextRender = keys
+        populateSavedLyrics(true)
+    }
+    activity.savedLyricsDeletionRefresh = deletionRefresh
     populateSavedLyrics(false)
-    lyricsSettingsContentRefresh = { populateSavedLyrics(true) }
+    lyricsSettingsContentRefresh = {
+        if (activity.savedLyricsDeletionPending == null) populateSavedLyrics(true)
+    }
 
     // Keep the original 760 dp content limit without an outer ScrollView: the list must
     // receive a bounded viewport so it can recycle rows instead of measuring every song.

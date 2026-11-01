@@ -40,7 +40,7 @@ class SavedLyricsListAdapterTest {
         adapter = SavedLyricsListAdapter(host, { true }, { it in selected }, {
             if (!selected.add(it.selectionKey())) selected.remove(it.selectionKey())
             adapter.refresh(list)
-        }, {}).apply { progress = 1f }
+        }, { _, _ -> }).apply { progress = 1f }
         adapter.submit((0 until 2000).map {
             LocalLyricsUiItem("$it.lrc", 0L, 32L, title = "Song $it", indexKey = "$it", displayTitle = "Song $it")
         })

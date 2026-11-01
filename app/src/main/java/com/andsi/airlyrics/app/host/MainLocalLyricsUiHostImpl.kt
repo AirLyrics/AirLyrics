@@ -37,6 +37,8 @@ import com.andsi.airlyrics.ui.state.restoreOperationConfirmation
 import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
+import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -90,6 +92,10 @@ internal fun MainActivityUiHost.observeEditorSession() {
                 if (session == null) {
                     binding?.dialog?.dismiss()
                     binding = null
+                    if (editorChangeCallback != null && savedLyricsDeletionPending != null) {
+                        savedLyricsDeletionPending = null
+                        lyricsSettingsContentRefresh?.invoke()
+                    }
                     return@collect
                 }
                 if (session.finished != null) {
@@ -97,9 +103,13 @@ internal fun MainActivityUiHost.observeEditorSession() {
                     binding = null
                     editorSession.acknowledgeCompletion()
                     if (session.finished == LocalLyricsUiChange.SAVED) showMessage(R.string.ui_saved)
+                    val keepSavedList = session.finished == LocalLyricsUiChange.DELETED &&
+                        editorChangeCallback != null && currentPage == Page.SETTINGS &&
+                        settingsSubPage == SettingsSubPage.SAVED_LYRICS && savedLyricsDeletionRefresh != null
+                    savedLyricsDeletionPending = null
                     editorChangeCallback?.invoke(session.finished)
                     editorChangeCallback = null
-                    rebuildCurrentPage(animateContent = false, animateTabs = false)
+                    if (!keepSavedList) rebuildCurrentPage(animateContent = false, animateTabs = false)
                     return@collect
                 }
                 if (session.notice == EditorNotice.READ_FAILED && interactions.read("editor") == null) {
@@ -125,7 +135,14 @@ internal fun MainActivityUiHost.observeEditorSession() {
                         } else showLyricsFormatErrorDialog(session.invalidLines)
                         EditorNotice.VALID -> showAirDialog(title = getString(R.string.ui_format_looks_good))
                         EditorNotice.READ_FAILED -> showMessage(R.string.ui_read_failed)
-                        EditorNotice.DELETE_FAILED, EditorNotice.SAVE_FAILED -> showAirDialog(title = getString(R.string.ui_save_failed))
+                        EditorNotice.DELETE_FAILED -> {
+                            if (savedLyricsDeletionPending != null) {
+                                savedLyricsDeletionPending = null
+                                lyricsSettingsContentRefresh?.invoke()
+                            }
+                            showAirDialog(title = getString(R.string.ui_save_failed))
+                        }
+                        EditorNotice.SAVE_FAILED -> showAirDialog(title = getString(R.string.ui_save_failed))
                     }
                 }
             }

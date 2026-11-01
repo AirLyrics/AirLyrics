@@ -16,6 +16,7 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.LocalLyricsRowView
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
+import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.*
 import kotlin.math.roundToInt
@@ -28,7 +29,7 @@ internal class SavedLyricsListAdapter(
     private val selecting: () -> Boolean,
     private val selected: (String) -> Boolean,
     private val toggle: (LocalLyricsUiItem) -> Unit,
-    private val changed: () -> Unit
+    private val changed: (LocalLyricsUiChange, String) -> Unit
 ) : BaseAdapter() {
     var items: List<LocalLyricsUiItem> = emptyList()
         private set
@@ -69,7 +70,9 @@ internal class SavedLyricsListAdapter(
 
     private inner class Holder(initial: LocalLyricsUiItem) {
         var item = initial
-        val row = host.localLyricsRow(initial, onLyricsChanged = { changed() }, onClickIntercept = {
+        private var openedKey = initial.selectionKey()
+        val row = host.localLyricsRow(initial, onLyricsChanged = { changed(it, openedKey) }, onClickIntercept = {
+            openedKey = item.selectionKey()
             if (selecting()) { toggle(item); true } else false
         }) as LocalLyricsRowView
         val checkbox = CheckBox(host).apply {
@@ -104,7 +107,12 @@ internal class SavedLyricsListAdapter(
             item = value
             row.bind(value, expanded)
             checkbox.contentDescription = host.getString(R.string.ui_batch_select_item, value.displayTitle)
-            if (rebound) { row.animate().cancel(); row.scaleX = 1f; row.scaleY = 1f }
+            if (rebound) {
+                row.animate().cancel()
+                row.scaleX = 1f
+                row.scaleY = 1f
+                wrapper.translationY = 0f
+            }
             update(animate = false)
         }
 

@@ -11,6 +11,8 @@ import com.andsi.airlyrics.app.interaction.BatchLyricsStage
 import com.andsi.airlyrics.ui.components.dismissAirDialogImmediately
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.showAirDialog
+import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -24,7 +26,20 @@ internal fun MainActivityUiHost.observeBatchLyricsSession() {
             combine(batchLyricsSession.state, windowGeneration) { state, _ -> state }.collect { state ->
                 dialog?.dismissAirDialogImmediately()
                 dialog = null
-                if (state == null || state.stage in setOf(BatchLyricsStage.PICKING, BatchLyricsStage.EXPORT_PICKING)) return@collect
+                if (state == null) {
+                    if (savedLyricsDeletionPending != null) {
+                        savedLyricsDeletionPending = null
+                        lyricsSettingsContentRefresh?.invoke()
+                    }
+                    return@collect
+                }
+                if (state.stage == BatchLyricsStage.DELETE && savedLyricsDeletionRefresh != null) {
+                    savedLyricsDeletionPending = state.items.mapTo(mutableSetOf()) { it.indexKey.ifBlank { "root:${it.name}" } }
+                }
+                if (state.stage in setOf(BatchLyricsStage.PICKING, BatchLyricsStage.EXPORT_PICKING)) return@collect
+                val savedDeleteFinish = state.stage == BatchLyricsStage.FINISHED &&
+                    savedLyricsDeletionPending != null && savedLyricsDeletionRefresh != null &&
+                    currentPage == Page.SETTINGS && settingsSubPage == SettingsSubPage.SAVED_LYRICS
                 val busy = state.stage in setOf(BatchLyricsStage.READING, BatchLyricsStage.RUNNING, BatchLyricsStage.EXPORTING)
                 val importable = state.rows.count { it.target != null && it.problem == null }
                 val title = when (state.stage) {
@@ -88,14 +103,25 @@ internal fun MainActivityUiHost.observeBatchLyricsSession() {
                     negativeText = if (state.stage in setOf(BatchLyricsStage.PREVIEW, BatchLyricsStage.DELETE)) getString(R.string.ui_cancel) else null,
                     body = body,
                     onPositive = {
-                        if (state.stage == BatchLyricsStage.FINISHED) batchLyricsSession.dismiss() else batchLyricsSession.confirm()
+                        if (state.stage == BatchLyricsStage.FINISHED) {
+                            if (!savedDeleteFinish) batchLyricsSession.dismiss()
+                        } else batchLyricsSession.confirm()
                     },
                     onNegative = { batchLyricsSession.dismiss() },
                     onUserDismiss = {
-                        if (batchLyricsSession.state.value?.stage == state.stage) batchLyricsSession.dismiss()
+                        if (!savedDeleteFinish && batchLyricsSession.state.value?.stage == state.stage) batchLyricsSession.dismiss()
+                    },
+                    afterUserDismiss = {
+                        if (savedDeleteFinish) {
+                            val keys = savedLyricsDeletionPending.orEmpty()
+                            savedLyricsDeletionPending = null
+                            savedLyricsDeletionRefresh?.invoke(keys)
+                            batchLyricsSession.dismiss()
+                        }
                     }
                 ).apply { setCancelable(!busy); setCanceledOnTouchOutside(!busy) }
-                if (state.stage == BatchLyricsStage.FINISHED) {
+                if (state.stage == BatchLyricsStage.FINISHED && !savedDeleteFinish) {
+                    savedLyricsDeletionPending = null
                     rebuildCurrentPage(animateContent = false, animateTabs = false)
                 }
             }

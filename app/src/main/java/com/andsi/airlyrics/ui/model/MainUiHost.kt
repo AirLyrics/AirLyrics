@@ -41,6 +41,9 @@ internal abstract class MainUiHost(
     open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
     val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
     var savedLyricsSelectionBackHandler: (() -> Boolean)? = null
+    /** A confirmed deletion keeps the current list in place until its data refresh can animate. */
+    var savedLyricsDeletionPending: Set<String>? = null
+    var savedLyricsDeletionRefresh: ((Set<String>) -> Unit)? = null
     val interactionUi = com.andsi.airlyrics.ui.state.InteractionUiRegistry()
     private var panelControlIndex = 0
     fun beginPanelControls() { panelControlIndex = 0 }
