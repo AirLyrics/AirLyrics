@@ -196,8 +196,10 @@ class MainActivityInteractionRecreationTest {
         settle()
     }
     private fun editFirstLine(lyric: String) {
-        editorRow().performClick(); settle()
-        button(latestDialog(), R.string.ui_edit_line).performClick()
+        assertTrue(editorRow().performClick()); settle()
+        val editLine = button(latestDialog(), R.string.ui_edit_line)
+        assertTrue(editLine.isShown)
+        editLine.performClick()
         await { descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().size == 2 }
         descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>()
             .single { it.contentDescription == activity.getString(R.string.ui_lyrics) }
@@ -209,6 +211,11 @@ class MainActivityInteractionRecreationTest {
     private fun editorRowOrNull(): View? = latestDialogOrNull()?.window?.decorView
         ?.let { descendants(it).filterIsInstance<RecyclerView>().singleOrNull() }
         ?.findViewHolderForAdapterPosition(0)?.itemView
+        ?.let { itemView ->
+            descendants(itemView).firstOrNull { row ->
+                row !== itemView && row.isClickable && !row.contentDescription.isNullOrEmpty()
+            }
+        }
     private fun editorRow(): View = requireNotNull(editorRowOrNull())
     private fun floatingPage() {
         activity.graph.viewModel.selectPage(Page.FLOATING)
