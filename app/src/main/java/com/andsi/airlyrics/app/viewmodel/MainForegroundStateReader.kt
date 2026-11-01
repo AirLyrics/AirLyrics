@@ -18,7 +18,8 @@ internal fun interface ForegroundSnapshotReader {
 }
 
 internal class MainForegroundStateReader(
-    context: Context
+    context: Context,
+    private val mediaPlayerOrder: MediaPlayerOrder = MediaPlayerOrder()
 ) : ForegroundSnapshotReader {
     private val appContext = context.applicationContext
 
@@ -44,14 +45,15 @@ internal class MainForegroundStateReader(
     }
 
     private fun readMediaSnapshot(): MediaUiSnapshot {
-        val controllers = CurrentMediaReader
+        val controllersByPackage = CurrentMediaReader
             .selectedControllersByPackage(CurrentMediaReader.getActiveControllers(appContext))
-            .values
-            .toList()
+        val controllers = mediaPlayerOrder.reconcile(controllersByPackage)
         val selectedPackage = MediaSourceStore.getSelectedPackage(appContext)
         return MediaUiSnapshot(
             selectedPackage = selectedPackage,
-            selectedArtworkKey = CurrentMediaReader.bestController(controllers, selectedPackage)
+            selectedArtworkKey = CurrentMediaReader.bestController(
+                controllersByPackage.values.toList(), selectedPackage
+            )
                 ?.metadata.mediaArtwork()?.refreshKey,
             players = controllers.map { controller ->
                 val song = resolveMediaSongMetadata(controller.packageName, controller.metadata)

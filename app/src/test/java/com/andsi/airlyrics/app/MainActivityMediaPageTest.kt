@@ -38,6 +38,96 @@ import kotlin.math.roundToInt
 @RunWith(RobolectricTestRunner::class)
 class MainActivityMediaPageTest {
     @Test
+    fun playerCardsKeepTheirPositionsAcrossSessionReorderingAndMembershipChanges() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
+        val managerShadow = shadowOf(manager)
+        val sessions = mutableListOf<MediaSession>()
+
+        fun controller(key: String, packageName: String, playing: Boolean = false): MediaController {
+            val session = MediaSession(context, key)
+            sessions += session
+            return MediaController(context, session.sessionToken).also { controller ->
+                shadowOf(controller).setPackageName(packageName)
+                shadowOf(controller).setMetadata(metadata(key, "Artist", null, null))
+                shadowOf(controller).setPlaybackState(PlaybackState.Builder()
+                    .setState(if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED, 0L, 1f)
+                    .build())
+            }
+        }
+
+        val controllers = mapOf(
+            "a1" to controller("a1", "player.alpha"),
+            "a2" to controller("a2", "player.alpha", playing = true),
+            "b" to controller("b", "player.beta"),
+            "c" to controller("c", "player.gamma"),
+            "d" to controller("d", "player.delta"),
+            "e" to controller("e", "player.epsilon")
+        )
+        fun show(vararg keys: String) {
+            managerShadow.clearControllers()
+            keys.forEach { managerShadow.addController(controllers.getValue(it)) }
+        }
+        fun packages(root: View): List<String> = descendants(root).mapNotNull { view ->
+            (view.getTag(com.andsi.airlyrics.R.id.interaction_anchor) as? String)
+                ?.takeIf { it.startsWith("media.player.") && '/' !in it }
+                ?.removePrefix("media.player.")
+        }.toList()
+
+        try {
+            show("a1", "b", "c", "a2")
+            MediaSourceStore.saveSelectedPackage(context, "player.alpha")
+            Robolectric.buildActivity(MainActivity::class.java).setup().use { activityController ->
+                val activity = activityController.get()
+                val host = activity.graph.uiHost
+                val container = host.contentContainer!!
+                val firstPage = container.getChildAt(0)
+                val firstSnapshot = activity.graph.state.foreground.media
+                val initialOrder = listOf("player.alpha", "player.beta", "player.gamma")
+                assertEquals(initialOrder, firstSnapshot.players.map { it.packageName })
+                assertEquals(initialOrder, packages(firstPage))
+                assertSame(controllers.getValue("a2"), host.mediaPageState().selectedController)
+
+                show("c", "a2", "b", "a1")
+                activity.graph.viewModel.refreshForegroundState()
+                host.refreshMediaContent()
+                assertEquals(firstSnapshot, activity.graph.state.foreground.media)
+                assertSame(firstPage, container.getChildAt(0))
+                assertEquals(initialOrder, packages(firstPage))
+                assertSame(controllers.getValue("a2"), host.mediaPageState().selectedController)
+
+                shadowOf(controllers.getValue("a2")).setMetadata(metadata("New song", "Artist", null, null))
+                activity.graph.viewModel.refreshForegroundState()
+                host.refreshMediaContent()
+                assertSame(firstPage, container.getChildAt(0))
+                assertEquals(initialOrder, packages(firstPage))
+                assertEquals("New song", activity.graph.state.foreground.media.players.first().title)
+
+                show("e", "c", "a2", "d", "b", "a1")
+                activity.graph.viewModel.refreshForegroundState()
+                host.refreshMediaContent()
+                assertEquals(initialOrder + listOf("player.epsilon", "player.delta"),
+                    packages(container.getChildAt(0)))
+
+                show("d", "a1", "c", "e", "a2")
+                activity.graph.viewModel.refreshForegroundState()
+                host.refreshMediaContent()
+                assertEquals(listOf("player.alpha", "player.gamma", "player.epsilon", "player.delta"),
+                    packages(container.getChildAt(0)))
+
+                show("b", "d", "a2", "e", "c", "a1")
+                activity.graph.viewModel.refreshForegroundState()
+                host.refreshMediaContent()
+                assertEquals(listOf("player.alpha", "player.gamma", "player.epsilon", "player.delta", "player.beta"),
+                    packages(container.getChildAt(0)))
+            }
+        } finally {
+            managerShadow.clearControllers()
+            sessions.forEach(MediaSession::release)
+        }
+    }
+
+    @Test
     fun neteasePageKeepsSongAndArtistWhenBluetoothLyricsChange() {
         withPlayer("com.netease.cloudmusic") { host, controller ->
             for (lyric in listOf("first lyric", "next lyric", "")) {

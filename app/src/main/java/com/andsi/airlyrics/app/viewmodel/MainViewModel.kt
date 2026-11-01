@@ -65,6 +65,7 @@ internal class MainViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val lyricsController: LyricsOperations,
     private val foregroundStateReader: ForegroundSnapshotReader,
+    internal val mediaPlayerOrder: MediaPlayerOrder = MediaPlayerOrder(),
     private val floatingFontImporter: FloatingFontImportOperation,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel(), MainFloatingState {
@@ -685,6 +686,7 @@ internal class MainViewModel(
             val appContext = context.applicationContext
             return viewModelFactory {
                 initializer {
+                    val mediaPlayerOrder = MediaPlayerOrder()
                     val mediaControllerProvider = object : MediaControllerProvider {
                         override fun getActiveControllers() =
                             CurrentMediaReader.getActiveControllers(appContext)
@@ -696,7 +698,8 @@ internal class MainViewModel(
                             mediaControllerProvider = mediaControllerProvider,
                             lyricsChangedPublisher = BroadcastLyricsChangedPublisher(appContext)
                         ),
-                        foregroundStateReader = MainForegroundStateReader(appContext),
+                        foregroundStateReader = MainForegroundStateReader(appContext, mediaPlayerOrder),
+                        mediaPlayerOrder = mediaPlayerOrder,
                         floatingFontImporter = FloatingFontImporter(appContext)
                     )
                 }

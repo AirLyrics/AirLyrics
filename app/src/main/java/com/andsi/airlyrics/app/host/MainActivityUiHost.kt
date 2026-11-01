@@ -183,11 +183,12 @@ internal class MainActivityUiHost(
 
     override fun getActiveMediaControllers(): List<MediaController> = graph.mediaSourceController.getActiveControllers()
     override fun mediaPageState(): MediaPageState {
-        val controllers = CurrentMediaReader.selectedControllersByPackage(getActiveMediaControllers())
-            .values
-            .toList()
+        val controllersByPackage = CurrentMediaReader.selectedControllersByPackage(getActiveMediaControllers())
+        val controllers = graph.viewModel.mediaPlayerOrder.reconcile(controllersByPackage)
         val selectedPackage = MediaSourceStore.getSelectedPackage(this)
-        val selectedController = CurrentMediaReader.bestController(controllers, selectedPackage)
+        val selectedController = CurrentMediaReader.bestController(
+            controllersByPackage.values.toList(), selectedPackage
+        )
         val song = selectedController?.let { resolveMediaSongMetadata(it.packageName, it.metadata) }
         val artwork = selectedController?.metadata.mediaArtwork()
         return MediaPageState(
