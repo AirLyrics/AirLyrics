@@ -92,6 +92,16 @@ class LyricsSearchSessionTest {
             assertEquals(1,session.state.value.results[failing]?.candidates?.size)
         }
     }
+    @Test fun noCandidatesCannotApply()=runTest {
+        withSession { session,access ->
+            access.searchResults[song.title]=emptyList()
+            session.search();runCurrent()
+            assertTrue(session.state.value.results[source]!!.candidates.isEmpty())
+            assertFalse(session.state.value.canApply)
+            session.apply();runCurrent()
+            assertNull(access.appliedTarget)
+        }
+    }
     @Test fun switchingTargetCancelsPendingPreviewAndRetainsSourceChoice()=runTest {
         withSession { session,access ->
             session.preview(candidate)

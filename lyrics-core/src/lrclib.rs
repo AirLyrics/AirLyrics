@@ -2138,15 +2138,33 @@ fn manual_track_content(
     if v.id.to_string() != t.id {
         return Err(LrclibError::parse("track ID mismatch"));
     }
-    if v.synced_lyrics
+    let no_lyrics = v
+        .synced_lyrics
         .as_deref()
         .is_none_or(|text| text.trim().is_empty())
         && v.plain_lyrics
             .as_deref()
+            .is_none_or(|text| text.trim().is_empty());
+    if v.instrumental == Some(true) {
+        if v.track_name
+            .as_deref()
             .is_none_or(|text| text.trim().is_empty())
-    {
+            || v.artist_name
+                .as_deref()
+                .is_none_or(|text| text.trim().is_empty())
+        {
+            return Err(LrclibError::parse("instrumental record has no identity"));
+        }
+        if !no_lyrics {
+            return Err(LrclibError::parse("instrumental record has lyrics"));
+        }
         return Ok(crate::manual::unavailable(
             crate::manual::UnavailableReason::SourceEmpty,
+        ));
+    }
+    if no_lyrics {
+        return Err(LrclibError::parse(
+            "missing lyrics without instrumental marker",
         ));
     }
     let Some(lrc) = v.synced_lyrics.and_then(normalize_usable_lrc) else {
@@ -2171,8 +2189,6 @@ mod manual_tests {
             score: 0.0,
         };
         for (body, reason) in [
-            (r#"{"id":1,"instrumental":true}"#, "source_empty"),
-            (r#"{"id":1}"#, "source_empty"),
             (r#"{"id":1,"plainLyrics":"Untimed lyrics"}"#, "no_timeline"),
             (r#"{"id":1,"syncedLyrics":"untimed"}"#, "no_timeline"),
             (r#"{"id":1,"syncedLyrics":"[00:01.00]"}"#, "no_timeline"),
@@ -2190,5 +2206,34 @@ mod manual_tests {
             manual_track_content(v, &t).unwrap_err().error_type(),
             "ParseError"
         );
+        // Captured from LRCLIB search; its exact-ID endpoint was unavailable during this audit.
+        let live: ApiTrack = serde_json::from_str(include_str!(
+            "../testdata/lrclib-merry-christmas-mr-lawrence-instrumental.json"
+        ))
+        .unwrap();
+        let selected = crate::manual::Track {
+            id: "35930629".into(),
+            title: "Merry Christmas Mr. Lawrence".into(),
+            artist: "Ryuichi Sakamoto".into(),
+            album: "1996 (Re-Mastered)".into(),
+            duration_ms: 240_000,
+            score: 1.0,
+        };
+        assert_eq!(
+            manual_track_content(live, &selected).unwrap()["reason"],
+            "source_empty"
+        );
+        for body in [
+            r#"{"id":1,"instrumental":true}"#,
+            r#"{"id":1}"#,
+            r#"{"id":1,"instrumental":false,"plainLyrics":null,"syncedLyrics":null}"#,
+            r#"{"id":1,"trackName":"Song","artistName":"Artist","instrumental":true,"syncedLyrics":"[00:01.00]Unexpected"}"#,
+        ] {
+            let v = serde_json::from_str(body).unwrap();
+            assert_eq!(
+                manual_track_content(v, &t).unwrap_err().error_type(),
+                "ParseError"
+            );
+        }
     }
 }

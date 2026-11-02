@@ -648,6 +648,16 @@ impl<'a> AppleClient<'a> {
             .map(str::to_string);
 
         let Some(ttml) = ttml else {
+            if manual
+                && body
+                    .pointer("/data/0/attributes/hasLyrics")
+                    .and_then(Value::as_bool)
+                    == Some(false)
+            {
+                return Ok(crate::manual::unavailable(
+                    crate::manual::UnavailableReason::SourceEmpty,
+                ));
+            }
             return Ok(json!({
                 "ok": false,
                 "source": "apple",
@@ -922,10 +932,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn manual_fetch_accepts_catalogue_song_explicitly_without_lyrics() {
+        let mut song = details("42", None);
+        song["data"][0]["attributes"] = json!({"hasLyrics": false});
+        let server = crate::test_http::Server::new(vec![http_json(song)]);
+        let result = manual_request(
+            &manual_input("fetch"),
+            "user",
+            "developer",
+            "us",
+            0,
+            &server.url,
+        )
+        .await
+        .unwrap();
+        assert_eq!(result["ok"], true);
+        assert_eq!(result["content_state"], "empty");
+        assert_eq!(result["reason"], "source_empty");
+        server.finish();
+    }
+
+    #[tokio::test]
     async fn manual_fetch_rejects_wrong_identity_and_unusable_content() {
         for (body, error, reason) in [
             (details("99", Some(SAMPLE)), Some("ParseError"), None),
             (details("42", None), None, Some("NotFound")),
+            (
+                {
+                    let mut song = details("42", None);
+                    song["data"][0]["attributes"] = json!({"hasLyrics": true});
+                    song
+                },
+                None,
+                Some("NotFound"),
+            ),
             (
                 details("42", Some("<tt><p>untimed</p></tt>")),
                 None,

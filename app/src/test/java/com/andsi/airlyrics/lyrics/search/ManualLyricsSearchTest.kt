@@ -2,6 +2,8 @@ package com.andsi.airlyrics.lyrics.search
 
 import com.andsi.airlyrics.core.model.*
 import com.andsi.airlyrics.lyrics.*
+import com.andsi.airlyrics.lyrics.providers.LocalPlainLyricsProvider
+import com.andsi.airlyrics.lyrics.providers.spicyFixture
 import com.andsi.airlyrics.lyrics.storage.*
 import org.json.JSONObject
 import org.junit.Assert.*
@@ -217,6 +219,77 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
             val error=runCatching { fetch("""{"id":"123","Type":"Line","Content":$content}""") }.exceptionOrNull()
             assertEquals(LyricsLookupErrorType.ParseError,(error as LyricsLookupException).errorType)
         }
+    }
+
+    @Test fun pikasonicBlossomSpicyResultClearsOldLyricsAndSurvivesReload() {
+        val blossom = SongIdentity("Blossom", "PIKASONIC", "Blossom", 180000)
+        val songToken = LyricsLookupCancellationToken(blossom.storageKey(), 1)
+        val trackId = "2OgQsOSI0UJKhAktzQ95MP"
+        assertTrue(LyricsStorage.savePlainLyrics(context, blossom.title, blossom.artist, blossom.durationMs,
+            "[00:01.00]Old lyrics", blossom.album, LyricsStorage.SOURCE_DOWNLOADED, "old"))
+        val service = ManualLyricsSearch(context) { raw, _ ->
+            val request = JSONObject(raw)
+            assertEquals("spicy", request.getString("provider"))
+            when (request.getString("operation")) {
+                "search" -> """{"ok":true,"candidates":[{"id":"$trackId","title":"Blossom","artist":"PIKASONIC","album":"Blossom","duration_ms":180000,"score":1.0}]}"""
+                "fetch" -> {
+                    assertEquals(trackId, request.getJSONObject("track").getString("id"))
+                    // Native result for this track's real Spicy lyrics_not_found response.
+                    """{"ok":true,"content_state":"empty","reason":"source_empty"}"""
+                }
+                else -> error("Unexpected operation")
+            }
+        }
+        val candidate = service.search(PlainLyricsSearchSource.SPICY, blossom, songToken).single()
+        assertEquals(trackId, candidate.id)
+        assertEquals(blossom, candidate.song)
+        assertEquals(1.0, candidate.score, 0.0)
+        val preview = (service.fetch(candidate, blossom, songToken) as ManualLyricsFetchResult.Available).lyrics
+        assertEquals("", preview.plainLrc)
+        assertEquals("Blossom", preview.matchedTitle)
+        assertNull(preview.manualUnavailableReason())
+        assertTrue(LyricsStorage.readPlainLyrics(context, blossom.title, blossom.artist, blossom.durationMs)!!.contains("Old lyrics"))
+
+        assertTrue(service.apply(blossom, preview, songToken, null))
+        assertEquals("", LyricsStorage.readPlainLyrics(context, blossom.title, blossom.artist, blossom.durationMs))
+        val current = LocalPlainLyricsProvider.fetch(PlainLyricsSearchRequest(context,
+            blossom.title, blossom.artist, blossom.album, blossom.durationMs)).getOrThrow()!!
+        assertEquals("", current.plainLrc)
+        assertTrue(current.wordByWordLines.isEmpty())
+        assertTrue(current.selectedManually)
+    }
+
+    @Test fun spicyMissingCandidateAndErrorsDoNotClearOldLyrics() {
+        saveLocal(LyricsStorage.SOURCE_DOWNLOADED)
+        val spicy = candidate.copy(source = PlainLyricsSearchSource.SPICY)
+        val noCandidates = ManualLyricsSearch(context) { _, _ -> """{"ok":true,"candidates":[]}""" }
+        assertTrue(noCandidates.search(PlainLyricsSearchSource.SPICY, target, token()).isEmpty())
+        val unavailable = ManualLyricsSearch(context) { _, _ ->
+            """{"ok":true,"content_state":"empty","reason":"unknown"}"""
+        }
+        assertEquals(ManualLyricsFetchResult.Unavailable(LyricsUnavailableReason.UNKNOWN),
+            unavailable.fetch(spicy, target, token()))
+        for ((type, expected) in listOf(
+            "NetworkError" to LyricsLookupErrorType.NetworkError,
+            "RateLimited" to LyricsLookupErrorType.RateLimited,
+            "ParseError" to LyricsLookupErrorType.ParseError
+        )) {
+            val response = """{"ok":false,"error_type":"$type"}"""
+            val service = ManualLyricsSearch(context) { _, _ -> response }
+            val error = runCatching { service.fetch(spicy, target, token()) }.exceptionOrNull()
+            assertEquals(expected, (error as LyricsLookupException).errorType)
+            assertNull(ManualLyricsSelectionStore.read(context, target))
+            assertTrue(LyricsStorage.readPlainLyrics(context, target.title, target.artist, target.durationMs)!!.contains("Existing lyrics"))
+        }
+    }
+
+    @Test fun normalSpicyLyricsStillApply() {
+        val spicy = candidate.copy(source = PlainLyricsSearchSource.SPICY)
+        val service = ManualLyricsSearch(context) { _, _ -> spicyFixture().replace("synthetic", spicy.id) }
+        val preview = (service.fetch(spicy, target, token()) as ManualLyricsFetchResult.Available).lyrics
+        assertEquals("[00:01.001]Hello world", preview.plainLrc)
+        assertTrue(service.apply(target, preview, token(), null))
+        assertEquals(preview.plainLrc, ManualLyricsSelectionStore.read(context, target)!!.result.plainLrc)
     }
 
 }

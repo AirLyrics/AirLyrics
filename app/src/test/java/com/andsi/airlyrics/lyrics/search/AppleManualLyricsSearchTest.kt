@@ -6,7 +6,9 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
 import com.andsi.airlyrics.lyrics.LyricsLookupException
+import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 import com.andsi.airlyrics.lyrics.providers.AppleManualLyricsRequest
+import com.andsi.airlyrics.lyrics.providers.LocalPlainLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorageTestBase
 import com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore
@@ -63,6 +65,26 @@ class AppleManualLyricsSearchTest : LyricsStorageTestBase() {
         val result = (service.fetch(candidate, target, token()) as ManualLyricsFetchResult.Available).lyrics
         assertEquals("你好", result.wordByWordLines.single().translatedText)
         assertTrue(result.wordByWordLines.single().translatedSegments.isEmpty())
+    }
+
+    @Test fun catalogueSongWithoutLyricsReplacesOldLyricsWithAnEmptySelection() {
+        assertTrue(LyricsStorage.savePlainLyrics(context, target.title, target.artist, target.durationMs,
+            "[00:01.00]Old lyrics", target.album, LyricsStorage.SOURCE_DOWNLOADED, "old"))
+        val service = ManualLyricsSearch(context) { _, _ ->
+            """{"ok":true,"content_state":"empty","reason":"source_empty"}"""
+        }
+        val preview = (service.fetch(candidate, target, token()) as ManualLyricsFetchResult.Available).lyrics
+        assertEquals("", preview.plainLrc)
+        assertEquals(candidate.song.title, preview.matchedTitle)
+        assertTrue(LyricsStorage.readPlainLyrics(context, target.title, target.artist, target.durationMs)!!.contains("Old lyrics"))
+
+        assertTrue(service.apply(target, preview, token(), null))
+        assertEquals("", LyricsStorage.readPlainLyrics(context, target.title, target.artist, target.durationMs))
+        val current = LocalPlainLyricsProvider.fetch(PlainLyricsSearchRequest(context,
+            target.title, target.artist, target.album, target.durationMs)).getOrThrow()!!
+        assertEquals("", current.plainLrc)
+        assertTrue(current.wordByWordLines.isEmpty())
+        assertTrue(current.selectedManually)
     }
 
     @Test fun wrongIdAndMissingLyricsCannotBeApplied() {

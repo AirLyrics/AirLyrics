@@ -97,6 +97,19 @@ async fn json_response(r: Result<Response, reqwest::Error>) -> Result<Value, Str
     let text = bounded_text(response, 2_000_000).await?;
     serde_json::from_str(&text).map_err(|_| err("ParseError"))
 }
+async fn manual_lyrics_response(r: Result<Response, reqwest::Error>) -> Result<Value, String> {
+    let response = r.map_err(|_| err("NetworkError"))?;
+    if response.status().as_u16() != 404 {
+        return json_response(Ok(response)).await;
+    }
+    // A 404 can mean lyrics_not_found or not_found; the body distinguishes them.
+    let text = bounded_text(response, 2_000_000).await?;
+    let body: Value = serde_json::from_str(&text).map_err(|_| err("ParseError"))?;
+    if body["Status"].as_u64() != Some(404) {
+        return Err(err("ParseError"));
+    }
+    Ok(body)
+}
 async fn bounded_text(mut response: Response, max: usize) -> Result<String, String> {
     let mut bytes = Vec::new();
     while let Some(chunk) = response.chunk().await.map_err(|_| err("NetworkError"))? {
@@ -697,7 +710,7 @@ pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Resul
         if t.id.len() != 22 || !t.id.bytes().all(|b| b.is_ascii_alphanumeric()) {
             return Err(err("ParseError"));
         }
-        let response = json_response(
+        let response = manual_lyrics_response(
             client
                 .get(format!("https://api.spicylyrics.org/v1/lyrics/{}", t.id))
                 .bearer_auth(key)
@@ -723,7 +736,17 @@ fn manual_unavailable_reason(
     use crate::manual::UnavailableReason;
     match response["Status"].as_u64() {
         Some(200) => {}
-        Some(404) => return Ok(Some(UnavailableReason::Unknown)),
+        Some(404) => {
+            if response["Type"].as_str().is_none() || response["Body"]["message"].as_str().is_none()
+            {
+                return Err(err("ParseError"));
+            }
+            return match response["Body"]["error"].as_str() {
+                Some("lyrics_not_found") => Ok(Some(UnavailableReason::SourceEmpty)),
+                Some("not_found") => Ok(Some(UnavailableReason::Unknown)),
+                _ => Err(err("ParseError")),
+            };
+        }
         Some(401) => return Err(err("NeedCredential")),
         Some(403) => return Err(err("RestrictedLyrics")),
         Some(429) => return Err(err("RateLimited")),
@@ -760,10 +783,35 @@ fn manual_unavailable_reason(
 mod manual_tests {
     use super::*;
     use crate::manual::UnavailableReason;
+    #[tokio::test]
+    async fn pikasonic_blossom_missing_sync_is_a_selectable_empty_result() {
+        // Captured from Spicy for Spotify track 2OgQsOSI0UJKhAktzQ95MP on 2026-11-02.
+        let body = include_str!("../testdata/spicy-blossom-lyrics-not-found.json");
+        let response = Box::leak(format!(
+            "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{body}"
+        ).into_boxed_str());
+        let server = crate::test_http::Server::new(vec![response]);
+        let client = crate::test_http::client();
+        let actual = manual_lyrics_response(client.get(&server.url).send().await)
+            .await
+            .unwrap();
+        assert_eq!(
+            manual_unavailable_reason(&actual).unwrap(),
+            Some(UnavailableReason::SourceEmpty)
+        );
+        server.finish();
+    }
     #[test]
     fn manual_content_reasons_do_not_swallow_errors() {
         for (response, expected) in [
-            (json!({"Status":404}), Some(UnavailableReason::Unknown)),
+            (
+                json!({"Status":404,"Type":"object","Body":{"error":"lyrics_not_found","message":"No lyrics are available for that track."}}),
+                Some(UnavailableReason::SourceEmpty),
+            ),
+            (
+                json!({"Status":404,"Type":"object","Body":{"error":"not_found","message":"Track not found."}}),
+                Some(UnavailableReason::Unknown),
+            ),
             (
                 json!({"Status":200,"Body":{"Type":"Static"}}),
                 Some(UnavailableReason::UnsupportedFormat),
@@ -796,6 +844,8 @@ mod manual_tests {
         }
         for response in [
             json!({}),
+            json!({"Status":404}),
+            json!({"Status":404,"Body":{"error":"lyrics_not_found"}}),
             json!({"Status":200,"Body":{}}),
             json!({"Status":200,"Body":{"Type":"Line","Content":{}}}),
             json!({"Status":200,"Body":{"Type":"Line","Content":[{}]}}),
