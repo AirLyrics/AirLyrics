@@ -16,6 +16,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
+import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -226,10 +227,16 @@ internal class LyricsSourcePages(
             setOnClickListener { if (visual != SourceVisual.RESULTS && visual != SourceVisual.LOADING)
                 source?.let(session::retry) }
         }
-        private val status = FrameLayout(context).apply {
+        // The clickable status row must pass vertical drags up to the AppBarLayout.
+        private val status = NestedScrollView(context).apply {
             minimumHeight = dp(80)
-            addView(loading, FrameLayout.LayoutParams(-1, dp(80)))
-            addView(message, FrameLayout.LayoutParams(-1, -2))
+            isVerticalScrollBarEnabled = false
+            overScrollMode = OVER_SCROLL_NEVER
+            addView(FrameLayout(context).apply {
+                minimumHeight = dp(80)
+                addView(loading, FrameLayout.LayoutParams(-1, dp(80)))
+                addView(message, FrameLayout.LayoutParams(-1, -2))
+            }, FrameLayout.LayoutParams(-1, -2))
             visibility = GONE
         }
         var source: PlainLyricsSearchSource? = null
@@ -239,6 +246,7 @@ internal class LyricsSourcePages(
         private var resetScrollOnResult = false
 
         init {
+            // Keep this scroll child visible even without rows so blank space can expand the AppBarLayout.
             frame.addView(list, FrameLayout.LayoutParams(-1, -1))
             frame.addView(status, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
             list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -287,7 +295,6 @@ internal class LyricsSourcePages(
                     .withEndAction {
                         if (shownResult === result) {
                             rows.submit(key, emptyList())
-                            list.visibility = INVISIBLE
                             list.scrollToPosition(0)
                             resetScrollOnResult = false
                         }
@@ -297,7 +304,6 @@ internal class LyricsSourcePages(
             } else {
                 if (result.loading && result.candidates.isEmpty()) session.pagePositions.remove(key)
                 rows.submit(key, result.candidates)
-                list.visibility = if (result.candidates.isEmpty()) INVISIBLE else VISIBLE
                 list.alpha = if (firstResults) 0f else 1f
                 if (resetScrollOnResult && result.candidates.isNotEmpty()) {
                     list.scrollToPosition(0)
@@ -396,7 +402,6 @@ internal class LyricsSourcePages(
             message.animate().cancel()
             list.alpha = 1f
             list.translationY = 0f
-            list.visibility = if (shownResult?.candidates.isNullOrEmpty()) INVISIBLE else VISIBLE
             status.alpha = 1f
             status.translationY = 0f
             loading.alpha = 1f

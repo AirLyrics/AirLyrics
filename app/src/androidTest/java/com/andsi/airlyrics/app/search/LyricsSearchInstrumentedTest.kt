@@ -173,6 +173,69 @@ class LyricsSearchInstrumentedTest {
         }
     }
 
+    @Test fun resultStatusesAllowSwipeToExpandSearchControls() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val context = instrumentation.targetContext
+        val source = PlainLyricsSearchSource.NETEASE
+        val states = listOf(
+            "loading" to SourceResults(loading = true),
+            "empty" to SourceResults(),
+            "error" to SourceResults(error = IllegalStateException("offline"))
+        )
+        ActivityScenario.launch<LyricsSearchActivity>(
+            Intent(context, LyricsSearchActivity::class.java).putExtra("search.title", "Song")
+        ).use { scenario ->
+            scenario.onActivity { activity ->
+                WindowCompat.getInsetsController(activity.window, activity.window.decorView)
+                    .hide(WindowInsetsCompat.Type.ime())
+            }
+            for ((name, result) in states) {
+                scenario.onActivity { activity ->
+                    val session = session(activity)
+                    state(session).value = session.state.value.copy(results = mapOf(source to result))
+                }
+                instrumentation.waitForIdleSync()
+                SystemClock.sleep(250)
+                for (startFraction in listOf(.25f, .05f)) {
+                    scenario.onActivity { activity ->
+                        val views = descendants(activity.findViewById(android.R.id.content))
+                        views.filterIsInstance<com.google.android.material.appbar.AppBarLayout>()
+                            .single().setExpanded(false, false)
+                    }
+                    instrumentation.waitForIdleSync()
+                    var swipe: Triple<Float, Float, Float>? = null
+                    scenario.onActivity { activity ->
+                        val views = descendants(activity.findViewById(android.R.id.content))
+                        val pager = views.filterIsInstance<ViewPager2>().single()
+                        val bounds = Rect()
+                        assertTrue("$name pager is not visible", pager.getGlobalVisibleRect(bounds))
+                        swipe = Triple(bounds.exactCenterX(), bounds.top + bounds.height() * startFraction,
+                            bounds.top + bounds.height() * .85f)
+                    }
+                    val (x, startY, endY) = requireNotNull(swipe)
+                    val downTime = SystemClock.uptimeMillis()
+                    for (step in 0..20) {
+                        val event = android.view.MotionEvent.obtain(downTime, SystemClock.uptimeMillis(),
+                            when (step) {
+                                0 -> android.view.MotionEvent.ACTION_DOWN
+                                20 -> android.view.MotionEvent.ACTION_UP
+                                else -> android.view.MotionEvent.ACTION_MOVE
+                            }, x, startY + (endY - startY) * step / 20, 0)
+                        instrumentation.sendPointerSync(event)
+                        event.recycle()
+                        SystemClock.sleep(20)
+                    }
+                    instrumentation.waitForIdleSync()
+                    scenario.onActivity { activity ->
+                        val appBar = descendants(activity.findViewById(android.R.id.content))
+                            .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
+                        assertEquals("$name swipe from $startFraction did not expand the search controls", 0, appBar.top)
+                    }
+                }
+            }
+        }
+    }
+
     @Test fun sourcePagesAndEmptyPreviewSurviveRecreation() {
         val instrumentation=InstrumentationRegistry.getInstrumentation()
         val context=instrumentation.targetContext
