@@ -40,6 +40,32 @@ class EditableLrcDocumentTest {
     }
 
     @Test
+    fun deletingOneTimedRowKeepsAdjacentTextAndTimestamps() {
+        val document = EditableLrcDocument.from("[ar:Artist]\r\n[00:01.00]a\r\n[00:02.500]\r\n[00:03.00]♪ music ♪")
+
+        document.removeAt(2)
+
+        assertEquals("[ar:Artist]\r\n[00:01.00]a\r\n[00:03.00]♪ music ♪", document.serialize())
+        assertEquals(listOf(1000L, 3000L), LrcParser.parse(document.serialize()).filterNot { it.isMetadata }.map { it.timeMs })
+        assertTrue(LrcParser.validateForStorage(document.serialize()).isValid)
+    }
+
+    @Test
+    fun deletingFirstOrFinalRowPreservesTheOriginalTrailingBreakPolicy() {
+        val noTrailingBreak = EditableLrcDocument.from("[00:01.00]first\n[00:02.00]last")
+        noTrailingBreak.removeAt(1)
+        assertEquals("[00:01.00]first", noTrailingBreak.serialize())
+
+        val trailingBreak = EditableLrcDocument.from("[00:01.00]first\r\n[00:02.00]last\r\n")
+        trailingBreak.removeAt(1)
+        assertEquals("[00:01.00]first\r\n", trailingBreak.serialize())
+
+        val first = EditableLrcDocument.from("[00:01.00]first\r\n[00:02.00]last")
+        first.removeAt(0)
+        assertEquals("[00:02.00]last", first.serialize())
+    }
+
+    @Test
     fun timestampInputRejectsOutOfRangeSecondsAndKeepsPrecision() {
         assertEquals("[00:05.678]", EditableLrcDocument.normalizedTimestamp("00:05.678"))
         assertNull(EditableLrcDocument.normalizedTimestamp("[00:60.00]"))

@@ -11,6 +11,7 @@ import android.content.pm.ResolveInfo
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.ListView
 import android.widget.TextView
@@ -120,6 +121,86 @@ class MainActivityInteractionRecreationTest {
         assertTrue(LyricsStorage.readLocalLyricsItemText(activity, LyricsStorage.listAllLyrics(activity).single(), LyricsStorage.LocalLyricsEditTarget.PLAIN)!!.contains("original"))
     }
 
+    @Test fun rowActionsFillTheSameWidthForShortLongAndEmptyLyrics() {
+        openEditor("[00:01.00]x\n[00:02.00]A normal lyric line\n[00:03.00]A longer lyric that wraps across several display lines and keeps going\n[00:04.00]\n[00:05.00]♪ music ♪")
+        val list = descendants(latestDialog().window!!.decorView).filterIsInstance<RecyclerView>().single()
+        assertTrue(list.width > 0)
+        val expectedWidth = list.width - list.paddingLeft - list.paddingRight
+
+        for (index in 0..4) {
+            list.scrollToPosition(index)
+            settle()
+            val holder = requireNotNull(list.findViewHolderForAdapterPosition(index))
+            val row = descendants(holder.itemView).first { it.isClickable && !it.contentDescription.isNullOrEmpty() }
+            assertTrue(row.performClick())
+            settle()
+            val actionButtons = descendants(holder.itemView).filterIsInstance<TextView>()
+                .filter { it.text.toString() in listOf(
+                    activity.getString(R.string.ui_edit_line),
+                    activity.getString(R.string.ui_delete),
+                    activity.getString(R.string.ui_add_next_line)
+                ) }
+            assertEquals(3, actionButtons.size)
+            val actions = actionButtons.first().parent as LinearLayout
+            assertEquals(expectedWidth, holder.itemView.width)
+            assertEquals(expectedWidth - row.paddingLeft - row.paddingRight, actions.width)
+            assertTrue(actionButtons.last().width > actionButtons.first().width)
+            assertEquals(actionButtons[0].height, actionButtons[1].height)
+            assertEquals(actionButtons[1].height, actionButtons[2].height)
+        }
+    }
+
+    @Test fun deletingASelectedRowStaysInDraftUntilSaveAndCancelRestoresIt() {
+        val original = "[00:01.00]first\n[00:02.00]\n[00:03.00]♪ music ♪"
+        val afterDelete = "[00:01.00]first\n[00:03.00]♪ music ♪"
+        openEditor(original)
+        deleteSecondEditorRow()
+        assertEquals(afterDelete, activity.graph.uiHost.editorSession.state.value?.text)
+        assertEquals(original, storedLyrics())
+        assertEquals(2, editorList().adapter?.itemCount)
+        assertEquals("[00:03.00], ♪ music ♪", editorRow(1).contentDescription)
+        assertFalse(button(latestDialog(), R.string.ui_edit_line).isShown)
+
+        button(latestDialog(), R.string.ui_cancel).performClick()
+        settle()
+        assertEquals(original, storedLyrics())
+
+        openEditor(original)
+        deleteSecondEditorRow()
+        button(latestDialog(), R.string.ui_save_changes).performClick()
+        await { storedLyrics() == afterDelete }
+        assertEquals(afterDelete, storedLyrics())
+    }
+
+    @Test fun editingAddingAndDeletingRowsUseTheSameDraft() {
+        openEditor("[00:01.00]first\n[00:03.00]last")
+        editorRow(0).performClick()
+        settle()
+        button(latestDialog(), R.string.ui_edit_line).performClick()
+        await { descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().size == 2 }
+        descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>()
+            .single { it.contentDescription == activity.getString(R.string.ui_lyrics) }.setText("edited")
+        button(latestDialog(), R.string.ui_confirm_line).performClick()
+        await { activity.graph.uiHost.editorSession.state.value?.text == "[00:01.00]edited\n[00:03.00]last" }
+        settle()
+
+        editorRow(0).performClick()
+        settle()
+        button(latestDialog(), R.string.ui_add_next_line).performClick()
+        await { descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().size == 2 }
+        descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>()
+            .single { it.contentDescription == activity.getString(R.string.ui_lyrics_time_hint) }.setText("00:02.00")
+        descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>()
+            .single { it.contentDescription == activity.getString(R.string.ui_lyrics) }.setText("middle")
+        button(latestDialog(), R.string.ui_confirm_line).performClick()
+        await { activity.graph.uiHost.editorSession.state.value?.text == "[00:01.00]edited\n[00:02.00]middle\n[00:03.00]last" }
+        settle()
+
+        deleteSecondEditorRow()
+        assertEquals("[00:01.00]edited\n[00:03.00]last", activity.graph.uiHost.editorSession.state.value?.text)
+        assertEquals(2, editorList().adapter?.itemCount)
+    }
+
     @Test fun editorRestoresFromSavedInstanceStateIntoNewViewModel() {
         openEditor()
         editFirstLine("persistent draft")
@@ -188,8 +269,8 @@ class MainActivityInteractionRecreationTest {
         assertEquals(setOf("previous.selection"), DisplayScopeStore.selectedPackages(context))
     }
 
-    private fun openEditor() {
-        assertTrue(LyricsStorage.savePlainLyrics(context = context, title = "Song", artist = "Artist", duration = 180000L, album = "Album", plainLrc = "[00:01.00]original"))
+    private fun openEditor(plainLrc: String = "[00:01.00]original") {
+        assertTrue(LyricsStorage.savePlainLyrics(context = context, title = "Song", artist = "Artist", duration = 180000L, album = "Album", plainLrc = plainLrc))
         val host = activity.graph.uiHost
         host.localLyricsRow(host.savedLyricsState().lyrics.single()).performClick()
         await { latestDialogOrNull() is BottomSheetDialog && editorRowOrNull() != null }
@@ -208,15 +289,28 @@ class MainActivityInteractionRecreationTest {
         await { activity.graph.uiHost.editorSession.state.value?.text == "[00:01.00]$lyric" }
         settle()
     }
-    private fun editorRowOrNull(): View? = latestDialogOrNull()?.window?.decorView
+    private fun editorRowOrNull(index: Int = 0): View? = latestDialogOrNull()?.window?.decorView
         ?.let { descendants(it).filterIsInstance<RecyclerView>().singleOrNull() }
-        ?.findViewHolderForAdapterPosition(0)?.itemView
+        ?.findViewHolderForAdapterPosition(index)?.itemView
         ?.let { itemView ->
             descendants(itemView).firstOrNull { row ->
                 row !== itemView && row.isClickable && !row.contentDescription.isNullOrEmpty()
             }
         }
-    private fun editorRow(): View = requireNotNull(editorRowOrNull())
+    private fun editorRow(index: Int = 0): View = requireNotNull(editorRowOrNull(index))
+    private fun editorList(): RecyclerView = descendants(latestDialog().window!!.decorView)
+        .filterIsInstance<RecyclerView>().single()
+    private fun deleteSecondEditorRow() {
+        editorRow(1).performClick()
+        settle()
+        val holder = requireNotNull(editorList().findViewHolderForAdapterPosition(1))
+        descendants(holder.itemView).filterIsInstance<TextView>()
+            .single { it.text.toString() == activity.getString(R.string.ui_delete) }.performClick()
+        settle()
+    }
+    private fun storedLyrics(): String? = LyricsStorage.readLocalLyricsItemText(
+        activity, LyricsStorage.listAllLyrics(activity).single(), LyricsStorage.LocalLyricsEditTarget.PLAIN
+    )
     private fun floatingPage() {
         activity.graph.viewModel.selectPage(Page.FLOATING)
         activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)

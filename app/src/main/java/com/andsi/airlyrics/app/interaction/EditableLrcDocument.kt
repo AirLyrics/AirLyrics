@@ -36,6 +36,12 @@ internal class EditableLrcDocument private constructor(
         return Row(timestamp + lyric, newEnding, timestamp, lyric).also { rows.add(index + 1, it) }
     }
 
+    fun removeAt(index: Int) {
+        val removed = rows.removeAt(index)
+        // A final row without a line break owns the document's lack of a trailing break.
+        if (index == rows.size && removed.ending.isEmpty()) rows.lastOrNull()?.ending = ""
+    }
+
     companion object {
         private val timedRow = Regex("""^[ \t]*(\[\d{1,2}:\d{2}(?:[.:]\d{1,3})?])(.*)$""")
         private val lineBreaks = Regex("\r\n|\n|\r")

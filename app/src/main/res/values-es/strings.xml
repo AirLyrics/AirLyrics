@@ -75,6 +75,7 @@
     <string name="ui_check_format">Verificar formato</string>
     <string name="ui_edit_line">Editar</string>
     <string name="ui_add_next_line">Añadir línea</string>
+    <string name="ui_delete_lyric_line">Eliminar línea de letra</string>
     <string name="ui_confirm_line">Confirmar</string>
     <string name="ui_lyrics_time_hint">Tiempo mm:ss.xx</string>
     <string name="ui_lyrics_time_error">Escribe el tiempo en formato mm:ss.xx</string>

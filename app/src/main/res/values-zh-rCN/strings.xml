@@ -75,6 +75,7 @@
     <string name="ui_check_format">检查格式</string>
     <string name="ui_edit_line">编辑</string>
     <string name="ui_add_next_line">新增下一行</string>
+    <string name="ui_delete_lyric_line">删除当前歌词行</string>
     <string name="ui_confirm_line">确认</string>
     <string name="ui_lyrics_time_hint">时间 mm:ss.xx</string>
     <string name="ui_lyrics_time_error">请输入 mm:ss.xx 格式的时间</string>

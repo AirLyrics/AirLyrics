@@ -73,6 +73,7 @@
     <string name="ui_check_format">Check format</string>
     <string name="ui_edit_line">Edit</string>
     <string name="ui_add_next_line">Add next line</string>
+    <string name="ui_delete_lyric_line">Delete lyric line</string>
     <string name="ui_confirm_line">Confirm</string>
     <string name="ui_lyrics_time_hint">Time mm:ss.xx</string>
     <string name="ui_lyrics_time_error">Enter time as mm:ss.xx</string>

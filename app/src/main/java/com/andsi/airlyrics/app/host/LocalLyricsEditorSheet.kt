@@ -137,9 +137,12 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
         clipToPadding = false
     }
     lateinit var lineEditor: FloatingLineEditor
-    val rows = LrcRowsAdapter(this, document) { row, anchor, insert ->
-        lineEditor.open(row, anchor, insert)
-    }
+    var onDocumentChanged: (Boolean) -> Unit = {}
+    val rows = LrcRowsAdapter(
+        this, document,
+        onAction = { row, anchor, insert -> lineEditor.open(row, anchor, insert) },
+        onDelete = { onDocumentChanged(false) }
+    )
     list.adapter = rows
     val maxListHeight = (resources.displayMetrics.heightPixels * 0.84f).toInt() - dp(220)
     var imeInset = 0
@@ -223,11 +226,12 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     }
 
     sheet.addView(overlay, FrameLayout.LayoutParams(-1, -1))
-    lineEditor = FloatingLineEditor(this, sheet, overlay, document, rows) { inserted ->
+    onDocumentChanged = { inserted ->
         val text = document.serialize()
         editorSession.edit(text, 0, 0, list.computeVerticalScrollOffset())
         updateListHeight(inserted)
     }
+    lineEditor = FloatingLineEditor(this, sheet, overlay, document, rows, onDocumentChanged)
     closeLineEditor = lineEditor::close
     list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
         override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -320,7 +324,8 @@ private fun MainActivityUiHost.sheetButton(
 private class LrcRowsAdapter(
     private val host: MainActivityUiHost,
     private val document: EditableLrcDocument,
-    private val onAction: (EditableLrcDocument.Row, View, Boolean) -> Unit
+    private val onAction: (EditableLrcDocument.Row, View, Boolean) -> Unit,
+    private val onDelete: () -> Unit
 ) : RecyclerView.Adapter<LrcRowsAdapter.RowHolder>() {
     private val visibleRows = document.rows.filter(EditableLrcDocument.Row::isVisible).toMutableList()
     private val pendingInserted = mutableSetOf<EditableLrcDocument.Row>()
@@ -349,7 +354,7 @@ private class LrcRowsAdapter(
                 setTextColor(host.colorTextMuted)
             }
             container.addView(raw, LinearLayout.LayoutParams(-1, -2))
-            return RowHolder(InsertReveal(host, container), raw, null, null, null)
+            return RowHolder(rowView(container), raw, null, null, null)
         }
         val line = LinearLayout(host).apply {
             gravity = Gravity.TOP
@@ -378,12 +383,18 @@ private class LrcRowsAdapter(
         val edit = actionButton(host, R.string.ui_edit_line) {
             if (enabled) visibleRows.getOrNull(holderPosition(container))?.let { onAction(it, container, false) }
         }
-        val add = actionButton(host, R.string.ui_add_next_line, green = true) {
+        val delete = actionButton(host, R.string.ui_delete, tone = RowActionTone.DELETE) {
+            if (enabled) visibleRows.getOrNull(holderPosition(container))?.let(::delete)
+        }.apply { contentDescription = host.getString(R.string.ui_delete_lyric_line) }
+        val add = actionButton(host, R.string.ui_add_next_line, tone = RowActionTone.ADD) {
             if (enabled) visibleRows.getOrNull(holderPosition(container))?.let { onAction(it, container, true) }
         }
-        actions.addView(edit, LinearLayout.LayoutParams(0, host.dp(42), 1f))
-        actions.addView(add, LinearLayout.LayoutParams(0, host.dp(42), 1f).apply { marginStart = host.dp(8) })
-        reveal.addView(actions, FrameLayout.LayoutParams(-1, host.dp(42)).apply {
+        val lineHeight = add.paint.fontMetricsInt.run { descent - ascent }
+        val actionHeight = maxOf(host.dp(48), lineHeight * 2 + host.dp(8))
+        actions.addView(edit, LinearLayout.LayoutParams(0, actionHeight, 1f))
+        actions.addView(delete, LinearLayout.LayoutParams(0, actionHeight, 1.2f).apply { marginStart = host.dp(8) })
+        actions.addView(add, LinearLayout.LayoutParams(0, actionHeight, 1.3f).apply { marginStart = host.dp(8) })
+        reveal.addView(actions, FrameLayout.LayoutParams(-1, actionHeight).apply {
             topMargin = host.dp(8)
             bottomMargin = host.dp(8)
         })
@@ -399,7 +410,11 @@ private class LrcRowsAdapter(
             old?.let(::refreshExpansion)
             if (expanded !== old) expanded?.let(::refreshExpansion)
         }
-        return RowHolder(InsertReveal(host, container), lyric, time, reveal, actions)
+        return RowHolder(rowView(container), lyric, time, reveal, actions)
+    }
+
+    private fun rowView(content: LinearLayout): InsertReveal = InsertReveal(host, content).apply {
+        layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
 
     private fun holderPosition(view: View): Int =
@@ -421,6 +436,18 @@ private class LrcRowsAdapter(
 
     fun update(row: EditableLrcDocument.Row) {
         visibleRows.indexOf(row).takeIf { it >= 0 }?.let(::notifyItemChanged)
+    }
+
+    private fun delete(row: EditableLrcDocument.Row) {
+        val visibleIndex = visibleRows.indexOf(row)
+        val documentIndex = document.rows.indexOf(row)
+        if (visibleIndex < 0 || documentIndex < 0) return
+        expanded = null
+        pendingInserted.remove(row)
+        document.removeAt(documentIndex)
+        visibleRows.removeAt(visibleIndex)
+        notifyItemRemoved(visibleIndex)
+        onDelete()
     }
 
     fun insertAfter(anchor: EditableLrcDocument.Row, timestamp: String, lyric: String) {
@@ -554,23 +581,44 @@ private class InsertReveal(context: Context, private val content: LinearLayout) 
     }
 }
 
-private fun actionButton(host: MainActivityUiHost, label: Int, green: Boolean = false, onClick: () -> Unit): TextView = TextView(host).apply {
+private enum class RowActionTone { DEFAULT, ADD, DELETE }
+
+private fun actionButton(
+    host: MainActivityUiHost,
+    label: Int,
+    tone: RowActionTone = RowActionTone.DEFAULT,
+    onClick: () -> Unit
+): TextView = TextView(host).apply {
     text = host.getString(label)
     textSize = AirUiTokens.TextSize.BodySmall
     typeface = Typeface.DEFAULT_BOLD
     gravity = Gravity.CENTER
+    maxLines = 2
+    setPadding(host.dp(6), 0, host.dp(6), 0)
     host.styleAirTonalButton(this, AirTonalButtonTone.DEFAULT, AirUiTokens.Radius.Sm)
-    if (green) {
+    if (tone != RowActionTone.DEFAULT) {
         val base = host.airTonalButtonStyle(AirTonalButtonTone.DEFAULT)
-        val sage = Color.rgb(143, 184, 129)
+        val tint = if (tone == RowActionTone.ADD) Color.rgb(143, 184, 129) else host.colorDanger
         val dark = host.isDarkTheme()
         val solid = host.buttonStyle() == ButtonStyle.SOLID
+        val fillTint = if (tone == RowActionTone.ADD) {
+            if (solid) 0.42f else 0.22f
+        } else {
+            if (solid) 0.24f else 0.16f
+        }
+        val strokeTint = if (tone == RowActionTone.DELETE) 0.4f else 0.55f
         background = GradientDrawable().apply {
             cornerRadius = host.dp(AirUiTokens.Radius.Sm).toFloat()
-            setColor(ColorUtils.blendARGB(base.fillColor, sage, if (solid) 0.42f else 0.22f))
-            setStroke(host.dp(base.strokeWidthDp), ColorUtils.blendARGB(base.strokeColor, sage, 0.55f))
+            setColor(ColorUtils.blendARGB(base.fillColor, tint, fillTint))
+            setStroke(host.dp(base.strokeWidthDp), ColorUtils.blendARGB(base.strokeColor, tint, strokeTint))
         }
-        setTextColor(if (dark) Color.rgb(190, 222, 175) else Color.rgb(60, 111, 60))
+        setTextColor(
+            if (tone == RowActionTone.ADD) {
+                if (dark) Color.rgb(190, 222, 175) else Color.rgb(60, 111, 60)
+            } else {
+                host.colorDanger
+            }
+        )
     }
     enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
     setOnClickListener { onClick() }
