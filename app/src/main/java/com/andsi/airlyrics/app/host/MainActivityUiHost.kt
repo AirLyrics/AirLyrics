@@ -464,7 +464,7 @@ internal class MainActivityUiHost(
 
     private val readGenerations = mutableMapOf<LyricsReadKind, Long>()
 
-    private fun loadLyrics(kind: LyricsReadKind, force: Boolean, deliver: (LyricsReadSnapshot) -> Unit) {
+    private fun loadLyrics(kind: LyricsReadKind, force: Boolean, deliver: (LyricsReadSnapshot, Boolean) -> Unit) {
         val generation = (readGenerations[kind] ?: 0L) + 1
         readGenerations[kind] = generation
         val uiGeneration = currentUiGeneration()
@@ -477,29 +477,29 @@ internal class MainActivityUiHost(
                         showMessage(R.string.ui_read_failed)
                         LyricsReadSnapshot(null, null, wordByWord = false, wordEnabled = false, 0L, null, emptyList())
                     }
-                    deliver(snapshot)
+                    deliver(snapshot, result.isSuccess)
                 }
             }
         }
     }
 
-    override fun loadCurrentLyrics(force: Boolean, deliver: (CurrentLyricsUiState) -> Unit) =
-        loadLyrics(LyricsReadKind.CURRENT, force) { data ->
+    override fun loadCurrentLyrics(force: Boolean, deliver: (CurrentLyricsUiState, Boolean) -> Unit) =
+        loadLyrics(LyricsReadKind.CURRENT, force) { data, readSucceeded ->
             val info = data.info
             deliver(CurrentLyricsUiState(data.media?.toUiInfo(), info?.let { localizedLocalPlainLyricsSource(it) },
                 info?.friendlyTitle,
                 data.deletable.all,
                 data.wordByWord, data.wordEnabled, data.offset, data.media?.toOperationTarget(),
-                data.deletable.plain, data.deletable.wordByWord))
+                data.deletable.plain, data.deletable.wordByWord), readSucceeded)
         }
 
-    override fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState) -> Unit) =
-        loadLyrics(LyricsReadKind.RECENT, force) { data ->
-            deliver(RecentLyricsUiState(data.current?.let(::toUiItem), data.items.map(::toUiItem), data.media?.toUiInfo()))
+    override fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState, Boolean) -> Unit) =
+        loadLyrics(LyricsReadKind.RECENT, force) { data, readSucceeded ->
+            deliver(RecentLyricsUiState(data.current?.let(::toUiItem), data.items.map(::toUiItem), data.media?.toUiInfo()), readSucceeded)
         }
 
     override fun loadSavedLyrics(force: Boolean, deliver: (SavedLyricsUiState) -> Unit) =
-        loadLyrics(LyricsReadKind.SAVED, force) { data -> deliver(SavedLyricsUiState(data.items.map(::toUiItem))) }
+        loadLyrics(LyricsReadKind.SAVED, force) { data, _ -> deliver(SavedLyricsUiState(data.items.map(::toUiItem))) }
 
     override fun currentLyricsState(): CurrentLyricsUiState {
         val media = graph.viewModel.currentMediaInfo()

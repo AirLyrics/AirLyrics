@@ -25,10 +25,10 @@ internal abstract class MainUiHost(
     private val currentLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
     private val recentLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
     private val savedLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
-    open fun loadCurrentLyrics(force: Boolean, deliver: (CurrentLyricsUiState) -> Unit) =
-        currentLoad.submit(this, { currentLyricsState() }, deliver)
-    open fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState) -> Unit) =
-        recentLoad.submit(this, { recentLyricsState(8) }, deliver)
+    open fun loadCurrentLyrics(force: Boolean, deliver: (CurrentLyricsUiState, Boolean) -> Unit) =
+        currentLoad.submit(this, { currentLyricsState() }) { state -> deliver(state, true) }
+    open fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState, Boolean) -> Unit) =
+        recentLoad.submit(this, { recentLyricsState(8) }) { state -> deliver(state, true) }
     open fun loadSavedLyrics(force: Boolean, deliver: (SavedLyricsUiState) -> Unit) =
         savedLoad.submit(this, { savedLyricsState() }, deliver)
 

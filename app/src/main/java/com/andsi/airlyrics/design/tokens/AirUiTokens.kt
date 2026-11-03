@@ -78,6 +78,10 @@ object AirUiTokens {
         const val ChildEnterMs = 220L
         const val ChildDelayStepMs = 24L
         const val RefreshSpinMs = 420L
+        const val RefreshCheckInMs = 180L
+        const val RefreshCheckHoldMs = 700L
+        const val RefreshRestoreMs = 240L
+        const val RefreshRestoreStartRotation = -45f
         const val FeedbackInMs = 160L
         const val FeedbackOutMs = 240L
         const val FeedbackHoldMs = 900L
@@ -142,12 +146,8 @@ object AirUiTokens {
         const val DialogDimAmount = 0.28f
         const val TabTextSwapAlpha = 0.55f
         const val TabTextSwapScale = 0.92f
-        const val TabQuickScale = 1.14f
         const val TabUnselectedAlpha = 0.86f
         const val TabAnimationMs = 190L
-        const val NavTapDownMs = 70L
-        const val NavTapUpMs = 180L
-        const val NavTapOvershoot = 1.45f
         const val MediaDoneSettleMs = 130L
         const val MediaDoneRefreshMs = 260L
         const val MediaRefreshingMs = 650L

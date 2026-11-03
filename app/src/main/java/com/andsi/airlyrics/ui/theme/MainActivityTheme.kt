@@ -37,6 +37,9 @@ internal val MainUiHost.colorAccentSoft: Int
     get() = airLyricsPalette.accentSoft
 internal val MainUiHost.colorAccentMint: Int
     get() = airLyricsPalette.accentMint
+/** Success icon color with enough contrast on both card themes. */
+internal val MainUiHost.colorSuccessIcon: Int
+    get() = airLyricsPalette.successIcon
 internal val MainUiHost.colorDanger: Int
     get() = airLyricsPalette.danger
 internal val MainUiHost.colorTextStrong: Int

@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.ui.pages.settings
 
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.animation.ValueAnimator
 import android.view.Gravity
@@ -29,7 +28,6 @@ import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
 import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
@@ -40,14 +38,8 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
     val body = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
     }
-    val feedback = TextView(this).apply {
-        text = ""
-        textSize = AirUiTokens.TextSize.Caption
-        typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorAccentText)
-        gravity = Gravity.CENTER_VERTICAL
-    }
     var cardView: LinearLayout? = null
+    var refreshFeedback: LyricsSettingsRefreshIcon? = null
     var renderedState: CurrentLyricsUiState? = null
     var detailsView: LinearLayout? = null
     var detailTexts: CurrentLyricsDetailTexts? = null
@@ -167,19 +159,16 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
         showRefreshFeedback: Boolean = false,
         preserveContent: Boolean = false
     ) {
-        if (showRefreshFeedback) {
-            showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
-        } else if (!preserveContent && renderedState == null) {
-            loadingView.text = getString(R.string.ui_loading)
+        if (!showRefreshFeedback) {
+            refreshFeedback?.cancel()
+            if (!preserveContent && renderedState == null) loadingView.text = getString(R.string.ui_loading)
         }
 
         body.setTag(R.id.interaction_loading, true)
-        loadCurrentLyrics(force = showRefreshFeedback) { state ->
+        loadCurrentLyrics(force = showRefreshFeedback) { state, readSucceeded ->
             body.setTag(R.id.interaction_loading, false)
             render(state)
-            if (showRefreshFeedback) {
-                playLocalRefreshFeedback(activity, target = body, feedback = feedback, message = getString(R.string.ui_refreshed), animateTarget = false)
-            }
+            if (showRefreshFeedback) refreshFeedback?.complete(readSucceeded)
         }
     }
 
@@ -190,26 +179,16 @@ internal fun createCurrentLyricsCard(activity: MainUiHost): RefreshableSettingsC
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             addView(bigText(activity, getString(R.string.ui_current_song_lyrics)).apply {
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            })
-            addView(feedback, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                setMargins(0, 0, dp(AirUiTokens.Space.Xl), 0)
-            })
-            addView(airIconView(
-                iconRes = R.drawable.ic_air_refresh,
-                tint = colorAccentText,
-                contentDescription = getString(R.string.ui_refresh_media_status)
-            ).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    dp(AirUiTokens.Layout.IconTouchSize),
-                    dp(AirUiTokens.Layout.IconTouchSize)
-                )
-                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                setOnClickListener {
-                    animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
-                    populate(showRefreshFeedback = true)
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = dp(AirUiTokens.Space.Xl)
                 }
             })
+            val refresh = lyricsSettingsRefreshIcon().also { refreshFeedback = it }
+            refresh.view.setOnClickListener {
+                refresh.start()
+                populate(showRefreshFeedback = true)
+            }
+            addView(refresh.view)
         })
         addView(body)
     }

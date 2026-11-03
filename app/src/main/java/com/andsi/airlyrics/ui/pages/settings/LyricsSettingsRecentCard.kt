@@ -41,9 +41,11 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
         typeface = Typeface.DEFAULT_BOLD
         setTextColor(colorAccentText)
         gravity = Gravity.CENTER_VERTICAL
+        clearRefreshFeedbackOnDetach()
     }
     var closeHeaderHint: () -> Unit = {}
     var cardView: LinearLayout? = null
+    var refreshFeedback: LyricsSettingsRefreshIcon? = null
     var renderedState: RecentLyricsUiState? = null
     var currentKey: String? = null
     var currentView: View? = null
@@ -126,19 +128,11 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
         })
     }
 
-    fun renderLyricsList(state: RecentLyricsUiState, showRefreshFeedback: Boolean) {
+    fun renderLyricsList(state: RecentLyricsUiState) {
         val currentItem = state.currentItem
         val recentLyrics = state.recentLyrics
         val previous = renderedState
-        fun refreshMessage(): String = if (recentLyrics.isNotEmpty()) {
-            getString(R.string.ui_refreshed) + " " + recentLyrics.size + " " + getString(R.string.ui_songs)
-        } else getString(R.string.ui_refreshed)
-        if (previous == state) {
-            if (showRefreshFeedback) {
-                playLocalRefreshFeedback(activity, listBody, feedback, refreshMessage(), animateTarget = false)
-            }
-            return
-        }
+        if (previous == state) return
 
         val otherRecentLyrics = recentLyrics.filterNot { item ->
             if (currentItem == null) {
@@ -220,23 +214,19 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
             nextCurrentView.translationY = dp(6).toFloat()
             nextCurrentView.animate().translationY(0f).setDuration(180L).start()
         }
-
-        if (showRefreshFeedback) {
-            playLocalRefreshFeedback(activity, listBody, feedback, refreshMessage(), animateTarget = false)
-        }
     }
 
     populateRecentLyrics = { showRefreshFeedback, preserveContent ->
-        if (showRefreshFeedback) {
-            showInlineRefreshFeedback(feedback, getString(R.string.ui_refreshing))
-        } else if (!preserveContent && renderedState == null) {
-            loadingView.text = getString(R.string.ui_loading)
+        if (!showRefreshFeedback) {
+            refreshFeedback?.cancel()
+            if (!preserveContent && renderedState == null) loadingView.text = getString(R.string.ui_loading)
         }
 
         listBody.setTag(R.id.interaction_loading, true)
-        loadRecentLyrics(force = showRefreshFeedback) { state ->
+        loadRecentLyrics(force = showRefreshFeedback) { state, readSucceeded ->
             listBody.setTag(R.id.interaction_loading, false)
-            renderLyricsList(state, showRefreshFeedback)
+            renderLyricsList(state)
+            if (showRefreshFeedback) refreshFeedback?.complete(readSucceeded)
         }
     }
 
@@ -275,19 +265,16 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
                 }
             }
         }
-        val refresh = airIconView(R.drawable.ic_air_refresh, colorAccentText, getString(R.string.ui_refresh_media_status)).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(AirUiTokens.Layout.IconTouchSize), dp(AirUiTokens.Layout.IconTouchSize))
-            enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-            setOnClickListener {
-                closeHeaderHint()
-                animate().rotationBy(360f).setDuration(AirUiTokens.Motion.RefreshSpinMs).start()
-                populateRecentLyrics(true, true)
-            }
+        val refresh = lyricsSettingsRefreshIcon().also { refreshFeedback = it }
+        refresh.view.setOnClickListener {
+            closeHeaderHint()
+            refresh.start()
+            populateRecentLyrics(true, true)
         }
         val icons = LinearLayout(activity).apply {
             gravity = Gravity.CENTER_VERTICAL
             addView(help)
-            addView(refresh)
+            addView(refresh.view)
         }
         addView(adaptiveHeader(bigText(activity, getString(R.string.ui_recent_local_lyrics)), feedback, icons))
         addView(hintText)
