@@ -26,7 +26,8 @@ internal class SavedLyricsDragSelectionLayout(
     private val items: () -> List<SavedLyricsDragItem>,
     private val selectedKeys: () -> Set<String>,
     private val select: (Set<String>) -> Unit,
-    private val itemKeys: () -> List<String> = { items().filter { it.view.isVisible }.map { it.key } }
+    private val itemKeys: () -> List<String> = { items().filter { it.view.isVisible }.map { it.key } },
+    private val excludeTouch: (Int, Int) -> Boolean = { _, _ -> false }
 ) : LinearLayout(context) {
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private val density = resources.displayMetrics.density
@@ -98,7 +99,7 @@ internal class SavedLyricsDragSelectionLayout(
                     getLocationOnScreen(location)
                     val screenX = location[0] + event.x
                     val screenY = location[1] + event.y
-                    val anchor = items().firstOrNull {
+                    val anchor = if (excludeTouch(screenX.toInt(), screenY.toInt())) null else items().firstOrNull {
                         it.view.getGlobalVisibleRect(bounds) && bounds.contains(screenX.toInt(), screenY.toInt())
                     }
                     anchorIndex = anchor?.let { positions[it.key] } ?: -1

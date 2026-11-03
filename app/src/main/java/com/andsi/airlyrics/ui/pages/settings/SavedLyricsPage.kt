@@ -1,12 +1,20 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.graphics.Typeface
 import android.text.InputType
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.MotionEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
@@ -17,26 +25,31 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.animation.ValueAnimator
 import android.view.animation.PathInterpolator
+import android.view.animation.DecelerateInterpolator
 import androidx.core.graphics.drawable.toDrawable
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.core.widget.doAfterTextChanged
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.airIconView
-import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.card
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.normalText
 import com.andsi.airlyrics.ui.components.pageContainer
-import com.andsi.airlyrics.ui.components.styleAirTonalButton
+import com.andsi.airlyrics.ui.components.setAirTopIcon
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
+import com.andsi.airlyrics.ui.theme.colorAccentText
+import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import java.text.NumberFormat
 import java.util.Locale
 
 private val savedLyricsSearchWhitespace = Regex("\\s+")
@@ -48,12 +61,18 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     val listBody = ListView(activity).apply {
         divider = null
         dividerHeight = 0
-        cacheColorHint = android.graphics.Color.TRANSPARENT
-        selector = android.graphics.Color.TRANSPARENT.toDrawable()
+        cacheColorHint = Color.TRANSPARENT
+        selector = Color.TRANSPARENT.toDrawable()
         clipToPadding = false
     }
+    val listSurface = FrameLayout(activity).apply {
+        addView(listBody, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
     val listCard = card(activity) {
-        addView(listBody, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(listSurface, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
+    val listOverlay = FrameLayout(activity).apply {
+        addView(listCard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
     }
     val loadingHint = normalText(activity, getString(R.string.ui_loading))
     val emptyHint = normalText(activity, getString(R.string.ui_saved_lyrics_empty_hint)).apply {
@@ -79,11 +98,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     var dragSelectionLayout: SavedLyricsDragSelectionLayout? = null
     val selection = interactions.read("savedLyricsSelection")?.getStringArrayList("keys")?.toMutableSet() ?: mutableSetOf()
     var selecting = interactions.read("savedLyricsSelection") != null
-    val selectionBar = LinearLayout(activity).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(AirUiTokens.Space.PageH), 0, dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.Lg))
-    }
-    val selectionPanel = SavedLyricsSelectionPanel(activity, selectionBar)
+    lateinit var selectionPanel: SavedLyricsSelectionPanel
     fun itemKey(item: LocalLyricsUiItem) = item.selectionKey()
     fun saveSelection() {
         if (selecting) interactions.write("savedLyricsSelection") { putStringArrayList("keys", ArrayList(selection)) }
@@ -254,71 +269,206 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         return deletionStarted
     }
 
-    fun batchButtons(vararg buttons: Pair<String, () -> Unit>): LinearLayout = LinearLayout(activity).apply {
-        orientation = LinearLayout.HORIZONTAL
-        isBaselineAligned = false
-        setPadding(0, dp(AirUiTokens.Space.Lg), 0, 0)
-        buttons.forEachIndexed { index, (label, action) ->
-            addView(TextView(activity).apply {
-                text = label
-                textSize = AirUiTokens.TextSize.Button
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                minHeight = dp(AirUiTokens.Layout.IconTouchSize)
-                setPadding(dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Lg), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Lg))
-                enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
-                setOnClickListener { action() }
-            }, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f).apply {
-                if (index > 0) marginStart = dp(AirUiTokens.Space.Lg)
-            })
+    fun toolbarLabel(label: String, icon: Int, tint: Int) = TextView(activity).apply {
+        text = label
+        textSize = AirUiTokens.TextSize.Tiny
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(tint)
+        gravity = Gravity.CENTER
+        includeFontPadding = false
+        maxLines = 2
+        setPadding(0, dp(2), 0, dp(2))
+        setAutoSizeTextTypeUniformWithConfiguration(8, 11, 1, TypedValue.COMPLEX_UNIT_SP)
+        setAirTopIcon(activity, icon, tint, paddingDp = 3)
+    }
+    fun toolbarRipple(base: GradientDrawable = GradientDrawable().apply {
+        cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
+        setColor(Color.TRANSPARENT)
+    }) = RippleDrawable(
+        ColorStateList.valueOf(ColorUtils.setAlphaComponent(colorAccent, 72)),
+        base,
+        GradientDrawable().apply {
+            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
+            setColor(Color.WHITE)
         }
+    )
+    fun toolbarAction(label: String, icon: Int, tint: Int, action: () -> Unit) = toolbarLabel(label, icon, tint).apply {
+        isFocusable = true
+        background = toolbarRipple()
+        enableSavedLyricsToolbarPressFeedback()
+        setOnClickListener { action() }
     }
-    fun styleButton(button: TextView, tone: AirTonalButtonTone) {
-        activity.styleAirTonalButton(button, tone)
+    val selectedLabel = TextView(activity).apply {
+        text = getString(R.string.ui_saved_lyrics_toolbar_selected)
+        textSize = AirUiTokens.TextSize.Tiny
+        setTextColor(colorTextStrong)
+        includeFontPadding = false
+        gravity = Gravity.CENTER
+        maxLines = 1
+        setAutoSizeTextTypeUniformWithConfiguration(7, 11, 1, TypedValue.COMPLEX_UNIT_SP)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
-    val selectedCount = normalText(activity, getString(R.string.ui_batch_selected, selection.size))
-    val selectionControls = batchButtons(
-        getString(R.string.ui_select_all) to {
+    val selectedNumberFormat = NumberFormat.getIntegerInstance(resources.configuration.locales[0])
+    val selectedCount = SavedLyricsSelectionCountView(activity, selection.size, selectedNumberFormat).apply {
+        textSize = 19f
+        TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(this, 15, 19, 1, TypedValue.COMPLEX_UNIT_SP)
+        minimumHeight = dp(32)
+        typeface = Typeface.DEFAULT_BOLD
+        setTextColor(colorAccentText)
+        includeFontPadding = false
+        gravity = Gravity.CENTER
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+    val selectedInfo = LinearLayout(activity).apply {
+        orientation = LinearLayout.VERTICAL
+        gravity = Gravity.CENTER
+        setPadding(dp(2), 0, dp(2), 0)
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        contentDescription = getString(R.string.ui_batch_selected, selection.size)
+        addView(selectedLabel, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        addView(selectedCount, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+    }
+    val selectAll = toolbarAction(getString(R.string.ui_saved_lyrics_toolbar_select_all), R.drawable.ic_air_select_all, colorTextStrong) {
             renderSavedLyrics()
             val visibleKeys = adapter.keys
             if (visibleKeys.isNotEmpty() && visibleKeys.all { it in selection }) selection.removeAll(visibleKeys.toSet())
             else selection.addAll(visibleKeys)
             saveSelection()
             updateSelectionUi()
-        },
-        getString(R.string.ui_cancel) to { endSelection() }
-    )
-    styleButton(selectionControls.getChildAt(0) as TextView, AirTonalButtonTone.DEFAULT)
-    styleButton(selectionControls.getChildAt(1) as TextView, AirTonalButtonTone.DEFAULT)
-    refreshSelectAll = {
+    }
+    val selectAllOutgoing = toolbarLabel("", R.drawable.ic_air_select_all, colorTextStrong).apply {
+        visibility = View.GONE
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+    val selectAllSlot = FrameLayout(activity).apply {
+        addView(selectAll, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(selectAllOutgoing, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
+    var selectAllState: Boolean? = null
+    var selectAllTransition: ValueAnimator? = null
+    fun settleSelectAllTransition() {
+        selectAllTransition?.removeAllListeners()
+        selectAllTransition?.cancel()
+        selectAllTransition = null
+        selectAll.translationY = 0f
+        selectAllOutgoing.visibility = View.GONE
+        selectAllOutgoing.text = ""
+        selectAllOutgoing.alpha = 0f
+        selectAllOutgoing.translationY = 0f
+    }
+    refreshSelectAll = refresh@{
         val visibleKeys = adapter.keys
-        (selectionControls.getChildAt(0) as TextView).apply {
-            text = getString(if (visibleKeys.isNotEmpty() && visibleKeys.all { it in selection })
-                R.string.ui_batch_deselect_all else R.string.ui_select_all)
-            isEnabled = selecting && visibleKeys.isNotEmpty()
-            alpha = if (isEnabled) 1f else AirUiTokens.Button.DisabledAlpha
+        val allSelected = visibleKeys.isNotEmpty() && visibleKeys.all { it in selection }
+        val enabled = selecting && visibleKeys.isNotEmpty()
+        val previousState = selectAllState
+        if (previousState == allSelected && selectAllTransition != null && enabled) return@refresh
+        val useOutgoing = selectAllTransition != null &&
+            selectAllOutgoing.isVisible && selectAllOutgoing.alpha > selectAll.alpha
+        val visualState = if (useOutgoing) previousState?.not() else previousState
+        val visualText = if (useOutgoing) selectAllOutgoing.text else selectAll.text
+        val canAnimate = visualState != null && visualState != allSelected && enabled &&
+            selectAll.isAttachedToWindow && ValueAnimator.areAnimatorsEnabled() && selectionPanel.expanded
+        settleSelectAllTransition()
+        if (canAnimate) {
+            selectAllOutgoing.text = visualText
+            selectAllOutgoing.setAirTopIcon(activity,
+                if (visualState) R.drawable.ic_air_deselect_all else R.drawable.ic_air_select_all,
+                colorTextStrong, paddingDp = 3)
+        }
+        selectAllState = allSelected
+        selectAll.text = getString(if (allSelected) R.string.ui_saved_lyrics_toolbar_deselect else R.string.ui_saved_lyrics_toolbar_select_all)
+        selectAll.setAirTopIcon(activity,
+            if (allSelected) R.drawable.ic_air_deselect_all else R.drawable.ic_air_select_all,
+            colorTextStrong, paddingDp = 3)
+        selectAll.contentDescription = getString(if (allSelected) R.string.ui_batch_deselect_all else R.string.ui_select_all)
+        selectAll.isEnabled = enabled
+        if (canAnimate) {
+            val distance = dp(4).toFloat()
+            val direction = if (allSelected) 1f else -1f
+            val next = ValueAnimator.ofFloat(0f, 1f).apply {
+                duration = 270L
+                interpolator = PathInterpolator(0.25f, 0f, 0.2f, 1f)
+                addUpdateListener {
+                    val fraction = it.animatedValue as Float
+                    selectAll.alpha = fraction
+                    selectAll.translationY = direction * distance * (1f - fraction)
+                    selectAllOutgoing.alpha = 1f - fraction
+                    selectAllOutgoing.translationY = -direction * distance * fraction
+                }
+                addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        if (selectAllTransition !== animation) return
+                        settleSelectAllTransition()
+                        selectAll.alpha = 1f
+                    }
+                })
+            }
+            selectAll.alpha = 0f
+            selectAll.translationY = direction * distance
+            selectAllOutgoing.alpha = 1f
+            selectAllOutgoing.visibility = View.VISIBLE
+            selectAllTransition = next
+            next.start()
+        } else {
+            selectAll.alpha = if (enabled) 1f else AirUiTokens.Button.DisabledAlpha
         }
     }
-    val selectionActions = batchButtons(
-        getString(R.string.ui_batch_replace) to {
+    val importAction = toolbarAction(getString(R.string.ui_saved_lyrics_toolbar_import), R.drawable.ic_air_download, colorTextStrong) {
             manageSavedLyrics(allLyrics.filter { itemKey(it) in selection }, delete = false)
-        },
-        getString(R.string.ui_batch_export) to {
+    }.apply { contentDescription = getString(R.string.ui_batch_replace) }
+    val exportAction = toolbarAction(getString(R.string.ui_batch_export), R.drawable.ic_air_upload, colorTextStrong) {
             exportSavedLyrics(allLyrics.filter { itemKey(it) in selection })
-        },
-        getString(R.string.ui_delete) to {
-            manageSavedLyrics(allLyrics.filter { itemKey(it) in selection }, delete = true)
-        }
-    )
-    for (index in 0 until selectionActions.childCount) {
-        styleButton(
-            selectionActions.getChildAt(index) as TextView,
-            if (index == 2) AirTonalButtonTone.DANGER else AirTonalButtonTone.SELECTED
-        )
     }
-    selectionBar.addView(selectedCount)
-    selectionBar.addView(selectionControls)
-    selectionBar.addView(selectionActions)
+    val deleteAction = toolbarAction(getString(R.string.ui_delete), R.drawable.ic_air_delete, colorDanger) {
+            manageSavedLyrics(allLyrics.filter { itemKey(it) in selection }, delete = true)
+    }.apply {
+        background = toolbarRipple(GradientDrawable().apply {
+            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
+            setColor(ColorUtils.setAlphaComponent(colorDanger, 38))
+        })
+    }
+    val toolbarActions = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        for (action in listOf(selectAllSlot, importAction, exportAction, deleteAction)) {
+            addView(action, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+        }
+    }
+    var selectionScrollPadding = dp(80)
+    val selectionBar = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        isClickable = true
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        addView(selectedInfo, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
+        addView(View(activity).apply {
+            setBackgroundColor(ColorUtils.setAlphaComponent(colorTextMuted, 65))
+        }, LinearLayout.LayoutParams(dp(1), dp(32)).apply {
+            gravity = Gravity.CENTER_VERTICAL
+        })
+        addView(toolbarActions, LinearLayout.LayoutParams(dp(192), ViewGroup.LayoutParams.MATCH_PARENT))
+        addOnLayoutChangeListener { _, _, top, _, bottom, _, _, _, _ ->
+            val padding = bottom - top + dp(24)
+            if (padding != selectionScrollPadding) {
+                selectionScrollPadding = padding
+                if (selecting) listBody.setPadding(0, 0, 0, padding)
+            }
+        }
+    }
+    val selectionToggle = airIconView(
+        R.drawable.ic_air_chevron_right,
+        colorTextStrong,
+        getString(R.string.ui_saved_lyrics_toolbar_collapse)
+    ).apply {
+        layoutDirection = View.LAYOUT_DIRECTION_LTR
+        isFocusable = true
+        enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
+    }
+    selectionPanel = SavedLyricsSelectionPanel(activity, selectionBar, selectionToggle, toolbarActions) {
+        selectedCount.finishAnimation()
+        settleSelectAllTransition()
+        selectAll.alpha = if (selectAll.isEnabled) 1f else AirUiTokens.Button.DisabledAlpha
+    }
+    listOverlay.addView(selectionPanel, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
     updateSelectionUi = {
         selectionAction.isSelected = selecting
@@ -327,22 +477,26 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         )
         selectionAction.isEnabled = selecting || (lyricsLoaded && allLyrics.isNotEmpty())
         selectionAction.alpha = if (selectionAction.isEnabled) 1f else 0.5f
-        if (selecting) selectedCount.text = getString(R.string.ui_batch_selected, selection.size)
-        selectionPanel.importantForAccessibility = if (selecting) View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
-            else View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
-        for (index in 0 until selectionControls.childCount) {
-            selectionControls.getChildAt(index).apply {
-                isEnabled = selecting
-                alpha = if (isEnabled) 1f else 0.5f
+        if (selecting) {
+            if (selectedCount.count != selection.size) {
+                selectedCount.setCount(selection.size,
+                    animate = selectionPanel.expanded && selectionPanel.isVisible)
+                selectedInfo.contentDescription = getString(R.string.ui_batch_selected, selection.size)
             }
+        } else {
+            selectedCount.finishAnimation()
         }
+        selectionPanel.importantForAccessibility = if (selecting) View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            else View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         refreshSelectAll()
-        for (index in 0 until selectionActions.childCount) {
+        for ((index, action) in listOf(importAction, exportAction, deleteAction).withIndex()) {
             val enabled = selecting && selection.isNotEmpty() && (index != 0 || allLyrics.any {
                 itemKey(it) in selection && it.indexKey.isNotBlank() && it.title.isNotBlank()
             })
-            selectionActions.getChildAt(index).apply { isEnabled = enabled; alpha = if (enabled) 1f else 0.5f }
+            action.apply { isEnabled = enabled; alpha = if (enabled) 1f else 0.5f }
         }
+        val bottomPadding = if (selecting) selectionScrollPadding else 0
+        if (listBody.paddingBottom != bottomPadding) listBody.setPadding(0, 0, 0, bottomPadding)
         // Update interaction immediately, while the visual state may still be reversing.
         adapter.progress = selectionMotion.progress
         adapter.refresh(listBody)
@@ -504,6 +658,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {
             if (!endSelection()) {
+                selectionPanel.setExpanded(true, animate = false)
                 selecting = true
                 saveSelection()
                 updateSelectionUi()
@@ -526,7 +681,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     container.addView(loadingHint)
     container.addView(emptyHint)
     container.addView(noSearchResultsHint)
-    container.addView(listCard, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
+    container.addView(listOverlay, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
     deletionRefresh = { keys ->
         deletionForNextRender = keys
         populateSavedLyrics(true)
@@ -563,7 +718,8 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
                 updateSelectionUi()
             }
         },
-        itemKeys = { adapter.keys }
+        itemKeys = { adapter.keys },
+        excludeTouch = selectionPanel::containsControl
     ).apply {
         dragSelectionLayout = this
         searchInput.doAfterTextChanged {
@@ -576,7 +732,31 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         addView(content, LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
         ))
-        addView(selectionPanel)
+    }
+}
+
+@SuppressLint("ClickableViewAccessibility")
+private fun View.enableSavedLyricsToolbarPressFeedback() {
+    setOnTouchListener { view, event ->
+        if (!view.isEnabled || !ValueAnimator.areAnimatorsEnabled()) {
+            view.animate().cancel()
+            view.scaleX = 1f
+            view.scaleY = 1f
+            return@setOnTouchListener false
+        }
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                view.animate().cancel()
+                view.animate().scaleX(0.94f).scaleY(0.94f)
+                    .setDuration(140L).setInterpolator(DecelerateInterpolator()).start()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                view.animate().cancel()
+                view.animate().scaleX(1f).scaleY(1f)
+                    .setDuration(200L).setInterpolator(DecelerateInterpolator()).start()
+            }
+        }
+        false
     }
 }
 

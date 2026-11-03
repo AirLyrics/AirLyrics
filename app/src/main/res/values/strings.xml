@@ -446,6 +446,12 @@ Word-timed TTML:
     <string name="provider_spicy_name">Spicy Lyrics</string>
     <string name="ui_searching_international_title">Trying another way to find lyrics…</string>
     <string name="ui_batch_selected">Selected: %1$d</string>
+    <string name="ui_saved_lyrics_toolbar_selected">Selected</string>
+    <string name="ui_saved_lyrics_toolbar_import">Import</string>
+    <string name="ui_saved_lyrics_toolbar_select_all">Select all</string>
+    <string name="ui_saved_lyrics_toolbar_deselect">Deselect</string>
+    <string name="ui_saved_lyrics_toolbar_collapse">Collapse actions</string>
+    <string name="ui_saved_lyrics_toolbar_expand">Expand actions</string>
     <string name="ui_batch_select_item">Select %1$s</string>
     <string name="ui_batch_replace">Import and replace</string>
     <plurals name="ui_batch_delete_title">

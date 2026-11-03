@@ -445,6 +445,12 @@
     <string name="provider_spicy_name">Spicy Lyrics</string>
     <string name="ui_searching_international_title">正在尝试其他方式搜索歌词…</string>
     <string name="ui_batch_selected">已选择：%1$d</string>
+    <string name="ui_saved_lyrics_toolbar_selected">已选择</string>
+    <string name="ui_saved_lyrics_toolbar_import">导入</string>
+    <string name="ui_saved_lyrics_toolbar_select_all">全选</string>
+    <string name="ui_saved_lyrics_toolbar_deselect">取消全选</string>
+    <string name="ui_saved_lyrics_toolbar_collapse">收起操作菜单</string>
+    <string name="ui_saved_lyrics_toolbar_expand">展开操作菜单</string>
     <string name="ui_batch_select_item">选择 %1$s</string>
     <string name="ui_batch_replace">导入并替换</string>
     <plurals name="ui_batch_delete_title">

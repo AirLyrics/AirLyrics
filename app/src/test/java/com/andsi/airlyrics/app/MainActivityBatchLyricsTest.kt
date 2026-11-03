@@ -4,8 +4,11 @@ import android.content.Context
 import android.animation.ValueAnimator
 import android.net.Uri
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.EditText
 import android.widget.CheckBox
+import android.widget.LinearLayout
+import android.widget.ListView
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
@@ -89,7 +92,7 @@ class MainActivityBatchLyricsTest {
         assertEquals(2, checkboxes(activity).size)
         controller!!.recreate()
         val recreated = controller!!.get()
-        // A recycled list creates only the rows that fit beside the restored action panel.
+        // The recycled list should restore its visible rows beneath the floating toolbar.
         awaitUiCondition { checkboxes(recreated).isNotEmpty() }
         assertEquals(1, recreated.graph.uiHost.interactions.read("savedLyricsSelection")
             ?.getStringArrayList("keys")?.size)
@@ -119,7 +122,9 @@ class MainActivityBatchLyricsTest {
             ?.getStringArrayList("keys")?.single()
         assertEquals(activity.graph.uiHost.savedLyricsState().lyrics.single { it.title == "One" }.indexKey, selectedKey)
         fun selectionButton(label: Int) = descendants(activity.window.decorView)
-            .filterIsInstance<TextView>().single { it.text == activity.getString(label) }
+            .filterIsInstance<TextView>().single { it.contentDescription == activity.getString(label) || it.text == activity.getString(label) }
+        assertEquals(activity.getString(R.string.ui_saved_lyrics_toolbar_deselect),
+            selectionButton(R.string.ui_batch_deselect_all).text)
         selectionButton(R.string.ui_batch_deselect_all).performClick()
         assertEquals(0, checkboxes(activity).count { it.isChecked })
         selectionButton(R.string.ui_select_all).performClick()
@@ -130,12 +135,12 @@ class MainActivityBatchLyricsTest {
         selectionButton(R.string.ui_batch_deselect_all).performClick()
         assertEquals(listOf(selectedKey), activity.graph.uiHost.interactions.read("savedLyricsSelection")
             ?.getStringArrayList("keys"))
-        val replace = selectionButton(R.string.ui_batch_replace)
+        val replace = selectionButton(R.string.ui_saved_lyrics_toolbar_import)
         val export = selectionButton(R.string.ui_batch_export)
         val delete = selectionButton(R.string.ui_delete)
         assertSame(replace.parent, export.parent)
         assertSame(replace.parent, delete.parent)
-        assertTrue(selectionButton(R.string.ui_cancel).background != null)
+        assertEquals(activity.getString(R.string.ui_batch_replace), replace.contentDescription)
         clickAction(R.string.ui_exit_multi_select)
         ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
         assertTrue(checkboxes(activity).isEmpty())
@@ -146,6 +151,83 @@ class MainActivityBatchLyricsTest {
         assertTrue(checkbox.isChecked)
         checkbox.performClick()
         assertFalse(checkbox.isChecked)
+    }
+
+    @Test fun selectionToolbarOverlaysListAndCollapsesToAReachableHandle() {
+        val activity = launch()
+        val views = descendants(activity.window.decorView)
+        val list = views.filterIsInstance<ListView>().single()
+        val panel = views.filterIsInstance<SavedLyricsSelectionPanel>().single()
+        val surface = panel.parent as FrameLayout
+        val card = list.parent?.parent as View
+        assertSame(surface, card.parent)
+        val cardHeight = card.height
+        val row = rows(activity).first()
+
+        views.filterIsInstance<SavedLyricsSelectionIconView>().single().performClick()
+        ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
+        assertEquals(cardHeight, card.height)
+        assertEquals(View.VISIBLE, panel.visibility)
+        assertTrue(list.paddingBottom >= panel.getChildAt(0).height)
+        val selectedInfo = descendants(panel).filterIsInstance<LinearLayout>().single {
+            it.contentDescription == activity.getString(R.string.ui_batch_selected, 0)
+        }
+        assertEquals(activity.getString(R.string.ui_saved_lyrics_toolbar_selected),
+            (selectedInfo.getChildAt(0) as TextView).text)
+        row.performClick()
+        assertEquals("1", (selectedInfo.getChildAt(1) as TextView).text)
+        assertEquals(activity.getString(R.string.ui_batch_selected, 1), selectedInfo.contentDescription)
+
+        val toggle = descendants(panel).single {
+            it.contentDescription == activity.getString(R.string.ui_saved_lyrics_toolbar_collapse)
+        }
+        assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_YES, toggle.importantForAccessibility)
+        val location = IntArray(2)
+        toggle.getLocationOnScreen(location)
+        assertTrue(panel.containsControl(location[0] + toggle.width / 2, location[1] + toggle.height / 2))
+        toggle.performClick()
+        ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
+        assertFalse(panel.expanded)
+        assertEquals(View.VISIBLE, panel.visibility)
+        assertEquals(View.INVISIBLE, panel.getChildAt(0).visibility)
+        assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS,
+            panel.getChildAt(0).importantForAccessibility)
+        assertEquals(activity.getString(R.string.ui_saved_lyrics_toolbar_expand), toggle.contentDescription)
+        assertEquals(180f, toggle.rotation, 0.001f)
+        assertEquals(cardHeight, card.height)
+        assertSame(row, rows(activity).first())
+
+        toggle.performClick()
+        ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
+        assertTrue(panel.expanded)
+        assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO, panel.getChildAt(0).importantForAccessibility)
+        assertEquals(0f, toggle.rotation, 0.001f)
+        assertSame(row, rows(activity).first())
+    }
+
+    @Test fun rapidSelectAllChangesKeepTheButtonInPlaceAndSettleOnTheLatestState() {
+        val activity = launch()
+        descendants(activity.window.decorView).filterIsInstance<SavedLyricsSelectionIconView>()
+            .single().performClick()
+        val panel = descendants(activity.window.decorView).filterIsInstance<SavedLyricsSelectionPanel>().single()
+        val selectAll = descendants(panel).filterIsInstance<TextView>().single {
+            it.contentDescription == activity.getString(R.string.ui_select_all)
+        }
+        val slot = selectAll.parent as FrameLayout
+        val outgoing = slot.getChildAt(1) as TextView
+        ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
+        val slotWidth = slot.width
+
+        selectAll.performClick()
+        assertEquals(activity.getString(R.string.ui_batch_deselect_all), selectAll.contentDescription)
+        selectAll.performClick()
+        assertEquals(activity.getString(R.string.ui_select_all), selectAll.contentDescription)
+        assertEquals(0, checkboxes(activity).count { it.isChecked })
+        ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
+        assertEquals(View.GONE, outgoing.visibility)
+        assertEquals("", outgoing.text.toString())
+        assertEquals(slotWidth, slot.width)
+        assertEquals(1f, selectAll.alpha, 0.001f)
     }
 
     @Test fun selectionAnimationReversesWithoutReplacingRowsOrControls() {
@@ -332,7 +414,7 @@ class MainActivityBatchLyricsTest {
             assertTrue(LyricsStorage.savePlainLyrics(context, "Extra $index", "Artist", 180_000, "[00:01.00]test"))
         }
         val activity = launch()
-        val list = descendants(activity.window.decorView).filterIsInstance<android.widget.ListView>().single()
+        val list = descendants(activity.window.decorView).filterIsInstance<ListView>().single()
         assertEquals(62, list.count)
         assertTrue(list.childCount < list.count)
         list.setSelection(35)
@@ -343,14 +425,14 @@ class MainActivityBatchLyricsTest {
         controller!!.recreate()
         val recreated = controller!!.get()
         awaitUiCondition {
-            descendants(recreated.window.decorView).filterIsInstance<android.widget.ListView>().singleOrNull()?.count == 62
+            descendants(recreated.window.decorView).filterIsInstance<ListView>().singleOrNull()?.count == 62
         }
         ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
         recreated.graph.uiHost.interactionUi.capture()
         assertEquals(anchor, recreated.graph.uiHost.interactions.read("savedLyrics.list")!!.getString("key"))
         descendants(recreated.window.decorView).filterIsInstance<SavedLyricsSelectionIconView>().single().performClick()
         fun action(id: Int) = descendants(recreated.window.decorView).filterIsInstance<TextView>()
-            .single { it.text == recreated.getString(id) }.performClick()
+            .single { it.contentDescription == recreated.getString(id) || it.text == recreated.getString(id) }.performClick()
         action(R.string.ui_select_all)
         assertEquals(62, recreated.graph.uiHost.interactions.read("savedLyricsSelection")!!.getStringArrayList("keys")!!.size)
         descendants(recreated.window.decorView).filterIsInstance<EditText>().single().setText("Extra")

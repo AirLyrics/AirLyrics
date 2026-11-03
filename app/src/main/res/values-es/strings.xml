@@ -447,6 +447,12 @@ TTML de tiempo por palabra:
     <string name="ui_lyrics_expired">La letra ha caducado</string>
     <string name="ui_searching_international_title">Probando otra forma de buscar letras…</string>
     <string name="ui_batch_selected">Seleccionados: %1$d</string>
+    <string name="ui_saved_lyrics_toolbar_selected">Elegidos</string>
+    <string name="ui_saved_lyrics_toolbar_import">Importar</string>
+    <string name="ui_saved_lyrics_toolbar_select_all">Marcar todo</string>
+    <string name="ui_saved_lyrics_toolbar_deselect">Ninguno</string>
+    <string name="ui_saved_lyrics_toolbar_collapse">Contraer acciones</string>
+    <string name="ui_saved_lyrics_toolbar_expand">Expandir acciones</string>
     <string name="ui_batch_select_item">Seleccionar %1$s</string>
     <string name="ui_batch_replace">Importar y reemplazar</string>
     <plurals name="ui_batch_delete_title">
