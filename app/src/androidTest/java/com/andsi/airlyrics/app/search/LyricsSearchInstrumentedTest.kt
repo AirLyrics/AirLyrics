@@ -55,21 +55,31 @@ class LyricsSearchInstrumentedTest {
         }
     }
 
-    @Test fun searchStaysDisabledWithoutSelectedSourcesAcrossRecreation() {
+    @Test fun searchShowsMissingSourcesDialogAcrossRecreation() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         LyricsSettingsStore.setPlainLyricsSearchSources(context, emptyList())
         val intent = Intent(context, LyricsSearchActivity::class.java)
             .putExtra("search.title", "Song").putExtra("search.artist", "Artist")
         ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-            fun assertDisabled() = scenario.onActivity { activity ->
+            fun assertDialog() = scenario.onActivity { activity ->
                 val button = descendants(activity.findViewById(android.R.id.content))
                     .filterIsInstance<com.google.android.material.button.MaterialButton>()
                     .single { it.text.toString() == activity.getString(R.string.ui_search) }
-                assertFalse("Search requires a selected source", button.isEnabled)
+                assertTrue("Search must explain the missing source", button.isEnabled)
+                button.performClick()
+                val dialog = LyricsSearchActivity::class.java.getDeclaredField("missingSourcesDialog").run {
+                    isAccessible = true
+                    get(activity) as android.app.Dialog
+                }
+                assertTrue(dialog.isShowing)
+                assertEquals(activity.getString(R.string.search_no_sources_selected),
+                    dialog.findViewById<TextView>(android.R.id.message)?.text)
+                assertTrue(session(activity).state.value.results.isEmpty())
+                dialog.dismiss()
             }
-            assertDisabled()
+            assertDialog()
             scenario.recreate()
-            assertDisabled()
+            assertDialog()
         }
     }
 

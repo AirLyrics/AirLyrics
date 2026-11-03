@@ -504,6 +504,7 @@ Word-timed TTML:
     <string name="search_no_content">No usable lyrics</string>
     <string name="search_sources_selected">Sources · %1$s</string>
     <string name="search_sources_use">Use selected sources (%1$d)</string>
+    <string name="search_no_sources_selected">You haven’t selected a lyrics source yet.</string>
     <string name="search_source_empty">This source has no lyrics for this song yet</string>
     <string name="search_no_timeline">No usable timing</string>
     <string name="search_unsupported_format">Unsupported lyrics format</string>

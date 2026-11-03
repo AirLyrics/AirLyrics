@@ -99,6 +99,7 @@ class LyricsSearchActivity : AppCompatActivity() {
     private var currentSong: SongIdentity?=null
     private var confirmation: AlertDialog?=null
     private var confirmationRevision: String?=null
+    private var missingSourcesDialog: MissingSourcesDialog?=null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -265,12 +266,16 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         form.addView(sourcesButton)
         searchButton=button(R.string.ui_search) {
-            (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(titleInput.windowToken,0)
-            titleInput.clearFocus();artistInput.clearFocus();albumInput.clearFocus()
-            pendingSourceFocus=true
-            session.search()
-            // Also handle repeated searches whose loading state is unchanged.
-            appBar.post { focusSourcesIfReady() }
+            if(session.state.value.sources.isEmpty()) {
+                showMissingSourcesDialog()
+            } else {
+                (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).hideSoftInputFromWindow(titleInput.windowToken,0)
+                titleInput.clearFocus();artistInput.clearFocus();albumInput.clearFocus()
+                pendingSourceFocus=true
+                session.search()
+                // Also handle repeated searches whose loading state is unchanged.
+                appBar.post { focusSourcesIfReady() }
+            }
         }.apply {
             setIconResource(R.drawable.ic_air_search)
             backgroundTintList = ColorStateList.valueOf(palette.accent)
@@ -400,7 +405,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         previewDetails.text=state.previewCandidate?.let(::candidateDetails).orEmpty()
         previewRetry.visibility=if(showPreview && !state.previewLoading && state.preview==null) View.VISIBLE else View.GONE
-        searchButton.isEnabled=!state.applying && state.sources.isNotEmpty() && listOf(state.query.title,state.query.artist,state.query.album).any { it.isNotBlank() }
+        searchButton.isEnabled=!state.applying && listOf(state.query.title,state.query.artist,state.query.album).any { it.isNotBlank() }
         applyButton.isEnabled=state.canApply
         applyButton.alpha=if(state.canApply) 1f else 0.38f
         val busy=state.applying || state.previewLoading
@@ -472,6 +477,14 @@ class LyricsSearchActivity : AppCompatActivity() {
         if(!pendingSourceFocus || inPreview || session.state.value.results.isEmpty()) return
         pendingSourceFocus=false
         appBar.setExpanded(false,ValueAnimator.areAnimatorsEnabled())
+    }
+
+    private fun showMissingSourcesDialog() {
+        if(missingSourcesDialog?.isShowing==true) return
+        missingSourcesDialog=MissingSourcesDialog(this,palette,ThemeSettingsStore.isDark(this)).apply {
+            setOnDismissListener { if(missingSourcesDialog===this) missingSourcesDialog=null }
+            show()
+        }
     }
 
     private fun renderTarget(state:LyricsSearchState) {
@@ -604,6 +617,7 @@ class LyricsSearchActivity : AppCompatActivity() {
     }
     override fun onDestroy() {
         confirmation?.dismiss()
+        missingSourcesDialog?.dismissImmediately()
         if(::paneMotion.isInitialized) paneMotion.finish()
         if(::albumReveal.isInitialized) albumReveal.finish()
         if(::feedbackReveal.isInitialized) feedbackReveal.finish()

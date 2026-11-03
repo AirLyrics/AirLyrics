@@ -502,6 +502,7 @@
     <string name="search_no_content">暂无可用歌词</string>
     <string name="search_sources_selected">来源 · %1$s</string>
     <string name="search_sources_use">使用所选来源（%1$d）</string>
+    <string name="search_no_sources_selected">还没有选择歌词源哦</string>
     <string name="search_source_empty">该来源暂无这首歌的歌词</string>
     <string name="search_no_timeline">无可用时间轴</string>
     <string name="search_unsupported_format">暂不支持此歌词格式</string>

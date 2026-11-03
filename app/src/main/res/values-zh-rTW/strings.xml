@@ -502,6 +502,7 @@
     <string name="search_no_content">暫無可用歌詞</string>
     <string name="search_sources_selected">來源 · %1$s</string>
     <string name="search_sources_use">使用所選來源（%1$d）</string>
+    <string name="search_no_sources_selected">還沒有選擇歌詞來源喔</string>
     <string name="search_source_empty">此來源暫無這首歌的歌詞</string>
     <string name="search_no_timeline">無可用時間軸</string>
     <string name="search_unsupported_format">暫不支援此歌詞格式</string>

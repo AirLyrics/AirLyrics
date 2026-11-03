@@ -506,6 +506,7 @@ TTML de tiempo por palabra:
     <string name="search_no_content">No hay letras disponibles</string>
     <string name="search_sources_selected">Fuentes · %1$s</string>
     <string name="search_sources_use">Usar selección (%1$d)</string>
+    <string name="search_no_sources_selected">Aún no has elegido una fuente de letras.</string>
     <string name="search_source_empty">Esta fuente aún no tiene la letra de esta canción</string>
     <string name="search_no_timeline">Sin sincronización válida</string>
     <string name="search_unsupported_format">Formato de letra no compatible</string>
