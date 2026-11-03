@@ -1,12 +1,12 @@
-v1.2.7 - 2026-10-14
+v1.2.8 - 2026-11-03
 
 Added
-- Add Spicy Lyrics as an optional source with word-by-word lyrics.
-- Search by international song titles when the original title finds no suitable lyrics.
+- Search across lyric sources, preview results, and apply a match.
+- Add Apple Music lyrics with word timing and translations when available (sign-in required).
+- Import LDDC word-timed LRC; batch export, import, and delete saved lyrics.
 
 Improved
-- Better layouts for long text, large fonts, and smaller windows.
-- Clearer lyrics search status and more reliable online searches.
+- Easier lyric editing, album art and player icons, and smoother animations.
 
 Fixed
-- Fix various bugs and improve stability.
+- Improve lyric matching and saved-lyrics reliability.

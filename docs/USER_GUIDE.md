@@ -41,8 +41,7 @@ is enabled.
 - **Display blocked** means floating lyrics are still enabled, but current conditions prevent the
   window from appearing. See the troubleshooting section at the bottom.
 - **Lyrics offset** is saved for each song and does not change the original lyrics file.
-- **Word-by-word lyrics** supports local imports and the Spicy Lyrics source. (I am also trying to find
-  ways to support other lyrics sources, but it is quite likely that I will not be able to.)
+- **Word-by-word lyrics** supports local imports, Spicy Lyrics, and Apple Music when timing is available.
 
 ## Lyrics and Local Files
 
@@ -65,6 +64,10 @@ Settings > Lyrics. Each source tries the full track information first, then broa
 checks other related candidates if the first one has no synchronized lyrics. Only lyrics with a
 valid timeline are used; to improve the hit rate, the returned version, artist tags, or duration may
 not exactly match the current track. If you need more accurate lyrics, just adjust them yourself.
+
+Apple Music lyrics require sign-in under **Settings > Lyrics > Apple Music account**. Sign-in opens
+Apple's page in the app. Available word timing and translations depend on the song and storefront.
+You can sign out from the same page.
 
 ### Manual Lyrics Search
 

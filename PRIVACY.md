@@ -2,13 +2,13 @@
 
 [English](PRIVACY.md) · [简体中文](PRIVACY.zh-CN.md)
 
-AirLyrics is designed to show floating synced lyrics on Android. The app does not collect, upload, sell, or share personal data.
+AirLyrics is designed to show floating synced lyrics on Android. Its developer does not receive personal data from the app. Optional online features connect directly to the selected services.
 
 ## Data collection
 
-AirLyrics does not collect personal data.
+AirLyrics has no server that collects personal data.
 
-AirLyrics does not use analytics, advertising SDKs, tracking SDKs, account systems, or crash-reporting services.
+AirLyrics does not use analytics, advertising SDKs, tracking SDKs, its own account system, or crash-reporting services. Apple Music sign-in is optional.
 
 ## Permissions
 
@@ -20,8 +20,8 @@ AirLyrics asks for the following Android permissions only when they are needed f
 | Notification access     | Detects current media playback information from local notifications / media sessions |
 | Notifications           | Keeps the foreground floating lyrics service visible to Android                      |
 | Usage access            | Checks whether apps selected in Display scope are visible (Android 10+)               |
-| Internet access         | Searches lyrics online when the user uses online lyrics search                       |
-| File picker             | Lets the user import local lyrics files                                              |
+| Internet access         | Searches lyrics online and signs in to Apple Music when those features are used       |
+| File picker             | Lets the user import or export local lyrics files                                    |
 
 Notification access is used locally on the device to detect media playback metadata such as the playing app, title, artist, album, playback state, and available media controls. AirLyrics does not upload notification content.
 
@@ -29,15 +29,17 @@ Usage access is optional and used locally only for Display scope. AirLyrics does
 
 ## Local data
 
-AirLyrics may store app settings, selected media source information, Display scope app selections, local lyrics records, cached lyrics, and recent lyrics download records on the device.
+AirLyrics may store app settings, selected media source information, Display scope app selections, local lyrics records, cached lyrics, and recent lyrics download records on the device. If you sign in to Apple Music, it also stores an account token and storefront in private app data. Apple's sign-in page may store cookies in Android WebView.
 
-This data is used only for app functionality and remains on the user's device unless the user exports, shares, backs up, or otherwise transfers it using system features or third-party tools.
+This data is used for app functionality. Online lyrics requests send the data described below directly to the selected services. Other local data stays on the device unless you export, share, back up, or otherwise transfer it.
 
 ## Online lyrics search
 
 When the user searches lyrics online, AirLyrics sends the search request required by the lyrics provider. This may include song-related metadata such as title, artist, album, and duration.
 
-AirLyrics does not add personal identifiers, accounts, analytics identifiers, or advertising identifiers to these requests.
+Except for Apple Music account requests, AirLyrics does not add account tokens, analytics identifiers, or advertising identifiers to lyrics searches.
+
+Apple Music sign-in takes place on Apple's page inside the app. AirLyrics does not read your Apple ID password. It sends the saved account token directly to Apple to validate the account and request lyrics. Signing out of AirLyrics removes its saved token and storefront; Apple's WebView cookies may remain on the device. App backup is disabled.
 
 When Spicy Lyrics is selected, AirLyrics sends the song title to Spotify to identify the recording, then sends its Spotify track ID to the Spicy Lyrics API. Requests use the app's publishable API key. These services receive normal network information such as the requesting IP address. No AirLyrics server is involved.
 
@@ -45,7 +47,7 @@ Spicy lyrics and any edits are stored in private app storage excluded from backu
 
 ## Third-party services
 
-AirLyrics currently uses online lyrics providers only for lyrics search. Those providers may receive the search request needed to return lyrics. Their own privacy practices are controlled by those providers.
+Online lyrics providers receive the requests needed to return lyrics. Apple also receives account requests when you sign in to Apple Music. Each service controls its own privacy practices.
 
 ## Children
 

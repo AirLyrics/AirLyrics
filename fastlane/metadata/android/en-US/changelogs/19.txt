@@ -1,0 +1,6 @@
+v1.2.8
+• Search across lyric sources, preview results, and apply a match.
+• Add Apple Music lyrics with word timing and translations when available (sign-in required).
+• Import LDDC word-timed LRC; batch export, import, and delete saved lyrics.
+• Improve lyric editing and animations; show album art and player icons.
+• Improve lyric matching and saved-lyrics reliability.

@@ -25,6 +25,7 @@ import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import kotlin.math.roundToInt
 
 internal enum class ParsedLyricsAvailability {
     AVAILABLE,
@@ -71,9 +72,9 @@ class FloatingLyricsRenderer(
             append("\n")
             val start = length
             append(credit.displayText())
-            val size = (11 * view.resources.configuration.fontScale).toInt().coerceAtLeast(10)
+            val size = ((11 * view.resources.configuration.fontScale).toInt().coerceAtLeast(10) / 2f).roundToInt()
             setSpan(AbsoluteSizeSpan(size, true), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(ForegroundColorSpan(ColorUtils.setAlphaComponent(view.currentTextColor, 180)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(ForegroundColorSpan(ColorUtils.setAlphaComponent(view.currentTextColor, 90)), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 

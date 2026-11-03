@@ -60,10 +60,10 @@ For more settings and help with common problems, see the [User Guide](docs/USER_
 
 ## Features
 
-- **Lyrics search and import**: Follows song changes in the selected player and searches for lyrics
-  through NetEase Cloud Music, Musixmatch, LRCLIB, or Spicy Lyrics. You can also import local LRC and TTML files, with
-  support for common timing and translation fields used by Apple Music and AMLL, original lyrics,
-  translations, and word-by-word highlighting.
+- **Lyrics search and import**: Follows song changes in the selected player and searches NetEase
+  Cloud Music, Musixmatch, LRCLIB, Spicy Lyrics, or Apple Music (sign-in required). You can also
+  search across sources manually, preview results, and import local LRC and TTML files, including
+  LDDC word-timed LRC. Lyrics can show translations and word-by-word highlighting.
 - **Overlay appearance**: Adjust the font, weight, colors, opacity, window style, and transition
   animations, with a live preview as you make changes. You can also import your own fonts.
 - **Themes**: Choose a light or dark theme, or follow the system setting, with several accent colors
@@ -71,8 +71,8 @@ For more settings and help with common problems, see the [User Guide](docs/USER_
 - **Display controls**: Automatically hide lyrics when playback is paused, lock the window, let taps
   pass through it, or control it from the notification. You can also limit the overlay to selected
   apps.
-- **Lyrics management**: Save timing offsets for individual songs, and browse, search, edit, or
-  delete local lyrics.
+- **Lyrics management**: Save timing offsets for individual songs, and browse, search, edit, export,
+  import, or delete saved lyrics, including batch actions.
 
 ---
 

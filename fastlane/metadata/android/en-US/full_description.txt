@@ -3,12 +3,13 @@ AirLyrics is a lightweight floating lyrics app.
 Features:
 
 • Detect current media and show synced floating lyrics
-• Search for lyrics online through NetEase Cloud Music, Musixmatch, LRCLIB, or Spicy Lyrics
-• Import local LRC or TTML files with plain or word-by-word lyrics, display translations, and adjust timing
+• Search NetEase Cloud Music, Musixmatch, LRCLIB, Spicy Lyrics, or Apple Music (sign-in required), and preview results before applying them
+• Import local LRC or TTML files, including LDDC word-timed LRC; display translations and adjust timing
+• Edit saved lyrics and export, import, or delete them in batches
 • Customize the floating window and switch between light and dark themes
 
 AirLyrics is not a music player and does not include a complete lyrics database. If an online match is inaccurate, you can import local lyrics.
 
 Privacy:
 
-AirLyrics does not collect or share personal data. Notification access is used only on-device for media detection; online search sends only the song information required to find lyrics.
+AirLyrics has no analytics or own server. Notification access is used on-device for media detection. Online searches go directly to the selected providers; optional Apple Music sign-in sends an account token to Apple.
