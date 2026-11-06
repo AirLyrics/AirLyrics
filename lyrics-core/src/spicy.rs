@@ -31,15 +31,19 @@ fn err(kind: &str) -> String {
     kind.to_owned()
 }
 
+pub(crate) struct LookupRequest<'a> {
+    pub(crate) title: &'a str,
+    pub(crate) artist: &'a str,
+    pub(crate) album: &'a str,
+    pub(crate) duration_ms: u64,
+    pub(crate) spotify_id: Option<&'a str>,
+}
+
 pub(crate) fn fetch(
-    title: &str,
-    artist: &str,
-    album: &str,
-    duration: u64,
+    request: LookupRequest<'_>,
     key: &str,
     lookup: i64,
     international: bool,
-    spotify_id: Option<&str>,
 ) -> Value {
     let result = (|| -> Result<Value, String> {
         let _guard = crate::begin_lookup_cancellation(lookup)?;
@@ -55,7 +59,7 @@ pub(crate) fn fetch(
                 async {
                     tokio::time::timeout(
                         Duration::from_secs(25),
-                        resolve(title, artist, album, duration, key, international, spotify_id),
+                        resolve(request, key, international),
                     )
                     .await
                     .map_err(|_| err("NetworkError"))?
@@ -344,14 +348,17 @@ fn timed_response(response: &Value) -> bool {
 }
 
 async fn resolve(
-    title: &str,
-    artist: &str,
-    album: &str,
-    duration: u64,
+    request: LookupRequest<'_>,
     key: &str,
     international: bool,
-    spotify_id: Option<&str>,
 ) -> Result<Value, String> {
+    let LookupRequest {
+        title,
+        artist,
+        album,
+        duration_ms: duration,
+        spotify_id,
+    } = request;
     let deadline = tokio::time::Instant::now() + Duration::from_secs(24);
     if *COOLDOWN
         .get_or_init(|| Mutex::new(0))
@@ -422,9 +429,7 @@ async fn resolve(
     }
     fetch_tracks(&tracks, deadline, |id| {
         let client = &client;
-        async move {
-            fetch_lyrics_by_id(client, &id, key).await
-        }
+        async move { fetch_lyrics_by_id(client, &id, key).await }
     })
     .await
 }
@@ -481,7 +486,18 @@ mod tests {
 
     #[tokio::test]
     async fn exact_id_path_rejects_invalid_id_before_any_discovery() {
-        let result = resolve("Song", "Artist", "", 0, "sl_pk_test", false, Some("invalid")).await;
+        let result = resolve(
+            LookupRequest {
+                title: "Song",
+                artist: "Artist",
+                album: "",
+                duration_ms: 0,
+                spotify_id: Some("invalid"),
+            },
+            "sl_pk_test",
+            false,
+        )
+        .await;
         assert_eq!(result.unwrap_err(), "ParseError");
     }
 
@@ -673,9 +689,7 @@ mod tests {
 }
 
 fn validate_track_response(id: &str, response: &Value) -> Result<(), String> {
-    if response["Status"].as_u64() == Some(200)
-        && response["Body"]["id"].as_str() != Some(id)
-    {
+    if response["Status"].as_u64() == Some(200) && response["Body"]["id"].as_str() != Some(id) {
         return Err(err("ParseError"));
     }
     Ok(())
@@ -687,9 +701,13 @@ async fn fetch_lyrics_by_id(client: &Client, id: &str, key: &str) -> Result<Valu
         return Err(err("ParseError"));
     }
     let response = manual_lyrics_response(
-        client.get(format!("https://api.spicylyrics.org/v1/lyrics/{id}"))
-            .bearer_auth(key).send().await,
-    ).await?;
+        client
+            .get(format!("https://api.spicylyrics.org/v1/lyrics/{id}"))
+            .bearer_auth(key)
+            .send()
+            .await,
+    )
+    .await?;
     validate_track_response(id, &response)?;
     Ok(response)
 }

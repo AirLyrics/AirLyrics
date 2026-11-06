@@ -62,6 +62,7 @@ resource_paths = [
     Path('app/src/main/res/values-zh-rTW/strings.xml'),
 ]
 resources: dict[str, dict[str, str]] = {}
+non_translatable_names: set[str] = set()
 for path in resource_paths:
     try:
         root = ET.parse(path).getroot()
@@ -76,6 +77,8 @@ for path in resource_paths:
         value = ''.join(el.itertext())
         names.append(name)
         strings[name] = value
+        if path == resource_paths[0] and el.attrib.get('translatable') == 'false':
+            non_translatable_names.add(name)
 
         if not STRING_NAME_RE.match(name):
             fail(f'{path}: invalid string key name: {name}')
@@ -117,7 +120,7 @@ if len(resources) == len(resource_paths):
     for path in resource_paths[1:]:
         localized_strings = resources[str(path)]
         names = set(localized_strings)
-        missing = sorted(default_names - names)
+        missing = sorted(default_names - non_translatable_names - names)
         extra = sorted(names - default_names)
         if missing:
             fail(f'{path}: missing keys from default resources: {missing}')

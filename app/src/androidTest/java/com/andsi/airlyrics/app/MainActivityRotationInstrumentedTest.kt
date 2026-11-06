@@ -48,7 +48,7 @@ class MainActivityRotationInstrumentedTest {
                 val expected = if (orientation == ActivityInfo.SCREEN_ORIENTATION_PORTRAIT) Configuration.ORIENTATION_PORTRAIT else Configuration.ORIENTATION_LANDSCAPE
                 awaitActivity(
                     scenario, taskId,
-                    "Requested orientation $expected was not applied",
+                    "MainActivity did not gain focus and settle in orientation $expected",
                     ready = { activity ->
                         val root = activity.findViewById<View>(android.R.id.content)
                         activity.window.decorView.hasWindowFocus() &&
@@ -207,7 +207,7 @@ class MainActivityRotationInstrumentedTest {
                 shell("wm density ${density ?: "reset"}")
                 shell(if (fontScale == "null" || fontScale.isBlank())
                     "settings delete system font_scale" else "settings put system font_scale $fontScale")
-                restoreRotationState(rotation, rotationMode)
+                restoreRotationState(rotation, autoRotation, rotationMode)
                 awaitSystemState(size, density, fontScale, rotation, autoRotation, rotationMode,
                     animationScales, hardwareKeyboard)
             } catch (restoreFailure: Throwable) {
@@ -237,23 +237,21 @@ class MainActivityRotationInstrumentedTest {
         assertTrue("$label must fit available window $available; actual $full", available.contains(full))
     }
 
-    private fun restoreRotationState(rotation: String, rotationMode: String) {
+    private fun restoreRotationState(rotation: String, autoRotation: String, rotationMode: String) {
         check(rotation in listOf("0", "1", "2", "3")) { "Unexpected saved user_rotation: $rotation" }
-        if (shell("settings get system user_rotation").trim() != rotation) {
-            shell("cmd window user-rotation lock $rotation")
-            // Complete this transition before changing the mode. Back-to-back
-            // WindowManager commands can apply out of order while it handles
-            // the display changes made by this test.
-            awaitRotationState(rotation, "lock $rotation")
-        }
-        if (shell("cmd window user-rotation").trim() != rotationMode) {
+        // Always await a lock, even when user_rotation already has the saved value:
+        // display reconfiguration may still have a pending write to rotation mode.
+        shell("cmd window user-rotation lock $rotation")
+        awaitRotationState(rotation, "lock $rotation")
+        if (rotationMode != "lock $rotation") {
             shell("cmd window user-rotation $rotationMode")
         }
+        awaitRotationState(rotation, rotationMode, autoRotation)
     }
 
-    private fun awaitRotationState(rotation: String, mode: String) {
+    private fun awaitRotationState(rotation: String, mode: String, autoRotation: String = "0") {
         val expected = mapOf("user_rotation" to rotation,
-            "accelerometer_rotation" to "0", "rotation_mode" to mode)
+            "accelerometer_rotation" to autoRotation, "rotation_mode" to mode)
         var observed = emptyMap<String, String>()
         val deadline = SystemClock.uptimeMillis() + 10_000L
         while (SystemClock.uptimeMillis() < deadline) {

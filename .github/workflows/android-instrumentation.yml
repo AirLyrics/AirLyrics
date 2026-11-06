@@ -24,9 +24,14 @@ concurrency:
 
 jobs:
   instrumentation-x86_64:
-    name: Run Android instrumentation on x86_64 emulator
+    name: Android instrumentation (${{ matrix.suite }})
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Global display changes must not share an emulator with ordinary UI or frame tests.
+        suite: ${{ fromJSON((github.event_name == 'schedule' || inputs.suite == 'full') && '["fast", "stress", "hardware"]' || format('["{0}"]', inputs.suite)) }}
 
     steps:
       - name: Checkout
@@ -78,6 +83,9 @@ jobs:
           test -f app/src/main/jniLibs/x86_64/libairlyrics_lyrics.so
           file app/src/main/jniLibs/x86_64/libairlyrics_lyrics.so | grep 'x86-64'
 
+      - name: Build test APKs before starting the emulator
+        run: ./gradlew :app:assembleDebug :app:assembleDebugAndroidTest -Pairlyrics.buildX86_64=true -Pairlyrics.skipRustBuild=true --stacktrace
+
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
@@ -85,23 +93,25 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # These offline tests do not need Google APIs. AOSP avoids Nexus Launcher ANRs
+      # observed during the display-size stress test.
       - name: Install emulator system image
-        run: bash scripts/ci/install_android_packages.sh emulator "system-images;android-35;google_apis;x86_64"
+        run: bash scripts/ci/install_android_packages.sh emulator "system-images;android-35;default;x86_64"
 
       - name: Run Android instrumentation tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
-          target: google_apis
+          target: default
           arch: x86_64
           profile: pixel_7
           disable-animations: true
-          script: bash scripts/run_instrumentation_ci.sh --${{ github.event_name == 'schedule' && 'full' || inputs.suite || 'full' }}
+          script: bash scripts/run_instrumentation_ci.sh --${{ matrix.suite }}
 
       - name: Verify instrumentation test results
         if: always()
         env:
-          INSTRUMENTATION_SUITE: ${{ github.event_name == 'schedule' && 'full' || inputs.suite || 'full' }}
+          INSTRUMENTATION_SUITE: ${{ matrix.suite }}
         run: |
           case "$INSTRUMENTATION_SUITE" in
             fast) minimum=25 ;;
@@ -115,7 +125,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: airlyrics-instrumentation-${{ github.event_name == 'schedule' && 'full' || inputs.suite || 'full' }}-reports
+          name: airlyrics-instrumentation-${{ matrix.suite }}-reports
           path: |
             app/build/reports/androidTests/connected/
             app/build/outputs/androidTest-results/connected/

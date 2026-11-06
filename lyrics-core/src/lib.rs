@@ -214,8 +214,21 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNati
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
     let key = jstring_to_string(&mut env, key);
-    let result = std::panic::catch_unwind(|| spicy::fetch(&title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id, international != 0, None))
-        .unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
+    let result = std::panic::catch_unwind(|| {
+        spicy::fetch(
+            spicy::LookupRequest {
+                title: &title,
+                artist: &artist,
+                album: &album,
+                duration_ms: duration_ms.max(0) as u64,
+                spotify_id: None,
+            },
+            &key,
+            lookup_id,
+            international != 0,
+        )
+    })
+    .unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
     env.new_string(result.to_string())
         .map(|s| s.into_raw())
         .unwrap_or(std::ptr::null_mut())
@@ -238,10 +251,24 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNati
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
     let key = jstring_to_string(&mut env, key);
-    let result = std::panic::catch_unwind(|| spicy::fetch(
-        &title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id, false, Some(&spotify_id)
-    )).unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
-    env.new_string(result.to_string()).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
+    let result = std::panic::catch_unwind(|| {
+        spicy::fetch(
+            spicy::LookupRequest {
+                title: &title,
+                artist: &artist,
+                album: &album,
+                duration_ms: duration_ms.max(0) as u64,
+                spotify_id: Some(&spotify_id),
+            },
+            &key,
+            lookup_id,
+            false,
+        )
+    })
+    .unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
+    env.new_string(result.to_string())
+        .map(|s| s.into_raw())
+        .unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]

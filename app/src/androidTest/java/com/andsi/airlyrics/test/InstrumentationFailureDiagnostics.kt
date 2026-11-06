@@ -66,7 +66,8 @@ class InstrumentationFailureDiagnostics : TestWatcher() {
                 "settings get system user_rotation", "settings get system accelerometer_rotation",
                 "cmd window user-rotation",
                 "settings get secure show_ime_with_hard_keyboard", "dumpsys window windows",
-                "dumpsys activity activities", "dumpsys input_method"
+                "dumpsys activity activities", "dumpsys activity lastanr",
+                "dumpsys input_method", "dumpsys power"
             )) {
                 appendLine("\n$ $command")
                 appendLine(runCatching { shell(command) }.getOrElse { "Command failed: $it" })

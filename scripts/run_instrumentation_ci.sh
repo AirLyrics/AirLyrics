@@ -34,6 +34,8 @@ collect_diagnostics() {
   adb shell dumpsys input_method > app/build/test-diagnostics/input-method.txt 2>&1 || true
   adb shell dumpsys window > app/build/test-diagnostics/windows.txt 2>&1 || true
   adb shell dumpsys activity activities > app/build/test-diagnostics/activities.txt 2>&1 || true
+  adb shell dumpsys activity lastanr > app/build/test-diagnostics/last-anr.txt 2>&1 || true
+  adb shell dumpsys power > app/build/test-diagnostics/power.txt 2>&1 || true
   adb shell wm size > app/build/test-diagnostics/display-size.txt 2>&1 || true
   adb shell wm density > app/build/test-diagnostics/display-density.txt 2>&1 || true
   adb shell settings get system font_scale > app/build/test-diagnostics/font-scale.txt 2>&1 || true
@@ -59,6 +61,7 @@ fi
 {
   echo "SDK=$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
   echo "ABI=$device_abi"
+  echo "Image=$(adb shell getprop ro.build.fingerprint | tr -d '\r')"
   echo "Test selection: $suite"
   echo "Rust JNI: $rust_status"
 } | tee app/build/test-diagnostics/environment.txt
