@@ -194,20 +194,33 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
     }
 
     @Test
-    fun clickThroughFallsBackToLockedUntilExplicitlySet() {
+    fun changingLockPreservesClickThroughBeforeAndAfterItIsExplicitlySet() {
         assertFalse(FloatingLyricsStyleStore.isLocked(context))
         assertFalse(FloatingLyricsStyleStore.isClickThrough(context))
-        assertTrue(FloatingLyricsStyleStore.isClickThroughFollowingLocked(context))
 
         FloatingLyricsStyleStore.setLocked(context, true)
 
-        assertTrue(FloatingLyricsStyleStore.isClickThrough(context))
-        assertTrue(FloatingLyricsStyleStore.isClickThroughFollowingLocked(context))
-
-        FloatingLyricsStyleStore.setClickThrough(context, false)
-
+        assertTrue(FloatingLyricsStyleStore.isLocked(context))
         assertFalse(FloatingLyricsStyleStore.isClickThrough(context))
-        assertFalse(FloatingLyricsStyleStore.isClickThroughFollowingLocked(context))
+
+        FloatingLyricsStyleStore.setClickThrough(context, true)
+        FloatingLyricsStyleStore.setLocked(context, false)
+
+        assertFalse(FloatingLyricsStyleStore.isLocked(context))
+        assertTrue(FloatingLyricsStyleStore.isClickThrough(context))
+    }
+
+    @Test
+    fun changingLegacyLockPreservesEffectiveClickThrough() {
+        val preferences = context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
+        preferences.edit().putBoolean("locked", true).remove("click_through").commit()
+        assertTrue(FloatingLyricsStyleStore.isClickThrough(context))
+
+        FloatingLyricsStyleStore.setLocked(context, false)
+
+        assertFalse(FloatingLyricsStyleStore.isLocked(context))
+        assertTrue(FloatingLyricsStyleStore.isClickThrough(context))
+        assertTrue(preferences.contains("click_through"))
     }
 
     @Test

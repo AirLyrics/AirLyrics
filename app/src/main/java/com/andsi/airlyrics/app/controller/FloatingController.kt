@@ -146,14 +146,11 @@ internal class FloatingController(
     }
 
     private fun updateLocalLocked(locked: Boolean, persist: Boolean) {
-        var clickThrough: Boolean? = null
-        if (persist) {
-            FloatingLyricsStyleStore.setLocked(appContext, locked)
-            clickThrough = FloatingLyricsStyleStore.isClickThrough(appContext)
-        } else if (FloatingLyricsStyleStore.isClickThroughFollowingLocked(appContext)) {
-            clickThrough = locked
-        }
-        state.updateFloatingState(locked = locked, clickThrough = clickThrough)
+        if (persist) FloatingLyricsStyleStore.setLocked(appContext, locked)
+        state.updateFloatingState(
+            locked = locked,
+            clickThrough = if (persist) FloatingLyricsStyleStore.isClickThrough(appContext) else null
+        )
     }
 
     private fun updateLocalClickThrough(clickThrough: Boolean, persist: Boolean) {

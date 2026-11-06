@@ -130,6 +130,21 @@ class FloatingControllerTest {
     }
 
     @Test
+    fun togglingVisibleLockLeavesClickThroughUnchangedUntilServiceResponds() {
+        context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
+            .edit().clear().commit()
+        val state = FakeFloatingState(quickFloatingVisible = true)
+        val commands = mutableListOf<Intent>()
+        val controller = controller(state, commands)
+
+        assertTrue(controller.toggleLock())
+
+        assertTrue(state.locked)
+        assertFalse(state.clickThrough)
+        assertEquals(FloatingServiceCommand.Lock, FloatingServiceCommand.fromIntent(commands.single()))
+    }
+
+    @Test
     fun autoHideSettingsPersistIndependentlyAndNotifyVisibleService() {
         val state = FakeFloatingState(quickFloatingDesiredVisible = true)
         QuickFloatingStore.setDesiredVisible(context, true)

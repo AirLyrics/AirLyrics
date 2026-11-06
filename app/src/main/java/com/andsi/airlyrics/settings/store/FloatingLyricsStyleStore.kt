@@ -262,7 +262,15 @@ object FloatingLyricsStyleStore {
     }
 
     fun setLocked(context: Context, locked: Boolean) {
-        prefs(context).setBoolean(KEY_LOCKED, locked)
+        val prefs = prefs(context)
+        val clickThroughWasFollowingLocked = !prefs.contains(KEY_CLICK_THROUGH)
+        val previousClickThrough = prefs.getBoolean(KEY_LOCKED, false)
+        prefs.edit {
+            if (clickThroughWasFollowingLocked) {
+                putBoolean(KEY_CLICK_THROUGH, previousClickThrough)
+            }
+            putBoolean(KEY_LOCKED, locked)
+        }
     }
 
     fun isLocked(context: Context): Boolean {
@@ -276,10 +284,6 @@ object FloatingLyricsStyleStore {
     fun isClickThrough(context: Context): Boolean {
         val prefs = prefs(context)
         return prefs.getBoolean(KEY_CLICK_THROUGH, prefs.getBoolean(KEY_LOCKED, false))
-    }
-
-    fun isClickThroughFollowingLocked(context: Context): Boolean {
-        return !prefs(context).contains(KEY_CLICK_THROUGH)
     }
 
     fun setAutoHideWhenPaused(context: Context, enabled: Boolean) {
