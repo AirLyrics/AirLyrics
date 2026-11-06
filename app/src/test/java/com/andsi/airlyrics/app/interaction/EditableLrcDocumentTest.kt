@@ -40,6 +40,42 @@ class EditableLrcDocumentTest {
     }
 
     @Test
+    fun firstRowCanBeAddedToAnEmptyDocument() {
+        val document = EditableLrcDocument.from("")
+
+        val added = document.append("[00:00.00]", "first")
+
+        assertEquals(listOf(added), document.rows)
+        assertEquals("[00:00.00]first", document.serialize())
+        assertTrue(LrcParser.validateForStorage(document.serialize()).isValid)
+    }
+
+    @Test
+    fun firstRowPreservesExistingBlankLinesAndLineBreakStyle() {
+        val document = EditableLrcDocument.from("\r\n \r\n")
+
+        assertFalse(document.rows.any { it.isVisible })
+        document.append("[00:00.00]", "")
+
+        assertEquals("\r\n \r\n[00:00.00]\r\n", document.serialize())
+        assertTrue(document.rows.last().isTimed)
+        assertTrue(document.rows.last().isVisible)
+        document.insertAfter(document.rows.lastIndex, "[00:01.00]", "next")
+        assertEquals("\r\n \r\n[00:00.00]\r\n[00:01.00]next\r\n", document.serialize())
+    }
+
+    @Test
+    fun deletingLastRowAllowsAddingANewFirstRow() {
+        val document = EditableLrcDocument.from("[00:01.00]last")
+        document.removeAt(0)
+
+        document.append("[00:02.00]", "replacement")
+
+        assertEquals("[00:02.00]replacement", document.serialize())
+        assertEquals(1, document.rows.count { it.isVisible })
+    }
+
+    @Test
     fun deletingOneTimedRowKeepsAdjacentTextAndTimestamps() {
         val document = EditableLrcDocument.from("[ar:Artist]\r\n[00:01.00]a\r\n[00:02.500]\r\n[00:03.00]♪ music ♪")
 

@@ -36,6 +36,11 @@ internal class EditableLrcDocument private constructor(
         return Row(timestamp + lyric, newEnding, timestamp, lyric).also { rows.add(index + 1, it) }
     }
 
+    fun append(timestamp: String, lyric: String): Row {
+        if (rows.isNotEmpty()) return insertAfter(rows.lastIndex, timestamp, lyric)
+        return Row(timestamp + lyric, "", timestamp, lyric).also(rows::add)
+    }
+
     fun removeAt(index: Int) {
         val removed = rows.removeAt(index)
         // A final row without a line break owns the document's lack of a trailing break.

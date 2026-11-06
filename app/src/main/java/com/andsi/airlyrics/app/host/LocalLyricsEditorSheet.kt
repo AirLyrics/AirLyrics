@@ -324,31 +324,45 @@ private fun MainActivityUiHost.sheetButton(
 private class LrcRowsAdapter(
     private val host: MainActivityUiHost,
     private val document: EditableLrcDocument,
-    private val onAction: (EditableLrcDocument.Row, View, Boolean) -> Unit,
+    private val onAction: (EditableLrcDocument.Row?, View, Boolean) -> Unit,
     private val onDelete: () -> Unit
-) : RecyclerView.Adapter<LrcRowsAdapter.RowHolder>() {
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private val visibleRows = document.rows.filter(EditableLrcDocument.Row::isVisible).toMutableList()
     private val pendingInserted = mutableSetOf<EditableLrcDocument.Row>()
     private var list: RecyclerView? = null
     private var expanded: EditableLrcDocument.Row? = null
     var enabled = true
 
-    override fun getItemCount(): Int = visibleRows.size
-    override fun getItemViewType(position: Int): Int = if (visibleRows[position].isTimed) 1 else 0
+    override fun getItemCount(): Int = visibleRows.size.coerceAtLeast(1)
+    override fun getItemViewType(position: Int): Int = when {
+        visibleRows.isEmpty() -> VIEW_TYPE_EMPTY
+        visibleRows[position].isTimed -> VIEW_TYPE_TIMED
+        else -> VIEW_TYPE_RAW
+    }
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) { list = recyclerView }
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         pendingInserted.clear()
         list = null
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RowHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val container = LinearLayout(host).apply {
             orientation = LinearLayout.VERTICAL
             clipChildren = false
             clipToPadding = false
             setPadding(host.dp(10), host.dp(7), host.dp(10), host.dp(7))
         }
-        if (viewType == 0) {
+        if (viewType == VIEW_TYPE_EMPTY) {
+            val add = actionButton(host, R.string.ui_add_next_line, tone = RowActionTone.ADD) {
+                if (enabled && visibleRows.isEmpty()) onAction(null, container, true)
+            }.apply {
+                minHeight = host.dp(48)
+                setPadding(host.dp(6), host.dp(8), host.dp(6), host.dp(8))
+            }
+            container.addView(add, LinearLayout.LayoutParams(-1, -2))
+            return EmptyHolder(rowView(container))
+        }
+        if (viewType == VIEW_TYPE_RAW) {
             val raw = TextView(host).apply {
                 textSize = AirUiTokens.TextSize.Caption
                 setTextColor(host.colorTextMuted)
@@ -426,13 +440,15 @@ private class LrcRowsAdapter(
         (list?.findViewHolderForAdapterPosition(index) as? RowHolder)?.animateExpansion(expanded === row)
     }
 
-    override fun onBindViewHolder(holder: RowHolder, position: Int) {
-        val row = visibleRows[position]
-        holder.bind(row, expanded === row, pendingInserted.remove(row))
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is RowHolder) {
+            val row = visibleRows[position]
+            holder.bind(row, expanded === row, pendingInserted.remove(row))
+        }
     }
 
-    override fun onViewRecycled(holder: RowHolder) { holder.stopAnimation() }
-    override fun onViewDetachedFromWindow(holder: RowHolder) { holder.stopAnimation() }
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) { (holder as? RowHolder)?.stopAnimation() }
+    override fun onViewDetachedFromWindow(holder: RecyclerView.ViewHolder) { (holder as? RowHolder)?.stopAnimation() }
 
     fun update(row: EditableLrcDocument.Row) {
         visibleRows.indexOf(row).takeIf { it >= 0 }?.let(::notifyItemChanged)
@@ -446,22 +462,41 @@ private class LrcRowsAdapter(
         pendingInserted.remove(row)
         document.removeAt(documentIndex)
         visibleRows.removeAt(visibleIndex)
-        notifyItemRemoved(visibleIndex)
+        if (visibleRows.isEmpty()) notifyItemChanged(0) else notifyItemRemoved(visibleIndex)
         onDelete()
     }
 
-    fun insertAfter(anchor: EditableLrcDocument.Row, timestamp: String, lyric: String) {
-        val documentIndex = document.rows.indexOf(anchor)
-        val visibleIndex = visibleRows.indexOf(anchor)
-        if (documentIndex < 0 || visibleIndex < 0) return
-        val added = document.insertAfter(documentIndex, timestamp, lyric)
-        visibleRows.add(visibleIndex + 1, added)
+    fun insertAfter(anchor: EditableLrcDocument.Row?, timestamp: String, lyric: String) {
+        val wasEmpty = visibleRows.isEmpty()
+        val added: EditableLrcDocument.Row
+        val insertIndex: Int
+        if (anchor == null) {
+            if (!wasEmpty) return
+            added = document.append(timestamp, lyric)
+            insertIndex = 0
+        } else {
+            val documentIndex = document.rows.indexOf(anchor)
+            val visibleIndex = visibleRows.indexOf(anchor)
+            if (documentIndex < 0 || visibleIndex < 0) return
+            added = document.insertAfter(documentIndex, timestamp, lyric)
+            insertIndex = visibleIndex + 1
+        }
+        visibleRows.add(insertIndex, added)
         val manager = list?.layoutManager as? LinearLayoutManager
-        val visibleInsert = manager != null && visibleIndex + 1 in
+        val visibleInsert = manager != null && insertIndex in
             manager.findFirstVisibleItemPosition()..(manager.findLastVisibleItemPosition() + 1)
         if (visibleInsert) pendingInserted += added
-        notifyItemInserted(visibleIndex + 1)
+        // The first lyric replaces the empty-state action at the same adapter position.
+        if (wasEmpty) notifyItemChanged(0) else notifyItemInserted(insertIndex)
         if (visibleInsert) list?.handler?.postDelayed({ pendingInserted.remove(added) }, 400L)
+    }
+
+    private class EmptyHolder(view: View) : RecyclerView.ViewHolder(view)
+
+    private companion object {
+        const val VIEW_TYPE_RAW = 0
+        const val VIEW_TYPE_TIMED = 1
+        const val VIEW_TYPE_EMPTY = 2
     }
 
     class RowHolder(
@@ -667,18 +702,18 @@ private class FloatingLineEditor(
         overlay.setOnClickListener { if (!hideErrorBubble()) close() }
     }
 
-    fun open(row: EditableLrcDocument.Row, anchor: View, insert: Boolean) {
-        if (card != null) return
+    fun open(row: EditableLrcDocument.Row?, anchor: View, insert: Boolean) {
+        if (card != null || (!insert && row == null)) return
         this.anchor = anchor
         val form = LinearLayout(host).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(host.dp(12), host.dp(12), host.dp(12), host.dp(12))
         }
         val timestamp = ValidatedLineField(host, host.getString(R.string.ui_lyrics_time_hint), singleLine = true).apply {
-            input.setText(row.timestamp.orEmpty().removeSurrounding("[", "]"))
+            input.setText((row?.timestamp ?: "[00:00.00]").removeSurrounding("[", "]"))
         }
         val lyric = ValidatedLineField(host, host.getString(R.string.ui_lyrics), singleLine = false).apply {
-            input.setText(if (insert) "" else row.lyric)
+            input.setText(if (insert) "" else row?.lyric.orEmpty())
             input.minLines = 2
             input.maxLines = 3
             input.gravity = Gravity.TOP or Gravity.START
@@ -693,13 +728,13 @@ private class FloatingLineEditor(
                 ?: return@sheetButton
             val text = EditableLrcDocument.normalizedLyric(lyric.input.text.toString())
             if (!EditableLrcDocument.canStoreAsOneRow(tag, text)) return@sheetButton
-            if (!insert && tag == row.timestamp && text == row.lyric) {
+            if (!insert && row != null && tag == row.timestamp && text == row.lyric) {
                 close()
                 return@sheetButton
             }
             if (insert) {
                 rows.insertAfter(row, tag, text)
-            } else {
+            } else if (row != null) {
                 document.update(document.rows.indexOf(row), tag, text)
                 rows.update(row)
             }
@@ -721,7 +756,7 @@ private class FloatingLineEditor(
             }
             val text = EditableLrcDocument.normalizedLyric(lyric.input.text.toString())
             val tagForText = EditableLrcDocument.normalizedTimestamp(timestamp.input.text.toString())
-                ?: row.timestamp.orEmpty()
+                ?: row?.timestamp.orEmpty()
             val lyricError = if (EditableLrcDocument.canStoreAsOneRow(tagForText, text)) null
                 else host.getString(R.string.ui_lyrics_one_line_error)
             timestamp.showError(timeError)
@@ -809,6 +844,7 @@ private class FloatingLineEditor(
         }
         editorCard.maxHeightPx = (sheet.height - host.dp(24)).coerceAtLeast(host.dp(80))
         val source = anchor ?: return
+        if (closing || !source.isAttachedToWindow) return
         val sheetPosition = IntArray(2)
         val anchorPosition = IntArray(2)
         sheet.getLocationOnScreen(sheetPosition)
