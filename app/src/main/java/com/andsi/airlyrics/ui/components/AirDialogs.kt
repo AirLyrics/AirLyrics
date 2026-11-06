@@ -46,8 +46,10 @@ private const val DIALOG_EXIT_TRANSLATION_Y_DP = 8
 
 private class AirAnimatedDialog(
     context: Context,
-    themeResId: Int
+    themeResId: Int,
+    val backgroundDimAmount: Float
 ) : Dialog(context, themeResId) {
+    val targetDimAmount = maxOf(AirUiTokens.Layout.DialogDimAmount, backgroundDimAmount)
     var animatedContent: View? = null
     var coordinatedDim = false
     var onUserDismiss: (() -> Unit)? = null
@@ -111,7 +113,7 @@ private class AirAnimatedDialog(
             super.dismiss()
             return
         }
-        if (coordinatedDim) animateDimTo(0f, DIALOG_EXIT_MS)
+        if (coordinatedDim) animateDimTo(backgroundDimAmount, DIALOG_EXIT_MS)
         content.animate().cancel()
         content.animate()
             .alpha(0f)
@@ -187,7 +189,11 @@ internal fun MainUiHost.showAirDialog(
     val host = this
     // The dialog owns input in a separate window, so Activity feedback must leave first.
     dismissMessage()
-    val dialog = AirAnimatedDialog(this, android.R.style.Theme_Translucent_NoTitleBar)
+    // WindowManager uses the top dimming window, rather than adding each window's dim.
+    // Keep the lower modal's shade when a confirmation takes over.
+    val dialog = AirAnimatedDialog(
+        this, android.R.style.Theme_Translucent_NoTitleBar, interactionUi.maxShowingDimAmount()
+    )
     dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
     dialog.coordinatedDim = coordinatedDim
 
@@ -320,10 +326,10 @@ internal fun MainUiHost.showAirDialog(
     }
 
     dialog.window?.applyAirDialogSystemBars(host)
-    if (coordinatedDim) dialog.window?.apply {
-        setWindowAnimations(0)
+    dialog.window?.apply {
+        if (coordinatedDim) setWindowAnimations(0)
         addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-        setDimAmount(0f)
+        setDimAmount(if (coordinatedDim) dialog.backgroundDimAmount else dialog.targetDimAmount)
     }
     dialog.animatedContent = animatedContent
     dialog.setContentView(root)
@@ -333,7 +339,7 @@ internal fun MainUiHost.showAirDialog(
             applyAirDialogSystemBars(host)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             if (!coordinatedDim || !ValueAnimator.areAnimatorsEnabled()) {
-                setDimAmount(AirUiTokens.Layout.DialogDimAmount)
+                setDimAmount(dialog.targetDimAmount)
             }
             setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
         }
@@ -341,7 +347,7 @@ internal fun MainUiHost.showAirDialog(
             if (!dialog.isShowing || dialog.isLeaving) return@post
             ViewCompat.requestApplyInsets(root)
             if (coordinatedDim) {
-                dialog.animateDimTo(AirUiTokens.Layout.DialogDimAmount, DIALOG_ENTER_MS)
+                dialog.animateDimTo(dialog.targetDimAmount, DIALOG_ENTER_MS)
                 if (!ValueAnimator.areAnimatorsEnabled()) {
                     animatedContent.alpha = 1f
                     animatedContent.scaleX = 1f

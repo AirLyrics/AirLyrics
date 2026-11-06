@@ -45,6 +45,7 @@ import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
+import com.andsi.airlyrics.ui.state.InteractionUiRegistry
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -56,6 +57,7 @@ import kotlin.time.Duration.Companion.seconds
 
 /** A dedicated window gives the keyboard, candidates and preview their own lifecycle. */
 class LyricsSearchActivity : AppCompatActivity() {
+    internal val interactionUi = InteractionUiRegistry()
     private lateinit var session: LyricsSearchSession
     private val palette by lazy { AirLyricsTheme.palette(ThemeSettingsStore.isDark(this),ThemeSettingsStore.getAccent(this)) }
     private lateinit var titleInput: TextInputEditText
@@ -470,7 +472,12 @@ class LyricsSearchActivity : AppCompatActivity() {
                 .setTitle(R.string.search_apply).setMessage(R.string.search_replace_local)
                 .setNegativeButton(R.string.ui_cancel) { _,_-> session.dismissConfirmation() }
                 .setPositiveButton(R.string.search_apply) { _,_-> session.apply(revision) }
-                .setOnCancelListener { session.dismissConfirmation() }.show()
+                .setOnCancelListener { session.dismissConfirmation() }
+                .create().also { dialog ->
+                    dialog.setOnDismissListener { interactionUi.forget(dialog) }
+                    interactionUi.register(dialog, dialog::dismiss)
+                    dialog.show()
+                }
         }
     }
     private fun focusSourcesIfReady() {
@@ -481,8 +488,14 @@ class LyricsSearchActivity : AppCompatActivity() {
 
     private fun showMissingSourcesDialog() {
         if(missingSourcesDialog?.isShowing==true) return
-        missingSourcesDialog=MissingSourcesDialog(this,palette,ThemeSettingsStore.isDark(this)).apply {
-            setOnDismissListener { if(missingSourcesDialog===this) missingSourcesDialog=null }
+        missingSourcesDialog=MissingSourcesDialog(
+            this,palette,ThemeSettingsStore.isDark(this),interactionUi.maxShowingDimAmount()
+        ).apply {
+            setOnDismissListener {
+                interactionUi.forget(this)
+                if(missingSourcesDialog===this) missingSourcesDialog=null
+            }
+            interactionUi.register(this, ::dismissImmediately)
             show()
         }
     }
@@ -616,8 +629,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
     }
     override fun onDestroy() {
-        confirmation?.dismiss()
-        missingSourcesDialog?.dismissImmediately()
+        interactionUi.destroy()
         if(::paneMotion.isInitialized) paneMotion.finish()
         if(::albumReveal.isInitialized) albumReveal.finish()
         if(::feedbackReveal.isInitialized) feedbackReveal.finish()

@@ -2,6 +2,7 @@ package com.andsi.airlyrics.app.search
 
 import android.animation.ValueAnimator
 import android.app.Dialog
+import android.content.DialogInterface
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
@@ -108,6 +109,7 @@ class LyricsSourcesSheet : BottomSheetDialogFragment() {
         content.addView(done, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
         updateFooter()
         sheet.setContentView(content)
+        (activity as? LyricsSearchActivity)?.interactionUi?.register(sheet, sheet::dismiss)
         return sheet
     }
 
@@ -132,6 +134,11 @@ class LyricsSourcesSheet : BottomSheetDialogFragment() {
             translationZ = 0f
             outlineProvider = null
         }
+    }
+
+    override fun onDismiss(dialog: DialogInterface) {
+        if (dialog is Dialog) (activity as? LyricsSearchActivity)?.interactionUi?.forget(dialog)
+        super.onDismiss(dialog)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

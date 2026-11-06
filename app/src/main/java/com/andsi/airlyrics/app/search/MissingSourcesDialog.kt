@@ -35,8 +35,10 @@ import com.google.android.material.button.MaterialButton
 internal class MissingSourcesDialog(
     context: Context,
     palette: AirLyricsPalette,
-    isDark: Boolean
+    isDark: Boolean,
+    private val backgroundDimAmount: Float
 ) : Dialog(context, android.R.style.Theme_Translucent_NoTitleBar) {
+    private val targetDimAmount = maxOf(0.42f, backgroundDimAmount)
     private val systemBarBase = palette.background
     private val card: NestedScrollView
     private var motion: ValueAnimator? = null
@@ -128,7 +130,7 @@ internal class MissingSourcesDialog(
                 isAppearanceLightNavigationBars = !isDark
             }
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            setDimAmount(0f)
+            setDimAmount(backgroundDimAmount)
             setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         }
         setOnShowListener {
@@ -191,8 +193,9 @@ internal class MissingSourcesDialog(
         card.alpha = value
         card.scaleX = 0.9f + 0.1f * value
         card.scaleY = 0.9f + 0.1f * value
-        window?.setDimAmount(0.42f * value)
-        val systemBarColor = ColorUtils.blendARGB(systemBarBase, Color.BLACK, 0.42f * value)
+        val dimAmount = backgroundDimAmount + (targetDimAmount - backgroundDimAmount) * value
+        window?.setDimAmount(dimAmount)
+        val systemBarColor = ColorUtils.blendARGB(systemBarBase, Color.BLACK, dimAmount)
         window?.statusBarColor = systemBarColor
         window?.navigationBarColor = systemBarColor
     }
