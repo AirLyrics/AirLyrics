@@ -57,7 +57,7 @@ internal fun scroll(activity: MainUiHost, child: View, animateChildren: Boolean 
     }
 }
 
-internal fun sectionTitle(activity: MainUiHost, title: String, subtitle: String): View  = with(activity) sectionTitle@ {
+internal fun sectionTitle(activity: MainUiHost, title: String): View = with(activity) sectionTitle@ {
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(AirUiTokens.Space.Xl))
@@ -66,12 +66,6 @@ internal fun sectionTitle(activity: MainUiHost, title: String, subtitle: String)
             textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(colorTextStrong)
-        })
-        addView(TextView(activity).apply {
-            text = subtitle
-            textSize = AirUiTokens.TextSize.Body
-            setTextColor(colorTextMuted)
-            setPadding(0, dp(AirUiTokens.Space.Sm), 0, 0)
         })
     }
 }

@@ -89,10 +89,7 @@ internal fun createMediaPage(
     val players = mutableListOf<MediaSourceCardBinding>()
 
     container.addView(
-        sectionTitle(activity, 
-            getString(R.string.ui_media),
-            getString(R.string.ui_choose_the_player_airlyrics_follows)
-        )
+        sectionTitle(activity, getString(R.string.ui_media))
     )
 
     container.addView(

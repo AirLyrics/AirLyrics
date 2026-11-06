@@ -87,7 +87,6 @@
     <string name="ui_choose_accent_color">选择强调色</string>
     <string name="ui_choose_lyrics_save_folder">选择歌词保存目录</string>
     <string name="ui_choose_apps">选择应用</string>
-    <string name="ui_choose_the_player_airlyrics_follows">选择要跟随的播放器</string>
     <string name="ui_clean_letters">纯净</string>
     <string name="ui_click_through">穿透</string>
     <string name="ui_click_through_off">点击穿透：已关闭</string>

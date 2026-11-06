@@ -87,7 +87,6 @@
     <string name="ui_choose_accent_color">Elegir color de acento</string>
     <string name="ui_choose_lyrics_save_folder">Elegir carpeta de guardado de letras</string>
     <string name="ui_choose_apps">Elegir apps</string>
-    <string name="ui_choose_the_player_airlyrics_follows">Elige el reproductor que AirLyrics seguirá </string>
     <string name="ui_clean_letters">Limpio</string>
     <string name="ui_click_through">Traspaso de toques</string>
     <string name="ui_click_through_off">Traspaso de toques: Desactivado</string>
