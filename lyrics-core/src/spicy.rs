@@ -39,6 +39,7 @@ pub(crate) fn fetch(
     key: &str,
     lookup: i64,
     international: bool,
+    spotify_id: Option<&str>,
 ) -> Value {
     let result = (|| -> Result<Value, String> {
         let _guard = crate::begin_lookup_cancellation(lookup)?;
@@ -54,7 +55,7 @@ pub(crate) fn fetch(
                 async {
                     tokio::time::timeout(
                         Duration::from_secs(25),
-                        resolve(title, artist, album, duration, key, international),
+                        resolve(title, artist, album, duration, key, international, spotify_id),
                     )
                     .await
                     .map_err(|_| err("NetworkError"))?
@@ -349,6 +350,7 @@ async fn resolve(
     duration: u64,
     key: &str,
     international: bool,
+    spotify_id: Option<&str>,
 ) -> Result<Value, String> {
     let deadline = tokio::time::Instant::now() + Duration::from_secs(24);
     if *COOLDOWN
@@ -366,6 +368,15 @@ async fn resolve(
         .redirect(reqwest::redirect::Policy::none())
         .build()
         .map_err(|_| err("NativeError"))?;
+    if let Some(id) = spotify_id {
+        let response = fetch_lyrics_by_id(&client, id, key).await?;
+        if manual_unavailable_reason(&response)?.is_some() {
+            return Ok(json!({"ok":false,"error_type":"NotFound","stage":"lyrics_fetch"}));
+        }
+        return Ok(json!({"ok":true,
+            "track":{"id":id,"title":title,"artist":artist,"album":album,"duration_ms":duration},
+            "response":response,"lookup":{"candidates":1,"attempted":1}}));
+    }
     let cache_key = json!([title, artist, album, duration, international]).to_string();
     let cached = TRACKS
         .get_or_init(|| Mutex::new(HashMap::new()))
@@ -412,14 +423,7 @@ async fn resolve(
     fetch_tracks(&tracks, deadline, |id| {
         let client = &client;
         async move {
-            json_response(
-                client
-                    .get(format!("https://api.spicylyrics.org/v1/lyrics/{id}"))
-                    .bearer_auth(key)
-                    .send()
-                    .await,
-            )
-            .await
+            fetch_lyrics_by_id(client, &id, key).await
         }
     })
     .await
@@ -463,6 +467,24 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn exact_id_rejects_wrong_or_missing_response_identity() {
+        let id = "5l94Up12BJSjhH7Mhr2ji4";
+        assert!(validate_track_response(id, &json!({"Status":200,"Body":{"id":id}})).is_ok());
+        for body in [json!({"id":"other"}), json!({})] {
+            assert_eq!(
+                validate_track_response(id, &json!({"Status":200,"Body":body})).unwrap_err(),
+                "ParseError"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn exact_id_path_rejects_invalid_id_before_any_discovery() {
+        let result = resolve("Song", "Artist", "", 0, "sl_pk_test", false, Some("invalid")).await;
+        assert_eq!(result.unwrap_err(), "ParseError");
+    }
+
     #[test]
     fn totp_decimal_key_vector() {
         // Independent HMAC/TOTP vector for this player's decimal key transform.
@@ -650,6 +672,28 @@ mod tests {
     }
 }
 
+fn validate_track_response(id: &str, response: &Value) -> Result<(), String> {
+    if response["Status"].as_u64() == Some(200)
+        && response["Body"]["id"].as_str() != Some(id)
+    {
+        return Err(err("ParseError"));
+    }
+    Ok(())
+}
+
+/// Shared by automatic exact-ID lookups and manual previews; never performs discovery.
+async fn fetch_lyrics_by_id(client: &Client, id: &str, key: &str) -> Result<Value, String> {
+    if id.len() != 22 || !id.bytes().all(|b| b.is_ascii_alphanumeric()) {
+        return Err(err("ParseError"));
+    }
+    let response = manual_lyrics_response(
+        client.get(format!("https://api.spicylyrics.org/v1/lyrics/{id}"))
+            .bearer_auth(key).send().await,
+    ).await?;
+    validate_track_response(id, &response)?;
+    Ok(response)
+}
+
 pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Result<Value, String> {
     if !key.starts_with("sl_pk_") {
         return Err(err("NeedCredential"));
@@ -707,22 +751,7 @@ pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Resul
             .collect();
         Ok(json!({"ok":true,"candidates":crate::manual::ranked(tracks,t)}))
     } else {
-        if t.id.len() != 22 || !t.id.bytes().all(|b| b.is_ascii_alphanumeric()) {
-            return Err(err("ParseError"));
-        }
-        let response = manual_lyrics_response(
-            client
-                .get(format!("https://api.spicylyrics.org/v1/lyrics/{}", t.id))
-                .bearer_auth(key)
-                .send()
-                .await,
-        )
-        .await?;
-        if response["Status"].as_u64() == Some(200)
-            && response["Body"]["id"].as_str() != Some(t.id.as_str())
-        {
-            return Err(err("ParseError"));
-        }
+        let response = fetch_lyrics_by_id(&client, &t.id, key).await?;
         if let Some(reason) = manual_unavailable_reason(&response)? {
             return Ok(crate::manual::unavailable(reason));
         }

@@ -12,7 +12,10 @@ import org.json.JSONObject
 import org.json.JSONException
 
 internal data class LyricsCandidate(val source: PlainLyricsSearchSource, val id: String,
-    val song: SongIdentity, val score: Double, val storefront: String? = null)
+    val song: SongIdentity, val score: Double, val storefront: String? = null,
+    val spotifyIdMatch: Boolean = false)
+
+internal data class SpotifyIdLyricsResult(val candidate: LyricsCandidate, val lyrics: LyricsProviderResult)
 
 /** Network reads stay separate from the explicit, transactional user selection. */
 internal class ManualLyricsSearch(
@@ -35,6 +38,18 @@ internal class ManualLyricsSearch(
             LyricsCandidate(source, item.getString("id"), SongIdentity(item.getString("title"),
                 item.getString("artist"), item.getString("album"), item.optLong("duration_ms")), item.optDouble("score", 0.0), item.optString("storefront").takeIf { it.isNotBlank() })
         }.distinctBy { it.id }
+    }
+
+    fun findBySpotifyId(id: String, mediaSong: SongIdentity?, target: SongIdentity,
+        token: LyricsLookupCancellationToken): SpotifyIdLyricsResult? {
+        val parsedId = com.andsi.airlyrics.core.model.SpotifyTrackId.parse(id)
+            ?: throw IllegalArgumentException("Invalid Spotify track ID")
+        // A pasted ID may describe another recording. Unknown metadata stays unknown.
+        val candidate = LyricsCandidate(PlainLyricsSearchSource.SPICY, parsedId,
+            mediaSong ?: SongIdentity("", "", "", 0L), 0.0, spotifyIdMatch = true)
+        val result = fetch(candidate, target, token) as? ManualLyricsFetchResult.Available ?: return null
+        return result.lyrics.takeIf { it.manualUnavailableReason() == null }
+            ?.let { SpotifyIdLyricsResult(candidate, it) }
     }
 
     fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken): SongIdentity? {

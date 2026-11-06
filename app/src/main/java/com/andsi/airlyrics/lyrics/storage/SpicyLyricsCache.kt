@@ -51,6 +51,14 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
     fun read(key: String): LyricsProviderResult? = synchronized(lock) {
         runCatching { document(key)?.let { result(key, it) } }.getOrNull()
     }
+    fun readForTrack(key: String, spotifyId: String): LyricsProviderResult? = synchronized(lock) {
+        runCatching {
+            document(key)?.takeIf {
+                JSONObject(it.getString("raw")).getJSONObject("response")
+                    .getJSONObject("Body").getString("id") == spotifyId
+            }?.let { result(key, it) }
+        }.getOrNull()
+    }
     /** Lookup caches are mode-specific; the saved document remains bound to the original song. */
     fun readForSearch(key: String, searchKey: String): LyricsProviderResult? = synchronized(lock) {
         runCatching {

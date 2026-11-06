@@ -506,4 +506,13 @@
     <string name="search_no_timeline">無可用時間軸</string>
     <string name="search_unsupported_format">暫不支援此歌詞格式</string>
     <string name="search_no_usable_lines">沒有可用歌詞行</string>
+    <string name="search_spotify_id">Spotify ID 搜尋</string>
+    <string name="search_spotify_id_input">Spotify 曲目連結或 ID</string>
+    <string name="search_spotify_id_invalid">請輸入有效的曲目連結或 22 位 ID</string>
+    <string name="search_spotify_id_active">Spotify ID · %1$s</string>
+    <string name="search_by_title">依歌名搜尋</string>
+    <string name="search_spotify_id_empty">此 ID 暫無歌詞</string>
+    <string name="search_spotify_track">Spotify 曲目</string>
+    <string name="search_ready">點選搜尋尋找歌詞</string>
+    <string name="search_id_match">透過 Spotify ID 取得</string>
 </resources>

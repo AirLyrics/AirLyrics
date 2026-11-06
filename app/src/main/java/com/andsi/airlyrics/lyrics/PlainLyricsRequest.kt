@@ -13,5 +13,6 @@ data class PlainLyricsSearchRequest(
     val durationMs: Long,
     val cancellationToken: LyricsLookupCancellationToken? = null,
     val searchMode: LyricsSearchMode = LyricsSearchMode.Original,
-    val originalSong: SongIdentity? = null
+    val originalSong: SongIdentity? = null,
+    val spotifyTrackId: String? = null,
 )

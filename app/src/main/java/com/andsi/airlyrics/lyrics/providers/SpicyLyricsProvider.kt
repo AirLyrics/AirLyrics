@@ -18,8 +18,12 @@ object SpicyLyricsProvider : LyricsProvider {
     private val fetchLock = ReentrantLock()
     private val misses = LinkedHashMap<String, Long>()
 
-    override fun cached(request: PlainLyricsSearchRequest): LyricsProviderResult? = SpicyLyricsCache.forContext(request.context)
-        .read(SpicyLyricsCache.key(request.title, request.artist, request.durationMs))
+    override fun cached(request: PlainLyricsSearchRequest): LyricsProviderResult? {
+        val cache = SpicyLyricsCache.forContext(request.context)
+        val key = SpicyLyricsCache.key(request.title, request.artist, request.durationMs)
+        val id = com.andsi.airlyrics.core.model.SpotifyTrackId.parse(request.spotifyTrackId)
+        return if (id == null) cache.read(key) else cache.readForTrack(key, id)
+    }
 
     override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> = runCatching {
         while (!fetchLock.tryLock(100, TimeUnit.MILLISECONDS)) request.cancellationToken?.throwIfCancellationRequested()
@@ -27,25 +31,30 @@ object SpicyLyricsProvider : LyricsProvider {
             request.cancellationToken?.throwIfCancellationRequested()
             val song = request.originalSong ?: SongIdentity(request.title, request.artist, request.album, request.durationMs)
             val key = SpicyLyricsCache.key(song.title, song.artist, song.durationMs)
-            val searchKey = if (request.searchMode == LyricsSearchMode.International) {
+            val spotifyId = com.andsi.airlyrics.core.model.SpotifyTrackId.parse(request.spotifyTrackId)
+            val searchKey = if (spotifyId != null) "spotify:$spotifyId" else if (request.searchMode == LyricsSearchMode.International) {
                 "international:" + org.json.JSONArray(listOf(request.title, request.artist, request.album, request.durationMs)).toString()
             } else key
             SpicyLyricsCache.forContext(request.context).readForSearch(key, searchKey)?.let { return@runCatching it }
             if (!isConfigured) throw LyricsLookupException(id, name, LyricsLookupErrorType.NeedCredential, "Spicy client key not configured")
             if ((misses[searchKey] ?: 0L) > System.currentTimeMillis()) return@runCatching null
             val raw = withNativeLyricsCancellation(request.cancellationToken) { lookup ->
-                SpicyLyricsNative.fetchLyricsForSearchJson(request.title, request.artist, request.album, request.durationMs, BuildConfig.SPICY_CLIENT_KEY, lookup, request.searchMode == LyricsSearchMode.International)
+                if (spotifyId != null) {
+                    SpicyLyricsNative.fetchLyricsBySpotifyIdJson(spotifyId, song.title, song.artist, song.album, song.durationMs, BuildConfig.SPICY_CLIENT_KEY, lookup)
+                } else {
+                    SpicyLyricsNative.fetchLyricsForSearchJson(request.title, request.artist, request.album, request.durationMs, BuildConfig.SPICY_CLIENT_KEY, lookup, request.searchMode == LyricsSearchMode.International)
+                }
             }
             request.cancellationToken?.throwIfCancellationRequested()
             if (BuildConfig.DEBUG) {
                 val summary = org.json.JSONObject(raw)
                 val stage = summary.optString("stage").takeIf { it == "spotify_match" || it == "lyrics_fetch" } ?: "response"
                 val lookup = summary.optJSONObject("lookup")
-                android.util.Log.d("AirLyricsLyrics", "source=$id stage=$stage ok=${summary.optBoolean("ok")} candidates=${lookup?.optInt("candidates") ?: summary.optInt("candidates")} attempted=${lookup?.optInt("attempted") ?: 0}")
+                android.util.Log.d("AirLyricsLyrics", "source=$id route=${if (spotifyId == null) "search" else "spotify_id"} stage=$stage ok=${summary.optBoolean("ok")} candidates=${lookup?.optInt("candidates") ?: summary.optInt("candidates")} attempted=${lookup?.optInt("attempted") ?: 0}")
             }
             val fetchedAt = System.currentTimeMillis()
             val result = SpicyLyricsParser.parse(raw, key, fetchedAt)?.copy(
-                pendingSpicyLyrics = PendingSpicyLyrics(raw, searchKey, fetchedAt)
+                pendingSpicyLyrics = PendingSpicyLyrics(raw, searchKey, fetchedAt),
             )
             if (result == null) {
                 if (misses.size >= 128) misses.remove(misses.keys.first())

@@ -18,6 +18,17 @@ class LyricsSearchSessionTest {
     private val source = PlainLyricsSearchSource.NETEASE
     private val candidate = LyricsCandidate(source,"42",song.copy(title="Alias"),0.9)
     private class FakeAccess: LyricsSearchAccess {
+        val idQueries = mutableListOf<String>()
+        var idResultMissing = false
+        var previewFetches = 0
+        override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken):com.andsi.airlyrics.lyrics.search.SpotifyIdLyricsResult? {
+            idQueries += id
+            if (idResultMissing) return null
+            return com.andsi.airlyrics.lyrics.search.SpotifyIdLyricsResult(
+                LyricsCandidate(PlainLyricsSearchSource.SPICY,id,mediaSong ?: SongIdentity("","","",0),0.0,spotifyIdMatch=true),
+                LyricsProviderResult("spicy","Spicy","[00:01.00]Exact ID lyrics"),
+            )
+        }
         var searched: SongIdentity? = null
         val searchQueries = mutableListOf<SongIdentity>()
         val resolvedQueries = mutableListOf<SongIdentity>()
@@ -36,7 +47,7 @@ class LyricsSearchSessionTest {
         override fun search(source:PlainLyricsSearchSource,query:SongIdentity,token:LyricsLookupCancellationToken):List<LyricsCandidate> {
             searched=query
             searchQueries += query
-            if(source in failingSources || query.title in failingTitles) error("offline")
+            if ((source in failingSources) || (query.title in failingTitles)) error("offline")
             return searchResults[query.title]?.map { it.copy(source=source) }
                 ?: listOf(LyricsCandidate(source,"42",query,0.9))
         }
@@ -46,6 +57,7 @@ class LyricsSearchSessionTest {
             return internationalQuery
         }
         override fun fetch(candidate:LyricsCandidate,target:SongIdentity,token:LyricsLookupCancellationToken):ManualLyricsFetchResult {
+            previewFetches++
             if (failPreview) error("offline")
             if (emptyPreview) return ManualLyricsFetchResult.Unavailable(LyricsUnavailableReason.NO_TIMELINE)
             fetchedTarget=target
@@ -59,14 +71,117 @@ class LyricsSearchSessionTest {
         }
     }
     private fun TestScope.withSession(sources:Set<PlainLyricsSearchSource> = setOf(source),
-        target:SongIdentity = song, block: TestScope.(LyricsSearchSession,FakeAccess)->Unit) {
+        target:SongIdentity = song, spotifyId:String? = null, block: TestScope.(LyricsSearchSession,FakeAccess)->Unit) {
         val dispatcher=StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
             val access=FakeAccess()
-            block(LyricsSearchSession(target,sources,access,dispatcher),access)
+            block(LyricsSearchSession(target,sources,access,dispatcher,spotifyId),access)
         } finally { Dispatchers.resetMain() }
     }
+    @Test fun sessionIdIsPinnedAlongsideNormalResultsAndPreviewReusesLyrics()=runTest {
+        val id="5l94Up12BJSjhH7Mhr2ji4"
+        val spicy=PlainLyricsSearchSource.SPICY
+        withSession(setOf(spicy,source),spotifyId=id) { session,access ->
+            session.search();runCurrent()
+            val rows=session.state.value.results.getValue(spicy).candidates
+            assertEquals(listOf(id,"42"),rows.map { (_, trackId) -> trackId })
+            assertTrue(rows.first().spotifyIdMatch)
+            assertFalse(rows.last().spotifyIdMatch)
+            assertFalse(session.state.value.results.getValue(spicy).loading)
+            session.preview(rows.first());runCurrent()
+            assertEquals(0,access.previewFetches)
+            assertTrue(session.state.value.canApply)
+            assertNull(access.appliedTarget)
+        }
+    }
+
+    @Test fun sameIdFromNormalSearchIsDeduplicatedAndKeepsItsBadge()=runTest {
+        val id="5l94Up12BJSjhH7Mhr2ji4"
+        val spicy=PlainLyricsSearchSource.SPICY
+        withSession(setOf(spicy),spotifyId=id) { session,access ->
+            access.searchResults[song.title]=listOf(candidate.copy(id=id))
+            session.search();runCurrent()
+            val rows=session.state.value.results.getValue(spicy).candidates
+            assertEquals(1,rows.size)
+            assertTrue(rows.single().spotifyIdMatch)
+        }
+    }
+
+    @Test fun explicitIdReplacesSpicyAndPendingInternationalSearchCannotMixResults()=runTest {
+        val id="5l94Up12BJSjhH7Mhr2ji4"
+        val spicy=PlainLyricsSearchSource.SPICY
+        withSession(setOf(spicy,source)) { session,access ->
+            access.internationalQuery=song.copy(title="International")
+            session.search()
+            assertTrue(session.searchSpotifyId(id))
+            runCurrent()
+            assertEquals(listOf(id),session.state.value.results.getValue(spicy).candidates.map { it.id })
+            assertEquals(id,session.state.value.results.getValue(spicy).spotifyId)
+            assertFalse(session.state.value.results.getValue(spicy).loading)
+            assertTrue(session.state.value.results.getValue(source).candidates.isNotEmpty())
+            assertEquals(song,session.state.value.target)
+            session.preview(session.state.value.results.getValue(spicy).candidates.single())
+            assertEquals("",session.state.value.previewCandidate?.song?.title)
+            assertNull(access.appliedTarget)
+        }
+    }
+
+    @Test fun directIdWorksBeforeSongSearchAndRetriesWithoutDiscovery()=runTest {
+        val id="5l94Up12BJSjhH7Mhr2ji4"
+        val spicy=PlainLyricsSearchSource.SPICY
+        withSession(setOf(spicy)) { session,access ->
+            access.idResultMissing=true
+            session.searchSpotifyId(id);runCurrent()
+            assertTrue(access.searchQueries.isEmpty())
+            assertTrue(access.resolvedQueries.isEmpty())
+            assertTrue(session.state.value.results.getValue(spicy).candidates.isEmpty())
+            access.idResultMissing=false
+            session.retry(spicy);runCurrent()
+            assertEquals(listOf(id,id),access.idQueries)
+            assertEquals(1,session.state.value.results.getValue(spicy).candidates.size)
+            assertFalse(session.state.value.results.getValue(spicy).loading)
+            session.searchSpicyByTitle();runCurrent()
+            assertEquals(listOf("42"),session.state.value.results.getValue(spicy).candidates.map { it.id })
+            assertNull(session.state.value.results.getValue(spicy).spotifyId)
+        }
+    }
+
+    @Test fun returningToSongSearchUsesEditedConditionsAndLeavesOtherSourceRetryUnchanged()=runTest {
+        val spicy=PlainLyricsSearchSource.SPICY
+        withSession(setOf(spicy,source)) { session,access ->
+            session.search();runCurrent()
+            val other=session.state.value.results.getValue(source)
+            session.searchSpotifyId("5l94Up12BJSjhH7Mhr2ji4");runCurrent()
+            session.editQuery("Another song","Other artist","")
+            access.internationalQuery=song.copy(title="Alternative title",artist="Other artist")
+            session.searchSpicyByTitle();runCurrent()
+            assertNull(session.state.value.results.getValue(spicy).spotifyId)
+            assertFalse(session.state.value.results.getValue(spicy).loading)
+            assertTrue(access.searchQueries.any { it.title=="Another song" })
+            assertTrue(access.searchQueries.any { it.title=="Alternative title" })
+            assertEquals(other,session.state.value.results.getValue(source))
+            session.retry(source);runCurrent()
+            assertEquals(song,access.searchQueries.last())
+        }
+    }
+
+    @Test fun newIdCancelsPreviousIdAndEditedQueryDoesNotReuseSessionId()=runTest {
+        val id="5l94Up12BJSjhH7Mhr2ji4"
+        val next="0X5X6D3kZyDEG8Im1LQaVf"
+        val spicy=PlainLyricsSearchSource.SPICY
+        withSession(setOf(spicy),spotifyId=id) { session,access ->
+            session.searchSpotifyId(id)
+            session.searchSpotifyId(next);runCurrent()
+            assertEquals(listOf(next),session.state.value.results.getValue(spicy).candidates.map { it.id })
+            assertFalse(session.searchSpotifyId("spotify:episode:$id"))
+            session.editQuery("Another song","Artist","")
+            session.search();runCurrent()
+            assertEquals(listOf(next),access.idQueries)
+            assertFalse(session.state.value.results.getValue(spicy).candidates.any { it.spotifyIdMatch })
+        }
+    }
+
     @Test fun editedQueryAndPreviewDoNotChangeBindingOrSave()=runTest {
         withSession { session,access ->
             session.editQuery("Translated title","Other artist","")
@@ -359,7 +474,7 @@ class LyricsSearchSessionTest {
         val order=listOf(PlainLyricsSearchSource.SPICY,PlainLyricsSearchSource.LRCLIB,source)
         withSession(order.toSet()) { session,access ->
             assertEquals(order,session.state.value.sources.toList())
-            session.setSources(order.drop(1).toSet())
+            session.setSources(order.asSequence().drop(1).toSet())
             session.setSources((order.drop(1)+order.first()).toSet())
             assertEquals(order,session.state.value.sources.toList())
             access.failingSources.add(order.first())

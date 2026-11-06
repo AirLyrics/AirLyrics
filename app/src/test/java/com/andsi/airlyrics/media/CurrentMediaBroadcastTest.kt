@@ -16,7 +16,8 @@ class CurrentMediaBroadcastTest {
     fun mediaUpdateIntent_roundTripsCurrentMediaInfo() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val media = CurrentMediaInfo(
-            sourcePackage = "com.example.player",
+            sourcePackage = "com.spotify.music",
+            spotifyTrackId = "5l94Up12BJSjhH7Mhr2ji4",
             title = "Song",
             artist = "Artist",
             album = "Album",

@@ -510,4 +510,13 @@ TTML de tiempo por palabra:
     <string name="search_no_timeline">Sin sincronización válida</string>
     <string name="search_unsupported_format">Formato de letra no compatible</string>
     <string name="search_no_usable_lines">No hay líneas de letra válidas</string>
+    <string name="search_spotify_id">Buscar por Spotify ID</string>
+    <string name="search_spotify_id_input">Enlace de canción de Spotify o ID</string>
+    <string name="search_spotify_id_invalid">Introduce un enlace de canción válido o un ID de 22 caracteres</string>
+    <string name="search_spotify_id_active">Spotify ID · %1$s</string>
+    <string name="search_by_title">Buscar por título</string>
+    <string name="search_spotify_id_empty">No hay letra para este ID</string>
+    <string name="search_spotify_track">Canción de Spotify</string>
+    <string name="search_ready">Pulsa Buscar para encontrar letras</string>
+    <string name="search_id_match">Obtenida mediante Spotify ID</string>
 </resources>

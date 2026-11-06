@@ -55,6 +55,7 @@ internal fun FloatingLyricsService.reloadCurrentLyrics() {
         nonce = "reload|${SystemClock.uptimeMillis()}"
     )
     lastPlaybackLyricsKey = playbackLyricsKey
+    lastLookupSpotifyTrackId = currentMedia.spotifyTrackId
     activeLyricsLookupRequestKey = lookupRequestKey
     loadLyricsForSong(
         media = currentMedia,
@@ -77,6 +78,7 @@ internal fun FloatingLyricsService.handleLyricsChanged(change: LyricsChange) {
 
 internal fun FloatingLyricsService.clearLyricsState(message: () -> String) {
     lastPlaybackLyricsKey = null
+    lastLookupSpotifyTrackId = null
     automaticOnlineLookupSuppressedSong = null
     activeLyricsLookupRequestKey = null
     lyricsLookupRunner.cancelActive()

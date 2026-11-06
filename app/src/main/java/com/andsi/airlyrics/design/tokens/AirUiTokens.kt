@@ -64,6 +64,14 @@ object AirUiTokens {
     }
 
     object Motion {
+        const val InputDialogFadeInMs = 160L
+        const val InputDialogExitMs = 140L
+        const val InputDialogClosedScale = 0.94f
+        const val InputDialogTravelDp = 12
+        // AndroidX SpringForce: medium stiffness, medium-bouncy entry, critically damped exit.
+        const val InputDialogStiffness = 1500f
+        const val InputDialogOpenDamping = 0.5f
+        const val InputDialogCloseDamping = 1f
         const val TextScrollDelayMs = 700L
         const val TextScrollEndHoldMs = 1000L
         const val TextScrollDpPerSecond = 24

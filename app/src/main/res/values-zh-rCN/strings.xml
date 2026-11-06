@@ -506,4 +506,13 @@
     <string name="search_no_timeline">无可用时间轴</string>
     <string name="search_unsupported_format">暂不支持此歌词格式</string>
     <string name="search_no_usable_lines">没有可用歌词行</string>
+    <string name="search_spotify_id">Spotify ID 搜索</string>
+    <string name="search_spotify_id_input">Spotify 曲目链接或 ID</string>
+    <string name="search_spotify_id_invalid">请输入有效的曲目链接或 22 位 ID</string>
+    <string name="search_spotify_id_active">Spotify ID · %1$s</string>
+    <string name="search_by_title">按歌名搜索</string>
+    <string name="search_spotify_id_empty">该 ID 暂无歌词</string>
+    <string name="search_spotify_track">Spotify 曲目</string>
+    <string name="search_ready">点击搜索查找歌词</string>
+    <string name="search_id_match">通过 Spotify ID 获取</string>
 </resources>

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.core.model.SpotifyTrackId
+import com.andsi.airlyrics.lyrics.search.SpotifyIdLyricsResult
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.search.manualUnavailableReason
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
@@ -29,11 +31,16 @@ internal interface LyricsSearchAccess {
     fun search(source: PlainLyricsSearchSource, query: SongIdentity, token: LyricsLookupCancellationToken): List<LyricsCandidate>
     fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken): SongIdentity?
     fun fetch(candidate: LyricsCandidate, target: SongIdentity, token: LyricsLookupCancellationToken): ManualLyricsFetchResult
+    fun findBySpotifyId(id: String, mediaSong: SongIdentity?, target: SongIdentity, token: LyricsLookupCancellationToken): SpotifyIdLyricsResult?
     fun protectedRevision(target: SongIdentity): String?
     fun apply(target: SongIdentity, result: LyricsProviderResult, token: LyricsLookupCancellationToken, approvedRevision: String?): Boolean
 }
 
-internal data class SourceResults(val loading: Boolean = false, val candidates: List<LyricsCandidate> = emptyList(), val error: Throwable? = null)
+internal data class SourceResults(
+    val loading: Boolean = false, val candidates: List<LyricsCandidate> = emptyList(),
+    val error: Throwable? = null, val searched: Boolean = true,
+    val spotifyId: String? = null, val query: SongIdentity? = null,
+)
 internal data class SearchPreview(val candidate: LyricsCandidate, val lyrics: LyricsProviderResult)
 internal data class LyricsSearchState(
     val target: SongIdentity, val query: SongIdentity = target,
@@ -46,7 +53,8 @@ internal data class LyricsSearchState(
     val previewLoading: Boolean = false, val applying: Boolean = false,
     val confirmationRevision: String? = null,
     val error: Throwable? = null, val saved: Boolean = false,
-    val moreConditions: Boolean = false
+    val moreConditions: Boolean = false,
+    val spotifyTrackId: String? = null
 ) {
     val canApply: Boolean
         get() = preview != null && preview.candidate == previewCandidate &&
@@ -59,14 +67,17 @@ internal class LyricsSearchSession(
     target: SongIdentity,
     sources: Set<PlainLyricsSearchSource>,
     private val access: LyricsSearchAccess,
-    private val io: CoroutineDispatcher = Dispatchers.IO
+    private val io: CoroutineDispatcher = Dispatchers.IO,
+    initialSpotifyTrackId: String? = null
 ) : ViewModel() {
     val sourceOrder = (sources.toList() + PlainLyricsSearchSource.onlineSources).distinct()
-    private val mutable = MutableStateFlow(LyricsSearchState(target, sources = sources))
+    private val mutable = MutableStateFlow(LyricsSearchState(target, sources = sources,
+        spotifyTrackId = SpotifyTrackId.parse(initialSpotifyTrackId)))
     val state = mutable.asStateFlow()
     private val requests = mutableMapOf<String, Pair<LyricsLookupCancellationToken, Job>>()
     private var resolvingInternational = false
     private var internationalQuery: SongIdentity? = null
+    private val spotifyLyrics = mutableMapOf<String, LyricsProviderResult>()
     private var generation = 0L
     var resultsGeneration = 0L
         private set
@@ -94,7 +105,8 @@ internal class LyricsSearchSession(
         if (!state.value.applying) mutable.value = state.value.copy(sources=sourceOrder.filter { it in sources }.toSet())
     }
     fun toggleMore() { mutable.value = state.value.copy(moreConditions=!state.value.moreConditions) }
-    fun switchTarget(target: SongIdentity) {
+    fun switchTarget(target: SongIdentity) = switchTarget(target, null)
+    fun switchTarget(target: SongIdentity, spotifyTrackId: String?) {
         if (state.value.applying) return
         cancelAll()
         resolvingInternational=false
@@ -104,7 +116,8 @@ internal class LyricsSearchSession(
         resultsGeneration++
         pagePositions.clear()
         previewScroll=0
-        mutable.value=LyricsSearchState(target,sources=state.value.sources)
+        spotifyLyrics.clear()
+        mutable.value=LyricsSearchState(target,sources=state.value.sources,spotifyTrackId=SpotifyTrackId.parse(spotifyTrackId))
     }
     fun search() {
         val before=state.value
@@ -115,9 +128,13 @@ internal class LyricsSearchSession(
         resultsScroll=0
         resultsGeneration++
         pagePositions.clear()
-        mutable.value=before.copy(results=before.sources.associateWith { SourceResults(loading=true) },submittedQuery=before.query,
+        mutable.value=before.copy(results=before.sources.associateWith { SourceResults(loading=true, query=before.query) },submittedQuery=before.query,
             preview=null,previewUnavailableReason=null,previewCandidate=null,previewLoading=false,error=null,confirmationRevision=null)
+        spotifyLyrics.clear()
         before.sources.forEach { searchSource(it,before.query) }
+        if (PlainLyricsSearchSource.SPICY in before.sources && before.query == before.target) {
+            before.spotifyTrackId?.let { searchSpotifyTrack(it, before.target) }
+        }
         launch("international-title", { access.resolveInternationalTitle(before.query,it) }, { resolved ->
             finishInternationalResolution(before.sources,resolved)
         }, {
@@ -126,11 +143,94 @@ internal class LyricsSearchSession(
     }
     fun retry(source: PlainLyricsSearchSource) {
         if (state.value.applying || source !in state.value.results) return
-        val query=state.value.submittedQuery ?: return
-        mutable.value=state.value.copy(results=state.value.results+(source to SourceResults(loading=true)))
-        searchSource(source,query)
-        internationalQuery?.let { searchInternationalSource(source,it) }
+        val query=state.value.results[source]?.query ?: state.value.submittedQuery ?: state.value.query
+        val exactId = state.value.results[source]?.spotifyId
+        if (source == PlainLyricsSearchSource.SPICY) {
+            cancelSpicySearch()
+            spotifyLyrics.clear()
+        }
+        mutable.value=state.value.copy(results=state.value.results+(source to SourceResults(loading=true, spotifyId=exactId, query=query)))
+        if (exactId != null) {
+            searchSpotifyTrack(exactId, null)
+        } else {
+            searchSource(source,query)
+            if (source == PlainLyricsSearchSource.SPICY) {
+                resolveSpicyTitle(query)
+            } else {
+                internationalQuery?.let { searchInternationalSource(source,it) }
+            }
+            if (source == PlainLyricsSearchSource.SPICY && query == state.value.target) {
+                state.value.spotifyTrackId?.let { searchSpotifyTrack(it, state.value.target) }
+            }
+        }
     }
+    /** Explicit ID queries replace Spicy only; other providers keep their results and requests. */
+    fun searchSpotifyId(value: String): Boolean {
+        if (state.value.applying) return false
+        val id = SpotifyTrackId.parse(value) ?: return false
+        cancelSpicySearch()
+        cancel("preview")
+        spotifyLyrics.clear()
+        val source = PlainLyricsSearchSource.SPICY
+        activeSource = source
+        pagePositions.remove(source)
+        mutable.value = state.value.copy(
+            results = state.value.results + (source to SourceResults(loading=true, spotifyId=id)),
+            preview=null, previewCandidate=null, previewLoading=false, previewUnavailableReason=null,
+            error=null, confirmationRevision=null
+        )
+        searchSpotifyTrack(id, null)
+        return true
+    }
+
+    fun searchSpicyByTitle() {
+        if (state.value.applying) return
+        cancelSpicySearch()
+        spotifyLyrics.clear()
+        val source = PlainLyricsSearchSource.SPICY
+        val query = state.value.query
+        pagePositions.remove(source)
+        mutable.value = state.value.copy(
+            results=state.value.results + (source to SourceResults(loading=true, query=query))
+        )
+        searchSource(source, query)
+        resolveSpicyTitle(query)
+    }
+
+    private fun resolveSpicyTitle(query: SongIdentity) {
+        val source = PlainLyricsSearchSource.SPICY
+        if (query == state.value.submittedQuery) {
+            internationalQuery?.let { searchInternationalSource(source,it) }
+            return
+        }
+        launch("spicy-title", { access.resolveInternationalTitle(query,it) }, { resolved ->
+            if (resolved != null) searchInternationalSource(source,resolved)
+            val previous=state.value.results[source] ?: return@launch
+            mutable.value=state.value.copy(results=state.value.results +
+                (source to previous.copy(loading=sourcePending(source,"spicy-title"))))
+        }, {
+            val previous=state.value.results[source] ?: return@launch
+            mutable.value=state.value.copy(results=state.value.results +
+                (source to previous.copy(loading=sourcePending(source,"spicy-title"))))
+        })
+    }
+
+    private fun cancelSpicySearch() {
+        cancel(PlainLyricsSearchSource.SPICY.key)
+        cancel("international:spicy")
+        cancel("spotify-id")
+        cancel("spicy-title")
+    }
+
+    private fun searchSpotifyTrack(id: String, mediaSong: SongIdentity?) {
+        val source = PlainLyricsSearchSource.SPICY
+        val target = state.value.target
+        launch("spotify-id", { access.findBySpotifyId(id, mediaSong, target, it) }, { found ->
+            if (found != null) spotifyLyrics[id] = found.lyrics
+            updateSource(source, "spotify-id", listOfNotNull(found?.candidate), null, original=false)
+        }, { updateSource(source, "spotify-id", emptyList(), it, original=false) })
+    }
+
     private fun searchSource(source: PlainLyricsSearchSource, query: SongIdentity) {
         launch(source.key,{ access.search(source,query,it) }, { candidates ->
             updateSource(source, source.key, candidates, null, original=true)
@@ -140,7 +240,11 @@ internal class LyricsSearchSession(
         resolvingInternational=false
         internationalQuery=resolved
         if (resolved != null) {
-            sources.forEach { searchInternationalSource(it,resolved) }
+            sources.forEach {
+                if (it != PlainLyricsSearchSource.SPICY || state.value.results[it]?.query == state.value.submittedQuery) {
+                    searchInternationalSource(it,resolved)
+                }
+            }
         } else {
             val results=state.value.results.toMutableMap()
             sources.forEach { source ->
@@ -150,6 +254,7 @@ internal class LyricsSearchSession(
         }
     }
     private fun searchInternationalSource(source: PlainLyricsSearchSource, query: SongIdentity) {
+        if (source == PlainLyricsSearchSource.SPICY && state.value.results[source]?.spotifyId != null) return
         val key="international:${source.key}"
         launch(key,{ access.search(source,query,it) }, { candidates ->
             updateSource(source,key,candidates,null,original=false)
@@ -159,10 +264,11 @@ internal class LyricsSearchSession(
         candidates: List<LyricsCandidate>, error: Throwable?, original: Boolean) {
         val previous=state.value.results[source] ?: return
         val ranked=candidates.filter { it.source == source }.distinctBy { it.id }.sortedByDescending { it.score }
-        val merged=if (original) (ranked+previous.candidates).distinctBy { it.id }
-            else (previous.candidates+ranked).distinctBy { it.id }
-        val ordered=rankMergedCandidates(merged)
-        val result=SourceResults(
+        val pinned=(ranked+previous.candidates).filter { it.spotifyIdMatch }
+        val merged=if (original) (pinned+ranked+previous.candidates).distinctBy { it.id }
+            else (pinned+previous.candidates+ranked).distinctBy { it.id }
+        val ordered=rankMergedCandidates(merged).sortedByDescending { it.spotifyIdMatch }
+        val result=previous.copy(
             loading=sourcePending(source,completedKey), candidates=ordered,
             error=if (ordered.isNotEmpty()) null else previous.error ?: error
         )
@@ -206,12 +312,24 @@ internal class LyricsSearchSession(
     }
     private fun sourcePending(source: PlainLyricsSearchSource, completedKey: String? = null): Boolean =
         // Callbacks run before launch removes their own request entry.
-        resolvingInternational || listOf(source.key,"international:${source.key}").any {
-            it != completedKey && it in requests
-        }
+        (resolvingInternational && state.value.results[source]?.spotifyId == null &&
+            state.value.results[source]?.query == state.value.submittedQuery) ||
+            (listOf(source.key,"international:${source.key}") +
+                if (source == PlainLyricsSearchSource.SPICY) listOf("spotify-id","spicy-title") else emptyList()).any {
+                it != completedKey && it in requests
+            }
     fun preview(candidate: LyricsCandidate) {
         if (state.value.applying) return
         val target=state.value.target
+        val cached = if (candidate.spotifyIdMatch) spotifyLyrics[candidate.id]
+            ?.takeIf { it.access?.isExpired() != true } else null
+        if (cached != null) {
+            cancel("preview")
+            previewScroll=0
+            mutable.value=state.value.copy(preview=SearchPreview(candidate,cached),
+                previewCandidate=candidate,previewLoading=false,previewUnavailableReason=null,error=null)
+            return
+        }
         previewScroll=0
         mutable.value=state.value.copy(preview=null,previewUnavailableReason=null,previewCandidate=candidate,previewLoading=true,error=null)
         launch("preview",{ access.fetch(candidate,target,it) }, { result ->

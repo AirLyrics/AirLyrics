@@ -78,10 +78,17 @@ internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo
     ) {
         automaticOnlineLookupSuppressedSong = null
     }
-    if (playbackLyricsKey == lastPlaybackLyricsKey) {
+    val samePlayback = playbackLyricsKey == lastPlaybackLyricsKey
+    val idArrived = media.spotifyTrackId != null && media.spotifyTrackId != lastLookupSpotifyTrackId
+    val retryWithId = samePlayback && idArrived &&
+        lyricsAvailability != LyricsAvailability.AVAILABLE &&
+        !isAutomaticOnlineLookupSuppressed(media) &&
+        com.andsi.airlyrics.settings.store.LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
+    if (samePlayback && !retryWithId) {
         renderer.tick()
         return true
     }
+    lastLookupSpotifyTrackId = media.spotifyTrackId
 
     val lookupRequestKey = media.lyricsLookupRequestKey()
     lastPlaybackLyricsKey = playbackLyricsKey
@@ -100,7 +107,7 @@ internal fun CurrentMediaInfo.playbackLyricsKey(): PlaybackLyricsKey {
 internal fun CurrentMediaInfo.lyricsLookupRequestKey(nonce: String? = null): LyricsLookupRequestKey {
     val playbackKey = playbackLyricsKey()
     return LyricsLookupRequestKey(
-        if (nonce == null) playbackKey.value else "${playbackKey.value}|$nonce"
+        listOfNotNull(playbackKey.value, spotifyTrackId?.let { "spotify:$it" }, nonce).joinToString("|")
     )
 }
 

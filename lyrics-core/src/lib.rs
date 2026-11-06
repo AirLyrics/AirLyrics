@@ -214,11 +214,34 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNati
     let artist = jstring_to_string(&mut env, artist);
     let album = jstring_to_string(&mut env, album);
     let key = jstring_to_string(&mut env, key);
-    let result = std::panic::catch_unwind(|| spicy::fetch(&title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id, international != 0))
+    let result = std::panic::catch_unwind(|| spicy::fetch(&title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id, international != 0, None))
         .unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
     env.new_string(result.to_string())
         .map(|s| s.into_raw())
         .unwrap_or(std::ptr::null_mut())
+}
+
+#[no_mangle]
+pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SpicyLyricsNative_fetchLyricsBySpotifyIdJson(
+    mut env: JNIEnv,
+    _this: JObject,
+    spotify_id: JString,
+    title: JString,
+    artist: JString,
+    album: JString,
+    duration_ms: jni::sys::jlong,
+    key: JString,
+    lookup_id: jni::sys::jlong,
+) -> jstring {
+    let spotify_id = jstring_to_string(&mut env, spotify_id);
+    let title = jstring_to_string(&mut env, title);
+    let artist = jstring_to_string(&mut env, artist);
+    let album = jstring_to_string(&mut env, album);
+    let key = jstring_to_string(&mut env, key);
+    let result = std::panic::catch_unwind(|| spicy::fetch(
+        &title, &artist, &album, duration_ms.max(0) as u64, &key, lookup_id, false, Some(&spotify_id)
+    )).unwrap_or_else(|_| serde_json::json!({"ok":false,"error_type":"NativeError","error":"Spicy lookup failed"}));
+    env.new_string(result.to_string()).map(|s| s.into_raw()).unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]

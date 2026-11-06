@@ -7,6 +7,7 @@ import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.SystemClock
+import com.andsi.airlyrics.core.model.SpotifyTrackId
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.model.MediaSnapshotSequencer
 
@@ -131,7 +132,12 @@ object CurrentMediaReader {
             durationMs = metadata.getLong(MediaMetadata.METADATA_KEY_DURATION),
             isPlaying = state?.state == PlaybackState.STATE_PLAYING,
             positionMs = estimatedPositionMs(state),
-            snapshotSequence = MediaSnapshotSequencer.next()
+            snapshotSequence = MediaSnapshotSequencer.next(),
+            spotifyTrackId = SpotifyTrackId.fromMediaSession(
+                packageName,
+                metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID),
+                metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_URI)
+            )
         )
     }
 

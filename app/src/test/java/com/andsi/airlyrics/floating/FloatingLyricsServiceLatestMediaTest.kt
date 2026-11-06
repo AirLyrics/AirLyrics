@@ -369,6 +369,46 @@ class FloatingLyricsServiceLatestMediaTest {
         assertEquals("next song lyrics", lyricsView.text.toString())
     }
 
+    @Test
+    fun lateSpotifyIdRetriesMissingLookupOnceAndOldResultCannotWin() {
+        LyricsSettingsStore.setAutoSearchOnlineEnabled(context, true)
+        val controller = Robolectric.buildService(RecordingLookupFloatingLyricsService::class.java)
+            .create().also { serviceController = it }
+        val service = controller.get()
+        service.showLyrics()
+        service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=1))
+        service.takeLookupSettings()
+        val oldDelivery = service.callbackDispatcher.takeDelivery()
+        val id = "5l94Up12BJSjhH7Mhr2ji4"
+        service.lookupResult = Result.success(LyricsProviderResult("spicy","Spicy","[00:00.00]exact"))
+        service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=2).copy(spotifyTrackId=id))
+        service.takeLookupSettings()
+        val exactDelivery = service.callbackDispatcher.takeDelivery()
+        oldDelivery()
+        exactDelivery()
+        assertEquals(id,service.lastLookupMedia?.spotifyTrackId)
+        assertEquals("exact",service.lyricsView?.text.toString())
+        service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=3))
+        service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=4).copy(spotifyTrackId=id))
+        assertEquals(0,service.callbackDispatcher.pendingDeliveryCount())
+    }
+
+    @Test
+    fun lateSpotifyIdKeepsAlreadyAvailableLyrics() {
+        val controller = Robolectric.buildService(RecordingLookupFloatingLyricsService::class.java)
+            .create().also { serviceController = it }
+        val service = controller.get()
+        service.lookupResult = Result.success(LyricsProviderResult("local","Local","[00:00.00]saved"))
+        service.showLyrics()
+        service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=1))
+        service.takeLookupSettings()
+        service.callbackDispatcher.takeDelivery().invoke()
+        service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=2).copy(spotifyTrackId="5l94Up12BJSjhH7Mhr2ji4"))
+        assertEquals("saved",service.lyricsView?.text.toString())
+        assertEquals(0,service.callbackDispatcher.pendingDeliveryCount())
+        assertNull(service.lastLookupMedia?.spotifyTrackId)
+    }
+
     private fun saveLocalPlainLyrics(title: String, plainLrc: String) {
         assertTrue(
             LyricsStorage.savePlainLyrics(

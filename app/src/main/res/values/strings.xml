@@ -508,4 +508,14 @@ Word-timed TTML:
     <string name="search_no_timeline">No usable timing</string>
     <string name="search_unsupported_format">Unsupported lyrics format</string>
     <string name="search_no_usable_lines">No usable lyric lines</string>
+    <string name="search_spotify_id">Search by Spotify ID</string>
+    <string name="search_spotify_id_input">Spotify track link or ID</string>
+    <string name="search_spotify_id_invalid">Enter a valid Spotify track link or 22-character ID</string>
+    <string name="search_spotify_id_active">Spotify ID · %1$s</string>
+    <string name="search_by_title">Search by song title</string>
+    <string name="search_spotify_id_empty">No lyrics for this ID</string>
+    <string name="search_spotify_track">Spotify track</string>
+    <string name="search_ready">Choose Search to find lyrics</string>
+    <string name="search_id_match">Fetched using Spotify ID</string>
+    <string name="search_id_badge" translatable="false">ID</string>
 </resources>

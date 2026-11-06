@@ -19,6 +19,14 @@ class SpicyLyricsCacheTest {
     private val key = SpicyLyricsCache.key("Test", "Artist", 10000)
     private fun cache() = SpicyLyricsCache(folder.root) { now }
 
+    @Test fun exactIdCacheDoesNotReturnAnotherRecording() {
+        val cache = cache()
+        cache.save(key, "Test", "Artist", "", 10000, spicyFixture())
+        assertNotNull(cache.readForTrack(key, "synthetic"))
+        assertNull(cache.readForTrack(key, "another-recording"))
+        assertNotNull(cache.read(key))
+    }
+
     @Test fun localLyricsFileSizeReportsSpicyCacheDocumentSize() {
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val title = "Sized Spicy Lyrics"

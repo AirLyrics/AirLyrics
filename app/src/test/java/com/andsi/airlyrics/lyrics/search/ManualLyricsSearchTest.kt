@@ -21,6 +21,28 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
         assertTrue(LyricsStorage.savePlainLyrics(context,target.title,target.artist,target.durationMs,
             "[00:01.00]Existing lyrics",target.album,source,"local"))
     }
+    @Test fun pastedSpotifyIdFetchesOnlyLyricsWithoutInventingMetadataOrWriting() {
+        val id="5l94Up12BJSjhH7Mhr2ji4"
+        val requests=mutableListOf<JSONObject>()
+        val service=ManualLyricsSearch(context) { request,_ ->
+            requests += JSONObject(request)
+            JSONObject(spicyFixture()).apply {
+                getJSONObject("track").put("id",id).put("title","").put("artist","").put("duration_ms",0)
+                getJSONObject("response").getJSONObject("Body").put("id",id)
+            }.toString()
+        }
+        val found=service.findBySpotifyId(id,null,target,token())!!
+        assertTrue(found.candidate.spotifyIdMatch)
+        assertEquals("",found.candidate.song.title)
+        assertEquals(0L,found.candidate.song.durationMs)
+        assertTrue(found.lyrics.plainLrc.isNotBlank())
+        assertEquals("fetch",requests.single().getString("operation"))
+        assertEquals(id,requests.single().getJSONObject("track").getString("id"))
+        assertEquals("",requests.single().getJSONObject("track").getString("title"))
+        assertNull(ManualLyricsSelectionStore.read(context,target))
+        assertTrue(SpicyLyricsCache.forContext(context).list().isEmpty())
+    }
+
     @Test fun previewFetchUsesExactIdAndNeverWritesLyrics() {
         val requests=mutableListOf<JSONObject>()
         val service=ManualLyricsSearch(context) { request,_ ->

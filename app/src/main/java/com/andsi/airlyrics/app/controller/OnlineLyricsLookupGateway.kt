@@ -49,6 +49,7 @@ internal object RepositoryOnlineLyricsLookupGateway : OnlineLyricsLookupGateway 
             artist = media.artist,
             album = media.album,
             durationMs = media.durationMs,
+            spotifyTrackId = media.spotifyTrackId,
             bypassLocal = true,
             forceSaveOnline = true,
             ignoreAutoSearchSetting = true,

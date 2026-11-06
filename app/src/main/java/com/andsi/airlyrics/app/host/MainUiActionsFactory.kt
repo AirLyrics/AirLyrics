@@ -13,7 +13,7 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
     return MainUiActions(
         openLyricsSearch = {
             CurrentMediaReader.readSelectedCurrentMedia(activity, MediaSourceStore.getSelectedPackage(activity))
-                ?.toSongIdentity()?.let { LyricsSearchActivity.open(activity, it) }
+                ?.let { LyricsSearchActivity.open(activity, it.toSongIdentity(), it.spotifyTrackId) }
         },
         selectPage = viewModel::selectPage,
         openSettingsSubPage = viewModel::openSettingsSubPage,

@@ -35,7 +35,8 @@ internal class LyricsSourcePages(
     context: Context,
     private val palette: AirLyricsPalette,
     private val session: LyricsSearchSession,
-    private val errorText: (Throwable) -> String
+    private val errorText: (Throwable) -> String,
+    private val onSpotifyIdSearch: () -> Unit
 ) : LinearLayout(context) {
     private val tabs = object : TabLayout(context) {
         override fun selectTab(tab: Tab?, updateIndicator: Boolean) {
@@ -159,7 +160,7 @@ internal class LyricsSourcePages(
         val result = results[source]
         val suffix = when {
             result?.candidates?.isNotEmpty() == true -> result.candidates.size.toString()
-            result?.loading == true -> ""
+            result?.loading == true || result?.searched == false -> ""
             result?.error != null -> context.getString(R.string.search_failed)
             else -> result?.candidates?.size?.toString().orEmpty()
         }
@@ -185,7 +186,7 @@ internal class LyricsSourcePages(
         })
     }
 
-    private enum class SourceVisual { RESULTS, LOADING, EMPTY, ERROR }
+    private enum class SourceVisual { RESULTS, LOADING, EMPTY, ERROR, IDLE }
 
     // Motion Prompt #069 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#069
     // Motion Prompt #072 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#072
@@ -204,6 +205,38 @@ internal class LyricsSourcePages(
             })
         }
         private val rows = Rows().also { list.adapter = it }
+        private val idSearch = com.google.android.material.button.MaterialButton(context).apply {
+            text = context.getString(R.string.search_spotify_id)
+            isAllCaps = false
+            letterSpacing = 0f
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            minimumHeight = dp(48)
+            setPadding(dp(4), 0, dp(12), 0)
+            backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+            setTextColor(palette.accent)
+            setIconResource(R.drawable.ic_air_search)
+            iconTint = ColorStateList.valueOf(palette.accent)
+            stateListAnimator = null
+            setOnClickListener { if (!blocksInteraction) onSpotifyIdSearch() }
+        }
+        private val byTitle = com.google.android.material.button.MaterialButton(context).apply {
+            text = context.getString(R.string.search_by_title)
+            isAllCaps = false
+            letterSpacing = 0f
+            minimumHeight = dp(48)
+            gravity = Gravity.START or Gravity.CENTER_VERTICAL
+            setPadding(dp(4), 0, dp(12), 0)
+            backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
+            setTextColor(palette.accent)
+            stateListAnimator = null
+            setOnClickListener { if (!blocksInteraction) session.searchSpicyByTitle() }
+        }
+        private val tools = LinearLayout(context).apply {
+            orientation = VERTICAL
+            addView(idSearch, LayoutParams(-1, -2))
+            addView(byTitle, LayoutParams(-1, -2))
+            visibility = GONE
+        }
         private val loading = LyricsLoadingView(context, palette)
         private val messageTitle = TextView(context).apply {
             textSize = 19f
@@ -224,7 +257,7 @@ internal class LyricsSourcePages(
             context.theme.resolveAttribute(android.R.attr.selectableItemBackground, selectable, true)
             setBackgroundResource(selectable.resourceId)
             isFocusable = true
-            setOnClickListener { if (visual != SourceVisual.RESULTS && visual != SourceVisual.LOADING)
+            setOnClickListener { if (visual == SourceVisual.EMPTY || visual == SourceVisual.ERROR)
                 source?.let(session::retry) }
         }
         // The clickable status row must pass vertical drags up to the AppBarLayout.
@@ -247,8 +280,15 @@ internal class LyricsSourcePages(
 
         init {
             // Keep this scroll child visible even without rows so blank space can expand the AppBarLayout.
-            frame.addView(list, FrameLayout.LayoutParams(-1, -1))
-            frame.addView(status, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+            val content = FrameLayout(context).apply {
+                addView(list, FrameLayout.LayoutParams(-1, -1))
+                addView(status, FrameLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) })
+            }
+            frame.addView(LinearLayout(context).apply {
+                orientation = VERTICAL
+                addView(tools, LayoutParams(-1, -2))
+                addView(content, LayoutParams(-1, 0, 1f))
+            }, FrameLayout.LayoutParams(-1, -1))
             list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
                 override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                     if (dy != 0) save()
@@ -272,11 +312,17 @@ internal class LyricsSourcePages(
             generation = session.resultsGeneration
             val result = results.getValue(key)
             shownResult = result
+            tools.visibility = if (key == PlainLyricsSearchSource.SPICY) VISIBLE else GONE
+            byTitle.visibility = if (result.spotifyId != null) VISIBLE else GONE
+            idSearch.text = result.spotifyId?.let { context.getString(R.string.search_spotify_id_active, it) }
+                ?: context.getString(R.string.search_spotify_id)
+            idSearch.contentDescription = context.getString(R.string.search_spotify_id)
             if (!samePage && result.loading && result.candidates.isEmpty()) resetScrollOnResult = true
             val nextVisual = when {
                 result.candidates.isNotEmpty() -> SourceVisual.RESULTS
                 result.loading -> SourceVisual.LOADING
                 result.error != null -> SourceVisual.ERROR
+                !result.searched -> SourceVisual.IDLE
                 else -> SourceVisual.EMPTY
             }
             val animate = sameSource && frame.isShown && !blocksInteraction &&
@@ -340,9 +386,16 @@ internal class LyricsSourcePages(
             val previous = visual
             visual = next
             if (next != SourceVisual.RESULTS && next != SourceVisual.LOADING) {
-                messageTitle.text = if (next == SourceVisual.ERROR) errorText(result.error!!) else
-                    context.getString(R.string.search_empty)
-                messageDetail.text = context.getString(R.string.search_retry)
+                messageTitle.text = when {
+                    next == SourceVisual.ERROR -> errorText(result.error!!)
+                    next == SourceVisual.IDLE -> context.getString(R.string.search_ready)
+                    result.spotifyId != null -> context.getString(R.string.search_spotify_id_empty)
+                    else -> context.getString(R.string.search_empty)
+                }
+                messageDetail.text = if (next == SourceVisual.IDLE) "" else context.getString(R.string.search_retry)
+                messageDetail.visibility = if (next == SourceVisual.IDLE) GONE else VISIBLE
+                message.isClickable = next != SourceVisual.IDLE
+                message.isFocusable = next != SourceVisual.IDLE
             }
             if (previous == next && status.isVisible) return
             status.animate().cancel()
@@ -412,7 +465,7 @@ internal class LyricsSourcePages(
             status.visibility = if (visual == SourceVisual.RESULTS ||
                 (blocksInteraction && visual == SourceVisual.LOADING)) GONE else VISIBLE
             loading.visibility = if (visual == SourceVisual.LOADING) VISIBLE else GONE
-            message.visibility = if (visual == SourceVisual.EMPTY || visual == SourceVisual.ERROR) VISIBLE else GONE
+            message.visibility = if (visual == SourceVisual.EMPTY || visual == SourceVisual.ERROR || visual == SourceVisual.IDLE) VISIBLE else GONE
         }
     }
 
@@ -442,6 +495,23 @@ internal class LyricsSourcePages(
             setTextColor(palette.textStrong)
             setTypeface(typeface, Typeface.BOLD)
         }
+        val idBadge = TextView(context).apply {
+            text = context.getString(R.string.search_id_badge)
+            textSize = 12f
+            setTextColor(palette.accent)
+            setPadding(dp(6), dp(2), dp(6), dp(2))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(5).toFloat()
+                setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(palette.accent, 20))
+            }
+            val check = androidx.appcompat.content.res.AppCompatResources.getDrawable(context, R.drawable.ic_air_check)?.mutate()
+            check?.setTint(palette.accent)
+            check?.setBounds(0, 0, dp(14), dp(14))
+            setCompoundDrawablesRelative(check, null, null, null)
+            compoundDrawablePadding = dp(3)
+            contentDescription = context.getString(R.string.search_id_match)
+            visibility = GONE
+        }
         val duration = TextView(context).apply { textSize = 12f; setTextColor(palette.textMuted) }
         val detail = TextView(context).apply { textSize = 13f; setTextColor(palette.textMuted) }
         init {
@@ -449,6 +519,7 @@ internal class LyricsSourcePages(
             box.minimumHeight = dp(80)
             box.setPadding(dp(4), dp(16), dp(4), dp(16))
             titleLine.addView(heading, LayoutParams(0, -2, 1f))
+            titleLine.addView(idBadge, LayoutParams(-2, -2).apply { marginStart = dp(8) })
             titleLine.addView(duration, LayoutParams(-2, -2).apply { marginStart = dp(16) })
             box.addView(titleLine)
             box.addView(detail, LayoutParams(-1, -2).apply { topMargin = dp(6) })
@@ -494,9 +565,10 @@ internal class LyricsSourcePages(
             holder.duration.text = candidate.song.durationMs.takeIf { it > 0 }?.let {
                 String.format(Locale.ROOT, "%d:%02d", it / 60000, it / 1000 % 60)
             }.orEmpty()
-            holder.heading.text = candidate.song.title
+            holder.heading.text = candidate.song.title.ifBlank { context.getString(R.string.search_spotify_track) }
+            holder.idBadge.visibility = if (candidate.spotifyIdMatch) VISIBLE else GONE
             holder.detail.text = listOf(candidate.song.artist, candidate.song.album)
-                .filter { it.isNotBlank() }.joinToString(" · ")
+                .filter { it.isNotBlank() }.joinToString(" · ").ifBlank { candidate.id }
             holder.box.setOnClickListener { if (canOpen) session.preview(candidate) }
         }
         override fun onViewRecycled(holder: Row) {

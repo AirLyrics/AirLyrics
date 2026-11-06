@@ -99,6 +99,7 @@ class LyricsSearchActivity : AppCompatActivity() {
     private var shownFeedback: String?=null
     private var inPreview=false
     private var currentSong: SongIdentity?=null
+    private var currentSpotifyTrackId: String?=null
     private var confirmation: AlertDialog?=null
     private var confirmationRevision: String?=null
     private var missingSourcesDialog: MissingSourcesDialog?=null
@@ -114,11 +115,13 @@ class LyricsSearchActivity : AppCompatActivity() {
                     override fun search(source:PlainLyricsSearchSource,query:SongIdentity,token:LyricsLookupCancellationToken)=service.search(source,query,token)
                     override fun resolveInternationalTitle(query:SongIdentity,token:LyricsLookupCancellationToken)=service.resolveInternationalTitle(query,token)
                     override fun fetch(candidate:LyricsCandidate,target:SongIdentity,token:LyricsLookupCancellationToken)=service.fetch(candidate,target,token)
+                    override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken)=service.findBySpotifyId(id,mediaSong,target,token)
                     override fun protectedRevision(target:SongIdentity)=service.protectedRevision(target)
                     override fun apply(target:SongIdentity,result:LyricsProviderResult,token:LyricsLookupCancellationToken,approvedRevision:String?)=service.apply(target,result,token,approvedRevision)
                 }
                 @Suppress("UNCHECKED_CAST")
-                return LyricsSearchSession(initial,LyricsSettingsStore.getPlainLyricsSearchSources(app).toSet(),access) as T
+                return LyricsSearchSession(initial,LyricsSettingsStore.getPlainLyricsSearchSources(app).toSet(),access,
+                    initialSpotifyTrackId=(savedInstanceState ?: intent.extras)?.getString("search.spotifyId")) as T
             }
         })[LyricsSearchSession::class.java]
         supportFragmentManager.setFragmentResultListener(LyricsSourcesSheet.RESULT,this) { _,result ->
@@ -127,6 +130,12 @@ class LyricsSearchActivity : AppCompatActivity() {
                 .filter { it in PlainLyricsSearchSource.onlineSources }.toSet()
             if(selected.isNotEmpty()) {
                 session.setSources(selected)
+            }
+        }
+        supportFragmentManager.setFragmentResultListener(SpotifyIdSearchDialog.RESULT,this) { _,result ->
+            result.getString(SpotifyIdSearchDialog.ID)?.let {
+                pendingSourceFocus=true
+                session.searchSpotifyId(it)
             }
         }
         val initialScroll = if (session.state.value.previewCandidate != null) session.previewScroll else session.resultsScroll
@@ -144,8 +153,10 @@ class LyricsSearchActivity : AppCompatActivity() {
                 launch { session.state.collect(::render) }
                 launch {
                     while (true) {
-                        currentSong=CurrentMediaReader.readSelectedCurrentMedia(this@LyricsSearchActivity,
-                            MediaSourceStore.getSelectedPackage(this@LyricsSearchActivity))?.toSongIdentity()
+                        val media=CurrentMediaReader.readSelectedCurrentMedia(this@LyricsSearchActivity,
+                            MediaSourceStore.getSelectedPackage(this@LyricsSearchActivity))
+                        currentSong=media?.toSongIdentity()
+                        currentSpotifyTrackId=media?.spotifyTrackId
                         renderTarget(session.state.value)
                         delay(1.seconds)
                     }
@@ -245,7 +256,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         header.addView(heading)
         targetText=text("")
         header.addView(targetText)
-        switchButton=button(R.string.search_switch_target) { currentSong?.let(session::switchTarget) }
+        switchButton=button(R.string.search_switch_target) { currentSong?.let { session.switchTarget(it,currentSpotifyTrackId) } }
         header.addView(switchButton)
         form=column().apply { setPadding(0,0,0,dp(12)) }
         header.addView(form)
@@ -305,7 +316,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         val loadingSlot=FrameLayout(this).apply { addView(loading,FrameLayout.LayoutParams(-1,-2)) }
         header.addView(loadingSlot,LinearLayout.LayoutParams(-1,0))
         loadingReveal=LyricsSearchReveal(loadingSlot,loading,0,150,dp(4).toFloat(),0f)
-        results=LyricsSourcePages(this,palette,session,::errorText)
+        results=LyricsSourcePages(this,palette,session,::errorText,::showSpotifyIdSearch)
         panel.addView(results,CoordinatorLayout.LayoutParams(-1,-1).apply {
             behavior=AppBarLayout.ScrollingViewBehavior()
         })
@@ -372,9 +383,9 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         form.visibility=if(!showPreview) View.VISIBLE else View.GONE
         renderResetIcons(state)
-        // Before searching there is no nested result list to bring a collapsed header back.
-        // Keep the form in a bounded scroll view, including when the keyboard reduces the viewport.
-        val queryOnly=!showPreview && state.results.isEmpty()
+        // Selected source pages provide nested scrolling even before the first query.
+        // With no sources, bound the form to the viewport so keyboard input remains reachable.
+        val queryOnly=!showPreview && state.sources.isEmpty()
         val headerParent=if(queryOnly) queryScroll else appBar
         if(header.parent !== headerParent) {
             (header.parent as? ViewGroup)?.removeView(header)
@@ -400,7 +411,7 @@ class LyricsSearchActivity : AppCompatActivity() {
             appBar.setExpanded(showPreview || !restoreCollapsed,false)
             if(showPreview) scroll.post { scroll.scrollTo(0,session.previewScroll) }
         }
-        val title=state.previewCandidate?.song?.title ?: getString(R.string.search_lyrics)
+        val title=state.previewCandidate?.let { it.song.title.ifBlank { getString(R.string.search_spotify_track) } } ?: getString(R.string.search_lyrics)
         if(headingTitle.text.toString()!=title) {
             headingTitle.text=title
             headingScroll.scrollTo(0,0)
@@ -431,7 +442,8 @@ class LyricsSearchActivity : AppCompatActivity() {
         renderTarget(state)
         val hadRenderedResults=shownResults!=null
         val hadResults=shownResults?.isNotEmpty()==true
-        if(shownResults!=state.results) { shownResults=state.results;results.render(state.results) }
+        val displayed=state.sources.associateWith { state.results[it] ?: SourceResults(searched=false) }
+        if(shownResults!=displayed) { shownResults=displayed;results.render(displayed) }
         if(pendingSourceFocus) appBar.post { focusSourcesIfReady() }
         if(showPreview && shownPreview!=state.preview) {
             shownPreview=state.preview
@@ -457,7 +469,7 @@ class LyricsSearchActivity : AppCompatActivity() {
                 }
             }
         }
-        paneMotion.show(showPreview,state.results.isNotEmpty())
+        paneMotion.show(showPreview,state.sources.isNotEmpty())
         if(hadRenderedResults && !hadResults && state.results.isNotEmpty() && !showPreview &&
             results.isAttachedToWindow && ValueAnimator.areAnimatorsEnabled()) {
             results.alpha=0f
@@ -484,6 +496,12 @@ class LyricsSearchActivity : AppCompatActivity() {
         if(!pendingSourceFocus || inPreview || session.state.value.results.isEmpty()) return
         pendingSourceFocus=false
         appBar.setExpanded(false,ValueAnimator.areAnimatorsEnabled())
+    }
+
+    private fun showSpotifyIdSearch() {
+        if (supportFragmentManager.findFragmentByTag(SpotifyIdSearchDialog.TAG) != null) return
+        SpotifyIdSearchDialog.create(session.state.value.results[PlainLyricsSearchSource.SPICY]?.spotifyId)
+            .show(supportFragmentManager,SpotifyIdSearchDialog.TAG)
     }
 
     private fun showMissingSourcesDialog() {
@@ -517,7 +535,8 @@ class LyricsSearchActivity : AppCompatActivity() {
         val album=song.album.takeUnless { it.trim().equals(song.title.trim(),ignoreCase=true) }.orEmpty()
         return listOf(
             listOf(song.artist,album).filter { it.isNotBlank() }.joinToString(" · "),
-            listOf(duration,localizedPlainLyricsProviderName(candidate.source.key)).filter { it.isNotBlank() }.joinToString(" · ")
+            listOfNotNull(duration,localizedPlainLyricsProviderName(candidate.source.key),
+                candidate.id.takeIf { candidate.spotifyIdMatch }).filter { it.isNotBlank() }.joinToString(" · ")
         ).filter { it.isNotBlank() }.joinToString("\n")
     }
     private fun unavailableMessage(reason:LyricsUnavailableReason?)=when(reason) {
@@ -625,7 +644,10 @@ class LyricsSearchActivity : AppCompatActivity() {
     }
     private fun dp(value:Int)=(value*resources.displayMetrics.density).toInt()
     override fun onSaveInstanceState(outState:Bundle) {
-        if (::session.isInitialized) writeTarget(outState,session.state.value.target)
+        if (::session.isInitialized) {
+            writeTarget(outState,session.state.value.target)
+            outState.putString("search.spotifyId",session.state.value.spotifyTrackId)
+        }
         super.onSaveInstanceState(outState)
     }
     override fun onDestroy() {
@@ -639,9 +661,9 @@ class LyricsSearchActivity : AppCompatActivity() {
     }
 
     companion object {
-        internal fun open(context:Context,target:SongIdentity) {
+        internal fun open(context:Context,target:SongIdentity,spotifyTrackId:String? = null) {
             if(target.title.isBlank()) return
-            context.startActivity(Intent(context,LyricsSearchActivity::class.java).putExtras(Bundle().apply { writeTarget(this,target) }))
+            context.startActivity(Intent(context,LyricsSearchActivity::class.java).putExtras(Bundle().apply { writeTarget(this,target); putString("search.spotifyId",spotifyTrackId) }))
         }
         private fun writeTarget(bundle:Bundle,target:SongIdentity) {
             bundle.putString("search.title",target.title);bundle.putString("search.artist",target.artist)

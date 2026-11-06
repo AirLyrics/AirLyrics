@@ -27,6 +27,25 @@ class LyricsRepositoryEngineTest {
     }
 
     @Test
+    fun spotifyIdentityReachesProviderWithoutChangingStorageMetadata() {
+        val id = "5l94Up12BJSjhH7Mhr2ji4"
+        var received: PlainLyricsSearchRequest? = null
+        val spicy = FakePlainLyricsProvider("spicy") { request ->
+            received = request
+            Result.success(result("spicy", "[00:01.00]exact"))
+        }
+        val engine = engine(
+            onlineProviders = mapOf(PlainLyricsSearchSource.SPICY to spicy),
+            settings = settings(plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY))
+        )
+        engine.findLyrics(context, "Song", "Artist", "Album", 180_000L,
+            spotifyTrackId = id).getOrThrow()
+        assertEquals(id, received?.spotifyTrackId)
+        assertEquals("Song", received?.title)
+        assertEquals("Album", received?.album)
+    }
+
+    @Test
     fun findLyrics_returnsLocalLyricsBeforeOnlineProvider() {
         val local = FakePlainLyricsProvider("local", Result.success(result("local", "[00:01.00]local")))
         val online = FakePlainLyricsProvider("netease", Result.success(result("netease", "[00:01.00]online")))

@@ -15,6 +15,7 @@ object CurrentMediaBroadcast {
     private const val ACTION_MEDIA_UPDATE = "com.andsi.airlyrics.MEDIA_UPDATE"
     private const val ACTION_MEDIA_SOURCE_LOST = "com.andsi.airlyrics.MEDIA_SOURCE_LOST"
 
+    private const val EXTRA_SPOTIFY_TRACK_ID = "spotifyTrackId"
     private const val EXTRA_TITLE = "title"
     private const val EXTRA_ARTIST = "artist"
     private const val EXTRA_ALBUM = "album"
@@ -39,6 +40,7 @@ object CurrentMediaBroadcast {
     fun mediaUpdateIntent(context: Context, media: CurrentMediaInfo): Intent {
         return Intent(ACTION_MEDIA_UPDATE).apply {
             setPackage(context.packageName)
+            putExtra(EXTRA_SPOTIFY_TRACK_ID, media.spotifyTrackId)
             putExtra(EXTRA_TITLE, media.title)
             putExtra(EXTRA_ARTIST, media.artist)
             putExtra(EXTRA_ALBUM, media.album)
@@ -70,6 +72,9 @@ object CurrentMediaBroadcast {
 
         return CurrentMediaInfo(
             sourcePackage = sourcePackage,
+            spotifyTrackId = com.andsi.airlyrics.core.model.SpotifyTrackId.fromMediaSession(
+                sourcePackage, intent.getStringExtra(EXTRA_SPOTIFY_TRACK_ID), null,
+            ),
             title = title,
             artist = intent.getStringExtra(EXTRA_ARTIST).orEmpty(),
             album = intent.getStringExtra(EXTRA_ALBUM).orEmpty(),

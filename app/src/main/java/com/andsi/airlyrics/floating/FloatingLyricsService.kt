@@ -86,6 +86,7 @@ open class FloatingLyricsService : Service() {
             artist = media.artist,
             album = media.album,
             durationMs = media.durationMs,
+            spotifyTrackId = media.spotifyTrackId,
             cancellationToken = cancellationToken,
             onInterimResult = { interim ->
                 syncHandler.post {
@@ -100,6 +101,7 @@ open class FloatingLyricsService : Service() {
     private var manualSearchObservation: AutoCloseable? = null
     internal var currentMedia: CurrentMediaInfo = CurrentMediaInfo.Empty
     internal var lastPlaybackLyricsKey: PlaybackLyricsKey? = null
+    internal var lastLookupSpotifyTrackId: String? = null
     internal var automaticOnlineLookupSuppressedSong: SongIdentity? = null
     internal var activeLyricsLookupRequestKey: LyricsLookupRequestKey? = null
     internal var selectedSourcePackage: String? = null

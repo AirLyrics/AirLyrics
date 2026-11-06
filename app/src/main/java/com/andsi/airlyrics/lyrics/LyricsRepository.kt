@@ -51,11 +51,12 @@ object LyricsRepository {
         cancellationToken: LyricsLookupCancellationToken? = null,
         searchMode: LyricsSearchMode = LyricsSearchMode.Original,
         searchOrigin: LyricsSearchOrigin = LyricsSearchOrigin.Automatic,
+        spotifyTrackId: String? = null,
         onInterimResult: ((LyricsProviderResult) -> Unit)? = null
     ): Result<LyricsProviderResult?> {
         return findLyricsWithProviders(context, onlinePlainLyricsProviders, settings, title, artist,
             album, durationMs, bypassLocal, forceSaveOnline, ignoreAutoSearchSetting,
-            cancellationToken, searchMode, searchOrigin, onInterimResult)
+            cancellationToken, searchMode, searchOrigin, spotifyTrackId, onInterimResult)
     }
 
     internal fun findLyricsWithProviders(
@@ -72,6 +73,7 @@ object LyricsRepository {
         cancellationToken: LyricsLookupCancellationToken? = null,
         searchMode: LyricsSearchMode = LyricsSearchMode.Original,
         searchOrigin: LyricsSearchOrigin = LyricsSearchOrigin.Automatic,
+        spotifyTrackId: String? = null,
         onInterimResult: ((LyricsProviderResult) -> Unit)? = null
     ): Result<LyricsProviderResult?> {
         val song = SongIdentity(title, artist, album, durationMs)
@@ -130,7 +132,8 @@ object LyricsRepository {
                     cancellationToken = token,
                     onInterimResult = onInterimResult,
                     searchMode = searchMode,
-                    searchOrigin = searchOrigin
+                    searchOrigin = searchOrigin,
+                    spotifyTrackId = spotifyTrackId
                 ).getOrThrow().let { result ->
                     token.throwIfCancellationRequested()
                     if (!settings.wordByWordLyricsEnabled) result?.copy(wordByWordLines = emptyList()) else result
@@ -175,6 +178,7 @@ internal class LyricsRepositoryEngine(
         cancellationToken: LyricsLookupCancellationToken? = null,
         searchMode: LyricsSearchMode = LyricsSearchMode.Original,
         searchOrigin: LyricsSearchOrigin = LyricsSearchOrigin.Automatic,
+        spotifyTrackId: String? = null,
         onInterimResult: ((LyricsProviderResult) -> Unit)? = null
     ): Result<LyricsProviderResult?> {
         val appContext = context.applicationContext
@@ -184,7 +188,8 @@ internal class LyricsRepositoryEngine(
             artist = artist,
             album = album,
             durationMs = durationMs,
-            cancellationToken = cancellationToken
+            cancellationToken = cancellationToken,
+            spotifyTrackId = spotifyTrackId
         )
 
         return runCatching {
