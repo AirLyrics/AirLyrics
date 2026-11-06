@@ -368,7 +368,6 @@ TTML de tiempo por palabra:
     <string name="ui_skipping_queue">Saltando en la cola</string>
     <string name="ui_slide_up">Deslizar hacia arriba</string>
     <string name="ui_soft_fade">Desvanecido suave</string>
-    <string name="ui_songs">canciones</string>
     <string name="ui_lyrics_settings_summary">Fuentes, almacenamiento y letras locales</string>
     <string name="ui_stopped">Detenido</string>
     <string name="ui_switch_animation">Animación de cambio</string>

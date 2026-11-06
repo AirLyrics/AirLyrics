@@ -368,7 +368,6 @@
     <string name="ui_skipping_queue">切換佇列</string>
     <string name="ui_slide_up">向上滑入</string>
     <string name="ui_soft_fade">柔和淡入</string>
-    <string name="ui_songs">首</string>
     <string name="ui_lyrics_settings_summary">歌詞來源、儲存與本機管理</string>
     <string name="ui_stopped">已停止</string>
     <string name="ui_switch_animation">歌詞切換動畫</string>

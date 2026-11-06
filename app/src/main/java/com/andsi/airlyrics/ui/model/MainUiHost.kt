@@ -14,7 +14,7 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
  */
 internal abstract class MainUiHost(
     val activity: AppCompatActivity,
-    private val uiStateProvider: () -> MainUiState
+    private val uiStateProvider: () -> MainUiState,
 ) : ContextWrapper(activity),
     MainChromeHost,
     MainRuntimeHost,
@@ -39,6 +39,7 @@ internal abstract class MainUiHost(
     var activeConfirmationId: String? = null
     var windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(0f, 0f, 1f)
     open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
+    open val mascotSession by lazy { MascotSession() }
     val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
     var savedLyricsSelectionBackHandler: (() -> Boolean)? = null
     /** A confirmed deletion keeps the current list in place until its data refresh can animate. */
@@ -50,21 +51,23 @@ internal abstract class MainUiHost(
     fun nextPanelControlKey(kind: String): String? = interactions.panel?.let { "panel.control.${it.name}.$kind.${panelControlIndex++}" }
 
     init {
-        activity.lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
-                interactionUi.capture()
-                onInteractionsStopped()
-            }
-            override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
-                auxiliaryRestoreJob?.cancel()
-                interactionUi.destroy()
-                auxiliaryDialogs.clear()
-                if (activity.isFinishing) {
-                    interactions.read("aux.order")?.getStringArrayList("items")?.toList()?.forEach { forgetAuxiliaryDialog(it) }
+        activity.lifecycle.addObserver(
+            object : androidx.lifecycle.DefaultLifecycleObserver {
+                override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                    interactionUi.capture()
+                    onInteractionsStopped()
                 }
-                onInteractionsDestroyed(activity.isFinishing)
-            }
-        })
+                override fun onDestroy(owner: androidx.lifecycle.LifecycleOwner) {
+                    auxiliaryRestoreJob?.cancel()
+                    interactionUi.destroy()
+                    auxiliaryDialogs.clear()
+                    if (activity.isFinishing) {
+                        interactions.read("aux.order")?.getStringArrayList("items")?.toList()?.forEach { forgetAuxiliaryDialog(it) }
+                    }
+                    onInteractionsDestroyed(activity.isFinishing)
+                }
+            },
+        )
     }
 
     protected open fun onInteractionsStopped() = Unit

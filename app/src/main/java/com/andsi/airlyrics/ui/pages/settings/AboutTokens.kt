@@ -9,13 +9,6 @@ internal object AboutTokens {
     const val GITHUB_ICON_SIZE_DP = 20
     const val CHANGE_LOG_HORIZONTAL_PADDING_DP = 28
     const val CHANGE_LOG_VERTICAL_PADDING_DP = 11
-    const val LOGO_PRESS_SCALE = 0.9f
-    const val LOGO_OVERSHOOT_SCALE = 1.1f
-    const val LOGO_PRESS_MS = 55L
-    const val LOGO_OVERSHOOT_MS = 115L
-    const val LOGO_SETTLE_MS = 160L
-    const val LOGO_OVERSHOOT = 1.55f
-    const val LOGO_SETTLE_OVERSHOOT = 1.15f
     const val SEGMENT_TEXT_SP = 17f
     const val SEGMENT_SIDE_MARGIN_DP = 22
     const val SEGMENT_GAP_DP = 8

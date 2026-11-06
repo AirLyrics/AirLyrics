@@ -93,7 +93,7 @@ import kotlin.math.roundToInt
 
 /** Bridges handwritten main UI helpers to the UI-facing host boundary. */
 internal class MainActivityUiHost(
-    private val graph: MainGraph
+    private val graph: MainGraph,
 ) : MainUiHost(graph.activity, { graph.state }) {
     private val viewRefs: MainActivityViewRefs
         get() = graph.viewRefs
@@ -110,6 +110,7 @@ internal class MainActivityUiHost(
         if (batchLyricsSession.begin(items, delete) && !delete) graph.launchers.selectBatchLyricsFiles()
     }
     override val interactions get() = graph.viewModel.interactions
+    override val mascotSession get() = graph.viewModel.mascotSession
 
     var editorObserverInstalled = false
     var editorChangeCallback: ((LocalLyricsUiChange) -> Unit)? = null
@@ -126,12 +127,12 @@ internal class MainActivityUiHost(
             searchWithMode = { media, mode -> graph.viewModel.searchOnlineLyrics(media, mode) },
             deleteEditor = {
                 if (savedLyricsDeletionRefresh != null) {
-                    editorSession.state.value?.item?.let {
-                        savedLyricsDeletionPending = setOf(it.indexKey.ifBlank { "root:${it.name}" })
+                    editorSession.state.value?.item?.run {
+                        savedLyricsDeletionPending = setOf(indexKey.ifBlank { "root:$name" })
                     }
                 }
                 editorSession.delete()
-            }
+            },
         )
     }
 
@@ -485,12 +486,22 @@ internal class MainActivityUiHost(
 
     override fun loadCurrentLyrics(force: Boolean, deliver: (CurrentLyricsUiState, Boolean) -> Unit) =
         loadLyrics(LyricsReadKind.CURRENT, force) { data, readSucceeded ->
-            val info = data.info
-            deliver(CurrentLyricsUiState(data.media?.toUiInfo(), info?.let { localizedLocalPlainLyricsSource(it) },
-                info?.friendlyTitle,
-                data.deletable.all,
-                data.wordByWord, data.wordEnabled, data.offset, data.media?.toOperationTarget(),
-                data.deletable.plain, data.deletable.wordByWord), readSucceeded)
+            val (media, info, wordByWord, wordEnabled, offset, _, _, deletable) = data
+            deliver(
+                CurrentLyricsUiState(
+                    media?.toUiInfo(),
+                    info?.let { localizedLocalPlainLyricsSource(it) },
+                    info?.friendlyTitle,
+                    deletable.all,
+                    wordByWord,
+                    wordEnabled,
+                    offset,
+                    media?.toOperationTarget(),
+                    deletable.plain,
+                    deletable.wordByWord,
+                ),
+                readSucceeded,
+            )
         }
 
     override fun loadRecentLyrics(force: Boolean, deliver: (RecentLyricsUiState, Boolean) -> Unit) =
@@ -684,20 +695,22 @@ private fun MainActivityUiHost.currentLocalLyricsItem(media: com.andsi.airlyrics
         artist = media.artist,
         duration = media.durationMs
     )
-    return LyricsStorage.LocalLyricsItem(
-        name = info.plainFileName,
-        modifiedTimeMillis = info.updatedAt,
-        sizeBytes = LyricsStorage.localLyricsFileSize(this, info.plainFileName),
-        title = info.title,
-        artist = info.artist,
-        album = info.album,
-        durationMs = info.durationMs,
-        indexKey = info.indexKey,
-        source = info.plainSource,
-        provider = info.plainProvider,
-        hasPlainLyrics = true,
-        hasWordByWordLyrics = hasWordByWordLyrics
-    ).let { toUiItem(it) }
+    return toUiItem(
+        LyricsStorage.LocalLyricsItem(
+            name = info.plainFileName,
+            modifiedTimeMillis = info.updatedAt,
+            sizeBytes = LyricsStorage.localLyricsFileSize(this, info.plainFileName),
+            title = info.title,
+            artist = info.artist,
+            album = info.album,
+            durationMs = info.durationMs,
+            indexKey = info.indexKey,
+            source = info.plainSource,
+            provider = info.plainProvider,
+            hasPlainLyrics = true,
+            hasWordByWordLyrics = hasWordByWordLyrics,
+        ),
+    )
 }
 
 private fun MainActivityUiHost.toUiItem(item: LyricsStorage.LocalLyricsItem): LocalLyricsUiItem {

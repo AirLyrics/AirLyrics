@@ -42,7 +42,8 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 // Motion Prompt #049 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#049
 internal fun createAboutSettingsPage(activity: MainUiHost, animateChildren: Boolean): View = with(activity) {
     val container = com.andsi.airlyrics.ui.components.pageContainer(activity)
-    val aboutHeader = aboutLogoHeader()
+    val dragOverlay = MascotDragOverlay(activity)
+    val aboutHeader = aboutLogoHeader(dragOverlay)
     val changelogButton = changeLogButton()
     container.addView(settingsBackHeader(getString(R.string.ui_about)))
     container.addView(aboutHeader)
@@ -52,7 +53,11 @@ internal fun createAboutSettingsPage(activity: MainUiHost, animateChildren: Bool
         // The first child contains the interactive logo and its Easter Egg; leave it untouched.
         revealAboutContent(page, aboutHeader.getChildAt(1), aboutHeader.getChildAt(2), changelogButton)
     }
-    return page
+    return FrameLayout(activity).apply {
+        clipChildren = false
+        addView(page, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        addView(dragOverlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
 }
 
 private fun MainUiHost.revealAboutContent(page: View, title: View, details: View, changelog: View) {
@@ -74,18 +79,20 @@ private fun MainUiHost.revealAboutContent(page: View, title: View, details: View
         title.translationY = 0f
         listOf(details, changelog).forEach {
             it.animate().cancel()
-            it.animate().setStartDelay(0L)
+            it.animate().startDelay = 0L
             it.alpha = 1f
             it.translationY = 0f
         }
     }
 
-    page.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-        override fun onViewAttachedToWindow(v: View) = Unit
-        override fun onViewDetachedFromWindow(v: View) = settle()
-    })
+    page.addOnAttachStateChangeListener(
+        object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) = settle()
+        },
+    )
     page.doOnPreDraw {
-        if (!page.isAttachedToWindow || !ValueAnimator.areAnimatorsEnabled() || title.height == 0) {
+        if ((!page.isAttachedToWindow) || (!ValueAnimator.areAnimatorsEnabled()) || (title.height == 0)) {
             settle()
             return@doOnPreDraw
         }
@@ -120,7 +127,7 @@ private fun MainUiHost.revealAboutContent(page: View, title: View, details: View
     }
 }
 
-private fun MainUiHost.aboutLogoHeader(): LinearLayout {
+private fun MainUiHost.aboutLogoHeader(dragOverlay: MascotDragOverlay): LinearLayout {
     val activity = this
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
@@ -142,7 +149,7 @@ private fun MainUiHost.aboutLogoHeader(): LinearLayout {
             )
             minimumHeight = dp(AboutTokens.HEADER_MIN_HEIGHT_DP)
 
-            addView(InteractiveLogoView(activity) {
+            addView(InteractiveLogoView(activity, dragOverlay) {
                 easterEggOverlay.onLogoClicked()
             }.apply {
                 layoutParams = FrameLayout.LayoutParams(dp(AboutTokens.LOGO_SIZE_DP), dp(AboutTokens.LOGO_SIZE_DP), Gravity.CENTER)
@@ -179,13 +186,14 @@ private fun MainUiHost.aboutLogoHeader(): LinearLayout {
                 layoutParams = lp
             })
 
-            addView(githubIconButton(activity))
+            addView(githubIconButton(activity, dragOverlay))
         })
     }
 }
 
-private fun MainUiHost.githubIconButton(activity: MainUiHost): View {
+private fun MainUiHost.githubIconButton(activity: MainUiHost, dragOverlay: MascotDragOverlay): View {
     return FrameLayout(activity).apply {
+        dragOverlay.setGithubTarget(this)
         layoutParams = LinearLayout.LayoutParams(dp(AboutTokens.GITHUB_BUTTON_WIDTH_DP), dp(AboutTokens.GITHUB_BUTTON_HEIGHT_DP))
         background = GradientDrawable().apply {
             cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()

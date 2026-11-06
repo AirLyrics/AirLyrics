@@ -39,6 +39,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.toSongIdentity
+import com.andsi.airlyrics.ui.model.MascotSession
 import com.andsi.airlyrics.ui.model.RefreshState
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
@@ -67,7 +68,7 @@ internal class MainViewModel(
     private val foregroundStateReader: ForegroundSnapshotReader,
     internal val mediaPlayerOrder: MediaPlayerOrder = MediaPlayerOrder(),
     private val floatingFontImporter: FloatingFontImportOperation,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel(), MainFloatingState {
     private var lyricsReadSession: com.andsi.airlyrics.app.interaction.LyricsReadSession? = null
     fun lyricsReads(context: Context): com.andsi.airlyrics.app.interaction.LyricsReadSession =
@@ -96,6 +97,7 @@ internal class MainViewModel(
             .also { editorSession = it }
 
     val interactions = com.andsi.airlyrics.ui.state.MainInteractionState(savedStateHandle)
+    val mascotSession = MascotSession()
 
     private val _uiState = MutableStateFlow(restoredState())
     val uiState: StateFlow<MainScreenState> = _uiState.asStateFlow()
@@ -144,8 +146,8 @@ internal class MainViewModel(
     }
 
     fun navigateBack(): Boolean {
-        val state = _uiState.value
-        if (state.currentPage != Page.SETTINGS || state.settingsSubPage == SettingsSubPage.HOME) {
+        val (currentPage, settingsSubPage) = _uiState.value
+        if ((currentPage != Page.SETTINGS) || (settingsSubPage == SettingsSubPage.HOME)) {
             return false
         }
         updateState {
@@ -616,8 +618,9 @@ internal class MainViewModel(
             )
             LyricsStorage.ImportLyricsResult.SaveFailed,
             LyricsStorage.ImportLyricsResult.SnapshotFailed,
-            is LyricsStorage.ImportLyricsResult.RollbackFailed ->
+            is LyricsStorage.ImportLyricsResult.RollbackFailed -> {
                 showMessage(R.string.ui_lrc_import_save_failed, error = true)
+            }
         }
     }
 
