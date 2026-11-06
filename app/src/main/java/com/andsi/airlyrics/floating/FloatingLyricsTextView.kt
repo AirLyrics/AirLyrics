@@ -23,36 +23,74 @@ import kotlin.math.roundToInt
 internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(context),
     LyricsTextAnimationTarget {
 
+    internal var lyricsGlowStyle = com.andsi.airlyrics.core.model.LyricsGlowStyle()
+        private set
+
+    internal fun updateLyricsGlow(style: com.andsi.airlyrics.core.model.LyricsGlowStyle) {
+        val normalized = style.normalized()
+        if (lyricsGlowStyle == normalized) return
+        lyricsGlowStyle = normalized
+        requestLayout()
+        invalidate()
+    }
+
     private val spicyDrawing = SpicyLyricsDrawing(this)
+    private val spicyLineDrawing = SpicyLineDrawing(this)
+    private var spicyLineActive = false
+    private var lineScaleInset = 0
     private val spicyBasePaint = android.text.TextPaint()
     private var spicyPosition: (() -> Long)? = null
     private var spicyPlaying = false
     private var spicyRequestedPosition: Long? = null
+    private val spicyVisibleRect = android.graphics.Rect()
     private val spicyFrame = object : Runnable {
         override fun run() {
             if (spicyPosition == null || !spicyPlaying || !isShown || windowVisibility != VISIBLE || !isAttachedToWindow) return
-            invalidate()
-            postOnAnimation(this)
+            if (getLocalVisibleRect(spicyVisibleRect)) {
+                invalidate()
+                postOnAnimation(this)
+            } else {
+                // A preview scrolled off screen needs no frames; resume when it returns.
+                postDelayed(this, 300L)
+            }
         }
     }
 
     internal fun updateSpicyPlayback(position: (() -> Long)?, playing: Boolean) {
-        val changed = (spicyPosition == null) != (position == null)
+        val lineActive = position != null && (text as? android.text.Spanned)?.getSpans(
+            0, text.length, SpicyLineSpan::class.java
+        )?.any { it.animated } == true
+        val changed = (spicyPosition == null) != (position == null) || lineActive != spicyLineActive
+        spicyLineActive = lineActive
         val requestedPosition = position?.invoke()
         val needsRedraw = changed || playing != spicyPlaying || requestedPosition != spicyRequestedPosition
         spicyRequestedPosition = requestedPosition
         spicyPosition = position
         spicyPlaying = playing
         removeCallbacks(spicyFrame)
-        if (position == null) spicyDrawing.reset()
+        if (position == null) {
+            spicyDrawing.reset()
+            spicyLineDrawing.reset()
+        }
         else if (playing && isShown && windowVisibility == VISIBLE && isAttachedToWindow) postOnAnimation(spicyFrame)
         if (changed) requestLayout()
         if (needsRedraw) invalidate()
     }
 
-    private fun spicyInset(): Int = if (spicyPosition != null) kotlin.math.ceil(textSize * .24f).toInt() else 0
-    override fun getCompoundPaddingLeft() = super.getCompoundPaddingLeft() + spicyInset()
-    override fun getCompoundPaddingRight() = super.getCompoundPaddingRight() + spicyInset()
+    private fun spicyInset(): Int = if (spicyPosition != null) maxOf(
+        kotlin.math.ceil(textSize * .24f).toInt(), LyricsHalo.outset(textSize, lyricsGlowStyle)
+    ) else 0
+    override fun getCompoundPaddingLeft() = super.getCompoundPaddingLeft() + spicyInset() + if (spicyLineActive) lineScaleInset else 0
+    override fun getCompoundPaddingRight() = super.getCompoundPaddingRight() + spicyInset() + if (spicyLineActive) lineScaleInset else 0
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // Reserve the 5% activation scale at either alignment without resizing the window per frame.
+        lineScaleInset = if (spicyLineActive) kotlin.math.ceil(
+            (MeasureSpec.getSize(widthMeasureSpec) - super.getCompoundPaddingLeft() - super.getCompoundPaddingRight())
+                .coerceAtLeast(0) * .05f
+        ).toInt() else 0
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
     override fun getCompoundPaddingTop() = super.getCompoundPaddingTop() + spicyInset()
     override fun getCompoundPaddingBottom() = super.getCompoundPaddingBottom() + spicyInset()
 
@@ -81,6 +119,7 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
             return
         }
         spicyDrawing.prepare()
+        spicyLineDrawing.prepare()
         // TextView may pass its own paint to CharacterStyle. The temporary ink mask
         // must not permanently clear the user's shadow (or leak transparent paint).
         spicyBasePaint.set(paint)
@@ -98,7 +137,10 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
         }.coerceAtLeast(0)
         canvas.withSave {
             translate(compoundPaddingLeft.toFloat(), (extendedPaddingTop + verticalOffset).toFloat())
-            spicyDrawing.draw(this, position(), SystemClock.uptimeMillis())
+            val currentPosition = position()
+            val now = SystemClock.uptimeMillis()
+            spicyDrawing.draw(this, currentPosition, now)
+            spicyLineDrawing.draw(this, currentPosition, now)
         }
     }
 
@@ -213,6 +255,7 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
     override fun onDetachedFromWindow() {
         removeCallbacks(spicyFrame)
         spicyDrawing.reset()
+        spicyLineDrawing.reset()
         cancelLyricsTextAnimation()
         setLyricsTextAnimationState(
             alpha = REST_ALPHA,

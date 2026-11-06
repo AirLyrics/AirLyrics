@@ -16,7 +16,8 @@ internal data class SpicyTiming(
 internal fun spicyTimings(
     line: WordByWordLine,
     text: String,
-    displaySegments: List<WordByWordSegment> = line.segments
+    displaySegments: List<WordByWordSegment> = line.segments,
+    allowEmphasis: Boolean = true
 ): List<SpicyTiming> {
     val iterator = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }
     val result = mutableListOf<SpicyTiming>()
@@ -44,7 +45,7 @@ internal fun spicyTimings(
             next = iterator.next()
         }
         val duration = segment.endMs - segment.startMs
-        val emphasis = motion && duration >= 1000 && boundaries.size > 2
+        val emphasis = allowEmphasis && motion && duration >= 1000 && boundaries.size > 2
         if (emphasis) {
             val count = boundaries.lastIndex
             // Spicy normal mode completes emphasized text 250ms before the sung word ends.

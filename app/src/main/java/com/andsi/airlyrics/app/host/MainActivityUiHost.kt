@@ -351,10 +351,24 @@ internal class MainActivityUiHost(
         text: android.text.SpannableStringBuilder,
         currentLine: String,
         start: Int,
-        color: Int
-    ) = applyPreviewLyricsHighlight(text, currentLine, start, color)
+        color: Int,
+        classic: Boolean
+    ) = applyPreviewLyricsHighlight(text, currentLine, start, color, classic)
+
+    override fun applyAnimatedFloatingPreviewLine(
+        text: android.text.SpannableStringBuilder,
+        start: Int, end: Int, lineOffset: Int, partIndex: Int, color: Int, animated: Boolean
+    ) = applyPreviewLyricsLine(text, start, end, lineOffset, partIndex, color, animated)
+
+    override fun updateFloatingPreviewPlayback(view: TextView, positionMs: Long) {
+        val target = view as? FloatingLyricsTextView ?: return
+        val text = view.text as? android.text.Spanned ?: return
+        if (text.getSpans(0, text.length, com.andsi.airlyrics.floating.SpicyLyricsSpan::class.java).none { it.haloOnly }) return
+        target.updateSpicyPlayback({ positionMs }, false)
+    }
 
     override fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle) {
+        (this as? FloatingLyricsTextView)?.updateLyricsGlow(style.glow)
         val thumbnailTextSizeSp = previewTextSizeSp(style.textSizeSp, lyricsLineDisplayMode())
         val thumbnailScale = (thumbnailTextSizeSp / style.textSizeSp.coerceAtLeast(1f)).coerceAtMost(1f)
         textSize = thumbnailTextSizeSp

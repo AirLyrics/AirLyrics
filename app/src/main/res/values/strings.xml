@@ -518,4 +518,10 @@ Word-timed TTML:
     <string name="search_ready">Choose Search to find lyrics</string>
     <string name="search_id_match">Fetched using Spotify ID</string>
     <string name="search_id_badge" translatable="false">ID</string>
+    <string name="ui_highlight_effects">Highlight effects</string>
+    <string name="ui_enable_glow">Turn on glow</string>
+    <string name="ui_disable_glow">Turn off glow</string>
+    <string name="ui_glow_strength">Glow strength</string>
+    <string name="ui_glow_spread">Glow spread</string>
+    <string name="ui_glow">Glow</string>
 </resources>

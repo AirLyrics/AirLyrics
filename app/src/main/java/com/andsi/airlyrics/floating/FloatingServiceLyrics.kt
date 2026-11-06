@@ -27,7 +27,12 @@ internal fun FloatingLyricsService.startLyricsSync() {
     if (!shouldSyncLyrics()) return
 
     renderer.refresh()
-    syncHandler.postDelayed(syncRunnable, lyricsSyncIntervalMs())
+    scheduleNextLyricsSync()
+}
+
+internal fun FloatingLyricsService.scheduleNextLyricsSync() {
+    syncHandler.removeCallbacks(syncRunnable)
+    if (shouldSyncLyrics()) syncHandler.postDelayed(syncRunnable, lyricsSyncIntervalMs())
 }
 
 internal fun FloatingLyricsService.stopLyricsSync() {
@@ -35,12 +40,13 @@ internal fun FloatingLyricsService.stopLyricsSync() {
 }
 
 internal fun FloatingLyricsService.lyricsSyncIntervalMs(): Long {
-    return if (renderer.isWordByWordActive()) 40L else 300L
+    return renderer.nextSyncDelayMs(if (renderer.isWordByWordActive()) 40L else 300L)
 }
 
 internal fun FloatingLyricsService.applyLyricsOffset(offsetMs: Long) {
     if (renderer.setLyricsOffset(offsetMs)) {
         renderer.refresh()
+        scheduleNextLyricsSync()
     }
 }
 
@@ -156,6 +162,7 @@ internal fun FloatingLyricsService.applyLyricsResult(
         } else {
             markLyricsUnavailable(media.playbackLyricsKey())
         }
+        scheduleNextLyricsSync()
         return
     }
 
@@ -230,6 +237,7 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
         } else {
             markLyricsUnavailable(media.playbackLyricsKey())
         }
+        scheduleNextLyricsSync()
     } else {
         renderer.show { getString(R.string.ui_lyrics_import_failed) }
     }

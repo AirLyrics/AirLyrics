@@ -21,6 +21,9 @@ internal fun FloatingLyricsStyle.undoChangesTo(next: FloatingLyricsStyle): Bundl
     if (gravity != next.gravity) putInt("gravity", gravity)
     if (fontFamily != next.fontFamily) putString("fontFamily", fontFamily.key)
     if (fontWeight != next.fontWeight) putInt("fontWeight", fontWeight)
+    if (glow.enabled != next.glow.enabled) putBoolean("glowEnabled", glow.enabled)
+    if (glow.strengthPercent != next.glow.strengthPercent) putInt("glowStrengthPercent", glow.strengthPercent)
+    if (glow.spreadPercent != next.glow.spreadPercent) putInt("glowSpreadPercent", glow.spreadPercent)
 }
 
 internal fun FloatingLyricsStyle.restoreFields(snapshot: Bundle): FloatingLyricsStyle = copy(
@@ -40,4 +43,9 @@ internal fun FloatingLyricsStyle.restoreFields(snapshot: Bundle): FloatingLyrics
     gravity = if (snapshot.containsKey("gravity")) snapshot.getInt("gravity") else gravity,
     fontFamily = if (snapshot.containsKey("fontFamily")) FloatingLyricsFontFamily.fromKey(snapshot.getString("fontFamily")) else fontFamily,
     fontWeight = if (snapshot.containsKey("fontWeight")) snapshot.getInt("fontWeight") else fontWeight,
+    glow = glow.copy(
+        enabled = if (snapshot.containsKey("glowEnabled")) snapshot.getBoolean("glowEnabled") else glow.enabled,
+        strengthPercent = if (snapshot.containsKey("glowStrengthPercent")) snapshot.getInt("glowStrengthPercent") else glow.strengthPercent,
+        spreadPercent = if (snapshot.containsKey("glowSpreadPercent")) snapshot.getInt("glowSpreadPercent") else glow.spreadPercent
+    ).normalized()
 )

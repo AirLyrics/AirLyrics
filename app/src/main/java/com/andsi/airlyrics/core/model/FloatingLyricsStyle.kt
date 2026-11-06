@@ -22,7 +22,8 @@ data class FloatingLyricsStyle(
     val maxWidthPercent: Int,
     val gravity: Int,
     val fontFamily: FloatingLyricsFontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT,
-    val fontWeight: Int = FloatingLyricsFontWeight.DEFAULT
+    val fontWeight: Int = FloatingLyricsFontWeight.DEFAULT,
+    val glow: LyricsGlowStyle = LyricsGlowStyle()
 )
 
 /** Font sources that can be applied only to the floating lyrics text. */

@@ -190,10 +190,6 @@ class SpicyLyricsTest {
     }
 
     @Test fun sourceCurvesSeparateOrdinaryGlowFromLetterProximity() {
-        assertEquals(.35f, SpicyLyricsCurves.glowOpacity(emphasized = false, strength = 1f))
-        assertEquals(1f, SpicyLyricsCurves.glowOpacity(emphasized = true, strength = 1f))
-        assertEquals(6f, SpicyLyricsCurves.glowRadius(56f, emphasized = false, strength = 1f))
-        assertEquals(16f, SpicyLyricsCurves.glowRadius(56f, emphasized = true, strength = 1f))
         val word = SpicyTiming(0, 4, 0, 800, emphasized = false, motion = true)
         val pose = SpicyLyricsCurves.Pose()
         SpicyLyricsCurves.targets(word, 120, pose)

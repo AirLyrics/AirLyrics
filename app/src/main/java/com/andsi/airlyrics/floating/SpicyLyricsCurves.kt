@@ -16,6 +16,10 @@ internal object SpicyLyricsCurves {
     private val letterLift = NaturalSpline(floatArrayOf(0f, .9f, 1f), floatArrayOf(.01f, -1f / 56, 0f))
     private val glow = NaturalSpline(floatArrayOf(0f, .15f, .6f, 1f), floatArrayOf(0f, 1f, 1f, 0f))
 
+    private val lineGlow = NaturalSpline(floatArrayOf(0f, .5f, 1f), floatArrayOf(0f, 1f, 0f))
+
+    fun lineGlow(progress: Float): Float = lineGlow.at(progress).coerceIn(0f, 1f)
+
     class Pose(var scale: Float = .95f, var lift: Float = .01f, var glow: Float = 0f)
 
     fun targets(timing: SpicyTiming, position: Long, out: Pose) {
@@ -53,13 +57,6 @@ internal object SpicyLyricsCurves {
         val p = spicyProgress(position, timing.startMs, timing.endMs)
         return if (timing.emphasized) kotlin.math.sin(p * Math.PI / 2).toFloat() else p
     }
-
-    fun glowOpacity(emphasized: Boolean, strength: Float): Float =
-        (strength * if (emphasized) 1.85f else .35f).coerceIn(0f, 1f)
-
-    /** Match 4+2g / 4+12g CSS-pixel radii at the reference's 3.5rem (56px) size. */
-    fun glowRadius(textSize: Float, emphasized: Boolean, strength: Float): Float =
-        textSize / 56f * (4f + (if (emphasized) 12f else 2f) * strength)
 }
 
 /** Natural cubic spline, matching cubic-spline's zero endpoint second derivatives. */

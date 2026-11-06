@@ -56,7 +56,7 @@ internal fun FloatingPageScope.playPreviewSwitchAnimation() {
     val offset: Float
     val scale: Float
     when (switchAnimationMode()) {
-        LyricsSwitchAnimationMode.NONE -> {
+        LyricsSwitchAnimationMode.NONE, LyricsSwitchAnimationMode.SPICY -> {
             duration = 0L
             offset = 0f
             scale = 1f

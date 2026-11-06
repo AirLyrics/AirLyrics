@@ -14,6 +14,24 @@ class PlainLyricsDisplayFormatterTest {
     )
 
     @Test
+    fun timedRangesSkipEqualTimestampsAndKeepExplicitBlankEnds() {
+        val lines = listOf(LrcLine(1000, "Again", "再一次"), LrcLine(1000, "Same time"),
+            LrcLine(2000, ""), LrcLine(3000, "Last"))
+        val rendered = PlainLyricsDisplayFormatter.formatWithTiming(lines, 0,
+            LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION,
+            lineMode = LyricsLineDisplayMode.CURRENT_AND_NEXT)
+        assertEquals(listOf("Again", "再一次", "Same time"),
+            rendered.ranges.map { rendered.text.substring(it.start, it.end) })
+        assertEquals(listOf(2000L, 2000L, 2000L), rendered.ranges.map { it.endMs })
+        val last = PlainLyricsDisplayFormatter.formatWithTiming(lines, 3,
+            LyricsContentDisplayMode.ORIGINAL_ONLY, lineMode = LyricsLineDisplayMode.CURRENT_ONLY)
+        assertEquals(8000L, last.ranges.single().endMs)
+        val missingTranslation = PlainLyricsDisplayFormatter.formatWithTiming(lines, 3,
+            LyricsContentDisplayMode.TRANSLATION_ONLY, lineMode = LyricsLineDisplayMode.CURRENT_ONLY)
+        assertEquals(emptyList<PlainLyricsTextRange>(), missingTranslation.ranges)
+    }
+
+    @Test
     fun format_returnsEmptyTextForInvalidIndexes() {
         assertEquals(
             "",

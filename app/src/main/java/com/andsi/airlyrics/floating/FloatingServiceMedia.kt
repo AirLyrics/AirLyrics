@@ -86,6 +86,7 @@ internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo
         com.andsi.airlyrics.settings.store.LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
     if (samePlayback && !retryWithId) {
         renderer.tick()
+        scheduleNextLyricsSync()
         return true
     }
     lastLookupSpotifyTrackId = media.spotifyTrackId

@@ -17,6 +17,7 @@ internal class FloatingPreviewClassicLoop(
     private val sampleLine: () -> String?,
     private val highlightColor: () -> Int,
     private val progressForLine: (String) -> (Long) -> FloatingPreviewHighlightProgress,
+    private val onPositionChanged: (Long) -> Unit = {},
     private val isVisible: () -> Boolean = {
         view.isAttachedToWindow && view.isShown && view.windowVisibility == View.VISIBLE &&
             view.getGlobalVisibleRect(Rect())
@@ -59,12 +60,15 @@ internal class FloatingPreviewClassicLoop(
         if (ValueAnimator.areAnimatorsEnabled() && isVisible()) {
             if (animator == null) {
                 highlighter?.renderAt(0L)
+                onPositionChanged(0L)
                 animator = ValueAnimator.ofInt(0, FloatingPageTokens.PREVIEW_CLASSIC_CYCLE_MS.toInt()).apply {
                     duration = FloatingPageTokens.PREVIEW_CLASSIC_CYCLE_MS
                     repeatCount = ValueAnimator.INFINITE
                     interpolator = LinearInterpolator()
                     addUpdateListener { animation ->
-                        highlighter?.renderAt((animation.animatedValue as Int).toLong())
+                        val position = (animation.animatedValue as Int).toLong()
+                        highlighter?.renderAt(position)
+                        onPositionChanged(position)
                     }
                     start()
                 }
@@ -72,6 +76,7 @@ internal class FloatingPreviewClassicLoop(
         } else {
             stopAnimator()
             highlighter?.renderAt(FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS / 2)
+            onPositionChanged(FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS / 2)
         }
     }
 

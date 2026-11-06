@@ -62,8 +62,14 @@ internal interface FloatingUiHost {
         text: android.text.SpannableStringBuilder,
         currentLine: String,
         start: Int,
-        color: Int
+        color: Int,
+        classic: Boolean = false
     )
+    fun applyAnimatedFloatingPreviewLine(
+        text: android.text.SpannableStringBuilder,
+        start: Int, end: Int, lineOffset: Int, partIndex: Int, color: Int, animated: Boolean = true
+    )
+    fun updateFloatingPreviewPlayback(view: TextView, positionMs: Long)
     fun TextView.applyFloatingPreviewStyle(style: FloatingLyricsStyle)
     fun applyFloatingPreset(preset: String)
     fun applyFloatingStyle(style: FloatingLyricsStyle)

@@ -104,13 +104,15 @@ internal class FloatingPageScope(
                     Color.alpha(previewStyle.textColor)
                 )
             },
-            progressForLine = host::classicPreviewProgressForLine
+            progressForLine = host::classicPreviewProgressForLine,
+            onPositionChanged = { position -> host.updateFloatingPreviewPlayback(createdPreviewHandle.lyricTextView, position) }
         )
         previewSwitchLoop = FloatingPreviewSwitchLoop(
             view = createdPreviewHandle.lyricTextView,
             shouldAnimate = {
                 switchAnimationMode() != LyricsSwitchAnimationMode.NONE &&
-                    !hasAnimatedWordPreview()
+                    switchAnimationMode() != LyricsSwitchAnimationMode.SPICY &&
+                    !hasAnimatedPreview()
             },
             play = ::playPreviewSwitchAnimation
         )
@@ -235,12 +237,33 @@ internal class FloatingPageScope(
     }
 
     internal fun previewLyricsText(previewStyle: FloatingLyricsStyle): CharSequence {
-        return formattedPreviewLyrics(
+        val lines = visiblePreviewLyricLines()
+        val result = SpannableStringBuilder(formattedPreviewLyrics(
             mode = contentDisplayMode(),
-            lines = visiblePreviewLyricLines(),
+            lines = lines,
             textColor = previewStyle.textColor,
             scriptPreference = scriptPreference()
-        )
+        ))
+        if (switchAnimationMode() != LyricsSwitchAnimationMode.SPICY && !previewStyle.glow.enabled) return result
+        val currentIndex = lines.indexOfFirst { it.isCurrent }
+        var cursor = 0
+        for ((index, line) in lines.withIndex()) {
+            val rendered = com.andsi.airlyrics.core.text.LyricsDisplayPolicy.render(
+                contentDisplayMode(), line.original, line.translation, scriptPreference()
+            )
+            listOfNotNull(rendered.primary.takeIf { it.isNotBlank() }, rendered.secondary?.takeIf { it.isNotBlank() })
+                .forEachIndexed { partIndex, part ->
+                    val start = result.indexOf(part, cursor)
+                    if (start >= 0) {
+                        host.applyAnimatedFloatingPreviewLine(result, start, start + part.length,
+                            index - currentIndex, partIndex,
+                            AirColorUtils.multiplyAlpha(previewStyle.wordByWordHighlightColor, Color.alpha(previewStyle.textColor)),
+                            animated = switchAnimationMode() == LyricsSwitchAnimationMode.SPICY)
+                        cursor = start + part.length
+                    }
+                }
+        }
+        return result
     }
 
     internal fun wordByWordPreviewText(previewStyle: FloatingLyricsStyle): CharSequence {
@@ -256,12 +279,13 @@ internal class FloatingPageScope(
         )
         if (contentDisplayMode() != LyricsContentDisplayMode.TRANSLATION_ONLY) {
             val currentLineStart = result.toString().indexOf(currentLine.original)
-            if (currentLineStart >= 0 && host.wordByWordAnimationMode() == WordByWordAnimationMode.SPICY) {
+            if (currentLineStart >= 0 && (host.wordByWordAnimationMode() == WordByWordAnimationMode.SPICY || previewStyle.glow.enabled)) {
                 host.applyAnimatedFloatingPreviewHighlight(
                     result,
                     currentLine.original,
                     currentLineStart,
-                    AirColorUtils.multiplyAlpha(previewStyle.wordByWordHighlightColor, Color.alpha(previewStyle.textColor))
+                    AirColorUtils.multiplyAlpha(previewStyle.wordByWordHighlightColor, Color.alpha(previewStyle.textColor)),
+                    classic = host.wordByWordAnimationMode() == WordByWordAnimationMode.CLASSIC
                 )
             }
         }
@@ -350,7 +374,7 @@ internal class FloatingPageScope(
         updateFloatingTileSubtitle(host.getString(R.string.ui_lyrics_offset), host.uiActions.currentLyricsOffsetSummary())
         updateFloatingTileSubtitle(host.getString(R.string.ui_switch_animation), host.localizedLyricsSwitchAnimationTitle(switchAnimationMode()))
         updateFloatingTileSubtitle(host.getString(R.string.ui_word_by_word_lyrics), wordByWordLyricsSubtitle())
-        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_color), compactColorSummary(latestStyle.wordByWordHighlightColor))
+        updateFloatingTileSubtitle(host.getString(R.string.ui_highlight_effects), highlightEffectsSubtitle(latestStyle))
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_control), host.floatingDisplaySummary())
         updateFloatingTileSubtitle(
             host.getString(R.string.ui_auto_hide),
@@ -382,7 +406,8 @@ internal class FloatingPageScope(
     }
 
     internal fun applyLyricsAnimationSettingsChanged() {
-        if (!hasAnimatedWordPreview()) playPreviewSwitchAnimation()
+        renderFloatingPreview(style())
+        if (switchAnimationMode() == LyricsSwitchAnimationMode.SPICY || !hasAnimatedPreview()) playPreviewSwitchAnimation()
         syncPreviewAnimations()
         refreshFloatingSettingTiles()
         host.notifyFloatingStyleChanged()
@@ -449,6 +474,21 @@ internal class FloatingPageScope(
         )
     }
 
+    internal fun highlightEffectsSubtitle(current: FloatingLyricsStyle = style()): String =
+        compactColorSummary(current.wordByWordHighlightColor) + " · " +
+            host.getString(R.string.ui_glow) + ": " +
+            host.getString(if (current.glow.enabled) R.string.ui_on else R.string.ui_off)
+
+    internal fun previewFloatingGlow(glow: com.andsi.airlyrics.core.model.LyricsGlowStyle) {
+        val previewStyle = style().copy(glow = glow)
+        previewStyleForAnimation = previewStyle
+        // Preserve the playback phase while dragging: restarting at zero would hide the halo.
+        previewHandle?.lyricTextView?.let { view ->
+            with(host) { view.applyFloatingPreviewStyle(previewStyle) }
+        }
+        previewHandle?.bodyView?.requestLayout()
+    }
+
     private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {
         previewStyleForAnimation = latestStyle
         previewHandle?.updateText?.invoke(if (wordByWordLyricsEnabled()) {
@@ -465,7 +505,7 @@ internal class FloatingPageScope(
         syncPreviewAnimations()
     }
 
-    private fun hasAnimatedWordPreview(): Boolean {
+    private fun hasAnimatedPreview(): Boolean {
         if (previewClassicLoop?.hasTarget == true) return true
         val view = previewHandle?.lyricTextView ?: return false
         return host.hasAnimatedFloatingPreviewHighlight(view)

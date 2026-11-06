@@ -515,4 +515,10 @@
     <string name="search_spotify_track">Spotify 曲目</string>
     <string name="search_ready">点击搜索查找歌词</string>
     <string name="search_id_match">通过 Spotify ID 获取</string>
+    <string name="ui_highlight_effects">高亮效果</string>
+    <string name="ui_enable_glow">开启发光</string>
+    <string name="ui_disable_glow">关闭发光</string>
+    <string name="ui_glow_strength">发光强度</string>
+    <string name="ui_glow_spread">扩散范围</string>
+    <string name="ui_glow">发光</string>
 </resources>

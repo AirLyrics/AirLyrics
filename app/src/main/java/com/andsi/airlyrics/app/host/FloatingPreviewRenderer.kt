@@ -9,6 +9,8 @@ import android.widget.TextView
 import com.andsi.airlyrics.floating.FloatingLyricsTextView
 import com.andsi.airlyrics.floating.LyricsTextAnimationTarget
 import com.andsi.airlyrics.floating.SpicyLyricsSpan
+import com.andsi.airlyrics.floating.SpicyLineSpan
+import com.andsi.airlyrics.floating.SpicyLineTiming
 import com.andsi.airlyrics.floating.spicyTimings
 import com.andsi.airlyrics.floating.wordByWordHighlightProgress
 import com.andsi.airlyrics.lyrics.WordByWordLine
@@ -20,18 +22,26 @@ internal fun applyPreviewLyricsHighlight(
     text: SpannableStringBuilder,
     currentLine: String,
     start: Int,
-    color: Int
+    color: Int,
+    classic: Boolean = false
 ) {
     val words = Regex("\\S+").findAll(currentLine).toList()
     var time = 0L
     val segments = words.mapIndexed { index, word ->
-        val duration = if (index == words.lastIndex) 1800L else 450L
-        WordByWordSegment(word.value, time, time + duration).also { time += duration }
+        if (classic) {
+            val fill = FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS
+            time = fill
+            WordByWordSegment(word.value, fill * word.range.first / currentLine.length,
+                fill * (word.range.last + 1) / currentLine.length)
+        } else {
+            val duration = if (index == words.lastIndex) 1800L else 450L
+            WordByWordSegment(word.value, time, time + duration).also { time += duration }
+        }
     }
     val line = WordByWordLine(0L, time, currentLine, segments)
-    for (timing in spicyTimings(line, currentLine)) {
+    for (timing in spicyTimings(line, currentLine, allowEmphasis = !classic)) {
         text.setSpan(
-            SpicyLyricsSpan(timing, color),
+            SpicyLyricsSpan(timing, color, haloOnly = classic),
             start + timing.start,
             start + timing.end,
             Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
@@ -39,21 +49,34 @@ internal fun applyPreviewLyricsHighlight(
     }
 }
 
+internal fun applyPreviewLyricsLine(
+    text: SpannableStringBuilder, start: Int, end: Int, lineOffset: Int, partIndex: Int, color: Int, animated: Boolean = true
+) {
+    val startMs = lineOffset * 4_000L
+    text.setSpan(SpicyLineSpan(SpicyLineTiming(lineOffset, partIndex, startMs, startMs + 4_000L), color, animated),
+        start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+}
+
 internal fun updatePreviewLyricsText(view: TextView, text: CharSequence) {
     view.text = text
     if (view !is FloatingLyricsTextView) return
     val spans = (view.text as? Spanned)?.getSpans(0, view.text.length, SpicyLyricsSpan::class.java).orEmpty()
     val endMs = spans.maxOfOrNull { it.timing.endMs } ?: 0L
+    val lineSpans = (view.text as? Spanned)?.getSpans(0, view.text.length, SpicyLineSpan::class.java).orEmpty()
+    val lineEnd = lineSpans.firstOrNull { it.timing.startMs == 0L }?.timing?.endMs ?: 0L
     val started = SystemClock.uptimeMillis()
-    view.updateSpicyPlayback(
-        if (endMs > 0) ({ (SystemClock.uptimeMillis() - started) % (endMs + 1000) }) else null,
-        true
-    )
+    val clock: (() -> Long)? = when {
+        lineEnd > 0 -> ({ ((SystemClock.uptimeMillis() - started) % (lineEnd + 800)).coerceAtMost(lineEnd - 1) })
+        endMs > 0 -> ({ (SystemClock.uptimeMillis() - started) % (endMs + 1000) })
+        else -> null
+    }
+    view.updateSpicyPlayback(clock, spans.none { it.haloOnly })
 }
 
 internal fun hasAnimatedPreviewLyricsHighlight(view: TextView): Boolean {
     val text = view.text as? Spanned ?: return false
-    return text.getSpans(0, text.length, SpicyLyricsSpan::class.java).isNotEmpty()
+    return text.getSpans(0, text.length, SpicyLyricsSpan::class.java).any { !it.haloOnly } ||
+        text.getSpans(0, text.length, SpicyLineSpan::class.java).any { it.animated }
 }
 
 internal fun animatePreviewLyricsText(view: TextView, durationMs: Long, offsetY: Float, scale: Float) {

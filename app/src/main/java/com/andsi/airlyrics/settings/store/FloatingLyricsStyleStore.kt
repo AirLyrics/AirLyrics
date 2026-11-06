@@ -8,6 +8,7 @@ import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.LyricsGlowStyle
 import com.andsi.airlyrics.core.prefs.PreferenceStore
 import com.andsi.airlyrics.core.prefs.prefs as preferenceStore
 import com.andsi.airlyrics.core.color.AirColorUtils
@@ -20,6 +21,9 @@ object FloatingLyricsStyleStore {
     private const val KEY_TEXT_COLOR = "text_color"
     // Persisted compatibility contract. Do not change the serialized value.
     private const val KEY_WORD_BY_WORD_HIGHLIGHT_COLOR = "karaoke_highlight_color"
+    private const val KEY_GLOW_ENABLED = "glow_enabled"
+    private const val KEY_GLOW_STRENGTH = "glow_strength_percent"
+    private const val KEY_GLOW_SPREAD = "glow_spread_percent"
     private const val KEY_SHADOW_COLOR = "shadow_color"
     private const val KEY_SHADOW_RADIUS = "shadow_radius"
     private const val KEY_BACKGROUND_ENABLED = "background_enabled"
@@ -107,6 +111,15 @@ object FloatingLyricsStyleStore {
         prefs(context).setBoolean(KEY_PREVIEW_EXPANDED, expanded)
     }
 
+    fun getGlowStyle(context: Context): LyricsGlowStyle {
+        val prefs = prefs(context)
+        return LyricsGlowStyle(
+            prefs.getBoolean(KEY_GLOW_ENABLED, true),
+            prefs.getInt(KEY_GLOW_STRENGTH, 100),
+            prefs.getInt(KEY_GLOW_SPREAD, 100)
+        ).normalized()
+    }
+
     fun getStyle(context: Context): FloatingLyricsStyle {
         val prefs = prefs(context)
         return FloatingLyricsStyle(
@@ -129,7 +142,8 @@ object FloatingLyricsStyleStore {
             ),
             fontWeight = FloatingLyricsFontWeight.normalize(
                 prefs.getInt(KEY_FONT_WEIGHT, FloatingLyricsFontWeight.DEFAULT)
-            )
+            ),
+            glow = getGlowStyle(context)
         )
     }
 
@@ -161,6 +175,10 @@ object FloatingLyricsStyleStore {
             putFloat(KEY_TEXT_SIZE, style.textSizeSp)
             putInt(KEY_TEXT_COLOR, style.textColor)
             putInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, style.wordByWordHighlightColor)
+            val glow = style.glow.normalized()
+            putBoolean(KEY_GLOW_ENABLED, glow.enabled)
+            putInt(KEY_GLOW_STRENGTH, glow.strengthPercent)
+            putInt(KEY_GLOW_SPREAD, glow.spreadPercent)
             putInt(KEY_SHADOW_COLOR, style.shadowColor)
             putFloat(KEY_SHADOW_RADIUS, style.shadowRadius)
             putBoolean(KEY_BACKGROUND_ENABLED, style.backgroundEnabled)
@@ -184,6 +202,9 @@ object FloatingLyricsStyleStore {
             putString(KEY_PRESET, values.key)
             putInt(KEY_TEXT_COLOR, AirColorUtils.withAlpha(values.textColor, textAlpha))
             putInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, values.wordByWordHighlightColor)
+            putBoolean(KEY_GLOW_ENABLED, true)
+            putInt(KEY_GLOW_STRENGTH, 100)
+            putInt(KEY_GLOW_SPREAD, 100)
             putInt(KEY_SHADOW_COLOR, values.shadowColor)
             putFloat(KEY_SHADOW_RADIUS, values.shadowRadius)
             putBoolean(KEY_BACKGROUND_ENABLED, values.backgroundEnabled)

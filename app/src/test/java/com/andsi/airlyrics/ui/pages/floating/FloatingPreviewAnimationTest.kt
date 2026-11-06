@@ -54,6 +54,21 @@ class FloatingPreviewAnimationTest {
     }
 
     @Test
+    fun `classic preview reports the exact color position to its halo clock`() {
+        val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val lyric = TextView(activity).apply { text = "Current lyric" }
+        var reported = -1L
+        val loop = FloatingPreviewClassicLoop(
+            view = lyric, sampleLine = { "Current lyric" }, highlightColor = { Color.RED },
+            progressForLine = ::createClassicPreviewProgress,
+            onPositionChanged = { reported = it },
+            isVisible = { false }
+        )
+        loop.sync()
+        assertEquals(FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS / 2, reported)
+    }
+
+    @Test
     fun `classic preview clears its highlight when the mode changes`() {
         val activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val lyric = TextView(activity).apply { text = "上一行\n当前歌词\n译文" }

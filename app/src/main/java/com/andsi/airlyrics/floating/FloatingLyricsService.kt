@@ -63,7 +63,9 @@ open class FloatingLyricsService : Service() {
                 Color.alpha(style.textColor)
             )
         },
-        noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric) }
+        noTranslationTextProvider = { getString(R.string.ui_no_translation_for_this_lyric) },
+        durationMsProvider = { currentMedia.durationMs },
+        glowStyleProvider = { FloatingLyricsStyleStore.getGlowStyle(this) }
     )
     internal val syncHandler = Handler(Looper.getMainLooper())
     internal val lyricsLookupRunner: LyricsLookupRunner by lazy(LazyThreadSafetyMode.NONE) {
@@ -127,9 +129,7 @@ open class FloatingLyricsService : Service() {
             if (!shouldSyncLyrics()) return
 
             renderer.tick()
-            if (shouldSyncLyrics()) {
-                syncHandler.postDelayed(this, lyricsSyncIntervalMs())
-            }
+            scheduleNextLyricsSync()
         }
     }
 

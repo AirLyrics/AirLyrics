@@ -519,4 +519,10 @@ TTML de tiempo por palabra:
     <string name="search_spotify_track">Canción de Spotify</string>
     <string name="search_ready">Pulsa Buscar para encontrar letras</string>
     <string name="search_id_match">Obtenida mediante Spotify ID</string>
+    <string name="ui_highlight_effects">Efectos de resaltado</string>
+    <string name="ui_enable_glow">Activar resplandor</string>
+    <string name="ui_disable_glow">Desactivar resplandor</string>
+    <string name="ui_glow_strength">Intensidad del resplandor</string>
+    <string name="ui_glow_spread">Extensión del resplandor</string>
+    <string name="ui_glow">Resplandor</string>
 </resources>

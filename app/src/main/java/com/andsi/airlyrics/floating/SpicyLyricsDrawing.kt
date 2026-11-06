@@ -6,8 +6,6 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Shader
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.text.Layout
 import android.text.Spanned
 import android.text.TextPaint
@@ -18,14 +16,16 @@ import kotlin.math.abs
 import kotlin.math.min
 
 /** Hides only the timed ink from TextView; layout, selection and accessibility remain native. */
-internal class SpicyLyricsSpan(val timing: SpicyTiming, val highlight: Int) : CharacterStyle(), UpdateAppearance {
+internal class SpicyLyricsSpan(val timing: SpicyTiming, val highlight: Int, val haloOnly: Boolean = false) : CharacterStyle(), UpdateAppearance {
     var hidden = false
     override fun updateDrawState(tp: TextPaint) { if (hidden) { tp.alpha = 0; tp.clearShadowLayer() } }
 }
 
 /** Cached geometry and shaped drawing runs. Nothing here measures or replaces text per frame. */
 internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
-    private class Run(
+    private data class RunKey(val timing: SpicyTiming, val start: Int, val end: Int, val haloOnly: Boolean)
+
+    private inner class Run(
         val start: Int, val end: Int, val contextStart: Int, val contextEnd: Int,
         val x: Float, val baseline: Float, val width: Float, val rtl: Boolean,
         val offset: Float, var totalWidth: Float, val span: SpicyLyricsSpan, val paint: TextPaint
@@ -52,12 +52,9 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
         init { paint.alpha = alpha }
         val scale = SpicySpring(.88, .64, .95f)
         val lift = SpicySpring(1.45, .4, .01f)
-        val glow = SpicySpring(1.18, .56, 0f)
+        var glow = SpicySpring(1.18, .56, 0f)
         val target = SpicyLyricsCurves.Pose()
-        val haloPaint = TextPaint(paint).apply { shader = null; color = Color.WHITE; clearShadowLayer() }
-        val cutoutPaint = TextPaint(haloPaint).apply { xfermode = PorterDuffXfermode(PorterDuff.Mode.DST_OUT) }
-        val inkTop = paint.fontMetrics.top
-        val inkBottom = paint.fontMetrics.bottom
+        val halo = LyricsHalo(view, paint, span.highlight)
     }
     private var cachedLayout: Layout? = null
     private var cachedText: CharSequence? = null
@@ -71,7 +68,11 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
     }
 
     private fun rebuild(layout: Layout, text: Spanned) {
+        val previous = runs.associateBy { RunKey(it.span.timing, it.start, it.end, it.span.haloOnly) }
+        for (run in runs) run.span.hidden = false
         val built = mutableListOf<Run>()
+        val selection = android.graphics.Path()
+        val bounds = android.graphics.RectF()
         // TextView reports -1 when height is constrained in pixels (as in the overlay).
         // In that mode there is no line-count limit; the window clips to its pixel height.
         val maxLines = view.maxLines.takeIf { it >= 0 } ?: Int.MAX_VALUE
@@ -82,31 +83,33 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
             if ((layout.getLineForOffset(start)..layout.getLineForOffset((end - 1).coerceAtLeast(start))).any {
                 it >= maxLines || layout.getEllipsisCount(it) > 0
             }) continue
-            span.hidden = true
+            span.hidden = !span.haloOnly
             val pieces = mutableListOf<Run>()
             var offset = 0f
             var from = start
             while (from < end) {
                 val line = layout.getLineForOffset(from)
                 if (line >= maxLines || layout.getEllipsisCount(line) > 0) break
-                val to = min(end, layout.getLineEnd(line))
-                if (to <= from) break
+                val to = min(end, layout.getLineVisibleEnd(line))
+                if (to <= from) { from = layout.getLineEnd(line); continue }
                 val rtl = layout.isRtlCharAt(from)
                 // A bidi boundary is a shaping boundary; never draw through the next run.
                 var runEnd = from + 1
-                while (runEnd < to && layout.isRtlCharAt(runEnd) == rtl) runEnd++
-                val a = layout.getPrimaryHorizontal(from)
-                val b = if (runEnd == layout.getLineEnd(line)) {
-                    if (rtl) layout.getLineLeft(line) else layout.getLineRight(line)
-                } else layout.getPrimaryHorizontal(runEnd)
-                val width = abs(b - a)
+                while (runEnd < to && layout.isRtlCharAt(runEnd) == rtl &&
+                    layout.getPrimaryHorizontal(runEnd) == layout.getSecondaryHorizontal(runEnd)) runEnd++
+                selection.reset()
+                layout.getSelectionPath(from, runEnd, selection)
+                selection.computeBounds(bounds, true)
+                val width = bounds.width()
                 val paint = TextPaint(view.paint)
                 paint.color = view.currentTextColor
                 for (style in text.getSpans(from, runEnd, CharacterStyle::class.java)) {
                     if (style !is SpicyLyricsSpan) style.updateDrawState(paint)
                 }
-                pieces += Run(from, runEnd, layout.getLineStart(line), layout.getLineEnd(line), min(a, b),
-                    layout.getLineBaseline(line).toFloat(), width, rtl, offset, 0f, span, paint)
+                pieces += Run(from, runEnd, layout.getLineStart(line), layout.getLineEnd(line), bounds.left,
+                    layout.getLineBaseline(line).toFloat(), width, rtl, offset, 0f, span, paint).also { run ->
+                    previous[RunKey(span.timing, from, runEnd, span.haloOnly)]?.let { run.glow = it.glow }
+                }
                 offset += width
                 from = runEnd
             }
@@ -136,19 +139,20 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
         for (run in runs) {
             val timing = run.span.timing
             val p = spicyProgress(position, timing.startMs, timing.endMs)
-            val motion = motionEnabled && timing.motion
+            val motion = motionEnabled && timing.motion && !run.span.haloOnly
             SpicyLyricsCurves.targets(timing, position, run.target)
             val target = run.target
             if (seek || !motion) {
                 run.scale.reset(target.scale)
                 run.lift.reset(target.lift)
-                run.glow.reset(target.glow)
             }
+            val glowTarget = if (motionEnabled) target.glow else if (position in timing.startMs until timing.endMs) .35f else 0f
+            if (seek || !motionEnabled) run.glow.reset(glowTarget)
             val scale = if (motion) run.scale.step(target.scale, delta)
                 .coerceAtMost(1f + run.paint.textSize * .35f / run.width.coerceAtLeast(1f)) else 1f
             val lift = if (motion) run.lift.step(target.lift, delta) * run.paint.textSize *
                 (if (timing.emphasized) 2f else 1f) else 0f
-            val springGlow = if (motion) run.glow.step(target.glow, delta).coerceIn(0f, 1f) else 0f
+            val springGlow = run.glow.step(glowTarget, delta).coerceIn(0f, 1f)
             // Keep spring smoothing, but do not let a short word develop a new glow peak
             // after its fill has finished. Emphasis follows the active letter's proximity.
             val glow = when {
@@ -169,7 +173,7 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
                 translate(0f, lift)
                 scale(scale, scale, run.x + run.width / 2f, run.baseline)
                 drawHalo(this, text, run, glow)
-                drawTextRun(text, run.start, run.end, run.contextStart, run.contextEnd,
+                if (!run.span.haloOnly) drawTextRun(text, run.start, run.end, run.contextStart, run.contextEnd,
                     run.x, run.baseline, run.rtl, run.paint)
             }
             run.paint.clearShadowLayer()
@@ -177,29 +181,10 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
         lastPosition = position
         lastFrame = now
     }
-    /** Isolate the halo so it never replaces the user's shadow or paints the ink twice. */
     private fun drawHalo(canvas: Canvas, text: CharSequence, run: Run, strength: Float) {
-        val opacity = SpicyLyricsCurves.glowOpacity(run.span.timing.emphasized, strength)
-        val alpha = (Color.alpha(run.span.highlight) * opacity).toInt()
-        val userShadow = view.shadowRadius > 0f && Color.alpha(view.shadowColor) > 0
-        if (alpha == 0 && !userShadow) return
-        val radius = SpicyLyricsCurves.glowRadius(run.paint.textSize, run.span.timing.emphasized, strength)
-        val margin = maxOf(radius, view.shadowRadius) * 3f + run.paint.textSize * .2f +
-            maxOf(abs(view.shadowDx), abs(view.shadowDy))
-        val layer = canvas.saveLayer(run.x - margin, run.baseline + run.inkTop - margin,
-            run.x + run.width + margin, run.baseline + run.inkBottom + margin, null)
-        if (userShadow) {
-            run.haloPaint.setShadowLayer(view.shadowRadius, view.shadowDx, view.shadowDy, view.shadowColor)
-            canvas.drawTextRun(text, run.start, run.end, run.contextStart, run.contextEnd,
-                run.x, run.baseline, run.rtl, run.haloPaint)
-        }
-        if (alpha > 0) {
-            run.haloPaint.setShadowLayer(radius, 0f, 0f, (run.span.highlight and 0x00ffffff) or (alpha shl 24))
-            canvas.drawTextRun(text, run.start, run.end, run.contextStart, run.contextEnd,
-                run.x, run.baseline, run.rtl, run.haloPaint)
-        }
-        canvas.drawTextRun(text, run.start, run.end, run.contextStart, run.contextEnd,
-            run.x, run.baseline, run.rtl, run.cutoutPaint)
-        canvas.restoreToCount(layer)
+        run.halo.draw(canvas, text, run.start, run.end, run.contextStart, run.contextEnd,
+            run.x, run.baseline, run.rtl, run.width,
+            strength * if (run.span.timing.emphasized) 1.3f else 1f,
+            view.lyricsGlowStyle, includeUserShadow = !run.span.haloOnly)
     }
 }
