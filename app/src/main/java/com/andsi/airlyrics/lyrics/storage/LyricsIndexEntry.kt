@@ -19,7 +19,9 @@ internal data class LyricsIndexEntry(
     // Empty on entries written by older versions (no provenance available).
     val matchedTitle: String = "",
     val matchedArtist: String = "",
-    val matchedDurationMs: Long = 0L
+    val matchedDurationMs: Long = 0L,
+    val isUntimed: Boolean = false,
+    val untimedTranslation: String? = null
 )
 
 internal fun LyricsIndexEntry.toSongIdentity(): SongIdentity {

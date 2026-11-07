@@ -241,7 +241,7 @@
     <string name="ui_no_translation_for_this_lyric">尚無翻譯</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">請至少新增一行：[00:12.34]&lt;00:12.34&gt;歌詞</string>
     <string name="ui_plain_lrc_no_valid_line_error">請至少新增一行：[00:12.34]歌詞</string>
-    <string name="ui_import_no_valid_plain_lyrics">未找到有效的一般歌詞，請檢查 LRC 或 TTML 格式</string>
+    <string name="ui_import_no_valid_plain_lyrics">未找到有效歌詞，請檢查 LRC、TTML 或 TXT 格式</string>
     <string name="ui_import_no_valid_word_by_word_lyrics">未找到有效的逐字歌詞，請檢查 LRC 或 TTML 格式</string>
     <string name="ui_not_bound">未綁定</string>
     <string name="ui_not_imported">未匯入</string>
@@ -286,7 +286,7 @@
     <string name="ui_plain_lrc_import_success">一般歌詞已匯入</string>
     <string name="ui_plain_lrc_removed_for_this_song">一般歌詞已移除</string>
     <string name="ui_plain_lyrics">一般歌詞</string>
-    <string name="ui_plain_lyrics_lrc">一般歌詞（.lrc / .ttml）</string>
+    <string name="ui_plain_lyrics_lrc">一般歌詞（.lrc / .ttml / .txt）</string>
     <string name="ui_lyrics_format_lrc_guide_body">一般 LRC：
 [00:12.34]原文歌詞 / 翻譯歌詞
 [00:12.34]原文歌詞
@@ -304,7 +304,7 @@
     <string name="ui_media_streams_empty_hint">未偵測到使用中的媒體</string>
     <string name="ui_playback_error">播放異常</string>
     <string name="ui_playing">播放中</string>
-    <string name="ui_please_choose_a_plain_lrc_lyrics_file">請選擇一般歌詞 .lrc 或 .ttml 檔案</string>
+    <string name="ui_please_choose_a_plain_lrc_lyrics_file">請選擇 .lrc、.ttml 或 .txt 檔案</string>
     <string name="ui_please_choose_a_word_by_word_lrc_file">請選擇逐字歌詞 .lrc 或 .ttml 檔案</string>
     <string name="ui_enable_overlay_permission_first">請先開啟懸浮視窗權限</string>
     <string name="ui_select_song_before_importing">請先播放歌曲並選擇播放器</string>
@@ -533,4 +533,7 @@
     <string name="ui_lyrics_word_empty">請輸入詞或音節</string>
     <string name="ui_lyrics_line_text">整行歌詞</string>
     <string name="ui_lyrics_line_empty">請輸入歌詞</string>
+    <string name="ui_untimed_lyrics">純文字歌詞</string>
+    <string name="search_untimed_notice">無時間軸，無法在懸浮窗顯示。</string>
+    <string name="ui_untimed_lyrics_unavailable">純文字歌詞，無法同步顯示</string>
 </resources>

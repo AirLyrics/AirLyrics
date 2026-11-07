@@ -16,7 +16,8 @@ internal data class NativePlainLyricsJsonResult(
     val durationMs: Long,
     val lrc: String,
     val mergedLrc: String,
-    val translatedLrc: String?
+    val translatedLrc: String?,
+    val untimedText: String? = null
 ) {
     fun primaryPlainLrc(allowTranslatedFallback: Boolean = false): String {
         return lrc
@@ -49,7 +50,8 @@ internal object NativePlainLyricsResultParser {
             durationMs = json.optLong("duration_ms", fallbackDurationMs),
             lrc = json.optStringOrDefault("lrc", ""),
             mergedLrc = json.optStringOrDefault("merged_lrc", ""),
-            translatedLrc = json.optStringOrDefault("translated_lrc", "").ifBlank { null }
+            translatedLrc = json.optStringOrDefault("translated_lrc", "").ifBlank { null },
+            untimedText = (json.opt("untimed_text") as? String)?.takeIf { it.isNotBlank() }
         )
     }
 

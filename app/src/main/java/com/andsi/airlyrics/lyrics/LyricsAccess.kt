@@ -2,7 +2,7 @@ package com.andsi.airlyrics.lyrics
 
 import com.andsi.airlyrics.core.model.LyricsAttribution
 
-enum class LyricsPrecision { LINE, WORD }
+enum class LyricsPrecision { LINE, WORD, TEXT }
 
 /** This policy follows the payload, including edited and line-only derivatives. */
 data class LyricsAccess(

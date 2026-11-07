@@ -54,7 +54,7 @@ internal object ManualLyricsSelectionStore {
                 val result = cache.read(key) ?: return@runCatching null
                 val item = cache.item(key) ?: return@runCatching null
                 val info = LyricsStorage.LocalPlainLyricsInfo(item.title, item.artist, item.durationMs,
-                    item.name, item.source, item.provider, item.modifiedTimeMillis, item.indexKey, item.album)
+                    item.name, item.source, item.provider, item.modifiedTimeMillis, item.indexKey, item.album, isUntimed = item.isUntimed)
                 Selection(result.copy(manualLocal = true, selectedManually = true), info)
             } else {
                 if (local == null || local.indexKey != doc.getString("key") || local.plainProvider != doc.getString("provider")) return@runCatching null
@@ -62,7 +62,7 @@ internal object ManualLyricsSelectionStore {
                 val entry = LyricsIndexStore.find(context, song.title, song.artist, song.durationMs)
                 // Legacy selections lack a binding between their text and word file. Provider
                 // and song identity alone cannot prove ownership, so keep their plain lyrics.
-                val ref = doc.optJSONObject("words")
+                val ref = if (local.isUntimed) null else doc.optJSONObject("words")
                 val json = if (ref != null && entry != null &&
                     entry.key == ref.optString("key") && entry.wordByWordFile == ref.optString("path") &&
                     entry.wordByWordProvider == ref.optString("provider") &&
@@ -71,11 +71,12 @@ internal object ManualLyricsSelectionStore {
                         ?.takeIf { digest(it) == ref.optString("digest") }
                 } else null
                 val payload = json?.let { JSONObject(it) }
-                Selection(LyricsProviderResult("local", "Local lyrics", payload?.optString("originalLrc") ?: plain,
+                Selection(LyricsProviderResult("local", "Local lyrics", if (local.isUntimed) "" else payload?.optString("originalLrc") ?: plain,
                     translatedLrc = payload?.optString("translatedLrc")?.takeIf { it.isNotEmpty() },
                     wordByWordLines = json?.let { WordByWordLyricsJsonCodec.parseWordByWordLinesJson(it) }.orEmpty(),
                     matchedTitle = song.title, matchedArtist = song.artist, matchedAlbum = song.album,
-                    matchedDurationMs = song.durationMs, manualLocal = true, selectedManually = true), local)
+                    matchedDurationMs = song.durationMs, manualLocal = true, selectedManually = true,
+                    untimedLyrics = if (local.isUntimed) com.andsi.airlyrics.lyrics.UntimedLyrics(plain, local.untimedTranslation) else null), local)
             }
         }.getOrNull()
         if (selected == null) selectionFile.delete()
@@ -107,12 +108,16 @@ internal object ManualLyricsSelectionStore {
         val cacheKey = result.access?.cacheKey
         val pending = result.pendingSpicyLyrics
         val previousCache = if (cacheKey != null && pending != null) cache.snapshot(cacheKey) else null
-        val fileName = LyricsFileNaming.managedPlainFileName(song)
+        val fileName = LyricsFileNaming.managedPlainFileName(song, result.isUntimed)
         val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
         val index = if (cacheKey == null) LyricsIndexStore.captureRaw(context) else null
         check(index !is LyricsIndexStore.RawSnapshot.Unreadable) { "Cannot snapshot lyrics index" }
         val oldPlain = if (cacheKey == null) LyricsFileStore.readManagedLyrics(context, relativeFile) else null
         check(cacheKey != null || oldPlain != null || !LyricsFileStore.managedLyricsExists(context, relativeFile)) { "Cannot snapshot lyrics file" }
+        val oldPath = if (cacheKey == null) LyricsIndexStore.find(context, song.title, song.artist, song.durationMs)
+            ?.plainFile?.takeIf { it.isNotBlank() && it != relativeFile } else null
+        val oldOther = oldPath?.let { LyricsFileStore.readManagedLyrics(context, it) }
+        check(oldPath == null || oldOther != null || !LyricsFileStore.managedLyricsExists(context, oldPath)) { "Cannot snapshot previous lyrics" }
         val wordFileName = LyricsFileNaming.managedWordByWordFileName(song)
         val wordPath = LyricsFileNaming.managedRelativePath(wordFileName)
         val oldWords = if (cacheKey == null) LyricsFileStore.readManagedLyrics(context, wordPath) else null
@@ -127,8 +132,9 @@ internal object ManualLyricsSelectionStore {
                 savedResult
             } else {
                 check(PlainLyricsStorageOps.savePlainLyrics(context, song.title, song.artist, song.durationMs,
-                    LrcParser.mergeOriginalAndTranslationForStorage(result.plainLrc, result.translatedLrc),
-                    song.album, LyricsStorage.SOURCE_DOWNLOADED, result.plainProviderId, overwrite = true)) { "Lyrics save failed" }
+                    result.storageText,
+                    song.album, LyricsStorage.SOURCE_DOWNLOADED, result.plainProviderId, overwrite = true,
+                    isUntimed = result.isUntimed, untimedTranslation = result.untimedLyrics?.translatedText)) { "Lyrics save failed" }
                 if (result.wordByWordLines.isNotEmpty()) {
                     val json = JSONObject().put("lines", org.json.JSONArray(WordByWordLyricsJsonCodec.wordByWordLinesToJson(result.wordByWordLines)))
                         .put("originalLrc", result.plainLrc).put("translatedLrc", result.translatedLrc.orEmpty()).toString()
@@ -169,6 +175,9 @@ internal object ManualLyricsSelectionStore {
                         if (LyricsFileStore.managedLyricsExists(context, wordPath))
                             check(LyricsFileStore.deleteManagedLyrics(context, wordPath))
                     } else check(LyricsFileStore.writeManagedLyrics(context, wordFileName, oldWords))
+                }
+                if (oldPath != null && oldOther != null) restore {
+                    check(LyricsFileStore.writeManagedLyrics(context, oldPath.substringAfterLast('/'), oldOther))
                 }
                 restore { check(LyricsIndexStore.restoreRaw(context, index)) }
             }

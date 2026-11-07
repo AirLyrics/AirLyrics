@@ -241,7 +241,7 @@
     <string name="ui_no_translation_for_this_lyric">Sin traducción para esta letra</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">Agrega al menos una línea: [00:12.34]&lt;00:12.34&gt;letra</string>
     <string name="ui_plain_lrc_no_valid_line_error">Agrega al menos una línea: [00:12.34]letra</string>
-    <string name="ui_import_no_valid_plain_lyrics">No se encontraron letras simples válidas; revisa el formato LRC o TTML</string>
+    <string name="ui_import_no_valid_plain_lyrics">No se encontró letra válida; revisa el formato LRC, TTML o TXT</string>
     <string name="ui_import_no_valid_word_by_word_lyrics">No se encontraron letras palabra por palabra válidas; revisa el formato LRC o TTML</string>
     <string name="ui_not_bound">No vinculado</string>
     <string name="ui_not_imported">No importado</string>
@@ -286,7 +286,7 @@
     <string name="ui_plain_lrc_import_success">Letras simples importadas</string>
     <string name="ui_plain_lrc_removed_for_this_song">Se eliminaron las letras simples de esta canción</string>
     <string name="ui_plain_lyrics">Letras simples</string>
-    <string name="ui_plain_lyrics_lrc">Letras simples (.lrc / .ttml)</string>
+    <string name="ui_plain_lyrics_lrc">Letra (.lrc / .ttml / .txt)</string>
     <string name="ui_lyrics_format_lrc_guide_body">LRC simple:
 [00:12.34]Letra original / Traducción
 [00:12.34]Letra original
@@ -304,7 +304,7 @@ TTML de tiempo por palabra:
     <string name="ui_media_streams_empty_hint">No se detectaron medios activos</string>
     <string name="ui_playback_error">Error de reproducción</string>
     <string name="ui_playing">Reproduciendo</string>
-    <string name="ui_please_choose_a_plain_lrc_lyrics_file">Elige un archivo de letras simples .lrc o .ttml</string>
+    <string name="ui_please_choose_a_plain_lrc_lyrics_file">Elige un archivo .lrc, .ttml o .txt</string>
     <string name="ui_please_choose_a_word_by_word_lrc_file">Elige un archivo de letras palabra por palabra .lrc o .ttml</string>
     <string name="ui_enable_overlay_permission_first">Activa primero el permiso de superposición</string>
     <string name="ui_select_song_before_importing">Reproduce una canción y elige primero su reproductor</string>
@@ -537,4 +537,7 @@ TTML de tiempo por palabra:
     <string name="ui_lyrics_word_empty">Introduce una palabra</string>
     <string name="ui_lyrics_line_text">Línea completa</string>
     <string name="ui_lyrics_line_empty">Introduce la letra</string>
+    <string name="ui_untimed_lyrics">Letra sin sincronizar</string>
+    <string name="search_untimed_notice">Sin tiempos; no se puede mostrar en la ventana flotante.</string>
+    <string name="ui_untimed_lyrics_unavailable">La letra sin tiempos no se puede sincronizar</string>
 </resources>

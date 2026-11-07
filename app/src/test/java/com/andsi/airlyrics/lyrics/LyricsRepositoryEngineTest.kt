@@ -651,6 +651,34 @@ class LyricsRepositoryEngineTest {
         }
     }
 
+    @Test fun untimedResultsAreAFallbackAndNeverReceiveOldWordTiming() {
+        for (wordsEnabled in listOf(false, true)) {
+            val text = result("spicy", "").copy(untimedLyrics = UntimedLyrics("Plain text"))
+            val timed = result("lrclib", "[00:01.00]Timed")
+            val sources = listOf(PlainLyricsSearchSource.SPICY, PlainLyricsSearchSource.LRCLIB)
+            for (later in listOf(timed, null)) {
+                val spicy = FakePlainLyricsProvider("spicy", Result.success(text))
+                val other = FakePlainLyricsProvider("lrclib", Result.success(later))
+                val found = engine(onlineProviders = mapOf(sources[0] to spicy, sources[1] to other),
+                    settings = settings(plainLyricsSearchSources = sources, wordByWordLyricsEnabled = wordsEnabled),
+                    wordByWordLyricsReader = WordByWordLyricsReader { _,_,_,_ -> spicyResult().wordByWordLines })
+                    .findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow()
+                if (later == null) assertSame(text, found)
+                else assertEquals(timed.plainLrc, found?.plainLrc)
+                assertEquals(1, spicy.calls)
+                assertEquals(1, other.calls)
+            }
+            val provider = FakePlainLyricsProvider("spicy", Result.success(timed))
+            val selected = engine(local = FakePlainLyricsProvider("local", Result.success(text.copy(selectedManually = true))),
+                onlineProviders = mapOf(sources[0] to provider),
+                settings = settings(plainLyricsSearchSources = listOf(sources[0]), wordByWordLyricsEnabled = wordsEnabled))
+                .findLyrics(context, "Song", "Artist", durationMs = 180000).getOrThrow()!!
+            assertTrue(selected.isUntimed)
+            assertTrue(selected.wordByWordLines.isEmpty())
+            assertEquals(0, provider.calls)
+        }
+    }
+
     private fun spicyResult() = result("spicy", "[00:01.00]word").copy(
         wordByWordLines = listOf(WordByWordLine(1000, 2000, "word", listOf(WordByWordSegment("word", 1000, 2000)))),
         access = LyricsAccess(1, Long.MAX_VALUE, "key", com.andsi.airlyrics.core.model.LyricsAttribution("Spicy Lyrics", emptyList()))

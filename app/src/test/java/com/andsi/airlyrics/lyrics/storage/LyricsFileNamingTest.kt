@@ -54,6 +54,6 @@ class LyricsFileNamingTest {
     fun friendlyDisplayName_removesKnownSuffixAndLegacyHash() {
         assertEquals("Song Name", LyricsFileNaming.friendlyDisplayName("Song_Name [abc123EF].lrc"))
         assertEquals("Song Name", LyricsFileNaming.friendlyDisplayName("lyrics/Song_Name.karaoke.json"))
-        assertEquals("Song Name.txt", LyricsFileNaming.friendlyDisplayName("Song_Name.txt"))
+        assertEquals("Song Name", LyricsFileNaming.friendlyDisplayName("Song_Name.txt"))
     }
 }

@@ -444,6 +444,7 @@ where
     Fut: std::future::Future<Output = Result<Value, String>>,
 {
     let mut line_fallback = None;
+    let mut text_fallback = None;
     for (index, track) in tracks.iter().take(MAX_TRACK_CANDIDATES).enumerate() {
         let id = track["id"].as_str().ok_or_else(|| err("ParseError"))?;
         let response = match tokio::time::timeout_at(deadline, fetch(id.to_owned()))
@@ -452,9 +453,14 @@ where
         {
             Ok(response) => response,
             Err(e) if e == "NotFound" => continue,
-            Err(e) => return line_fallback.map(Ok).unwrap_or(Err(e)),
+            Err(e) => return line_fallback.or(text_fallback).map(Ok).unwrap_or(Err(e)),
         };
         if !timed_response(&response) {
+            if text_fallback.is_none() && response["Body"]["Type"] == "Static"
+                && manual_unavailable_reason(&response)?.is_none() {
+                text_fallback = Some(json!({"ok":true,"track":track,"response":response,
+                    "lookup":{"candidates":tracks.len(),"attempted":index+1}}));
+            }
             continue;
         }
         let syllable = response["Body"]["Type"] == "Syllable";
@@ -466,7 +472,7 @@ where
             line_fallback = Some(result);
         }
     }
-    Ok(line_fallback.unwrap_or_else(|| json!({"ok":false,"error_type":"NotFound","stage":"lyrics_fetch","candidates":tracks.len()})))
+    Ok(line_fallback.or(text_fallback).unwrap_or_else(|| json!({"ok":false,"error_type":"NotFound","stage":"lyrics_fetch","candidates":tracks.len()})))
 }
 
 #[cfg(test)]
@@ -616,6 +622,20 @@ mod tests {
         assert_eq!(result["track"]["id"], "second");
         assert_eq!(result["lookup"]["attempted"], 2);
     }
+    #[tokio::test(start_paused = true)]
+    async fn static_fallback_does_not_prevent_a_later_timed_match() {
+        let tracks = vec![json!({"id":"text"}), json!({"id":"line"})];
+        let result = fetch_tracks(&tracks, tokio::time::Instant::now() + Duration::from_secs(1), |id| async move {
+            Ok(if id == "text" { json!({"Status":200,"Body":{"Type":"Static","Lines":[{"Text":"Lyrics"}]}}) }
+                else { json!({"Status":200,"Body":{"Type":"Line","Content":[{}]}}) })
+        }).await.unwrap();
+        assert_eq!(result["track"]["id"], "line");
+        let text_only = fetch_tracks(&tracks[..1], tokio::time::Instant::now() + Duration::from_secs(1), |_| async {
+            Ok(json!({"Status":200,"Body":{"Type":"Static","Lines":[{"Text":"Lyrics"}]}}))
+        }).await.unwrap();
+        assert_eq!(text_only["track"]["id"], "text");
+    }
+
     #[tokio::test(start_paused = true)]
     async fn line_fallback_survives_variant_timeout() {
         let tracks = vec![json!({"id":"line"}), json!({"id":"slow"})];
@@ -803,6 +823,16 @@ fn manual_unavailable_reason(
     let kind = response["Body"]["Type"]
         .as_str()
         .ok_or_else(|| err("ParseError"))?;
+    if kind == "Static" {
+        let lines = response["Body"]["Lines"].as_array()
+            .or_else(|| response["Body"]["Content"].as_array()).ok_or_else(|| err("ParseError"))?;
+        if lines.is_empty() { return Ok(Some(UnavailableReason::SourceEmpty)); }
+        if lines.iter().any(|line| !line["Text"].is_string()) { return Err(err("ParseError")); }
+        return Ok(if lines.iter().any(|line| !line["Text"].as_str().unwrap().trim().is_empty() ||
+            line["TranslatedText"].as_str().is_some_and(|text| !text.trim().is_empty())) {
+            None
+        } else { Some(UnavailableReason::NoUsableLines) });
+    }
     if !matches!(kind, "Line" | "Syllable") {
         return Ok(Some(UnavailableReason::UnsupportedFormat));
     }
@@ -850,6 +880,11 @@ mod manual_tests {
     }
     #[test]
     fn manual_content_reasons_do_not_swallow_errors() {
+        assert_eq!(manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static",
+            "Lines":[{"Text":"A line"},{"Text":""},{"Text":"Another line"}]}})).unwrap(), None);
+        assert_eq!(manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static",
+            "Lines":[{"Text":""}]}})).unwrap(), Some(UnavailableReason::NoUsableLines));
+        assert!(manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static","Lines":[{}]}})).is_err());
         for (response, expected) in [
             (
                 json!({"Status":404,"Type":"object","Body":{"error":"lyrics_not_found","message":"No lyrics are available for that track."}}),
@@ -860,7 +895,7 @@ mod manual_tests {
                 Some(UnavailableReason::Unknown),
             ),
             (
-                json!({"Status":200,"Body":{"Type":"Static"}}),
+                json!({"Status":200,"Body":{"Type":"Future"}}),
                 Some(UnavailableReason::UnsupportedFormat),
             ),
             (

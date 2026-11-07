@@ -5,6 +5,7 @@ import java.security.MessageDigest
 
 internal object LyricsFileNaming {
     const val PLAIN_LYRICS_EXTENSION = ".lrc"
+    const val TEXT_LYRICS_EXTENSION = ".txt"
     // Persisted compatibility contract. Do not change the serialized value.
     const val WORD_BY_WORD_LYRICS_EXTENSION = ".karaoke.json"
 
@@ -13,8 +14,8 @@ internal object LyricsFileNaming {
     private val legacyHashSuffix = Regex("\\s*\\[[0-9a-fA-F]{8}]$")
     private val legacyPlainFileName = Regex(".*\\s\\[[0-9a-fA-F]{8}]\\.lrc$", RegexOption.IGNORE_CASE)
 
-    fun managedPlainFileName(identity: SongIdentity): String {
-        return managedFileName(identity.storageKey(), PLAIN_LYRICS_EXTENSION)
+    fun managedPlainFileName(identity: SongIdentity, isUntimed: Boolean = false): String {
+        return managedFileName(identity.storageKey(), if (isUntimed) TEXT_LYRICS_EXTENSION else PLAIN_LYRICS_EXTENSION)
     }
 
     fun managedWordByWordFileName(identity: SongIdentity): String {
@@ -49,11 +50,15 @@ internal object LyricsFileNaming {
         return fileName?.endsWith(PLAIN_LYRICS_EXTENSION, ignoreCase = true) == true
     }
 
+    fun isReadableLyricsFile(fileName: String?): Boolean = isPlainLyricsFile(fileName) || isUntimedFile(fileName)
+
+    fun isUntimedFile(fileName: String?): Boolean = fileName?.endsWith(TEXT_LYRICS_EXTENSION, ignoreCase = true) == true
+
     fun isSafePlainLyricsBaseName(fileName: String): Boolean {
         return fileName.isNotBlank() &&
             '/' !in fileName &&
             '\\' !in fileName &&
-            isPlainLyricsFile(fileName)
+            isReadableLyricsFile(fileName)
     }
 
     fun isWordByWordLyricsFile(fileName: String?): Boolean {
@@ -82,6 +87,7 @@ internal object LyricsFileNaming {
         return when {
             endsWith(WORD_BY_WORD_LYRICS_EXTENSION, ignoreCase = true) -> dropLast(WORD_BY_WORD_LYRICS_EXTENSION.length)
             endsWith(PLAIN_LYRICS_EXTENSION, ignoreCase = true) -> dropLast(PLAIN_LYRICS_EXTENSION.length)
+            endsWith(TEXT_LYRICS_EXTENSION, ignoreCase = true) -> dropLast(TEXT_LYRICS_EXTENSION.length)
             else -> this
         }
     }

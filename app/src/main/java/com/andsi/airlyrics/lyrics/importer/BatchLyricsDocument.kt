@@ -19,7 +19,8 @@ internal data class BatchLyricsDocument(
     val metadata: List<String> = emptyList(),
     val title: String = "",
     val artist: String = "",
-    val targetKey: String = ""
+    val targetKey: String = "",
+    val isUntimed: Boolean = false
 ) {
     val matchInfo get() = BatchLyricsMatcher.Document(name, title, artist, targetKey)
 }
@@ -71,6 +72,11 @@ internal object BatchLyricsDocumentReader {
                         ?: return Result(name, failure = Failure.INVALID)
                     BatchLyricsDocument(name, plain)
                 }
+            }
+            LyricsDocumentFormat.TXT -> {
+                val plain = (LyricsImportParsers.parsePlain(format, text) as? LyricsTextParseResult.Success)?.value
+                    ?: return Result(name, failure = Failure.INVALID)
+                BatchLyricsDocument(name, plain, isUntimed = true)
             }
             LyricsDocumentFormat.UNKNOWN -> return Result(name, failure = Failure.INVALID)
         }

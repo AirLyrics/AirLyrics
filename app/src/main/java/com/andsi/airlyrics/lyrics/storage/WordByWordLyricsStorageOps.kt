@@ -14,11 +14,12 @@ import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
 internal object WordByWordLyricsStorageOps {
     fun hasWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): Boolean {
         val entry = LyricsIndexStore.find(context, title, artist, duration) ?: return false
-        return entry.wordByWordFile.isNotBlank() && LyricsFileStore.readManagedLyrics(context, entry.wordByWordFile) != null
+        return !entry.isUntimed && entry.wordByWordFile.isNotBlank() && LyricsFileStore.readManagedLyrics(context, entry.wordByWordFile) != null
     }
 
     fun readWordByWordLyrics(context: Context, title: String, artist: String, duration: Long): List<WordByWordLine> {
         val entry = LyricsIndexStore.find(context, title, artist, duration) ?: return emptyList()
+        if (entry.isUntimed) return emptyList()
         val wordByWordJson = entry.wordByWordFile
             .takeIf { it.isNotBlank() }
             ?.let { LyricsFileStore.readManagedLyrics(context, it) }
@@ -67,7 +68,9 @@ internal object WordByWordLyricsStorageOps {
             plainProvider = existing?.plainProvider ?: "local",
             wordByWordProvider = wordByWordProvider,
             createdAt = existing?.createdAt ?: now,
-            updatedAt = now
+            updatedAt = now,
+            isUntimed = existing?.isUntimed == true,
+            untimedTranslation = existing?.untimedTranslation
         )
 
         return LyricsIndexStore.write(context, entries)

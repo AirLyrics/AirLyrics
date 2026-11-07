@@ -536,6 +536,7 @@ pub(crate) fn fetch_best_lyrics(
                 lrc: Some(found.lrc),
                 translated_lrc,
                 merged_lrc: Some(merged_lrc),
+                untimed_text: None,
                 error_type: None,
                 error: None,
             })

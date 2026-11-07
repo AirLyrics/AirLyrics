@@ -86,6 +86,32 @@ class FloatingLyricsServiceAutoHideTest {
     }
 
     @Test
+    fun pureTextShowsAnUnavailableNoticeAndObeysAutoHideAndManualShow() {
+        val service = createVisibleService()
+        val media = media(isPlaying = true)
+        service.currentMedia = media
+        for (hide in listOf(false, true)) {
+            service.resetLyricsAvailability()
+            FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(service, hide)
+            service.applyLyricsResult(Result.success(LyricsProviderResult("test", "Test", "[00:01.00]Timed")), media)
+            service.applyLyricsResult(Result.success(LyricsProviderResult("test", "Test", "",
+                untimedLyrics = com.andsi.airlyrics.lyrics.UntimedLyrics("Text that must not be rendered"))), media)
+            assertEquals(LyricsAvailability.UNAVAILABLE, service.lyricsAvailability)
+            assertTrue(requireNotNull(service.lyricsView).text.toString()
+                .contains(service.getString(com.andsi.airlyrics.R.string.ui_untimed_lyrics_unavailable)))
+            assertFalse(requireNotNull(service.lyricsView).text.toString().contains("Text that must not be rendered"))
+            assertEquals(hide, service.unavailableLyricsAutoHidePending)
+            ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS, TimeUnit.MILLISECONDS)
+            assertEquals(!hide, service.windowController.isVisible)
+            if (hide) {
+                assertTrue(service.showLyrics())
+                ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS, TimeUnit.MILLISECONDS)
+                assertTrue(service.windowController.isVisible)
+            }
+        }
+    }
+
+    @Test
     fun manuallySelectedEmptyAndUnparseableLyricsTriggerAutoHide() {
         val service = createVisibleService()
         val media = media(isPlaying = true)

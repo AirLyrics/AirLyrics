@@ -11,6 +11,8 @@ import androidx.core.widget.NestedScrollView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.UntimedLyrics
 import com.andsi.airlyrics.lyrics.search.LyricsCandidate
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.testutil.descendants
@@ -126,6 +128,29 @@ class LyricsSearchLayoutTest {
             bitmap.recycle()
         }
         ThemeSettingsStore.setDark(app,false)
+    }
+
+    @Test fun untimedPreviewShowsParagraphsTranslationAndAnEnabledApplyAction() {
+        Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
+            val activity=controller.get()
+            val content=activity.findViewById<ViewGroup>(android.R.id.content)
+            val state=session(activity).state.value
+            val candidate=LyricsCandidate(PlainLyricsSearchSource.LRCLIB,"42",state.target,1.0)
+            val lyrics=LyricsProviderResult("lrclib","LRCLIB","",
+                untimedLyrics=UntimedLyrics("First line\n\n第二段","Translation\n\n译文"))
+            render(activity,state.copy(preview=SearchPreview(candidate,lyrics),previewCandidate=candidate))
+            layout(content,900)
+            ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS)
+            val texts=descendants(content).filterIsInstance<TextView>().toList()
+            assertTrue(texts.any { it.isShown && it.text.toString()==activity.getString(R.string.ui_untimed_lyrics) })
+            assertTrue(texts.any { it.isShown && it.text.toString()==activity.getString(R.string.search_untimed_notice) })
+            assertTrue(texts.any { it.isShown && it.text.toString()==lyrics.untimedLyrics!!.text })
+            assertTrue(texts.any { it.isShown && it.text.toString()==lyrics.untimedLyrics!!.translatedText })
+            val apply=texts.filterIsInstance<MaterialButton>()
+                .single { it.text.toString()==activity.getString(R.string.search_apply) }
+            assertTrue(apply.isShown)
+            assertTrue(apply.isEnabled)
+        }
     }
 
     private fun intent()=Intent(RuntimeEnvironment.getApplication(),LyricsSearchActivity::class.java)

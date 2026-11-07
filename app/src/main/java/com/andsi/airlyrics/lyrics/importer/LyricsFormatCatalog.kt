@@ -29,6 +29,12 @@ internal object LyricsFormatCatalog {
                 "text/lrc"
             ),
             matchesContent = { content -> lrcTimedLineRegex.containsMatchIn(content) }
+        ),
+        FormatDefinition(
+            format = LyricsDocumentFormat.TXT,
+            extensions = setOf("txt"),
+            mimeTypes = emptySet(),
+            matchesContent = { false }
         )
     )
 

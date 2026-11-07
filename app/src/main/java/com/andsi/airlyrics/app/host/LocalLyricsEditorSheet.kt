@@ -66,7 +66,7 @@ import kotlin.math.roundToInt
 @Suppress("DEPRECATION")
 internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSession): EditorDialogBinding {
     val document = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD)
-        EditableLrcDocument.fromWords(session.text) else EditableLrcDocument.from(session.text)
+        EditableLrcDocument.fromWords(session.text) else EditableLrcDocument.from(if (session.item.isUntimed) "" else session.text)
     var closeLineEditor: () -> Boolean = { false }
     val dialog = object : BottomSheetDialog(this, R.style.ThemeOverlay_AirLyrics_LyricsSources) {
         override fun cancel() {
@@ -150,24 +150,70 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
         onDelete = { onDocumentChanged(false) }
     )
     list.adapter = rows
+    var captureRaw: () -> Unit = {}
+    val rawInput = if (session.item.isUntimed) object : AppCompatEditText(this) {
+        override fun onSelectionChanged(selStart: Int, selEnd: Int) {
+            super.onSelectionChanged(selStart, selEnd)
+            captureRaw()
+        }
+    }.apply {
+        isSaveEnabled = session.access == null
+        setText(session.text)
+        setSelection(session.selectionStart.coerceIn(0, length()), session.selectionEnd.coerceIn(0, length()))
+        hint = getString(R.string.ui_lyrics)
+        contentDescription = getString(R.string.ui_lyrics)
+        textSize = AirUiTokens.TextSize.Body
+        minLines = 8
+        gravity = Gravity.TOP or Gravity.START
+        inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        setHorizontallyScrolling(false)
+        setTextColor(colorTextStrong)
+        setHintTextColor(colorTextMuted)
+        setPadding(dp(12), dp(12), dp(12), dp(12))
+        background = null
+    } else null
+    val rawScroll = rawInput?.let { input -> NestedScrollView(this).apply {
+        isFillViewport = true
+        background = list.background.constantState?.newDrawable()
+        addView(LinearLayout(this@showLocalLyricsEditorSheet).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(input, LinearLayout.LayoutParams(-1, -2))
+            session.untimedTranslation?.let { translation ->
+                addView(TextView(this@showLocalLyricsEditorSheet).apply {
+                    text = getString(R.string.search_translation)
+                    textSize = AirUiTokens.TextSize.Caption
+                    setTextColor(colorTextMuted)
+                    setPadding(dp(12), dp(8), dp(12), dp(4))
+                })
+                addView(TextView(this@showLocalLyricsEditorSheet).apply {
+                    text = translation
+                    textSize = AirUiTokens.TextSize.Body
+                    setTextColor(colorTextStrong)
+                    setTextIsSelectable(true)
+                    setPadding(dp(12), 0, dp(12), dp(12))
+                })
+            }
+        }, ViewGroup.LayoutParams(-1, -2))
+    } }
+    val editorBody: View = rawScroll ?: list
     val maxListHeight = (resources.displayMetrics.heightPixels * 0.84f).toInt() - dp(220)
     var imeInset = 0
     var listHeightAnimator: ValueAnimator? = null
     fun listHeight(): Int {
-        val preferred = (rows.itemCount * dp(64)).coerceAtLeast(dp(86))
+        val preferred = (if (rawInput != null) dp(280) else rows.itemCount * dp(64)).coerceAtLeast(dp(86))
             .coerceAtMost(maxListHeight.coerceAtLeast(dp(86)))
         val available = resources.displayMetrics.heightPixels - imeInset - dp(220)
         return preferred.coerceAtMost(available.coerceAtLeast(dp(76)))
     }
     fun updateListHeight(animate: Boolean = false) {
         val height = listHeight()
-        val current = list.layoutParams.height
+        val current = editorBody.layoutParams.height
         val previous = listHeightAnimator
         listHeightAnimator = null
         previous?.cancel()
         if (current == height) return
-        if (!animate || !ValueAnimator.areAnimatorsEnabled() || !list.isAttachedToWindow) {
-            list.layoutParams = list.layoutParams.apply { this.height = height }
+        if (!animate || !ValueAnimator.areAnimatorsEnabled() || !editorBody.isAttachedToWindow) {
+            editorBody.layoutParams = editorBody.layoutParams.apply { this.height = height }
             return
         }
         val motion = ValueAnimator.ofInt(current, height).apply {
@@ -175,15 +221,15 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
             interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
             addUpdateListener { animation ->
                 val next = animation.animatedValue as Int
-                if (list.layoutParams.height != next) {
-                    list.layoutParams = list.layoutParams.apply { this.height = next }
+                if (editorBody.layoutParams.height != next) {
+                    editorBody.layoutParams = editorBody.layoutParams.apply { this.height = next }
                 }
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     if (listHeightAnimator === animation) {
                         listHeightAnimator = null
-                        list.layoutParams = list.layoutParams.apply { this.height = height }
+                        editorBody.layoutParams = editorBody.layoutParams.apply { this.height = height }
                     }
                 }
             })
@@ -191,7 +237,7 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
         listHeightAnimator = motion
         motion.start()
     }
-    content.addView(list, LinearLayout.LayoutParams(-1, listHeight()))
+    content.addView(editorBody, LinearLayout.LayoutParams(-1, listHeight()))
 
     session.access?.let { access ->
         content.addView(TextView(this).apply {
@@ -225,7 +271,21 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     footer.addView(save, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
     content.addView(footer, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
 
-    val entranceParts = listOf(header, list, footer)
+    if (rawInput != null && rawScroll != null) {
+        captureRaw = {
+            editorSession.edit(rawInput.text.toString(), rawInput.selectionStart, rawInput.selectionEnd, rawScroll.scrollY)
+            save.isEnabled = editorSession.state.value?.busy != true && (!rawInput.text.isNullOrBlank() || !session.untimedTranslation.isNullOrBlank())
+            save.alpha = if (save.isEnabled) 1f else 0.5f
+        }
+        rawInput.doAfterTextChanged { captureRaw() }
+        rawScroll.setOnScrollChangeListener { _, _, _, _, _ -> captureRaw() }
+        interactionUi.snapshot(rawInput, captureRaw)
+        rawInput.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) = Unit
+            override fun onViewDetachedFromWindow(v: View) { interactionUi.forgetSnapshot(rawInput) }
+        })
+    }
+    val entranceParts = listOf(header, editorBody, footer)
     if (ValueAnimator.areAnimatorsEnabled()) entranceParts.forEachIndexed { index, view ->
         view.alpha = 0.72f
         view.translationY = dp(6 + index * 2).toFloat()
@@ -283,7 +343,7 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
         } else {
             entranceParts.forEach { it.alpha = 1f; it.translationY = 0f }
         }
-        list.post { list.scrollBy(0, session.scrollY) }
+        editorBody.post { if (rawScroll != null) rawScroll.scrollTo(0, session.scrollY) else list.scrollBy(0, session.scrollY) }
         ViewCompat.requestApplyInsets(sheet)
     }
     dialog.setOnDismissListener {
@@ -300,7 +360,12 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     dialog.show()
     return EditorDialogBinding(session.id, dialog) { busy ->
         rows.enabled = !busy
+        rawInput?.isEnabled = !busy
         buttons.forEach { it.isEnabled = !busy; it.alpha = if (busy) 0.55f else 1f }
+        if (rawInput != null) {
+            save.isEnabled = !busy && (!rawInput.text.isNullOrBlank() || !session.untimedTranslation.isNullOrBlank())
+            save.alpha = if (save.isEnabled) 1f else 0.5f
+        }
         dialog.setCancelable(!busy)
         dialog.behavior.isDraggable = !busy
     }

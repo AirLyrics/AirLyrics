@@ -40,6 +40,10 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
     }
     private fun result(key: String, doc: JSONObject): LyricsProviderResult? {
         val original = SpicyLyricsParser.parse(doc.getString("raw"), key, doc.getLong("fetchedAt")) ?: return null
+        if (original.isUntimed) {
+            val text = if (doc.has("textEdit")) doc.getString("textEdit") else original.untimedLyrics!!.text
+            return original.copy(untimedLyrics = original.untimedLyrics!!.copy(text = text))
+        }
         val edit = doc.optString("edit")
         if (edit.isBlank() && !doc.has("wordEdit")) return original
         return if (original.wordByWordLines.isNotEmpty()) {
@@ -95,6 +99,11 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
     fun edit(key: String, text: String, word: Boolean): LyricsStorage.LocalLyricsUpdateResult = synchronized(lock) {
         val doc = document(key) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
         val payload = result(key, doc) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
+        if (payload.isUntimed) {
+            if (word || (text.isBlank() && payload.untimedLyrics?.translatedText.isNullOrBlank())) return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
+            if (text != payload.untimedLyrics!!.text) write(key, doc.put("textEdit", text).put("updatedAt", clock()))
+            return@synchronized LyricsStorage.LocalLyricsUpdateResult(true)
+        }
         if (word != payload.wordByWordLines.isNotEmpty()) return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
         val validation = if (word) {
             val v = WordByWordLrcParser.validateForStorage(text)
@@ -152,7 +161,7 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
             val payload = result(key, doc) ?: return@synchronized null
             LyricsStorage.LocalLyricsItem(PREFIX + key, doc.getLong("updatedAt"), file(key).length(), doc.getString("title"),
                 doc.getString("artist"), doc.optString("album"), doc.getLong("duration"), PREFIX + key,
-                LyricsStorage.SOURCE_PROVIDER_CACHE, "spicy", true, payload.wordByWordLines.isNotEmpty())
+                LyricsStorage.SOURCE_PROVIDER_CACHE, "spicy", true, payload.wordByWordLines.isNotEmpty(), payload.isUntimed)
         }.getOrNull()
     }
     fun list(): List<LyricsStorage.LocalLyricsItem> = synchronized(lock) {

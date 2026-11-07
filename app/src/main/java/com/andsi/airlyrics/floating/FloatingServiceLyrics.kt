@@ -146,6 +146,10 @@ internal fun FloatingLyricsService.applyLyricsResult(
     media: CurrentMediaInfo
 ) {
     val lyricsResult = result.getOrNull()
+    if (lyricsResult?.isUntimed == true) {
+        showUntimedLyricsStatus(media, lyricsResult.access)
+        return
+    }
     val plainLrc = lyricsResult?.plainLrc
     renderer.setLyricsAccess(lyricsResult?.access)
 
@@ -168,6 +172,17 @@ internal fun FloatingLyricsService.applyLyricsResult(
 
     renderer.clear()
     renderer.show { lookupFailureText(result.exceptionOrNull(), media) }
+    markLyricsUnavailable(media.playbackLyricsKey())
+}
+
+private fun FloatingLyricsService.showUntimedLyricsStatus(
+    media: CurrentMediaInfo,
+    access: com.andsi.airlyrics.lyrics.LyricsAccess? = null
+) {
+    stopLyricsSync()
+    renderer.clear()
+    renderer.setLyricsAccess(access)
+    renderer.show { "${media.displayText}\n${getString(R.string.ui_untimed_lyrics_unavailable)}" }
     markLyricsUnavailable(media.playbackLyricsKey())
 }
 
@@ -228,6 +243,10 @@ internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolea
         lastPlaybackLyricsKey = media.playbackLyricsKey()
         activeLyricsLookupRequestKey = null
         renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
+        if (LyricsStorage.getLocalPlainLyricsInfo(this, media.title, media.artist, media.durationMs)?.isUntimed == true) {
+            showUntimedLyricsStatus(media)
+            return
+        }
         val availability = renderer.parseAndShow(
             plainLrc = localPlainLrc,
             emptyText = { getString(R.string.ui_lyrics_import_empty_error) }

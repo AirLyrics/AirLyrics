@@ -24,14 +24,22 @@ internal object SpicyLyricsParser {
         require(response.getInt("Status") == 200)
         require(body.getString("id") == track.getString("id"))
         val type = body.getString("Type")
-        if (type !in setOf("Syllable", "Line")) return null
+        if (type !in setOf("Syllable", "Line", "Static")) return null
         val lines = mutableListOf<WordByWordLine>()
         val plain = mutableListOf<Pair<Long, String>>()
         val translated = mutableListOf<Pair<Long, String>>()
         val duration = track.optLong("duration_ms")
-        val content = body.getJSONArray("Content")
+        val textLines = mutableListOf<String>()
+        val textTranslations = mutableListOf<String>()
+        val content = if (type == "Static") body.optJSONArray("Lines") ?: body.getJSONArray("Content")
+            else body.getJSONArray("Content")
         for (i in 0 until content.length()) {
             val line = content.getJSONObject(i)
+            if (type == "Static") {
+                textLines += line.getString("Text")
+                textTranslations += line.optString("TranslatedText")
+                continue
+            }
             if (line.optString("Type") != "Vocal") continue
             if (type == "Syllable") {
                 val voices = mutableListOf(line.getJSONObject("Lead"))
@@ -67,7 +75,7 @@ internal object SpicyLyricsParser {
                 line.optString("TranslatedText").takeIf { it.isNotBlank() }?.let { translated += start to it }
             }
         }
-        if (plain.isEmpty()) return null
+        if (plain.isEmpty() && textLines.all { it.isBlank() } && textTranslations.all { it.isBlank() }) return null
         val provider = when (body.optString("source")) {
             "spicy_lyrics" -> "Spicy Lyrics"
             "apple_music" -> "Apple Music"
@@ -87,7 +95,9 @@ internal object SpicyLyricsParser {
         return LyricsProviderResult("spicy", "Spicy Lyrics", lrc(plain),
             translated.takeIf { it.isNotEmpty() }?.let(::lrc), lines.sortedBy { it.startMs },
             track.optString("title"), track.optString("artist"), track.optString("album"), duration,
-            LyricsAccess(fetchedAt, fetchedAt + RETENTION_MS, cacheKey, LyricsAttribution(provider, credits)))
+            LyricsAccess(fetchedAt, fetchedAt + RETENTION_MS, cacheKey, LyricsAttribution(provider, credits)),
+            untimedLyrics = if (type == "Static") UntimedLyrics(textLines.joinToString("\n"),
+                textTranslations.takeIf { it.any(String::isNotBlank) }?.joinToString("\n")) else null)
     }
 
     private fun time(json: JSONObject, key: String): Long {

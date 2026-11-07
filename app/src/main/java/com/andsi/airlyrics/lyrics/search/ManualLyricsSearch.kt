@@ -73,14 +73,16 @@ internal class ManualLyricsSearch(
                 val body = response.getJSONObject("response").getJSONObject("Body")
                 require(body.getString("id") == candidate.id) { "Candidate identity mismatch" }
                 val type = body.getString("Type")
-                if (type !in setOf("Syllable", "Line")) {
+                if (type !in setOf("Syllable", "Line", "Static")) {
                     return ManualLyricsFetchResult.Unavailable(LyricsUnavailableReason.UNSUPPORTED_FORMAT)
                 }
-                val content = body.getJSONArray("Content")
-                if (content.length() == 0) return emptyLyrics(candidate)
-                for (index in 0 until content.length()) content.getJSONObject(index).getString("Type")
-                if ((0 until content.length()).all { content.getJSONObject(it).getString("Type") == "Instrumental" })
-                    return emptyLyrics(candidate)
+                if (type != "Static") {
+                    val content = body.getJSONArray("Content")
+                    if (content.length() == 0) return emptyLyrics(candidate)
+                    for (index in 0 until content.length()) content.getJSONObject(index).getString("Type")
+                    if ((0 until content.length()).all { content.getJSONObject(it).getString("Type") == "Instrumental" })
+                        return emptyLyrics(candidate)
+                }
                 val fetchedAt = System.currentTimeMillis()
                 val key = SpicyLyricsCache.key(target.title, target.artist, target.durationMs)
                 val lyrics = SpicyLyricsParser.parse(raw, key, fetchedAt)?.copy(
@@ -107,7 +109,8 @@ internal class ManualLyricsSearch(
                 splitLrclibEmbeddedTranslations(lrc) else null
             val lyrics = LyricsProviderResult(candidate.source.key, candidate.source.key,
                 tracks?.originalLrc ?: lrc, tracks?.translatedLrc ?: parsed.translatedLrc,
-                matchedTitle = t.title, matchedArtist = t.artist, matchedAlbum = t.album, matchedDurationMs = t.durationMs)
+                matchedTitle = t.title, matchedArtist = t.artist, matchedAlbum = t.album, matchedDurationMs = t.durationMs,
+                untimedLyrics = parsed.untimedText?.let(::UntimedLyrics))
             val reason = lyrics.manualUnavailableReason()
             return if (reason == null) ManualLyricsFetchResult.Available(lyrics)
             else ManualLyricsFetchResult.Unavailable(reason)

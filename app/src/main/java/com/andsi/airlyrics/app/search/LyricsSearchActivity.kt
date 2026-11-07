@@ -451,13 +451,20 @@ class LyricsSearchActivity : AppCompatActivity() {
             preview.alpha=1f
             preview.translationY=0f
             preview.removeAllViews()
-            state.preview?.takeIf { it.lyrics.plainLrc.isNotBlank() || !it.lyrics.translatedLrc.isNullOrBlank() }?.let { p ->
-                preview.addView(previewHeading(getString(if(p.lyrics.wordByWordLines.isEmpty()) R.string.search_line_lyrics else R.string.search_word_lyrics)))
+            state.preview?.takeIf { it.lyrics.hasUsableLyrics() }?.let { p ->
+                preview.addView(previewHeading(getString(when (p.lyrics.precision) {
+                    LyricsPrecision.TEXT -> R.string.ui_untimed_lyrics
+                    LyricsPrecision.LINE -> R.string.search_line_lyrics
+                    LyricsPrecision.WORD -> R.string.search_word_lyrics
+                })))
+                if (p.lyrics.isUntimed) preview.addView(text(getString(R.string.search_untimed_notice)).apply {
+                    setTextColor(palette.textMuted)
+                })
                 p.lyrics.access?.attribution?.let { attribution ->
                     preview.addView(text("").apply { text=attribution.displayText();movementMethod=LinkMovementMethod.getInstance() })
                 }
-                preview.addView(text(p.lyrics.plainLrc).apply { setTextIsSelectable(true) })
-                p.lyrics.translatedLrc?.let { translation ->
+                preview.addView(text(p.lyrics.untimedLyrics?.text ?: p.lyrics.plainLrc).apply { setTextIsSelectable(true) })
+                (p.lyrics.untimedLyrics?.translatedText ?: p.lyrics.translatedLrc)?.let { translation ->
                     preview.addView(previewHeading(getString(R.string.search_translation)))
                     preview.addView(text(translation).apply { setTextIsSelectable(true) })
                 }

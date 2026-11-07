@@ -86,6 +86,8 @@ pub(crate) struct NativeResult {
     lrc: Option<String>,
     translated_lrc: Option<String>,
     merged_lrc: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    untimed_text: Option<String>,
     error_type: Option<&'static str>,
     error: Option<String>,
 }
@@ -522,6 +524,7 @@ fn fallback_error(source: &'static str, error_type: &'static str, message: &str)
         lrc: None,
         translated_lrc: None,
         merged_lrc: None,
+        untimed_text: None,
         error_type: Some(error_type),
         error: Some(message.to_string()),
     })
@@ -1117,6 +1120,7 @@ async fn fetch_candidate_lyrics<B: NeteaseBackend>(
         lrc: lyrics.lrc,
         translated_lrc: lyrics.translated_lrc,
         merged_lrc: Some(lyrics.merged_lrc),
+        untimed_text: None,
         error_type: None,
         error: None,
     }))

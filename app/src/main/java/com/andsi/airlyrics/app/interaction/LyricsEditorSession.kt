@@ -36,7 +36,8 @@ internal data class EditorSession(
     val notice: EditorNotice? = null,
     val invalidLines: List<Int> = emptyList(),
     val finished: LocalLyricsUiChange? = null,
-    val access: LyricsAccess? = null
+    val access: LyricsAccess? = null,
+    val untimedTranslation: String? = null
 )
 
 /** Retains only application context and data; UI subscribes anew after recreation. */
@@ -68,13 +69,14 @@ internal class LyricsEditorSession(
             val draft = if (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE) null else withContext(Dispatchers.IO) { runCatching { drafts.read(id).get() }.getOrNull() }
             val text = draft ?: withContext(Dispatchers.IO) { runCatching { readText(item, target) }.getOrNull() }
             val access = withContext(Dispatchers.IO) { LyricsStorage.restrictedLyricsAccess(context, item.indexKey) }
+            val translation = withContext(Dispatchers.IO) { LyricsStorage.untimedTranslation(context, item.toStorageItem()) }
             if (text == null || (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && access == null)) {
                 interactions.remove("editor")
                 current.value = EditorSession(id, item, target, "", notice = EditorNotice.READ_FAILED)
             } else {
                 current.value = EditorSession(id, item, target, text,
                     saved.getInt("start").coerceIn(0, text.length), saved.getInt("end").coerceIn(0, text.length),
-                    saved.getInt("scroll"), notice = if (draft == null && item.source != LyricsStorage.SOURCE_PROVIDER_CACHE) EditorNotice.READ_FAILED else null, access = access)
+                    saved.getInt("scroll"), notice = if (draft == null && item.source != LyricsStorage.SOURCE_PROVIDER_CACHE) EditorNotice.READ_FAILED else null, access = access, untimedTranslation = translation)
                 watchExpiry()
             }
         }
@@ -91,12 +93,13 @@ internal class LyricsEditorSession(
         loading = scope.launch {
             val text = withContext(Dispatchers.IO) { runCatching { readText(item, target) }.getOrNull() }
             val access = withContext(Dispatchers.IO) { LyricsStorage.restrictedLyricsAccess(context, item.indexKey) }
+            val translation = withContext(Dispatchers.IO) { LyricsStorage.untimedTranslation(context, item.toStorageItem()) }
             if (text == null || (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && access == null)) {
                 interactions.remove("editor")
                 current.value = null
                 return@launch
             }
-            current.value = EditorSession(id, item, target, text, access = access)
+            current.value = EditorSession(id, item, target, text, access = access, untimedTranslation = translation)
             watchExpiry()
             flush()
         }
@@ -166,7 +169,8 @@ internal class LyricsEditorSession(
             val document = WordLyricsDocument.parse(session.text)
             LyricsStorage.LocalLyricsUpdateResult(document.lines.isNotEmpty() && document.invalidLines().isEmpty(), document.invalidLines())
         } else {
-            val validation = LrcParser.validateForStorage(session.text)
+            val validation = if (session.item.isUntimed) LrcParser.StorageValidationResult(session.text.isNotBlank() || !session.untimedTranslation.isNullOrBlank())
+                else LrcParser.validateForStorage(session.text)
             LyricsStorage.LocalLyricsUpdateResult(validation.isValid, validation.invalidLineNumbers)
         }
         session.copy(notice = if (result.saved) EditorNotice.VALID else EditorNotice.INVALID, invalidLines = result.invalidLineNumbers)

@@ -727,6 +727,7 @@ private fun MainActivityUiHost.currentLocalLyricsItem(media: com.andsi.airlyrics
             provider = info.plainProvider,
             hasPlainLyrics = true,
             hasWordByWordLyrics = hasWordByWordLyrics,
+            isUntimed = info.isUntimed,
         ),
     )
 }
@@ -745,6 +746,7 @@ private fun MainActivityUiHost.toUiItem(item: LyricsStorage.LocalLyricsItem): Lo
         provider = item.provider,
         hasPlainLyrics = item.hasPlainLyrics,
         hasWordByWordLyrics = item.hasWordByWordLyrics,
+        isUntimed = item.isUntimed,
         canDelete = item.canDelete,
         displayTitle = item.displayTitle,
         subtitle = localizedLocalLyricsSubtitle(item),
@@ -766,7 +768,8 @@ internal fun LocalLyricsUiItem.toStorageItem(): LyricsStorage.LocalLyricsItem {
         source = source.ifBlank { LyricsStorage.SOURCE_LEGACY },
         provider = provider,
         hasPlainLyrics = hasPlainLyrics,
-        hasWordByWordLyrics = hasWordByWordLyrics
+        hasWordByWordLyrics = hasWordByWordLyrics,
+        isUntimed = isUntimed
     )
 }
 

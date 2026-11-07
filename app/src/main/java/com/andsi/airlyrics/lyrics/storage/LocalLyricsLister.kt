@@ -18,9 +18,9 @@ internal object LocalLyricsLister {
             val root = DocumentFile.fromTreeUri(context, treeUri)
             val managedDir = root?.findFile(MANAGED_LYRICS_DIR)?.takeIf { it.isDirectory }
             val rootItems = root?.listFiles().orEmpty()
-                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
+                .filter { it.isFile && LyricsFileNaming.isReadableLyricsFile(it.name) }
             val managedItems = managedDir?.listFiles().orEmpty()
-                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
+                .filter { it.isFile && LyricsFileNaming.isReadableLyricsFile(it.name) }
                 .filter { indexedByFileName.containsKey(it.name.orEmpty()) }
             rootItems.map { file -> documentItem(context, file, entry = null) } +
                 managedItems.map { file ->
@@ -30,9 +30,9 @@ internal object LocalLyricsLister {
             val root = LyricsStoragePaths.fallbackLyricsDir(context)
             val managedDir = File(root, MANAGED_LYRICS_DIR)
             val rootItems = root.listFiles().orEmpty()
-                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
+                .filter { it.isFile && LyricsFileNaming.isReadableLyricsFile(it.name) }
             val managedItems = managedDir.listFiles().orEmpty()
-                .filter { it.isFile && LyricsFileNaming.isPlainLyricsFile(it.name) }
+                .filter { it.isFile && LyricsFileNaming.isReadableLyricsFile(it.name) }
                 .filter { indexedByFileName.containsKey(it.name) }
             rootItems.map { file -> fileItem(file, entry = null) } +
                 managedItems.map { file -> fileItem(file, indexedByFileName[file.name]) }
@@ -41,7 +41,7 @@ internal object LocalLyricsLister {
         val listedIndexKeys = items.mapTo(mutableSetOf()) { it.indexKey }
         val indexedOnlyWordByWordItems = indexEntries
             .filter {
-                it.wordByWordFile.isNotBlank() &&
+                !it.isUntimed && it.wordByWordFile.isNotBlank() &&
                     it.key !in listedIndexKeys
             }
             .map { entry ->
@@ -83,7 +83,8 @@ internal object LocalLyricsLister {
             source = entry?.plainSource ?: LyricsStorage.SOURCE_LEGACY,
             provider = entry?.plainProvider ?: "local",
             hasPlainLyrics = true,
-            hasWordByWordLyrics = entry?.wordByWordFile?.isNotBlank() == true
+            hasWordByWordLyrics = entry?.isUntimed != true && entry?.wordByWordFile?.isNotBlank() == true,
+            isUntimed = entry?.isUntimed ?: LyricsFileNaming.isUntimedFile(file.name)
         )
     }
 
@@ -103,7 +104,8 @@ internal object LocalLyricsLister {
             source = entry?.plainSource ?: LyricsStorage.SOURCE_LEGACY,
             provider = entry?.plainProvider ?: "local",
             hasPlainLyrics = true,
-            hasWordByWordLyrics = entry?.wordByWordFile?.isNotBlank() == true
+            hasWordByWordLyrics = entry?.isUntimed != true && entry?.wordByWordFile?.isNotBlank() == true,
+            isUntimed = entry?.isUntimed ?: LyricsFileNaming.isUntimedFile(file.name)
         )
     }
 }

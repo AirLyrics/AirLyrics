@@ -232,7 +232,7 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
             """{"ok":true,"track":{"id":"123"},"response":{"Status":200,"Body":$body}}"""
         }.fetch(spicy,target,token())
         assertEquals(ManualLyricsFetchResult.Unavailable(LyricsUnavailableReason.UNSUPPORTED_FORMAT),
-            fetch("""{"id":"123","Type":"Static"}"""))
+            fetch("""{"id":"123","Type":"Future"}"""))
         for (body in listOf(
             """{"id":"123","Type":"Line","Content":[]}""",
             """{"id":"123","Type":"Line","Content":[{"Type":"Instrumental"}]}"""

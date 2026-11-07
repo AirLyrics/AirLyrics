@@ -50,7 +50,7 @@ class SpicyLyricsParserTest {
         assertNull(result.translatedLrc)
     }
     @Test fun unsupportedAndNotFoundAreMisses() {
-        assertNull(SpicyLyricsParser.parse(spicyFixture("Static"), "key", 100))
+        assertNull(SpicyLyricsParser.parse(spicyFixture("Future"), "key", 100))
         assertNull(SpicyLyricsParser.parse("""{"ok":false,"error_type":"NotFound"}""", "key", 100))
     }
     @Test fun invalidTimingAndWrongIdentityAreRejected() {

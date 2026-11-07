@@ -85,7 +85,7 @@ private fun defaultReader(context: Context): suspend (LyricsReadRequest) -> Lyri
     val current = preferred ?: info?.let {
         LyricsStorage.LocalLyricsItem(it.plainFileName, it.updatedAt,
             LyricsStorage.localLyricsFileSize(context, it.plainFileName), it.title, it.artist, it.album,
-            it.durationMs, it.indexKey, it.plainSource, it.plainProvider, true, hasWord)
+            it.durationMs, it.indexKey, it.plainSource, it.plainProvider, true, hasWord, it.isUntimed)
     }
     val items = when (request.kind) {
         LyricsReadKind.CURRENT -> emptyList()

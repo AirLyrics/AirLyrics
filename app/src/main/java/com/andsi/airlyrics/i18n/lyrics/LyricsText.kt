@@ -56,6 +56,7 @@ internal fun Context.localizedLocalLyricsType(item: LyricsStorage.LocalLyricsIte
 
 @StringRes
 internal fun localLyricsTypeRes(item: LyricsStorage.LocalLyricsItem): Int = when {
+    item.isUntimed -> R.string.ui_untimed_lyrics
     item.hasWordByWordLyrics -> R.string.ui_word_by_word
     item.hasPlainLyrics -> R.string.ui_plain
     else -> R.string.ui_unknown_type

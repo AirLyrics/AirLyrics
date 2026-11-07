@@ -17,6 +17,7 @@ internal fun LocalLyricsUiItem.toEditorBundle(): Bundle = Bundle().apply {
     putBoolean("hasPlainLyrics", hasPlainLyrics)
     putBoolean("hasWordByWordLyrics", hasWordByWordLyrics)
     putBoolean("canDelete", canDelete)
+    putBoolean("isUntimed", isUntimed)
     putString("displayTitle", displayTitle)
     putString("subtitle", subtitle)
     putString("typeText", typeText)
@@ -37,6 +38,7 @@ internal fun Bundle.toEditorItem(): LocalLyricsUiItem = LocalLyricsUiItem(
     hasPlainLyrics = getBoolean("hasPlainLyrics"),
     hasWordByWordLyrics = getBoolean("hasWordByWordLyrics"),
     canDelete = getBoolean("canDelete"),
+    isUntimed = getBoolean("isUntimed", getString("name").orEmpty().endsWith(".txt", ignoreCase = true)),
     displayTitle = getString("displayTitle").orEmpty(),
     subtitle = getString("subtitle").orEmpty(),
     typeText = getString("typeText").orEmpty(),

@@ -24,8 +24,9 @@ internal object LyricsReplacementOps {
         val key = if (isCache) song.storageKey() else item.indexKey
         val existing = entries.singleOrNull { it.key == key }
         if (!isCache && existing == null) return@withStorageLock Result.STALE
-        val plainPath = existing?.plainFile?.takeIf { it.isNotBlank() }
-            ?: LyricsFileNaming.managedRelativePath(LyricsFileNaming.managedPlainFileName(song))
+        val plainPath = existing?.plainFile?.takeIf { it.isNotBlank() && existing.isUntimed == document.isUntimed }
+            ?: LyricsFileNaming.managedRelativePath(LyricsFileNaming.managedPlainFileName(song, document.isUntimed))
+        val obsolete = existing?.plainFile?.takeIf { it.isNotBlank() && it != plainPath }
         val wordPath = existing?.wordByWordFile?.takeIf { it.isNotBlank() }
             ?: LyricsFileNaming.managedRelativePath(LyricsFileNaming.managedWordByWordFileName(song))
         // Never overwrite a path owned by another entry, including truncated-key collisions.
@@ -35,7 +36,7 @@ internal object LyricsReplacementOps {
         val indexSnapshot = indexIo.captureRaw(context)
         if (indexSnapshot is LyricsIndexStore.RawSnapshot.Unreadable) return@withStorageLock Result.FAILED
         val snapshots = linkedMapOf<String, String?>()
-        for (path in listOf(plainPath, wordPath)) {
+        for (path in listOfNotNull(plainPath, wordPath, obsolete).distinct()) {
             snapshots[path] = if (io.exists(context, path)) io.read(context, path) ?: return@withStorageLock Result.FAILED else null
         }
         fun rollback(): Result {
@@ -58,7 +59,8 @@ internal object LyricsReplacementOps {
             plainProvider = "local",
             wordByWordProvider = if (document.words.isEmpty()) "" else "local",
             createdAt = existing?.createdAt ?: now,
-            updatedAt = now
+            updatedAt = now,
+            isUntimed = document.isUntimed
         )
         val saved = runCatching {
             check(io.write(context, plainPath.substringAfterLast('/'), document.plainLrc))
@@ -68,6 +70,7 @@ internal object LyricsReplacementOps {
                 check(io.delete(context, wordPath))
             }
             check(indexIo.write(context, entries.filterNot { it.key == key } + replacement))
+            if (obsolete != null && io.exists(context, obsolete)) check(io.delete(context, obsolete))
         }.isSuccess
         if (!saved) return@withStorageLock rollback()
         // Imported lyrics are durable local content, independent of the online cache lifetime.

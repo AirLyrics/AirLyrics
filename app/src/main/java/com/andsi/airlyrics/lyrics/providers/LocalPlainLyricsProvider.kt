@@ -34,7 +34,8 @@ object LocalPlainLyricsProvider : PlainLyricsProvider {
             LyricsProviderResult(
                 plainProviderId = id,
                 plainProviderName = name,
-                plainLrc = plainLrc,
+                plainLrc = if (info?.isUntimed == true) "" else plainLrc,
+                untimedLyrics = if (info?.isUntimed == true) com.andsi.airlyrics.lyrics.UntimedLyrics(plainLrc, info.untimedTranslation) else null,
                 matchedTitle = info?.matchedTitle?.takeIf { it.isNotBlank() } ?: request.title,
                 matchedArtist = info?.matchedArtist?.takeIf { it.isNotBlank() } ?: request.artist,
                 matchedAlbum = request.album,

@@ -48,7 +48,9 @@ internal object LyricsIndexStore {
                     updatedAt = obj.optLong("updatedAt"),
                     matchedTitle = obj.optString("matchedTitle", ""),
                     matchedArtist = obj.optString("matchedArtist", ""),
-                    matchedDurationMs = obj.optLong("matchedDurationMs", 0L)
+                    matchedDurationMs = obj.optLong("matchedDurationMs", 0L),
+                    isUntimed = obj.optString("plainType") == "text" || LyricsFileNaming.isUntimedFile(obj.optString("file")),
+                    untimedTranslation = obj.optString("untimedTranslation").takeIf { it.isNotEmpty() }
                 )
             }.filter { it.key.isNotBlank() && (it.plainFile.isNotBlank() || it.wordByWordFile.isNotBlank()) }
         }.getOrDefault(emptyList())
@@ -64,6 +66,8 @@ internal object LyricsIndexStore {
                 put("album", entry.album)
                 put("durationMs", entry.durationMs)
                 put("file", entry.plainFile)
+                if (entry.isUntimed) put("plainType", "text")
+                entry.untimedTranslation?.let { put("untimedTranslation", it) }
                 put(WORD_BY_WORD_FILE_JSON_FIELD, entry.wordByWordFile)
                 put("source", entry.plainSource)
                 put("provider", entry.plainProvider)

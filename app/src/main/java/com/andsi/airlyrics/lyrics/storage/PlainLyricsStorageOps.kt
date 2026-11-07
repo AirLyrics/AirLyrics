@@ -28,7 +28,9 @@ internal object PlainLyricsStorageOps {
                 album = indexed.album,
                 matchedTitle = indexed.matchedTitle,
                 matchedArtist = indexed.matchedArtist,
-                matchedDurationMs = indexed.matchedDurationMs
+                matchedDurationMs = indexed.matchedDurationMs,
+                isUntimed = indexed.isUntimed,
+                untimedTranslation = indexed.untimedTranslation
             )
         }
 
@@ -53,7 +55,8 @@ internal object PlainLyricsStorageOps {
     fun readPlainLyrics(context: Context, title: String, artist: String, duration: Long): String? {
         val entry = LyricsIndexStore.find(context, title, artist, duration)
         if (entry?.plainFile?.isNotBlank() == true) {
-            LyricsFileStore.readManagedLyrics(context, entry.plainFile)?.let { return it }
+            val managed = LyricsFileStore.readManagedLyrics(context, entry.plainFile)
+            if (managed != null || entry.isUntimed) return managed
         }
         return LyricsFileStore.readLegacyPlainLyrics(context, title, artist, duration)
     }
@@ -70,7 +73,9 @@ internal object PlainLyricsStorageOps {
         overwrite: Boolean = true,
         matchedTitle: String = "",
         matchedArtist: String = "",
-        matchedDurationMs: Long = 0L
+        matchedDurationMs: Long = 0L,
+        isUntimed: Boolean = false,
+        untimedTranslation: String? = null
     ): Boolean {
         val identity = SongIdentity(title = title, artist = artist, album = album, durationMs = duration)
         val normalizedKey = identity.storageKey()
@@ -78,8 +83,15 @@ internal object PlainLyricsStorageOps {
         if (existing?.plainFile?.isNotBlank() == true && !overwrite) return false
 
         val now = System.currentTimeMillis()
-        val fileName = LyricsFileNaming.managedPlainFileName(identity)
+        val fileName = LyricsFileNaming.managedPlainFileName(identity, isUntimed)
         val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
+        val snapshot = LyricsIndexStore.captureRaw(context)
+        if (snapshot is LyricsIndexStore.RawSnapshot.Unreadable) return false
+        val oldTarget = LyricsFileStore.readManagedLyrics(context, relativeFile)
+        if (oldTarget == null && LyricsFileStore.managedLyricsExists(context, relativeFile)) return false
+        val obsolete = existing?.plainFile?.takeIf { it.isNotBlank() && it != relativeFile }
+        val oldSource = obsolete?.let { LyricsFileStore.readManagedLyrics(context, it) }
+        if (obsolete != null && oldSource == null && LyricsFileStore.managedLyricsExists(context, obsolete)) return false
         if (!LyricsFileStore.writeManagedLyrics(context, fileName, plainLrc)) return false
 
         val entries = LyricsIndexStore.read(context)
@@ -101,10 +113,28 @@ internal object PlainLyricsStorageOps {
             updatedAt = now,
             matchedTitle = matchedTitle.ifBlank { existing?.matchedTitle.orEmpty() },
             matchedArtist = matchedArtist.ifBlank { existing?.matchedArtist.orEmpty() },
-            matchedDurationMs = matchedDurationMs.takeIf { it > 0L } ?: existing?.matchedDurationMs ?: 0L
+            matchedDurationMs = matchedDurationMs.takeIf { it > 0L } ?: existing?.matchedDurationMs ?: 0L,
+            isUntimed = isUntimed,
+            untimedTranslation = untimedTranslation.takeIf { isUntimed }
         )
 
-        return LyricsIndexStore.write(context, entries)
+        var committed = false
+        try {
+            if (!LyricsIndexStore.write(context, entries)) return false
+            if (obsolete != null && LyricsFileStore.managedLyricsExists(context, obsolete) &&
+                !LyricsFileStore.deleteManagedLyrics(context, obsolete)) return false
+            committed = true
+            return true
+        } finally {
+            if (!committed) {
+                if (oldTarget == null) {
+                    if (LyricsFileStore.managedLyricsExists(context, relativeFile)) check(LyricsFileStore.deleteManagedLyrics(context, relativeFile))
+                } else check(LyricsFileStore.writeManagedLyrics(context, fileName, oldTarget))
+                if (obsolete != null && oldSource != null)
+                    check(LyricsFileStore.writeManagedLyrics(context, obsolete.substringAfterLast('/'), oldSource))
+                check(LyricsIndexStore.restoreRaw(context, snapshot))
+            }
+        }
     }
 
     fun importPlainLyricsFromUriWithResult(
@@ -149,7 +179,8 @@ internal object PlainLyricsStorageOps {
                 album = album,
                 plainSource = LyricsStorage.SOURCE_MANUAL_IMPORT,
                 plainProvider = "local",
-                overwrite = overwrite
+                overwrite = overwrite,
+                isUntimed = format == com.andsi.airlyrics.lyrics.importer.LyricsDocumentFormat.TXT
             )) {
                 LyricsStorage.ImportLyricsResult.Saved
             } else {

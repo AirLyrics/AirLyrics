@@ -54,7 +54,8 @@ internal data class LocalLyricsUiItem(
     val displayTitle: String,
     val subtitle: String = "",
     val typeText: String = "",
-    val metaText: String = ""
+    val metaText: String = "",
+    val isUntimed: Boolean = name.endsWith(".txt", ignoreCase = true)
 )
 
 internal data class RecentLyricsUiState(

@@ -44,19 +44,23 @@ internal object BatchLyricsExporter {
                             }
                             val target = if (item.hasWordByWordLyrics) LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
                                 else LyricsStorage.LocalLyricsEditTarget.PLAIN
-                            requireNotNull(LyricsStorage.readLocalLyricsItemText(context, item, target)?.takeIf { it.isNotBlank() })
+                            val raw = requireNotNull(LyricsStorage.readLocalLyricsItemText(context, item, target))
+                            val content = if (item.isUntimed) com.andsi.airlyrics.lyrics.UntimedLyrics(
+                                raw, LyricsStorage.untimedTranslation(context, item)).readableText else raw
+                            requireNotNull(content.takeIf { it.isNotBlank() })
                         }
                     }.getOrElse {
                         failures += Failure(item.displayTitle, problem)
                         continue
                     }
                     val stem = safeStem(item)
-                    var name = "$stem.lrc"
+                    val extension = if (item.isUntimed) "txt" else "lrc"
+                    var name = "$stem.$extension"
                     var suffix = 2
-                    while (!names.add(name.lowercase(Locale.ROOT))) name = "$stem (${suffix++}).lrc"
+                    while (!names.add(name.lowercase(Locale.ROOT))) name = "$stem (${suffix++}).$extension"
                     // Compression and destination I/O must not hold the playback storage lock.
                     zip.putNextEntry(ZipEntry(name))
-                    zip.write(withIdentity(text, item).toByteArray(Charsets.UTF_8))
+                    zip.write((if (item.isUntimed) text else withIdentity(text, item)).toByteArray(Charsets.UTF_8))
                     zip.closeEntry()
                     count++
                 }

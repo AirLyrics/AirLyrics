@@ -241,7 +241,7 @@
     <string name="ui_no_translation_for_this_lyric">暂无翻译</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">请至少添加一行：[00:12.34]&lt;00:12.34&gt;歌词</string>
     <string name="ui_plain_lrc_no_valid_line_error">请至少添加一行：[00:12.34]歌词</string>
-    <string name="ui_import_no_valid_plain_lyrics">未找到有效的普通歌词，请检查 LRC 或 TTML 格式</string>
+    <string name="ui_import_no_valid_plain_lyrics">未找到有效歌词，请检查 LRC、TTML 或 TXT 格式</string>
     <string name="ui_import_no_valid_word_by_word_lyrics">未找到有效的逐字歌词，请检查 LRC 或 TTML 格式</string>
     <string name="ui_not_bound">未绑定</string>
     <string name="ui_not_imported">未导入</string>
@@ -286,7 +286,7 @@
     <string name="ui_plain_lrc_import_success">普通歌词已导入</string>
     <string name="ui_plain_lrc_removed_for_this_song">普通歌词已移除</string>
     <string name="ui_plain_lyrics">普通歌词</string>
-    <string name="ui_plain_lyrics_lrc">普通歌词（.lrc / .ttml）</string>
+    <string name="ui_plain_lyrics_lrc">普通歌词（.lrc / .ttml / .txt）</string>
     <string name="ui_lyrics_format_lrc_guide_body">普通 LRC：
 [00:12.34]原文歌词 / 翻译歌词
 [00:12.34]原文歌词
@@ -304,7 +304,7 @@
     <string name="ui_media_streams_empty_hint">未检测到活跃媒体</string>
     <string name="ui_playback_error">播放异常</string>
     <string name="ui_playing">播放中</string>
-    <string name="ui_please_choose_a_plain_lrc_lyrics_file">请选择普通歌词 .lrc 或 .ttml 文件</string>
+    <string name="ui_please_choose_a_plain_lrc_lyrics_file">请选择 .lrc、.ttml 或 .txt 文件</string>
     <string name="ui_please_choose_a_word_by_word_lrc_file">请选择逐字歌词 .lrc 或 .ttml 文件</string>
     <string name="ui_enable_overlay_permission_first">请先开启悬浮窗权限</string>
     <string name="ui_select_song_before_importing">请先播放歌曲并选择播放器</string>
@@ -533,4 +533,7 @@
     <string name="ui_lyrics_word_empty">请输入词或音节</string>
     <string name="ui_lyrics_line_text">整行歌词</string>
     <string name="ui_lyrics_line_empty">请输入歌词</string>
+    <string name="ui_untimed_lyrics">纯文本歌词</string>
+    <string name="search_untimed_notice">无时间轴，无法在悬浮窗显示。</string>
+    <string name="ui_untimed_lyrics_unavailable">纯文本歌词，无法同步显示</string>
 </resources>

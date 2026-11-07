@@ -103,7 +103,8 @@ object LyricsStorage {
         val source: String = SOURCE_LEGACY,
         val provider: String = "local",
         val hasPlainLyrics: Boolean = true,
-        val hasWordByWordLyrics: Boolean = false
+        val hasWordByWordLyrics: Boolean = false,
+        val isUntimed: Boolean = name.endsWith(".txt", ignoreCase = true)
     ) {
         val displayTitle: String
             get() = title.ifBlank { LyricsFileNaming.friendlyDisplayName(name) }
@@ -124,7 +125,9 @@ object LyricsStorage {
         val album: String = "",
         val matchedTitle: String = "",
         val matchedArtist: String = "",
-        val matchedDurationMs: Long = 0L
+        val matchedDurationMs: Long = 0L,
+        val isUntimed: Boolean = plainFileName.endsWith(".txt", ignoreCase = true),
+        val untimedTranslation: String? = null
     ) {
         val friendlyTitle: String
             get() = if (title.isNotBlank()) {
@@ -166,8 +169,15 @@ object LyricsStorage {
             val result = SpicyLyricsCache.forContext(context).read(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX)) ?: return@withStorageLock null
             if (target == LocalLyricsEditTarget.WORD_BY_WORD) {
                 com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser.wordByWordLinesToWordByWordLrc(result.wordByWordLines)
-            } else if (result.wordByWordLines.isEmpty()) result.plainLrc else null
+            } else if (result.wordByWordLines.isEmpty()) result.untimedLyrics?.text ?: result.plainLrc else null
         } else LocalLyricsEditor.readItemText(context, item, target)
+    }
+
+    internal fun untimedTranslation(context: Context, item: LocalLyricsItem): String? = withStorageLock {
+        if (!item.isUntimed) return@withStorageLock null
+        if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX))
+            SpicyLyricsCache.forContext(context).read(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX))?.untimedLyrics?.translatedText
+        else LyricsIndexStore.read(context).singleOrNull { it.key == item.indexKey }?.untimedTranslation
     }
 
     fun updatePlainLyricsItemTextWithResult(
@@ -216,7 +226,7 @@ object LyricsStorage {
         ManualLyricsSelectionStore.read(context, SongIdentity(title, artist, durationMs = duration))?.info
             ?: PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, title, artist, duration)
             ?: SpicyLyricsCache.forContext(context).item(SpicyLyricsCache.key(title, artist, duration))
-                ?.let { LocalPlainLyricsInfo(it.title, it.artist, it.durationMs, it.name, it.source, it.provider, it.modifiedTimeMillis, it.indexKey, it.album) }
+                ?.let { LocalPlainLyricsInfo(it.title, it.artist, it.durationMs, it.name, it.source, it.provider, it.modifiedTimeMillis, it.indexKey, it.album, isUntimed = it.isUntimed) }
     }
 
     /** Metadata for the same word upgrade chosen by the repository, without accessing the network. */
@@ -249,7 +259,9 @@ object LyricsStorage {
         overwrite: Boolean = true,
         matchedTitle: String = "",
         matchedArtist: String = "",
-        matchedDurationMs: Long = 0L
+        matchedDurationMs: Long = 0L,
+        isUntimed: Boolean = false,
+        untimedTranslation: String? = null
     ): Boolean = withStorageLock {
         if (plainProvider == "spicy") return@withStorageLock false
         val saved = PlainLyricsStorageOps.savePlainLyrics(
@@ -264,7 +276,9 @@ object LyricsStorage {
             overwrite = overwrite,
             matchedTitle = matchedTitle,
             matchedArtist = matchedArtist,
-            matchedDurationMs = matchedDurationMs
+            matchedDurationMs = matchedDurationMs,
+            isUntimed = isUntimed,
+            untimedTranslation = untimedTranslation
         )
         if (saved) markContentChanged()
         saved

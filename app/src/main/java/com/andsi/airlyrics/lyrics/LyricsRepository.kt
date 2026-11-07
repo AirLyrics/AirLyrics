@@ -6,7 +6,6 @@ import com.andsi.airlyrics.lyrics.providers.SongAliasNative
 import android.content.Context
 import android.util.Log
 import com.andsi.airlyrics.BuildConfig
-import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.providers.SpicyLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.ApplePlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.LocalPlainLyricsProvider
@@ -251,7 +250,8 @@ internal class LyricsRepositoryEngine(
             // provider may have returned a usable line-only result (for example Apple lyrics).
             // Keep local as the final fallback after configured online sources are exhausted.
             val sources = settings.plainLyricsSearchSources
-            val lineFallback = prefetched.values.firstNotNullOfOrNull { it.getOrNull() }
+            val prefetchedMatches = prefetched.values.mapNotNull { it.getOrNull() }
+            val lineFallback = prefetchedMatches.firstOrNull { !it.isUntimed } ?: prefetchedMatches.firstOrNull()
             val onlinePlainLyricsResult = try {
                 // Word timing is an optional capability. Once the word-capable prefetch has
                 // failed to produce timed words, resolve the ordinary result strictly in the
@@ -280,6 +280,7 @@ internal class LyricsRepositoryEngine(
     ): LyricsProviderResult? {
         val orderedSources = sources.distinct()
         var lookupError: Throwable? = null
+        var textFallback: LyricsProviderResult? = null
         for ((index, source) in orderedSources.withIndex()) {
             request.cancellationToken?.throwIfCancellationRequested()
             val provider = checkNotNull(onlinePlainLyricsProviders[source]) {
@@ -312,6 +313,7 @@ internal class LyricsRepositoryEngine(
                     lookupError = error
                     continue
                 }
+                if (textFallback != null) { lookupError = error; continue }
                 throw error
             }
 
@@ -334,8 +336,13 @@ internal class LyricsRepositoryEngine(
                 stage = LyricsLookupProviderStage.MATCH,
                 debug = BuildConfig.DEBUG
             )
+            if (result.isUntimed) {
+                if (textFallback == null) textFallback = result
+                continue
+            }
             return result
         }
+        textFallback?.let { return it }
         lookupError?.let { throw it }
         return null
     }
@@ -348,6 +355,7 @@ internal class LyricsRepositoryEngine(
         durationMs: Long,
         enabled: Boolean
     ): LyricsProviderResult {
+        if (result.isUntimed) return result
         if (!enabled) return if (result.wordByWordLines.isEmpty()) result else result.copy(wordByWordLines = emptyList())
         if (result.access != null || result.selectedManually) return result
 
@@ -421,10 +429,9 @@ private object AndroidLocalPlainLyricsSaver : LocalPlainLyricsSaver {
             title = title,
             artist = artist,
             duration = durationMs,
-            plainLrc = LrcParser.mergeOriginalAndTranslationForStorage(
-                plainLrc = plainLyricsResult.plainLrc,
-                translatedLrc = plainLyricsResult.translatedLrc
-            ),
+            plainLrc = plainLyricsResult.storageText,
+            isUntimed = plainLyricsResult.isUntimed,
+            untimedTranslation = plainLyricsResult.untimedLyrics?.translatedText,
             album = album,
             plainSource = LyricsStorage.SOURCE_DOWNLOADED,
             plainProvider = plainLyricsResult.plainProviderId,

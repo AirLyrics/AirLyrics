@@ -5,6 +5,7 @@ import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 /** Empty text is an explicit choice; non-empty payloads still need playable lines. */
 internal fun LyricsProviderResult.manualUnavailableReason(): LyricsUnavailableReason? {
+    if (isUntimed) return if (untimedLyrics?.hasContent == true) null else LyricsUnavailableReason.NO_USABLE_LINES
     val tracks = listOf(plainLrc, translatedLrc.orEmpty())
     if (tracks.all { it.isBlank() }) return null
     val text = tracks.flatMap { LrcParser.parse(it) }

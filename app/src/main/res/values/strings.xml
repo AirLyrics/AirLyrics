@@ -241,7 +241,7 @@
     <string name="ui_no_translation_for_this_lyric">No translation for this lyric</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">Add at least one line: [00:12.34]&lt;00:12.34&gt;lyric</string>
     <string name="ui_plain_lrc_no_valid_line_error">Add at least one line: [00:12.34]lyric</string>
-    <string name="ui_import_no_valid_plain_lyrics">No valid plain lyrics found; check the LRC or TTML format</string>
+    <string name="ui_import_no_valid_plain_lyrics">No valid lyrics found; check the LRC, TTML or TXT format</string>
     <string name="ui_import_no_valid_word_by_word_lyrics">No valid word-by-word lyrics found; check the LRC or TTML format</string>
     <string name="ui_not_bound">Not bound</string>
     <string name="ui_not_imported">Not imported</string>
@@ -286,7 +286,7 @@
     <string name="ui_plain_lrc_import_success">Plain lyrics imported</string>
     <string name="ui_plain_lrc_removed_for_this_song">Plain lyrics removed for this song</string>
     <string name="ui_plain_lyrics">Plain lyrics</string>
-    <string name="ui_plain_lyrics_lrc">Plain lyrics (.lrc / .ttml)</string>
+    <string name="ui_plain_lyrics_lrc">Lyrics (.lrc / .ttml / .txt)</string>
     <string name="ui_lyrics_format_lrc_guide_body">Plain LRC:
 [00:12.34]Original lyric / Translation
 [00:12.34]Original lyric
@@ -304,7 +304,7 @@ Word-timed TTML:
     <string name="ui_media_streams_empty_hint">No active media detected</string>
     <string name="ui_playback_error">Playback error</string>
     <string name="ui_playing">Playing</string>
-    <string name="ui_please_choose_a_plain_lrc_lyrics_file">Choose a plain lyrics .lrc or .ttml file</string>
+    <string name="ui_please_choose_a_plain_lrc_lyrics_file">Choose a .lrc, .ttml or .txt file</string>
     <string name="ui_please_choose_a_word_by_word_lrc_file">Choose a word-by-word lyrics .lrc or .ttml file</string>
     <string name="ui_enable_overlay_permission_first">Enable overlay permission first</string>
     <string name="ui_select_song_before_importing">Play a song and select its player first</string>
@@ -536,4 +536,7 @@ Word-timed TTML:
     <string name="ui_lyrics_word_empty">Enter word text</string>
     <string name="ui_lyrics_line_text">Full line</string>
     <string name="ui_lyrics_line_empty">Enter lyrics</string>
+    <string name="ui_untimed_lyrics">Plain text lyrics</string>
+    <string name="search_untimed_notice">No timing; cannot display in the floating window.</string>
+    <string name="ui_untimed_lyrics_unavailable">Plain text lyrics cannot be synced</string>
 </resources>

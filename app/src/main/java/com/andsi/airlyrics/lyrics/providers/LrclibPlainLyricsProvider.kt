@@ -16,7 +16,8 @@ data class LrclibPlainLyricsResult(
     val album: String,
     val durationMs: Long,
     val lrc: String,
-    val translatedLrc: String?
+    val translatedLrc: String?,
+    val untimedText: String? = null
 )
 
 object LrclibPlainLyricsProvider : PlainLyricsProvider {
@@ -104,7 +105,7 @@ object LrclibPlainLyricsProvider : PlainLyricsProvider {
         }
 
         val lrc = nativeResult.primaryPlainLrc()
-        if (lrc.isBlank()) return null
+        if (lrc.isBlank() && nativeResult.untimedText == null) return null
         val lyricsTracks = nativeResult.translatedLrc?.let { translatedLrc ->
             LrclibEmbeddedLyricsTracks(
                 originalLrc = lrc,
@@ -121,6 +122,7 @@ object LrclibPlainLyricsProvider : PlainLyricsProvider {
             durationMs = nativeResult.durationMs,
             lrc = lyricsTracks.originalLrc,
             translatedLrc = lyricsTracks.translatedLrc,
+            untimedText = nativeResult.untimedText,
         )
     }
 
@@ -135,6 +137,7 @@ object LrclibPlainLyricsProvider : PlainLyricsProvider {
                 matchedArtist = it.artist,
                 matchedAlbum = it.album,
                 matchedDurationMs = it.durationMs,
+                untimedLyrics = it.untimedText?.let { text -> com.andsi.airlyrics.lyrics.UntimedLyrics(text) },
             )
         }
     }

@@ -1,3 +1,7 @@
+Plain text (.txt)
+Keep the lyrics as text, including blank lines. No timestamps are needed.
+Plain text lyrics cannot be displayed in the floating window.
+
 Plain LRC
 [00:12.34]This is a line of lyrics
 

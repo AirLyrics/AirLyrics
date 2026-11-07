@@ -23,6 +23,8 @@ internal object LyricsImportParsers {
     ): LyricsTextParseResult<String> {
         return when (format) {
             LyricsDocumentFormat.LRC -> parsePlainLrc(text)
+            LyricsDocumentFormat.TXT -> if (text.isNotBlank() && '\u0000' !in text)
+                LyricsTextParseResult.Success(text.removePrefix("\uFEFF")) else LyricsTextParseResult.InvalidFormat()
             LyricsDocumentFormat.TTML -> when (val result = TtmlParser.parse(text)) {
                 is TtmlParseResult.Success -> result.document.toPlainLrc()
                     .takeIf { it.isNotBlank() }
@@ -43,6 +45,7 @@ internal object LyricsImportParsers {
     ): LyricsTextParseResult<ParsedWordByWordLyrics> {
         return when (format) {
             LyricsDocumentFormat.LRC -> parseWordByWordLrc(text)
+            LyricsDocumentFormat.TXT -> LyricsTextParseResult.InvalidFormat()
             LyricsDocumentFormat.TTML -> when (val result = TtmlParser.parse(text)) {
                 is TtmlParseResult.Success -> result.document.toParsedWordByWordLyrics()
                     .takeIf { it.wordByWordLines.isNotEmpty() }

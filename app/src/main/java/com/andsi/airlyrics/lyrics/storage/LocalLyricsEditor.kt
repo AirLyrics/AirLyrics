@@ -42,7 +42,10 @@ internal object LocalLyricsEditor {
             return LyricsStorage.LocalLyricsUpdateResult(saved = false)
         }
 
-        val validation = LrcParser.validateForStorage(plainLrc)
+        val untimed = item.isUntimed
+        val hasTranslation = untimed && !findEntry(context, item)?.untimedTranslation.isNullOrBlank()
+        val validation = if (untimed) LrcParser.StorageValidationResult(plainLrc.isNotBlank() || hasTranslation)
+            else LrcParser.validateForStorage(plainLrc)
         if (!validation.isValid) {
             return LyricsStorage.LocalLyricsUpdateResult(
                 saved = false,
@@ -50,8 +53,8 @@ internal object LocalLyricsEditor {
             )
         }
 
-        val normalizedPlainLrc = LrcParser.normalizeForStorage(plainLrc)
-        if (normalizedPlainLrc.isBlank()) return LyricsStorage.LocalLyricsUpdateResult(saved = false)
+        val normalizedPlainLrc = if (untimed) plainLrc else LrcParser.normalizeForStorage(plainLrc)
+        if (normalizedPlainLrc.isBlank() && !hasTranslation) return LyricsStorage.LocalLyricsUpdateResult(saved = false)
 
         return LyricsStorage.withStorageLock {
             val entry = findEntry(context, item)
