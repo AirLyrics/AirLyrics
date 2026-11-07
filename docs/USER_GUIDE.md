@@ -42,18 +42,27 @@ is enabled.
   window from appearing. See the troubleshooting section at the bottom.
 - **Lyrics offset** is saved for each song and does not change the original lyrics file.
 - **Word-by-word lyrics** supports local imports, Spicy Lyrics, and Apple Music when timing is available.
+- **Highlight effects** lets you adjust the highlight color, glow strength, and glow spread.
 
 ## Lyrics and Local Files
 
 Manage lyrics in **Settings > Lyrics**. AirLyrics always looks for lyrics in this order:
 manual import > local cache > online search.
 
+### Edit Saved Lyrics
+
+Open a saved lyric to edit its text and timing. Word-by-word lyrics support line and word timing,
+translations, and background vocals. The **Full line** field uses `<mm:ss.SSS>` word timestamps,
+including an end timestamp after the last word; tap **Update words**, then save the lyric.
+
+Plain text lyrics can be imported from TXT files, saved, and edited, but cannot be displayed in the floating window.
+
 ### Manage Saved Lyrics in Batches
 
 Tap **Select multiple** (the top-right button) in **Saved lyrics** (Recent local lyrics -> View all):
 
-- **Export** saves a ZIP. Extract and edit its LRC files, then **Import and replace**. Keep `airlyrics-key` tags to match the original entries.
-- Imports match selected songs: export tags take priority, followed by LRC title and artist tags. Without a title tag, filenames are matched; use `Title - Artist.lrc`. One selected song and one file without an export tag map directly.
+- **Export** saves a ZIP containing LRC files, or TXT files for plain text lyrics. Edit them, then **Import and replace**. Keep `airlyrics-key` tags in LRC files to match the original entries.
+- Imports match selected songs: export tags take priority, followed by LRC title and artist tags. Without a title tag, filenames are matched; use `Title - Artist.lrc` or `Title - Artist.txt`. One selected song and one file without an export tag map directly.
 - Confirming an import replaces the original lyrics and type. Deletion includes plain and word-timed lyrics.
 - Unmatched, ambiguous, or duplicate matches are skipped. Source restrictions or read failures can prevent export (lyrics from Spicy Lyrics cannot be exported due to API restrictions).
 
@@ -61,9 +70,10 @@ Tap **Select multiple** (the top-right button) in **Saved lyrics** (Recent local
 
 Multiple online lyrics sources are supported. You can select them and adjust their priority in
 Settings > Lyrics. Each source tries the full track information first, then broadens the query and
-checks other related candidates if the first one has no synchronized lyrics. Only lyrics with a
-valid timeline are used; to improve the hit rate, the returned version, artist tags, or duration may
-not exactly match the current track. If you need more accurate lyrics, just adjust them yourself.
+checks other related candidates if the first one has no synchronized lyrics. Timed lyrics take priority;
+LRCLIB and Spicy can return plain text when no timed lyrics are found. Plain text can be saved and read
+in the app, but cannot be displayed in the floating window. The returned version, artist tags, or
+duration may not exactly match the current track. If needed, adjust the lyrics yourself.
 
 Apple Music lyrics require sign-in under **Settings > Lyrics > Apple Music account**. Sign-in opens
 Apple's page in the app. Available word timing and translations depend on the song and storefront.
@@ -76,10 +86,13 @@ choose sources, and search. Swipe between sources, open a result to preview it, 
 The reset icon at the end of each edited field restores its original value.
 Searching and previewing leave existing lyrics intact; applying uses the song shown at the top of the window.
 
+On the Spicy source page, choose **Search by Spotify ID** and paste a Spotify track link or
+22-character ID. When Spotify supplies the current track ID, AirLyrics can use it automatically.
+
 - Uninstalling AirLyrics also deletes the default lyrics folder. To use a custom folder, select it
   through the system file picker.
 
-See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC and TTML examples. I generally do not plan to
+See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC, TTML, and TXT examples. I generally do not plan to
 add support for more lyrics formats; you can use AI to convert them yourself.
 
 ## Troubleshooting

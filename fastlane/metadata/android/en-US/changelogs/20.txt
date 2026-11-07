@@ -1,0 +1,7 @@
+v1.2.9
+• Edit word-by-word lyrics, including word text and timing.
+• Import, save, and edit plain text lyrics (no floating display).
+• Search Spicy Lyrics by Spotify track link or ID.
+• Add lyric glow controls and smoother Spicy animations.
+• Add an interactive cat to the About page (I don't know why I made this either).
+• Fix many small issues.

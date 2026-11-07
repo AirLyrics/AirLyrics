@@ -62,9 +62,10 @@ For more settings and help with common problems, see the [User Guide](docs/USER_
 
 - **Lyrics search and import**: Follows song changes in the selected player and searches NetEase
   Cloud Music, Musixmatch, LRCLIB, Spicy Lyrics, or Apple Music (sign-in required). You can also
-  search across sources manually, preview results, and import local LRC and TTML files, including
-  LDDC word-timed LRC. Lyrics can show translations and word-by-word highlighting.
-- **Overlay appearance**: Adjust the font, weight, colors, opacity, window style, and transition
+  search across sources manually, preview results, and import local LRC, TTML, and TXT files, including
+  LDDC word-timed LRC. Timed lyrics can show translations and word-by-word highlighting; plain text
+  lyrics can be saved and edited but cannot be displayed in the overlay.
+- **Overlay appearance**: Adjust the font, weight, colors, opacity, glow, window style, and transition
   animations, with a live preview as you make changes. You can also import your own fonts.
 - **Themes**: Choose a light or dark theme, or follow the system setting, with several accent colors
   available.
@@ -72,7 +73,7 @@ For more settings and help with common problems, see the [User Guide](docs/USER_
   pass through it, or control it from the notification. You can also limit the overlay to selected
   apps.
 - **Lyrics management**: Save timing offsets for individual songs, and browse, search, edit, export,
-  import, or delete saved lyrics, including batch actions.
+  import, or delete saved lyrics, including batch actions. Edit word text and timing in word-by-word lyrics.
 
 ---
 
@@ -173,7 +174,7 @@ For details about permissions, data storage, and online searches, see the
 | [Documentation Home](docs/README.md) | English documentation index |
 | [Privacy Policy](PRIVACY.md) | Permissions, data storage, and online searches |
 | [User Guide](docs/USER_GUIDE.md) | Usage instructions and common problems |
-| [Lyrics Formats](docs/LYRICS_FORMAT.md) | Importing local LRC and TTML files |
+| [Lyrics Formats](docs/LYRICS_FORMAT.md) | Importing local LRC, TTML, and TXT files |
 | [Contributing Guide](docs/CONTRIBUTING.md) | Development setup, contribution workflow, and code locations |
 | [Project Architecture](docs/ARCHITECTURE.md) | Modules and how the app runs |
 

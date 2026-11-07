@@ -48,8 +48,15 @@ internal class ManualLyricsSearch(
         val candidate = LyricsCandidate(PlainLyricsSearchSource.SPICY, parsedId,
             mediaSong ?: SongIdentity("", "", "", 0L), 0.0, spotifyIdMatch = true)
         val result = fetch(candidate, target, token) as? ManualLyricsFetchResult.Available ?: return null
-        return result.lyrics.takeIf { it.manualUnavailableReason() == null }
-            ?.let { SpotifyIdLyricsResult(candidate, it) }
+        return result.lyrics.takeIf { it.manualUnavailableReason() == null }?.let { lyrics ->
+            val song = SongIdentity(
+                lyrics.matchedTitle.ifBlank { candidate.song.title },
+                lyrics.matchedArtist.ifBlank { candidate.song.artist },
+                lyrics.matchedAlbum.ifBlank { candidate.song.album },
+                lyrics.matchedDurationMs.takeIf { it > 0 } ?: candidate.song.durationMs
+            )
+            SpotifyIdLyricsResult(candidate.copy(song = song), lyrics)
+        }
     }
 
     fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken): SongIdentity? {

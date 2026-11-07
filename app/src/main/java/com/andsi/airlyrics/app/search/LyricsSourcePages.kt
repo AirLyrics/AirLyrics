@@ -567,7 +567,8 @@ internal class LyricsSourcePages(
             }.orEmpty()
             holder.heading.text = candidate.song.title.ifBlank { context.getString(R.string.search_spotify_track) }
             holder.idBadge.visibility = if (candidate.spotifyIdMatch) VISIBLE else GONE
-            holder.detail.text = listOf(candidate.song.artist, candidate.song.album)
+            holder.detail.text = listOfNotNull(candidate.song.artist, candidate.song.album,
+                candidate.id.takeIf { candidate.spotifyIdMatch })
                 .filter { it.isNotBlank() }.joinToString(" · ").ifBlank { candidate.id }
             holder.box.setOnClickListener { if (canOpen) session.preview(candidate) }
         }

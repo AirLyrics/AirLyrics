@@ -20,9 +20,16 @@ A cross-script title with insufficient text similarity requires a strong artist 
 | NetEase | Shared free-text plan | Common scoring; early lyric attempts, then remaining ranked candidates |
 | LRCLIB | Exact metadata request, then shared structured plan | Both exact and search results use common scoring; timed lyrics arrive with candidates |
 | Musixmatch | Native matcher, then shared structured plan | Track results use common scoring; final subtitle matcher follows shared query variants, but exposes no candidate metadata to rescore |
-| Spicy | Shared free-text plan sent to Spotify | Common scoring; merge rounds, preserve relevance on ties, try at most four IDs for line/word lyrics |
+| Spicy | Direct track ID when available; otherwise the shared free-text plan sent to Spotify | Exact-ID requests skip candidate search; search results use common scoring, merge rounds, preserve relevance on ties, and try at most four IDs |
 
 Transport deadlines, cancellation, rate-limit cooldowns, endpoint parameter names and lyric decoding stay with their providers. Do not force these protocols into a single network loop. Source-specific tiebreakers may use native IDs or API relevance only after shared metadata scoring.
+
+Spicy accepts a track ID from the selected Spotify media session or a manually entered track link/ID.
+Direct lookups fetch that recording without metadata search and verify the response ID.
+Missing titles are requested through Spotify oEmbed; a title failure does not discard the lyrics.
+Results and previews show both the title and ID; word-timed previews retain their word timestamps.
+LRCLIB and Spicy retain plain text as a fallback while continuing to look for timed lyrics.
+Untimed results can be previewed, saved, and edited, but are not rendered as synced floating lyrics.
 
 ## Validation
 

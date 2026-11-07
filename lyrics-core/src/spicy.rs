@@ -456,8 +456,10 @@ where
             Err(e) => return line_fallback.or(text_fallback).map(Ok).unwrap_or(Err(e)),
         };
         if !timed_response(&response) {
-            if text_fallback.is_none() && response["Body"]["Type"] == "Static"
-                && manual_unavailable_reason(&response)?.is_none() {
+            if text_fallback.is_none()
+                && response["Body"]["Type"] == "Static"
+                && manual_unavailable_reason(&response)?.is_none()
+            {
                 text_fallback = Some(json!({"ok":true,"track":track,"response":response,
                     "lookup":{"candidates":tracks.len(),"attempted":index+1}}));
             }
@@ -625,14 +627,29 @@ mod tests {
     #[tokio::test(start_paused = true)]
     async fn static_fallback_does_not_prevent_a_later_timed_match() {
         let tracks = vec![json!({"id":"text"}), json!({"id":"line"})];
-        let result = fetch_tracks(&tracks, tokio::time::Instant::now() + Duration::from_secs(1), |id| async move {
-            Ok(if id == "text" { json!({"Status":200,"Body":{"Type":"Static","Lines":[{"Text":"Lyrics"}]}}) }
-                else { json!({"Status":200,"Body":{"Type":"Line","Content":[{}]}}) })
-        }).await.unwrap();
+        let result = fetch_tracks(
+            &tracks,
+            tokio::time::Instant::now() + Duration::from_secs(1),
+            |id| async move {
+                Ok(if id == "text" {
+                    json!({"Status":200,"Body":{"Type":"Static","Lines":[{"Text":"Lyrics"}]}})
+                } else {
+                    json!({"Status":200,"Body":{"Type":"Line","Content":[{}]}})
+                })
+            },
+        )
+        .await
+        .unwrap();
         assert_eq!(result["track"]["id"], "line");
-        let text_only = fetch_tracks(&tracks[..1], tokio::time::Instant::now() + Duration::from_secs(1), |_| async {
-            Ok(json!({"Status":200,"Body":{"Type":"Static","Lines":[{"Text":"Lyrics"}]}}))
-        }).await.unwrap();
+        let text_only = fetch_tracks(
+            &tracks[..1],
+            tokio::time::Instant::now() + Duration::from_secs(1),
+            |_| async {
+                Ok(json!({"Status":200,"Body":{"Type":"Static","Lines":[{"Text":"Lyrics"}]}}))
+            },
+        )
+        .await
+        .unwrap();
         assert_eq!(text_only["track"]["id"], "text");
     }
 
@@ -732,6 +749,39 @@ async fn fetch_lyrics_by_id(client: &Client, id: &str, key: &str) -> Result<Valu
     Ok(response)
 }
 
+/// Optional display metadata must never turn available lyrics into a failed lookup.
+/// oEmbed returns a title without Spotify authentication or a title-based search.
+async fn complete_track_title(client: &Client, track: &mut crate::manual::Track, endpoint: &str) {
+    if !track.title.trim().is_empty() {
+        return;
+    }
+    let title = tokio::time::timeout(Duration::from_secs(2), async {
+        let response = client
+            .get(endpoint)
+            .query(&[(
+                "url",
+                format!("https://open.spotify.com/track/{}", track.id),
+            )])
+            .send()
+            .await
+            .ok()?;
+        if !response.status().is_success() {
+            return None;
+        }
+        let text = bounded_text(response, 64 * 1024).await.ok()?;
+        let data: Value = serde_json::from_str(&text).ok()?;
+        data["title"]
+            .as_str()
+            .map(str::trim)
+            .filter(|title| !title.is_empty())
+            .map(str::to_owned)
+    })
+    .await;
+    if let Ok(Some(title)) = title {
+        track.title = title;
+    }
+}
+
 pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Result<Value, String> {
     if !key.starts_with("sl_pk_") {
         return Err(err("NeedCredential"));
@@ -793,7 +843,9 @@ pub(crate) async fn manual(request: &crate::manual::Request, key: &str) -> Resul
         if let Some(reason) = manual_unavailable_reason(&response)? {
             return Ok(crate::manual::unavailable(reason));
         }
-        Ok(json!({"ok":true,"track":t,"response":response}))
+        let mut track = t.clone();
+        complete_track_title(&client, &mut track, "https://open.spotify.com/oembed").await;
+        Ok(json!({"ok":true,"track":track,"response":response}))
     }
 }
 
@@ -824,14 +876,28 @@ fn manual_unavailable_reason(
         .as_str()
         .ok_or_else(|| err("ParseError"))?;
     if kind == "Static" {
-        let lines = response["Body"]["Lines"].as_array()
-            .or_else(|| response["Body"]["Content"].as_array()).ok_or_else(|| err("ParseError"))?;
-        if lines.is_empty() { return Ok(Some(UnavailableReason::SourceEmpty)); }
-        if lines.iter().any(|line| !line["Text"].is_string()) { return Err(err("ParseError")); }
-        return Ok(if lines.iter().any(|line| !line["Text"].as_str().unwrap().trim().is_empty() ||
-            line["TranslatedText"].as_str().is_some_and(|text| !text.trim().is_empty())) {
-            None
-        } else { Some(UnavailableReason::NoUsableLines) });
+        let lines = response["Body"]["Lines"]
+            .as_array()
+            .or_else(|| response["Body"]["Content"].as_array())
+            .ok_or_else(|| err("ParseError"))?;
+        if lines.is_empty() {
+            return Ok(Some(UnavailableReason::SourceEmpty));
+        }
+        if lines.iter().any(|line| !line["Text"].is_string()) {
+            return Err(err("ParseError"));
+        }
+        return Ok(
+            if lines.iter().any(|line| {
+                !line["Text"].as_str().unwrap().trim().is_empty()
+                    || line["TranslatedText"]
+                        .as_str()
+                        .is_some_and(|text| !text.trim().is_empty())
+            }) {
+                None
+            } else {
+                Some(UnavailableReason::NoUsableLines)
+            },
+        );
     }
     if !matches!(kind, "Line" | "Syllable") {
         return Ok(Some(UnavailableReason::UnsupportedFormat));
@@ -860,6 +926,52 @@ fn manual_unavailable_reason(
 mod manual_tests {
     use super::*;
     use crate::manual::UnavailableReason;
+    fn untitled_track() -> crate::manual::Track {
+        crate::manual::Track {
+            id: "5l94Up12BJSjhH7Mhr2ji4".into(),
+            title: String::new(),
+            artist: String::new(),
+            album: String::new(),
+            duration_ms: 0,
+            score: 0.0,
+        }
+    }
+
+    #[tokio::test]
+    async fn direct_id_title_uses_oembed_without_credentials_or_invented_artist() {
+        let server = crate::test_http::Server::new(vec![
+            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n{\"title\":\"Fetched song\",\"author_name\":\"Spotify\"}",
+        ]);
+        let mut track = untitled_track();
+        complete_track_title(&crate::test_http::client(), &mut track, &server.url).await;
+        assert_eq!(track.title, "Fetched song");
+        assert!(track.artist.is_empty());
+        assert!(track.album.is_empty());
+        assert_eq!(track.duration_ms, 0);
+        let requests = server.requests();
+        assert_eq!(requests.len(), 1);
+        assert!(requests[0]
+            .contains("url=https%3A%2F%2Fopen.spotify.com%2Ftrack%2F5l94Up12BJSjhH7Mhr2ji4"));
+        server.finish();
+    }
+
+    #[tokio::test]
+    async fn title_failure_preserves_the_id_and_unknown_metadata() {
+        for response in [
+            "HTTP/1.1 429 Too Many Requests\r\nConnection: close\r\n\r\n",
+            "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\nnot json",
+            "HTTP/1.1 200 OK\r\nConnection: close\r\n\r\n{\"title\":\" \"}",
+        ] {
+            let server = crate::test_http::Server::new(vec![response]);
+            let mut track = untitled_track();
+            complete_track_title(&crate::test_http::client(), &mut track, &server.url).await;
+            assert_eq!(track.id, "5l94Up12BJSjhH7Mhr2ji4");
+            assert!(track.title.is_empty());
+            assert!(track.artist.is_empty());
+            server.finish();
+        }
+    }
+
     #[tokio::test]
     async fn pikasonic_blossom_missing_sync_is_a_selectable_empty_result() {
         // Captured from Spicy for Spotify track 2OgQsOSI0UJKhAktzQ95MP on 2026-11-02.
@@ -880,11 +992,22 @@ mod manual_tests {
     }
     #[test]
     fn manual_content_reasons_do_not_swallow_errors() {
-        assert_eq!(manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static",
-            "Lines":[{"Text":"A line"},{"Text":""},{"Text":"Another line"}]}})).unwrap(), None);
-        assert_eq!(manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static",
-            "Lines":[{"Text":""}]}})).unwrap(), Some(UnavailableReason::NoUsableLines));
-        assert!(manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static","Lines":[{}]}})).is_err());
+        assert_eq!(
+            manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static",
+            "Lines":[{"Text":"A line"},{"Text":""},{"Text":"Another line"}]}}))
+            .unwrap(),
+            None
+        );
+        assert_eq!(
+            manual_unavailable_reason(&json!({"Status":200,"Body":{"Type":"Static",
+            "Lines":[{"Text":""}]}}))
+            .unwrap(),
+            Some(UnavailableReason::NoUsableLines)
+        );
+        assert!(manual_unavailable_reason(
+            &json!({"Status":200,"Body":{"Type":"Static","Lines":[{}]}})
+        )
+        .is_err());
         for (response, expected) in [
             (
                 json!({"Status":404,"Type":"object","Body":{"error":"lyrics_not_found","message":"No lyrics are available for that track."}}),

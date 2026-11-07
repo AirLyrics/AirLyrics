@@ -118,6 +118,9 @@ class LyricsSearchLayoutTest {
             layout(content,900)
             ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS)
             layout(content,900)
+            val visibleTexts=descendants(content).filterIsInstance<TextView>().filter { it.isShown }.map { it.text.toString() }
+            assertTrue(visibleTexts.contains(song.title))
+            assertTrue(visibleTexts.any { song.artist in it && "5l94Up12BJSjhH7Mhr2ji4" in it })
             val badges=descendants(content).filterIsInstance<TextView>()
                 .filter { it.contentDescription==activity.getString(R.string.search_id_match) && it.visibility==View.VISIBLE }.toList()
             assertEquals(1,badges.size)
@@ -128,6 +131,43 @@ class LyricsSearchLayoutTest {
             bitmap.recycle()
         }
         ThemeSettingsStore.setDark(app,false)
+    }
+
+    @Test
+    @Config(qualifiers="en-rUS-w400dp-h900dp-mdpi")
+    fun spotifyPreviewKeepsTitleIdAndDisplaysTheActualTimingPrecision() {
+        Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
+            val activity=controller.get()
+            val content=activity.findViewById<ViewGroup>(android.R.id.content)
+            val state=session(activity).state.value
+            val id="5l94Up12BJSjhH7Mhr2ji4"
+            val song=SongIdentity("Fetched song","Fetched artist","Fetched album",10000)
+            val candidate=LyricsCandidate(PlainLyricsSearchSource.SPICY,id,song,0.0,spotifyIdMatch=true)
+            for ((type,label) in listOf("Line" to R.string.search_line_lyrics, "Syllable" to R.string.search_word_lyrics)) {
+                val raw=org.json.JSONObject(com.andsi.airlyrics.lyrics.providers.spicyFixture(type)).apply {
+                    getJSONObject("track").put("id",id)
+                    getJSONObject("response").getJSONObject("Body").put("id",id)
+                }
+                val lyrics=com.andsi.airlyrics.lyrics.providers.SpicyLyricsParser.parse(raw.toString(),"key",100)!!
+                render(activity,state.copy(preview=SearchPreview(candidate,lyrics),previewCandidate=candidate))
+                layout(content,900)
+                ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS)
+                val texts=descendants(content).filterIsInstance<TextView>().filter { it.isShown }.map { it.text.toString() }
+                assertTrue(texts.contains(song.title))
+                assertTrue(texts.any { id in it })
+                assertTrue(texts.contains(activity.getString(label)))
+                val lyricText=descendants(content).filterIsInstance<TextView>()
+                    .single { it.isShown && it.isTextSelectable }.text.toString()
+                if (type=="Line") {
+                    assertEquals(lyrics.plainLrc,lyricText)
+                    assertFalse(lyricText.contains('<'))
+                    assertFalse(texts.contains(activity.getString(R.string.search_word_lyrics)))
+                } else {
+                    assertTrue(lyricText.contains("<00:01.001>Hel<00:01.432><00:01.567>"))
+                    assertTrue(lyricText.endsWith("<00:03.789>"))
+                }
+            }
+        }
     }
 
     @Test fun untimedPreviewShowsParagraphsTranslationAndAnEnabledApplyAction() {

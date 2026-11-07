@@ -41,7 +41,7 @@ Except for Apple Music account requests, AirLyrics does not add account tokens, 
 
 Apple Music sign-in takes place on Apple's page inside the app. AirLyrics does not read your Apple ID password. It sends the saved account token directly to Apple to validate the account and request lyrics. Signing out of AirLyrics removes its saved token and storefront; Apple's WebView cookies may remain on the device. App backup is disabled.
 
-When Spicy Lyrics is selected, AirLyrics sends the song title to Spotify to identify the recording, then sends its Spotify track ID to the Spicy Lyrics API. Requests use the app's publishable API key. These services receive normal network information such as the requesting IP address. No AirLyrics server is involved.
+When Spicy Lyrics is selected, AirLyrics uses a Spotify track ID supplied by the selected Spotify player or entered by you to request lyrics directly from the Spicy Lyrics API. Without an ID, it sends the song title to Spotify to identify the recording first. For pasted IDs, it also asks Spotify for the track title. Spicy requests use the app's publishable API key. These services receive normal network information such as the requesting IP address. No AirLyrics server is involved.
 
 Spicy lyrics and any edits are stored in private app storage excluded from backup, for at most 30 days of use after acquisition. Expired content is unavailable and is removed on access, app startup or scheduled cleanup. Android may delay scheduled cleanup while the app is stopped. AirLyrics does not offer file export or sharing for this content.
 

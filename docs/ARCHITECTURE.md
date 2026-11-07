@@ -84,12 +84,12 @@ Run the source, JVM dependency and policy checks with JDK 17 and Python 3.10+:
 
 ### Spicy Lyrics
 
-Spicy supports plain and word-by-word lyrics and must be enabled manually. Lyrics and edits stay inside the app, expire 30 days after acquisition, and cannot be exported, shared as files or backed up. Source and contributor credits are preserved when displaying lyrics; requests are subject to rate limits. See the [Spicy API terms](https://developers.spicylyrics.org/terms).
+Spicy supports line-timed, word-by-word, and plain text lyrics and must be enabled manually. Lyrics and edits stay inside the app, expire 30 days after acquisition, and cannot be exported, shared as files or backed up. Source and contributor credits are preserved when displaying lyrics; requests are subject to rate limits. See the [Spicy API terms](https://developers.spicylyrics.org/terms).
 
 Set `airlyrics.spicy.clientKey` in an untracked `local.properties` or user Gradle properties file, or use `AIRLYRICS_SPICY_CLIENT_KEY`. Use an `sl_pk_` key with client access enabled, never an `sl_sk_` secret key. Do not commit real keys. Without a configured key, Spicy is unavailable.
 
 ### Lyrics matching
 
-Manual imports take priority over cached and online lyrics. Selected providers run in priority order and share title, artist, duration and album scoring. Queries broaden when needed, so a match may be a different recording. Spicy searches Spotify for candidates before fetching lyrics; line timing can remain available when word timing is missing.
+Manual imports take priority over cached and online lyrics. Selected providers run in priority order and share title, artist, duration and album scoring. Queries broaden when needed, so a match may be a different recording. Spicy uses a track ID from the selected Spotify player or manual input when available; otherwise it searches Spotify for candidates. Line timing remains available when word timing is missing. LRCLIB and Spicy plain text results are retained as fallbacks after timed results; untimed content is stored separately and is not rendered as synced floating lyrics.
 
 The shared matching rules live in `lyrics-core/src/matching.rs` and are described in the [matching documentation](lyrics-matching.md).

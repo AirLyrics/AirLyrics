@@ -881,7 +881,11 @@ fn map_api_track(track: ApiTrack, query: &LookupQuery) -> Result<NativeResult, L
     }
 
     let lrc = track.synced_lyrics.and_then(normalize_usable_lrc);
-    let untimed = if lrc.is_none() { track.plain_lyrics.filter(|text| !text.trim().is_empty()) } else { None };
+    let untimed = if lrc.is_none() {
+        track.plain_lyrics.filter(|text| !text.trim().is_empty())
+    } else {
+        None
+    };
     if lrc.is_none() && untimed.is_none() {
         return Err(LrclibError::not_found("LRCLIB returned no usable lyrics"));
     }
@@ -1065,11 +1069,13 @@ fn score_track_with_reason(
         return Err(SearchCandidateRejection::Instrumental);
     }
 
-    let lrc = track
-        .synced_lyrics
-        .take()
-        .and_then(normalize_usable_lrc);
-    if lrc.is_none() && track.plain_lyrics.as_ref().is_none_or(|text| text.trim().is_empty()) {
+    let lrc = track.synced_lyrics.take().and_then(normalize_usable_lrc);
+    if lrc.is_none()
+        && track
+            .plain_lyrics
+            .as_ref()
+            .is_none_or(|text| text.trim().is_empty())
+    {
         return Err(SearchCandidateRejection::NoUsableLyrics);
     }
     let candidate_duration_ms = track.duration.and_then(duration_seconds_to_ms);
@@ -1124,7 +1130,10 @@ fn score_track_with_reason(
 }
 
 fn compare_scored_tracks(left: &ScoredApiTrack, right: &ScoredApiTrack) -> Ordering {
-    left.track.synced_lyrics.is_some().cmp(&right.track.synced_lyrics.is_some())
+    left.track
+        .synced_lyrics
+        .is_some()
+        .cmp(&right.track.synced_lyrics.is_some())
         .then_with(|| left.match_score.total.total_cmp(&right.match_score.total))
         // Prefer the closest duration when metadata scores are identical.
         .then_with(|| right.duration_delta_ms.cmp(&left.duration_delta_ms))
@@ -2171,11 +2180,15 @@ fn manual_track_content(
         ));
     }
     let Some(lrc) = v.synced_lyrics.and_then(normalize_usable_lrc) else {
-        return Ok(if let Some(text) = v.plain_lyrics.filter(|text| !text.trim().is_empty()) {
-            let mut result = t.lyrics("lrclib-rust", String::new(), None);
-            result["untimed_text"] = serde_json::Value::String(text);
-            result
-        } else { crate::manual::unavailable(crate::manual::UnavailableReason::NoTimeline) });
+        return Ok(
+            if let Some(text) = v.plain_lyrics.filter(|text| !text.trim().is_empty()) {
+                let mut result = t.lyrics("lrclib-rust", String::new(), None);
+                result["untimed_text"] = serde_json::Value::String(text);
+                result
+            } else {
+                crate::manual::unavailable(crate::manual::UnavailableReason::NoTimeline)
+            },
+        );
     };
     Ok(t.lyrics("lrclib-rust", lrc, None))
 }
@@ -2194,7 +2207,6 @@ mod manual_tests {
             score: 0.0,
         };
         for (body, reason) in [
-
             (r#"{"id":1,"syncedLyrics":"untimed"}"#, "no_timeline"),
             (r#"{"id":1,"syncedLyrics":"[00:01.00]"}"#, "no_timeline"),
         ] {

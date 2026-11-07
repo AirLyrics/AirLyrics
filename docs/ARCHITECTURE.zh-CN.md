@@ -84,12 +84,12 @@ apple        -> (none)
 
 ### Spicy Lyrics
 
-Spicy 支持普通和逐字歌词，需手动启用。歌词和编辑内容仅保留在应用内，获取 30 天后到期，不提供文件导出、分享或备份。显示时保留来源和贡献者署名；请求受限流约束。具体要求见 [Spicy API 使用条款](https://developers.spicylyrics.org/terms)。
+Spicy 支持逐行、逐字和纯文本歌词，需手动启用。歌词和编辑内容仅保留在应用内，获取 30 天后到期，不提供文件导出、分享或备份。显示时保留来源和贡献者署名；请求受限流约束。具体要求见 [Spicy API 使用条款](https://developers.spicylyrics.org/terms)。
 
 构建时，在未跟踪的 `local.properties` 或用户 Gradle 配置中设置 `airlyrics.spicy.clientKey`，或使用环境变量 `AIRLYRICS_SPICY_CLIENT_KEY`。使用已启用客户端访问的 `sl_pk_` key，不要使用 `sl_sk_` secret key 或将实际 key 提交到仓库。未配置时，Spicy 显示为不可用。
 
 ### 歌词匹配
 
-手动导入优先于缓存和联网搜索。在线来源按所选优先级查询，共用歌名、歌手、时长和专辑评分；找不到时逐步放宽条件，因此命中不保证是同一录音版本。Spicy 通过 Spotify 搜索候选歌曲，再获取歌词；没有逐字歌词时可保留普通同步歌词。
+手动导入优先于缓存和联网搜索。在线来源按所选优先级查询，共用歌名、歌手、时长和专辑评分；找不到时逐步放宽条件，因此命中不保证是同一录音版本。Spicy 优先使用所选 Spotify 播放器提供或手动输入的曲目 ID，否则通过 Spotify 搜索候选歌曲。没有逐字歌词时可保留普通同步歌词；LRCLIB 和 Spicy 的纯文本结果作为同步歌词之后的兜底，单独保存，不作为同步悬浮歌词渲染。
 
 共用的匹配规则位于 `lyrics-core/src/matching.rs`，详见[歌词匹配](lyrics-matching.md)。

@@ -41,7 +41,7 @@ AirLyrics 可能会在设备上保存应用设置、已选择的媒体源信息�
 
 Apple Music 登录在应用内的 Apple 页面完成，AirLyrics 不读取 Apple ID 密码。应用会将保存的账号令牌直接发送给 Apple，用于验证账号和获取歌词。在 AirLyrics 中退出登录会删除应用保存的令牌和地区信息；Apple 页面在 WebView 中的 Cookie 可能仍留在设备上。应用已关闭备份。
 
-选择 Spicy Lyrics 后，AirLyrics 会向 Spotify 发送歌曲标题以匹配录音，再向 Spicy Lyrics API 发送匹配到的 Spotify 曲目 ID。请求使用应用的 publishable key，这些服务也会收到 IP 地址等正常网络信息。此过程不经过 AirLyrics 服务器。
+选择 Spicy Lyrics 后，AirLyrics 会使用所选 Spotify 播放器提供或你输入的曲目 ID，直接向 Spicy Lyrics API 请求歌词。没有 ID 时，会先向 Spotify 发送歌曲标题以匹配录音。粘贴 ID 搜索时，还会向 Spotify 查询该曲目的标题。Spicy 请求使用应用的 publishable key，这些服务也会收到 IP 地址等正常网络信息。此过程不经过 AirLyrics 服务器。
 
 Spicy 歌词及其编辑内容存放在不参与备份的应用私有目录中，从获取之日起最多可使用 30 天。到期后不可读取，并在访问、启动应用或定期清理时删除；应用停止运行时，Android 可能延迟后台清理。AirLyrics 不为这些内容提供文件导出或分享功能。
 

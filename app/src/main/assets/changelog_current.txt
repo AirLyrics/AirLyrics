@@ -1,12 +1,13 @@
-v1.2.8 - 2026-11-03
+v1.2.9 - 2026-11-07
 
 Added
-- Search across lyric sources, preview results, and apply a match.
-- Add Apple Music lyrics with word timing and translations when available (sign-in required).
-- Import LDDC word-timed LRC; batch export, import, and delete saved lyrics.
+- Edit word-by-word lyrics, including word text and timing.
+- Import, save, and edit plain text lyrics (no floating display).
+- Search Spicy Lyrics by Spotify track link or ID.
 
 Improved
-- Easier lyric editing, album art and player icons, and smoother animations.
+- Add lyric glow controls and smoother Spicy animations.
+- Add an interactive cat to the About page (I don't know why I made this either).
 
 Fixed
-- Improve lyric matching and saved-lyrics reliability.
+- Fix many small issues.

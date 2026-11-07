@@ -2,7 +2,12 @@
 
 [English](LYRICS_FORMAT.md) · [简体中文](LYRICS_FORMAT.zh-CN.md)
 
-AirLyrics supports local imports of `.lrc` and `.ttml` files.
+AirLyrics supports local imports of `.lrc`, `.ttml`, and `.txt` files.
+
+## Plain Text (TXT)
+
+Save lyrics as a UTF-8 `.txt` file without timestamps. Text and blank lines are preserved.
+Plain text lyrics can be saved and edited but cannot be displayed in the floating window.
 
 ## Plain LRC
 
@@ -103,7 +108,7 @@ translations linked to lyric lines by `itunes:key`.
 
 The import option controls the result:
 
-- The **Plain lyrics** option accepts line- or word-timed TTML and flattens word timing to line
+- The **Lyrics** option accepts line- or word-timed TTML and flattens word timing to line
   timing.
 - The **Word-by-word lyrics** option requires timed `<span>` elements on every valid lyric line.
   Line-timed or mixed-timing TTML cannot be imported as word-by-word lyrics.
@@ -136,8 +141,9 @@ The examples above are the recommended forms. This section lists the formats and
 
 ### Files and Import Options
 
-| File contents | Plain lyrics option | Word-by-word lyrics option |
+| File contents | Lyrics option | Word-by-word lyrics option |
 | --- | --- | --- |
+| Plain text (TXT) | Supported; no floating display | Not supported |
 | Plain LRC, including translations | Supported | Not sufficient on its own; plain lines at matching timestamps can translate word-timed lines |
 | Word-timed LRC with line and word tags | Word tags are not interpreted; use the word-by-word option | Supported |
 | Line-timed TTML | Supported | Not supported |
@@ -145,7 +151,7 @@ The examples above are the recommended forms. This section lists the formats and
 | Mixed line- and word-timed TTML | Supported | Not supported; every valid lyric line needs word timing |
 | AirLyrics word-timing JSON | Not supported | Compatible; see the structure below |
 
-Prefer `.lrc` and `.ttml` extensions. When the filename and type are inconclusive, the app tries to detect the contents. It does not convert unrelated formats automatically.
+Use `.txt` for untimed text, `.lrc` for LRC, and `.ttml` for TTML. When the filename and type are inconclusive, the app tries to detect the contents. It does not convert unrelated formats automatically.
 
 ### LRC Timestamps and Variants
 
@@ -260,4 +266,4 @@ Times are in milliseconds. Each line needs nonempty `text`, valid start/end time
 
 ### Formats Requiring Conversion
 
-Untimed text, SRT, ASS, QRC, KRC, YRC and other encrypted or compressed lyrics files must be converted to a format listed above. Renaming the extension does not convert the contents. TTML support is limited to this reference, not the entire TTML standard.
+SRT, ASS, QRC, KRC, YRC and other encrypted or compressed lyrics files must be converted to a format listed above. Renaming the extension does not convert the contents. TTML support is limited to this reference, not the entire TTML standard.

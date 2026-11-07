@@ -463,7 +463,13 @@ class LyricsSearchActivity : AppCompatActivity() {
                 p.lyrics.access?.attribution?.let { attribution ->
                     preview.addView(text("").apply { text=attribution.displayText();movementMethod=LinkMovementMethod.getInstance() })
                 }
-                preview.addView(text(p.lyrics.untimedLyrics?.text ?: p.lyrics.plainLrc).apply { setTextIsSelectable(true) })
+                val content = when (p.lyrics.precision) {
+                    LyricsPrecision.TEXT -> p.lyrics.untimedLyrics!!.text
+                    LyricsPrecision.LINE -> p.lyrics.plainLrc
+                    LyricsPrecision.WORD -> com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
+                        .wordByWordLinesToWordByWordLrc(p.lyrics.wordByWordLines)
+                }
+                preview.addView(text(content).apply { setTextIsSelectable(true) })
                 (p.lyrics.untimedLyrics?.translatedText ?: p.lyrics.translatedLrc)?.let { translation ->
                     preview.addView(previewHeading(getString(R.string.search_translation)))
                     preview.addView(text(translation).apply { setTextIsSelectable(true) })
