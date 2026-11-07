@@ -769,6 +769,7 @@ private class FloatingLineEditor(
     private var errorBubble: TextView? = null
     private var errorAnchor: View? = null
     private var closing = false
+    private val restingMinHeight = sheet.minimumHeight
 
     init {
         overlay.setBackgroundColor(ColorUtils.setAlphaComponent(host.colorBackground, 120))
@@ -883,13 +884,11 @@ private class FloatingLineEditor(
                 input.setText(text)
                 input.minHeight = host.dp(48)
             }
-        val lineText = field(R.string.ui_lyrics_line_text, baseline.text, singleLine = false).apply {
+        val lineText = field(R.string.ui_lyrics_line_text, WordLyricsTextEditor.rawLine(baseline), singleLine = false).apply {
             input.minLines = 2
             input.maxLines = 3
             input.gravity = Gravity.TOP or Gravity.START
         }
-        val lineStart = field(R.string.ui_lyrics_line_start, WordLyricsDocument.time(baseline.startMs))
-        val lineEnd = field(R.string.ui_lyrics_line_end, WordLyricsDocument.time(baseline.endMs))
         fun label(text: CharSequence) = TextView(host).apply {
             this.text = text
             textSize = AirUiTokens.TextSize.Caption
@@ -908,41 +907,47 @@ private class FloatingLineEditor(
             }, LinearLayout.LayoutParams(-1, -2))
         }
         form.addView(labeled(lineText), LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = host.dp(10) })
-        times(form, lineStart, lineEnd)
+        val lineActions = LinearLayout(host).apply { gravity = Gravity.END }
+        form.addView(lineActions, LinearLayout.LayoutParams(-1, -2).apply { topMargin = host.dp(6) })
         val tokenList = LinearLayout(host).apply { orientation = LinearLayout.VERTICAL }
         form.addView(tokenList, LinearLayout.LayoutParams(-1, -2))
         data class TokenFields(val text: ValidatedLineField, val start: ValidatedLineField,
             val end: ValidatedLineField, val view: LinearLayout, val heading: TextView)
         val tokens = mutableListOf<TokenFields>()
         var validate: () -> Unit = {}
-        var reconcileText: () -> Unit = {}
         var syncingText = false
-        var remapBaseline: WordByWordLine? = null
+        var appliedLine = baseline
+        var confirmedRaw = WordLyricsTextEditor.rawLine(baseline)
+        fun editedLine(): WordByWordLine? {
+            val segments = tokens.map {
+                WordByWordSegment(it.text.input.text.toString(),
+                    WordLyricsDocument.parseTime(it.start.input.text.toString()) ?: return null,
+                    WordLyricsDocument.parseTime(it.end.input.text.toString()) ?: return null)
+            }
+            return WordLyricsTextEditor.withSegments(appliedLine, segments)
+        }
         fun syncWholeText() {
             if (syncingText) return
-            remapBaseline = null
-            val text = tokens.joinToString("") { it.text.input.text.toString() }
-            if (lineText.input.text.toString() != text) {
+            val edited = editedLine() ?: return
+            confirmedRaw = WordLyricsTextEditor.rawLine(edited)
+            if (lineText.input.text.toString() != confirmedRaw) {
                 syncingText = true
-                lineText.input.setText(text)
+                lineText.input.setText(confirmedRaw)
                 syncingText = false
             }
         }
-        fun watch(input: ValidatedLineField, wordText: Boolean = false) {
+        fun watch(input: ValidatedLineField) {
             input.errorIcon.setOnClickListener {
                 input.errorMessage?.let { toggleErrorBubble(input.errorIcon, it) }
             }
             input.input.setOnClickListener { hideErrorBubble() }
             input.input.doAfterTextChanged {
                 if (!syncingText) {
-                    remapBaseline = null
-                    if (wordText) syncWholeText() else reconcileText()
+                    syncWholeText()
                     validate()
                 }
             }
         }
-        watch(lineStart)
-        watch(lineEnd)
         fun renumber() {
             tokens.forEachIndexed { index, fields ->
                 val label = host.getString(R.string.ui_lyrics_word_text, index + 1)
@@ -976,63 +981,60 @@ private class FloatingLineEditor(
             }.apply { minHeight = host.dp(48) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = host.dp(4) })
             tokens += fields
             tokenList.addView(container, LinearLayout.LayoutParams(-1, -2))
-            watch(text, wordText = true)
+            watch(text)
             watch(a)
             watch(b)
             renumber()
         }
         baseline.segments.forEach(::addToken)
-        form.addView(host.sheetButton(host.getString(R.string.ui_add_word), AirTonalButtonTone.DEFAULT) {
+        val addWord = host.sheetButton(host.getString(R.string.ui_add_word), AirTonalButtonTone.DEFAULT) {
             val a = tokens.lastOrNull()?.end?.input?.text?.toString()?.let(WordLyricsDocument::parseTime)
-                ?: WordLyricsDocument.parseTime(lineStart.input.text.toString()) ?: 0L
+                ?: appliedLine.startMs
             val b = a + 400
             addToken(WordByWordSegment("", a, b))
             syncWholeText()
-            if ((WordLyricsDocument.parseTime(lineEnd.input.text.toString()) ?: 0L) < b)
-                lineEnd.input.setText(WordLyricsDocument.time(b))
             validate()
             tokens.last().text.input.requestFocus()
-        }.apply { minHeight = host.dp(48) }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = host.dp(10) })
-        fun editedLine(): WordByWordLine? {
-            val a = WordLyricsDocument.parseTime(lineStart.input.text.toString()) ?: return null
-            val b = WordLyricsDocument.parseTime(lineEnd.input.text.toString()) ?: return null
-            val segments = tokens.map {
-                WordByWordSegment(it.text.input.text.toString(),
-                    WordLyricsDocument.parseTime(it.start.input.text.toString()) ?: return null,
-                    WordLyricsDocument.parseTime(it.end.input.text.toString()) ?: return null)
-            }
-            return baseline.copy(startMs = a, endMs = b, segments = segments,
-                text = if (segments == baseline.segments) baseline.text else segments.joinToString("") { it.text })
+        }.apply { minHeight = host.dp(48) }
+        form.addView(addWord, LinearLayout.LayoutParams(-1, -2).apply { topMargin = host.dp(10) })
+        fun hasPendingLineChanges() = lineText.input.text.toString() != confirmedRaw
+        fun restoreLineFields() {
+            syncingText = true
+            lineText.input.setText(confirmedRaw)
+            syncingText = false
         }
-        reconcileText = reconcile@{
-            val text = lineText.input.text.toString()
-            if (syncingText || text == tokens.joinToString("") { it.text.input.text.toString() } ||
-                '\n' in text || '\r' in text) return@reconcile
-            val a = WordLyricsDocument.parseTime(lineStart.input.text.toString()) ?: return@reconcile
-            val b = WordLyricsDocument.parseTime(lineEnd.input.text.toString()) ?: return@reconcile
-            if (b <= a) return@reconcile
-            val source = remapBaseline ?: (editedLine() ?: baseline).also { remapBaseline = it }
-            val updated = WordLyricsTextEditor.replaceText(source.copy(startMs = a, endMs = b), text)
+        fun parsedRawLine(): WordByWordLine? {
+            val source = editedLine()?.takeIf { WordLyricsDocument(listOf(it)).invalidLines().isEmpty() } ?: appliedLine
+            return WordLyricsTextEditor.parseRawLine(source, lineText.input.text.toString())
+        }
+        val resetLine = host.sheetButton(host.getString(R.string.ui_lyrics_reset_line), AirTonalButtonTone.DEFAULT) {
+            restoreLineFields()
+            validate()
+        }.apply { minHeight = host.dp(48) }
+        val updateWords = host.sheetButton(host.getString(R.string.ui_lyrics_update_words), AirTonalButtonTone.SELECTED) {
+            val updated = parsedRawLine() ?: return@sheetButton
             syncingText = true
             hideErrorBubble(animate = false)
             tokenList.removeAllViews()
             tokens.clear()
+            appliedLine = updated
+            confirmedRaw = WordLyricsTextEditor.rawLine(updated)
             updated.segments.forEach(::addToken)
             syncingText = false
-        }
+            restoreLineFields()
+            validate()
+        }.apply { minHeight = host.dp(48) }
+        lineActions.addView(resetLine, LinearLayout.LayoutParams(0, -2, 1f))
+        lineActions.addView(updateWords, LinearLayout.LayoutParams(0, -2, 1f).apply { marginStart = host.dp(8) })
         lineText.errorIcon.setOnClickListener {
             lineText.errorMessage?.let { toggleErrorBubble(lineText.errorIcon, it) }
         }
         lineText.input.setOnClickListener { hideErrorBubble() }
-        lineText.input.doAfterTextChanged {
-            if (!syncingText) {
-                reconcileText()
-                validate()
-            }
-        }
+        lineText.input.doAfterTextChanged { if (!syncingText) validate() }
         val footer = LinearLayout(host).apply { gravity = Gravity.END }
         footer.addView(host.sheetButton(host.getString(R.string.ui_cancel), AirTonalButtonTone.DEFAULT) { close() })
         val confirm = host.sheetButton(host.getString(R.string.ui_confirm_line), AirTonalButtonTone.SELECTED) {
+            if (hasPendingLineChanges()) return@sheetButton
             val line = editedLine() ?: return@sheetButton
             if (WordLyricsDocument(listOf(line)).invalidLines().isNotEmpty()) return@sheetButton
             if (insert) rows.insertAfter(row, "[${WordLyricsDocument.time(line.startMs)}]", line.text, line)
@@ -1047,21 +1049,30 @@ private class FloatingLineEditor(
         footer.addView(confirm, LinearLayout.LayoutParams(-2, -2).apply { marginStart = host.dp(8) })
         form.addView(footer, LinearLayout.LayoutParams(-1, -2).apply { topMargin = host.dp(9) })
         validate = {
-            val a = WordLyricsDocument.parseTime(lineStart.input.text.toString())
-            val b = WordLyricsDocument.parseTime(lineEnd.input.text.toString())
             val formatError = host.getString(R.string.ui_lyrics_time_error)
             val rangeError = host.getString(R.string.ui_lyrics_word_time_error)
             val text = lineText.input.text.toString()
             val textError = when {
                 text.isBlank() -> host.getString(R.string.ui_lyrics_line_empty)
                 '\n' in text || '\r' in text -> host.getString(R.string.ui_lyrics_one_line_error)
+                parsedRawLine() == null -> host.getString(R.string.ui_lyrics_raw_line_error)
                 else -> null
             }
             lineText.showError(textError)
-            lineStart.showError(if (a == null) formatError else if (
-                baseline.translatedSegments.any { it.startMs < a }) rangeError else null)
-            lineEnd.showError(if (b == null) formatError else if (
-                a != null && b <= a || baseline.translatedSegments.any { it.endMs > b + 1 }) rangeError else null)
+            val pending = hasPendingLineChanges()
+            val lineValid = textError == null
+            updateWords.isEnabled = pending && lineValid
+            resetLine.isEnabled = pending
+            updateWords.alpha = if (updateWords.isEnabled) 1f else 0.5f
+            resetLine.alpha = if (resetLine.isEnabled) 1f else 0.5f
+            fun enableWordEditing(view: View) {
+                view.isEnabled = !pending
+                if (view is ViewGroup) for (i in 0 until view.childCount) enableWordEditing(view.getChildAt(i))
+            }
+            enableWordEditing(tokenList)
+            tokenList.alpha = if (pending) 0.5f else 1f
+            addWord.isEnabled = !pending
+            addWord.alpha = if (pending) 0.5f else 1f
             var previousStart = -1L
             tokens.forEach { fields ->
                 val tokenStart = WordLyricsDocument.parseTime(fields.start.input.text.toString())
@@ -1069,15 +1080,15 @@ private class FloatingLineEditor(
                 fields.text.showError(if (fields.text.input.text.isNullOrBlank())
                     host.getString(R.string.ui_lyrics_word_empty) else null)
                 fields.start.showError(if (tokenStart == null) formatError else if (
-                    a != null && tokenStart < a || tokenStart < previousStart) rangeError else null)
+                    tokenStart < previousStart) rangeError else null)
                 fields.end.showError(if (tokenEnd == null) formatError else if (
-                    tokenStart != null && tokenEnd <= tokenStart || b != null && tokenEnd > b + 50) rangeError else null)
+                    tokenStart != null && tokenEnd <= tokenStart) rangeError else null)
                 if (tokenStart != null) previousStart = tokenStart
             }
             hideErrorBubble(animate = false)
             val edited = editedLine()
-            confirm.isEnabled = textError == null && edited != null &&
-                edited.text == text && WordLyricsDocument(listOf(edited)).invalidLines().isEmpty()
+            confirm.isEnabled = !pending && lineValid && edited != null &&
+                WordLyricsDocument(listOf(edited)).invalidLines().isEmpty()
             confirm.alpha = if (confirm.isEnabled) 1f else 0.5f
         }
         validate()
@@ -1130,6 +1141,14 @@ private class FloatingLineEditor(
 
     fun reposition() {
         val editorCard = card ?: return
+        if (document.isWordByWord && !closing) {
+            val insets = ViewCompat.getRootWindowInsets(sheet)
+                ?.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
+            val available = host.resources.displayMetrics.heightPixels -
+                (insets?.top ?: 0) - (insets?.bottom ?: 0) - host.dp(24)
+            val height = available.coerceIn(host.dp(80), host.dp(640)).coerceAtLeast(restingMinHeight)
+            if (sheet.minimumHeight != height) sheet.minimumHeight = height
+        }
         if (sheet.width == 0 || sheet.height == 0) return
         val params = editorCard.layoutParams as FrameLayout.LayoutParams
         val width = (sheet.width - host.dp(32)).coerceAtLeast(1).coerceAtMost(host.dp(304))
@@ -1244,6 +1263,7 @@ private class FloatingLineEditor(
             overlay.alpha = 1f
             card = null
             anchor = null
+            sheet.minimumHeight = restingMinHeight
             closing = false
         }
         if (ValueAnimator.areAnimatorsEnabled() && editorCard.isAttachedToWindow) {
@@ -1263,6 +1283,7 @@ private class FloatingLineEditor(
         overlay.removeAllViews()
         card = null
         anchor = null
+        sheet.minimumHeight = restingMinHeight
     }
 }
 

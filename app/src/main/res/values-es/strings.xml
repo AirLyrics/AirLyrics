@@ -537,6 +537,9 @@ TTML de tiempo por palabra:
     <string name="ui_lyrics_word_empty">Introduce una palabra</string>
     <string name="ui_lyrics_line_text">Línea completa</string>
     <string name="ui_lyrics_line_empty">Introduce la letra</string>
+    <string name="ui_lyrics_raw_line_error">Usa &lt;mm:ss.SSS&gt; antes de cada palabra y al final; ordena los tiempos de inicio.</string>
+    <string name="ui_lyrics_reset_line">Restablecer línea</string>
+    <string name="ui_lyrics_update_words">Actualizar palabras</string>
     <string name="ui_untimed_lyrics">Letra sin sincronizar</string>
     <string name="search_untimed_notice">Sin tiempos; no se puede mostrar en la ventana flotante.</string>
     <string name="ui_untimed_lyrics_unavailable">La letra sin tiempos no se puede sincronizar</string>

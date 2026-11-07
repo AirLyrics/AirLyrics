@@ -14,70 +14,80 @@ class WordLyricsTextEditorTest {
     ), isBackground = true, translatedText = "你好", translatedSegments = listOf(
         WordByWordSegment("你好", 1000, 6000)))
 
-    @Test fun replacingTheMiddleKeepsUnchangedTokensAndTheirPreciseGaps() {
-        val updated = WordLyricsTextEditor.replaceText(line, "Hello 新世界 again")
+    @Test fun rawLineShowsExactWordTimesAndPreservesGapsOnRoundTrip() {
+        val raw = WordLyricsTextEditor.rawLine(line)
+        assertEquals("<00:01.101>Hello <00:02.101><00:02.202>world <00:03.703><00:04.004>again<00:05.789>", raw)
+        assertEquals(line, WordLyricsTextEditor.parseRawLine(line, raw))
+    }
+
+    @Test fun rawTextChangesKeepUserDefinedTokenBoundariesAndPreciseTimes() {
+        val raw = WordLyricsTextEditor.rawLine(line).replace("world ", "新 世界 ")
+        val updated = WordLyricsTextEditor.parseRawLine(line, raw)!!
+        assertEquals(line.segments.map { it.startMs to it.endMs }, updated.segments.map { it.startMs to it.endMs })
+        assertEquals(listOf("Hello ", "新 世界 ", "again"), updated.segments.map { it.text })
+        assertEquals(line.translatedSegments, updated.translatedSegments)
+        assertTrue(updated.isBackground)
+        assertEquals("你好", updated.translatedText)
+        assertValid(updated)
+    }
+
+    @Test fun explicitNewTimestampsSplitTokensWithoutEstimatingTimings() {
+        val source = WordByWordLine(0, 1000, "你好", listOf(
+            WordByWordSegment("你", 0, 500), WordByWordSegment("好", 500, 1000)))
+        val raw = "<00:00.000>你<00:00.400>们<00:00.800>好<00:01.000>"
+        val updated = WordLyricsTextEditor.parseRawLine(source, raw)!!
+        assertEquals(listOf(WordByWordSegment("你", 0, 400), WordByWordSegment("们", 400, 800),
+            WordByWordSegment("好", 800, 1000)), updated.segments)
+        assertValid(updated)
+    }
+
+    @Test fun editingOneTimestampOnlyUpdatesThatWordBoundary() {
+        val updated = WordLyricsTextEditor.parseRawLine(line,
+            WordLyricsTextEditor.rawLine(line).replace("<00:02.202>", "<00:02.500>"))!!
         assertEquals(line.segments.first(), updated.segments.first())
         assertEquals(line.segments.last(), updated.segments.last())
-        assertEquals(listOf("新", "世", "界 "), updated.segments.subList(1, 4).map { it.text })
-        assertEquals(2202L, updated.segments[1].startMs)
-        assertEquals(3703L, updated.segments[3].endMs)
-        assertTrue(updated.isBackground)
-        assertEquals(line.translatedSegments, updated.translatedSegments)
+        assertEquals(line.segments[1].copy(startMs = 2500), updated.segments[1])
         assertValid(updated)
     }
 
-    @Test fun unchangedTextNeverRetimesExistingWords() {
-        assertEquals(line, WordLyricsTextEditor.replaceText(line, line.text))
-    }
-
-    @Test fun insertingAtATouchingBoundaryBorrowsTimeWithoutZeroDurationWords() {
-        val source = WordByWordLine(0, 1000, "你好", listOf(
-            WordByWordSegment("你", 0, 500), WordByWordSegment("好", 500, 1000)))
-        val updated = WordLyricsTextEditor.replaceText(source, "你们好")
-        assertEquals("你们好", updated.segments.joinToString("") { it.text })
-        assertEquals(source.segments.last(), updated.segments.last())
+    @Test fun movingExplicitTimesPreservesPaddingAndTranslationWithoutScaling() {
+        val shifted = line.segments.map { it.copy(startMs = it.startMs + 4000, endMs = it.endMs + 4000) }
+        val raw = WordLyricsTextEditor.rawLine(line.copy(segments = shifted))
+        val updated = WordLyricsTextEditor.parseRawLine(line, raw)!!
+        assertEquals(shifted, updated.segments)
+        assertEquals(5000L, updated.startMs)
+        assertEquals(10000L, updated.endMs)
+        assertEquals(listOf(WordByWordSegment("你好", 5000, 10000)), updated.translatedSegments)
         assertValid(updated)
     }
 
-    @Test fun insertingSpacesDoesNotCreateBlankWordTokensOrLoseText() {
-        val source = WordByWordLine(0, 1000, "你好", listOf(
-            WordByWordSegment("你", 0, 500), WordByWordSegment("好", 500, 1000)))
-        val updated = WordLyricsTextEditor.replaceText(source, "你 好")
-        assertEquals(listOf("你 ", "好"), updated.segments.map { it.text })
-        assertEquals(source.segments.map { it.startMs to it.endMs }, updated.segments.map { it.startMs to it.endMs })
-        assertValid(updated)
+    @Test fun rawRoundTripsPreserveWhitespaceUnicodeAndOverlappingWordEnds() {
+        val segments = listOf(WordByWordSegment("  e\u0301 ", 0, 700),
+            WordByWordSegment("👨‍👩‍👧‍👦! ", 500, 1000))
+        val source = WordByWordLine(0, 1000, segments.joinToString("") { it.text }, segments)
+        assertEquals(source, WordLyricsTextEditor.parseRawLine(source, WordLyricsTextEditor.rawLine(source)))
     }
 
-    @Test fun deletingTextPreservesSurvivingWordTimes() {
-        val updated = WordLyricsTextEditor.replaceText(line, "Hello again")
-        assertEquals(listOf(line.segments.first(), line.segments.last()), updated.segments)
-        assertValid(updated)
+    @Test fun pastedEnhancedLrcMayKeepAnExplicitLineStartTag() {
+        assertEquals(line, WordLyricsTextEditor.parseRawLine(line,
+            "[00:01.000]" + WordLyricsTextEditor.rawLine(line)))
     }
 
-    @Test fun newWordsKeepSpacesCombiningMarksAndEmojiClusters() {
-        val source = line.copy(text = "", segments = emptyList())
-        val updated = WordLyricsTextEditor.replaceText(source, "  Café e\u0301 👨‍👩‍👧‍👦!")
-        assertEquals(listOf("  Café ", "e\u0301 ", "👨‍👩‍👧‍👦!"), updated.segments.map { it.text })
-        assertValid(updated)
-    }
-
-    @Test fun veryShortLinesUseAValidCombinedToken() {
-        val source = WordByWordLine(0, 1, "", emptyList())
-        val updated = WordLyricsTextEditor.replaceText(source, "新歌词")
-        assertEquals(listOf(WordByWordSegment("新歌词", 0, 1)), updated.segments)
-        assertValid(updated)
-    }
-
-    @Test fun blankTextHasNoWordTokensAndCannotBeSaved() {
-        val updated = WordLyricsTextEditor.replaceText(line, " ")
-        assertTrue(updated.segments.isEmpty())
-        assertFalse(WordLyricsDocument(listOf(updated)).invalidLines().isEmpty())
+    @Test fun malformedOrIncompleteRawInputCannotSilentlyDropTextOrInventTimes() {
+        for (raw in listOf(
+            "Hello world", "<00:01.000>Hello", "<00:60.000>Hello<00:61.000>",
+            "<bad>Hello<00:02.000>", "<00:02.000>A<00:03.000><00:01.000>B<00:02.000>",
+            "<00:01.000>Hello<00:00.500>", "<00:01.000> <00:02.000>",
+            "<00:01.000>Hello<oops><00:02.000>", "[00:09.000]<00:01.000>Hello<00:02.000>",
+            "<00:01.000>Hello<00:02.000>lost text", "<00:01.000>A<00:02.000>\n<00:02.000>B<00:03.000>",
+            "<00:05.000><00:01.000>Hello<00:02.000>", "<00:01.000>Hello<00:02.000><00:03.000>",
+            "<00:01.000>A<00:02.000><00:02.100><00:02.200>B<00:03.000>"
+        )) assertNull(raw, WordLyricsTextEditor.parseRawLine(line, raw))
     }
 
     private fun assertValid(line: WordByWordLine) {
         assertEquals(line.text, line.segments.joinToString("") { it.text })
         assertTrue(WordLyricsDocument(listOf(line)).invalidLines().isEmpty())
-        assertTrue(line.segments.all { it.startMs < it.endMs })
         assertEquals(line, WordLyricsDocument.parse(WordLyricsDocument(listOf(line)).serialize()).lines.single())
     }
 }

@@ -533,6 +533,9 @@
     <string name="ui_lyrics_word_empty">请输入词或音节</string>
     <string name="ui_lyrics_line_text">整行歌词</string>
     <string name="ui_lyrics_line_empty">请输入歌词</string>
+    <string name="ui_lyrics_raw_line_error">每个词前和末尾使用 &lt;分:秒.毫秒&gt;，词开始时间须依序排列。</string>
+    <string name="ui_lyrics_reset_line">还原整行</string>
+    <string name="ui_lyrics_update_words">更新逐字</string>
     <string name="ui_untimed_lyrics">纯文本歌词</string>
     <string name="search_untimed_notice">无时间轴，无法在悬浮窗显示。</string>
     <string name="ui_untimed_lyrics_unavailable">纯文本歌词，无法同步显示</string>

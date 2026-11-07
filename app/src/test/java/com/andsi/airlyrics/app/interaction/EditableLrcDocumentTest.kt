@@ -1,13 +1,44 @@
 package com.andsi.airlyrics.app.interaction
 
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordByWordSegment
+import com.andsi.airlyrics.lyrics.WordLyricsDocument
 import com.andsi.airlyrics.lyrics.parser.LrcParser
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+@RunWith(RobolectricTestRunner::class)
 class EditableLrcDocumentTest {
+    @Test fun movingAWordLineKeepsItsSeparateTranslationTrackAligned() {
+        val line = WordByWordLine(1001, 3789, "Hello", listOf(WordByWordSegment("Hello", 1001, 3789)))
+        val translations = "[ar:Artist]\r\n[00:01.001]你好\r\n[00:08.000]下一行"
+        val document = EditableLrcDocument.fromWords(WordLyricsDocument(listOf(line),
+            translatedLrc = translations).serialize())
+        document.updateWord(document.rows.single(), line.copy(startMs = 5001, endMs = 7789,
+            segments = listOf(WordByWordSegment("Hello", 5001, 7789))))
+        val updated = WordLyricsDocument.parse(document.serialize())
+        assertEquals("[ar:Artist]\r\n[00:05.001]你好\r\n[00:08.000]下一行", updated.translatedLrc)
+    }
+
+    @Test fun sharedTranslationsStayAtTheOldTimeAndBackgroundEditsDoNotMoveThem() {
+        val line = WordByWordLine(1001, 3789, "Hello", listOf(WordByWordSegment("Hello", 1001, 3789)))
+        for (background in listOf(false, true)) {
+            val second = line.copy(isBackground = background)
+            val document = EditableLrcDocument.fromWords(WordLyricsDocument(listOf(line, second),
+                translatedLrc = "[00:01.001]你好").serialize())
+            document.updateWord(document.rows.last(), second.copy(startMs = 5001, endMs = 7789,
+                segments = listOf(WordByWordSegment("Hello", 5001, 7789))))
+            val track = WordLyricsDocument.parse(document.serialize()).translatedLrc!!
+            assertEquals(if (background) listOf(1001L) else listOf(1001L, 5001L),
+                LrcParser.parse(track).map { it.timeMs })
+        }
+    }
+
     @Test
     fun untouchedRowsKeepMetadataTranslationsPrecisionAndOriginalLineBreaks() {
         val original = "[ar:Artist]\r\n[00:05.678]原文 / 译文\r\n[00:10.00][00:11.00]shared\r\n"

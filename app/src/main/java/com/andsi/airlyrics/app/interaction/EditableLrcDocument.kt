@@ -8,7 +8,7 @@ import com.andsi.airlyrics.lyrics.WordLyricsDocument
 internal class EditableLrcDocument private constructor(
     val rows: MutableList<Row>,
     private val lineBreak: String,
-    private val wordDocument: WordLyricsDocument? = null
+    private var wordDocument: WordLyricsDocument? = null
 ) {
     internal class Row(
         var raw: String,
@@ -27,6 +27,23 @@ internal class EditableLrcDocument private constructor(
         ?: buildString { rows.forEach { append(it.raw); append(it.ending) } }
 
     fun updateWord(row: Row, line: WordByWordLine) {
+        val previous = row.wordLine
+        val translations = wordDocument?.translatedLrc
+        if (previous != null && !previous.isBackground && previous.startMs != line.startMs && translations != null) {
+            val track = from(translations)
+            val keepPreviousTime = rows.any {
+                it !== row && it.wordLine?.let { other -> !other.isBackground && other.startMs == previous.startMs } == true
+            }
+            val tag = "[${WordLyricsDocument.time(line.startMs)}]"
+            track.rows.filter {
+                it.timestamp?.removeSurrounding("[", "]")?.let(WordLyricsDocument::parseTime) == previous.startMs
+            }.forEach { translation ->
+                val index = track.rows.indexOf(translation)
+                if (keepPreviousTime) track.insertAfter(index, tag, translation.lyric)
+                else track.update(index, tag, translation.lyric)
+            }
+            wordDocument = wordDocument?.copy(translatedLrc = track.serialize())
+        }
         row.wordLine = line
         row.timestamp = "[${WordLyricsDocument.time(line.startMs)}]"
         row.lyric = line.text

@@ -536,6 +536,9 @@ Word-timed TTML:
     <string name="ui_lyrics_word_empty">Enter word text</string>
     <string name="ui_lyrics_line_text">Full line</string>
     <string name="ui_lyrics_line_empty">Enter lyrics</string>
+    <string name="ui_lyrics_raw_line_error">Use &lt;mm:ss.SSS&gt; before each word and after the last word; keep word starts in order.</string>
+    <string name="ui_lyrics_reset_line">Reset line</string>
+    <string name="ui_lyrics_update_words">Update words</string>
     <string name="ui_untimed_lyrics">Plain text lyrics</string>
     <string name="search_untimed_notice">No timing; cannot display in the floating window.</string>
     <string name="ui_untimed_lyrics_unavailable">Plain text lyrics cannot be synced</string>
