@@ -323,7 +323,7 @@ internal class MainActivityUiHost(
     }
 
     override fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView {
-        return FloatingLyricsTextView(this).apply {
+        return FloatingLyricsTextView(this, preview = true).apply {
             updateFloatingPreviewText(this, text)
             val params = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -337,6 +337,10 @@ internal class MainActivityUiHost(
 
     override fun updateFloatingPreviewText(view: TextView, text: CharSequence) =
         updatePreviewLyricsText(view, text)
+
+    override fun syncFloatingPreviewVisibility(view: TextView, visible: Boolean) {
+        (view as? FloatingLyricsTextView)?.syncPreviewVisibility(visible)
+    }
 
     override fun hasAnimatedFloatingPreviewHighlight(view: TextView): Boolean =
         hasAnimatedPreviewLyricsHighlight(view)

@@ -1,11 +1,9 @@
 package com.andsi.airlyrics.ui.pages.floating
 
 import android.animation.ValueAnimator
-import android.graphics.Rect
 import android.text.Spannable
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
-import android.view.View
 import android.view.animation.LinearInterpolator
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
@@ -19,8 +17,7 @@ internal class FloatingPreviewClassicLoop(
     private val progressForLine: (String) -> (Long) -> FloatingPreviewHighlightProgress,
     private val onPositionChanged: (Long) -> Unit = {},
     private val isVisible: () -> Boolean = {
-        view.isAttachedToWindow && view.isShown && view.windowVisibility == View.VISIBLE &&
-            view.getGlobalVisibleRect(Rect())
+        view.isPreviewFullyVisible()
     }
 ) {
     private var text: Spannable? = null
@@ -57,7 +54,13 @@ internal class FloatingPreviewClassicLoop(
             )
         }
 
-        if (ValueAnimator.areAnimatorsEnabled() && isVisible()) {
+        if (!isVisible()) {
+            stopAnimator()
+            highlighter?.clear()
+            return
+        }
+
+        if (ValueAnimator.areAnimatorsEnabled()) {
             if (animator == null) {
                 highlighter?.renderAt(0L)
                 onPositionChanged(0L)

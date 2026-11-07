@@ -55,6 +55,7 @@ internal interface FloatingUiHost {
     fun hasUsageStatsAccess(): Boolean
     fun floatingPreviewText(text: CharSequence, style: FloatingLyricsStyle): TextView
     fun updateFloatingPreviewText(view: TextView, text: CharSequence)
+    fun syncFloatingPreviewVisibility(view: TextView, visible: Boolean)
     fun hasAnimatedFloatingPreviewHighlight(view: TextView): Boolean
     fun animateFloatingPreviewText(view: TextView, durationMs: Long, offsetY: Float, scale: Float)
     fun classicPreviewProgressForLine(lineText: String): (Long) -> FloatingPreviewHighlightProgress

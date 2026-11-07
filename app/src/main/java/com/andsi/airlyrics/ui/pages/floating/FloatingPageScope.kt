@@ -512,6 +512,9 @@ internal class FloatingPageScope(
     }
 
     private fun syncPreviewAnimations() {
+        previewHandle?.lyricTextView?.let { view ->
+            host.syncFloatingPreviewVisibility(view, view.isPreviewFullyVisible())
+        }
         previewClassicLoop?.sync()
         previewSwitchLoop?.sync()
     }

@@ -8,6 +8,10 @@ data class LyricsGlowStyle(
 ) {
     fun normalized() = copy(
         strengthPercent = strengthPercent.coerceIn(0, 200),
-        spreadPercent = spreadPercent.coerceIn(50, 200)
+        spreadPercent = spreadPercent.coerceIn(50, MAX_SPREAD_PERCENT)
     )
+
+    companion object {
+        const val MAX_SPREAD_PERCENT = 200
+    }
 }

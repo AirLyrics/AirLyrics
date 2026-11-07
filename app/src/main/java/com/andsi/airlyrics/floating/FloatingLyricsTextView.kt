@@ -12,6 +12,7 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.graphics.withSave
+import com.andsi.airlyrics.core.model.LyricsGlowStyle
 import kotlin.math.roundToInt
 
 /**
@@ -20,18 +21,38 @@ import kotlin.math.roundToInt
  * A TextView draws its background before [onDraw], so applying the transition only while
  * delegating to TextView's content drawing keeps the background fully visible and stationary.
  */
-internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(context),
+internal class FloatingLyricsTextView @JvmOverloads constructor(
+    context: Context,
+    private val preview: Boolean = false
+) : AppCompatTextView(context),
     LyricsTextAnimationTarget {
 
-    internal var lyricsGlowStyle = com.andsi.airlyrics.core.model.LyricsGlowStyle()
+    internal var lyricsGlowStyle = LyricsGlowStyle()
         private set
 
-    internal fun updateLyricsGlow(style: com.andsi.airlyrics.core.model.LyricsGlowStyle) {
+    internal fun updateLyricsGlow(style: LyricsGlowStyle) {
         val normalized = style.normalized()
         if (lyricsGlowStyle == normalized) return
+        val previousInset = spicyInset()
         lyricsGlowStyle = normalized
-        requestLayout()
+        if (previousInset != spicyInset()) requestLayout()
         invalidate()
+    }
+
+    internal var previewEffectsVisible = !preview
+        private set
+    internal var onPreviewVisibilityChanged: ((Boolean) -> Unit)? = null
+
+    internal fun syncPreviewVisibility(visible: Boolean) {
+        if (!preview || previewEffectsVisible == visible) return
+        previewEffectsVisible = visible
+        onPreviewVisibilityChanged?.invoke(visible)
+        // Use the same clean restart for folding and scrolling out of the viewport.
+        spicyDrawing.reset()
+        spicyLineDrawing.reset()
+        cancelLyricsTextAnimation()
+        setLyricsTextAnimationState(REST_ALPHA, 0f, REST_SCALE, REST_SCALE)
+        updateSpicyPlayback(spicyPosition, spicyPlaying)
     }
 
     private val spicyDrawing = SpicyLyricsDrawing(this)
@@ -45,7 +66,7 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
     private val spicyVisibleRect = android.graphics.Rect()
     private val spicyFrame = object : Runnable {
         override fun run() {
-            if (spicyPosition == null || !spicyPlaying || !isShown || windowVisibility != VISIBLE || !isAttachedToWindow) return
+            if (!previewEffectsVisible || spicyPosition == null || !spicyPlaying || !isShown || windowVisibility != VISIBLE || !isAttachedToWindow) return
             if (getLocalVisibleRect(spicyVisibleRect)) {
                 invalidate()
                 postOnAnimation(this)
@@ -72,13 +93,15 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
             spicyDrawing.reset()
             spicyLineDrawing.reset()
         }
-        else if (playing && isShown && windowVisibility == VISIBLE && isAttachedToWindow) postOnAnimation(spicyFrame)
+        else if (previewEffectsVisible && playing && isShown && windowVisibility == VISIBLE && isAttachedToWindow) postOnAnimation(spicyFrame)
         if (changed) requestLayout()
         if (needsRedraw) invalidate()
     }
 
     private fun spicyInset(): Int = if (spicyPosition != null) maxOf(
-        kotlin.math.ceil(textSize * .24f).toInt(), LyricsHalo.outset(textSize, lyricsGlowStyle)
+        kotlin.math.ceil(textSize * .24f).toInt(),
+        // Keep the preview geometry fixed while tuning glow; the overlay uses the actual outset.
+        LyricsHalo.outset(textSize, if (preview) PREVIEW_GLOW_SPACE else lyricsGlowStyle)
     ) else 0
     override fun getCompoundPaddingLeft() = super.getCompoundPaddingLeft() + spicyInset() + if (spicyLineActive) lineScaleInset else 0
     override fun getCompoundPaddingRight() = super.getCompoundPaddingRight() + spicyInset() + if (spicyLineActive) lineScaleInset else 0
@@ -114,7 +137,7 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
     @android.annotation.SuppressLint("WrongCall")
     private fun drawLyrics(canvas: Canvas) {
         val position = spicyPosition
-        if (position == null) {
+        if (position == null || !previewEffectsVisible) {
             super.onDraw(canvas)
             return
         }
@@ -229,6 +252,8 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
         if (lyricContentAlpha <= 0f) return
 
         canvas.withSave {
+            // Contain shadow layers and animated glyphs even under a scrolling parent's clip.
+            clipRect(0, 0, width, height)
             translate(0f, lyricContentTranslationY)
             scale(
                 lyricContentScaleX,
@@ -276,6 +301,7 @@ internal class FloatingLyricsTextView(context: Context) : AppCompatTextView(cont
     }
 
     private companion object {
+        val PREVIEW_GLOW_SPACE = LyricsGlowStyle(spreadPercent = LyricsGlowStyle.MAX_SPREAD_PERCENT)
         const val REST_ALPHA = 1f
         const val REST_SCALE = 1f
     }

@@ -64,13 +64,33 @@ internal fun updatePreviewLyricsText(view: TextView, text: CharSequence) {
     val endMs = spans.maxOfOrNull { it.timing.endMs } ?: 0L
     val lineSpans = (view.text as? Spanned)?.getSpans(0, view.text.length, SpicyLineSpan::class.java).orEmpty()
     val lineEnd = lineSpans.firstOrNull { it.timing.startMs == 0L }?.timing?.endMs ?: 0L
-    val started = SystemClock.uptimeMillis()
-    val clock: (() -> Long)? = when {
-        lineEnd > 0 -> ({ ((SystemClock.uptimeMillis() - started) % (lineEnd + 800)).coerceAtMost(lineEnd - 1) })
-        endMs > 0 -> ({ (SystemClock.uptimeMillis() - started) % (endMs + 1000) })
+    val clock = when {
+        lineEnd > 0 -> FloatingPreviewPlaybackClock(lineEnd + 800, lineEnd - 1)
+        endMs > 0 -> FloatingPreviewPlaybackClock(endMs + 1000)
         else -> null
     }
-    view.updateSpicyPlayback(clock, spans.none { it.haloOnly })
+    view.onPreviewVisibilityChanged = clock?.let { it::setVisible }
+    clock?.setVisible(view.previewEffectsVisible)
+    view.updateSpicyPlayback(clock?.let { it::position }, spans.none { it.haloOnly })
+}
+
+/** Restart preview time when it returns, rather than catching up on hidden frames. */
+internal class FloatingPreviewPlaybackClock(
+    private val cycleMs: Long,
+    private val holdAtMs: Long = Long.MAX_VALUE,
+    private val uptime: () -> Long = SystemClock::uptimeMillis
+) {
+    private var visible = false
+    private var started = 0L
+
+    fun setVisible(value: Boolean) {
+        if (visible == value) return
+        visible = value
+        started = uptime()
+    }
+
+    fun position(): Long = if (visible) ((uptime() - started).coerceAtLeast(0L) % cycleMs)
+        .coerceAtMost(holdAtMs) else 0L
 }
 
 internal fun hasAnimatedPreviewLyricsHighlight(view: TextView): Boolean {

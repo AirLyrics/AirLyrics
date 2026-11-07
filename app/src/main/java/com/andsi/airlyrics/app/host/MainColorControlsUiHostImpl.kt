@@ -4,9 +4,11 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.SeekBar
+import androidx.appcompat.widget.AppCompatSeekBar
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.GridColumnPolicy
 import com.andsi.airlyrics.ui.components.spacer
@@ -53,7 +55,17 @@ internal fun MainUiHost.sliderRowImpl(
         }
         addView(valueText)
 
-        addView(SeekBar(activity).apply {
+        addView(object : AppCompatSeekBar(activity) {
+            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+                // Capture the drag from DOWN, before a vertical parent can intercept it.
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> parent?.requestDisallowInterceptTouchEvent(true)
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
+                        parent?.requestDisallowInterceptTouchEvent(false)
+                }
+                return super.dispatchTouchEvent(event)
+            }
+        }.apply {
             this.max = (max - min) / safeStep
             progress = (safeValue - min) / safeStep
             var latestValue = safeValue

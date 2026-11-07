@@ -62,10 +62,19 @@ class FloatingPreviewAnimationTest {
             view = lyric, sampleLine = { "Current lyric" }, highlightColor = { Color.RED },
             progressForLine = ::createClassicPreviewProgress,
             onPositionChanged = { reported = it },
-            isVisible = { false }
+            isVisible = { true }
         )
         loop.sync()
-        assertEquals(FloatingPageTokens.PREVIEW_CLASSIC_FILL_MS / 2, reported)
+        assertEquals(0L, reported)
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(800, TimeUnit.MILLISECONDS)
+        val spans = lyric.text as Spanned
+        val red = spans.getSpans(0, spans.length, ForegroundColorSpan::class.java)
+            .single { it.foregroundColor == Color.RED }
+        val expected = createClassicPreviewProgress("Current lyric")(reported)
+        assertEquals(expected.completedEnd, spans.getSpanEnd(red))
+        assertTrue(reported > 0L)
+        lyric.text = ""
+        loop.sync()
     }
 
     @Test
@@ -78,10 +87,11 @@ class FloatingPreviewAnimationTest {
             sampleLine = { line },
             highlightColor = { Color.RED },
             progressForLine = ::createClassicPreviewProgress,
-            isVisible = { false }
+            isVisible = { true }
         )
 
         loop.sync()
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(800, TimeUnit.MILLISECONDS)
         assertTrue(loop.hasTarget)
         val highlighted = lyric.text as Spanned
         assertTrue(highlighted.getSpans(0, highlighted.length, ForegroundColorSpan::class.java).isNotEmpty())
@@ -90,6 +100,73 @@ class FloatingPreviewAnimationTest {
         loop.sync()
         assertFalse(loop.hasTarget)
         assertTrue(highlighted.getSpans(0, highlighted.length, ForegroundColorSpan::class.java).isEmpty())
+    }
+
+    @Test
+    fun `classic preview stops offscreen and returns with no accumulated highlight`() {
+        Robolectric.buildActivity(Activity::class.java).setup().use { controller ->
+            val lyric = TextView(controller.get()).apply { text = "Current lyric" }
+            var visible = true
+            var position = -1L
+            val loop = FloatingPreviewClassicLoop(
+                lyric, { "Current lyric" }, { Color.RED }, ::createClassicPreviewProgress,
+                onPositionChanged = { position = it }, isVisible = { visible }
+            )
+            loop.sync()
+            val looper = shadowOf(android.os.Looper.getMainLooper())
+            looper.idleFor(800, TimeUnit.MILLISECONDS)
+            assertTrue(position > 0L)
+
+            visible = false
+            loop.sync()
+            val stopped = position
+            looper.idleFor(30, TimeUnit.SECONDS)
+            assertEquals(stopped, position)
+            val text = lyric.text as Spanned
+            assertTrue(text.getSpans(0, text.length, ForegroundColorSpan::class.java).isEmpty())
+
+            visible = true
+            loop.sync()
+            assertEquals(0L, position)
+            assertTrue(text.getSpans(0, text.length, ForegroundColorSpan::class.java).isEmpty())
+            lyric.text = ""
+            loop.sync()
+        }
+    }
+
+    @Test
+    fun `viewport visibility excludes partially clipped and folded previews`() {
+        Robolectric.buildActivity(Activity::class.java).setup().visible().use { controller ->
+            val activity = controller.get()
+            // Control window visibility explicitly; legacy Robolectric leaves AttachInfo GONE.
+            var windowVisible = true
+            val lyric = object : TextView(activity) {
+                override fun getWindowVisibility() = if (windowVisible) View.VISIBLE else View.GONE
+            }.apply { text = "Preview" }
+            val content = android.widget.LinearLayout(activity).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                addView(lyric, android.widget.LinearLayout.LayoutParams(300, 80))
+                addView(View(activity), android.widget.LinearLayout.LayoutParams(300, 1000))
+            }
+            val scroll = android.widget.ScrollView(activity).apply { addView(content) }
+            activity.setContentView(scroll)
+            val decor = activity.window.decorView
+            decor.measure(View.MeasureSpec.makeMeasureSpec(300, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(400, View.MeasureSpec.EXACTLY))
+            decor.layout(0, 0, 300, 400)
+            assertTrue(lyric.isPreviewFullyVisible())
+            scroll.scrollTo(0, 20)
+            assertFalse(lyric.isPreviewFullyVisible())
+            scroll.scrollTo(0, 200)
+            assertFalse(lyric.isPreviewFullyVisible())
+            scroll.scrollTo(0, 0)
+            assertTrue(lyric.isPreviewFullyVisible())
+            lyric.visibility = View.GONE
+            assertFalse(lyric.isPreviewFullyVisible())
+            lyric.visibility = View.VISIBLE
+            windowVisible = false
+            assertFalse(lyric.isPreviewFullyVisible())
+        }
     }
 
     @Test
