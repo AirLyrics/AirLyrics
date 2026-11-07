@@ -521,4 +521,16 @@
     <string name="ui_glow_strength">發光強度</string>
     <string name="ui_glow_spread">擴散範圍</string>
     <string name="ui_glow">發光</string>
+    <string name="ui_lyrics_background">背景人聲</string>
+    <string name="ui_lyrics_line_start">行開始時間</string>
+    <string name="ui_lyrics_line_end">行結束時間</string>
+    <string name="ui_lyrics_word_text">詞／音節 %1$d</string>
+    <string name="ui_lyrics_word_start">詞開始時間</string>
+    <string name="ui_lyrics_word_end">詞結束時間</string>
+    <string name="ui_delete_word">刪除詞</string>
+    <string name="ui_add_word">新增詞</string>
+    <string name="ui_lyrics_word_time_error">詞時間須依序位於行內，結束須晚於開始。</string>
+    <string name="ui_lyrics_word_empty">請輸入詞或音節</string>
+    <string name="ui_lyrics_line_text">整行歌詞</string>
+    <string name="ui_lyrics_line_empty">請輸入歌詞</string>
 </resources>

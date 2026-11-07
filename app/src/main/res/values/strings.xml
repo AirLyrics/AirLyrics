@@ -524,4 +524,16 @@ Word-timed TTML:
     <string name="ui_glow_strength">Glow strength</string>
     <string name="ui_glow_spread">Glow spread</string>
     <string name="ui_glow">Glow</string>
+    <string name="ui_lyrics_background">Background vocals</string>
+    <string name="ui_lyrics_line_start">Line start</string>
+    <string name="ui_lyrics_line_end">Line end</string>
+    <string name="ui_lyrics_word_text">Word %1$d</string>
+    <string name="ui_lyrics_word_start">Word start</string>
+    <string name="ui_lyrics_word_end">Word end</string>
+    <string name="ui_delete_word">Delete word</string>
+    <string name="ui_add_word">Add word</string>
+    <string name="ui_lyrics_word_time_error">Keep word times in order and within the line; the end must follow the start.</string>
+    <string name="ui_lyrics_word_empty">Enter word text</string>
+    <string name="ui_lyrics_line_text">Full line</string>
+    <string name="ui_lyrics_line_empty">Enter lyrics</string>
 </resources>

@@ -1,24 +1,35 @@
 package com.andsi.airlyrics.app.interaction
 
 import com.andsi.airlyrics.lyrics.parser.LrcParser
+import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.lyrics.WordLyricsDocument
 
 /** A lossless draft view of physical LRC rows. Only simple timed rows are rewritten. */
 internal class EditableLrcDocument private constructor(
     val rows: MutableList<Row>,
-    private val lineBreak: String
+    private val lineBreak: String,
+    private val wordDocument: WordLyricsDocument? = null
 ) {
     internal class Row(
         var raw: String,
         var ending: String,
         var timestamp: String?,
-        var lyric: String
+        var lyric: String,
+        var wordLine: WordByWordLine? = null
     ) {
         val isTimed: Boolean get() = timestamp != null
         val isVisible: Boolean get() = isTimed || raw.isNotBlank()
     }
 
-    fun serialize(): String = buildString {
-        rows.forEach { append(it.raw); append(it.ending) }
+    val isWordByWord: Boolean get() = wordDocument != null
+
+    fun serialize(): String = wordDocument?.copy(lines = rows.mapNotNull { it.wordLine })?.serialize()
+        ?: buildString { rows.forEach { append(it.raw); append(it.ending) } }
+
+    fun updateWord(row: Row, line: WordByWordLine) {
+        row.wordLine = line
+        row.timestamp = "[${WordLyricsDocument.time(line.startMs)}]"
+        row.lyric = line.text
     }
 
     fun update(index: Int, timestamp: String, lyric: String) {
@@ -62,6 +73,13 @@ internal class EditableLrcDocument private constructor(
             }
             if (start < text.length) rows += row(text.substring(start), "")
             return EditableLrcDocument(rows, preferredBreak)
+        }
+
+        fun fromWords(text: String): EditableLrcDocument {
+            val document = WordLyricsDocument.parse(text)
+            return EditableLrcDocument(document.lines.map { line ->
+                Row("", "", "[${WordLyricsDocument.time(line.startMs)}]", line.text, line)
+            }.toMutableList(), "\n", document)
         }
 
         /** Keep the user's precision and separator; use the parser to check actual time bounds. */

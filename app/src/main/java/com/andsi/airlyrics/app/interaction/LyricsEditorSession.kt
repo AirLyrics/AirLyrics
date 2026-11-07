@@ -6,6 +6,8 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.LyricsAccess
+import com.andsi.airlyrics.lyrics.WordLyricsDocument
+import com.andsi.airlyrics.lyrics.storage.WordLyricsEditorStorage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
@@ -64,7 +66,7 @@ internal class LyricsEditorSession(
         val id = saved.getString("id") ?: return
         loading = scope.launch {
             val draft = if (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE) null else withContext(Dispatchers.IO) { runCatching { drafts.read(id).get() }.getOrNull() }
-            val text = draft ?: withContext(Dispatchers.IO) { runCatching { LyricsStorage.readLocalLyricsItemText(context, item.toStorageItem(), target) }.getOrNull() }
+            val text = draft ?: withContext(Dispatchers.IO) { runCatching { readText(item, target) }.getOrNull() }
             val access = withContext(Dispatchers.IO) { LyricsStorage.restrictedLyricsAccess(context, item.indexKey) }
             if (text == null || (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && access == null)) {
                 interactions.remove("editor")
@@ -87,7 +89,7 @@ internal class LyricsEditorSession(
             putString("id", id); putBundle("item", item.toEditorBundle()); putString("target", target.name)
         }
         loading = scope.launch {
-            val text = withContext(Dispatchers.IO) { runCatching { LyricsStorage.readLocalLyricsItemText(context, item.toStorageItem(), target) }.getOrNull() }
+            val text = withContext(Dispatchers.IO) { runCatching { readText(item, target) }.getOrNull() }
             val access = withContext(Dispatchers.IO) { LyricsStorage.restrictedLyricsAccess(context, item.indexKey) }
             if (text == null || (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && access == null)) {
                 interactions.remove("editor")
@@ -99,6 +101,11 @@ internal class LyricsEditorSession(
             flush()
         }
     }
+
+    private fun readText(item: LocalLyricsUiItem, target: LyricsStorage.LocalLyricsEditTarget): String? =
+        if (target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD)
+            WordLyricsEditorStorage.read(context, item.toStorageItem())
+        else LyricsStorage.readLocalLyricsItemText(context, item.toStorageItem(), target)
 
     fun edit(text: String, start: Int, end: Int, scroll: Int) {
         val old = current.value ?: return
@@ -156,7 +163,8 @@ internal class LyricsEditorSession(
 
     fun check() = operate { session ->
         val result = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
-            LyricsStorage.validateWordByWordLyricsItemText(session.text)
+            val document = WordLyricsDocument.parse(session.text)
+            LyricsStorage.LocalLyricsUpdateResult(document.lines.isNotEmpty() && document.invalidLines().isEmpty(), document.invalidLines())
         } else {
             val validation = LrcParser.validateForStorage(session.text)
             LyricsStorage.LocalLyricsUpdateResult(validation.isValid, validation.invalidLineNumbers)
@@ -166,7 +174,7 @@ internal class LyricsEditorSession(
 
     fun save() = operate { session ->
         val result = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
-            LyricsStorage.updateWordByWordLyricsItemTextWithResult(context, session.item.toStorageItem(), session.text)
+            WordLyricsEditorStorage.save(context, session.item.toStorageItem(), session.text)
         } else LyricsStorage.updatePlainLyricsItemTextWithResult(context, session.item.toStorageItem(), session.text)
         if (result.saved) {
             BroadcastLyricsChangedPublisher(context).publish(SongIdentity(session.item.title, session.item.artist, session.item.album, session.item.durationMs))

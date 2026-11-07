@@ -525,4 +525,16 @@ TTML de tiempo por palabra:
     <string name="ui_glow_strength">Intensidad del resplandor</string>
     <string name="ui_glow_spread">Extensión del resplandor</string>
     <string name="ui_glow">Resplandor</string>
+    <string name="ui_lyrics_background">Voces de fondo</string>
+    <string name="ui_lyrics_line_start">Inicio de línea</string>
+    <string name="ui_lyrics_line_end">Fin de línea</string>
+    <string name="ui_lyrics_word_text">Palabra %1$d</string>
+    <string name="ui_lyrics_word_start">Inicio de palabra</string>
+    <string name="ui_lyrics_word_end">Fin de palabra</string>
+    <string name="ui_delete_word">Eliminar palabra</string>
+    <string name="ui_add_word">Añadir palabra</string>
+    <string name="ui_lyrics_word_time_error">Ordena los tiempos dentro de la línea; el fin debe ser posterior al inicio.</string>
+    <string name="ui_lyrics_word_empty">Introduce una palabra</string>
+    <string name="ui_lyrics_line_text">Línea completa</string>
+    <string name="ui_lyrics_line_empty">Introduce la letra</string>
 </resources>

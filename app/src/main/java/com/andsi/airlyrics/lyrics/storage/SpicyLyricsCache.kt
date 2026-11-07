@@ -3,6 +3,7 @@ package com.andsi.airlyrics.lyrics.storage
 import android.content.Context
 import android.util.AtomicFile
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.WordLyricsDocument
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
 import com.andsi.airlyrics.lyrics.providers.SpicyLyricsParser
@@ -40,12 +41,14 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
     private fun result(key: String, doc: JSONObject): LyricsProviderResult? {
         val original = SpicyLyricsParser.parse(doc.getString("raw"), key, doc.getLong("fetchedAt")) ?: return null
         val edit = doc.optString("edit")
-        if (edit.isBlank()) return original
+        if (edit.isBlank() && !doc.has("wordEdit")) return original
         return if (original.wordByWordLines.isNotEmpty()) {
             val words = doc.optString("wordEdit").takeIf { it.isNotEmpty() }
                 ?.let(WordByWordLyricsJsonCodec::parseWordByWordLinesJson)
                 ?: WordByWordLrcParser.parseImport(edit).wordByWordLines
-            original.copy(plainLrc = WordByWordLrcParser.wordByWordLinesToPlainLrc(words.filterNot { it.isBackground }), translatedLrc = null, wordByWordLines = words)
+            original.copy(plainLrc = WordByWordLrcParser.wordByWordLinesToPlainLrc(words.filterNot { it.isBackground }),
+                translatedLrc = if (doc.has("translatedEdit")) doc.optString("translatedEdit").takeIf { it.isNotEmpty() } else original.translatedLrc,
+                wordByWordLines = words)
         } else original.copy(plainLrc = edit, translatedLrc = null)
     }
     fun read(key: String): LyricsProviderResult? = synchronized(lock) {
@@ -124,6 +127,19 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
         write(key, doc.put("edit", text).put("updatedAt", clock()))
         validation
     }
+    fun editWords(key: String, edited: WordLyricsDocument): LyricsStorage.LocalLyricsUpdateResult = synchronized(lock) {
+        val doc = document(key) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
+        val original = result(key, doc) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
+        if (original.wordByWordLines.isEmpty() || edited.lines.isEmpty() || edited.invalidLines().isNotEmpty())
+            return@synchronized LyricsStorage.LocalLyricsUpdateResult(false, edited.invalidLines())
+        if (original.wordByWordLines == edited.lines && original.translatedLrc == edited.translatedLrc)
+            return@synchronized LyricsStorage.LocalLyricsUpdateResult(true)
+        // The raw response, access policy and fetchedAt stay intact.
+        write(key, doc.put("wordEdit", edited.serialize()).put("edit", edited.originalLrc)
+            .put("translatedEdit", edited.translatedLrc.orEmpty()).put("updatedAt", clock()))
+        LyricsStorage.LocalLyricsUpdateResult(true)
+    }
+
     fun delete(key: String): Boolean = synchronized(lock) {
         val existed = file(key).exists()
         AtomicFile(file(key)).delete()
