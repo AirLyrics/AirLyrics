@@ -25,6 +25,7 @@ mod international;
 mod lrc;
 mod lrclib;
 mod manual;
+mod manual_words;
 mod matching;
 mod musixmatch;
 #[cfg(test)]

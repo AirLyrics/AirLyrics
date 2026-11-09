@@ -6,6 +6,9 @@ import com.andsi.airlyrics.lyrics.*
 import com.andsi.airlyrics.lyrics.search.LyricsCandidate
 import com.andsi.airlyrics.lyrics.search.ManualLyricsFetchResult
 import com.andsi.airlyrics.lyrics.search.LyricsUnavailableReason
+import com.andsi.airlyrics.lyrics.search.ManualWordSource
+import com.andsi.airlyrics.lyrics.search.ManualWordVersion
+import com.andsi.airlyrics.lyrics.search.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
@@ -21,6 +24,31 @@ class LyricsSearchSessionTest {
         val idQueries = mutableListOf<String>()
         var idResultMissing = false
         var previewFetches = 0
+        val wordQueries = mutableListOf<Pair<SongIdentity,ManualWordSource>>()
+        val pages = mutableListOf<Int>()
+        var catalogue:(SongIdentity,ManualWordSource,Int,LyricsLookupCancellationToken)->ManualWordPage = { q,s,p,_ ->
+            ManualWordPage(listOf(ManualWordRecording(s,"42",q)),p)
+        }
+        var detailLoads=0
+        var downloads=0
+        var details:(ManualWordRecording,LyricsLookupCancellationToken)->ManualWordDetails = { r,_ ->
+            ManualWordDetails(listOf(ManualWordVersion(r.id,r.source,r.song,
+                LyricsProviderResult(r.source.key,r.source.key,"[00:01.00]Line"))))
+        }
+        var download:(ManualWordOption,LyricsLookupCancellationToken)->ManualWordDetails = { _,_->ManualWordDetails() }
+        var appliedLyrics: LyricsProviderResult? = null
+        override fun searchWordRecordings(source:ManualWordSource,query:SongIdentity,page:Int,keyword:String,token:LyricsLookupCancellationToken):ManualWordPage {
+            wordQueries+=query to source; pages+=page
+            return catalogue(query,source,page,token)
+        }
+        override fun loadWordRecording(recording:ManualWordRecording,token:LyricsLookupCancellationToken):ManualWordDetails {
+            detailLoads++
+            return details(recording,token)
+        }
+        override fun loadWordOption(option:ManualWordOption,token:LyricsLookupCancellationToken):ManualWordDetails {
+            downloads++
+            return download(option,token)
+        }
         override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken):com.andsi.airlyrics.lyrics.search.SpotifyIdLyricsResult? {
             idQueries += id
             if (idResultMissing) return null
@@ -67,6 +95,7 @@ class LyricsSearchSessionTest {
         override fun apply(target:SongIdentity,result:LyricsProviderResult,token:LyricsLookupCancellationToken,approvedRevision:String?):Boolean {
             if(failApply) error("disk failure")
             appliedTarget=target
+            appliedLyrics=result
             return true
         }
     }
@@ -78,6 +107,182 @@ class LyricsSearchSessionTest {
             val access=FakeAccess()
             block(LyricsSearchSession(target,sources,access,dispatcher,spotifyId),access)
         } finally { Dispatchers.resetMain() }
+    }
+    private fun wordVersion(source:ManualWordSource, query:SongIdentity, id:String="42"):ManualWordVersion {
+        val lines=listOf(WordByWordLine(1000,2000,"你好",listOf(
+            WordByWordSegment("你",1000,1400),WordByWordSegment("好",1400,2000))))
+        return ManualWordVersion(id,source,query,
+            LyricsProviderResult(source.key,source.key,"[00:01.000]你好",
+                wordByWordLines=lines,matchedTitle=query.title))
+    }
+    @Test fun ordinarySearchNeverStartsWordLookup()=runTest {
+        withSession { session,access ->
+            session.search();runCurrent()
+            val rows=session.state.value.results.getValue(source).candidates
+            assertEquals(1,rows.size)
+            assertNull(rows.single().wordVersion)
+            session.preview(rows.single());runCurrent()
+            assertTrue(access.wordQueries.isEmpty())
+            assertEquals(LyricsPrecision.LINE,session.state.value.preview!!.lyrics.precision)
+        }
+    }
+    @Test fun catalogueSearchIsLazyAndKeepsQuerySeparateFromApplyTarget()=runTest {
+        withSession(setOf(source,PlainLyricsSearchSource.LRCLIB)) { session,access ->
+            session.search();runCurrent()
+            val other=session.state.value.results[PlainLyricsSearchSource.LRCLIB]
+            val edited=SongIdentity("Edited","Singer","",0)
+            session.searchWordLyrics(edited);runCurrent()
+            assertEquals(listOf(edited,edited),access.wordQueries.map { it.first })
+            assertEquals(0,access.detailLoads)
+            assertEquals(0,access.downloads)
+            assertEquals(song,session.state.value.target)
+            assertEquals(other,session.state.value.results[PlainLyricsSearchSource.LRCLIB])
+            val rows=session.state.value.results.getValue(source).candidates
+            assertEquals(2,rows.size)
+            assertTrue(rows.all { it.wordVersion==null && it.recording!=null })
+            session.preview(rows.first());runCurrent()
+            assertEquals(1,access.detailLoads)
+            val versions=session.state.value.results.getValue(source).candidates
+            session.preview(versions.single());runCurrent()
+            assertTrue(session.state.value.canApply)
+            assertNull(access.appliedTarget)
+            session.apply();runCurrent()
+            assertEquals(song,access.appliedTarget)
+        }
+    }
+    @Test fun pageTwoAndLowRelatedRecordingsRemainDiscoverableWithoutDownloads()=runTest {
+        withSession { session,access ->
+            access.catalogue={ q,s,p,_ -> ManualWordPage(
+                (1..20).map { ManualWordRecording(s,"$p:$it",q,related=it!=20) },p,p==1,"fixed keyword") }
+            session.searchWordLyrics(song);runCurrent()
+            assertEquals(38,session.state.value.results.getValue(source).candidates.size)
+            session.moreWordRecordings(ManualWordSource.NETEASE)
+            session.moreWordRecordings(ManualWordSource.NETEASE)
+            runCurrent()
+            assertEquals(listOf(1,1,2),access.pages)
+            assertEquals(57,session.state.value.results.getValue(source).candidates.size)
+            session.showOtherWordRecordings()
+            assertEquals(60,session.state.value.results.getValue(source).candidates.size)
+            assertEquals(0,access.detailLoads)
+        }
+    }
+    @Test fun failedSourceRetryKeepsSuccessfulSongsAndRetriesTheFailedPage()=runTest {
+        withSession { session,access ->
+            access.catalogue={ q,s,p,_ ->
+                if(s==ManualWordSource.NETEASE) error("offline")
+                ManualWordPage(listOf(ManualWordRecording(s,"hash",q)),p)
+            }
+            session.searchWordLyrics(song);runCurrent()
+            assertEquals("kugou",session.state.value.results.getValue(source).candidates.single().providerKey)
+            access.catalogue={ q,s,p,_ -> ManualWordPage(listOf(ManualWordRecording(s,"id",q)),p) }
+            session.retryWordFailure(ManualWordSource.NETEASE);runCurrent()
+            assertEquals(listOf(1,1,1),access.pages)
+            assertEquals(2,session.state.value.results.getValue(source).candidates.size)
+            assertEquals(1,access.wordQueries.count { it.second==ManualWordSource.KUGOU })
+        }
+    }
+    @Test fun lineAndWordVersionsSurvivePartialErrorsAndReuseCachedDetails()=runTest {
+        withSession { session,access ->
+            access.details={ r,_ -> ManualWordDetails(listOf(
+                ManualWordVersion(r.id,r.source,r.song,LyricsProviderResult(r.source.key,r.source.key,"[00:01.00]Line")),
+                wordVersion(r.source,r.song,r.id)),partialError=IllegalStateException("translation failed")) }
+            session.searchWordLyrics(song);runCurrent()
+            val row=session.state.value.results.getValue(source).candidates.first()
+            session.preview(row);runCurrent()
+            val result=session.state.value.results.getValue(source)
+            assertEquals(2,result.candidates.size)
+            assertNotNull(result.wordDetail!!.error)
+            assertEquals(2,result.candidates.map { it.id }.distinct().size)
+            result.candidates.forEach { session.preview(it);runCurrent();assertTrue(session.state.value.canApply) }
+            session.backToResults()
+            session.backToWordRecordings()
+            session.preview(row);runCurrent()
+            assertEquals(1,access.detailLoads)
+        }
+    }
+    @Test fun kugouListsEveryLyricCandidateAndDownloadsOnlyTheChosenOne()=runTest {
+        withSession { session,access ->
+            access.details={ r,_ -> ManualWordDetails(options=(1..12).map {
+                ManualWordOption(r,it.toString(),r.song,"key","Creator $it")
+            }) }
+            access.download={ o,_ -> ManualWordDetails(listOf(wordVersion(o.recording.source,o.song,o.key))) }
+            session.searchWordLyrics(song);runCurrent()
+            val kg=session.state.value.results.getValue(source).candidates.last()
+            session.preview(kg);runCurrent()
+            assertEquals(0,access.downloads)
+            val last=session.state.value.results.getValue(source).candidates.last()
+            assertEquals("12",last.wordOption!!.id)
+            session.preview(last);runCurrent()
+            assertEquals(1,access.downloads)
+            assertEquals("kugou",session.state.value.preview!!.lyrics.plainProviderId)
+            session.backToResults()
+            session.preview(session.state.value.results.getValue(source).candidates.last());runCurrent()
+            assertEquals(1,access.downloads)
+        }
+    }
+    @Test fun lateCatalogueAndDetailsCannotOverwriteNewQueriesOrTargets()=runTest {
+        withSession { session,access ->
+            var old:LyricsLookupCancellationToken?=null
+            access.catalogue={ q,s,p,token ->
+                if(q.title==song.title) { old=token;session.searchWordLyrics(song.copy(title="New")) }
+                ManualWordPage(listOf(ManualWordRecording(s,"id",q)),p)
+            }
+            session.searchWordLyrics(song);runCurrent()
+            assertTrue(old!!.isCancellationRequested)
+            assertTrue(session.state.value.results.getValue(source).candidates.all { it.song.title=="New" })
+            access.details={ _,token ->
+                old=token;session.switchTarget(song.copy(title="Next"));ManualWordDetails()
+            }
+            session.preview(session.state.value.results.getValue(source).candidates.first());runCurrent()
+            assertTrue(old!!.isCancellationRequested)
+            assertTrue(session.state.value.results.isEmpty())
+        }
+    }
+    @Test fun switchingRecordingsCancelsQueuedDetailsAndReturningRestoresSongs()=runTest {
+        withSession { session,access ->
+            session.searchWordLyrics(song);runCurrent()
+            val songs=session.state.value.results.getValue(source).candidates
+            session.preview(songs.first())
+            session.preview(songs.last());runCurrent()
+            assertEquals(1,access.detailLoads)
+            assertEquals(ManualWordSource.KUGOU,session.state.value.results.getValue(source).wordDetail!!.recording.source)
+            session.backToWordRecordings()
+            assertEquals(songs,session.state.value.results.getValue(source).candidates)
+        }
+    }
+    @Test fun pendingInternationalResolutionCannotOverwriteWordCatalogue()=runTest {
+        withSession { session,access ->
+            access.internationalQuery=song.copy(title="Alias")
+            session.search()
+            session.searchWordLyrics(song);runCurrent()
+            assertTrue(session.state.value.results.getValue(source).candidates.all { it.recording!=null })
+            session.searchNeteaseByTitle();runCurrent()
+            assertNull(session.state.value.results.getValue(source).wordQuery)
+            assertTrue(session.state.value.results.getValue(source).candidates.all { it.recording==null })
+        }
+    }
+
+    @Test fun failedLyricDoesNotBlockAnotherOptionAndSwitchCancelsDownload()=runTest {
+        withSession { session,access ->
+            access.details={ r,_ -> ManualWordDetails(options=(1..4).map { ManualWordOption(r,"$it",r.song,"key") }) }
+            session.searchWordLyrics(song);runCurrent()
+            session.preview(session.state.value.results.getValue(source).candidates.last());runCurrent()
+            val rows=session.state.value.results.getValue(source).candidates
+            access.download={ _,_->error("bad KRC") }
+            session.preview(rows.first());runCurrent()
+            assertNotNull(session.state.value.results.getValue(source).wordDetail!!.options.values.single().error)
+            access.download={ o,_->ManualWordDetails(listOf(wordVersion(o.recording.source,o.song,o.key))) }
+            session.preview(rows.last());runCurrent()
+            assertTrue(session.state.value.canApply)
+            session.backToResults()
+            var token:LyricsLookupCancellationToken?=null
+            access.download={ _,t->token=t;session.backToWordRecordings();ManualWordDetails() }
+            session.preview(rows[1]);runCurrent()
+            assertTrue(token!!.isCancellationRequested)
+            assertNull(session.state.value.preview)
+            session.preview(session.state.value.results.getValue(source).candidates.last());runCurrent()
+            assertTrue(session.state.value.results.getValue(source).wordDetail!!.options.values.none { it.loading })
+        }
     }
     @Test fun sessionIdIsPinnedAlongsideNormalResultsAndPreviewReusesLyrics()=runTest {
         val id="5l94Up12BJSjhH7Mhr2ji4"

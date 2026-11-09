@@ -29,8 +29,8 @@ import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import kotlin.math.abs
 
 /**
- * One spring carries the whole input surface. A separate parent handles IME/layout translation,
- * so window resizing cannot restart or fight the entrance or an interrupted dismissal.
+ * A spring presents the input surface; a single timed transition closes its card and shade.
+ * A separate parent handles IME/layout translation so resizing cannot restart the motion.
  */
 @Suppress("DEPRECATION")
 internal class LyricsSearchInputDialog(
@@ -194,13 +194,38 @@ internal class LyricsSearchInputDialog(
             return
         }
         isLeaving = true
-        positioner.animate().cancel()
+        // Capture the presented values before cancelling entry/layout motion.
+        // One clock now carries the card and shade through the entire exit.
+        val startScale = card.scaleX
+        val startTranslation = card.translationY
+        val startOpacity = opacity
+        stopMotion()
         window?.let { WindowCompat.getInsetsController(it, it.decorView).hide(WindowInsetsCompat.Type.ime()) }
-        // Retarget the existing spring, preserving its current position and velocity.
-        spring.spring?.dampingRatio = AirUiTokens.Motion.InputDialogCloseDamping
-        spring.animateToFinalPosition(0f)
-        val duration = (AirUiTokens.Motion.InputDialogExitMs * opacity).toLong().coerceAtLeast(1L)
-        fadeTo(0f, duration) { dismissImmediately() }
+        if (startOpacity < 0.001f) {
+            dismissImmediately()
+            return
+        }
+        fade = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = (AirUiTokens.Motion.InputDialogExitMs * startOpacity).toLong().coerceAtLeast(1L)
+            interpolator = easeOut
+            addUpdateListener {
+                val progress = it.animatedValue as Float
+                val scale = startScale + (AirUiTokens.Motion.InputDialogClosedScale - startScale) * progress
+                card.scaleX = scale
+                card.scaleY = scale
+                card.translationY = startTranslation +
+                    (dp(AirUiTokens.Motion.InputDialogTravelDp) - startTranslation) * progress
+                renderOpacity(startOpacity * (1f - progress))
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    if (fade !== animation) return
+                    fade = null
+                    dismissImmediately()
+                }
+            })
+            start()
+        }
     }
 
     /** Lifecycle teardown must never leave an animated window attached to a destroyed Activity. */

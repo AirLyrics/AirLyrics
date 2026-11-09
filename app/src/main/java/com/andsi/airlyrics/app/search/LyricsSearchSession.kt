@@ -12,6 +12,9 @@ import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.search.LyricsCandidate
 import com.andsi.airlyrics.lyrics.search.ManualLyricsFetchResult
 import com.andsi.airlyrics.lyrics.search.LyricsUnavailableReason
+import com.andsi.airlyrics.lyrics.search.ManualWordSource
+import com.andsi.airlyrics.lyrics.search.ManualWordVersion
+import com.andsi.airlyrics.lyrics.search.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,6 +35,9 @@ internal interface LyricsSearchAccess {
     fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken): SongIdentity?
     fun fetch(candidate: LyricsCandidate, target: SongIdentity, token: LyricsLookupCancellationToken): ManualLyricsFetchResult
     fun findBySpotifyId(id: String, mediaSong: SongIdentity?, target: SongIdentity, token: LyricsLookupCancellationToken): SpotifyIdLyricsResult?
+    fun searchWordRecordings(source:ManualWordSource,query:SongIdentity,page:Int,keyword:String,token:LyricsLookupCancellationToken):ManualWordPage
+    fun loadWordRecording(recording:ManualWordRecording,token:LyricsLookupCancellationToken):ManualWordDetails
+    fun loadWordOption(option:ManualWordOption,token:LyricsLookupCancellationToken):ManualWordDetails
     fun protectedRevision(target: SongIdentity): String?
     fun apply(target: SongIdentity, result: LyricsProviderResult, token: LyricsLookupCancellationToken, approvedRevision: String?): Boolean
 }
@@ -40,6 +46,24 @@ internal data class SourceResults(
     val loading: Boolean = false, val candidates: List<LyricsCandidate> = emptyList(),
     val error: Throwable? = null, val searched: Boolean = true,
     val spotifyId: String? = null, val query: SongIdentity? = null,
+    val wordResults: Map<ManualWordSource, WordSourceResults> = emptyMap(),
+    val wordQuery: SongIdentity? = null,
+    val wordDetail: WordRecordingState? = null, val showUnrelated: Boolean = false,
+)
+internal data class WordSourceResults(
+    val loading: Boolean = false,
+    val error: Throwable? = null,
+    val recordings: List<ManualWordRecording> = emptyList(), val page: Int = 0,
+    val hasMore: Boolean = false, val keyword: String = "",
+)
+internal data class WordOptionState(
+    val loading:Boolean=false, val version:ManualWordVersion?=null,
+    val error:Throwable?=null, val plainTextOnly:Boolean=false,
+)
+internal data class WordRecordingState(
+    val recording:ManualWordRecording, val loading:Boolean=false,
+    val details:ManualWordDetails=ManualWordDetails(), val error:Throwable?=null,
+    val options:Map<String,WordOptionState> = emptyMap(),
 )
 internal data class SearchPreview(val candidate: LyricsCandidate, val lyrics: LyricsProviderResult)
 internal data class LyricsSearchState(
@@ -68,7 +92,7 @@ internal class LyricsSearchSession(
     sources: Set<PlainLyricsSearchSource>,
     private val access: LyricsSearchAccess,
     private val io: CoroutineDispatcher = Dispatchers.IO,
-    initialSpotifyTrackId: String? = null
+    initialSpotifyTrackId: String? = null,
 ) : ViewModel() {
     val sourceOrder = (sources.toList() + PlainLyricsSearchSource.onlineSources).distinct()
     private val mutable = MutableStateFlow(LyricsSearchState(target, sources = sources,
@@ -78,6 +102,7 @@ internal class LyricsSearchSession(
     private var resolvingInternational = false
     private var internationalQuery: SongIdentity? = null
     private val spotifyLyrics = mutableMapOf<String, LyricsProviderResult>()
+    private val wordDetails = linkedMapOf<String,WordRecordingState>()
     private var generation = 0L
     var resultsGeneration = 0L
         private set
@@ -109,6 +134,7 @@ internal class LyricsSearchSession(
     fun switchTarget(target: SongIdentity, spotifyTrackId: String?) {
         if (state.value.applying) return
         cancelAll()
+        wordDetails.clear()
         resolvingInternational=false
         internationalQuery=null
         activeSource=null
@@ -123,13 +149,15 @@ internal class LyricsSearchSession(
         val before=state.value
         if (before.applying || before.sources.isEmpty() || listOf(before.query.title,before.query.artist,before.query.album).all { it.isBlank() }) return
         cancelAll()
+        wordDetails.clear()
         resolvingInternational=true
         internationalQuery=null
         resultsScroll=0
         resultsGeneration++
         pagePositions.clear()
         mutable.value=before.copy(results=before.sources.associateWith { SourceResults(loading=true, query=before.query) },submittedQuery=before.query,
-            preview=null,previewUnavailableReason=null,previewCandidate=null,previewLoading=false,error=null,confirmationRevision=null)
+            preview=null,previewUnavailableReason=null,previewCandidate=null,previewLoading=false,error=null,confirmationRevision=null,
+            )
         spotifyLyrics.clear()
         before.sources.forEach { searchSource(it,before.query) }
         if (PlainLyricsSearchSource.SPICY in before.sources && before.query == before.target) {
@@ -143,6 +171,7 @@ internal class LyricsSearchSession(
     }
     fun retry(source: PlainLyricsSearchSource) {
         if (state.value.applying || source !in state.value.results) return
+        if (source==PlainLyricsSearchSource.NETEASE && state.value.results[source]?.wordQuery!=null) { retryWordFailures(); return }
         val query=state.value.results[source]?.query ?: state.value.submittedQuery ?: state.value.query
         val exactId = state.value.results[source]?.spotifyId
         if (source == PlainLyricsSearchSource.SPICY) {
@@ -156,7 +185,7 @@ internal class LyricsSearchSession(
             searchSource(source,query)
             if (source == PlainLyricsSearchSource.SPICY) {
                 resolveSpicyTitle(query)
-            } else {
+            } else if (query==state.value.submittedQuery) {
                 internationalQuery?.let { searchInternationalSource(source,it) }
             }
             if (source == PlainLyricsSearchSource.SPICY && query == state.value.target) {
@@ -241,7 +270,9 @@ internal class LyricsSearchSession(
         internationalQuery=resolved
         if (resolved != null) {
             sources.forEach {
-                if (it != PlainLyricsSearchSource.SPICY || state.value.results[it]?.query == state.value.submittedQuery) {
+                if (state.value.results[it]?.wordQuery==null &&
+                    (it != PlainLyricsSearchSource.SPICY || state.value.results[it]?.query == state.value.submittedQuery) &&
+                    (it != PlainLyricsSearchSource.NETEASE || state.value.results[it]?.query == state.value.submittedQuery)) {
                     searchInternationalSource(it,resolved)
                 }
             }
@@ -254,6 +285,7 @@ internal class LyricsSearchSession(
         }
     }
     private fun searchInternationalSource(source: PlainLyricsSearchSource, query: SongIdentity) {
+        if (state.value.results[source]?.wordQuery!=null) return
         if (source == PlainLyricsSearchSource.SPICY && state.value.results[source]?.spotifyId != null) return
         val key="international:${source.key}"
         launch(key,{ access.search(source,query,it) }, { candidates ->
@@ -263,10 +295,12 @@ internal class LyricsSearchSession(
     private fun updateSource(source: PlainLyricsSearchSource, completedKey: String,
         candidates: List<LyricsCandidate>, error: Throwable?, original: Boolean) {
         val previous=state.value.results[source] ?: return
-        val ranked=candidates.filter { it.source == source }.distinctBy { it.id }.sortedByDescending { it.score }
-        val pinned=(ranked+previous.candidates).filter { it.spotifyIdMatch }
-        val merged=if (original) (pinned+ranked+previous.candidates).distinctBy { it.id }
-            else (pinned+previous.candidates+ranked).distinctBy { it.id }
+        if (previous.wordQuery!=null) return
+        val ranked=candidates.filter { it.source == source && it.wordVersion == null }.distinctBy { it.id }.sortedByDescending { it.score }
+        val originals=previous.candidates.filter { it.wordVersion == null }
+        val pinned=(ranked+originals).filter { it.spotifyIdMatch }
+        val merged=if (original) (pinned+ranked+originals).distinctBy { it.id }
+            else (pinned+originals+ranked).distinctBy { it.id }
         val ordered=rankMergedCandidates(merged).sortedByDescending { it.spotifyIdMatch }
         val result=previous.copy(
             loading=sourcePending(source,completedKey), candidates=ordered,
@@ -310,18 +344,28 @@ internal class LyricsSearchSession(
             else -> 8
         }
     }
-    private fun sourcePending(source: PlainLyricsSearchSource, completedKey: String? = null): Boolean =
+    private fun sourcePending(source: PlainLyricsSearchSource, completedKey: String? = null): Boolean {
+        val result=state.value.results[source]
+        if(result?.wordQuery!=null) return result.wordResults.values.any { it.loading }
         // Callbacks run before launch removes their own request entry.
-        (resolvingInternational && state.value.results[source]?.spotifyId == null &&
+        return (resolvingInternational && state.value.results[source]?.spotifyId == null &&
             state.value.results[source]?.query == state.value.submittedQuery) ||
             (listOf(source.key,"international:${source.key}") +
-                if (source == PlainLyricsSearchSource.SPICY) listOf("spotify-id","spicy-title") else emptyList()).any {
+                when(source) {
+                    PlainLyricsSearchSource.SPICY -> listOf("spotify-id","spicy-title")
+                    PlainLyricsSearchSource.NETEASE -> listOf("netease-title")
+                    else -> emptyList()
+                }).any {
                 it != completedKey && it in requests
             }
+    }
     fun preview(candidate: LyricsCandidate) {
         if (state.value.applying) return
+        candidate.recording?.let { openWordRecording(it); return }
+        if(candidate.wordOption!=null && candidate.wordVersion==null) { loadWordOption(candidate.wordOption); return }
+        mutable.value=state.value.copy(confirmationRevision=null)
         val target=state.value.target
-        val cached = if (candidate.spotifyIdMatch) spotifyLyrics[candidate.id]
+        val cached = candidate.wordVersion?.lyrics ?: if (candidate.spotifyIdMatch) spotifyLyrics[candidate.id]
             ?.takeIf { it.access?.isExpired() != true } else null
         if (cached != null) {
             cancel("preview")
@@ -339,9 +383,164 @@ internal class LyricsSearchSession(
             val reason = (result as? ManualLyricsFetchResult.Unavailable)?.reason
                 ?: contentReason
                 ?: LyricsUnavailableReason.UNKNOWN.takeIf { lyrics == null }
-            mutable.value=state.value.copy(preview=lyrics?.let { SearchPreview(candidate,it) },previewUnavailableReason=reason,previewLoading=false)
+            val loaded=lyrics?.let { SearchPreview(candidate,it) }
+            mutable.value=state.value.copy(preview=loaded,previewUnavailableReason=reason,previewLoading=false)
         }, { mutable.value=state.value.copy(previewLoading=false,error=it) })
     }
+    /** Like Spotify ID search, replaces one source page without changing the main query. */
+    fun searchWordLyrics(query:SongIdentity):Boolean {
+        val before=state.value
+        if(before.applying || query.title.isBlank()) return false
+        cancelNeteaseSearch()
+        wordDetails.clear()
+        cancel("preview")
+        activeSource=PlainLyricsSearchSource.NETEASE
+        pagePositions.remove(PlainLyricsSearchSource.NETEASE)
+        previewScroll=0
+        mutable.value=before.copy(
+            results=before.results + (PlainLyricsSearchSource.NETEASE to SourceResults(query=query,wordQuery=query)),
+            preview=null,previewCandidate=null,previewLoading=false,
+            previewUnavailableReason=null,error=null,confirmationRevision=null)
+        ManualWordSource.entries.forEach { searchWordSource(it,query) }
+        return true
+    }
+    fun searchNeteaseByTitle() {
+        if(state.value.applying) return
+        cancelNeteaseSearch()
+        val source=PlainLyricsSearchSource.NETEASE
+        val query=state.value.query
+        pagePositions.remove(source)
+        mutable.value=state.value.copy(results=state.value.results +
+            (source to SourceResults(loading=true,query=query)))
+        searchSource(source,query)
+        if(query==state.value.submittedQuery) {
+            internationalQuery?.let { searchInternationalSource(source,it) }
+        } else {
+            launch("netease-title",{ access.resolveInternationalTitle(query,it) },{ resolved ->
+                if(resolved!=null) searchInternationalSource(source,resolved)
+                val previous=state.value.results[source] ?: return@launch
+                mutable.value=state.value.copy(results=state.value.results +
+                    (source to previous.copy(loading=sourcePending(source,"netease-title"))))
+            },{
+                val previous=state.value.results[source] ?: return@launch
+                mutable.value=state.value.copy(results=state.value.results +
+                    (source to previous.copy(loading=sourcePending(source,"netease-title"))))
+            })
+        }
+    }
+    private fun cancelNeteaseSearch() {
+        listOf("netease","international:netease","netease-title","word-detail","word-download").forEach(::cancel)
+        ManualWordSource.entries.forEach { cancel("word-search:${it.key}") }
+    }
+    fun retryWordFailures() {
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        if(result.wordDetail!=null) { openWordRecording(result.wordDetail.recording,true); return }
+        ManualWordSource.entries.filter { result.wordResults[it]?.error!=null }.forEach(::retryWordFailure)
+    }
+    fun retryWordFailure(provider:ManualWordSource) {
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        val query=result.wordQuery ?: return
+        val before=result.wordResults[provider] ?: return
+        if(!state.value.applying && !before.loading && before.error!=null) searchWordSource(provider,query,before.page+1)
+    }
+    fun moreWordRecordings(provider:ManualWordSource) {
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        val before=result.wordResults[provider] ?: return
+        if(!state.value.applying && !before.loading && before.hasMore) searchWordSource(provider,result.wordQuery ?: return,before.page+1)
+    }
+    fun showOtherWordRecordings() {
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        publishWordPage(result.copy(showUnrelated=true))
+    }
+    private fun searchWordSource(provider:ManualWordSource,query:SongIdentity,page:Int=1) {
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        val existing=result.wordResults[provider] ?: WordSourceResults()
+        updateWordSearch(provider,existing.copy(loading=true,error=null))
+        launch("word-search:${provider.key}",{ access.searchWordRecordings(provider,query,page,existing.keyword,it) },{ found ->
+            updateWordSearch(provider,existing.copy(loading=false,
+                recordings=(existing.recordings+found.recordings).distinctBy { it.key },
+                page=found.page,hasMore=found.hasMore,keyword=found.keyword,error=found.partialError))
+        },{ updateWordSearch(provider,existing.copy(loading=false,error=it)) })
+    }
+    private fun updateWordSearch(provider:ManualWordSource,found:WordSourceResults) {
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        publishWordPage(result.copy(wordResults=result.wordResults+(provider to found)))
+    }
+    private fun publishWordPage(result:SourceResults) {
+        val detail=result.wordDetail
+        val candidates=if(detail==null) {
+            ManualWordSource.entries.flatMap { result.wordResults[it]?.recordings.orEmpty() }
+                .filter { result.showUnrelated || it.related }
+                .sortedWith(compareByDescending<ManualWordRecording> { it.related }.thenBy { it.requiresConfirmation }.thenByDescending { it.score })
+                .map { LyricsCandidate(PlainLyricsSearchSource.NETEASE,"recording:${it.key}",it.song,it.score,recording=it) }
+        } else {
+            detail.details.versions.map { wordCandidate(it) } + detail.details.options.map { option ->
+                val loaded=detail.options[option.key]?.version
+                LyricsCandidate(PlainLyricsSearchSource.NETEASE,"option:${option.key}",option.song,0.0,wordVersion=loaded,wordOption=option)
+            }
+        }
+        mutable.value=state.value.copy(results=state.value.results+(PlainLyricsSearchSource.NETEASE to result.copy(
+            candidates=candidates,loading=detail?.loading ?: result.wordResults.values.any { it.loading },
+            error=detail?.error)))
+    }
+    private fun wordCandidate(version:ManualWordVersion)=LyricsCandidate(PlainLyricsSearchSource.NETEASE,
+        "words:${version.key}",version.song,0.0,wordVersion=version)
+    fun backToWordRecordings() {
+        if(state.value.applying) return
+        cancel("word-detail"); cancel("word-download")
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        result.wordDetail?.let { cacheWordDetails(it.copy(loading=false,options=it.options.mapValues { (_,s)->s.copy(loading=false) })) }
+        publishWordPage(result.copy(wordDetail=null))
+    }
+    fun openWordRecording(recording:ManualWordRecording,refresh:Boolean=false) {
+        if(state.value.applying) return
+        cancel("word-detail"); cancel("word-download"); cancel("preview")
+        wordDetails.replaceAll { _,value->value.copy(loading=false,
+            options=value.options.mapValues { (_,s)->s.copy(loading=false) }) }
+        mutable.value=state.value.copy(preview=null,previewCandidate=null,previewLoading=false,
+            previewUnavailableReason=null,error=null,confirmationRevision=null)
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        val cached=wordDetails[recording.key]
+        if(cached!=null && !refresh) { publishWordPage(result.copy(wordDetail=cached)); return }
+        val before=cached ?: WordRecordingState(recording)
+        publishWordPage(result.copy(wordDetail=before.copy(loading=true,error=null)))
+        launch("word-detail",{ access.loadWordRecording(recording,it) },{ found ->
+            val current=state.value.results[PlainLyricsSearchSource.NETEASE]?.wordDetail ?: return@launch
+            setWordDetail(current.copy(loading=false,details=found,error=found.partialError))
+        },{ error ->
+            val current=state.value.results[PlainLyricsSearchSource.NETEASE]?.wordDetail ?: return@launch
+            setWordDetail(current.copy(loading=false,error=error))
+        })
+    }
+    private fun cacheWordDetails(detail:WordRecordingState) {
+        wordDetails.remove(detail.recording.key)
+        wordDetails[detail.recording.key]=detail
+        if(wordDetails.size>16) wordDetails.remove(wordDetails.keys.first())
+    }
+    private fun setWordDetail(detail:WordRecordingState) {
+        cacheWordDetails(detail)
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        if(result.wordDetail?.recording?.key==detail.recording.key) publishWordPage(result.copy(wordDetail=detail))
+    }
+    private fun loadWordOption(option:ManualWordOption) {
+        val result=state.value.results[PlainLyricsSearchSource.NETEASE] ?: return
+        var detail=result.wordDetail ?: return
+        if(detail.options[option.key]?.loading==true) return
+        cancel("word-download")
+        detail=detail.copy(options=detail.options.mapValues { (_,s)->s.copy(loading=false) })
+        setWordDetail(detail.copy(options=detail.options+(option.key to WordOptionState(loading=true))))
+        launch("word-download",{ access.loadWordOption(option,it) },{ found ->
+            val current=state.value.results[PlainLyricsSearchSource.NETEASE]?.wordDetail ?: return@launch
+            val version=found.versions.firstOrNull()
+            setWordDetail(current.copy(options=current.options+(option.key to WordOptionState(
+                version=version,error=found.partialError,plainTextOnly=found.plainTextOnly || version==null))))
+            if(version!=null) preview(wordCandidate(version))
+        },{ error ->
+            val current=state.value.results[PlainLyricsSearchSource.NETEASE]?.wordDetail ?: return@launch
+            setWordDetail(current.copy(options=current.options+(option.key to WordOptionState(error=error))))
+        })
+    }
+
     fun backToResults() {
         if (state.value.applying) return
         cancel("preview")
@@ -362,7 +561,7 @@ internal class LyricsSearchSession(
             mutable.value=state.value.copy(applying=false,saved=revision==null,confirmationRevision=revision)
         }, { mutable.value=state.value.copy(applying=false,error=it) })
     }
-    private fun <T> launch(key: String, work: (LyricsLookupCancellationToken)->T, done:(T)->Unit, failed:(Throwable)->Unit) {
+    private fun <T> launch(key: String, work: suspend (LyricsLookupCancellationToken)->T, done:(T)->Unit, failed:(Throwable)->Unit) {
         cancel(key)
         val token=LyricsLookupCancellationToken(state.value.target.storageKey(),++generation)
         val job=viewModelScope.launch(start=CoroutineStart.LAZY) {

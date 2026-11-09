@@ -13,7 +13,10 @@ import org.json.JSONException
 
 internal data class LyricsCandidate(val source: PlainLyricsSearchSource, val id: String,
     val song: SongIdentity, val score: Double, val storefront: String? = null,
-    val spotifyIdMatch: Boolean = false)
+    val spotifyIdMatch: Boolean = false, val wordVersion: ManualWordVersion? = null,
+    val recording: ManualWordRecording? = null, val wordOption: ManualWordOption? = null) {
+    val providerKey: String get() = wordVersion?.source?.key ?: recording?.source?.key ?: wordOption?.recording?.source?.key ?: source.key
+}
 
 internal data class SpotifyIdLyricsResult(val candidate: LyricsCandidate, val lyrics: LyricsProviderResult)
 
@@ -128,6 +131,24 @@ internal class ManualLyricsSearch(
         }
     }
 
+    fun searchWordRecordings(source:ManualWordSource,query:SongIdentity,page:Int,keyword:String,
+        token:LyricsLookupCancellationToken):ManualWordPage =
+        parseWordPage(request(PlainLyricsSearchSource.NETEASE,"word_catalog","",query,token,
+            provider=source.key,extra=JSONObject().put("page",page).put("keyword",keyword)),source)
+
+    fun loadWordRecording(recording:ManualWordRecording,token:LyricsLookupCancellationToken):ManualWordDetails =
+        parseWordDetails(request(PlainLyricsSearchSource.NETEASE,"word_options",recording.id,recording.song,
+            token,provider=recording.source.key),recording)
+
+    fun loadWordOption(option:ManualWordOption,token:LyricsLookupCancellationToken):ManualWordDetails {
+        val lyric=JSONObject().put("id",option.id).put("access_key",option.accessKey)
+            .put("requires_confirmation",option.requiresConfirmation)
+            .put("track",JSONObject().put("id",option.recording.id).put("title",option.song.title)
+                .put("artist",option.song.artist).put("album",option.song.album).put("duration_ms",option.song.durationMs))
+        return parseWordDetails(request(PlainLyricsSearchSource.NETEASE,"word_download",option.recording.id,
+            option.recording.song,token,provider=option.recording.source.key,extra=JSONObject().put("lyric",lyric)),option.recording)
+    }
+
     private fun emptyLyrics(candidate: LyricsCandidate) = ManualLyricsFetchResult.Available(
         LyricsProviderResult(candidate.source.key, candidate.source.key, "",
             matchedTitle = candidate.song.title, matchedArtist = candidate.song.artist,
@@ -160,11 +181,12 @@ internal class ManualLyricsSearch(
     }
 
     private fun request(source: PlainLyricsSearchSource, operation: String, id: String, song: SongIdentity,
-        token: LyricsLookupCancellationToken, storefront: String? = null): JSONObject {
-        val request = JSONObject().put("provider",source.key).put("operation",operation)
+        token: LyricsLookupCancellationToken, storefront: String? = null, provider: String = source.key, extra: JSONObject? = null): JSONObject {
+        val request = JSONObject().put("provider",provider).put("operation",operation)
             .put("language",context.resources.configuration.locales[0]?.language.orEmpty())
             .put("track",JSONObject().put("id",id).put("title",song.title).put("artist",song.artist)
                 .put("album",song.album).put("duration_ms",song.durationMs))
+        extra?.keys()?.forEach { request.put(it,extra.get(it)) }
         storefront?.let { request.put("storefront", it) }
         token.throwIfCancellationRequested()
         val raw = nativeCall(request.toString(), token)
@@ -173,7 +195,7 @@ internal class ManualLyricsSearch(
             if (!it.optBoolean("ok") && operation == "fetch" && it.optString("error_type") == "NotFound") {
                 it.put("ok", true).put("content_state", "empty").put("reason", "unknown")
             }
-            if (!it.optBoolean("ok")) throw LyricsLookupException(source.key,source.key,
+            if (!it.optBoolean("ok")) throw LyricsLookupException(provider,provider,
                 LyricsLookupErrorType.fromNativeName(it.optString("error_type")),"Lyrics request failed")
         }
     }

@@ -178,7 +178,7 @@ class LyricsSearchInstrumentedTest {
                 val texts = descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
                 assertTrue(texts.any { it.text == activity.getString(R.string.search_word_lyrics) })
                 assertTrue(texts.any { it.text.toString().contains("你好") })
-                assertTrue(texts.any { it.text == activity.getString(R.string.search_apply) && it.isEnabled })
+                assertTrue(texts.any { it.text == activity.getString(R.string.search_apply_current) && it.isEnabled })
             }
         }
     }
@@ -300,7 +300,7 @@ class LyricsSearchInstrumentedTest {
                 titleScroll.scrollTo(title.width,0)
                 assertTrue(titleScroll.scrollX>0)
                 assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_no_content) })
-                assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_apply) && !it.isEnabled })
+                assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_apply_current) && !it.isEnabled })
                 val back=descendants(activity.findViewById(android.R.id.content))
                     .single { it.contentDescription==activity.getString(R.string.search_back) }
                 assertTrue(back is android.widget.ImageButton)
@@ -423,7 +423,7 @@ class LyricsSearchInstrumentedTest {
                     val texts=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
                     assertTrue(texts.any { it.isShown && it.text==activity.getString(message) })
                     assertFalse(messages.values.filter { it!=message }.any { other -> texts.any { it.isShown && it.text==activity.getString(other) } })
-                    assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_apply) && !it.isEnabled })
+                    assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_apply_current) && !it.isEnabled })
                 }
             }
             scenario.onActivity { activity ->

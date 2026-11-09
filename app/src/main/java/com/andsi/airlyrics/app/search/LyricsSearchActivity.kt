@@ -116,6 +116,9 @@ class LyricsSearchActivity : AppCompatActivity() {
                     override fun resolveInternationalTitle(query:SongIdentity,token:LyricsLookupCancellationToken)=service.resolveInternationalTitle(query,token)
                     override fun fetch(candidate:LyricsCandidate,target:SongIdentity,token:LyricsLookupCancellationToken)=service.fetch(candidate,target,token)
                     override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken)=service.findBySpotifyId(id,mediaSong,target,token)
+                    override fun searchWordRecordings(source:ManualWordSource,query:SongIdentity,page:Int,keyword:String,token:LyricsLookupCancellationToken)=service.searchWordRecordings(source,query,page,keyword,token)
+                    override fun loadWordRecording(recording:com.andsi.airlyrics.lyrics.search.ManualWordRecording,token:LyricsLookupCancellationToken)=service.loadWordRecording(recording,token)
+                    override fun loadWordOption(option:com.andsi.airlyrics.lyrics.search.ManualWordOption,token:LyricsLookupCancellationToken)=service.loadWordOption(option,token)
                     override fun protectedRevision(target:SongIdentity)=service.protectedRevision(target)
                     override fun apply(target:SongIdentity,result:LyricsProviderResult,token:LyricsLookupCancellationToken,approvedRevision:String?)=service.apply(target,result,token,approvedRevision)
                 }
@@ -136,6 +139,17 @@ class LyricsSearchActivity : AppCompatActivity() {
             result.getString(SpotifyIdSearchDialog.ID)?.let {
                 pendingSourceFocus=true
                 session.searchSpotifyId(it)
+            }
+        }
+        supportFragmentManager.setFragmentResultListener(WordLyricsSearchDialog.RESULT,this) { _,result ->
+            val state=session.state.value
+            if(result.getString(WordLyricsSearchDialog.TARGET)==state.target.storageKey()) {
+                val query=SongIdentity(result.getString(WordLyricsSearchDialog.TITLE).orEmpty(),
+                    result.getString(WordLyricsSearchDialog.ARTIST).orEmpty(),
+                    result.getString(WordLyricsSearchDialog.ALBUM).orEmpty(),
+                    result.getLong(WordLyricsSearchDialog.DURATION))
+                pendingSourceFocus=true
+                session.searchWordLyrics(query)
             }
         }
         val initialScroll = if (session.state.value.previewCandidate != null) session.previewScroll else session.resultsScroll
@@ -175,6 +189,8 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         if (state.previewCandidate != null || state.preview != null || state.previewLoading) {
             session.backToResults()
+        } else if (state.results[PlainLyricsSearchSource.NETEASE]?.wordDetail!=null) {
+            session.backToWordRecordings()
         } else if (state.results.isNotEmpty() && (pendingSourceFocus || session.resultsScroll > 0 || appBar.top < 0)) {
             // Returning from results reveals the query without discarding any source/page state.
             pendingSourceFocus=false
@@ -316,7 +332,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         val loadingSlot=FrameLayout(this).apply { addView(loading,FrameLayout.LayoutParams(-1,-2)) }
         header.addView(loadingSlot,LinearLayout.LayoutParams(-1,0))
         loadingReveal=LyricsSearchReveal(loadingSlot,loading,0,150,dp(4).toFloat(),0f)
-        results=LyricsSourcePages(this,palette,session,::errorText,::showSpotifyIdSearch)
+        results=LyricsSourcePages(this,palette,session,::errorText,::showSpotifyIdSearch,::showWordLyricsSearch)
         panel.addView(results,CoordinatorLayout.LayoutParams(-1,-1).apply {
             behavior=AppBarLayout.ScrollingViewBehavior()
         })
@@ -342,7 +358,7 @@ class LyricsSearchActivity : AppCompatActivity() {
             session.state.value.previewCandidate?.let(session::preview)
         }
         previewPanel.addView(previewRetry)
-        applyButton=button(R.string.search_apply) { session.apply() }.apply {
+        applyButton=button(R.string.search_apply_current) { session.apply() }.apply {
             backgroundTintList = ColorStateList.valueOf(palette.accent)
             setTextColor(palette.onAccent)
         }
@@ -416,7 +432,7 @@ class LyricsSearchActivity : AppCompatActivity() {
             headingTitle.text=title
             headingScroll.scrollTo(0,0)
         }
-        previewDetails.text=state.previewCandidate?.let(::candidateDetails).orEmpty()
+        previewDetails.text=state.previewCandidate?.let { candidateDetails(it) }.orEmpty()
         previewRetry.visibility=if(showPreview && !state.previewLoading && state.preview==null) View.VISIBLE else View.GONE
         searchButton.isEnabled=!state.applying && listOf(state.query.title,state.query.artist,state.query.album).any { it.isNotBlank() }
         applyButton.isEnabled=state.canApply
@@ -517,6 +533,14 @@ class LyricsSearchActivity : AppCompatActivity() {
             .show(supportFragmentManager,SpotifyIdSearchDialog.TAG)
     }
 
+    private fun showWordLyricsSearch() {
+        if(supportFragmentManager.findFragmentByTag(WordLyricsSearchDialog.TAG)!=null) return
+        val state=session.state.value
+        val query=state.results[PlainLyricsSearchSource.NETEASE]?.wordQuery ?: state.query.copy(album="",durationMs=0)
+        WordLyricsSearchDialog.create(query,state.target.storageKey())
+            .show(supportFragmentManager,WordLyricsSearchDialog.TAG)
+    }
+
     private fun showMissingSourcesDialog() {
         if(missingSourcesDialog?.isShowing==true) return
         missingSourcesDialog=MissingSourcesDialog(
@@ -542,13 +566,13 @@ class LyricsSearchActivity : AppCompatActivity() {
         switchButton.visibility=if(changed && !showPreview) View.VISIBLE else View.GONE
         switchButton.isEnabled=!state.applying
     }
-    private fun candidateDetails(candidate:LyricsCandidate):String {
+    private fun candidateDetails(candidate:LyricsCandidate,provider:String=candidate.providerKey):String {
         val song=candidate.song
         val duration=if(song.durationMs>0) String.format(Locale.ROOT,"%d:%02d",song.durationMs/60000,song.durationMs/1000%60) else ""
         val album=song.album.takeUnless { it.trim().equals(song.title.trim(),ignoreCase=true) }.orEmpty()
         return listOf(
             listOf(song.artist,album).filter { it.isNotBlank() }.joinToString(" · "),
-            listOfNotNull(duration,localizedPlainLyricsProviderName(candidate.source.key),
+            listOfNotNull(duration,localizedPlainLyricsProviderName(provider),
                 candidate.id.takeIf { candidate.spotifyIdMatch }).filter { it.isNotBlank() }.joinToString(" · ")
         ).filter { it.isNotBlank() }.joinToString("\n")
     }

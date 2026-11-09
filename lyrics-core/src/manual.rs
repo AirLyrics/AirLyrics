@@ -51,7 +51,14 @@ pub(crate) struct Request {
     pub track: Track,
     #[serde(default)]
     pub language: String,
+    #[serde(default = "first_page")]
+    pub page: u32,
+    #[serde(default)]
+    pub keyword: String,
+    #[serde(default)]
+    pub lyric: Value,
 }
+fn first_page() -> u32 { 1 }
 pub(crate) fn ranked(mut tracks: Vec<Track>, query: &Track) -> Vec<Track> {
     let mut ids = HashSet::new();
     tracks.retain(|t| !t.id.is_empty() && ids.insert(t.id.clone()));
@@ -114,7 +121,7 @@ fn error_response(request: &str, error: &str) -> Value {
 }
 fn execute(raw: &str, key: &str, lookup: i64) -> Result<Value, String> {
     let request: Request = serde_json::from_str(raw).map_err(|_| "ParseError")?;
-    if !matches!(request.operation.as_str(), "search" | "fetch") {
+    if !matches!(request.operation.as_str(), "search" | "fetch" | "word_catalog" | "word_options" | "word_download") {
         return Err("ParseError".into());
     }
     let _guard = begin_lookup_cancellation(lookup)?;
@@ -129,6 +136,12 @@ fn execute(raw: &str, key: &str, lookup: i64) -> Result<Value, String> {
         await_with_cancellation(
             async {
                 tokio::time::timeout(Duration::from_secs(25), async {
+                    match request.operation.as_str() {
+                        "word_catalog" => return crate::manual_words::catalog(&request,lookup).await,
+                        "word_options" => return crate::manual_words::options(&request.provider,&request.track).await,
+                        "word_download" => return crate::manual_words::download(&request).await,
+                        _ => {}
+                    }
                     match request.provider.as_str() {
                         "netease" => netease(&request, lookup).await,
                         "musixmatch" => crate::musixmatch::manual(&request, lookup).await,

@@ -30,6 +30,14 @@ import java.util.concurrent.TimeUnit
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers="en-rUS-w400dp-h900dp-mdpi")
 class SpotifyIdSearchDialogTest {
+    private fun pauseCloseFrames() {
+        org.robolectric.shadows.ShadowChoreographer.setPaused(true)
+        org.robolectric.shadows.ShadowChoreographer.setFrameDelay(java.time.Duration.ofMillis(16))
+    }
+    @org.junit.After fun restoreAnimationClock() {
+        org.robolectric.shadows.ShadowChoreographer.setPaused(false)
+    }
+
     @Test fun confirmationIsSentOnceAndWindowLeavesBeforeFragmentIsRemoved() {
         Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
             val activity=controller.get()
@@ -40,12 +48,16 @@ class SpotifyIdSearchDialogTest {
             val fragment=show(activity)
             val dialog=fragment.requireDialog() as LyricsSearchInputDialog
             settle(600)
+            assertEquals("entry opacity",1f,dialog.card.alpha,0.001f)
             field(dialog).editText!!.setText("https://open.spotify.com/track/5l94Up12BJSjhH7Mhr2ji4")
+            pauseCloseFrames()
             dialog.findViewById<View>(android.R.id.button1).performClick()
             dialog.findViewById<View>(android.R.id.button1).performClick()
             assertEquals(listOf("5l94Up12BJSjhH7Mhr2ji4"),ids)
             assertTrue(dialog.isShowing)
             assertTrue(dialog.isLeaving)
+            settle(64)
+            assertClosingFrame(dialog)
             settle(300)
             assertFalse(dialog.isShowing)
             assertNull(activity.supportFragmentManager.findFragmentByTag(SpotifyIdSearchDialog.TAG))
@@ -87,6 +99,59 @@ class SpotifyIdSearchDialogTest {
             assertFalse(dialog.isShowing)
             assertEquals(0f,activity.interactionUi.maxShowingDimAmount(),0.001f)
         }
+    }
+
+    @Test fun spotifyCancelButtonAnimates() = checkClosePath(false,0)
+    @Test fun spotifyBackAnimates() = checkClosePath(false,1)
+    @Test fun spotifyOutsideTapAnimates() = checkClosePath(false,2)
+    @Test fun wordSearchCancelButtonAnimates() = checkClosePath(true,0)
+    @Test fun wordSearchBackAnimates() = checkClosePath(true,1)
+    @Test fun wordSearchOutsideTapAnimates() = checkClosePath(true,2)
+
+    private fun checkClosePath(wordSearch:Boolean,path:Int) {
+        Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
+            val activity=controller.get()
+            val fragment:androidx.fragment.app.DialogFragment=if(wordSearch)
+                WordLyricsSearchDialog.create(com.andsi.airlyrics.core.model.SongIdentity("Song","Artist","",0))
+            else SpotifyIdSearchDialog.create(null)
+            fragment.showNow(activity.supportFragmentManager,"input-close")
+            val dialog=fragment.requireDialog() as LyricsSearchInputDialog
+            settle(600)
+            assertEquals(1f,dialog.card.alpha,0.001f)
+            pauseCloseFrames()
+            when(path) {
+                0 -> dialog.findViewById<View>(android.R.id.button2).performClick()
+                1 -> @Suppress("DEPRECATION") dialog.onBackPressed()
+                else -> (dialog.card.parent.parent as View).performClick()
+            }
+            assertTrue(dialog.isLeaving)
+            assertTrue(dialog.isShowing)
+            // A fresh dialog can have no vsync queued when cancellation is the first input.
+            // Drive the framework animator clock explicitly for this close-path matrix.
+            val exit=ReflectionHelpers.getField<ValueAnimator>(dialog,"fade")
+            assertTrue(exit.isStarted)
+            exit.currentPlayTime=64
+            assertClosingFrame(dialog)
+            dialog.dismiss()
+            assertSame(exit,ReflectionHelpers.getField<ValueAnimator>(dialog,"fade"))
+            assertTrue(dialog.isShowing)
+            exit.end()
+            settle(300)
+            assertFalse(dialog.isShowing)
+            assertNull(activity.supportFragmentManager.findFragmentByTag("input-close"))
+            assertEquals(0f,activity.interactionUi.maxShowingDimAmount(),0.001f)
+        }
+    }
+
+    private fun assertClosingFrame(dialog:LyricsSearchInputDialog) {
+        assertTrue("showing=${dialog.isShowing}, alpha=${dialog.card.alpha}, scale=${dialog.card.scaleX}",dialog.isShowing)
+        assertTrue("mid alpha=${dialog.card.alpha}, scale=${dialog.card.scaleX}, y=${dialog.card.translationY}",dialog.card.alpha in 0.001f..0.999f)
+        assertTrue(dialog.card.scaleX < 1f)
+        assertTrue(dialog.card.translationY > 0f)
+        val closedScale=com.andsi.airlyrics.design.tokens.AirUiTokens.Motion.InputDialogClosedScale
+        val scaleProgress=(1f-dialog.card.scaleX)/(1f-closedScale)
+        // The card must visibly recede with its fade, rather than fading out ahead of its movement.
+        assertEquals(1f-dialog.card.alpha,scaleProgress,0.01f)
     }
 
     @Test fun recreationRestoresDraftAndImmediatelyReleasesTheOldWindow() {
