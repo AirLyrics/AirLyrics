@@ -540,6 +540,7 @@
     <string name="search_untimed_notice">无时间轴，无法在悬浮窗显示。</string>
     <string name="ui_untimed_lyrics_unavailable">纯文本歌词，无法同步显示</string>
     <string name="provider_kugou">酷狗</string>
+    <string name="provider_qq_music">QQ 音乐</string>
     <string name="search_apply_current">应用到当前歌曲</string>
     <string name="search_version_line">逐行</string>
     <string name="search_version_word">逐字</string>

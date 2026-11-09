@@ -543,6 +543,7 @@ Word-timed TTML:
     <string name="search_untimed_notice">No timing; cannot display in the floating window.</string>
     <string name="ui_untimed_lyrics_unavailable">Plain text lyrics cannot be synced</string>
     <string name="provider_kugou">Kugou</string>
+    <string name="provider_qq_music">QQ Music</string>
     <string name="search_apply_current">Apply to current song</string>
     <string name="search_version_line">Line-synced</string>
     <string name="search_version_word">Word-synced</string>

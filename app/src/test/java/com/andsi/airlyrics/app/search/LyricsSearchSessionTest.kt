@@ -132,13 +132,13 @@ class LyricsSearchSessionTest {
             val other=session.state.value.results[PlainLyricsSearchSource.LRCLIB]
             val edited=SongIdentity("Edited","Singer","",0)
             session.searchWordLyrics(edited);runCurrent()
-            assertEquals(listOf(edited,edited),access.wordQueries.map { it.first })
+            assertEquals(ManualWordSource.entries.map { edited },access.wordQueries.map { it.first })
             assertEquals(0,access.detailLoads)
             assertEquals(0,access.downloads)
             assertEquals(song,session.state.value.target)
             assertEquals(other,session.state.value.results[PlainLyricsSearchSource.LRCLIB])
             val rows=session.state.value.results.getValue(source).candidates
-            assertEquals(2,rows.size)
+            assertEquals(ManualWordSource.entries.size,rows.size)
             assertTrue(rows.all { it.wordVersion==null && it.recording!=null })
             session.preview(rows.first());runCurrent()
             assertEquals(1,access.detailLoads)
@@ -155,14 +155,14 @@ class LyricsSearchSessionTest {
             access.catalogue={ q,s,p,_ -> ManualWordPage(
                 (1..20).map { ManualWordRecording(s,"$p:$it",q,related=it!=20) },p,p==1,"fixed keyword") }
             session.searchWordLyrics(song);runCurrent()
-            assertEquals(38,session.state.value.results.getValue(source).candidates.size)
+            assertEquals(19*ManualWordSource.entries.size,session.state.value.results.getValue(source).candidates.size)
             session.moreWordRecordings(ManualWordSource.NETEASE)
             session.moreWordRecordings(ManualWordSource.NETEASE)
             runCurrent()
-            assertEquals(listOf(1,1,2),access.pages)
-            assertEquals(57,session.state.value.results.getValue(source).candidates.size)
+            assertEquals(ManualWordSource.entries.map { 1 }+2,access.pages)
+            assertEquals(19*(ManualWordSource.entries.size+1),session.state.value.results.getValue(source).candidates.size)
             session.showOtherWordRecordings()
-            assertEquals(60,session.state.value.results.getValue(source).candidates.size)
+            assertEquals(20*(ManualWordSource.entries.size+1),session.state.value.results.getValue(source).candidates.size)
             assertEquals(0,access.detailLoads)
         }
     }
@@ -173,12 +173,44 @@ class LyricsSearchSessionTest {
                 ManualWordPage(listOf(ManualWordRecording(s,"hash",q)),p)
             }
             session.searchWordLyrics(song);runCurrent()
-            assertEquals("kugou",session.state.value.results.getValue(source).candidates.single().providerKey)
+            assertEquals(setOf("kugou","qq"),session.state.value.results.getValue(source).candidates.map { it.providerKey }.toSet())
             access.catalogue={ q,s,p,_ -> ManualWordPage(listOf(ManualWordRecording(s,"id",q)),p) }
             session.retryWordFailure(ManualWordSource.NETEASE);runCurrent()
-            assertEquals(listOf(1,1,1),access.pages)
-            assertEquals(2,session.state.value.results.getValue(source).candidates.size)
+            assertEquals(ManualWordSource.entries.map { 1 }+1,access.pages)
+            assertEquals(ManualWordSource.entries.size,session.state.value.results.getValue(source).candidates.size)
             assertEquals(1,access.wordQueries.count { it.second==ManualWordSource.KUGOU })
+        }
+    }
+    @Test fun anyFailedWordSourceLeavesTheOtherProvidersSelectable()=runTest {
+        for(failed in ManualWordSource.entries) withSession { session,access ->
+            access.catalogue={ q,s,p,_ ->
+                if(s==failed) error("offline")
+                ManualWordPage(listOf(ManualWordRecording(s,"42",q)),p)
+            }
+            session.searchWordLyrics(song);runCurrent()
+            val result=session.state.value.results.getValue(source)
+            assertEquals(ManualWordSource.entries.filter { it!=failed }.map { it.key }.toSet(),
+                result.candidates.map { it.providerKey }.toSet())
+            assertNotNull(result.wordResults.getValue(failed).error)
+            assertEquals(0,access.detailLoads)
+            session.preview(result.candidates.first());runCurrent()
+            session.preview(session.state.value.results.getValue(source).candidates.single());runCurrent()
+            assertTrue(session.state.value.canApply)
+        }
+    }
+    @Test fun qqWordPreviewUsesItsOwnProviderAndIsInvalidatedByChangingTheTarget()=runTest {
+        withSession { session,access ->
+            access.details={ r,_ -> ManualWordDetails(listOf(wordVersion(r.source,r.song,r.id))) }
+            session.searchWordLyrics(song);runCurrent()
+            val qq=session.state.value.results.getValue(source).candidates.single { it.providerKey=="qq" }
+            session.preview(qq);runCurrent()
+            session.preview(session.state.value.results.getValue(source).candidates.single());runCurrent()
+            assertEquals("qq",session.state.value.preview!!.lyrics.plainProviderId)
+            assertNull(access.appliedTarget)
+            session.switchTarget(song.copy(title="Next"))
+            assertNull(session.state.value.preview)
+            session.apply();runCurrent()
+            assertNull(access.appliedTarget)
         }
     }
     @Test fun lineAndWordVersionsSurvivePartialErrorsAndReuseCachedDetails()=runTest {
@@ -207,7 +239,7 @@ class LyricsSearchSessionTest {
             }) }
             access.download={ o,_ -> ManualWordDetails(listOf(wordVersion(o.recording.source,o.song,o.key))) }
             session.searchWordLyrics(song);runCurrent()
-            val kg=session.state.value.results.getValue(source).candidates.last()
+            val kg=session.state.value.results.getValue(source).candidates.single { it.providerKey=="kugou" }
             session.preview(kg);runCurrent()
             assertEquals(0,access.downloads)
             val last=session.state.value.results.getValue(source).candidates.last()
@@ -245,7 +277,7 @@ class LyricsSearchSessionTest {
             session.preview(songs.first())
             session.preview(songs.last());runCurrent()
             assertEquals(1,access.detailLoads)
-            assertEquals(ManualWordSource.KUGOU,session.state.value.results.getValue(source).wordDetail!!.recording.source)
+            assertEquals(ManualWordSource.QQ,session.state.value.results.getValue(source).wordDetail!!.recording.source)
             session.backToWordRecordings()
             assertEquals(songs,session.state.value.results.getValue(source).candidates)
         }
@@ -266,7 +298,7 @@ class LyricsSearchSessionTest {
         withSession { session,access ->
             access.details={ r,_ -> ManualWordDetails(options=(1..4).map { ManualWordOption(r,"$it",r.song,"key") }) }
             session.searchWordLyrics(song);runCurrent()
-            session.preview(session.state.value.results.getValue(source).candidates.last());runCurrent()
+            session.preview(session.state.value.results.getValue(source).candidates.single { it.providerKey=="kugou" });runCurrent()
             val rows=session.state.value.results.getValue(source).candidates
             access.download={ _,_->error("bad KRC") }
             session.preview(rows.first());runCurrent()

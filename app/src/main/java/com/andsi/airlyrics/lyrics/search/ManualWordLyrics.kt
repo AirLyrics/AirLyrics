@@ -7,7 +7,7 @@ import org.json.JSONObject
 
 /** Word providers are scoped to manual candidate lookup, not automatic search sources. */
 internal enum class ManualWordSource(val key: String) {
-    NETEASE("netease"), KUGOU("kugou")
+    NETEASE("netease"), KUGOU("kugou"), QQ("qq")
 }
 
 internal data class ManualWordVersion(
@@ -40,7 +40,7 @@ internal fun parseManualWordVersions(
             require(item.getString("provider") == source.key)
             val track = item.getJSONObject("track")
             val id = item.getString("id")
-            if (source == ManualWordSource.NETEASE) {
+            if (source == ManualWordSource.NETEASE || source == ManualWordSource.QQ) {
                 require(id.isNotBlank() && id.all(Char::isDigit) && id == track.getString("id"))
                 if (candidate != null) require(id == candidate.id)
             }
@@ -113,7 +113,7 @@ internal fun JSONObject.wordError(source:ManualWordSource):Throwable? =
     }
 internal fun parseWordDetails(response:JSONObject, recording:ManualWordRecording):ManualWordDetails {
     val versions=parseManualWordVersions(response,recording.source,
-        if(recording.source==ManualWordSource.NETEASE)
+        if(recording.source==ManualWordSource.NETEASE || recording.source==ManualWordSource.QQ)
             LyricsCandidate(com.andsi.airlyrics.core.model.PlainLyricsSearchSource.NETEASE,recording.id,recording.song,0.0)
         else null)
     val rows=response.optJSONArray("options")

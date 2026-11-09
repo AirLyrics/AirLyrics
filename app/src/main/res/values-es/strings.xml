@@ -544,6 +544,7 @@ TTML de tiempo por palabra:
     <string name="search_untimed_notice">Sin tiempos; no se puede mostrar en la ventana flotante.</string>
     <string name="ui_untimed_lyrics_unavailable">La letra sin tiempos no se puede sincronizar</string>
     <string name="provider_kugou">Kugou</string>
+    <string name="provider_qq_music">QQ Music</string>
     <string name="search_apply_current">Aplicar a la canción actual</string>
     <string name="search_version_line">Por línea</string>
     <string name="search_version_word">Por palabra</string>

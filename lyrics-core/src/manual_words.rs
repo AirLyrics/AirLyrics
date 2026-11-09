@@ -8,7 +8,7 @@ use serde_json::{json, Value};
 use std::io::Read;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const MAX_BYTES: usize = 2 * 1024 * 1024;
+pub(crate) const MAX_BYTES: usize = 2 * 1024 * 1024;
 const KRC_KEY: &[u8; 16] = b"@Gaw^2tGQ61-\xce\xd2ni";
 
 fn parse_error<T>() -> Result<T, String> { Err("ParseError".into()) }
@@ -16,7 +16,7 @@ fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder().timeout(Duration::from_secs(10))
         .user_agent("Mozilla/5.0").build().map_err(|_| "NetworkError".into())
 }
-async fn response(request: reqwest::RequestBuilder) -> Result<Value, String> {
+pub(crate) async fn response(request: reqwest::RequestBuilder) -> Result<Value, String> {
     let mut r = request.send().await.map_err(|_| "NetworkError")?;
     if r.status().as_u16() == 429 { return Err("RateLimited".into()); }
     if !r.status().is_success() { return Err("HttpError".into()); }
@@ -102,6 +102,7 @@ async fn catalog_page(client: &reqwest::Client, provider: &str, term: &str, page
         }).collect();
         return Ok((tracks,more));
     }
+    if provider == "qq" { return crate::manual_qq::catalog(client,term,page).await; }
     if provider != "kugou" { return parse_error(); }
     // Keep the existing HTTPS client and use a signed catalogue request, with the legacy endpoint as fallback.
     let now = SystemTime::now().duration_since(UNIX_EPOCH).map_err(|_|"NativeError")?.as_millis();
@@ -147,6 +148,7 @@ async fn catalog_page(client: &reqwest::Client, provider: &str, term: &str, page
 pub(crate) async fn options(provider: &str, track: &Track) -> Result<Value,String> {
     let client = client()?;
     if provider == "netease" { return netease(&client,track).await; }
+    if provider == "qq" { return crate::manual_qq::options(&client,track).await; }
     if provider != "kugou" { return parse_error(); }
     let r = response(client.get("https://lyrics.kugou.com/search").query(&[
         ("ver","1"),("man","yes"),("client","pc"),("keyword",&crate::manual::search_term(track)),
@@ -239,15 +241,15 @@ fn netease_versions(r:&Value, track:&Track)->Result<Value,String> {
     }
     Ok(json!({"ok":true,"versions":versions,"partial_error":error}))
 }
-fn line_version(t:&Track,provider:&str,id:&str,lrc:String,translation:Option<String>,uncertain:bool)->Value {
+pub(crate) fn line_version(t:&Track,provider:&str,id:&str,lrc:String,translation:Option<String>,uncertain:bool)->Value {
     json!({"id":id,"provider":provider,"track":t,"kind":"line","lrc":lrc,
         "translated_lrc":translation,"lines":[],"requires_confirmation":uncertain})
 }
-fn version(t: &Track, provider: &str, id: &str, lines: Vec<Value>, translation: Option<String>, uncertain: bool) -> Value {
+pub(crate) fn version(t: &Track, provider: &str, id: &str, lines: Vec<Value>, translation: Option<String>, uncertain: bool) -> Value {
     json!({"id":id,"provider":provider,"track":t,"lrc":lrc(&lines),
         "translated_lrc":translation,"lines":lines,"requires_confirmation":uncertain})
 }
-fn lrc(lines: &[Value]) -> String {
+pub(crate) fn lrc(lines: &[Value]) -> String {
     lines.iter().map(|line| {
         let ms = line["startMs"].as_u64().unwrap();
         format!("[{:02}:{:02}.{:03}]{}",ms/60000,ms/1000%60,ms%1000,line["text"].as_str().unwrap())

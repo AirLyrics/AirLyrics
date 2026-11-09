@@ -1,8 +1,8 @@
 # Manual lyric catalogue and version selection
 
-This feature is manual-only. It supports NetEase and Kugou and uses the existing
-Rust/JNI cancellation boundary, HTTP clients, lyric models, transactional selection
-store and song-target checks. QQ is intentionally outside this implementation.
+This feature is manual-only. It supports NetEase, Kugou and QQ Music and uses the
+existing Rust/JNI cancellation boundary, HTTP clients, lyric models, transactional
+selection store and song-target checks. QQ automatic matching is unchanged.
 
 ## Query and target
 
@@ -32,6 +32,8 @@ the lyric-change event.
   same response. Kugou queries lyrics using the selected hash and lists every
   returned valid candidate, preserving lyric ID, access key, creator, rating,
   explicit title/artist/duration and confirmation hints. It downloads none.
+  QQ requests lyrics for the selected numeric song ID and returns a verified QRC
+  version, or a line version if the response only contains line timing.
 - `word_download`: one selected Kugou lyric ID/access key. KRC is decoded and
   verified before being labelled word-synced. A timed line-only KRC is a separate
   line choice; plain text is reported as lacking a synced version.
@@ -44,11 +46,35 @@ Kugou catalogue uses the signed v2 search endpoint with an HTTPS legacy fallback
 both request and pagination calculations use 20. Rate limits do not trigger a
 second catalogue endpoint.
 
+QQ uses musicu.fcg with anonymous mobile parameters. Session bootstrap is optional,
+limited to three seconds, and successful identities are cached for one hour.
+The Mobile search method has one Lite compatibility fallback, with explicit page
+numbers and 20 songs per page. Rate limits return a source error immediately;
+there is no minute-long sleep or background retry loop. Numeric song IDs are kept
+unchanged through selection, request and response validation. Subtitle/version
+information is preserved in the displayed title. GetPlayLyricInfo requests QRC and
+translation from that same recording; search does not fetch any lyrics.
+
+QRC cloud payloads use modified DES tables and zlib. Input and decompressed size
+are capped at 2 MiB. XML extraction preserves LyricContent newlines and unescapes
+entities without allowing DTDs. QRC word tags follow their text and contain
+absolute start/duration values. Validated segments retain punctuation and line
+end times; provider type flags alone never grant a word label. Plain LRC remains
+a line option, empty/plain text is absence of synced lyrics, and malformed
+ciphertext/timing is a failure. Invalid translation leaves valid original lyrics
+available with a partial error.
+
+Protocol references: [LDDC v0.9.2 qm.py](https://github.com/chenmozhijin/LDDC/blob/v0.9.2/LDDC/core/api/lyrics/qm.py)
+and [Lyrics-Helper 39e5883](https://github.com/ChouChiu/Lyrics-Helper/tree/39e58839bd52a881b6011be8f8d19c34380adf8e).
+Only the Apache-2.0 Lyrics-Helper crypto implementation is adapted; its license,
+original attribution and modification notice ship in
+`app/src/main/assets/third_party/lyrics-helper/`.
+
 ## UI and failure isolation
 
 The result page lists recordings before lyric IO. Selecting one lists its lyric
 versions/candidates, and selecting a version previews it before apply.
-Both sources are selected from the catalogue; a recording detail only shows that recording's lyric choices.
+All three sources are selected from the catalogue; a recording detail only shows that recording's lyric choices.
 Uncertain recordings show an info icon that expands a brief hint in the same row.
 Catalogue pagination is one More songs action at the end of the scrolling list.
 Source failures and other results also live in the catalogue footer;
@@ -58,7 +84,8 @@ Each source has independent loading, empty, error and pagination state. Successf
 rows survive another source/page failure. Each Kugou lyric download has its own
 state and retry; one failing lyric cannot hide the other candidates. NetEase
 line results survive malformed YRC. A single malformed version does not discard
-other valid versions in the JNI response.
+other valid versions in the JNI response. QQ source failures also leave NetEase
+and Kugou results available, and malformed QQ translation preserves its original.
 
 Requests use 10-second direct HTTP timeouts, a 25-second JNI operation budget,
 bounded responses/decompression, and cancellation tokens that reject stale
@@ -74,11 +101,16 @@ Persistence keeps the actual provider and the existing word timeline format.
 
 Offline Rust fixtures cover YRC absolute/KRC relative word times, malformed timing,
 zero-duration punctuation, line rounding, KRC decompression and translation, and
-independent line/YRC results with partial failure.
+independent line/YRC results with partial failure. QQ fixtures also cover numeric
+song-ID parameters, pagination/subtitles, fixed cloud ciphertext, XML entities and
+newlines, postfix QRC timing, line-only/plain/empty responses, translation failure,
+zero-duration credit lines, and bounded decompression.
 Kotlin tests cover lazy catalogue IO, pagination, low relevance expansion,
 source/page failure, exact recording requests, selected
 Kugou candidates beyond the old cap, cancellation, cache reuse, explicit query
-conditions, recreation, and persisted provider/word timeline recovery.
+conditions, recreation, three-source error isolation, QQ source labels, target
+changes after QQ preview, and persisted provider/word timeline recovery for all
+three providers.
 
 Provider availability and real-song matching are left for user device testing;
 offline fixtures and successful builds do not establish a live hit-rate change.

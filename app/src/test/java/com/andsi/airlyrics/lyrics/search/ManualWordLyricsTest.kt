@@ -94,13 +94,14 @@ class ManualWordLyricsTest : LyricsStorageTestBase() {
         val failure=runCatching { offline.loadWordRecording(recording(ManualWordSource.KUGOU),token()) }.exceptionOrNull()
         assertEquals("kugou",(failure as LyricsLookupException).providerId)
         assertEquals(LyricsLookupErrorType.NetworkError,failure.errorType)
-        for(bad in listOf(
-            payload("netease","other"),
-            payload("netease").apply { getJSONArray("versions").getJSONObject(0).getJSONArray("lines")
+        for((source,bad) in listOf(
+            ManualWordSource.NETEASE to payload("netease","other"),
+            ManualWordSource.QQ to payload("qq","124"),
+            ManualWordSource.NETEASE to payload("netease").apply { getJSONArray("versions").getJSONObject(0).getJSONArray("lines")
                 .getJSONObject(0).put("tokens",org.json.JSONArray()) }
         )) {
             val service=ManualLyricsSearch(context) { _,_->bad.toString() }
-            assertTrue(runCatching { service.loadWordRecording(recording(ManualWordSource.NETEASE),token()) }.isFailure)
+            assertTrue(runCatching { service.loadWordRecording(recording(source),token()) }.isFailure)
         }
         assertNull(ManualLyricsSelectionStore.read(context,target))
     }

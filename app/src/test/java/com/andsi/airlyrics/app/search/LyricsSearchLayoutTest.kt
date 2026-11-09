@@ -237,6 +237,7 @@ class LyricsSearchLayoutTest {
             ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS)
             val labels=descendants(content).filterIsInstance<TextView>().filter { it.isShown }.map { it.text.toString() }
             assertTrue(labels.any { it.contains("酷狗") && it.contains("逐字") })
+            assertTrue(labels.any { it.contains("QQ 音樂") && it.contains("逐字") })
             assertTrue(labels.contains(activity.getString(R.string.search_regular_search)))
             assertTrue(labels.contains(activity.getString(R.string.search_lyrics)))
             val bitmap=Bitmap.createBitmap(400,900,Bitmap.Config.ARGB_8888)
@@ -269,7 +270,7 @@ class LyricsSearchLayoutTest {
             layout(content,900)
             ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS)
             val texts=descendants(content).filterIsInstance<TextView>().filter { it.isShown }
-            assertTrue(texts.any { it.text.toString().contains("酷狗") })
+            assertTrue(texts.any { it.text.toString().contains("QQ 音樂") })
             val apply=texts.filterIsInstance<MaterialButton>().single {
                 it.text.toString()==activity.getString(R.string.search_apply_current)
             }

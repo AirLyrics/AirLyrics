@@ -1,0 +1,4 @@
+QRC decryption is adapted from Lyrics-Helper by ChouChiu, based on Lyricify-Lyrics-Helper.
+Copyright 2023 XY Wang, WXRIW. Licensed under Apache-2.0; see LICENSE.
+https://github.com/ChouChiu/Lyrics-Helper/tree/39e58839bd52a881b6011be8f8d19c34380adf8e
+Adaptations in AirLyrics: standalone cloud-QRC decoding, bounded input/decompression, error propagation.
