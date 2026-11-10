@@ -17,6 +17,7 @@ import android.widget.TextView
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -52,6 +53,7 @@ internal class LyricsSourcePages(
     private var results = emptyMap<PlainLyricsSearchSource, SourceResults>()
     private val pages = PageAdapter()
     private val mountedPages = mutableSetOf<Page>()
+    private var disposed = false
     var blocksInteraction = false
         set(value) {
             if (field == value) return
@@ -147,7 +149,8 @@ internal class LyricsSourcePages(
                         tab.contentDescription = tabDescription(source)
                         tab.view.isSelected = wasSelected
                     }
-                    pages.notifyItemChanged(index)
+                    // A payload keeps the existing page and its scroll snapshot during loading updates.
+                    pages.notifyItemChanged(index, source)
                 }
             }
         }
@@ -211,7 +214,7 @@ internal class LyricsSourcePages(
         private val rows = Rows()
         private val footer = FooterRows { body -> shownResult?.let { renderWordFooter(body,it) } }
         private val idSearch = com.google.android.material.button.MaterialButton(context).apply {
-            text = context.getString(R.string.search_spotify_id)
+            text = context.getString(R.string.search_try_spotify_id)
             isAllCaps = false
             letterSpacing = 0f
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
@@ -244,7 +247,7 @@ internal class LyricsSourcePages(
             }
         }
         private val wordSearch = com.google.android.material.button.MaterialButton(context).apply {
-            text=context.getString(R.string.search_word_search)
+            text=context.getString(R.string.search_try_word_search)
             isAllCaps=false
             letterSpacing=0f
             gravity=Gravity.START or Gravity.CENTER_VERTICAL
@@ -255,7 +258,7 @@ internal class LyricsSourcePages(
             setIconResource(R.drawable.ic_air_search)
             iconTint=ColorStateList.valueOf(palette.accent)
             stateListAnimator=null
-            contentDescription=context.getString(R.string.search_word_search)
+            contentDescription=context.getString(R.string.search_try_word_search)
             setOnClickListener { if(!blocksInteraction) onWordLyricsSearch() }
         }
         private val recordingHeading=TextView(context).apply {
@@ -299,6 +302,7 @@ internal class LyricsSourcePages(
                     context.localizedPlainLyricsProviderName(detail.recording.source.key),
                     context.getString(R.string.search_retry))) { session.openWordRecording(detail.recording,true) }
             } else {
+                if(result.error!=null) row(context.getString(R.string.search_failed)) { session.retryWordFailures() }
                 ManualWordSource.entries.forEach { provider ->
                     val state=result.wordResults[provider] ?: return@forEach
                     if(state.error!=null && !state.loading) row(context.getString(R.string.search_source_retry,
@@ -306,13 +310,19 @@ internal class LyricsSourcePages(
                         session.retryWordFailure(provider)
                     }
                 }
-                val loading=result.wordResults.values.any { it.loading }
-                if(loading && result.candidates.isNotEmpty()) row(context.getString(R.string.search_songs_loading))
+                val loading=result.loading || appendLoading
+                if(loading && result.candidates.isNotEmpty()) {
+                    body.addView(LyricsLoadingView(context,palette).apply {
+                        gravity=Gravity.START or Gravity.CENTER_VERTICAL
+                        setPadding(dp(4),dp(12),dp(4),dp(12))
+                    },LayoutParams(-1,-2))
+                }
                 if(!loading && result.wordResults.values.any { it.hasMore }) row(context.getString(R.string.search_more_songs)) {
                     ManualWordSource.entries.forEach(session::moreWordRecordings)
+                } else if(!result.loading && result.candidates.isNotEmpty() && result.error==null &&
+                    result.wordResults.values.none { it.error!=null }) {
+                    row(context.getString(R.string.search_no_more_results))
                 }
-                if(!result.showUnrelated && result.wordResults.values.any { it.recordings.any { r->!r.related } })
-                    row(context.getString(R.string.search_other_results)) { session.showOtherWordRecordings() }
             }
         }
         private val tools = LinearLayout(context).apply {
@@ -368,6 +378,9 @@ internal class LyricsSourcePages(
         private var visual = SourceVisual.RESULTS
         private var resetScrollOnResult = false
         private var cataloguePosition:android.os.Parcelable?=null
+        private var appendLoading=false
+        private var restorePageOnCommit=false
+        private var restoreCatalogueOnCommit=false
 
         init {
             // Keep this scroll child visible even without rows so blank space can expand the AppBarLayout.
@@ -390,7 +403,7 @@ internal class LyricsSourcePages(
         }
 
         fun save() {
-            if (generation != session.resultsGeneration) return
+            if (generation != session.resultsGeneration || list.visibility != VISIBLE) return
             source?.let { key ->
                 list.layoutManager?.onSaveInstanceState()?.let { session.pagePositions[key] = it }
             }
@@ -406,36 +419,46 @@ internal class LyricsSourcePages(
             val result = results.getValue(key)
             shownResult = result
             val openingDetail=result.wordDetail!=null && previous?.wordDetail?.recording?.key!=result.wordDetail.recording.key
-            val returningToSongs=previous?.wordDetail!=null && result.wordDetail==null && result.wordQuery!=null
-            if(openingDetail && previous?.wordDetail==null) cataloguePosition=list.layoutManager?.onSaveInstanceState()
+            val returningToSongs=previous?.wordDetail!=null && result.wordDetail==null && result.wordQuery!=null &&
+                result.wordQuery==previous.wordQuery && result.wordResults===previous.wordResults
+            if(!samePage || (result.loading && result.candidates.isEmpty() && !returningToSongs)) {
+                cataloguePosition=null
+                restoreCatalogueOnCommit=false
+            }
+            if(openingDetail && previous?.wordDetail==null) {
+                cataloguePosition=list.layoutManager?.onSaveInstanceState()
+            }
+            if(!samePage) restorePageOnCommit=true
+            if(openingDetail || (result.loading && result.candidates.isEmpty())) resetScrollOnResult=true
+            if(returningToSongs) restoreCatalogueOnCommit=true
             tools.visibility = if (key==PlainLyricsSearchSource.NETEASE || key==PlainLyricsSearchSource.SPICY) VISIBLE else GONE
             idSearch.visibility=if(key==PlainLyricsSearchSource.SPICY) VISIBLE else GONE
             wordSearch.visibility=if(key==PlainLyricsSearchSource.NETEASE) VISIBLE else GONE
             wordSearch.text=result.wordQuery?.title
-                ?: context.getString(R.string.search_word_search)
+                ?: context.getString(R.string.search_try_word_search)
             wordSearch.maxLines=1
             wordSearch.ellipsize=android.text.TextUtils.TruncateAt.END
             wordSearch.contentDescription=if(result.wordQuery!=null) context.getString(R.string.search_edit_query)
-                else context.getString(R.string.search_word_search)
+                else context.getString(R.string.search_try_word_search)
             recordingHeading.visibility=if(result.wordDetail!=null) VISIBLE else GONE
             recordingHeading.text=result.wordDetail?.recording?.song?.let { song ->
                 listOf(song.title,listOf(song.artist,song.album).filter(String::isNotBlank).joinToString(" · "))
                     .filter(String::isNotBlank).joinToString("\n")
             }
-            footer.show(result.wordQuery!=null && when {
-                result.wordDetail!=null -> result.candidates.isEmpty() || result.wordDetail.error!=null
-                else -> result.candidates.isEmpty() || result.wordResults.values.any { it.loading || it.error!=null || it.hasMore } ||
-                    (!result.showUnrelated && result.wordResults.values.any { it.recordings.any { r->!r.related } })
-            })
+            val showFooter=result.wordQuery!=null &&
+                (result.wordDetail==null || result.candidates.isEmpty() || result.wordDetail.error!=null)
             byTitle.visibility = if (result.spotifyId!=null || result.wordQuery!=null) VISIBLE else GONE
             byTitle.setText(if(result.wordDetail!=null) R.string.search_back_recordings else if(key==PlainLyricsSearchSource.NETEASE) R.string.search_regular_search else R.string.search_by_title)
             idSearch.text = result.spotifyId?.let { context.getString(R.string.search_spotify_id_active, it) }
-                ?: context.getString(R.string.search_spotify_id)
-            idSearch.contentDescription = context.getString(R.string.search_spotify_id)
-            if (!samePage && result.loading && result.candidates.isEmpty()) resetScrollOnResult = true
+                ?: context.getString(R.string.search_try_spotify_id)
+            idSearch.contentDescription = context.getString(R.string.search_try_spotify_id)
+            val keepCatalogue=samePage && visual==SourceVisual.RESULTS &&
+                rows.itemCount>0 && result.candidates.isNotEmpty() &&
+                result.wordQuery!=null && result.wordQuery==previous?.wordQuery &&
+                result.wordDetail==null && previous.wordDetail==null
             val nextVisual = when {
-                result.candidates.isNotEmpty() -> SourceVisual.RESULTS
                 result.loading -> SourceVisual.LOADING
+                result.candidates.isNotEmpty() -> SourceVisual.RESULTS
                 result.error != null -> SourceVisual.ERROR
                 !result.searched -> SourceVisual.IDLE
                 else -> SourceVisual.EMPTY
@@ -444,44 +467,64 @@ internal class LyricsSourcePages(
                 ValueAnimator.areAnimatorsEnabled()
             val firstResults = animate && previous?.candidates?.isEmpty() == true &&
                 result.candidates.isNotEmpty()
-            val leavingResults = animate && previous?.candidates?.isNotEmpty() == true &&
-                result.loading && result.candidates.isEmpty()
-
+            val pageGeneration=generation
             list.animate().cancel()
-            list.translationY = 0f
-            rows.canOpen = result.candidates.isNotEmpty()
-            if (leavingResults) {
-                // Keep the old rows only for their 120 ms exit. They cannot open a stale preview.
-                list.animate().alpha(0f).translationY(-dp(4).toFloat()).setDuration(120)
-                    .withEndAction {
-                        if (shownResult === result) {
-                            rows.submit(key, emptyList())
-                            list.scrollToPosition(0)
-                            resetScrollOnResult = false
-                        }
-                        list.alpha = 1f
-                        list.translationY = 0f
-                    }.start()
+            list.translationY=0f
+            rows.canOpen=keepCatalogue
+
+            val preparing=result.loading || (result.candidates.isNotEmpty() && !rows.isCurrentList(key,result.candidates))
+            if(keepCatalogue) {
+                // Keep the mounted songs visible while the footer covers fetching, sorting, and diffing.
+                if(preparing && !appendLoading) {
+                    appendLoading=true
+                    footer.show(true)
+                }
             } else {
-                if (result.loading && result.candidates.isEmpty()) session.pagePositions.remove(key)
-                rows.submit(key, result.candidates)
+                appendLoading=false
+                if(preparing) {
+                    list.visibility=INVISIBLE
+                    showStatus(SourceVisual.LOADING,result,animate)
+                }
+            }
+            if(result.loading) {
+                if(result.candidates.isEmpty()) session.pagePositions.remove(key)
+                if(blocksInteraction) finish()
+                return
+            }
+            rows.submit(key,result.candidates) {
+                // A recycled page or a superseded search must not reveal an older submission.
+                if(disposed || source!=key || generation!=pageGeneration || shownResult!==result || results[key]!==result) return@submit
+                // Update the footer with the new rows. Removing it before the diff commits would
+                // temporarily shorten the old list and force a scroll correction at its bottom.
+                appendLoading=false
+                footer.show(showFooter)
+                if(restoreCatalogueOnCommit || restorePageOnCommit) {
+                    // Reappearing rows must not steal focus and scroll a partially visible song into view.
+                    list.descendantFocusability=FOCUS_BLOCK_DESCENDANTS
+                    list.doOnPreDraw { list.descendantFocusability=FOCUS_AFTER_DESCENDANTS }
+                }
+                rows.canOpen=result.candidates.isNotEmpty()
                 if(previous?.wordDetail?.options!=result.wordDetail?.options && rows.itemCount>0)
                     rows.notifyItemRangeChanged(0,rows.itemCount)
-                list.alpha = if (firstResults) 0f else 1f
-                if (resetScrollOnResult && result.candidates.isNotEmpty()) {
+                list.alpha=if(firstResults) 0f else 1f
+                if(resetScrollOnResult && result.candidates.isNotEmpty()) {
                     list.scrollToPosition(0)
-                    resetScrollOnResult = false
+                    resetScrollOnResult=false
+                    restorePageOnCommit=false
+                } else if(restorePageOnCommit) {
+                    session.pagePositions[key]?.let { list.layoutManager?.onRestoreInstanceState(it) }
+                        ?: list.scrollToPosition(0)
                 }
-                if (firstResults) revealFirstRows(result)
+                restorePageOnCommit=false
+                if(restoreCatalogueOnCommit) {
+                    cataloguePosition?.let { list.layoutManager?.onRestoreInstanceState(it) }
+                    restoreCatalogueOnCommit=false
+                }
+                list.visibility=VISIBLE
+                if(firstResults) revealFirstRows(result)
+                showStatus(if(result.wordQuery!=null) SourceVisual.RESULTS else nextVisual,result,animate)
+                if(blocksInteraction) finish()
             }
-            showStatus(if(result.wordQuery!=null) SourceVisual.RESULTS else nextVisual, result, animate)
-            if (!samePage && !leavingResults) {
-                session.pagePositions[key]?.let { list.layoutManager?.onRestoreInstanceState(it) }
-                    ?: list.scrollToPosition(0)
-            }
-            if(openingDetail) list.scrollToPosition(0)
-            else if(returningToSongs) cataloguePosition?.let { list.layoutManager?.onRestoreInstanceState(it) }
-            if (blocksInteraction) finish()
         }
 
         private fun revealFirstRows(result: SourceResults) {
@@ -504,18 +547,27 @@ internal class LyricsSourcePages(
         private fun showStatus(next: SourceVisual, result: SourceResults, animate: Boolean) {
             val previous = visual
             visual = next
+            if (next == SourceVisual.IDLE) {
+                status.animate().cancel()
+                loading.animate().cancel()
+                message.animate().cancel()
+                status.visibility = GONE
+                loading.visibility = GONE
+                message.visibility = GONE
+                status.importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                return
+            }
             if (next != SourceVisual.RESULTS && next != SourceVisual.LOADING) {
                 messageTitle.text = when {
                     next == SourceVisual.ERROR -> errorText(result.error!!)
-                    next == SourceVisual.IDLE -> context.getString(R.string.search_ready)
                     result.wordDetail != null -> context.getString(R.string.search_no_lyrics)
                     result.spotifyId != null -> context.getString(R.string.search_spotify_id_empty)
                     else -> context.getString(R.string.search_empty)
                 }
-                messageDetail.text = if (next == SourceVisual.IDLE || (result.wordQuery!=null && next!=SourceVisual.ERROR)) "" else context.getString(R.string.search_retry)
-                messageDetail.visibility = if (next == SourceVisual.IDLE) GONE else VISIBLE
-                message.isClickable = next != SourceVisual.IDLE && (result.wordQuery==null || next==SourceVisual.ERROR)
-                message.isFocusable = next != SourceVisual.IDLE
+                messageDetail.text = if (result.wordQuery!=null && next!=SourceVisual.ERROR) "" else context.getString(R.string.search_retry)
+                messageDetail.visibility = VISIBLE
+                message.isClickable = result.wordQuery==null || next==SourceVisual.ERROR
+                message.isFocusable = true
             }
             if (previous == next && status.isVisible) return
             status.animate().cancel()
@@ -533,7 +585,7 @@ internal class LyricsSourcePages(
             status.visibility = VISIBLE
             val nextView = if (next == SourceVisual.LOADING) loading else message
             val previousView = if (previous == SourceVisual.LOADING) loading else message
-            if (animate && previous != SourceVisual.RESULTS && previousView !== nextView) {
+            if (animate && previous != SourceVisual.RESULTS && previous != SourceVisual.IDLE && previousView !== nextView) {
                 nextView.visibility = VISIBLE
                 nextView.alpha = 0f
                 nextView.translationY = dp(8).toFloat()
@@ -562,6 +614,7 @@ internal class LyricsSourcePages(
         }
 
         fun finish() {
+            list.descendantFocusability=FOCUS_AFTER_DESCENDANTS
             list.animate().cancel()
             for (index in 0 until list.childCount) {
                 list.getChildAt(index).apply {
@@ -575,6 +628,7 @@ internal class LyricsSourcePages(
             message.animate().cancel()
             list.alpha = 1f
             list.translationY = 0f
+            list.visibility=if(visual==SourceVisual.LOADING) INVISIBLE else VISIBLE
             status.alpha = 1f
             status.translationY = 0f
             loading.alpha = 1f
@@ -582,10 +636,10 @@ internal class LyricsSourcePages(
             message.alpha = 1f
             message.translationY = 0f
             // The preview owns the loading indicator during the handoff.
-            status.visibility = if (visual == SourceVisual.RESULTS ||
+            status.visibility = if (visual == SourceVisual.RESULTS || visual == SourceVisual.IDLE ||
                 (blocksInteraction && visual == SourceVisual.LOADING)) GONE else VISIBLE
             loading.visibility = if (visual == SourceVisual.LOADING) VISIBLE else GONE
-            message.visibility = if (visual == SourceVisual.EMPTY || visual == SourceVisual.ERROR || visual == SourceVisual.IDLE) VISIBLE else GONE
+            message.visibility = if (visual == SourceVisual.EMPTY || visual == SourceVisual.ERROR) VISIBLE else GONE
         }
     }
 
@@ -655,23 +709,6 @@ internal class LyricsSourcePages(
             contentDescription = context.getString(R.string.search_id_match)
             visibility = GONE
         }
-        val info=androidx.appcompat.widget.AppCompatImageButton(context).apply {
-            setImageResource(R.drawable.ic_air_info)
-            imageTintList=ColorStateList.valueOf(palette.textMuted)
-            contentDescription=context.getString(R.string.search_recording_hint)
-            val selectable=android.util.TypedValue()
-            context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless,selectable,true)
-            setBackgroundResource(selectable.resourceId)
-            setPadding(dp(13),dp(13),dp(13),dp(13))
-            visibility=GONE
-        }
-        val hint=TextView(context).apply {
-            textSize=14f
-            setTextColor(palette.textMuted)
-            text=context.getString(R.string.search_version_check)
-            visibility=GONE
-            accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
-        }
         val duration = TextView(context).apply { textSize = 12f; setTextColor(palette.textMuted) }
         val detail = TextView(context).apply { textSize = 13f; setTextColor(palette.textMuted) }
         init {
@@ -681,10 +718,8 @@ internal class LyricsSourcePages(
             titleLine.addView(heading, LayoutParams(0, -2, 1f))
             titleLine.addView(idBadge, LayoutParams(-2, -2).apply { marginStart = dp(8) })
             titleLine.addView(duration, LayoutParams(-2, -2).apply { marginStart = dp(12) })
-            titleLine.addView(info,LayoutParams(dp(48),dp(48)))
             box.addView(titleLine)
             box.addView(detail, LayoutParams(-1, -2).apply { topMargin = dp(6) })
-            box.addView(hint,LayoutParams(-1,-2).apply { topMargin=dp(8) })
             val selectable = android.util.TypedValue()
             context.theme.resolveAttribute(android.R.attr.selectableItemBackground, selectable, true)
             box.setBackgroundResource(selectable.resourceId)
@@ -693,39 +728,38 @@ internal class LyricsSourcePages(
     }
 
     private inner class Rows : RecyclerView.Adapter<Row>() {
-        private var source: PlainLyricsSearchSource? = null
-        private var candidates = emptyList<LyricsCandidate>()
-        private val expandedHints=mutableSetOf<String>()
+        private val differ=AsyncListDiffer(this,object:DiffUtil.ItemCallback<LyricsCandidate>() {
+            override fun areItemsTheSame(oldItem:LyricsCandidate,newItem:LyricsCandidate)=
+                oldItem.source==newItem.source && oldItem.id==newItem.id
+            override fun areContentsTheSame(oldItem:LyricsCandidate,newItem:LyricsCandidate)=oldItem==newItem
+        })
+        private var committedSource:PlainLyricsSearchSource?=null
+        private var committedList:List<LyricsCandidate>?=null
         var canOpen = false
         init { setHasStableIds(true) }
-        override fun getItemCount() = candidates.size
+        override fun getItemCount() = differ.currentList.size
         override fun getItemId(position: Int): Long {
-            val candidate = candidates[position]
+            val candidate = differ.currentList[position]
             var hash = -3750763034362895579L
             candidate.id.forEach { hash = (hash xor it.code.toLong()) * 1099511628211L }
             return hash xor (candidate.source.ordinal.toLong() shl 56)
         }
-        fun submit(key: PlainLyricsSearchSource, next: List<LyricsCandidate>) {
-            val before = candidates
-            val beforeSource = source
-            if (beforeSource == key && before == next) return
-            source = key
-            candidates = next
-            expandedHints.retainAll(next.map { it.id }.toSet())
-            DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-                override fun getOldListSize() = before.size
-                override fun getNewListSize() = next.size
-                override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                    beforeSource == key && before[oldItemPosition].id == next[newItemPosition].id
-                override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int) =
-                    before[oldItemPosition] == next[newItemPosition]
-            }).dispatchUpdatesTo(this@Rows)
+        fun isCurrentList(key:PlainLyricsSearchSource,next:List<LyricsCandidate>)=
+            committedSource==key && committedList===next
+
+        fun submit(key:PlainLyricsSearchSource,next:List<LyricsCandidate>,onCommitted:()->Unit) {
+            // Null keeps an empty adapter cheap and invalidates any obsolete in-flight diff.
+            differ.submitList(next.takeIf { it.isNotEmpty() }) {
+                committedSource=key
+                committedList=next
+                onCommitted()
+            }
         }
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = Row(
             LinearLayout(context).apply { layoutParams = RecyclerView.LayoutParams(-1, -2) }
         )
         override fun onBindViewHolder(holder: Row, position: Int) {
-            val candidate = candidates[position]
+            val candidate = differ.currentList[position]
             holder.duration.text = candidate.song.durationMs.takeIf { it > 0 }?.let {
                 String.format(Locale.ROOT, "%d:%02d", it / 60000, it / 1000 % 60)
             }.orEmpty()
@@ -761,18 +795,11 @@ internal class LyricsSourcePages(
             holder.detail.visibility=if(holder.detail.text.isEmpty()) GONE else VISIBLE
             holder.detail.maxLines=if(wordMode && status==null) 2 else Int.MAX_VALUE
             holder.detail.ellipsize=if(wordMode) android.text.TextUtils.TruncateAt.END else null
-            val uncertain=version?.requiresConfirmation==true || candidate.recording?.requiresConfirmation==true ||
-                option?.requiresConfirmation==true
-            holder.info.visibility=if(uncertain) VISIBLE else GONE
-            val expanded=uncertain && candidate.id in expandedHints
-            holder.hint.visibility=if(expanded) VISIBLE else GONE
-            holder.info.contentDescription=context.getString(if(expanded) R.string.search_hide_recording_hint else R.string.search_recording_hint)
-            holder.info.setOnClickListener {
-                if(candidate.id in expandedHints) expandedHints.remove(candidate.id) else expandedHints.add(candidate.id)
-                val current=holder.bindingAdapterPosition
-                if(current!=RecyclerView.NO_POSITION) notifyItemChanged(current)
+            holder.box.setOnClickListener {
+                val position=holder.bindingAdapterPosition
+                if(canOpen && position!=RecyclerView.NO_POSITION)
+                    differ.currentList.getOrNull(position)?.let(session::preview)
             }
-            holder.box.setOnClickListener { if (canOpen) session.preview(candidate) }
         }
         override fun onViewRecycled(holder: Row) {
             holder.box.animate().cancel()
@@ -787,6 +814,7 @@ internal class LyricsSourcePages(
     }
 
     fun dispose() {
+        disposed=true
         mountedPages.forEach(Page::finish)
         tabs.clearOnTabSelectedListeners()
     }

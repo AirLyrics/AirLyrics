@@ -99,7 +99,7 @@ class WordLyricsSearchDialog : DialogFragment() {
         body.addView(advanced,LinearLayout.LayoutParams(-1,-2))
         val (_,albumEdit)=input(R.string.search_album,ALBUM,EditorInfo.IME_ACTION_NEXT,advanced)
         val (durationField,durationEdit)=input(R.string.search_duration_match,DURATION_TEXT,EditorInfo.IME_ACTION_SEARCH,advanced)
-        durationField.placeholderText="4:02"
+        durationField.placeholderText=arguments?.getString(DURATION_TEXT)?.takeIf(String::isNotBlank)
         durationEdit.inputType=InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
         durationField.endIconMode=TextInputLayout.END_ICON_CUSTOM
         durationField.setEndIconDrawable(R.drawable.ic_air_info)
@@ -115,8 +115,7 @@ class WordLyricsSearchDialog : DialogFragment() {
         }
         albumInput=albumEdit
         durationInput=durationEdit
-        optionsExpanded=savedInstanceState?.getBoolean("match-options")
-            ?: (albumEdit.text?.isNotEmpty()==true || durationEdit.text?.isNotEmpty()==true)
+        optionsExpanded=savedInstanceState?.getBoolean("match-options") ?: false
         fun renderOptions() {
             advanced.visibility=if(optionsExpanded) android.view.View.VISIBLE else android.view.View.GONE
             more.setText(if(optionsExpanded) R.string.search_hide_match_options else R.string.search_match_options)

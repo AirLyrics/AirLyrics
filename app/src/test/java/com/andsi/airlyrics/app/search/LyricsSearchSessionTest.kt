@@ -9,6 +9,8 @@ import com.andsi.airlyrics.lyrics.search.LyricsUnavailableReason
 import com.andsi.airlyrics.lyrics.search.ManualWordSource
 import com.andsi.airlyrics.lyrics.search.ManualWordVersion
 import com.andsi.airlyrics.lyrics.search.*
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.*
@@ -100,12 +102,13 @@ class LyricsSearchSessionTest {
         }
     }
     private fun TestScope.withSession(sources:Set<PlainLyricsSearchSource> = setOf(source),
-        target:SongIdentity = song, spotifyId:String? = null, block: TestScope.(LyricsSearchSession,FakeAccess)->Unit) {
+        target:SongIdentity = song, spotifyId:String? = null, computation:CoroutineDispatcher?=null,
+        block: TestScope.(LyricsSearchSession,FakeAccess)->Unit) {
         val dispatcher=StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
             val access=FakeAccess()
-            block(LyricsSearchSession(target,sources,access,dispatcher,spotifyId),access)
+            block(LyricsSearchSession(target,sources,access,dispatcher,spotifyId,computation=computation ?: dispatcher),access)
         } finally { Dispatchers.resetMain() }
     }
     private fun wordVersion(source:ManualWordSource, query:SongIdentity, id:String="42"):ManualWordVersion {
@@ -115,6 +118,67 @@ class LyricsSearchSessionTest {
             LyricsProviderResult(source.key,source.key,"[00:01.000]你好",
                 wordByWordLines=lines,matchedTitle=query.title))
     }
+    private class QueuedComputation:CoroutineDispatcher() {
+        private val tasks=ArrayDeque<Runnable>()
+        override fun dispatch(context:CoroutineContext,block:Runnable) { tasks.addLast(block) }
+        fun runQueued() { while(tasks.isNotEmpty()) tasks.removeFirst().run() }
+    }
+
+    @Test fun completeBatchIncludesLowSimilarityRowsAndWaitsForLocalPreparation()=runTest {
+        val worker=QueuedComputation()
+        withSession(computation=worker) { session,access ->
+            access.catalogue={ q,s,p,_ -> ManualWordPage(
+                listOf(ManualWordRecording(s,"low",q,related=false)),p,hasMore=true) }
+            session.searchWordLyrics(song);runCurrent()
+            assertTrue(session.state.value.results.getValue(source).loading)
+            assertTrue(session.state.value.results.getValue(source).candidates.isEmpty())
+            worker.runQueued();runCurrent()
+            val preparing=session.state.value.results.getValue(source)
+            assertTrue(preparing.wordResults.values.none { it.loading })
+            assertTrue(preparing.loading)
+            assertTrue(preparing.candidates.isEmpty())
+            worker.runQueued();runCurrent()
+            val ready=session.state.value.results.getValue(source)
+            assertFalse(ready.loading)
+            assertEquals(ManualWordSource.entries.size,ready.candidates.size)
+            assertTrue(ready.candidates.all { it.recording?.related==false })
+            assertEquals(ManualWordSource.entries.map { 1 },access.pages)
+            assertEquals(0,access.detailLoads)
+        }
+    }
+
+    @Test fun newWordQuerySupersedesAQueuedBatch()=runTest {
+        val worker=QueuedComputation()
+        withSession(computation=worker) { session,_ ->
+            session.searchWordLyrics(song);runCurrent()
+            worker.runQueued();runCurrent()
+            val replacement=song.copy(title="New query")
+            session.searchWordLyrics(replacement);runCurrent()
+            worker.runQueued();runCurrent()
+            worker.runQueued();runCurrent()
+            val ready=session.state.value.results.getValue(source)
+            assertFalse(ready.loading)
+            assertEquals(replacement,ready.wordQuery)
+            assertEquals(ManualWordSource.entries.size,ready.candidates.size)
+            assertTrue(ready.candidates.all { it.song==replacement })
+        }
+    }
+
+    @Test fun regularSearchCannotBeOverwrittenByQueuedWordPreparation()=runTest {
+        val worker=QueuedComputation()
+        withSession(computation=worker) { session,_ ->
+            session.searchWordLyrics(song);runCurrent()
+            worker.runQueued();runCurrent()
+            session.searchNeteaseByTitle();runCurrent()
+            worker.runQueued();runCurrent()
+            val ready=session.state.value.results.getValue(source)
+            assertNull(ready.wordQuery)
+            assertFalse(ready.loading)
+            assertTrue(ready.candidates.isNotEmpty())
+            assertTrue(ready.candidates.all { it.recording==null })
+        }
+    }
+
     @Test fun ordinarySearchNeverStartsWordLookup()=runTest {
         withSession { session,access ->
             session.search();runCurrent()
@@ -155,17 +219,56 @@ class LyricsSearchSessionTest {
             access.catalogue={ q,s,p,_ -> ManualWordPage(
                 (1..20).map { ManualWordRecording(s,"$p:$it",q,related=it!=20) },p,p==1,"fixed keyword") }
             session.searchWordLyrics(song);runCurrent()
-            assertEquals(19*ManualWordSource.entries.size,session.state.value.results.getValue(source).candidates.size)
+            assertEquals(20*ManualWordSource.entries.size,session.state.value.results.getValue(source).candidates.size)
             session.moreWordRecordings(ManualWordSource.NETEASE)
             session.moreWordRecordings(ManualWordSource.NETEASE)
             runCurrent()
             assertEquals(ManualWordSource.entries.map { 1 }+2,access.pages)
-            assertEquals(19*(ManualWordSource.entries.size+1),session.state.value.results.getValue(source).candidates.size)
-            session.showOtherWordRecordings()
             assertEquals(20*(ManualWordSource.entries.size+1),session.state.value.results.getValue(source).candidates.size)
             assertEquals(0,access.detailLoads)
         }
     }
+    @Test fun laterPagesAppendWithoutReorderingAndKeepTheirOrderAfterDetailNavigation()=runTest {
+        withSession { session,access ->
+            access.catalogue={ q,s,p,_ ->
+                val weak=ManualWordRecording(s,"weak",q,score=0.1,related=false)
+                val songs=if(p==1) listOf(weak,ManualWordRecording(s,"best",q,score=0.6)) else listOf(
+                    weak,ManualWordRecording(s,"new-low",q,score=0.8),
+                    ManualWordRecording(s,"new-high",q,score=1.0))
+                ManualWordPage(songs,p,hasMore=p==1)
+            }
+            session.searchWordLyrics(song);runCurrent()
+            val first=session.state.value.results.getValue(source).candidates
+            val expected=ManualWordSource.entries.map { "recording:${it.key}:best" }+
+                ManualWordSource.entries.map { "recording:${it.key}:weak" }
+            assertEquals(expected,first.map { it.id })
+
+            // The footer requests another page from each source, even if scores exceed the first batch.
+            ManualWordSource.entries.forEach(session::moreWordRecordings)
+            assertTrue(session.state.value.results.getValue(source).loading)
+            assertEquals(first,session.state.value.results.getValue(source).candidates)
+            runCurrent()
+            val more=session.state.value.results.getValue(source).candidates
+            assertEquals(first,more.take(first.size))
+            assertEquals(ManualWordSource.entries.map { "recording:${it.key}:new-high" }+
+                ManualWordSource.entries.map { "recording:${it.key}:new-low" },
+                more.drop(first.size).map { it.id })
+            assertEquals(more.size,more.map { it.id }.toSet().size)
+            assertEquals(0,access.detailLoads)
+
+            session.preview(more.last());runCurrent()
+            assertNotNull(session.state.value.results.getValue(source).wordDetail)
+            session.backToWordRecordings();runCurrent()
+            assertEquals(more,session.state.value.results.getValue(source).candidates)
+
+            val replacement=song.copy(title="Another song")
+            session.searchWordLyrics(replacement);runCurrent()
+            val refreshed=session.state.value.results.getValue(source).candidates
+            assertEquals(expected,refreshed.map { it.id })
+            assertTrue(refreshed.all { it.song==replacement })
+        }
+    }
+
     @Test fun failedSourceRetryKeepsSuccessfulSongsAndRetriesTheFailedPage()=runTest {
         withSession { session,access ->
             access.catalogue={ q,s,p,_ ->
@@ -278,7 +381,7 @@ class LyricsSearchSessionTest {
             session.preview(songs.last());runCurrent()
             assertEquals(1,access.detailLoads)
             assertEquals(ManualWordSource.QQ,session.state.value.results.getValue(source).wordDetail!!.recording.source)
-            session.backToWordRecordings()
+            session.backToWordRecordings();runCurrent()
             assertEquals(songs,session.state.value.results.getValue(source).candidates)
         }
     }

@@ -179,6 +179,18 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
     }
 
+    internal fun sourceCapsule(): MaterialButton? = if (::sourcesButton.isInitialized) sourcesButton else null
+
+    private fun showSources() {
+        if (session.state.value.applying || supportFragmentManager.isStateSaved ||
+            supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) != null) return
+        currentFocus?.clearFocus()
+        WindowCompat.getInsetsController(window,window.decorView).hide(WindowInsetsCompat.Type.ime())
+        // showNow reserves the fragment identity before a second tap can enqueue another window.
+        LyricsSourcesSheet.create(session.state.value.sources,session.sourceOrder)
+            .showNow(supportFragmentManager,LyricsSourcesSheet.TAG)
+    }
+
     private fun navigateBack() {
         val state = session.state.value
         if (state.applying) return
@@ -248,16 +260,14 @@ class LyricsSearchActivity : AppCompatActivity() {
             v.setPadding(safe.left,safe.top,safe.right,safe.bottom)
             insets
         }
-        val heading=LinearLayout(this).apply { gravity=Gravity.CENTER_VERTICAL }
-        heading.addView(AppCompatImageButton(this).apply {
+        val backButton=AppCompatImageButton(this).apply {
             setImageResource(R.drawable.ic_air_arrow_back)
             imageTintList = ColorStateList.valueOf(palette.accent)
             background = null
             contentDescription = getString(R.string.search_back)
             setPadding(dp(12), dp(12), dp(12), dp(12))
-            layoutParams = LinearLayout.LayoutParams(dp(48), dp(48)).apply { marginEnd = dp(4) }
             setOnClickListener { navigateBack() }
-        })
+        }
         headingTitle=text(getString(R.string.search_lyrics),22f).apply {
             setTypeface(typeface,Typeface.BOLD)
             setSingleLine()
@@ -268,8 +278,20 @@ class LyricsSearchActivity : AppCompatActivity() {
             setFadingEdgeLength(dp(16))
             addView(headingTitle,FrameLayout.LayoutParams(-2,-2))
         }
-        heading.addView(headingScroll,LinearLayout.LayoutParams(0,-2,1f))
-        header.addView(heading)
+        sourcesButton=button(R.string.search_sources) { showSources() }.apply {
+            insetTop=0
+            insetBottom=0
+            minWidth=dp(48)
+            minimumHeight=dp(48)
+            shapeAppearanceModel=shapeAppearanceModel.toBuilder()
+                .setAllCornerSizes(com.google.android.material.shape.RelativeCornerSize(0.5f)).build()
+            textSize=14f
+            setPadding(dp(14),dp(8),dp(14),dp(8))
+            setTextColor(palette.accent)
+            strokeWidth=dp(1)
+            strokeColor=ColorStateList.valueOf(palette.stroke)
+        }
+        header.addView(LyricsSearchHeading(this,backButton,headingScroll,sourcesButton))
         targetText=text("")
         header.addView(targetText)
         switchButton=button(R.string.search_switch_target) { currentSong?.let { session.switchTarget(it,currentSpotifyTrackId) } }
@@ -287,14 +309,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         form.addView(albumSlot,LinearLayout.LayoutParams(-1,0))
         albumReveal=LyricsSearchReveal(albumSlot,albumField,dp(8),240,dp(8).toFloat(),0.25f)
-        sourcesButton=textAction(R.string.search_sources) {
-            if (supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) == null) {
-                LyricsSourcesSheet.create(session.state.value.sources,session.sourceOrder)
-                    .show(supportFragmentManager,LyricsSourcesSheet.TAG)
-            }
-        }
-        form.addView(sourcesButton)
-        searchButton=button(R.string.ui_search) {
+        searchButton=button(R.string.search_regular_search) {
             if(session.state.value.sources.isEmpty()) {
                 showMissingSourcesDialog()
             } else {
@@ -387,7 +402,10 @@ class LyricsSearchActivity : AppCompatActivity() {
             }
             view.isEnabled=!state.applying
         }
-        sourcesButton.text=getString(R.string.search_sources_selected,state.sources.joinToString(" / ") { localizedPlainLyricsProviderName(it.key) })
+        sourcesButton.text=getString(R.string.search_sources_count,state.sources.size)
+        sourcesButton.isEnabled=!state.applying
+        sourcesButton.visibility=if(state.previewCandidate==null) View.VISIBLE else View.GONE
+        ViewCompat.setStateDescription(sourcesButton,getString(R.string.search_sources_selection_count,state.sources.size))
         updating=false
         val showPreview=state.previewCandidate!=null
         val changed=inPreview!=showPreview
@@ -521,7 +539,13 @@ class LyricsSearchActivity : AppCompatActivity() {
                 }
         }
     }
+    internal fun onSourcesPickerDismissed() {
+        if (::appBar.isInitialized) appBar.post { focusSourcesIfReady() }
+    }
+
     private fun focusSourcesIfReady() {
+        if ((supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as? LyricsSourcesSheet)
+                ?.dialog?.isShowing == true) return
         if(!pendingSourceFocus || inPreview || session.state.value.results.isEmpty()) return
         pendingSourceFocus=false
         appBar.setExpanded(false,ValueAnimator.areAnimatorsEnabled())
@@ -536,7 +560,7 @@ class LyricsSearchActivity : AppCompatActivity() {
     private fun showWordLyricsSearch() {
         if(supportFragmentManager.findFragmentByTag(WordLyricsSearchDialog.TAG)!=null) return
         val state=session.state.value
-        val query=state.results[PlainLyricsSearchSource.NETEASE]?.wordQuery ?: state.query.copy(album="",durationMs=0)
+        val query=state.results[PlainLyricsSearchSource.NETEASE]?.wordQuery ?: state.query
         WordLyricsSearchDialog.create(query,state.target.storageKey())
             .show(supportFragmentManager,WordLyricsSearchDialog.TAG)
     }

@@ -8,6 +8,8 @@ import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
 import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
@@ -96,7 +98,7 @@ class LyricsSearchLayoutTest {
             layout(content,900)
             ShadowLooper.idleMainLooper(300,TimeUnit.MILLISECONDS)
             val action=descendants(content).filterIsInstance<MaterialButton>()
-                .first { it.text.toString()==activity.getString(R.string.search_spotify_id) }
+                .first { it.text.toString()==activity.getString(R.string.search_try_spotify_id) }
             assertTrue(action.isShown)
             action.performClick()
             activity.supportFragmentManager.executePendingTransactions()
@@ -193,15 +195,16 @@ class LyricsSearchLayoutTest {
         }
     }
 
-    @Test fun wordSearchEntryUsesAnInputDialogAndKeepsTheCurrentActivity() {
-        Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
+    @Test fun wordSearchEntryPrefillsAllMetadataAndKeepsTheCurrentActivity() {
+        val searchIntent=intent().putExtra("search.album","Fixture album").putExtra("search.duration",242000L)
+        Robolectric.buildActivity(LyricsSearchActivity::class.java,searchIntent).setup().visible().use { controller ->
             val activity=controller.get()
             val content=activity.findViewById<ViewGroup>(android.R.id.content)
             render(activity,session(activity).state.value.copy(sources=setOf(PlainLyricsSearchSource.NETEASE)))
             layout(content,900)
             ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS)
             val action=descendants(content).filterIsInstance<MaterialButton>().single {
-                it.isShown && it.text.toString()==activity.getString(R.string.search_word_search)
+                it.isShown && it.text.toString()==activity.getString(R.string.search_try_word_search)
             }
             action.performClick()
             activity.supportFragmentManager.executePendingTransactions()
@@ -210,6 +213,17 @@ class LyricsSearchLayoutTest {
             val fields=descendants(fragment.requireDialog().window!!.decorView).filterIsInstance<TextInputLayout>()
             assertEquals("8bit Voyager",fields[0].editText!!.text.toString())
             assertEquals("Lime",fields[1].editText!!.text.toString())
+            assertEquals("Fixture album",fields[2].editText!!.text.toString())
+            assertEquals("4:02",fields[3].editText!!.text.toString())
+            assertFalse(fields[2].isShown)
+            assertFalse(fields[3].isShown)
+            descendants(fragment.requireDialog().window!!.decorView).filterIsInstance<MaterialButton>().single {
+                it.text.toString()==activity.getString(R.string.search_match_options)
+            }.performClick()
+            assertTrue(fields[2].isShown)
+            assertTrue(fields[3].isShown)
+            assertEquals("Fixture album",fields[2].editText!!.text.toString())
+            assertEquals("4:02",fields[3].editText!!.text.toString())
             assertTrue(session(activity).state.value.results.isEmpty())
         }
     }
@@ -323,7 +337,7 @@ class LyricsSearchLayoutTest {
             assertTrue(texts.any { activity.getString(R.string.search_version_line) in it })
             assertTrue(texts.any { activity.getString(R.string.search_version_word) in it })
             assertTrue(texts.contains(activity.getString(R.string.search_back_recordings)))
-            val versionsList=descendants(content).filterIsInstance<androidx.recyclerview.widget.RecyclerView>().single {
+            val versionsList=descendants(content).filterIsInstance<RecyclerView>().single {
                 it.isShown && it.adapter is androidx.recyclerview.widget.ConcatAdapter
             }
             // The recording detail contains its lyric choices, with no cross-source action or catalogue footer.
@@ -334,7 +348,7 @@ class LyricsSearchLayoutTest {
     @Test
     @Config(qualifiers="en-rUS-w400dp-h900dp-mdpi")
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun catalogueKeepsPaginationAtTheEndAndRecordingHintsExpandInPlace() {
+    fun catalogueKeepsPaginationAtTheEndWithoutRecordingWarnings() {
         Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
             val activity=controller.get()
             val content=activity.findViewById<ViewGroup>(android.R.id.content)
@@ -344,10 +358,15 @@ class LyricsSearchLayoutTest {
             val recordings=(1..30).map { n -> com.andsi.airlyrics.lyrics.search.ManualWordRecording(
                 supplier,"$n",initial.target.copy(album="Album $n"),requiresConfirmation=n==1) }
             val rows=recordings.map { LyricsCandidate(source,it.key,it.song,1.0,recording=it) }
-            render(activity,initial.copy(sources=setOf(source),results=mapOf(source to SourceResults(
-                candidates=rows,wordQuery=initial.target,wordResults=mapOf(supplier to WordSourceResults(
-                    recordings=recordings,page=1,hasMore=true))))))
+            val batch=SourceResults(candidates=rows,wordQuery=initial.target,
+                wordResults=mapOf(supplier to WordSourceResults(recordings=recordings,page=1,hasMore=true)))
+            render(activity,initial.copy(sources=setOf(source),results=mapOf(source to batch.copy(loading=true))))
             layout(content,900);ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS);layout(content,900)
+            assertTrue(descendants(content).filterIsInstance<LyricsLoadingView>().any { it.isShown })
+            assertFalse(descendants(content).filterIsInstance<TextView>().any { it.isShown && it.text=="Album 1" })
+            render(activity,initial.copy(sources=setOf(source),results=mapOf(source to batch)))
+            layout(content,900);ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS);layout(content,900)
+            assertFalse(descendants(content).filterIsInstance<LyricsLoadingView>().any { it.isShown })
             fun texts()=descendants(content).filterIsInstance<TextView>().filter { it.isShown }.map { it.text.toString() }
             fun capture(name:String) {
                 val bitmap=Bitmap.createBitmap(400,900,Bitmap.Config.ARGB_8888)
@@ -358,21 +377,11 @@ class LyricsSearchLayoutTest {
             descendants(content).filterIsInstance<AppBarLayout>().single().setExpanded(false,false)
             layout(content,900);ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS);layout(content,900)
             assertFalse(texts().contains(activity.getString(R.string.search_more_songs)))
-            assertFalse(texts().contains(activity.getString(R.string.search_version_check)))
-            capture("clean-catalogue")
-            val fragments=activity.supportFragmentManager.fragments.size
-            val info=descendants(content).filterIsInstance<android.widget.ImageButton>().single {
-                it.isShown && it.contentDescription==activity.getString(R.string.search_recording_hint)
-            }
-            info.performClick();ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS);layout(content,900)
-            assertTrue(texts().contains(activity.getString(R.string.search_version_check)))
-            assertEquals(fragments,activity.supportFragmentManager.fragments.size)
-            capture("inline-hint")
-            info.performClick();ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS)
-            assertFalse(texts().contains(activity.getString(R.string.search_version_check)))
-            val list=descendants(content).filterIsInstance<androidx.recyclerview.widget.RecyclerView>().single {
+            val list=descendants(content).filterIsInstance<RecyclerView>().single {
                 it.adapter is androidx.recyclerview.widget.ConcatAdapter && it.isShown
             }
+            assertFalse(descendants(list).filterIsInstance<android.widget.ImageButton>().any { it.isShown })
+            capture("clean-catalogue")
             list.scrollToPosition(list.adapter!!.itemCount-1)
             layout(content,900);ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS);layout(content,900)
             assertEquals(1,texts().count { it==activity.getString(R.string.search_more_songs) })
@@ -383,6 +392,98 @@ class LyricsSearchLayoutTest {
             assertTrue(more.getGlobalVisibleRect(bounds))
             assertTrue(bounds.height()>=48)
             capture("clean-footer")
+        }
+    }
+
+    @Test
+    @Config(qualifiers="en-rUS-w400dp-h900dp-mdpi")
+    fun paginationPreservesTheVisibleSongAndOffsetAcrossLoadingAndBackgroundDiffing() =
+        verifyPaginationViewport(appendRows=true)
+
+    @Test
+    @Config(qualifiers="en-rUS-w400dp-h900dp-mdpi")
+    fun anEmptyFinalPageKeepsTheReadingPositionAndShowsTheEndOfResults() =
+        verifyPaginationViewport(appendRows=false)
+
+    private fun verifyPaginationViewport(appendRows:Boolean) {
+        Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
+            val activity=controller.get()
+            val content=activity.findViewById<ViewGroup>(android.R.id.content)
+            val initial=session(activity).state.value
+            val source=PlainLyricsSearchSource.NETEASE
+            val supplier=com.andsi.airlyrics.lyrics.search.ManualWordSource.NETEASE
+            val rows=(1..50).map { n ->
+                val song=initial.target.copy(title="Song $n")
+                val recording=com.andsi.airlyrics.lyrics.search.ManualWordRecording(supplier,"$n",song)
+                LyricsCandidate(source,recording.key,song,1.0,recording=recording)
+            }
+            val batch=SourceResults(candidates=rows.take(30),wordQuery=initial.target,
+                wordResults=mapOf(supplier to WordSourceResults(page=1,hasMore=true)))
+            fun show(result:SourceResults) {
+                render(activity,initial.copy(sources=setOf(source),results=mapOf(source to result)))
+                layout(content,900)
+                ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS)
+                layout(content,900)
+            }
+            show(batch)
+            val appBar=descendants(content).filterIsInstance<AppBarLayout>().single()
+            appBar.setExpanded(false,false)
+            layout(content,900);ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS);layout(content,900)
+            val list=descendants(content).filterIsInstance<RecyclerView>().single {
+                it.isShown && it.adapter is androidx.recyclerview.widget.ConcatAdapter
+            }
+            list.scrollToPosition(list.adapter!!.itemCount-1)
+            layout(content,900);ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS);layout(content,900)
+            val manager=list.layoutManager as LinearLayoutManager
+            val position=manager.findFirstVisibleItemPosition()
+            assertTrue(position>0 && position<30)
+            val id=list.adapter!!.getItemId(position)
+            val top=manager.findViewByPosition(position)!!.top
+            val appBarBottom=appBar.bottom
+            val footerTop=list.findViewHolderForAdapterPosition(batch.candidates.size)!!.itemView.top
+            fun assertReadingPosition() {
+                assertTrue(list.isShown)
+                assertEquals(position,manager.findFirstVisibleItemPosition())
+                assertEquals(id,list.adapter!!.getItemId(position))
+                assertEquals(top,manager.findViewByPosition(position)!!.top)
+                assertEquals(appBarBottom,appBar.bottom)
+            }
+
+            show(batch.copy(loading=true,wordResults=mapOf(supplier to WordSourceResults(loading=true,page=1,hasMore=true))))
+            assertSame(list,descendants(content).filterIsInstance<RecyclerView>().single {
+                it.adapter is androidx.recyclerview.widget.ConcatAdapter
+            })
+            assertEquals(View.VISIBLE,list.visibility)
+            assertReadingPosition()
+            val footer=list.findViewHolderForAdapterPosition(batch.candidates.size)!!.itemView
+            val progress=descendants(footer).filterIsInstance<LyricsLoadingView>().single { it.isShown }
+            assertEquals(footerTop,footer.top)
+            assertEquals(1,descendants(content).filterIsInstance<LyricsLoadingView>().count { it.isShown })
+            // Provider callbacks keep the same footer animation running until the prepared batch is ready.
+            show(batch.copy(loading=true))
+            assertReadingPosition()
+            assertSame(progress,descendants(footer).filterIsInstance<LyricsLoadingView>().single { it.isShown })
+            val next=if(appendRows) rows else batch.candidates
+            show(batch.copy(candidates=next,wordResults=mapOf(supplier to WordSourceResults(page=2))))
+            val expectedCount=next.size+1 // The end status keeps the footer space when no new songs arrive.
+            val deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5)
+            while(list.adapter!!.itemCount!=expectedCount && System.nanoTime()<deadline) {
+                ShadowLooper.idleMainLooper()
+                Thread.yield()
+            }
+            layout(content,900);ShadowLooper.idleMainLooper(500,TimeUnit.MILLISECONDS);layout(content,900)
+            assertEquals(expectedCount,list.adapter!!.itemCount)
+            assertReadingPosition()
+            assertFalse(descendants(content).filterIsInstance<LyricsLoadingView>().any { it.isShown })
+            list.scrollToPosition(expectedCount-1)
+            layout(content,900);ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS);layout(content,900)
+            val end=descendants(list).filterIsInstance<TextView>().single {
+                it.isShown && it.text.toString()==activity.getString(R.string.search_no_more_results)
+            }
+            assertFalse(end.isClickable)
+            assertFalse(descendants(list).filterIsInstance<TextView>().any {
+                it.isShown && it.text.toString()==activity.getString(R.string.search_more_songs)
+            })
         }
     }
 

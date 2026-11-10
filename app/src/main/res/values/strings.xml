@@ -502,20 +502,24 @@ Word-timed TTML:
     <string name="search_translation">Translation</string>
     <string name="search_no_content">No usable lyrics</string>
     <string name="search_sources_selected">Sources · %1$s</string>
-    <string name="search_sources_use">Use selected sources (%1$d)</string>
+    <string name="search_sources_count">Sources · %1$d</string>
+    <string name="search_sources_selection_count">%1$d selected</string>
+    <string name="search_sources_choose_one">Select at least one source</string>
+    <string name="search_sources_use">Apply</string>
     <string name="search_no_sources_selected">You haven’t selected a lyrics source yet.</string>
     <string name="search_source_empty">This source has no lyrics for this song yet</string>
     <string name="search_no_timeline">No usable timing</string>
     <string name="search_unsupported_format">Unsupported lyrics format</string>
     <string name="search_no_usable_lines">No usable lyric lines</string>
     <string name="search_spotify_id">Search by Spotify ID</string>
+    <string name="search_try_spotify_id">Try Spotify ID search</string>
+    <string name="search_try_word_search">Try word-synced search</string>
     <string name="search_spotify_id_input">Spotify track link or ID</string>
     <string name="search_spotify_id_invalid">Enter a valid Spotify track link or 22-character ID</string>
     <string name="search_spotify_id_active">Spotify ID · %1$s</string>
     <string name="search_by_title">Search by song title</string>
     <string name="search_spotify_id_empty">No lyrics for this ID</string>
     <string name="search_spotify_track">Spotify track</string>
-    <string name="search_ready">Choose Search to find lyrics</string>
     <string name="search_id_match">Fetched using Spotify ID</string>
     <string name="search_id_badge" translatable="false">ID</string>
     <string name="ui_highlight_effects">Highlight effects</string>
@@ -550,7 +554,6 @@ Word-timed TTML:
     <string name="search_version">%1$s · %2$s</string>
     <string name="search_word_loading">%1$s · Searching…</string>
     <string name="search_word_missing">%1$s · No word-synced lyrics</string>
-    <string name="search_version_check">This recording may differ from your search.</string>
     <string name="search_word_search">Search word-synced lyrics</string>
     <string name="search_word_results">Versions</string>
     <string name="search_title_required">Enter a song title</string>
@@ -567,7 +570,6 @@ Word-timed TTML:
     <string name="search_only_plain">No synced lyrics in this version</string>
     <string name="search_no_songs">%1$s · No songs found</string>
     <string name="search_more_source">Load more · %1$s</string>
-    <string name="search_other_results">Other results</string>
     <string name="search_back_recordings">Songs</string>
     <string name="search_lyrics_unchecked">Lyrics not loaded</string>
     <string name="search_lyric_rating">Rating %1$s</string>
@@ -576,11 +578,10 @@ Word-timed TTML:
     <string name="search_duration_match">Song duration (min:sec)</string>
     <string name="search_duration_help_action">About duration matching</string>
     <string name="search_duration_help">Ranks versions with a similar duration first.</string>
-    <string name="search_more_songs">More songs</string>
+    <string name="search_more_songs">Try to fetch more results</string>
+    <string name="search_no_more_results">No more results</string>
     <string name="search_songs_loading">Loading songs…</string>
     <string name="search_edit_query">Edit search</string>
     <string name="search_source_retry">%1$s · Failed to load · %2$s</string>
-    <string name="search_recording_hint">Show recording hint</string>
-    <string name="search_hide_recording_hint">Hide recording hint</string>
     <string name="search_lyric_number">Lyrics %1$d</string>
 </resources>

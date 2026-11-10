@@ -500,20 +500,24 @@
     <string name="search_translation">翻译</string>
     <string name="search_no_content">暂无可用歌词</string>
     <string name="search_sources_selected">来源 · %1$s</string>
-    <string name="search_sources_use">使用所选来源（%1$d）</string>
+    <string name="search_sources_count">来源 · %1$d</string>
+    <string name="search_sources_selection_count">已选 %1$d 个</string>
+    <string name="search_sources_choose_one">请至少选择一个来源</string>
+    <string name="search_sources_use">应用</string>
     <string name="search_no_sources_selected">还没有选择歌词源哦</string>
     <string name="search_source_empty">该来源暂无这首歌的歌词</string>
     <string name="search_no_timeline">无可用时间轴</string>
     <string name="search_unsupported_format">暂不支持此歌词格式</string>
     <string name="search_no_usable_lines">没有可用歌词行</string>
     <string name="search_spotify_id">Spotify ID 搜索</string>
+    <string name="search_try_spotify_id">尝试通过 Spotify ID 搜索</string>
+    <string name="search_try_word_search">尝试搜索逐字歌词</string>
     <string name="search_spotify_id_input">Spotify 曲目链接或 ID</string>
     <string name="search_spotify_id_invalid">请输入有效的曲目链接或 22 位 ID</string>
     <string name="search_spotify_id_active">Spotify ID · %1$s</string>
     <string name="search_by_title">按歌名搜索</string>
     <string name="search_spotify_id_empty">该 ID 暂无歌词</string>
     <string name="search_spotify_track">Spotify 曲目</string>
-    <string name="search_ready">点击搜索查找歌词</string>
     <string name="search_id_match">通过 Spotify ID 获取</string>
     <string name="ui_highlight_effects">高亮效果</string>
     <string name="ui_enable_glow">开启发光</string>
@@ -547,7 +551,6 @@
     <string name="search_version">%1$s · %2$s</string>
     <string name="search_word_loading">%1$s · 查询中…</string>
     <string name="search_word_missing">%1$s · 没有逐字歌词</string>
-    <string name="search_version_check">与搜索条件可能不符，请确认版本。</string>
     <string name="search_word_search">搜索逐字歌词</string>
     <string name="search_word_results">版本</string>
     <string name="search_title_required">请输入歌名</string>
@@ -564,7 +567,6 @@
     <string name="search_only_plain">此版本没有同步歌词</string>
     <string name="search_no_songs">%1$s · 未找到歌曲</string>
     <string name="search_more_source">加载更多 · %1$s</string>
-    <string name="search_other_results">其他结果</string>
     <string name="search_back_recordings">歌曲列表</string>
     <string name="search_lyrics_unchecked">歌词尚未加载</string>
     <string name="search_lyric_rating">评分 %1$s</string>
@@ -573,11 +575,10 @@
     <string name="search_duration_match">歌曲时长（分:秒）</string>
     <string name="search_duration_help_action">时长如何使用</string>
     <string name="search_duration_help">优先显示时长相近的版本。</string>
-    <string name="search_more_songs">更多歌曲</string>
+    <string name="search_more_songs">尝试获取更多结果</string>
+    <string name="search_no_more_results">没有更多结果</string>
     <string name="search_songs_loading">正在加载歌曲…</string>
     <string name="search_edit_query">修改搜索</string>
     <string name="search_source_retry">%1$s · 加载失败 · %2$s</string>
-    <string name="search_recording_hint">显示版本提示</string>
-    <string name="search_hide_recording_hint">收起版本提示</string>
     <string name="search_lyric_number">歌词 %1$d</string>
 </resources>

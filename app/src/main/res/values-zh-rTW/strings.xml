@@ -500,20 +500,24 @@
     <string name="search_translation">翻譯</string>
     <string name="search_no_content">暫無可用歌詞</string>
     <string name="search_sources_selected">來源 · %1$s</string>
-    <string name="search_sources_use">使用所選來源（%1$d）</string>
+    <string name="search_sources_count">來源 · %1$d</string>
+    <string name="search_sources_selection_count">已選 %1$d 個</string>
+    <string name="search_sources_choose_one">請至少選擇一個來源</string>
+    <string name="search_sources_use">套用</string>
     <string name="search_no_sources_selected">還沒有選擇歌詞來源喔</string>
     <string name="search_source_empty">此來源暫無這首歌的歌詞</string>
     <string name="search_no_timeline">無可用時間軸</string>
     <string name="search_unsupported_format">暫不支援此歌詞格式</string>
     <string name="search_no_usable_lines">沒有可用歌詞行</string>
     <string name="search_spotify_id">Spotify ID 搜尋</string>
+    <string name="search_try_spotify_id">嘗試透過 Spotify ID 搜尋</string>
+    <string name="search_try_word_search">嘗試搜尋逐字歌詞</string>
     <string name="search_spotify_id_input">Spotify 曲目連結或 ID</string>
     <string name="search_spotify_id_invalid">請輸入有效的曲目連結或 22 位 ID</string>
     <string name="search_spotify_id_active">Spotify ID · %1$s</string>
     <string name="search_by_title">依歌名搜尋</string>
     <string name="search_spotify_id_empty">此 ID 暫無歌詞</string>
     <string name="search_spotify_track">Spotify 曲目</string>
-    <string name="search_ready">點選搜尋尋找歌詞</string>
     <string name="search_id_match">透過 Spotify ID 取得</string>
     <string name="ui_highlight_effects">醒目提示效果</string>
     <string name="ui_enable_glow">開啟發光</string>
@@ -547,7 +551,6 @@
     <string name="search_version">%1$s · %2$s</string>
     <string name="search_word_loading">%1$s · 查詢中…</string>
     <string name="search_word_missing">%1$s · 沒有逐字歌詞</string>
-    <string name="search_version_check">與搜尋條件可能不符，請確認版本。</string>
     <string name="search_word_search">搜尋逐字歌詞</string>
     <string name="search_word_results">版本</string>
     <string name="search_title_required">請輸入歌名</string>
@@ -564,7 +567,6 @@
     <string name="search_only_plain">此版本沒有同步歌詞</string>
     <string name="search_no_songs">%1$s · 未找到歌曲</string>
     <string name="search_more_source">載入更多 · %1$s</string>
-    <string name="search_other_results">其他結果</string>
     <string name="search_back_recordings">歌曲列表</string>
     <string name="search_lyrics_unchecked">歌詞尚未載入</string>
     <string name="search_lyric_rating">評分 %1$s</string>
@@ -573,11 +575,10 @@
     <string name="search_duration_match">歌曲時長（分:秒）</string>
     <string name="search_duration_help_action">時長如何使用</string>
     <string name="search_duration_help">優先顯示時長相近的版本。</string>
-    <string name="search_more_songs">更多歌曲</string>
+    <string name="search_more_songs">嘗試取得更多結果</string>
+    <string name="search_no_more_results">沒有更多結果</string>
     <string name="search_songs_loading">正在載入歌曲…</string>
     <string name="search_edit_query">修改搜尋</string>
     <string name="search_source_retry">%1$s · 載入失敗 · %2$s</string>
-    <string name="search_recording_hint">顯示版本提示</string>
-    <string name="search_hide_recording_hint">收起版本提示</string>
     <string name="search_lyric_number">歌詞 %1$d</string>
 </resources>

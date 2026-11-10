@@ -504,20 +504,24 @@ TTML de tiempo por palabra:
     <string name="search_translation">Traducción</string>
     <string name="search_no_content">No hay letras disponibles</string>
     <string name="search_sources_selected">Fuentes · %1$s</string>
-    <string name="search_sources_use">Usar selección (%1$d)</string>
+    <string name="search_sources_count">Fuentes · %1$d</string>
+    <string name="search_sources_selection_count">Selección: %1$d</string>
+    <string name="search_sources_choose_one">Elige al menos una fuente</string>
+    <string name="search_sources_use">Aplicar</string>
     <string name="search_no_sources_selected">Aún no has elegido una fuente de letras.</string>
     <string name="search_source_empty">Esta fuente aún no tiene la letra de esta canción</string>
     <string name="search_no_timeline">Sin sincronización válida</string>
     <string name="search_unsupported_format">Formato de letra no compatible</string>
     <string name="search_no_usable_lines">No hay líneas de letra válidas</string>
     <string name="search_spotify_id">Buscar por Spotify ID</string>
+    <string name="search_try_spotify_id">Probar búsqueda por Spotify ID</string>
+    <string name="search_try_word_search">Probar búsqueda por palabra</string>
     <string name="search_spotify_id_input">Enlace de canción de Spotify o ID</string>
     <string name="search_spotify_id_invalid">Introduce un enlace de canción válido o un ID de 22 caracteres</string>
     <string name="search_spotify_id_active">Spotify ID · %1$s</string>
     <string name="search_by_title">Buscar por título</string>
     <string name="search_spotify_id_empty">No hay letra para este ID</string>
     <string name="search_spotify_track">Canción de Spotify</string>
-    <string name="search_ready">Pulsa Buscar para encontrar letras</string>
     <string name="search_id_match">Obtenida mediante Spotify ID</string>
     <string name="ui_highlight_effects">Efectos de resaltado</string>
     <string name="ui_enable_glow">Activar resplandor</string>
@@ -551,7 +555,6 @@ TTML de tiempo por palabra:
     <string name="search_version">%1$s · %2$s</string>
     <string name="search_word_loading">%1$s · Buscando…</string>
     <string name="search_word_missing">%1$s · Sin letra por palabra</string>
-    <string name="search_version_check">Esta versión puede diferir de la búsqueda.</string>
     <string name="search_word_search">Buscar letra por palabra</string>
     <string name="search_word_results">Versiones</string>
     <string name="search_title_required">Introduce el título de la canción</string>
@@ -568,7 +571,6 @@ TTML de tiempo por palabra:
     <string name="search_only_plain">Esta versión no tiene letras sincronizadas</string>
     <string name="search_no_songs">%1$s · No se encontraron canciones</string>
     <string name="search_more_source">Cargar más · %1$s</string>
-    <string name="search_other_results">Otros resultados</string>
     <string name="search_back_recordings">Canciones</string>
     <string name="search_lyrics_unchecked">Letras sin cargar</string>
     <string name="search_lyric_rating">Puntuación %1$s</string>
@@ -577,11 +579,10 @@ TTML de tiempo por palabra:
     <string name="search_duration_match">Duración (min:seg)</string>
     <string name="search_duration_help_action">Cómo se usa la duración</string>
     <string name="search_duration_help">Prioriza versiones de duración similar.</string>
-    <string name="search_more_songs">Más canciones</string>
+    <string name="search_more_songs">Intentar obtener más resultados</string>
+    <string name="search_no_more_results">No hay más resultados</string>
     <string name="search_songs_loading">Cargando canciones…</string>
     <string name="search_edit_query">Editar búsqueda</string>
     <string name="search_source_retry">%1$s · Error al cargar · %2$s</string>
-    <string name="search_recording_hint">Mostrar aviso de versión</string>
-    <string name="search_hide_recording_hint">Ocultar aviso de versión</string>
     <string name="search_lyric_number">Letra %1$d</string>
 </resources>

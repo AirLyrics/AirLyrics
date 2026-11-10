@@ -64,7 +64,7 @@ class LyricsSearchInstrumentedTest {
             fun assertDialog() = scenario.onActivity { activity ->
                 val button = descendants(activity.findViewById(android.R.id.content))
                     .filterIsInstance<com.google.android.material.button.MaterialButton>()
-                    .single { it.text.toString() == activity.getString(R.string.ui_search) }
+                    .single { it.text.toString() == activity.getString(R.string.search_regular_search) }
                 assertTrue("Search must explain the missing source", button.isEnabled)
                 button.performClick()
                 val dialog = LyricsSearchActivity::class.java.getDeclaredField("missingSourcesDialog").run {
@@ -117,7 +117,7 @@ class LyricsSearchInstrumentedTest {
                 assertEquals("Edited artist",fields[1].text.toString())
                 assertTrue(views.filterIsInstance<TextView>().any { it.text.toString().contains("Original song") })
                 assertTrue("Search must remain enabled with an edited query and a configured source",
-                    views.filterIsInstance<TextView>().any { it.text.toString()==activity.getString(R.string.ui_search) && it.isEnabled })
+                    views.filterIsInstance<TextView>().any { it.text.toString()==activity.getString(R.string.search_regular_search) && it.isEnabled })
             }
             for (orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)) {
                 scenario.onActivity { it.requestedOrientation = orientation }
@@ -575,15 +575,15 @@ class LyricsSearchInstrumentedTest {
                 instrumentation.waitForIdleSync()
                 scenario.onActivity { activity ->
                     val sheet=activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as LyricsSourcesSheet
-                    val backing=sheet.requireDialog().findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
-                    assertNull(backing.background)
-                    assertNull(backing.backgroundTintList)
-                    assertEquals(0f,backing.elevation)
+                    val morph=descendants(sheet.requireDialog().window!!.decorView)
+                        .filterIsInstance<LyricsSourcesMorphView>().single()
+                    assertTrue(morph.panelBounds.width()>morph.capsuleBounds.width())
+                    assertEquals(morph.capsuleBounds.right,morph.panelBounds.right,0.01f)
                     val views=descendants(sheet.requireDialog().window!!.decorView)
                     assertTrue(views.single { it.contentDescription==activity.localizedPlainLyricsProviderName(added.key) }.isSelected)
                     assertEquals(initial,session(activity).state.value.sources)
                 }
-                SystemClock.sleep(350)
+                SystemClock.sleep(500)
                 instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
                     PlatformTestStorageRegistry.getInstance().openOutputFile("manual-source-picker.png").use {
                         bitmap.compress(Bitmap.CompressFormat.PNG,100,it)
@@ -598,6 +598,7 @@ class LyricsSearchInstrumentedTest {
                     assertEquals(initial+added,session(activity).state.value.sources)
                 }
                 instrumentation.waitForIdleSync()
+                SystemClock.sleep(400)
                 scenario.onActivity { activity ->
                     LyricsSourcesSheet.create(initial+added).showNow(activity.supportFragmentManager,LyricsSourcesSheet.TAG)
                     val sheet=activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as LyricsSourcesSheet
