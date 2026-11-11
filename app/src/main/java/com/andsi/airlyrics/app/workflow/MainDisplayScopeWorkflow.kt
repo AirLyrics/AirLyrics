@@ -25,6 +25,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainGraph
+import com.andsi.airlyrics.app.search.LyricsLoadingView
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.displayscope.DisplayScopeCapability
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
@@ -33,6 +34,7 @@ import com.andsi.airlyrics.ui.components.expandableText
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.showAirDialog
+import com.andsi.airlyrics.ui.theme.airLyricsPalette
 import com.andsi.airlyrics.ui.theme.applyAirThemeTint
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
@@ -59,14 +61,16 @@ internal class MainDisplayScopeWorkflow(
     private inner class AppPickerSession(
         private val dialog: Dialog,
         private val adapter: AppChoiceAdapter,
-        private val emptyView: TextView
+        private val emptyView: TextView,
+        private val loadingView: LyricsLoadingView
     ) {
         fun showChoices(
             choices: List<DisplayScopeAppChoice>,
             pruneMissingSelections: Boolean
         ) {
             if (!dialog.isShowing) return
-            emptyView.setText(R.string.ui_no_apps_found)
+            loadingView.visibility = View.GONE
+            emptyView.visibility = View.VISIBLE
             adapter.submitChoices(choices, pruneMissingSelections)
             val list = findList(dialog.window?.decorView)
             val draft = graph.viewModel.interactions.read("appPicker")
@@ -228,6 +232,7 @@ internal class MainDisplayScopeWorkflow(
             ?: DisplayScopeStore.selectedPackages(this)).toMutableSet()
         val adapter = AppChoiceAdapter(emptyList(), selected)
         lateinit var empty: TextView
+        lateinit var loading: LyricsLoadingView
         lateinit var selectAll: TextView
         val dialog = showAirDialog(
             title = getString(R.string.ui_choose_apps),
@@ -265,16 +270,34 @@ internal class MainDisplayScopeWorkflow(
                 addView(search)
 
                 empty = TextView(this@with).apply {
-                    text = getString(R.string.ui_loading)
+                    text = getString(R.string.ui_no_apps_found)
                     textSize = AirUiTokens.TextSize.Body
                     setTextColor(colorTextMuted)
                     gravity = Gravity.CENTER
+                    visibility = View.GONE
+                }
+                loading = LyricsLoadingView(this@with, airLyricsPalette)
+                val emptyState = FrameLayout(this@with).apply {
+                    addView(
+                        empty,
+                        FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    )
+                    addView(
+                        loading,
+                        FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    )
                 }
                 val list = ListView(this@with).apply {
                     this.adapter = adapter
                     divider = null
                     dividerHeight = 0
-                    emptyView = empty
+                    emptyView = emptyState
                     isVerticalScrollBarEnabled = true
                     isNestedScrollingEnabled = true
                     overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
@@ -303,7 +326,7 @@ internal class MainDisplayScopeWorkflow(
                         )
                     )
                     addView(
-                        empty,
+                        emptyState,
                         FrameLayout.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
@@ -370,7 +393,7 @@ internal class MainDisplayScopeWorkflow(
             }
         )
         currentDialog = dialog
-        AppPickerSession(dialog, adapter, empty)
+        AppPickerSession(dialog, adapter, empty, loading)
     }
 
     private fun updateSelectAllButton(
