@@ -1,13 +1,8 @@
-v1.2.9 - 2026-11-07
+v1.2.10 - 2026-11-11
 
 Added
-- Edit word-by-word lyrics, including word text and timing.
-- Import, save, and edit plain text lyrics (no floating display).
-- Search Spicy Lyrics by Spotify track link or ID.
+- Search word-by-word lyrics from NetEase Cloud Music, Kugou, and QQ Music.
 
 Improved
-- Add lyric glow controls and smoother Spicy animations.
-- Add an interactive cat to the About page (I don't know why I made this either).
-
-Fixed
-- Fix many small issues.
+- Adjust the lyrics search layout and move the source button.
+- Show loading feedback in the Display scope app picker.

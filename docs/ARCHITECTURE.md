@@ -88,6 +88,16 @@ Spicy supports line-timed, word-by-word, and plain text lyrics and must be enabl
 
 Set `airlyrics.spicy.clientKey` in an untracked `local.properties` or user Gradle properties file, or use `AIRLYRICS_SPICY_CLIENT_KEY`. Use an `sl_pk_` key with client access enabled, never an `sl_sk_` secret key. Do not commit real keys. Without a configured key, Spicy is unavailable.
 
+### Manual word-by-word search
+
+NetEase Cloud Music, Kugou, and QQ Music use a separate, paginated manual catalogue. Lyric versions
+are fetched only for the selected recording. Rust validates YRC, KRC, and QRC timing; Kotlin retains
+per-source results and rejects stale query or target callbacks. Previewing does not write storage;
+applying uses the existing manual selection transaction. Automatic lyrics sources are unchanged.
+
+See [Manual lyric catalogue and version selection](../lyrics-core/MANUAL_WORD_LYRICS.md) for protocol,
+cancellation, and failure-isolation details.
+
 ### Lyrics matching
 
 Manual imports take priority over cached and online lyrics. Selected providers run in priority order and share title, artist, duration and album scoring. Queries broaden when needed, so a match may be a different recording. Spicy uses a track ID from the selected Spotify player or manual input when available; otherwise it searches Spotify for candidates. Line timing remains available when word timing is missing. LRCLIB and Spicy plain text results are retained as fallbacks after timed results; untimed content is stored separately and is not rendered as synced floating lyrics.

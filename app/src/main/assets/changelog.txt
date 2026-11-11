@@ -1,3 +1,13 @@
+v1.2.10 - 2026-11-11
+
+Added
+- Search word-by-word lyrics from NetEase Cloud Music, Kugou, and QQ Music.
+
+Improved
+- Adjust the lyrics search layout and move the source button.
+- Show loading feedback in the Display scope app picker.
+
+
 v1.2.9 - 2026-11-07
 
 Added

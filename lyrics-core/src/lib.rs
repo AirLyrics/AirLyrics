@@ -31,8 +31,8 @@ mod matching;
 mod musixmatch;
 #[cfg(test)]
 mod native_result_contract_tests;
-mod qrc_crypto;
 mod qq;
+mod qrc_crypto;
 mod recording;
 mod review;
 mod spicy;

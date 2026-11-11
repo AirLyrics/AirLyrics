@@ -347,11 +347,11 @@ fn key_schedule(key: &[u8], schedule: &mut [[u8; 6]], mode: Mode) {
         let togen = if mode == Mode::Decrypt { 15 - i } else { i };
         schedule[togen] = [0u8; 6];
 
-        for j in 0..24 {
-            schedule[togen][j / 8] |= bitnum_intr(c, KEY_COMPRESSION[j] as usize, 7 - (j % 8));
+        for (j, &perm) in KEY_COMPRESSION.iter().enumerate().take(24) {
+            schedule[togen][j / 8] |= bitnum_intr(c, perm as usize, 7 - (j % 8));
         }
-        for j in 24..48 {
-            schedule[togen][j / 8] |= bitnum_intr(d, KEY_COMPRESSION[j] as usize - 27, 7 - (j % 8));
+        for (j, &perm) in KEY_COMPRESSION.iter().enumerate().skip(24) {
+            schedule[togen][j / 8] |= bitnum_intr(d, perm as usize - 27, 7 - (j % 8));
         }
     }
 }

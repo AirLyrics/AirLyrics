@@ -57,10 +57,12 @@ jobs:
         with:
           targets: x86_64-linux-android
 
+      # cargo-ndk disables binstall's source fallback; install its locked sources directly.
       - name: Install cargo-ndk
         uses: taiki-e/install-action@v2
         with:
-          tool: cargo-ndk
+          tool: cargo-ndk@4.1.2
+          fallback: cargo-install
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6

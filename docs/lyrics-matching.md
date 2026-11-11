@@ -69,6 +69,11 @@ checks the response ID. Missing lyrics remain unavailable. The existing Apple pa
 and translations, and the normal manual selection transaction saves them together for later playback.
 An Apple account is required for both search and preview; credentials are read again for each operation.
 
+Manual word-by-word search has a separate paginated catalogue for NetEase Cloud Music, Kugou, and QQ Music.
+It requests 20 recordings per page and fetches versions only for the selected recording. Matching ranks
+the catalogue without automatically applying a result. See the [catalogue protocol](../lyrics-core/MANUAL_WORD_LYRICS.md)
+for timing validation, partial failures, and per-source cancellation.
+
 Applying obtains a manual commit lease, rechecks protected file revisions under the storage lock, and
 uses `ManualLyricsSelectionStore` to save and publish a target-specific change. Imported, edited and legacy
 local text require explicit replacement confirmation. Edited plain files now carry `manual_edit` provenance.

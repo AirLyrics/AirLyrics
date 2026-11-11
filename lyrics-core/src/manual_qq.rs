@@ -450,7 +450,8 @@ mod tests {
         assert_eq!(lines[0]["text"], "「你好」");
         assert_eq!(lines[0]["endMs"], 2001);
         assert_eq!(lines[0]["tokens"].as_array().unwrap().len(), 2);
-        let lines = parse_qrc("[0,0]Credits(0,0)\n[1000,1000]你(1000,400)(1400,0)好(1400,600)").unwrap();
+        let lines =
+            parse_qrc("[0,0]Credits(0,0)\n[1000,1000]你(1000,400)(1400,0)好(1400,600)").unwrap();
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0]["text"], "你好");
     }

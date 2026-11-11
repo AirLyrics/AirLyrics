@@ -41,7 +41,8 @@ is enabled.
 - **Display blocked** means floating lyrics are still enabled, but current conditions prevent the
   window from appearing. See the troubleshooting section at the bottom.
 - **Lyrics offset** is saved for each song and does not change the original lyrics file.
-- **Word-by-word lyrics** supports local imports, Spicy Lyrics, and Apple Music when timing is available.
+- **Word-by-word lyrics** supports local imports, manual searches on NetEase Cloud Music, Kugou, and
+  QQ Music, plus Spicy Lyrics and Apple Music when timing is available.
 - **Highlight effects** lets you adjust the highlight color, glow strength, and glow spread.
 
 ## Lyrics and Local Files
@@ -85,6 +86,11 @@ In **Settings > Lyrics > Current song lyrics**, tap **Search lyrics**. Edit the 
 choose sources, and search. Swipe between sources, open a result to preview it, then tap **Apply lyrics**.
 The reset icon at the end of each edited field restores its original value.
 Searching and previewing leave existing lyrics intact; applying uses the song shown at the top of the window.
+
+On the NetEase source page, tap **Try word-synced search** to search NetEase Cloud Music, Kugou,
+and QQ Music. Choose a recording, then a lyric version to preview and apply. Album and duration
+are optional; enter duration as `min:sec`. Tap **More songs** to load more results.
+This search does not change your automatic lyrics sources.
 
 On the Spicy source page, choose **Search by Spotify ID** and paste a Spotify track link or
 22-character ID. When Spotify supplies the current track ID, AirLyrics can use it automatically.

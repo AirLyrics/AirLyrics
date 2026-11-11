@@ -4,6 +4,7 @@ Features:
 
 • Detect current media and show synced floating lyrics
 • Search NetEase Cloud Music, Musixmatch, LRCLIB, Spicy Lyrics, or Apple Music (sign-in required), and preview results before applying them
+• Manually search word-by-word lyrics from NetEase Cloud Music, Kugou, and QQ Music
 • Import local LRC, TTML, or TXT files, including LDDC word-timed LRC; display translations and adjust timing
 • Edit saved lyrics, including word text and timing; export, import, or delete lyrics in batches
 • Customize the floating window, lyric glow, and animations; switch between light and dark themes

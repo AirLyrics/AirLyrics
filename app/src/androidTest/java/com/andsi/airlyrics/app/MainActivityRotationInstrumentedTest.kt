@@ -239,20 +239,29 @@ class MainActivityRotationInstrumentedTest {
 
     private fun restoreRotationState(rotation: String, autoRotation: String, rotationMode: String) {
         check(rotation in listOf("0", "1", "2", "3")) { "Unexpected saved user_rotation: $rotation" }
-        // Always await a lock, even when user_rotation already has the saved value:
-        // display reconfiguration may still have a pending write to rotation mode.
-        shell("cmd window user-rotation lock $rotation")
-        awaitRotationState(rotation, "lock $rotation")
-        if (rotationMode != "lock $rotation") {
-            shell("cmd window user-rotation $rotationMode")
+        check(autoRotation in listOf("0", "1")) { "Unexpected saved accelerometer_rotation: $autoRotation" }
+        val expectedMode = if (autoRotation == "1") "free" else "lock $rotation"
+        check(rotationMode == expectedMode) { "Inconsistent saved rotation mode: $rotationMode; expected=$expectedMode" }
+        // Android 15's DisplayRotationReversionController can reapply a stale lock as
+        // display overrides are removed. Restore the default display's persisted settings
+        // until WindowManager agrees and the state stays stable; do not retry the test.
+        awaitRotationState(rotation, rotationMode, autoRotation) {
+            shell("settings put system user_rotation $rotation")
+            shell("settings put system accelerometer_rotation $autoRotation")
         }
-        awaitRotationState(rotation, rotationMode, autoRotation)
     }
 
-    private fun awaitRotationState(rotation: String, mode: String, autoRotation: String = "0") {
+    private fun awaitRotationState(
+        rotation: String,
+        mode: String,
+        autoRotation: String = "0",
+        restore: (() -> Unit)? = null
+    ) {
         val expected = mapOf("user_rotation" to rotation,
             "accelerometer_rotation" to autoRotation, "rotation_mode" to mode)
         var observed = emptyMap<String, String>()
+        var stableSince: Long? = null
+        var nextRestoreAt = 0L
         val deadline = SystemClock.uptimeMillis() + 10_000L
         while (SystemClock.uptimeMillis() < deadline) {
             observed = mapOf(
@@ -260,7 +269,17 @@ class MainActivityRotationInstrumentedTest {
                 "accelerometer_rotation" to shell("settings get system accelerometer_rotation").trim(),
                 "rotation_mode" to shell("cmd window user-rotation").trim()
             )
-            if (observed == expected) return
+            val now = SystemClock.uptimeMillis()
+            if (observed == expected) {
+                val since = stableSince ?: now.also { stableSince = it }
+                if (restore == null || now - since >= 500L) return
+            } else {
+                stableSince = null
+                if (restore != null && now >= nextRestoreAt) {
+                    restore()
+                    nextRestoreAt = SystemClock.uptimeMillis() + 500L
+                }
+            }
             SystemClock.sleep(50)
         }
         throw AssertionError("Rotation mode did not settle; expected=$expected observed=$observed")

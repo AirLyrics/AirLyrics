@@ -37,6 +37,8 @@ This data is used for app functionality. Online lyrics requests send the data de
 
 When the user searches lyrics online, AirLyrics sends the search request required by the lyrics provider. This may include song-related metadata such as title, artist, album, and duration.
 
+Word-by-word searches connect directly to NetEase Cloud Music, Kugou, or QQ Music. Requests may include your query, the selected song ID or hash, and the provider's lyric ID and access key.
+
 Except for Apple Music account requests, AirLyrics does not add account tokens, analytics identifiers, or advertising identifiers to lyrics searches.
 
 Apple Music sign-in takes place on Apple's page inside the app. AirLyrics does not read your Apple ID password. It sends the saved account token directly to Apple to validate the account and request lyrics. Signing out of AirLyrics removes its saved token and storefront; Apple's WebView cookies may remain on the device. App backup is disabled.

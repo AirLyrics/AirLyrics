@@ -17,8 +17,11 @@ use crate::aliases::AliasEntry;
 
 const SMARTBOX_URL: &str = "https://c.y.qq.com/splcloud/fcgi-bin/smartbox_new.fcg";
 const SONG_DETAIL_URL: &str = "https://c.y.qq.com/v8/fcg-bin/fcg_play_single_song.fcg";
-const USER_AGENT: &str =
-    "AirLyrics/1.2.9 (+https://github.com/AirLyrics/AirLyrics; lyrics title resolver)";
+const USER_AGENT: &str = concat!(
+    "AirLyrics/",
+    env!("CARGO_PKG_VERSION"),
+    " (+https://github.com/AirLyrics/AirLyrics; lyrics title resolver)"
+);
 const MAX_SMARTBOX_CANDIDATES: usize = 4;
 const DURATION_WINDOW_MS: u64 = 2_000;
 const ALIAS_CONFIDENCE: f64 = 0.8;

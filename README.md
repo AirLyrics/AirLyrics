@@ -65,6 +65,7 @@ For more settings and help with common problems, see the [User Guide](docs/USER_
   search across sources manually, preview results, and import local LRC, TTML, and TXT files, including
   LDDC word-timed LRC. Timed lyrics can show translations and word-by-word highlighting; plain text
   lyrics can be saved and edited but cannot be displayed in the overlay.
+  Manual word-by-word search also supports NetEase Cloud Music, Kugou, and QQ Music.
 - **Overlay appearance**: Adjust the font, weight, colors, opacity, glow, window style, and transition
   animations, with a live preview as you make changes. You can also import your own fonts.
 - **Themes**: Choose a light or dark theme, or follow the system setting, with several accent colors
@@ -235,6 +236,7 @@ Thanks so much to everyone who has shared feedback or contributed.
 ## Acknowledgments
 
 - [waylyrics](https://github.com/waylyrics/waylyrics)
+- [Lyrics-Helper](https://github.com/ChouChiu/Lyrics-Helper): cloud QRC decryption (Apache-2.0; [notice](app/src/main/assets/third_party/lyrics-helper/NOTICE)).
 
 ---
 

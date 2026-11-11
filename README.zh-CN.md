@@ -61,6 +61,7 @@ AirLyrics 目前已可用于日常听歌，仍在持续维护和改进。(更新
 - **歌词搜索与导入**：跟随所选播放器切换歌曲，通过网易云音乐、Musixmatch、LRCLIB、Spicy Lyrics
   或 Apple Music（需登录）搜索歌词；也可跨来源手动搜索、预览结果，并导入本地 LRC、TTML、TXT 和 LDDC 逐字 LRC。
   同步歌词支持翻译和逐字高亮；纯文本歌词可保存和编辑，但无法在悬浮窗显示。
+  也可手动搜索网易云音乐、酷狗音乐和 QQ 音乐的逐字歌词，选择版本后预览并应用。
 - **悬浮窗外观**：调整字体、字重、颜色、透明度、发光、窗口样式和切换动画，
   修改时可实时预览，也支持导入字体。
 - **主题**：支持浅色、深色和跟随系统，可选择不同的强调色。
@@ -224,6 +225,7 @@ app/build/outputs/apk/debug/
 ## 鸣谢
 
 - [waylyrics](https://github.com/waylyrics/waylyrics)
+- [Lyrics-Helper](https://github.com/ChouChiu/Lyrics-Helper)：云端 QRC 解密（Apache-2.0，见[声明](app/src/main/assets/third_party/lyrics-helper/NOTICE)）。
 
 ---
 
