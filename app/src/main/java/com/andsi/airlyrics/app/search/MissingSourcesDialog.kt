@@ -6,7 +6,6 @@ import android.animation.TimeInterpolator
 import android.animation.ValueAnimator
 import android.app.Dialog
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -27,6 +26,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.NestedScrollView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.button.MaterialButton
 
@@ -74,8 +75,7 @@ internal class MissingSourcesDialog(
             minWidth = dp(96)
             elevation = 0f
             stateListAnimator = null
-            backgroundTintList = ColorStateList.valueOf(palette.accent)
-            setTextColor(palette.onAccent)
+            styleAirTonalButton(AirTonalButtonTone.PRIMARY)
             setOnClickListener { dismiss() }
         }, LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
             gravity = Gravity.END

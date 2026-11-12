@@ -18,7 +18,9 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
-import com.andsi.airlyrics.ui.theme.AirLyricsPalette
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
+import com.andsi.airlyrics.ui.components.styleAirTextButton
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -89,9 +91,8 @@ class WordLyricsSearchDialog : DialogFragment() {
         titleInput = titleEdit
         artistInput = artistEdit
         val advanced=LinearLayout(requireContext()).apply { orientation=LinearLayout.VERTICAL }
-        val more=button(R.string.search_match_options,false,palette).apply {
-            backgroundTintList=ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
-            setTextColor(palette.accent)
+        val more=button(R.string.search_match_options,false).apply {
+            styleAirTextButton()
             gravity=android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
             setPadding(dp(4),dp(8),dp(4),dp(8))
         }
@@ -125,13 +126,12 @@ class WordLyricsSearchDialog : DialogFragment() {
         val actions = AdaptiveGridLayout(requireContext(),2,dp(8),dp(8)).apply {
             setPadding(0,dp(20),0,0)
         }
-        val cancel = button(R.string.ui_cancel,false,palette).apply { id=android.R.id.button2 }
-        val search = button(R.string.ui_search,true,palette).apply {
+        val cancel = button(R.string.ui_cancel,false).apply { id=android.R.id.button2 }
+        val search = button(R.string.ui_search,true).apply {
             id=android.R.id.button1
             setIconResource(R.drawable.ic_air_search)
             iconSize=dp(18)
             iconPadding=dp(8)
-            iconTint=ColorStateList.valueOf(palette.onAccent)
         }
         actions.addView(cancel)
         actions.addView(search)
@@ -174,7 +174,7 @@ class WordLyricsSearchDialog : DialogFragment() {
         return window
     }
 
-    private fun button(label:Int,primary:Boolean,palette:AirLyricsPalette) =
+    private fun button(label:Int,primary:Boolean) =
         MaterialButton(requireContext()).apply {
             setText(label)
             isAllCaps=false
@@ -191,8 +191,7 @@ class WordLyricsSearchDialog : DialogFragment() {
             setPadding(dp(16),dp(12),dp(16),dp(12))
             elevation=0f
             stateListAnimator=null
-            backgroundTintList=ColorStateList.valueOf(if(primary) palette.accent else palette.surfaceLight)
-            setTextColor(if(primary) palette.onAccent else palette.textStrong)
+            styleAirTonalButton(if(primary) AirTonalButtonTone.PRIMARY else AirTonalButtonTone.DEFAULT)
         }
 
     override fun onDismiss(dialog:DialogInterface) {

@@ -45,6 +45,9 @@ import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
+import com.andsi.airlyrics.ui.components.styleAirTextButton
 import com.andsi.airlyrics.ui.state.InteractionUiRegistry
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.google.android.material.button.MaterialButton
@@ -287,9 +290,6 @@ class LyricsSearchActivity : AppCompatActivity() {
                 .setAllCornerSizes(com.google.android.material.shape.RelativeCornerSize(0.5f)).build()
             textSize=14f
             setPadding(dp(14),dp(8),dp(14),dp(8))
-            setTextColor(palette.accent)
-            strokeWidth=dp(1)
-            strokeColor=ColorStateList.valueOf(palette.stroke)
         }
         header.addView(LyricsSearchHeading(this,backButton,headingScroll,sourcesButton))
         targetText=text("")
@@ -322,9 +322,7 @@ class LyricsSearchActivity : AppCompatActivity() {
             }
         }.apply {
             setIconResource(R.drawable.ic_air_search)
-            backgroundTintList = ColorStateList.valueOf(palette.accent)
-            setTextColor(palette.onAccent)
-            iconTint = ColorStateList.valueOf(palette.onAccent)
+            styleAirTonalButton(AirTonalButtonTone.PRIMARY)
         }
         form.addView(searchButton)
         val watcher=object:TextWatcher {
@@ -374,8 +372,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
         previewPanel.addView(previewRetry)
         applyButton=button(R.string.search_apply_current) { session.apply() }.apply {
-            backgroundTintList = ColorStateList.valueOf(palette.accent)
-            setTextColor(palette.onAccent)
+            styleAirTonalButton(AirTonalButtonTone.PRIMARY)
         }
         previewPanel.addView(applyButton)
         scroll.setOnScrollChangeListener { _,_,y,_,_ -> if(inPreview) session.previewScroll=y }
@@ -454,7 +451,6 @@ class LyricsSearchActivity : AppCompatActivity() {
         previewRetry.visibility=if(showPreview && !state.previewLoading && state.preview==null) View.VISIBLE else View.GONE
         searchButton.isEnabled=!state.applying && listOf(state.query.title,state.query.artist,state.query.album).any { it.isNotBlank() }
         applyButton.isEnabled=state.canApply
-        applyButton.alpha=if(state.canApply) 1f else 0.38f
         val busy=state.applying || state.previewLoading
         loadingReveal.setExpanded(busy,shownBusy!=null)
         shownBusy=busy
@@ -688,8 +684,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
     }
     private fun textAction(label:Int,action:()->Unit)=button(label,action).apply {
-        backgroundTintList=ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
-        setTextColor(palette.accent)
+        styleAirTextButton()
         gravity=Gravity.START or Gravity.CENTER_VERTICAL
         setPadding(dp(4),0,dp(12),0)
     }
@@ -699,8 +694,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         letterSpacing = 0f
         stateListAnimator = null
         elevation = 0f
-        setTextColor(palette.textStrong);backgroundTintList=ColorStateList.valueOf(palette.surfaceLight)
-        iconTint=ColorStateList.valueOf(palette.accent)
+        styleAirTonalButton()
         setOnClickListener { action() }
     }
     private fun dp(value:Int)=(value*resources.displayMetrics.density).toInt()

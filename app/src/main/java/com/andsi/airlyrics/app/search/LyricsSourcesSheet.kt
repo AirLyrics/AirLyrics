@@ -24,6 +24,9 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.lyrics.localizedPlainLyricsProviderName
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.airTonalButtonStyle
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.google.android.material.button.MaterialButton
 
@@ -128,14 +131,7 @@ class LyricsSourcesSheet : DialogFragment() {
             minHeight = dp(48)
             stateListAnimator = null
             elevation = 0f
-            backgroundTintList = ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_enabled), intArrayOf()),
-                intArrayOf(palette.accent, palette.stroke)
-            )
-            setTextColor(ColorStateList(
-                arrayOf(intArrayOf(android.R.attr.state_enabled), intArrayOf()),
-                intArrayOf(palette.onAccent, palette.textMuted)
-            ))
+            styleAirTonalButton(AirTonalButtonTone.PRIMARY)
             setOnClickListener {
                 if (selected.isEmpty() || closing) return@setOnClickListener
                 committed.clear()
@@ -153,7 +149,7 @@ class LyricsSourcesSheet : DialogFragment() {
         val trigger = (activity as? LyricsSearchActivity)?.sourceCapsule()
         capsule = label(getString(R.string.search_sources_count, committed.size), 14f).apply {
             gravity = Gravity.CENTER
-            setTextColor(palette.accent)
+            setTextColor(trigger?.currentTextColor ?: context.airTonalButtonStyle(AirTonalButtonTone.DEFAULT).textColor)
             typeface = trigger?.typeface ?: typeface
             includeFontPadding = trigger?.includeFontPadding ?: true
             trigger?.let { setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, it.textSize) }

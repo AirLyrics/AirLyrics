@@ -15,8 +15,11 @@ import android.view.ViewGroup
 import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.airTonalButtonStyle
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import kotlin.math.abs
 import kotlin.math.min
@@ -47,6 +50,7 @@ internal class LyricsSourcesMorphView(
     internal val surfaceBounds = RectF()
     private val outline = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val capsuleStyle = context.airTonalButtonStyle(AirTonalButtonTone.DEFAULT)
     private val screenLocation = IntArray(2)
     private val anchorLocation = IntArray(2)
     private val easeOut = PathInterpolator(0.23f, 1f, 0.32f, 1f)
@@ -185,7 +189,6 @@ internal class LyricsSourcesMorphView(
         val radius = lerp(capsuleBounds.height() / 2f, dp(24).toFloat(), shape)
         outline.rewind()
         outline.addRoundRect(surfaceBounds, radius, radius, Path.Direction.CW)
-        paint.color = palette.surfaceLight
         capsule.alpha = 1f - segment(shape, 0f, 0.3f)
         content.alpha = 1f
         content.importantForAccessibility = if (targetOpen && progress >= 0.99f)
@@ -199,13 +202,14 @@ internal class LyricsSourcesMorphView(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        val shape = easeOut.getInterpolation((progress / 0.72f).coerceIn(0f, 1f))
+        paint.color = ColorUtils.blendARGB(capsuleStyle.fillColor, palette.surfaceLight, shape)
         canvas.drawPath(outline, paint)
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = dp(1).toFloat()
-        paint.color = palette.stroke
+        paint.color = ColorUtils.blendARGB(capsuleStyle.strokeColor, palette.stroke, shape)
         canvas.drawPath(outline, paint)
         paint.style = Paint.Style.FILL
-        paint.color = palette.surfaceLight
     }
 
     override fun dispatchDraw(canvas: Canvas) {

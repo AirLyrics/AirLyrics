@@ -7,23 +7,21 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import android.view.View
 import android.content.res.ColorStateList
 import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.animation.OvershootInterpolator
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.navigation.Page
-import com.andsi.airlyrics.ui.theme.colorAccentSoft
-import com.andsi.airlyrics.ui.theme.colorSurfaceLight
-import com.andsi.airlyrics.ui.theme.colorText
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.airTonalButtonStyle
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentLight
-import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
@@ -39,25 +37,16 @@ internal fun MainUiHost.refreshMediaButtonImpl(): View {
             RefreshState.REFRESHING -> R.string.ui_refreshing
             RefreshState.DONE -> R.string.ui_refreshed
         }
-        val buttonColor = when (mediaRefreshState) {
-            RefreshState.IDLE -> colorAccent
-            RefreshState.REFRESHING -> colorSurfaceLight
-            RefreshState.DONE -> colorAccentSoft
+        val tone = when (mediaRefreshState) {
+            RefreshState.IDLE -> AirTonalButtonTone.PRIMARY
+            RefreshState.REFRESHING -> AirTonalButtonTone.DEFAULT
+            RefreshState.DONE -> AirTonalButtonTone.SUCCESS
         }
 
         row.isEnabled = mediaRefreshState != RefreshState.REFRESHING
-        row.background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-            setColor(buttonColor)
-        }
+        styleAirTonalButton(row, tone)
         labelView.setText(buttonTextRes)
-        labelView.setTextColor(
-            when (mediaRefreshState) {
-                RefreshState.IDLE -> colorOnAccent
-                RefreshState.REFRESHING -> colorText
-                RefreshState.DONE -> colorOnAccent
-            }
-        )
+        labelView.setTextColor(airTonalButtonStyle(tone).textColor)
 
         if (mediaRefreshState == RefreshState.REFRESHING && progressView == null) {
             progressView = ProgressBar(activity).apply {
@@ -96,6 +85,7 @@ internal fun MainUiHost.refreshMediaButtonImpl(): View {
     row = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL
         gravity = Gravity.CENTER
+        minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
         setPadding(dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs))
         val params = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,

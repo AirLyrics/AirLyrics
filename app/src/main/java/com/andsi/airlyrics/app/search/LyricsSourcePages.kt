@@ -28,6 +28,7 @@ import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.lyrics.localizedPlainLyricsProviderName
 import com.andsi.airlyrics.lyrics.search.LyricsCandidate
 import com.andsi.airlyrics.lyrics.search.ManualWordSource
+import com.andsi.airlyrics.ui.components.styleAirTextButton
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.tabs.TabLayout
 import java.util.Locale
@@ -220,10 +221,8 @@ internal class LyricsSourcePages(
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             minimumHeight = dp(48)
             setPadding(dp(4), 0, dp(12), 0)
-            backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
-            setTextColor(palette.accent)
+            styleAirTextButton()
             setIconResource(R.drawable.ic_air_search)
-            iconTint = ColorStateList.valueOf(palette.accent)
             stateListAnimator = null
             setOnClickListener { if (!blocksInteraction) onSpotifyIdSearch() }
         }
@@ -234,8 +233,7 @@ internal class LyricsSourcePages(
             minimumHeight = dp(48)
             gravity = Gravity.START or Gravity.CENTER_VERTICAL
             setPadding(dp(4), 0, dp(12), 0)
-            backgroundTintList = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
-            setTextColor(palette.accent)
+            styleAirTextButton()
             stateListAnimator = null
             setOnClickListener {
                 if(!blocksInteraction) {
@@ -253,10 +251,8 @@ internal class LyricsSourcePages(
             gravity=Gravity.START or Gravity.CENTER_VERTICAL
             minimumHeight=dp(48)
             setPadding(dp(4),0,dp(12),0)
-            backgroundTintList=ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
-            setTextColor(palette.accent)
+            styleAirTextButton()
             setIconResource(R.drawable.ic_air_search)
-            iconTint=ColorStateList.valueOf(palette.accent)
             stateListAnimator=null
             contentDescription=context.getString(R.string.search_try_word_search)
             setOnClickListener { if(!blocksInteraction) onWordLyricsSearch() }
