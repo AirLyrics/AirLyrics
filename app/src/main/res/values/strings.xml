@@ -422,6 +422,8 @@ Word-timed TTML:
     <string name="ui_yay">Yay!</string>
     <string name="ui_overlay_update_failed">Overlay update failed</string>
     <string name="ui_scroll_text">Scroll text</string>
+    <string name="ui_lyrics_source_spicy_hint" translatable="false">Spotify</string>
+    <string name="ui_lyrics_source_apple_hint">Apple Music · Login + sub. req.</string>
     <string name="provider_spicy">Spicy Lyrics</string>
     <string name="provider_spicy_unavailable">Spicy Lyrics · Unavailable</string>
     <string name="ui_spicy_expiry">Expires %1$s</string>

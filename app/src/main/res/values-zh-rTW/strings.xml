@@ -421,6 +421,7 @@
     <string name="ui_yay">我會非常非常非常開心的！</string>
     <string name="ui_overlay_update_failed">懸浮窗更新失敗</string>
     <string name="ui_scroll_text">捲動查看</string>
+    <string name="ui_lyrics_source_apple_hint">Apple Music · 需登入+訂閱</string>
     <string name="provider_spicy">Spicy Lyrics</string>
     <string name="provider_spicy_unavailable">Spicy Lyrics · 無法使用</string>
     <string name="ui_spicy_expiry">%1$s 到期</string>

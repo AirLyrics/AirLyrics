@@ -78,7 +78,13 @@ internal class LyricsSourceOptionButton(
         clipToPadding = false
         enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
         setOnLongClickListener {
-            sourceTooltip.show(contentDescription)
+            sourceTooltip.show(
+                when (source) {
+                    PlainLyricsSearchSource.SPICY -> host.getString(R.string.ui_lyrics_source_spicy_hint)
+                    PlainLyricsSearchSource.APPLE -> host.getString(R.string.ui_lyrics_source_apple_hint)
+                    else -> contentDescription
+                }
+            )
             true
         }
 

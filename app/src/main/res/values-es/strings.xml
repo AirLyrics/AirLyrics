@@ -423,6 +423,7 @@ TTML de tiempo por palabra:
     <string name="ui_yay">¡Genial!</string>
     <string name="ui_overlay_update_failed">Falló la actualización de la superposición</string>
     <string name="ui_scroll_text">Desplazar texto</string>
+    <string name="ui_lyrics_source_apple_hint">Apple Music · Requiere sesión + suscr.</string>
     <string name="provider_spicy">Spicy Lyrics</string>
     <string name="provider_spicy_unavailable">Spicy Lyrics · No disponible en esta versión</string>
     <string name="ui_apple_account">Cuenta de Apple Music</string>
