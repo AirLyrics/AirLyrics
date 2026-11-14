@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
@@ -50,14 +51,21 @@ class MascotArtTest {
 
     @Test fun groundMeshKeepsTheSuppliedBodySilhouettes() {
         val art = MascotArt(ApplicationProvider.getApplicationContext())
-        for ((compression, layer) in listOf(
-            0f to MascotArt.Layer.GROUND_REST_BODY,
-            1f to MascotArt.Layer.GROUND_SQUASH_BODY,
+        for ((compression, fixture) in listOf(
+            0f to "mascot_cat_ground_rest_body",
+            1f to "mascot_cat_ground_squash_body",
         )) {
+            val encoded = checkNotNull(javaClass.getResourceAsStream("/mascot/$fixture.png.b64")) {
+                "Missing mascot reference: $fixture"
+            }.use { it.readBytes() }
+            val png = Base64.getDecoder().decode(encoded)
+            val reference = checkNotNull(BitmapFactory.decodeByteArray(
+                png, 0, png.size, BitmapFactory.Options().apply { inSampleSize = 2 }
+            ))
+            assertEquals(fixture, 512, reference.width)
+            assertEquals(fixture, 512, reference.height)
             val generated = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
-            val reference = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888)
             art.drawGroundBody(Canvas(generated), 1f, compression)
-            art.draw(Canvas(reference), layer)
             var intersection = 0
             var union = 0
             for (y in 80 until 420 step 4) for (x in 55 until 455 step 4) {
