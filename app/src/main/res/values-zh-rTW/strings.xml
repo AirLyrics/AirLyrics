@@ -130,7 +130,6 @@
     <string name="ui_drag_lock_on">拖動鎖定：已開啟</string>
     <string name="ui_draggable">可拖動</string>
     <string name="ui_draggable_click_through">可拖動 · 已穿透</string>
-    <string name="ui_enable_notif_access_hint">開啟通知存取權以辨識播放器</string>
     <string name="ui_english">English</string>
     <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">逐字</string>
@@ -173,7 +172,6 @@
     <string name="ui_highlight">醒目提示</string>
     <string name="ui_highlight_color">醒目提示色</string>
     <string name="ui_horizontal_padding">左右內邊界</string>
-    <string name="ui_media_empty_permission_hint">未辨識到播放器？請檢查通知存取權</string>
     <string name="ui_import">手動匯入</string>
     <string name="ui_generated_from_word_by_word_lyrics">由逐字歌詞產生</string>
     <string name="ui_lrc_import_save_failed">歌詞儲存失敗，請檢查資料夾權限和儲存空間</string>
@@ -228,7 +226,9 @@
     <string name="ui_no_changelog_yet">尚無更新記錄</string>
     <string name="ui_no_word_by_word_lyrics_to_remove">沒有可移除的逐字歌詞</string>
     <string name="ui_no_local_lyrics_to_remove">沒有可移除的本機歌詞</string>
-    <string name="ui_no_media_detected_yet">尚未偵測到媒體</string>
+    <string name="ui_media_no_player">未偵測到播放器</string>
+    <string name="ui_media_no_music">未偵測到音樂...現在還沒有</string>
+    <string name="ui_media_enable_notif_access">前往開啟通知存取權</string>
     <string name="ui_no_media_source_status">未選擇播放器</string>
     <string name="ui_no_offset">無偏移</string>
     <string name="ui_no_plain_lrc_bound_to_song">尚無一般歌詞</string>
@@ -301,7 +301,6 @@
 逐字 TTML：
 &lt;p begin="00:15.600" end="00:18.000"&gt;&lt;span begin="00:15.600" end="00:18.000"&gt;歌詞&lt;/span&gt;&lt;/p&gt;</string>
     <string name="ui_manage_lyrics_select_player_hint">播放歌曲，並在「媒體」中選擇目標播放器</string>
-    <string name="ui_media_streams_empty_hint">未偵測到使用中的媒體</string>
     <string name="ui_playback_error">播放異常</string>
     <string name="ui_playing">播放中</string>
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">請選擇 .lrc、.ttml 或 .txt 檔案</string>
@@ -422,7 +421,6 @@
     <string name="ui_usage_access_description">辨識前景應用程式</string>
     <string name="ui_usage_access_required">需要使用情況存取權</string>
     <string name="ui_waiting_for_media_message">等待媒體資訊…</string>
-    <string name="ui_waiting_for_music_signal">等待音樂中</string>
     <string name="ui_whats_new">本次更新</string>
     <string name="ui_white">白</string>
     <string name="ui_width">寬度</string>

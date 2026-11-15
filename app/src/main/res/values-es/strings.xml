@@ -130,7 +130,6 @@
     <string name="ui_drag_lock_on">Bloqueo de arrastre: Activado</string>
     <string name="ui_draggable">Arrastrable</string>
     <string name="ui_draggable_click_through">Arrastrable · traspaso de toques</string>
-    <string name="ui_enable_notif_access_hint">Permite el acceso a notificaciones para detectar reproductores</string>
     <string name="ui_english">English</string>
     <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">Palabra</string>
@@ -173,7 +172,6 @@
     <string name="ui_highlight">Resaltado</string>
     <string name="ui_highlight_color">Color de resaltado</string>
     <string name="ui_horizontal_padding">Relleno horizontal</string>
-    <string name="ui_media_empty_permission_hint">¿No hay reproductores? Verifica el acceso a notificaciones</string>
     <string name="ui_import">Importar</string>
     <string name="ui_generated_from_word_by_word_lyrics">Generado a partir de letras palabra por palabra</string>
     <string name="ui_lrc_import_save_failed">No se pudieron guardar las letras; verifica el acceso a la carpeta y el almacenamiento</string>
@@ -228,7 +226,9 @@
     <string name="ui_no_changelog_yet">Aún no hay registro de cambios</string>
     <string name="ui_no_word_by_word_lyrics_to_remove">No hay letras palabra por palabra para eliminar</string>
     <string name="ui_no_local_lyrics_to_remove">No hay letras locales para eliminar</string>
-    <string name="ui_no_media_detected_yet">Aún no se detectaron medios</string>
+    <string name="ui_media_no_player">No se detectó ningún reproductor</string>
+    <string name="ui_media_no_music">No se detectó música...todavía no</string>
+    <string name="ui_media_enable_notif_access">Activar acceso a notificaciones</string>
     <string name="ui_no_media_source_status">Ningún reproductor seleccionado</string>
     <string name="ui_no_offset">Sin desfase</string>
     <string name="ui_no_plain_lrc_bound_to_song">Sin letras simples</string>
@@ -301,7 +301,6 @@ LRC palabra por palabra:
 TTML de tiempo por palabra:
 &lt;p begin="00:15.600" end="00:18.000"&gt;&lt;span begin="00:15.600" end="00:18.000"&gt;Letra&lt;/span&gt;&lt;/p&gt;</string>
     <string name="ui_manage_lyrics_select_player_hint">Reproduce una canción y luego selecciona un reproductor para seguir en Medios</string>
-    <string name="ui_media_streams_empty_hint">No se detectaron medios activos</string>
     <string name="ui_playback_error">Error de reproducción</string>
     <string name="ui_playing">Reproduciendo</string>
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">Elige un archivo .lrc, .ttml o .txt</string>
@@ -424,7 +423,6 @@ TTML de tiempo por palabra:
     <string name="ui_usage_access_description">Detectar apps en primer plano</string>
     <string name="ui_usage_access_required">Se requiere acceso de uso</string>
     <string name="ui_waiting_for_media_message">Esperando medios…</string>
-    <string name="ui_waiting_for_music_signal">Esperando música</string>
     <string name="ui_whats_new">Novedades de esta versión</string>
     <string name="ui_white">Blanco</string>
     <string name="ui_width">Ancho</string>

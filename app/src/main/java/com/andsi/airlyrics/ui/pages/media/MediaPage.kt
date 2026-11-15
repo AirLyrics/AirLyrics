@@ -133,33 +133,19 @@ internal fun createMediaPage(
                     "${selectedController.packageName}\u0000${pageState.selectedTitle}\u0000${pageState.selectedArtist}")
                 currentMedia = CurrentMediaBinding(activity, titleView, artistView, statusMotion, artworkView)
             } else {
-                addView(bigText(activity, getString(R.string.ui_no_media_detected_yet)))
-                val hintText = getString(
-                    if (notificationAccessGranted) {
-                        R.string.ui_media_streams_empty_hint
-                    } else {
-                        R.string.ui_enable_notif_access_hint
-                    }
-                )
-                addView(normalText(activity, hintText))
+                addView(bigText(activity, getString(
+                    if (notificationAccessGranted) R.string.ui_media_no_music
+                    else R.string.ui_media_no_player
+                )))
             }
         }
     )
 
-    container.addView(spacer(activity, 12))
-    container.addView(label(activity, getString(R.string.ui_active_players), colorTextMuted))
-
-    if (controllers.isEmpty()) {
-        container.addView(
-            card(activity) {
-                addView(bigText(activity, getString(R.string.ui_waiting_for_music_signal)))
-                addView(normalText(activity, getString(R.string.ui_media_streams_empty_hint)))
-                if (!notificationAccessGranted) {
-                    addView(smallHint(activity, getString(R.string.ui_media_empty_permission_hint)))
-                }
-            }
-        )
-    } else {
+    if (selectedController != null) {
+        container.addView(spacer(activity, 12))
+        container.addView(label(activity, getString(R.string.ui_active_players), colorTextMuted).apply {
+            setTag(R.id.interaction_anchor, "media.players.heading")
+        })
         controllers.forEach { controller ->
             val source = mediaSourceCard(controller, controller.packageName == selectedPackage)
             players += source
@@ -179,16 +165,25 @@ internal fun createMediaPage(
             playerEntrance?.bind(controller.packageName, cardHolder, dp(AirUiTokens.Motion.MediaPlayerEnterRiseDp).toFloat())
             container.addView(cardHolder)
         }
+        container.addView(spacer(activity, 18))
     }
 
-    container.addView(spacer(activity, 18))
-    container.addView(refreshMediaButton())
+    if (selectedController == null && !notificationAccessGranted) {
+        container.addView(actionButton(activity, getString(R.string.ui_media_enable_notif_access)) {
+            uiActions.openNotificationListenerSettings()
+        }.apply {
+            setTag(R.id.interaction_anchor, "media.notification_access")
+        })
+    } else {
+        container.addView(refreshMediaButton().apply {
+            setTag(R.id.interaction_anchor, "media.refresh")
+        })
+    }
 
     container.getChildAt(0).setTag(R.id.interaction_anchor, "media.heading")
     container.getChildAt(1).setTag(R.id.interaction_anchor, "media.current")
-    container.getChildAt(3).setTag(R.id.interaction_anchor, "media.players.heading")
-    container.getChildAt(container.childCount - 1).setTag(R.id.interaction_anchor, "media.refresh")
-    val page = com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1), "scroll.MEDIA.root")
+    val leftIndices = if (selectedController == null) (0 until container.childCount).toSet() else setOf(0, 1)
+    val page = com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, leftIndices, "scroll.MEDIA.root")
     onBound?.invoke(MediaPageBinding(page, controllers.mapTo(mutableSetOf()) { it.packageName }, currentMedia, players))
     return page
 }

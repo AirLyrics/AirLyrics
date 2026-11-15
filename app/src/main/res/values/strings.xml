@@ -130,7 +130,6 @@
     <string name="ui_drag_lock_on">Drag lock: On</string>
     <string name="ui_draggable">Draggable</string>
     <string name="ui_draggable_click_through">Draggable · click-through</string>
-    <string name="ui_enable_notif_access_hint">Allow notification access to detect players</string>
     <string name="ui_english">English</string>
     <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">Word</string>
@@ -173,7 +172,6 @@
     <string name="ui_highlight">Highlight</string>
     <string name="ui_highlight_color">Highlight color</string>
     <string name="ui_horizontal_padding">Horizontal padding</string>
-    <string name="ui_media_empty_permission_hint">No players? Check notification access</string>
     <string name="ui_import">Import</string>
     <string name="ui_generated_from_word_by_word_lyrics">Generated from word-by-word lyrics</string>
     <string name="ui_lrc_import_save_failed">Couldn’t save lyrics; check folder access and storage</string>
@@ -228,7 +226,9 @@
     <string name="ui_no_changelog_yet">No changelog yet</string>
     <string name="ui_no_word_by_word_lyrics_to_remove">No word-by-word lyrics to remove</string>
     <string name="ui_no_local_lyrics_to_remove">No local lyrics to remove</string>
-    <string name="ui_no_media_detected_yet">No media detected yet</string>
+    <string name="ui_media_no_player">No player detected</string>
+    <string name="ui_media_no_music">No music detected...not yet</string>
+    <string name="ui_media_enable_notif_access">Enable notification access</string>
     <string name="ui_no_media_source_status">No player selected</string>
     <string name="ui_no_offset">No offset</string>
     <string name="ui_no_plain_lrc_bound_to_song">No plain lyrics</string>
@@ -301,7 +301,6 @@ Word-by-word LRC:
 Word-timed TTML:
 &lt;p begin="00:15.600" end="00:18.000"&gt;&lt;span begin="00:15.600" end="00:18.000"&gt;Lyrics&lt;/span&gt;&lt;/p&gt;</string>
     <string name="ui_manage_lyrics_select_player_hint">Play a song, then select a player to follow in Media</string>
-    <string name="ui_media_streams_empty_hint">No active media detected</string>
     <string name="ui_playback_error">Playback error</string>
     <string name="ui_playing">Playing</string>
     <string name="ui_please_choose_a_plain_lrc_lyrics_file">Choose a .lrc, .ttml or .txt file</string>
@@ -424,7 +423,6 @@ Word-timed TTML:
     <string name="ui_usage_access_description">Detect foreground apps</string>
     <string name="ui_usage_access_required">Usage access required</string>
     <string name="ui_waiting_for_media_message">Waiting for media…</string>
-    <string name="ui_waiting_for_music_signal">Waiting for music</string>
     <string name="ui_whats_new">New in this version</string>
     <string name="ui_white">White</string>
     <string name="ui_width">Width</string>
