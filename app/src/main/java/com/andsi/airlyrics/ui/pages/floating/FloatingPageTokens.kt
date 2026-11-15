@@ -20,15 +20,14 @@ internal object FloatingPageTokens {
 
     const val PANEL_SELECTED_SCALE = 0.985f
     const val PANEL_SELECTED_ALPHA = 0.92f
-    const val PANEL_OPEN_START_SCALE = 0.90f
-    const val PANEL_OPEN_OVERSHOOT_TENSION = 0.34f
+    const val PANEL_OPEN_START_SCALE = 0.96f
     const val PANEL_SOURCE_OFFSET_X_DP = 36
     const val PANEL_SOURCE_OFFSET_Y_DP = 44
     const val PANEL_CLOSE_SCALE = 0.94f
 
     const val FAST_ANIMATION_MS = 130L
     const val PANEL_OVERLAY_FADE_MS = 170L
-    const val PANEL_OPEN_MS = 280L
+    const val PANEL_OPEN_MS = 250L
     const val PANEL_CLOSE_MS = 180L
     const val PREVIEW_FADE_MS = 170L
     const val PREVIEW_SLIDE_MS = 190L

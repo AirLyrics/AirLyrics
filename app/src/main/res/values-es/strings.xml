@@ -339,6 +339,7 @@ TTML de tiempo por palabra:
     <string name="ui_rgb_tune">Ajuste RGB</string>
     <string name="ui_custom_color">Color personalizado</string>
     <string name="ui_save_color_swatch">Guardar muestra</string>
+    <string name="ui_delete_color_swatch">Eliminar muestra</string>
     <string name="ui_color_hex">Código de color</string>
     <string name="ui_color_hex_format">Usa #RRGGBB</string>
     <string name="ui_apply">Aplicar</string>

@@ -30,6 +30,7 @@ internal class SettingsPanelHeader(
 ) : LinearLayout(host) {
     private var reset: FrameLayout? = null
     private var back: FrameLayout? = null
+    private var resetState: Pair<Boolean, Boolean>? = null
     private lateinit var titleView: TextView
 
     init {
@@ -94,12 +95,22 @@ internal class SettingsPanelHeader(
     }
 
     fun updateResetAction(enabled: Boolean, isUndo: Boolean) {
+        val state = enabled to isUndo
+        if (resetState == state) return
+        resetState = state
         reset?.apply {
             animate().cancel()
             scaleX = 1f
             scaleY = 1f
             isEnabled = enabled
-            alpha = if (enabled) 1f else 0.34f
+            val targetAlpha = if (enabled) 1f else 0.34f
+            if (canAnimateFloatingControl()) {
+                animate().alpha(targetAlpha)
+                    .setStartDelay(0)
+                    .setDuration(AirUiTokens.Motion.PressUpMs)
+                    .setInterpolator(floatingPanelEaseOut)
+                    .start()
+            } else alpha = targetAlpha
             contentDescription = host.getString(if (isUndo) R.string.ui_undo else R.string.ui_reset)
             tooltipText = contentDescription
             (getChildAt(0) as ImageView).apply {

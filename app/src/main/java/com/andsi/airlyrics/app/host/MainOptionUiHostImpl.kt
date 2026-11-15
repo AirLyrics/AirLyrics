@@ -5,7 +5,6 @@ import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.airTonalButtonStyle
 import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.R
-import android.graphics.Color
 import android.graphics.Typeface
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
@@ -13,6 +12,7 @@ import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
+import com.andsi.airlyrics.ui.components.OptionSelectionMotion
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.setAirStartIcon
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
@@ -32,20 +32,12 @@ internal fun MainUiHost.optionButtonGridImpl(buttons: List<TextView>): LinearLay
 }
 
 internal fun MainUiHost.liveOptionGridImpl(items: List<KeyedOptionItem>): LinearLayout {
-    val buttons = mutableListOf<Pair<KeyedOptionItem, TextView>>()
-    fun updateSelection(view: TextView, item: KeyedOptionItem, selected: Boolean) {
-        applyOptionButtonState(view, item.title, selected)
-        view.isSelected = selected
-        // Reserve the checkmark slot so selection never changes the label's width.
-        val tone = if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
-        view.setAirStartIcon(this, R.drawable.ic_air_check,
-            if (selected) airTonalButtonStyle(tone).textColor else Color.TRANSPARENT)
-    }
+    val buttons = mutableListOf<Pair<KeyedOptionItem, OptionSelectionMotion>>()
     items.forEach { item ->
         val button = optionButton(OptionItem(item.title, item.selected) {
             item.action()
-            buttons.forEach { (option, view) ->
-                updateSelection(view, option, option.key == item.key)
+            buttons.forEach { (option, selection) ->
+                selection.select(option.key == item.key)
             }
         }).apply {
             minimumHeight = dp(AirUiTokens.SettingsPanel.OptionMinHeight)
@@ -64,15 +56,14 @@ internal fun MainUiHost.liveOptionGridImpl(items: List<KeyedOptionItem>): Linear
                     info.isChecked = host.isSelected
                 }
             }
-            updateSelection(this, item, item.selected)
         }
-        buttons.add(item to button)
+        buttons.add(item to OptionSelectionMotion(this, button, item.selected))
     }
     return AdaptiveGridLayout(
         this, AirUiTokens.Layout.OptionColumns,
         dp(AirUiTokens.SettingsPanel.ControlGap), dp(AirUiTokens.SettingsPanel.ControlGap)
     ).apply {
-        buttons.forEach { addView(it.second) }
+        buttons.forEach { addView(it.second.view) }
         setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
     }
 }

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.animation.ValueAnimator
 import android.view.MotionEvent
 import android.content.res.ColorStateList
-import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -12,13 +11,11 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.view.Gravity
 import android.view.View
-import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
-import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
@@ -33,6 +30,7 @@ import com.andsi.airlyrics.ui.components.GridColumnPolicy
 import com.andsi.airlyrics.ui.components.SettingsSliderRow
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.beginFloatingPanelChange
+import com.andsi.airlyrics.ui.components.canAnimateFloatingControl
 import com.andsi.airlyrics.ui.components.floatingPanelEaseOut
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -58,23 +56,30 @@ internal class FloatingColorPanelContent(
     private val editor = ColorPanelPage(host).apply { setTag(R.id.interaction_anchor, "floating.color.editor") }
     private val ownerPanel = host.interactions.panel
     private val hexEditor = FloatingHexColorEditor(
-        host, { editingRgb && host.interactions.panel == ownerPanel }, currentColor, ::applyRgb
+        host, { editingRgb && host.interactions.panel == ownerPanel }, currentColor, { applyRgb(it, animateSample = true) }
     )
     private val editorSample = View(host)
     private val editorHex = hexText(AirUiTokens.TextSize.Title)
     private val customSample = View(host)
+    private var sampleColor: Int = AirColorUtils.opaqueRgb(currentColor())
+    private var sampleAnimator: ValueAnimator? = null
+    private var sampleTargetColor: Int? = null
+    private var renderedSavedState: Boolean? = null
     private val customHex = hexText(AirUiTokens.TextSize.Body)
     private val customRow: View
-    private val presetSwatches = mutableListOf<Pair<Int, View>>()
-    private val savedSwatches = mutableListOf<Pair<Int, View>>()
+    private val presetSwatches = mutableListOf<Pair<Int, FloatingColorSwatch>>()
+    private val savedSwatches = linkedMapOf<Int, FloatingColorSwatch>()
+    private var pendingDeleteColor: Int? = null
     private val rgbRows = mutableListOf<SettingsSliderRow>()
     private var favorites = FloatingColorSwatchStore.colors(host)
     private val savedGrid = swatchGrid("floating.color.saved")
     private val savedSection: View
     private val saveButton = actionButton(host, host.getString(R.string.ui_save_color_swatch)) {
-        beginFloatingPanelChange()
         FloatingColorSwatchStore.save(host, currentColor())
-        refreshSavedSwatches()
+        // The overview is GONE here. Mutating it inside a window-wide Fade can draw its
+        // children in the transition overlay, briefly flashing the palette over the RGB page.
+        // Keep the editor stable; reconcile the saved views before revealing the overview.
+        favorites = FloatingColorSwatchStore.colors(host)
         renderColor()
     }
 
@@ -145,6 +150,7 @@ internal class FloatingColorPanelContent(
             background = RippleDrawable(ColorStateList.valueOf(
                 ColorUtils.setAlphaComponent(host.colorAccentText, 32)), null,
                 GradientDrawable().apply { setColor(Color.WHITE) })
+            enableSoftPressFeedback()
             setOnClickListener { showEditor(true) }
         }
         overview.addView(customRow)
@@ -170,6 +176,7 @@ internal class FloatingColorPanelContent(
                 setTag(R.id.interaction_anchor, "floating.color.hex")
                 tooltipText = host.getString(R.string.ui_color_hex)
                 isFocusable = true
+                enableSoftPressFeedback()
                 setOnClickListener { hexEditor.show() }
             }
             addView(editorSample, LayoutParams(host.dp(36), host.dp(36)))
@@ -203,7 +210,7 @@ internal class FloatingColorPanelContent(
         editor.addView(saveButton)
         addView(overview)
         addView(editor)
-        refreshSavedSwatches()
+        if (!editingRgb) refreshSavedSwatches()
         applyPage()
         renderColor()
     }
@@ -229,22 +236,60 @@ internal class FloatingColorPanelContent(
     }
 
     private fun colorSwatch(color: Int, label: String) = FloatingColorSwatch(host, color, label).apply {
-        setOnClickListener { applyRgb(color) }
+        setOnClickListener { applyRgb(color, animateSample = true) }
     }
 
     private fun refreshSavedSwatches() {
-        val updated = FloatingColorSwatchStore.colors(host)
-        savedSection.visibility = if (updated.isEmpty()) GONE else VISIBLE
-        if (updated == favorites && savedGrid.childCount == updated.size) return
-        favorites = updated
-        savedGrid.removeAllViews()
-        savedSwatches.clear()
-        favorites.forEach { color ->
-            val view = colorSwatch(color, compactColorSummary(color))
-            savedSwatches += color to view
-            savedGrid.addView(view)
+        favorites = FloatingColorSwatchStore.colors(host)
+        savedSwatches.keys.filterNot { it in favorites }.forEach { color ->
+            savedSwatches.remove(color)?.let { savedGrid.removeView(it) }
+        }
+        favorites.forEachIndexed { index, color ->
+            val swatch = savedSwatches.getOrPut(color) {
+                FloatingColorSwatch(host, color, compactColorSummary(color)).apply {
+                    setOnClickListener { onSavedSwatchClick(color, this) }
+                }
+            }
+            if (savedGrid.indexOfChild(swatch) != index) {
+                if (swatch.parent === savedGrid) savedGrid.removeView(swatch)
+                savedGrid.addView(swatch, index)
+            }
         }
         savedSection.visibility = if (favorites.isEmpty()) GONE else VISIBLE
+    }
+
+    private fun onSavedSwatchClick(color: Int, swatch: FloatingColorSwatch) {
+        if (!swatch.isEnabled) return
+        when {
+            pendingDeleteColor == color -> {
+                beginFloatingPanelChange()
+                pendingDeleteColor = null
+                FloatingColorSwatchStore.remove(host, color)
+                swatch.isEnabled = false
+                refreshSavedSwatches()
+                // Removing a favorite never changes the applied color or its alpha.
+                renderColor()
+            }
+            color == AirColorUtils.opaqueRgb(currentColor()) -> {
+                pendingDeleteColor = color
+                renderSwatchState()
+            }
+            else -> applyRgb(color, animateSample = true)
+        }
+    }
+
+    private fun clearPendingDeletion() {
+        pendingDeleteColor = null
+        savedSwatches.values.forEach { it.setRemovalArmed(false) }
+    }
+
+    private fun renderSwatchState() {
+        val rgb = AirColorUtils.opaqueRgb(currentColor())
+        presetSwatches.forEach { (color, view) -> view.isSelected = color == rgb }
+        savedSwatches.forEach { (color, view) ->
+            view.isSelected = color == rgb
+            view.setRemovalArmed(color == pendingDeleteColor && color == rgb)
+        }
     }
 
     private fun channelValue(color: Int, channel: Int): Int = when (channel) {
@@ -253,9 +298,12 @@ internal class FloatingColorPanelContent(
         else -> Color.blue(color)
     }
 
-    private fun applyRgb(rgb: Int) {
-        onColorChanged(AirColorUtils.withAlpha(rgb, Color.alpha(currentColor())))
-        renderColor()
+    private fun applyRgb(rgb: Int, animateSample: Boolean = false) {
+        clearPendingDeletion()
+        val current = currentColor()
+        val next = AirColorUtils.withAlpha(rgb, Color.alpha(current))
+        if (next != current) onColorChanged(next)
+        renderColor(animateSample)
     }
 
     private fun colorSample(rgb: Int) = GradientDrawable().apply {
@@ -264,23 +312,56 @@ internal class FloatingColorPanelContent(
         setStroke(host.dp(AirUiTokens.Stroke.Hairline), host.colorStroke)
     }
 
-    private fun renderColor() {
+    private fun renderColor(animateSample: Boolean = false) {
         val rgb = AirColorUtils.opaqueRgb(currentColor())
         val code = compactColorSummary(rgb)
         editorHex.text = code
         editorHex.contentDescription = listOf(host.getString(R.string.ui_color_hex), code).joinToString(", ")
         customHex.text = code
         customRow.contentDescription = listOf(host.getString(R.string.ui_custom_color), code).joinToString(", ")
-        editorSample.background = colorSample(rgb)
-        customSample.background = colorSample(rgb)
-        (presetSwatches + savedSwatches).forEach { (swatchColor, view) -> view.isSelected = swatchColor == rgb }
+        if (sampleTargetColor != rgb) {
+            sampleTargetColor = rgb
+            sampleAnimator?.cancel()
+            val visibleSample = if (editingRgb) editorSample else customSample
+            if (animateSample && visibleSample.canAnimateFloatingControl() && sampleColor != rgb) {
+                sampleAnimator = ValueAnimator.ofArgb(sampleColor, rgb).apply {
+                    duration = AirUiTokens.Motion.LayoutChangeMs
+                    interpolator = floatingPanelEaseOut
+                    addUpdateListener { updateSamples(it.animatedValue as Int) }
+                    start()
+                }
+            } else {
+                updateSamples(rgb)
+            }
+        }
+        renderSwatchState()
         rgbRows.forEachIndexed { channel, row -> row.seekBar.progress = channelValue(rgb, channel) }
         val saved = rgb in favorites
-        saveButton.setText(if (saved) R.string.ui_saved else R.string.ui_save_color_swatch)
-        saveButton.contentDescription = saveButton.text
-        saveButton.isEnabled = !saved
-        saveButton.alpha = if (saved) AirUiTokens.Button.DisabledAlpha else 1f
-        host.styleAirTonalButton(saveButton, if (saved) AirTonalButtonTone.DEFAULT else AirTonalButtonTone.PRIMARY)
+        if (renderedSavedState != saved) {
+            renderedSavedState = saved
+            saveButton.animate().cancel()
+            saveButton.setText(if (saved) R.string.ui_saved else R.string.ui_save_color_swatch)
+            saveButton.contentDescription = saveButton.text
+            saveButton.isEnabled = !saved
+            saveButton.alpha = if (saved) AirUiTokens.Button.DisabledAlpha else 1f
+            host.styleAirTonalButton(saveButton, if (saved) AirTonalButtonTone.DEFAULT else AirTonalButtonTone.PRIMARY)
+        }
+    }
+
+    private fun updateSamples(color: Int) {
+        sampleColor = color
+        listOf(editorSample, customSample).forEach { sample ->
+            val shape = sample.background as? GradientDrawable
+            if (shape == null) sample.background = colorSample(color) else shape.setColor(color)
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        clearPendingDeletion()
+        sampleAnimator?.cancel()
+        sampleAnimator = null
+        updateSamples(AirColorUtils.opaqueRgb(currentColor()))
+        super.onDetachedFromWindow()
     }
 
     private fun scrollParent(): ScrollView? =
@@ -288,6 +369,9 @@ internal class FloatingColorPanelContent(
 
     private fun showEditor(editing: Boolean) {
         if (editingRgb == editing) return
+        clearPendingDeletion()
+        // Prepare hidden content before the transition captures it, so only the page enters.
+        if (!editing) refreshSavedSwatches()
         beginFloatingPanelChange()
         val leavingKey = if (editingRgb) "rgbScroll" else "overviewScroll"
         host.interactions.write(pageStateKey) {
@@ -296,9 +380,12 @@ internal class FloatingColorPanelContent(
         }
         editingRgb = editing
         applyPage()
+        renderSwatchState()
         val enteringKey = if (editing) "rgbScroll" else "overviewScroll"
         val y = host.interactions.read(pageStateKey)?.getInt(enteringKey) ?: 0
-        (if (editing) editor else overview).doOnLayout { scrollParent()?.scrollTo(0, y) }
+        (if (editing) editor else overview).doOnLayout {
+            if (editingRgb == editing) scrollParent()?.scrollTo(0, y)
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -346,91 +433,5 @@ private class PaletteColumn(private val host: MainUiHost) : LinearLayout(host) {
         val width = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED) maxWidth
             else MeasureSpec.getSize(widthMeasureSpec).coerceAtMost(maxWidth)
         super.onMeasure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), heightMeasureSpec)
-    }
-}
-
-@SuppressLint("ViewConstructor")
-private class FloatingColorSwatch(
-    private val host: MainUiHost,
-    private val color: Int,
-    label: String
-) : View(host) {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var selectionAmount = 0f
-    private var selectionAnimator: ValueAnimator? = null
-    private val check = requireNotNull(AppCompatResources.getDrawable(host, R.drawable.ic_air_check)).mutate().apply {
-        setTint(if (ColorUtils.calculateContrast(Color.BLACK, color) >=
-            ColorUtils.calculateContrast(Color.WHITE, color)) Color.BLACK else Color.WHITE)
-    }
-
-    init {
-        minimumWidth = host.dp(AirUiTokens.Layout.IconTouchSize)
-        minimumHeight = host.dp(AirUiTokens.Layout.IconTouchSize)
-        contentDescription = label
-        isFocusable = true
-        enableSoftPressFeedback(AirUiTokens.Motion.DefaultPressScale)
-        accessibilityDelegate = object : AccessibilityDelegate() {
-            @Suppress("DEPRECATION")
-            override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
-                super.onInitializeAccessibilityNodeInfo(host, info)
-                info.className = "android.widget.RadioButton"
-                info.isCheckable = true
-                info.isChecked = host.isSelected
-            }
-        }
-    }
-
-    override fun setSelected(selected: Boolean) {
-        if (isSelected == selected) return
-        super.setSelected(selected)
-        selectionAnimator?.cancel()
-        val target = if (selected) 1f else 0f
-        if (!isAttachedToWindow || !isShown || !ValueAnimator.areAnimatorsEnabled() || (isFocused && !isInTouchMode)) {
-            selectionAmount = target
-            invalidate()
-            return
-        }
-        selectionAnimator = ValueAnimator.ofFloat(selectionAmount, target).apply {
-            duration = AirUiTokens.Motion.PulseDownMs
-            interpolator = floatingPanelEaseOut
-            addUpdateListener { selectionAmount = it.animatedValue as Float; invalidate() }
-            start()
-        }
-    }
-
-    override fun onDetachedFromWindow() {
-        selectionAnimator?.cancel()
-        selectionAnimator = null
-        selectionAmount = if (isSelected) 1f else 0f
-        super.onDetachedFromWindow()
-    }
-
-    override fun drawableStateChanged() {
-        super.drawableStateChanged()
-        invalidate()
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        super.onDraw(canvas)
-        val cx = width / 2f
-        val cy = height / 2f
-        paint.style = Paint.Style.FILL
-        paint.color = color
-        canvas.drawCircle(cx, cy, host.dp(18).toFloat(), paint)
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = host.dp(AirUiTokens.Stroke.Hairline).toFloat()
-        paint.color = ColorUtils.blendARGB(host.colorStroke, host.colorTextStrong, 0.5f)
-        canvas.drawCircle(cx, cy, host.dp(18).toFloat(), paint)
-        val ringAlpha = if (isFocused) 1f else selectionAmount
-        if (ringAlpha > 0f) {
-            paint.color = ColorUtils.setAlphaComponent(host.colorAccentText, (255 * ringAlpha).toInt())
-            canvas.drawCircle(cx, cy, host.dp(22).toFloat(), paint)
-        }
-        if (selectionAmount > 0f) {
-            check.alpha = (255 * selectionAmount).toInt()
-            val half = host.dp(11)
-            check.setBounds(cx.toInt() - half, cy.toInt() - half, cx.toInt() + half, cy.toInt() + half)
-            check.draw(canvas)
-        }
     }
 }

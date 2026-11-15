@@ -178,6 +178,126 @@ class FloatingColorPanelTest {
         assertNull(host.interactions.panel)
     }
 
+    @Test fun backgroundPaletteKeepsItsOpacityAndSwitchSeparateFromRgbAndFavorites() {
+        ThemeSettingsStore.setDark(RuntimeEnvironment.getApplication(), true)
+        open(FloatingPanelId.BACKGROUND)
+        host.applyFloatingStyle(host.floatingStyle().copy(
+            backgroundEnabled = true, backgroundAlpha = 123, backgroundColor = Color.rgb(9, 19, 29)
+        ))
+        scope.panelOpeners.getValue(FloatingPanelId.BACKGROUND).invoke()
+        layout()
+        val initial = host.floatingStyle()
+        val backgroundSwitch = visible(panel()).filterIsInstance<SwitchCompat>().single()
+        backgroundSwitch.performClick()
+        val opacity = visible(panel()).filterIsInstance<SeekBar>().single()
+        drag(opacity, 0.7f)
+        val alpha = host.floatingStyle().backgroundAlpha
+        action(R.string.ui_blue).performClick()
+        assertEquals(Color.rgb(66, 165, 245), host.floatingStyle().backgroundColor)
+        assertEquals(alpha, host.floatingStyle().backgroundAlpha)
+        assertFalse(host.floatingStyle().backgroundEnabled)
+
+        val favorite = Color.rgb(168, 83, 80)
+        editRgb(favorite)
+        assertEquals(3, visible(panel()).filterIsInstance<SeekBar>().size)
+        assertTrue(visible(panel()).none { it is SwitchCompat })
+        action(R.string.ui_save_color_swatch).performClick()
+        action(R.string.ui_back).performClick()
+        layout()
+        assertEquals(listOf(favorite), FloatingColorSwatchStore.colors(host))
+        assertEquals(favorite, host.floatingStyle().backgroundColor)
+        assertEquals(alpha, host.floatingStyle().backgroundAlpha)
+        assertFalse(host.floatingStyle().backgroundEnabled)
+        capture("background-palette")
+        val adjusted = host.floatingStyle()
+        action(R.string.ui_reset).performClick()
+        layout()
+        val defaults = host.floatingStyleDefaults(adjusted.presetName)
+        assertEquals(defaults.backgroundColor, host.floatingStyle().backgroundColor)
+        assertEquals(defaults.backgroundAlpha, host.floatingStyle().backgroundAlpha)
+        assertEquals(defaults.backgroundEnabled, host.floatingStyle().backgroundEnabled)
+        assertEquals(initial.textColor, host.floatingStyle().textColor)
+        assertEquals(initial.shadowColor, host.floatingStyle().shadowColor)
+        action(R.string.ui_undo).performClick()
+        layout()
+        assertEquals(adjusted, host.floatingStyle())
+        assertEquals(listOf(favorite), FloatingColorSwatchStore.colors(host))
+
+        scope.panelOpeners.getValue(FloatingPanelId.SHADOW).invoke()
+        layout()
+        applySaved("#A85350")
+        assertEquals(favorite and 0xFFFFFF, host.floatingStyle().shadowColor and 0xFFFFFF)
+        assertEquals(Color.alpha(initial.shadowColor), Color.alpha(host.floatingStyle().shadowColor))
+        assertEquals(adjusted.backgroundColor, host.floatingStyle().backgroundColor)
+        assertEquals(adjusted.wordByWordHighlightColor, host.floatingStyle().wordByWordHighlightColor)
+    }
+
+    @Test fun shadowPalettePreservesArgbAndRadiusAndKeepsLastControlReachableWithLargeFonts() {
+        ThemeSettingsStore.setDark(RuntimeEnvironment.getApplication(), false)
+        open(FloatingPanelId.SHADOW, width = 320, height = 420, scale = 1.8f)
+        host.applyFloatingStyle(host.floatingStyle().copy(
+            shadowColor = Color.argb(73, 9, 19, 29), shadowRadius = 9f
+        ))
+        scope.panelOpeners.getValue(FloatingPanelId.SHADOW).invoke()
+        layout()
+        val initial = host.floatingStyle()
+        action(R.string.ui_red).performClick()
+        assertEquals(Color.argb(73, 239, 83, 80), host.floatingStyle().shadowColor)
+        val radius = visible(panel()).filterIsInstance<SeekBar>().single {
+            it.contentDescription == host.getString(R.string.ui_shadow_radius)
+        }
+        drag(radius, 0.6f)
+        val adjustedRadius = host.floatingStyle().shadowRadius
+        capture("shadow-large")
+        val header = all(panel()).filterIsInstance<SettingsPanelHeader>().single()
+        val headerBounds = Rect(0, 0, header.width, header.height).also {
+            (page as ViewGroup).offsetDescendantRectToMyCoords(header, it)
+        }
+        val scroll = all(panel()).filterIsInstance<ScrollView>().single()
+        scroll.scrollTo(0, scroll.getChildAt(0).height)
+        layout()
+        val opacity = visible(panel()).filterIsInstance<SeekBar>().single {
+            it.contentDescription == host.getString(R.string.ui_opacity)
+        }
+        val bounds = Rect(0, 0, opacity.width, opacity.height)
+        panel().offsetDescendantRectToMyCoords(opacity, bounds)
+        assertTrue(bounds.top >= scroll.top)
+        assertTrue(bounds.bottom <= scroll.bottom)
+        drag(opacity, 0.8f)
+        val adjustedAlpha = Color.alpha(host.floatingStyle().shadowColor)
+        assertTrue(adjustedAlpha > 73)
+        assertEquals(adjustedRadius, host.floatingStyle().shadowRadius)
+        val finalHeaderBounds = Rect(0, 0, header.width, header.height).also {
+            (page as ViewGroup).offsetDescendantRectToMyCoords(header, it)
+        }
+        assertEquals("Scrolling the controls must keep the header fixed", headerBounds, finalHeaderBounds)
+        assertEquals(0, panel().scrollY)
+        val visibleHeader = Rect()
+        assertTrue(header.getLocalVisibleRect(visibleHeader))
+        assertEquals(Rect(0, 0, header.width, header.height), visibleHeader)
+        capture("shadow-large-bottom")
+
+        editRgb(Color.rgb(18, 52, 86))
+        val adjusted = host.floatingStyle()
+        assertEquals(Color.argb(adjustedAlpha, 18, 52, 86), adjusted.shadowColor)
+        assertEquals(adjustedRadius, adjusted.shadowRadius)
+        action(R.string.ui_reset).performClick()
+        layout()
+        assertEquals(3, visible(panel()).filterIsInstance<SeekBar>().size)
+        val defaults = host.floatingStyleDefaults(adjusted.presetName)
+        assertEquals(defaults.shadowColor, host.floatingStyle().shadowColor)
+        assertEquals(defaults.shadowRadius, host.floatingStyle().shadowRadius)
+        action(R.string.ui_undo).performClick()
+        layout()
+        assertEquals(adjusted, host.floatingStyle())
+        action(R.string.ui_back).performClick()
+        layout()
+        assertEquals(FloatingPanelId.SHADOW, host.interactions.panel)
+        assertEquals(initial.textColor, host.floatingStyle().textColor)
+        assertEquals(initial.backgroundColor, host.floatingStyle().backgroundColor)
+        assertEquals(initial.wordByWordHighlightColor, host.floatingStyle().wordByWordHighlightColor)
+    }
+
     @Test fun textPresetsStayInTwoRowsAndRgbKeepsBothAlphaAndHighlightColor() {
         open(FloatingPanelId.TEXT_COLOR)
         val highlight = host.floatingStyle().wordByWordHighlightColor
@@ -504,6 +624,154 @@ class FloatingColorPanelTest {
             controller = null
             org.robolectric.shadows.ShadowDialog.reset()
         }
+    }
+
+    @Test fun savedSwatchesRequireSelectionAndRedCrossConfirmationAndKeepTheAppliedColor() {
+        val blue = Color.rgb(66, 165, 245)
+        val other = Color.rgb(168, 83, 80)
+        val app = RuntimeEnvironment.getApplication()
+        FloatingColorSwatchStore.save(app, blue)
+        FloatingColorSwatchStore.save(app, other)
+        open(FloatingPanelId.TEXT_COLOR)
+        val swatch = savedGrid().getChildAt(0) as FloatingColorSwatch
+        val otherView = savedGrid().getChildAt(1)
+        val original = host.floatingStyle()
+        swatch.performClick()
+        val applied = host.floatingStyle()
+        assertEquals(Color.argb(173, 66, 165, 245), applied.textColor)
+        assertTrue(swatch.isSelected)
+        assertFalse(swatch.removalArmed)
+
+        swatch.performClick()
+        assertTrue(swatch.removalArmed)
+        capture("delete-armed")
+        assertEquals(applied, host.floatingStyle())
+        assertEquals(listOf(blue, other), FloatingColorSwatchStore.colors(host))
+        val node = swatch.createAccessibilityNodeInfo()
+        assertEquals(host.getString(R.string.ui_delete_color_swatch),
+            node.actionList.single {
+                it.id == android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK
+            }.label)
+
+        action(R.string.ui_red).performClick()
+        assertFalse(swatch.removalArmed)
+        assertSame(swatch, savedGrid().getChildAt(0))
+        swatch.performClick()
+        swatch.performClick()
+        assertTrue(swatch.removalArmed)
+        // Entering and leaving the editor cancels the armed delete.
+        action(R.string.ui_custom_color).performClick()
+        action(R.string.ui_back).performClick()
+        layout()
+        assertFalse(swatch.removalArmed)
+        swatch.performClick()
+        assertTrue(swatch.removalArmed)
+        swatch.performClick()
+        layout()
+        assertFalse(swatch.isEnabled)
+        assertEquals(listOf(other), FloatingColorSwatchStore.colors(host))
+        assertSame(otherView, savedGrid().getChildAt(0))
+        assertEquals(applied, host.floatingStyle())
+
+        // Built-in colors never enter delete mode, including a duplicate of a saved color.
+        repeat(3) { action(R.string.ui_blue).performClick() }
+        assertEquals(listOf(other), FloatingColorSwatchStore.colors(host))
+        assertEquals(original.wordByWordHighlightColor, host.floatingStyle().wordByWordHighlightColor)
+        coldRestart(FloatingPanelId.SHADOW)
+        assertEquals(listOf(other), FloatingColorSwatchStore.colors(host))
+        assertEquals(applied.textColor, host.floatingStyle().textColor)
+        assertEquals("#A85350", savedGrid().getChildAt(0).contentDescription)
+    }
+
+    @Test fun removingTheLastFavoriteWorksWithAnimationsDisabledAndCanBeSavedAgain() {
+        open(FloatingPanelId.BACKGROUND)
+        val original = host.floatingStyle()
+        FloatingColorSwatchStore.save(host, original.backgroundColor)
+        scope.panelOpeners.getValue(FloatingPanelId.BACKGROUND).invoke()
+        layout()
+        val swatch = savedGrid().getChildAt(0) as FloatingColorSwatch
+        val scale = ReflectionHelpers.callStaticMethod<Float>(android.animation.ValueAnimator::class.java, "getDurationScale")
+        try {
+            ReflectionHelpers.callStaticMethod<Any?>(android.animation.ValueAnimator::class.java, "setDurationScale",
+                ReflectionHelpers.ClassParameter.from(Float::class.javaPrimitiveType!!, 0f))
+            swatch.performClick()
+            assertTrue(swatch.removalArmed)
+            swatch.performClick()
+            layout()
+            assertTrue(FloatingColorSwatchStore.colors(host).isEmpty())
+            assertEquals(original, host.floatingStyle())
+            assertTrue(visible(panel()).none { it.getTag(R.id.interaction_anchor) == "floating.color.saved" })
+            action(R.string.ui_custom_color).performClick()
+            action(R.string.ui_save_color_swatch).performClick()
+            action(R.string.ui_back).performClick()
+            layout()
+            assertEquals(listOf(com.andsi.airlyrics.core.color.AirColorUtils.opaqueRgb(original.backgroundColor)),
+                FloatingColorSwatchStore.colors(host))
+            assertEquals(1, savedGrid().childCount)
+            assertEquals(original, host.floatingStyle())
+        } finally {
+            ReflectionHelpers.callStaticMethod<Any?>(android.animation.ValueAnimator::class.java, "setDurationScale",
+                ReflectionHelpers.ClassParameter.from(Float::class.javaPrimitiveType!!, scale))
+        }
+    }
+
+    @Test fun savingInRgbEditorNeverDrawsTheHiddenPaletteOverItsControls() {
+        open(FloatingPanelId.TEXT_COLOR)
+        val bubble = panel()
+        (bubble.parent as ViewGroup).removeView(bubble)
+        val frame = android.widget.FrameLayout(host).apply {
+            isFocusableInTouchMode = true
+            addView(bubble)
+        }
+        controller!!.get().setContentView(frame)
+        controller!!.visible()
+        frame.requestFocus()
+        fun advance(millis: Long) {
+            frame.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            frame.layout(0, 0, width, height)
+            frame.viewTreeObserver.dispatchOnPreDraw()
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper())
+                .idleFor(java.time.Duration.ofMillis(millis))
+        }
+        advance(220)
+        action(R.string.ui_custom_color).performClick()
+        advance(220)
+        val save = action(R.string.ui_save_color_swatch)
+        val buttonBounds = Rect(0, 0, save.width, save.height)
+        frame.offsetDescendantRectToMyCoords(save, buttonBounds)
+        val protectedHeight = buttonBounds.top - host.dp(8)
+        assertTrue(protectedHeight > frame.height / 2)
+        fun protectedPixels(): IntArray {
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            Canvas(bitmap).apply { drawColor(host.colorBackground); frame.draw(this) }
+            val pixels = IntArray(width * protectedHeight)
+            bitmap.getPixels(pixels, 0, width, 0, 0, width, protectedHeight)
+            bitmap.recycle()
+            return pixels
+        }
+        val before = protectedPixels()
+        val style = host.floatingStyle()
+        val inactiveFavorites = all(bubble).filterIsInstance<AdaptiveGridLayout>().single {
+            it.getTag(R.id.interaction_anchor) == "floating.color.saved"
+        }
+        val inactiveCount = inactiveFavorites.childCount
+        save.performClick()
+        // Software bitmap drawing alone does not exercise the GPU transition overlay.
+        // Keep the inactive page unchanged as well, so it cannot spawn transition ghosts.
+        assertEquals("Saving must leave the inactive palette untouched",
+            inactiveCount, inactiveFavorites.childCount)
+        listOf(16L, 32L, 32L, 100L).forEach { millis ->
+            advance(millis)
+            assertTrue("Saving must not flash palette pixels over the RGB editor",
+                before.contentEquals(protectedPixels()))
+        }
+        assertEquals(style, host.floatingStyle())
+        assertEquals(1, FloatingColorSwatchStore.colors(host).size)
+        assertFalse(action(R.string.ui_saved).isEnabled)
+        action(R.string.ui_back).performClick()
+        advance(220)
+        assertEquals(1, savedGrid().childCount)
     }
 
     @Test fun rapidPanelTransitionsAndDisabledAnimationsKeepTheActivePageUsable() {

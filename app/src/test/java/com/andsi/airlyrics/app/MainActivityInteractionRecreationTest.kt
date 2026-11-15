@@ -248,23 +248,32 @@ class MainActivityInteractionRecreationTest {
         assertNull(activity.graph.viewModel.interactions.read("panel.color.hex"))
     }
 
-    @Test fun rgbEditorSurvivesRecreationAndBackReturnsToColorPanel() {
+    @Test fun rgbEditorSurvivesRecreationAndBackReturnsToEachColorPanel() {
         floatingPage()
-        descendants(activity.window.decorView).single { it.getTag(R.id.interaction_anchor) == "panel:TEXT_COLOR" }.performClick()
-        settle()
-        descendants(activity.window.decorView)
-            .first { it.getTag(R.id.interaction_anchor) == "floating.color.custom" && it.isClickable }.performClick()
-        controller.recreate(); settle()
-        assertEquals(FloatingPanelId.TEXT_COLOR, activity.graph.viewModel.interactions.panel)
-        assertTrue(action(R.string.ui_back).isShown)
-        assertEquals(3, descendants(activity.window.decorView).filterIsInstance<android.widget.SeekBar>()
-            .count { it.isShown && it.getTag(R.id.interaction_anchor)?.toString()?.startsWith("floating.color.rgb.") == true })
-        activity.onBackPressedDispatcher.onBackPressed()
-        settle()
-        assertEquals(FloatingPanelId.TEXT_COLOR, activity.graph.viewModel.interactions.panel)
-        assertTrue(descendants(activity.window.decorView).any {
-            it.getTag(R.id.interaction_anchor) == "floating.color.custom" && it.isShown && it.isClickable
-        })
+        listOf(FloatingPanelId.TEXT_COLOR, FloatingPanelId.HIGHLIGHT_COLOR,
+            FloatingPanelId.BACKGROUND, FloatingPanelId.SHADOW).forEach { id ->
+            descendants(activity.window.decorView).single {
+                it.getTag(R.id.interaction_anchor) == "panel:${id.name}"
+            }.performClick()
+            settle()
+            descendants(activity.window.decorView).first {
+                it.getTag(R.id.interaction_anchor) == "floating.color.custom" && it.isClickable
+            }.performClick()
+            controller.recreate(); settle()
+            assertEquals(id, activity.graph.viewModel.interactions.panel)
+            assertTrue(action(R.string.ui_back).isShown)
+            assertEquals(3, descendants(activity.window.decorView).filterIsInstance<android.widget.SeekBar>()
+                .count { it.isShown && it.getTag(R.id.interaction_anchor)?.toString()?.startsWith("floating.color.rgb.") == true })
+            activity.onBackPressedDispatcher.onBackPressed()
+            settle()
+            assertEquals(id, activity.graph.viewModel.interactions.panel)
+            assertTrue(descendants(activity.window.decorView).any {
+                it.getTag(R.id.interaction_anchor) == "floating.color.custom" && it.isShown && it.isClickable
+            })
+            activity.onBackPressedDispatcher.onBackPressed()
+            settle()
+            assertNull(activity.graph.viewModel.interactions.panel)
+        }
     }
 
     @Suppress("DEPRECATION")

@@ -2,7 +2,9 @@ package com.andsi.airlyrics.app.host
 
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
-import android.transition.TransitionManager
+import com.andsi.airlyrics.ui.components.beginFloatingPanelContentReplacement
+import com.andsi.airlyrics.ui.components.endFloatingPanelChanges
+import androidx.core.view.doOnLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.FLOATING_PANEL_MOTION_ROOT
 import android.view.ViewGroup
@@ -63,7 +65,7 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
     }
     val shell = object : LinearLayout(this) {
         override fun onDetachedFromWindow() {
-            TransitionManager.endTransitions(this)
+            endFloatingPanelChanges()
             super.onDetachedFromWindow()
         }
 
@@ -91,11 +93,18 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
         addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
 
+    var contentRevision = 0
     return FloatingFocusBubbleHandle(
         view = shell,
         rebuildContent = {
+            val revision = ++contentRevision
+            val scrollY = scroll.scrollY
+            contentContainer.beginFloatingPanelContentReplacement()
             contentContainer.removeAllViews()
             contentContainer.content()
+            contentContainer.doOnLayout {
+                if (revision == contentRevision) scroll.scrollTo(0, scrollY)
+            }
         },
         updateResetAction = { enabled, isUndo -> header.updateResetAction(enabled, isUndo) },
         updateNavigation = { pageTitle, onBack ->

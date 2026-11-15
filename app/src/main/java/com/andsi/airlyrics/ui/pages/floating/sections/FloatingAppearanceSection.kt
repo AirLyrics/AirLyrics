@@ -94,6 +94,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = getString(if (style().backgroundEnabled) R.string.ui_on else R.string.ui_off),
                 iconRes = R.drawable.ic_air_chat_bubble,
                 onClick = { tile ->
+                    val navigation = FloatingPanelNavigation()
                     openPanel(
                         tile,
                         getString(R.string.ui_background_bubble),
@@ -111,30 +112,38 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                                     backgroundAlpha = defaults.backgroundAlpha
                                 )
                             }
-                        )
+                        ),
+                        navigation = navigation
                     ) {
-                        addView(panelSwitch(host, getString(R.string.ui_background), style().backgroundEnabled) { enabled ->
-                            applyFloatingBackgroundEnabled(enabled)
-                            refreshFloatingPreview()
-                        })
-                        addView(sliderRow(
-                            title = getString(R.string.ui_opacity),
-                            value = alphaToOpacityPercent(style().backgroundAlpha),
-                            min = 0,
-                            max = 100,
-                            suffix = "%"
-                        ) { value ->
-                            applyFloatingBackgroundAlpha(opacityPercentToAlpha(value))
-                            refreshFloatingPreview()
-                        })
-                        addView(colorControl(
-                            title = getString(R.string.ui_background),
-                            color = style().backgroundColor,
-                            includeOpacity = false
-                        ) { color ->
-                            applyFloatingBackgroundColor(color, refreshPage = false)
-                            refreshFloatingPreview()
-                        })
+                        setPadding(paddingLeft, paddingTop, paddingRight, dp(12))
+                        val controls = LinearLayout(host).apply {
+                            orientation = LinearLayout.VERTICAL
+                            addView(panelSwitch(host, getString(R.string.ui_background), style().backgroundEnabled) { enabled ->
+                                applyFloatingBackgroundEnabled(enabled)
+                                refreshFloatingPreview()
+                            })
+                            addView(sliderRow(
+                                title = getString(R.string.ui_opacity),
+                                value = alphaToOpacityPercent(style().backgroundAlpha),
+                                min = 0,
+                                max = 100,
+                                suffix = "%",
+                                compact = true
+                            ) { value ->
+                                applyFloatingBackgroundAlpha(opacityPercentToAlpha(value))
+                                refreshFloatingPreview()
+                            })
+                        }
+                        addView(FloatingColorPanelContent(
+                            host = host,
+                            navigation = navigation,
+                            currentColor = { style().backgroundColor },
+                            onColorChanged = { color ->
+                                applyFloatingBackgroundColor(color, refreshPage = false)
+                                refreshFloatingPreview()
+                            },
+                            additionalControls = controls
+                        ))
                     }
                 }
             ),
@@ -299,6 +308,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = getString(R.string.ui_radius) + " ${style().shadowRadius.toInt()}",
                 iconRes = R.drawable.ic_air_shadow,
                 onClick = { tile ->
+                    val navigation = FloatingPanelNavigation()
                     openPanel(
                         tile,
                         getString(R.string.ui_shadow_stroke),
@@ -314,16 +324,41 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                                     shadowColor = defaults.shadowColor
                                 )
                             }
-                        )
+                        ),
+                        navigation = navigation
                     ) {
-                        addView(sliderRow(getString(R.string.ui_shadow_radius), style().shadowRadius.toInt(), 0, 24, "") { value ->
-                            applyFloatingShadowRadius(value.toFloat())
-                            refreshFloatingPreview()
-                        })
-                        addView(colorControl(getString(R.string.ui_shadow), style().shadowColor) { color ->
-                            applyFloatingShadowColor(color)
-                            refreshFloatingPreview()
-                        })
+                        setPadding(paddingLeft, paddingTop, paddingRight, dp(12))
+                        val controls = LinearLayout(host).apply {
+                            orientation = LinearLayout.VERTICAL
+                            addView(sliderRow(
+                                title = getString(R.string.ui_shadow_radius),
+                                value = style().shadowRadius.toInt(),
+                                min = 0, max = 24, suffix = "", compact = true
+                            ) { value ->
+                                applyFloatingShadowRadius(value.toFloat())
+                                refreshFloatingPreview()
+                            })
+                            addView(sliderRow(
+                                title = getString(R.string.ui_opacity),
+                                value = alphaToOpacityPercent(Color.alpha(style().shadowColor)),
+                                min = 0, max = 100, suffix = "%", compact = true
+                            ) { value ->
+                                applyFloatingShadowColor(AirColorUtils.withAlpha(
+                                    style().shadowColor, opacityPercentToAlpha(value)
+                                ))
+                                refreshFloatingPreview()
+                            })
+                        }
+                        addView(FloatingColorPanelContent(
+                            host = host,
+                            navigation = navigation,
+                            currentColor = { style().shadowColor },
+                            onColorChanged = { color ->
+                                applyFloatingShadowColor(color)
+                                refreshFloatingPreview()
+                            },
+                            additionalControls = controls
+                        ))
                     }
                 }
             ),

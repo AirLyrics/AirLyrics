@@ -339,6 +339,7 @@ Word-timed TTML:
     <string name="ui_rgb_tune">RGB tune</string>
     <string name="ui_custom_color">Custom color</string>
     <string name="ui_save_color_swatch">Save swatch</string>
+    <string name="ui_delete_color_swatch">Delete swatch</string>
     <string name="ui_color_hex">Color code</string>
     <string name="ui_color_hex_format">Use #RRGGBB</string>
     <string name="ui_apply">Apply</string>

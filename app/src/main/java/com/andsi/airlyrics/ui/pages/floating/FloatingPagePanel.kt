@@ -6,9 +6,8 @@ import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import com.andsi.airlyrics.ui.state.findInteractionScroll
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AccelerateInterpolator
-import android.view.animation.DecelerateInterpolator
-import android.view.animation.OvershootInterpolator
+import com.andsi.airlyrics.ui.components.floatingPanelEaseOut
+import com.andsi.airlyrics.ui.components.endFloatingPanelChanges
 import android.widget.LinearLayout
 
 internal data class FloatingPanelReset(
@@ -62,12 +61,14 @@ internal fun FloatingPageScope.openPanel(
     host.interactions.panel = id
     selectedTileView = anchor
 
-    if (!restoringPanel) anchor.animate()
+    val animatePanel = !restoringPanel && ValueAnimator.areAnimatorsEnabled() &&
+        (anchor.isInTouchMode || !anchor.hasFocus())
+    if (animatePanel) anchor.animate()
         .scaleX(FloatingPageTokens.PANEL_SELECTED_SCALE)
         .scaleY(FloatingPageTokens.PANEL_SELECTED_SCALE)
         .alpha(FloatingPageTokens.PANEL_SELECTED_ALPHA)
         .setDuration(FloatingPageTokens.FAST_ANIMATION_MS)
-        .setInterpolator(DecelerateInterpolator())
+        .setInterpolator(floatingPanelEaseOut)
         .start()
 
     lateinit var bubbleHandle: com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
@@ -134,7 +135,7 @@ internal fun FloatingPageScope.openPanel(
 
     bubble.setOnClickListener { /* absorb clicks inside the restored panel, too */ }
     bubble.isClickable = true
-    if (restoringPanel) {
+    if (!animatePanel) {
         overlay.alpha = 1f
         bubble.alpha = 1f
         return ::rebuildContentIfOpen
@@ -163,11 +164,12 @@ internal fun FloatingPageScope.openPanel(
             bubble.translationY = 0f
             return@post
         }
-        // Motion Prompt #049 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#049
-        // The scrim settles before the source-linked panel finishes.
+        // Source-linked motion adapted from Motion Prompt #049 · MIT License (c) 2026 Shohei Ohtaki
+        // https://showheyohtaki.github.io/motion-prompt/#049
+        // The shell and its opacity settle together, without overshooting text.
         overlay.animate().alpha(1f)
             .setDuration(FloatingPageTokens.PANEL_OVERLAY_FADE_MS)
-            .setInterpolator(DecelerateInterpolator())
+            .setInterpolator(floatingPanelEaseOut)
             .start()
         bubble.animate()
             .alpha(1f)
@@ -176,7 +178,7 @@ internal fun FloatingPageScope.openPanel(
             .translationX(0f)
             .translationY(0f)
             .setDuration(FloatingPageTokens.PANEL_OPEN_MS)
-            .setInterpolator(OvershootInterpolator(FloatingPageTokens.PANEL_OPEN_OVERSHOOT_TENSION))
+            .setInterpolator(floatingPanelEaseOut)
             .start()
     }
     return ::rebuildContentIfOpen
@@ -202,6 +204,7 @@ private fun FloatingPageScope.closePanel() {
     activeBubble = null
     activePanelNavigation = null
     overlay.setOnClickListener { /* absorb touches until the panel is removed */ }
+    bubble?.endFloatingPanelChanges()
     bubble?.animate()?.cancel()
     overlay.animate().cancel()
 
@@ -213,7 +216,8 @@ private fun FloatingPageScope.closePanel() {
         }
     }
 
-    if (bubble == null || !ValueAnimator.areAnimatorsEnabled() || !overlay.isAttachedToWindow) {
+    if (bubble == null || !ValueAnimator.areAnimatorsEnabled() || !overlay.isAttachedToWindow ||
+        (!bubble.isInTouchMode && bubble.findFocus() != null)) {
         finishClose()
         return
     }
@@ -233,11 +237,12 @@ private fun FloatingPageScope.closePanel() {
         .translationX(targetX)
         .translationY(targetY)
         .setDuration(FloatingPageTokens.PANEL_CLOSE_MS)
-        .setInterpolator(AccelerateInterpolator())
+        .setInterpolator(floatingPanelEaseOut)
         .withEndAction(::finishClose)
         .start()
     overlay.animate().alpha(0f)
         .setDuration(FloatingPageTokens.PANEL_CLOSE_MS)
+        .setInterpolator(floatingPanelEaseOut)
         .start()
 }
 
@@ -250,7 +255,8 @@ private fun FloatingPageScope.clearContentFocus() {
         tile.animate().cancel()
         if (ValueAnimator.areAnimatorsEnabled() && tile.isAttachedToWindow) {
             tile.animate().scaleX(1f).scaleY(1f).alpha(1f)
-                .setDuration(FloatingPageTokens.PANEL_CLOSE_MS).start()
+                .setDuration(FloatingPageTokens.PANEL_CLOSE_MS)
+                .setInterpolator(floatingPanelEaseOut).start()
         } else {
             tile.scaleX = 1f
             tile.scaleY = 1f

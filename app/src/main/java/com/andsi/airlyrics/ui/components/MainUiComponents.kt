@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.components
 
 import android.annotation.SuppressLint
 import android.animation.LayoutTransition
+import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -320,32 +321,76 @@ internal fun softLayoutTransition(): LayoutTransition {
 
 @SuppressLint("ClickableViewAccessibility")
 internal fun View.enableSoftPressFeedback(pressedScale: Float = AirUiTokens.Motion.DefaultPressScale) {
+    var pressing = false
+    var restingAlpha = alpha
+    fun release(view: View) {
+        if (!pressing) return
+        pressing = false
+        view.animate().cancel()
+        if (!ValueAnimator.areAnimatorsEnabled()) {
+            view.scaleX = AirUiTokens.Motion.RestScale
+            view.scaleY = AirUiTokens.Motion.RestScale
+            view.alpha = restingAlpha
+            return
+        }
+        view.animate()
+            .scaleX(AirUiTokens.Motion.RestScale)
+            .scaleY(AirUiTokens.Motion.RestScale)
+            .alpha(restingAlpha)
+            .setStartDelay(0)
+            .setDuration(AirUiTokens.Motion.PressUpMs)
+            .setInterpolator(if (view.floatingPanelMotionRoot() != null) floatingPanelEaseOut
+                else OvershootInterpolator(AirUiTokens.Motion.OvershootSoft))
+            .start()
+    }
     setOnTouchListener { v, event ->
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
-                v.animate()
-                   .scaleX(pressedScale)
-                   .scaleY(pressedScale)
-                    .alpha(AirUiTokens.Motion.PressAlpha)
-                    .setDuration(AirUiTokens.Motion.PressDownMs)
-                    .setInterpolator(DecelerateInterpolator())
-                    .start()
+                if (v.isEnabled && ValueAnimator.areAnimatorsEnabled()) {
+                    if (!pressing && v.scaleX == AirUiTokens.Motion.RestScale) {
+                        restingAlpha = if (v.floatingPanelMotionRoot() != null) 1f else v.alpha
+                    }
+                    pressing = true
+                    v.animate().cancel()
+                    v.animate()
+                        .scaleX(pressedScale)
+                        .scaleY(pressedScale)
+                        .alpha(restingAlpha * AirUiTokens.Motion.PressAlpha)
+                        .setStartDelay(0)
+                        .setDuration(AirUiTokens.Motion.PressDownMs)
+                        .setInterpolator(if (v.floatingPanelMotionRoot() != null) floatingPanelEaseOut
+                            else DecelerateInterpolator())
+                        .start()
+                }
             }
-            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                v.animate()
-                    .scaleX(AirUiTokens.Motion.RestScale)
-                    .scaleY(AirUiTokens.Motion.RestScale)
-                    .alpha(AirUiTokens.Motion.RestAlpha)
-                    .setDuration(AirUiTokens.Motion.PressUpMs)
-                    .setInterpolator(OvershootInterpolator(AirUiTokens.Motion.OvershootSoft))
-                    .start()
+            MotionEvent.ACTION_MOVE -> {
+                if (event.x < 0 || event.x > v.width || event.y < 0 || event.y > v.height) release(v)
             }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> release(v)
         }
         false
     }
 }
 
 internal fun playTinyPulse(view: View) {
+    // Panel actions settle the touch feedback instead of starting a second, competing pulse.
+    // Disabled controls keep the alpha assigned by their new state (for example, a saved color).
+    if (!view.isEnabled || !ValueAnimator.areAnimatorsEnabled() ||
+        (view.hasFocus() && !view.isInTouchMode)) {
+        view.animate().cancel()
+        view.scaleX = AirUiTokens.Motion.RestScale
+        view.scaleY = AirUiTokens.Motion.RestScale
+        return
+    }
+    if (view.floatingPanelMotionRoot() != null) {
+        view.animate().cancel()
+        view.animate().scaleX(1f).scaleY(1f).alpha(1f)
+            .setStartDelay(0)
+            .setDuration(AirUiTokens.Motion.PressUpMs)
+            .setInterpolator(floatingPanelEaseOut)
+            .start()
+        return
+    }
     view.animate()
         .scaleX(AirUiTokens.Motion.TinyPulseScale)
         .scaleY(AirUiTokens.Motion.TinyPulseScale)

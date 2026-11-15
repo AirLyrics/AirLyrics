@@ -28,10 +28,23 @@ internal object FloatingColorSwatchStore {
         val rgb = AirColorUtils.opaqueRgb(color)
         val previous = colors(context)
         if (rgb in previous) return false
-        val array = JSONArray()
-        (previous + rgb).forEach { array.put(it and 0xFFFFFF) }
-        // Use the project's asynchronous preference writes; applying a color never depends on this.
-        prefs(context, PREFS_NAME).setString(KEY_COLORS, array.toString())
+        writeColors(context, previous + rgb)
         return true
+    }
+
+    @Synchronized
+    fun remove(context: Context, color: Int): Boolean {
+        val rgb = AirColorUtils.opaqueRgb(color)
+        val previous = colors(context)
+        if (rgb !in previous) return false
+        writeColors(context, previous.filterNot { it == rgb })
+        return true
+    }
+
+    private fun writeColors(context: Context, colors: List<Int>) {
+        val array = JSONArray()
+        colors.forEach { array.put(it and 0xFFFFFF) }
+        // Favorite edits never change the applied style.
+        prefs(context, PREFS_NAME).setString(KEY_COLORS, array.toString())
     }
 }

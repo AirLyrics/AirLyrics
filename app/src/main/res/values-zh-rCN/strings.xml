@@ -339,6 +339,7 @@
     <string name="ui_rgb_tune">展开 RGB 细调</string>
     <string name="ui_custom_color">自定义颜色</string>
     <string name="ui_save_color_swatch">保存色票</string>
+    <string name="ui_delete_color_swatch">删除色票</string>
     <string name="ui_color_hex">颜色代码</string>
     <string name="ui_color_hex_format">请输入 #RRGGBB</string>
     <string name="ui_apply">应用</string>
