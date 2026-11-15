@@ -5,7 +5,6 @@ import com.andsi.airlyrics.R
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.media.session.PlaybackState
 import android.net.Uri
 import android.view.Gravity
 import android.view.View
@@ -49,7 +48,6 @@ internal class CurrentMediaBinding(
     private val host: MainUiHost,
     private val title: MediaRollingTextSlot,
     private val artist: MediaRollingTextSlot,
-    private val status: MediaStatusMotion,
     private val artwork: MediaArtworkSwap
 ) {
     fun update(state: MediaPageState) = with(host) {
@@ -58,8 +56,6 @@ internal class CurrentMediaBinding(
         val artistText = state.selectedArtist ?: getString(R.string.ui_unknown_artist)
         val appName = getAppName(controller.packageName)
         artist.show("$artistText · $appName", delayMs = 45L, stableSuffix = " · $appName")
-        val playing = controller.playbackState?.state == PlaybackState.STATE_PLAYING
-        status.show(getPlaybackStateText(controller.playbackState?.state), playing)
         artwork.show(state.selectedArtworkBitmap, state.selectedArtworkUri,
             "${controller.packageName}\u0000${state.selectedTitle}\u0000${state.selectedArtist}")
     }
@@ -67,7 +63,6 @@ internal class CurrentMediaBinding(
     fun finish() {
         title.finish()
         artist.finish()
-        status.finish()
         artwork.finish()
     }
 }
@@ -102,14 +97,10 @@ internal fun createMediaPage(
                 val artist = pageState.selectedArtist
                     ?: getString(R.string.ui_unknown_artist)
                 val appName = getAppName(selectedController.packageName)
-                val state = getPlaybackStateText(selectedController.playbackState?.state)
                 val artworkBitmap = pageState.selectedArtworkBitmap
                 val artworkUri = pageState.selectedArtworkUri
                 val titleView = MediaRollingTextSlot(activity, bigText(activity, title), MediaRollingRole.TITLE)
                 val artistView = MediaRollingTextSlot(activity, normalText(activity, "$artist · $appName"))
-                val statusView = statusPill(activity, state, selectedController.playbackState?.state == PlaybackState.STATE_PLAYING)
-                val statusMotion = MediaStatusMotion(activity, statusView,
-                    selectedController.playbackState?.state == PlaybackState.STATE_PLAYING)
                 val artworkView = MediaArtworkSwap(activity, artworkMotion)
                 addView(LinearLayout(activity).apply {
                     orientation = LinearLayout.HORIZONTAL
@@ -125,13 +116,12 @@ internal fun createMediaPage(
                         )
                         addView(titleView)
                         addView(artistView)
-                        addView(statusView)
                     })
                     addView(artworkView)
                 })
                 artworkView.show(artworkBitmap, artworkUri,
                     "${selectedController.packageName}\u0000${pageState.selectedTitle}\u0000${pageState.selectedArtist}")
-                currentMedia = CurrentMediaBinding(activity, titleView, artistView, statusMotion, artworkView)
+                currentMedia = CurrentMediaBinding(activity, titleView, artistView, artworkView)
             } else {
                 addView(bigText(activity, getString(
                     if (notificationAccessGranted) R.string.ui_media_no_music
