@@ -12,7 +12,11 @@ import androidx.core.view.isGone
 internal sealed interface GridColumnPolicy {
     data object Content : GridColumnPolicy
     data object Fixed : GridColumnPolicy
-    data class Width(val minCellDp: Int) : GridColumnPolicy
+    data class Width(
+        val minCellDp: Int,
+        val scaleWithFont: Boolean = true,
+        val preserveColumns: Boolean = false
+    ) : GridColumnPolicy
 }
 
 /** Reflows existing children without replacing views, callbacks or selection. */
@@ -44,10 +48,13 @@ internal open class AdaptiveGridLayout(
         } else MeasureSpec.getSize(widthMeasureSpec)
         val available = (width - paddingLeft - paddingRight).coerceAtLeast(0)
         columns = maxColumns.coerceAtLeast(1)
-        if (columnPolicy != GridColumnPolicy.Fixed) columns = columns.coerceAtMost(children.size.coerceAtLeast(1))
+        if (columnPolicy != GridColumnPolicy.Fixed &&
+            !(columnPolicy is GridColumnPolicy.Width && columnPolicy.preserveColumns)) {
+            columns = columns.coerceAtMost(children.size.coerceAtLeast(1))
+        }
         if (columnPolicy is GridColumnPolicy.Width) {
-            val minWidth = columnPolicy.minCellDp * resources.displayMetrics.density *
-                resources.configuration.fontScale.coerceAtLeast(1f)
+            val fontScale = if (columnPolicy.scaleWithFont) resources.configuration.fontScale.coerceAtLeast(1f) else 1f
+            val minWidth = columnPolicy.minCellDp * resources.displayMetrics.density * fontScale
             columns = ((available + horizontalGap) / (minWidth + horizontalGap)).toInt()
                 .coerceIn(1, columns)
         }

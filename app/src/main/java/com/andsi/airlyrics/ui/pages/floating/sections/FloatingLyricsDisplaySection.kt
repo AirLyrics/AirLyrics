@@ -13,6 +13,9 @@ import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.horizontalButtons
 import com.andsi.airlyrics.ui.components.normalText
+import com.andsi.airlyrics.ui.components.panelSectionLabel
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
@@ -46,7 +49,7 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                                 )
                             }
                         ))
-                        addView(normalText(this@with, getString(R.string.ui_script_preference)))
+                        addView(panelSectionLabel(host, getString(R.string.ui_script_preference)))
                         addView(liveOptionGrid(
                             LyricsScriptPreference.entries.map { preference ->
                                 KeyedOptionItem(
@@ -119,7 +122,10 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                     openPanel(tile, getString(R.string.ui_lyrics_offset), "") {
                         val statusText = normalText(host, uiActions.currentLyricsOffsetSummary()).apply {
                             textSize = FloatingPageTokens.OFFSET_STATUS_TEXT_SP
+                            gravity = Gravity.CENTER
+                            fontFeatureSettings = "tnum"
                             typeface = Typeface.DEFAULT_BOLD
+                            accessibilityLiveRegion = android.view.View.ACCESSIBILITY_LIVE_REGION_POLITE
                             setTextColor(colorTextStrong)
                             setPadding(0, dp(FloatingPageTokens.OFFSET_STATUS_PADDING_TOP_DP), 0, dp(FloatingPageTokens.OFFSET_STATUS_PADDING_BOTTOM_DP))
                         }
@@ -134,6 +140,8 @@ internal fun FloatingPageScope.addLyricsDisplaySection(list: LinearLayout) = wit
                         ))
                         addView(actionButton(host, getString(R.string.ui_reset_current_song_offset)) {
                             resetLyricsOffset(statusText)
+                        }.apply {
+                            host.styleAirTonalButton(this, AirTonalButtonTone.DEFAULT)
                         })
                     }
                 }

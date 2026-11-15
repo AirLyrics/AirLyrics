@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -22,12 +23,14 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 @SuppressLint("ViewConstructor")
 internal class SettingsPanelHeader(
     private val host: MainUiHost,
-    title: String,
+    private val title: String,
     subtitle: String,
     onReset: (() -> Unit)?,
     onClose: () -> Unit
 ) : LinearLayout(host) {
     private var reset: FrameLayout? = null
+    private var back: FrameLayout? = null
+    private lateinit var titleView: TextView
 
     init {
         orientation = HORIZONTAL
@@ -35,16 +38,19 @@ internal class SettingsPanelHeader(
         addView(LinearLayout(host).apply {
             orientation = VERTICAL
             setPaddingRelative(0, host.dp(AirUiTokens.Space.Sm), host.dp(AirUiTokens.Space.Xl), 0)
-            addView(TextView(host).apply {
+            titleView = TextView(host).apply {
                 text = title
                 textSize = AirUiTokens.TextSize.Title
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(host.colorTextStrong)
-                applyTextPolicy(TextDisplayPolicy.CompactTitle)
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+                androidx.core.view.ViewCompat.setAccessibilityHeading(this, true)
                 setOnClickListener {
                     if (isTextTruncated()) host.showFullText(null, text.toString())
                 }
-            })
+            }
+            addView(titleView)
             if (subtitle.isNotBlank()) addView(TextView(host).apply {
                 text = subtitle
                 textSize = AirUiTokens.TextSize.BodySmall
@@ -73,6 +79,18 @@ internal class SettingsPanelHeader(
         }, FrameLayout.LayoutParams(host.dp(AirUiTokens.Layout.DialogCloseSize), host.dp(AirUiTokens.Layout.DialogCloseSize), Gravity.CENTER))
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener { onClick() }
+    }
+
+    fun updateNavigation(pageTitle: String?, onBack: (() -> Unit)?) {
+        titleView.text = pageTitle ?: title
+        if (onBack != null && back == null) {
+            back = action(R.drawable.ic_air_arrow_back, R.string.ui_back, onBack)
+            addView(back, 0)
+        }
+        back?.apply {
+            visibility = if (onBack == null) GONE else VISIBLE
+            setOnClickListener { onBack?.invoke() }
+        }
     }
 
     fun updateResetAction(enabled: Boolean, isUndo: Boolean) {

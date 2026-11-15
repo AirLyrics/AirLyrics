@@ -40,7 +40,7 @@ internal object FloatingPageTokens {
     const val PREVIEW_CLASSIC_FILL_MS = 2_800L
     const val PREVIEW_CLASSIC_CYCLE_MS = 3_600L
 
-    const val OFFSET_STATUS_TEXT_SP = 15f
+    const val OFFSET_STATUS_TEXT_SP = 20f
     const val OFFSET_STATUS_PADDING_TOP_DP = 2
     const val OFFSET_STATUS_PADDING_BOTTOM_DP = 8
 }

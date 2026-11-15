@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.ui.model
 
-import android.graphics.drawable.GradientDrawable
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -17,6 +16,7 @@ internal interface OptionControlsHost {
         max: Int,
         suffix: String,
         step: Int = 1,
+        compact: Boolean = false,
         onChangeFinished: ((Int) -> Unit)? = null,
         onChanged: (Int) -> Unit
     ): LinearLayout
@@ -27,5 +27,4 @@ internal interface OptionControlsHost {
         includeOpacity: Boolean = true,
         onChanged: (Int) -> Unit
     ): LinearLayout
-    fun colorPreviewBackground(color: Int): GradientDrawable
 }

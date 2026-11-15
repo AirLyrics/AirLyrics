@@ -1,6 +1,13 @@
 package com.andsi.airlyrics.ui.components
 
 import android.os.Looper
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import com.andsi.airlyrics.settings.store.ThemeSettingsStore
+import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
+import com.andsi.airlyrics.ui.state.FloatingPanelId
+import com.andsi.airlyrics.ui.theme.colorBackground
+import java.io.File
 import org.robolectric.Shadows.shadowOf
 import android.graphics.Rect
 import android.graphics.Color
@@ -223,6 +230,118 @@ class CompactSettingsLayoutTest {
                 controller = null
             }
         }
+    }
+
+    @Test fun floatingPanelActionsStayVisibleWhenLongContentScrolls() {
+        RuntimeEnvironment.setQualifiers("es-w320dp-h470dp-mdpi")
+        RuntimeEnvironment.setFontScale(2f)
+        val host = host()
+        val scope = FloatingPageScope(host)
+        val page = scope.createView()
+        layoutPage(page, 320, 470)
+        scope.restoringPanel = true
+        scope.panelOpeners.getValue(FloatingPanelId.SUMMARY).invoke()
+        layoutPage(page, 320, 470)
+        val panel = requireNotNull(scope.activeBubble)
+        val header = descendants(panel).filterIsInstance<SettingsPanelHeader>().single()
+        val scroll = descendants(panel).filterIsInstance<android.widget.ScrollView>().single()
+        assertTrue(scroll.height > 0)
+        assertTrue(scroll.getChildAt(0).height > scroll.height)
+        val top = header.top
+        scroll.fullScroll(View.FOCUS_DOWN)
+        layoutPage(page, 320, 470)
+        assertTrue(scroll.scrollY > 0)
+        assertEquals(top, header.top)
+        assertTrue(header.bottom <= scroll.top)
+        val close = descendants(header).single { it.contentDescription == host.getString(R.string.ui_close) }
+        assertEquals(host.dp(48), close.width)
+        assertTrue(close.bottom <= header.height)
+        capturePanel(page, "short-screen-summary")
+        close.performClick()
+        assertNull(host.interactions.panel)
+    }
+
+    @Test fun translucentColorsKeepPresetSelectionAndOpacityWhenChangingHue() {
+        val host = host()
+        val opacity = 90
+        var changedColor = Color.TRANSPARENT
+        val colors = host.colorControl("Color", Color.argb(opacity, 66, 165, 245), true) { changedColor = it }
+        layout(colors, host.dp(280))
+        val grid = descendants(colors).filterIsInstance<AdaptiveGridLayout>().single()
+        fun swatch(label: Int) = descendants(grid).filterIsInstance<TextView>()
+            .single { it.text.toString() == host.getString(label) }
+        assertTrue(swatch(R.string.ui_blue).isSelected)
+        swatch(R.string.ui_red).performClick()
+        assertEquals(opacity, Color.alpha(changedColor))
+        assertTrue(swatch(R.string.ui_red).isSelected)
+        assertFalse(swatch(R.string.ui_blue).isSelected)
+        swatch(R.string.ui_custom).performClick()
+        layout(colors, host.dp(280))
+        val sliders = descendants(colors).filterIsInstance<SettingsSliderRow>()
+        assertEquals(4, sliders.size)
+        assertTrue(sliders.all { it.parent.let { parent -> (parent as View).visibility == View.VISIBLE } })
+        assertTrue(sliders.all { it.seekBar.height >= host.dp(48) })
+    }
+
+    @Test fun floatingSubSettingsRenderWithReadableControlsAcrossThemesAndTextSizes() {
+        val app = RuntimeEnvironment.getApplication()
+        try {
+            for ((dark, locale, scale) in listOf(Triple(true, "zh-rCN", 1f), Triple(false, "es", 2f))) {
+                RuntimeEnvironment.setQualifiers("$locale-w360dp-h680dp-mdpi")
+                RuntimeEnvironment.setFontScale(scale)
+                ThemeSettingsStore.setDark(app, dark)
+                val host = host()
+                try {
+                    for (id in listOf(FloatingPanelId.TEXT_COLOR, FloatingPanelId.WINDOW_LAYOUT, FloatingPanelId.CONTENT, FloatingPanelId.AUTO_HIDE)) {
+                        host.interactions.panel = null
+                        val scope = FloatingPageScope(host)
+                        val page = scope.createView()
+                        layoutPage(page, 360, 680)
+                        scope.restoringPanel = true
+                        scope.panelOpeners.getValue(id).invoke()
+                        layoutPage(page, 360, 680)
+                        val panel = requireNotNull(scope.activeBubble)
+                        assertTrue(panel.width <= host.dp(360))
+                        assertTrue(panel.height <= host.dp(680))
+                        descendants(panel).filterIsInstance<SettingsSliderRow>().forEach { row ->
+                            val label = descendants(row).filterIsInstance<TextView>().single { it !== row.valueView }
+                            val labelBounds = Rect(0, 0, label.width, label.height)
+                            val valueBounds = Rect(0, 0, row.valueView.width, row.valueView.height)
+                            row.offsetDescendantRectToMyCoords(label, labelBounds)
+                            row.offsetDescendantRectToMyCoords(row.valueView, valueBounds)
+                            assertTrue(labelBounds.bottom <= valueBounds.top || labelBounds.right <= valueBounds.left)
+                            assertTrue(valueBounds.right <= row.width)
+                        }
+                        capturePanel(page, "$locale-${id.name.lowercase()}")
+                    }
+                } finally {
+                    controller?.close()
+                    controller = null
+                }
+            }
+        } finally {
+            app.getSharedPreferences("app_theme", Context.MODE_PRIVATE).edit().clear().commit()
+        }
+    }
+
+    private fun layoutPage(view: View, width: Int, height: Int) {
+        // Detached renders need an explicit direction to resolve relative icon drawables.
+        descendants(view).forEach { it.layoutDirection = View.LAYOUT_DIRECTION_LTR }
+        view.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+        view.layout(0, 0, view.measuredWidth, view.measuredHeight)
+    }
+
+    private fun capturePanel(page: View, name: String) {
+        val bitmap = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+        Canvas(bitmap).apply {
+            drawColor((page.context as MainUiHost).colorBackground)
+            page.draw(this)
+        }
+        File("/tmp", "airlyrics-floating-$name.png").outputStream().use {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        bitmap.recycle()
     }
 
     private fun focusWindow(decor: View, focused: Boolean) {

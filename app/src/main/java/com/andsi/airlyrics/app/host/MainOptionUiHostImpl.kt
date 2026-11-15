@@ -5,7 +5,10 @@ import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.airTonalButtonStyle
 import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.R
+import android.graphics.Color
 import android.graphics.Typeface
+import android.view.View
+import android.view.accessibility.AccessibilityNodeInfo
 import android.view.Gravity
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -30,16 +33,48 @@ internal fun MainUiHost.optionButtonGridImpl(buttons: List<TextView>): LinearLay
 
 internal fun MainUiHost.liveOptionGridImpl(items: List<KeyedOptionItem>): LinearLayout {
     val buttons = mutableListOf<Pair<KeyedOptionItem, TextView>>()
+    fun updateSelection(view: TextView, item: KeyedOptionItem, selected: Boolean) {
+        applyOptionButtonState(view, item.title, selected)
+        view.isSelected = selected
+        // Reserve the checkmark slot so selection never changes the label's width.
+        val tone = if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
+        view.setAirStartIcon(this, R.drawable.ic_air_check,
+            if (selected) airTonalButtonStyle(tone).textColor else Color.TRANSPARENT)
+    }
     items.forEach { item ->
         val button = optionButton(OptionItem(item.title, item.selected) {
             item.action()
             buttons.forEach { (option, view) ->
-                applyOptionButtonState(view, option.title, option.key == item.key)
+                updateSelection(view, option, option.key == item.key)
             }
-        })
+        }).apply {
+            minimumHeight = dp(AirUiTokens.SettingsPanel.OptionMinHeight)
+            setPaddingRelative(
+                dp(AirUiTokens.SettingsPanel.ControlGap), dp(AirUiTokens.Space.ControlV),
+                dp(AirUiTokens.SettingsPanel.ControlGap), dp(AirUiTokens.Space.ControlV)
+            )
+            isFocusable = true
+            isFocusableInTouchMode = false
+            accessibilityDelegate = object : View.AccessibilityDelegate() {
+                @Suppress("DEPRECATION") // Boolean checked state also supports Android 8–16.
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    info.className = "android.widget.RadioButton"
+                    info.isCheckable = true
+                    info.isChecked = host.isSelected
+                }
+            }
+            updateSelection(this, item, item.selected)
+        }
         buttons.add(item to button)
     }
-    return optionButtonGridImpl(buttons.map { it.second })
+    return AdaptiveGridLayout(
+        this, AirUiTokens.Layout.OptionColumns,
+        dp(AirUiTokens.SettingsPanel.ControlGap), dp(AirUiTokens.SettingsPanel.ControlGap)
+    ).apply {
+        buttons.forEach { addView(it.second) }
+        setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
+    }
 }
 
 internal fun MainUiHost.optionButtonImpl(item: OptionItem): TextView {

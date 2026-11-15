@@ -98,7 +98,7 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         if (needsRedraw) invalidate()
     }
 
-    private fun spicyInset(): Int = if (spicyPosition != null) maxOf(
+    private fun spicyInset(): Int = if (preview || spicyPosition != null) maxOf(
         kotlin.math.ceil(textSize * .24f).toInt(),
         // Keep the preview geometry fixed while tuning glow; the overlay uses the actual outset.
         LyricsHalo.outset(textSize, if (preview) PREVIEW_GLOW_SPACE else lyricsGlowStyle)

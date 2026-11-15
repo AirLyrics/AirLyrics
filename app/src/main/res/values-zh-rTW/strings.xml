@@ -338,6 +338,15 @@
     <string name="ui_reset_current_song_offset">重設目前歌曲偏移</string>
     <string name="ui_rewinding">倒轉中</string>
     <string name="ui_rgb_tune">展開 RGB 細調</string>
+    <string name="ui_custom_color">自訂顏色</string>
+    <string name="ui_save_color_swatch">儲存色票</string>
+    <string name="ui_color_hex">顏色代碼</string>
+    <string name="ui_color_hex_format">請輸入 #RRGGBB</string>
+    <string name="ui_apply">套用</string>
+    <string name="ui_saved_color_swatches">已儲存色票</string>
+    <string name="ui_back">返回</string>
+    <string name="ui_glow_strength_short">強度</string>
+    <string name="ui_glow_spread_short">擴散</string>
     <string name="ui_right">右對齊</string>
     <string name="ui_save_changes">儲存修改</string>
     <string name="ui_save_failed">儲存失敗</string>

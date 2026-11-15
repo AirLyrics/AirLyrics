@@ -10,7 +10,10 @@ import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.horizontalButtons
 import com.andsi.airlyrics.ui.components.settingRow
-import com.andsi.airlyrics.ui.components.settingSwitch
+import com.andsi.airlyrics.ui.components.panelSwitch
+import com.andsi.airlyrics.ui.components.panelSectionLabel
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.components.smallHint
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
@@ -40,7 +43,9 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                             }
                         ))
 
-                        val lockButton = actionButton(host, floatingLockButtonText()) { }
+                        val lockButton = actionButton(host, floatingLockButtonText()) { }.apply {
+                            host.styleAirTonalButton(this, AirTonalButtonTone.DEFAULT)
+                        }
                         pageRefs.lockButton = lockButton
                         lockButton.setOnClickListener {
                             uiActions.toggleLock()
@@ -49,7 +54,9 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                         }
                         addView(lockButton)
 
-                        val clickThroughButton = actionButton(host, floatingClickThroughButtonText()) { }
+                        val clickThroughButton = actionButton(host, floatingClickThroughButtonText()) { }.apply {
+                            host.styleAirTonalButton(this, AirTonalButtonTone.DEFAULT)
+                        }
                         pageRefs.clickThroughButton = clickThroughButton
                         clickThroughButton.setOnClickListener {
                             uiActions.toggleClickThrough()
@@ -72,7 +79,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                         ""
                     ) {
                         addView(
-                            settingSwitch(
+                            panelSwitch(
                                 host,
                                 getString(R.string.ui_auto_hide_when_paused),
                                 autoHideWhenPausedEnabled()
@@ -82,7 +89,7 @@ internal fun FloatingPageScope.addBehaviorSection(list: LinearLayout) = with(hos
                             }
                         )
                         addView(
-                            settingSwitch(
+                            panelSwitch(
                                 host,
                                 getString(R.string.ui_auto_hide_when_lyrics_unavailable),
                                 autoHideWhenLyricsUnavailableEnabled()
@@ -171,6 +178,9 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
     summaryButton.setOnClickListener {
         openingPanelId = FloatingPanelId.SUMMARY
         openPanel(summaryButton, getString(R.string.ui_current_setup), "") {
+            addView(panelSectionLabel(host, getString(R.string.ui_appearance)).apply {
+                setPadding(0, 0, 0, dp(AirUiTokens.SettingsPanel.ControlGap))
+            })
             addView(settingRow(host, getString(R.string.ui_skin), localizedPresetTitle(style().presetName)))
             addView(settingRow(host, getString(R.string.ui_font_size), "${style().textSizeSp.toInt()}sp"))
             addView(settingRow(host, getString(R.string.ui_font), fontFamilySubtitle(), valuePolicy = TextDisplayPolicy.SingleLineSummary))
@@ -180,12 +190,15 @@ private fun FloatingPageScope.addSetupSummaryButton(list: LinearLayout) = with(h
             addView(settingRow(host, getString(R.string.ui_highlight), AirColorUtils.colorSummary(style().wordByWordHighlightColor)))
             addView(settingRow(host, getString(R.string.ui_background), onOff(style().backgroundEnabled)))
             addView(settingRow(host, getString(R.string.ui_width), "${style().maxWidthPercent}%"))
+            addView(panelSectionLabel(host, getString(R.string.ui_lyrics_display)))
             addView(settingRow(host, getString(R.string.ui_content), localizedLyricsContentModeTitle(contentDisplayMode())))
             addView(settingRow(host, getString(R.string.ui_range), localizedLyricsLineModeTitle(lineDisplayMode())))
             addView(settingRow(host, getString(R.string.ui_alignment), localizedGravityTitle(style().gravity)))
+            addView(settingRow(host, getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary()))
+            addView(panelSectionLabel(host, getString(R.string.ui_animation)))
             addView(settingRow(host, getString(R.string.ui_animation), localizedLyricsSwitchAnimationTitle(switchAnimationMode())))
             addView(settingRow(host, getString(R.string.ui_word_by_word_lyrics), getString(if (wordByWordLyricsEnabled()) R.string.ui_preferred else R.string.ui_off)))
-            addView(settingRow(host, getString(R.string.ui_lyrics_offset), uiActions.currentLyricsOffsetSummary()))
+            addView(panelSectionLabel(host, getString(R.string.ui_behavior)))
             addView(settingRow(host, getString(R.string.ui_locked), onOff(uiState.locked)))
             addView(settingRow(host, getString(R.string.ui_click_through), onOff(uiState.clickThrough)))
             addView(settingRow(host, getString(R.string.ui_auto_hide), autoHideSummary()))

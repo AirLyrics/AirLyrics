@@ -217,16 +217,54 @@ class MainActivityInteractionRecreationTest {
         assertEquals("[00:01.00], persistent draft", editorRow().contentDescription)
     }
 
-    @Test fun rgbExpansionSurvivesRecreation() {
+    @Test fun hexInputDraftRestoresAndAppliesToTheCurrentColorPanel() {
+        floatingPage()
+        descendants(activity.window.decorView).single {
+            it.getTag(R.id.interaction_anchor) == "panel:TEXT_COLOR"
+        }.performClick()
+        settle()
+        descendants(activity.window.decorView).single {
+            it.getTag(R.id.interaction_anchor) == "floating.color.custom"
+        }.performClick()
+        settle()
+        descendants(activity.window.decorView).single {
+            it.getTag(R.id.interaction_anchor) == "floating.color.hex"
+        }.performClick()
+        settle()
+        descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().single().setText("#12")
+        val before = FloatingLyricsStyleStore.getStyle(activity)
+        controller.recreate()
+        settle()
+        assertEquals(FloatingPanelId.TEXT_COLOR, activity.graph.viewModel.interactions.panel)
+        val input = descendants(latestDialog().window!!.decorView).filterIsInstance<EditText>().single()
+        assertEquals("#12", input.text.toString())
+        input.setText("#a85350")
+        button(latestDialog(), R.string.ui_apply).performClick()
+        settle()
+        val after = FloatingLyricsStyleStore.getStyle(activity)
+        assertEquals(0xA85350, after.textColor and 0xFFFFFF)
+        assertEquals(android.graphics.Color.alpha(before.textColor), android.graphics.Color.alpha(after.textColor))
+        assertEquals(before.wordByWordHighlightColor, after.wordByWordHighlightColor)
+        assertNull(activity.graph.viewModel.interactions.read("panel.color.hex"))
+    }
+
+    @Test fun rgbEditorSurvivesRecreationAndBackReturnsToColorPanel() {
         floatingPage()
         descendants(activity.window.decorView).single { it.getTag(R.id.interaction_anchor) == "panel:TEXT_COLOR" }.performClick()
         settle()
-        descendants(activity.window.decorView).filterIsInstance<TextView>()
-            .first { it.text.toString() == activity.getString(R.string.ui_rgb_tune) }.performClick()
+        descendants(activity.window.decorView)
+            .first { it.getTag(R.id.interaction_anchor) == "floating.color.custom" && it.isClickable }.performClick()
         controller.recreate(); settle()
         assertEquals(FloatingPanelId.TEXT_COLOR, activity.graph.viewModel.interactions.panel)
-        assertTrue(descendants(activity.window.decorView).filterIsInstance<TextView>()
-            .any { it.text.toString() == activity.getString(R.string.ui_hide_rgb) && it.isShown })
+        assertTrue(action(R.string.ui_back).isShown)
+        assertEquals(3, descendants(activity.window.decorView).filterIsInstance<android.widget.SeekBar>()
+            .count { it.isShown && it.getTag(R.id.interaction_anchor)?.toString()?.startsWith("floating.color.rgb.") == true })
+        activity.onBackPressedDispatcher.onBackPressed()
+        settle()
+        assertEquals(FloatingPanelId.TEXT_COLOR, activity.graph.viewModel.interactions.panel)
+        assertTrue(descendants(activity.window.decorView).any {
+            it.getTag(R.id.interaction_anchor) == "floating.color.custom" && it.isShown && it.isClickable
+        })
     }
 
     @Suppress("DEPRECATION")

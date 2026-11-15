@@ -41,6 +41,8 @@ internal class FloatingPageScope(
     internal val host: MainUiHost
 ) {
     private val rootFrame = FrameLayout(host)
+    private var backgroundPage: ViewGroup? = null
+    private var backgroundInteractionState: Pair<Int, Int>? = null
     private val root = LinearLayout(host).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(
@@ -63,6 +65,7 @@ internal class FloatingPageScope(
     internal var activeBubble: LinearLayout? = null
     internal var selectedTileView: View? = null
     internal var activePanelResetStateUpdater: (() -> Unit)? = null
+    internal var activePanelNavigation: FloatingPanelNavigation? = null
     internal var activeDisplayScopePanelRefresh: (() -> Unit)? = null
     internal val pageRefs = FloatingPageRefs()
     internal var previewExpanded = host.isFloatingPreviewExpanded()
@@ -129,7 +132,9 @@ internal class FloatingPageScope(
 
         list.setTag(R.id.interaction_anchor, "floating.settings")
         root.addView(list)
-        rootFrame.addView(com.andsi.airlyrics.ui.layout.ResponsivePage(host, root, setOf(0), "scroll.FLOATING.root"),
+        val page = com.andsi.airlyrics.ui.layout.ResponsivePage(host, root, setOf(0), "scroll.FLOATING.root")
+        backgroundPage = page
+        rootFrame.addView(page,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
 
         focusOverlay = FrameLayout(host).apply {
@@ -148,6 +153,22 @@ internal class FloatingPageScope(
             try { panelOpeners[id]?.invoke() } finally { restoringPanel = false }
         }
         return@with rootFrame
+    }
+
+    internal fun setBackgroundBlockedByPanel(blocked: Boolean) {
+        val page = backgroundPage ?: return
+        if (blocked) {
+            if (backgroundInteractionState != null) return
+            backgroundInteractionState = page.descendantFocusability to page.importantForAccessibility
+            page.descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            page.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+        } else {
+            backgroundInteractionState?.let { (focus, accessibility) ->
+                page.descendantFocusability = focus
+                page.importantForAccessibility = accessibility
+            }
+            backgroundInteractionState = null
+        }
     }
 
     internal fun onOff(value: Boolean): String {
@@ -475,9 +496,7 @@ internal class FloatingPageScope(
     }
 
     internal fun highlightEffectsSubtitle(current: FloatingLyricsStyle = style()): String =
-        compactColorSummary(current.wordByWordHighlightColor) + " · " +
-            host.getString(R.string.ui_glow) + ": " +
-            host.getString(if (current.glow.enabled) R.string.ui_on else R.string.ui_off)
+        compactColorSummary(current.wordByWordHighlightColor)
 
     internal fun previewFloatingGlow(glow: com.andsi.airlyrics.core.model.LyricsGlowStyle) {
         val previewStyle = style().copy(glow = glow)

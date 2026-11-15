@@ -63,7 +63,7 @@ internal fun alphaToOpacityPercent(alpha: Int): Int {
 
 /** Compact tile value; the expanded controls still show each RGB channel. */
 internal fun compactColorSummary(color: Int): String =
-    String.format(Locale.ROOT, "#%06X · A%d", color and 0x00FFFFFF, Color.alpha(color))
+    String.format(Locale.ROOT, "#%06X", color and 0x00FFFFFF)
 
 internal fun opacityPercentToAlpha(percent: Int): Int {
     return (percent.coerceIn(0, 100) * 255f / 100f).roundToInt()

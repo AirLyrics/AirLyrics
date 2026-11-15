@@ -2,6 +2,9 @@ package com.andsi.airlyrics.app.host
 
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.transition.TransitionManager
+import com.andsi.airlyrics.R
+import com.andsi.airlyrics.ui.components.FLOATING_PANEL_MOTION_ROOT
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -11,7 +14,7 @@ import com.andsi.airlyrics.ui.components.GridColumnPolicy
 import com.andsi.airlyrics.ui.components.SettingTileLayout
 import com.andsi.airlyrics.ui.components.SettingsPanelHeader
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.ui.components.spacer
+import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -39,36 +42,31 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
     content: LinearLayout.() -> Unit
 ): FloatingFocusBubbleHandle {
     val activity = this
-    lateinit var contentContainer: LinearLayout
-    lateinit var header: SettingsPanelHeader
-    val bubble = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.ButtonH), dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Radius.Md))
-        elevation = dp(AirUiTokens.Space.Xxl).toFloat()
-        background = GradientDrawable().apply {
-            cornerRadius = dp(AirUiTokens.Radius.Dialog).toFloat()
-            setColor(colorBubble)
-            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
-        }
-        header = SettingsPanelHeader(activity, title, subtitle, onReset, onClose)
-        addView(header)
-        addView(spacer(activity, 8))
-        contentContainer = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-            content()
-        }
-        addView(contentContainer)
+    val header = SettingsPanelHeader(activity, title, subtitle, onReset, onClose).apply {
+        setPaddingRelative(
+            dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.Xxl),
+            dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Xl)
+        )
     }
-
+    val contentContainer = LinearLayout(activity).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(
+            dp(AirUiTokens.Space.PageH), 0,
+            dp(AirUiTokens.Space.PageH), dp(AirUiTokens.Space.PageH)
+        )
+        content()
+    }
     val scroll = ScrollView(this).apply {
         isFillViewport = false
-        addView(bubble, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        clipToPadding = false
+        addView(contentContainer, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
     val shell = object : LinearLayout(this) {
+        override fun onDetachedFromWindow() {
+            TransitionManager.endTransitions(this)
+            super.onDetachedFromWindow()
+        }
+
         override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
             val available = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED) {
                 dp(AirUiTokens.Layout.FloatingPanelMaxWidth)
@@ -77,14 +75,19 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
         }
     }.apply {
         orientation = LinearLayout.VERTICAL
-        background = bubble.background
-        bubble.background = null
-        elevation = bubble.elevation
-        bubble.elevation = 0f
+        setTag(R.id.interaction_anchor, FLOATING_PANEL_MOTION_ROOT)
+        background = GradientDrawable().apply {
+            cornerRadius = dp(AirUiTokens.Radius.Dialog).toFloat()
+            setColor(AirColorUtils.opaqueRgb(colorBubble))
+            setStroke(dp(AirUiTokens.Stroke.Hairline), colorAccentSoft)
+        }
+        elevation = dp(AirUiTokens.Space.Xxl).toFloat()
         clipToOutline = true
+        androidx.core.view.ViewCompat.setAccessibilityPaneTitle(this, title)
         layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER).apply {
             setMargins(dp(AirUiTokens.Radius.Md), dp(AirUiTokens.Radius.Md), dp(AirUiTokens.Radius.Md), dp(AirUiTokens.Radius.Md))
         }
+        addView(header, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
     }
 
@@ -94,6 +97,10 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
             contentContainer.removeAllViews()
             contentContainer.content()
         },
-        updateResetAction = { enabled, isUndo -> header.updateResetAction(enabled, isUndo) }
+        updateResetAction = { enabled, isUndo -> header.updateResetAction(enabled, isUndo) },
+        updateNavigation = { pageTitle, onBack ->
+            header.updateNavigation(pageTitle, onBack)
+            androidx.core.view.ViewCompat.setAccessibilityPaneTitle(shell, pageTitle ?: title)
+        }
     )
 }

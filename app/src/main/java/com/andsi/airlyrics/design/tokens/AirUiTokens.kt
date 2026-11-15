@@ -63,6 +63,14 @@ object AirUiTokens {
         const val PageTitle = 22f
     }
 
+    object SettingsPanel {
+        const val SectionGap = 24
+        const val ControlGap = 12
+        const val OptionMinHeight = 52
+        const val SwitchMinHeight = 56
+        const val ColorSampleSize = 24
+    }
+
     object Motion {
         const val InputDialogFadeInMs = 160L
         const val InputDialogExitMs = 200L
@@ -138,12 +146,11 @@ object AirUiTokens {
         const val LyricsSourceButtonHeight = 48
         const val SettingsIconBubbleSize = 46
         const val FloatingTileIconSize = 40
-        const val ColorSwatchHeight = 42
         const val FloatingTileMinHeight = 112
         const val SettingTextLineHeightMultiplier = 1.5f
         const val SettingGap = 12
         const val SwatchMinWidth = 80
-        const val FloatingPanelMaxWidth = 360
+        const val FloatingPanelMaxWidth = 400
         const val BottomBarHeight = 86
         const val BottomTabLabelTextSp = 10
         const val BottomTabFloatingPadding = 62

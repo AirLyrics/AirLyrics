@@ -338,6 +338,16 @@ Word-timed TTML:
     <string name="ui_reset_current_song_offset">Reset current song offset</string>
     <string name="ui_rewinding">Rewinding</string>
     <string name="ui_rgb_tune">RGB tune</string>
+    <string name="ui_custom_color">Custom color</string>
+    <string name="ui_save_color_swatch">Save swatch</string>
+    <string name="ui_color_hex">Color code</string>
+    <string name="ui_color_hex_format">Use #RRGGBB</string>
+    <string name="ui_apply">Apply</string>
+    <string name="ui_saved_color_swatches">Saved swatches</string>
+    <string name="ui_rgb_editor_title" translatable="false">RGB</string>
+    <string name="ui_back">Back</string>
+    <string name="ui_glow_strength_short">Strength</string>
+    <string name="ui_glow_spread_short">Spread</string>
     <string name="ui_right">Right</string>
     <string name="ui_save_changes">Save changes</string>
     <string name="ui_save_failed">Save failed</string>

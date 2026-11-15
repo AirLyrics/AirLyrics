@@ -5,11 +5,16 @@ import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.components.actionButton
-import com.andsi.airlyrics.ui.components.normalText
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.panelSwitch
+import com.andsi.airlyrics.ui.components.smallHint
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
+import com.andsi.airlyrics.ui.pages.floating.FloatingPanelNavigation
+import com.andsi.airlyrics.ui.pages.floating.FloatingColorPanelContent
 import com.andsi.airlyrics.ui.pages.floating.alphaToOpacityPercent
 import com.andsi.airlyrics.ui.pages.floating.compactColorSummary
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
@@ -50,6 +55,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = compactColorSummary(style().textColor),
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
+                    val navigation = FloatingPanelNavigation()
                     openPanel(
                         tile,
                         getString(R.string.ui_text_color),
@@ -66,18 +72,19 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                                     )
                                 )
                             }
-                        )
+                        ),
+                        navigation = navigation
                     ) {
-                        addView(
-                            colorControl(
-                                title = getString(R.string.ui_text),
-                                color = AirColorUtils.opaqueRgb(style().textColor),
-                                includeOpacity = false
-                            ) { color ->
+                        setPadding(paddingLeft, paddingTop, paddingRight, dp(12))
+                        addView(FloatingColorPanelContent(
+                            host = host,
+                            navigation = navigation,
+                            currentColor = { style().textColor },
+                            onColorChanged = { color ->
                                 applyFloatingTextColor(color, refreshPage = false)
                                 refreshFloatingPreview()
                             }
-                        )
+                        ))
                     }
                 }
             ),
@@ -106,14 +113,10 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                             }
                         )
                     ) {
-                        val backgroundButton = actionButton(host, getString(if (style().backgroundEnabled) R.string.ui_background_on else R.string.ui_background_off)) { }
-                        backgroundButton.setOnClickListener {
-                            val enabled = !floatingStyle().backgroundEnabled
+                        addView(panelSwitch(host, getString(R.string.ui_background), style().backgroundEnabled) { enabled ->
                             applyFloatingBackgroundEnabled(enabled)
-                            backgroundButton.setText(if (enabled) R.string.ui_background_on else R.string.ui_background_off)
                             refreshFloatingPreview()
-                        }
-                        addView(backgroundButton)
+                        })
                         addView(sliderRow(
                             title = getString(R.string.ui_opacity),
                             value = alphaToOpacityPercent(style().backgroundAlpha),
@@ -206,8 +209,10 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                             )
                         ) {
                             selectFloatingFontFile()
+                        }.apply {
+                            host.styleAirTonalButton(this, AirTonalButtonTone.DEFAULT)
                         })
-                        addView(normalText(host, getString(R.string.ui_font_formats_hint)))
+                        addView(smallHint(host, getString(R.string.ui_font_formats_hint)))
                     }
                 }
             ),

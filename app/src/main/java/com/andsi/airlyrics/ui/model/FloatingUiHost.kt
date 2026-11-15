@@ -13,7 +13,8 @@ import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 internal data class FloatingFocusBubbleHandle(
     val view: LinearLayout,
     val rebuildContent: () -> Unit,
-    val updateResetAction: (Boolean, Boolean) -> Unit
+    val updateResetAction: (Boolean, Boolean) -> Unit,
+    val updateNavigation: (String?, (() -> Unit)?) -> Unit = { _, _ -> }
 )
 
 internal data class FloatingPreviewHighlightProgress(

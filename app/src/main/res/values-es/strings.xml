@@ -338,6 +338,15 @@ TTML de tiempo por palabra:
     <string name="ui_reset_current_song_offset">Restablecer el desfase de la canción actual</string>
     <string name="ui_rewinding">Retrocediendo</string>
     <string name="ui_rgb_tune">Ajuste RGB</string>
+    <string name="ui_custom_color">Color personalizado</string>
+    <string name="ui_save_color_swatch">Guardar muestra</string>
+    <string name="ui_color_hex">Código de color</string>
+    <string name="ui_color_hex_format">Usa #RRGGBB</string>
+    <string name="ui_apply">Aplicar</string>
+    <string name="ui_saved_color_swatches">Muestras guardadas</string>
+    <string name="ui_back">Volver</string>
+    <string name="ui_glow_strength_short">Intensidad</string>
+    <string name="ui_glow_spread_short">Extensión</string>
     <string name="ui_right">Derecha</string>
     <string name="ui_save_changes">Guardar cambios</string>
     <string name="ui_save_failed">Falló el guardado</string>

@@ -3,26 +3,33 @@ package com.andsi.airlyrics.app.host
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.SeekBar
-import androidx.appcompat.widget.AppCompatSeekBar
-import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
-import com.andsi.airlyrics.ui.components.GridColumnPolicy
-import com.andsi.airlyrics.ui.components.spacer
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
+import com.andsi.airlyrics.ui.components.AdaptiveLabelValueLayout
+import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.GridColumnPolicy
+import com.andsi.airlyrics.ui.components.SettingsSliderRow
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
+import com.andsi.airlyrics.ui.components.spacer
+import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.core.color.AirColorUtils
-import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorStroke
-import com.andsi.airlyrics.ui.theme.colorText
-import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.ui.theme.colorSurfaceLight
+import com.andsi.airlyrics.ui.theme.colorTextMuted
+import com.andsi.airlyrics.ui.theme.colorTextStrong
+import java.util.Locale
 
 internal fun MainUiHost.sliderRowImpl(
     title: String,
@@ -32,78 +39,59 @@ internal fun MainUiHost.sliderRowImpl(
     suffix: String,
     step: Int,
     onChangeFinished: ((Int) -> Unit)?,
-    onChanged: (Int) -> Unit
+    onChanged: (Int) -> Unit,
+    compact: Boolean = false
 ): LinearLayout {
-    val activity = this
     val key = nextPanelControlKey("slider")
     val restoredValue = key?.let { interactions.read(it) }?.getInt("preview", value) ?: value
     val safeStep = step.coerceAtLeast(1)
     val safeValue = restoredValue.coerceIn(min, max).let {
         min + ((it - min + safeStep / 2) / safeStep) * safeStep
     }.coerceAtMost(max)
-    // These controls separate a pure preview callback from the persisted commit callback.
+    // Preview and persistence remain separate, including during activity recreation.
     if (restoredValue != value && onChangeFinished != null) onChanged(safeValue)
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
-
-        val valueText = TextView(activity).apply {
-            text = getString(R.string.field_value_with_suffix, title, safeValue, suffix)
-            textSize = AirUiTokens.TextSize.Body
-            setTextColor(colorText)
-            setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
-        }
-        addView(valueText)
-
-        addView(object : AppCompatSeekBar(activity) {
-            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-                // Capture the drag from DOWN, before a vertical parent can intercept it.
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> parent?.requestDisallowInterceptTouchEvent(true)
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL ->
-                        parent?.requestDisallowInterceptTouchEvent(false)
-                }
-                return super.dispatchTouchEvent(event)
-            }
-        }.apply {
-            this.max = (max - min) / safeStep
-            progress = (safeValue - min) / safeStep
-            var latestValue = safeValue
-            var isTracking = false
-            var changedWhileTracking = false
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    val newValue = min + progress * safeStep
-                    latestValue = newValue
-                    valueText.text = getString(R.string.field_value_with_suffix, title, newValue, suffix)
-                    if (fromUser) {
-                        key?.let { interactions.write(it) { putInt("preview", newValue) } }
-                        onChanged(newValue)
-                        if (isTracking) {
-                            changedWhileTracking = true
-                        } else {
-                            onChangeFinished?.invoke(newValue)
-                            key?.let(interactions::remove)
-                        }
-                    }
-                }
-
-                override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                    isTracking = true
-                    changedWhileTracking = false
-                }
-
-                override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                    isTracking = false
-                    if (changedWhileTracking) {
-                        onChangeFinished?.invoke(latestValue)
+    fun valueLabel(value: Int): String =
+        String.format(resources.configuration.locales[0], "%d%s", value, suffix)
+    val row = SettingsSliderRow(this, title, valueLabel(safeValue), compact)
+    row.seekBar.apply {
+        this.max = (max - min) / safeStep
+        progress = (safeValue - min) / safeStep
+        var latestValue = safeValue
+        var isTracking = false
+        var changedWhileTracking = false
+        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val newValue = min + progress * safeStep
+                latestValue = newValue
+                row.updateValue(valueLabel(newValue))
+                if (fromUser) {
+                    key?.let { interactions.write(it) { putInt("preview", newValue) } }
+                    onChanged(newValue)
+                    if (isTracking) {
+                        changedWhileTracking = true
+                    } else {
+                        onChangeFinished?.invoke(newValue)
                         key?.let(interactions::remove)
                     }
-                    changedWhileTracking = false
                 }
-            })
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+                isTracking = true
+                changedWhileTracking = false
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+                isTracking = false
+                if (changedWhileTracking) {
+                    onChangeFinished?.invoke(latestValue)
+                    key?.let(interactions::remove)
+                }
+                changedWhileTracking = false
+            }
         })
     }
+    return row
 }
 
 internal fun MainUiHost.colorControlImpl(
@@ -133,72 +121,101 @@ internal fun MainUiHost.colorControlImpl(
 
     return LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(AirUiTokens.Space.Lg), 0, 0)
-
-        val preview = TextView(activity).apply {
-            textSize = AirUiTokens.TextSize.Body
-            setTextColor(colorText)
-            setPadding(dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl), dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), dp(AirUiTokens.Space.Xxl))
+        setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
+        val valueText = TextView(activity).apply {
+            textSize = AirUiTokens.TextSize.BodySmall
+            fontFeatureSettings = "tnum"
+            setTextColor(colorTextMuted)
         }
-        addView(preview)
+        val sample = View(activity).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                dp(AirUiTokens.SettingsPanel.ColorSampleSize),
+                dp(AirUiTokens.SettingsPanel.ColorSampleSize)
+            )
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }
+        val preview = AdaptiveLabelValueLayout(
+            activity,
+            TextView(activity).apply {
+                text = title
+                textSize = AirUiTokens.TextSize.Button
+                setTextColor(colorTextStrong)
+            },
+            valueText,
+            trailingView = sample,
+            horizontalGapPx = dp(AirUiTokens.SettingsPanel.ControlGap),
+            verticalGapPx = dp(AirUiTokens.Space.Lg),
+            trailingGapPx = dp(AirUiTokens.Space.Xl),
+            trailingAtTop = true
+        )
+        addView(preview, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         val swatchViews = mutableListOf<Pair<Int?, TextView>>()
-        val swatchGrid = AdaptiveGridLayout(activity, AirUiTokens.Layout.SwatchColumns, dp(AirUiTokens.Layout.SettingGap), dp(AirUiTokens.Layout.SettingGap), columnPolicy = GridColumnPolicy.Width(AirUiTokens.Layout.SwatchMinWidth))
-        addView(spacer(activity, AirUiTokens.Layout.SettingGap))
+        val swatchGrid = AdaptiveGridLayout(
+            activity, AirUiTokens.Layout.SwatchColumns,
+            dp(AirUiTokens.SettingsPanel.ControlGap), dp(AirUiTokens.SettingsPanel.ControlGap),
+            columnPolicy = GridColumnPolicy.Width(AirUiTokens.Layout.SwatchMinWidth)
+        )
+        addView(spacer(activity, AirUiTokens.SettingsPanel.ControlGap))
         addView(swatchGrid)
-        addView(spacer(activity, AirUiTokens.Layout.SettingGap))
+        addView(spacer(activity, AirUiTokens.Space.Sm))
 
-        val fineTuneButton = actionButton(activity, getString(if (rgbExpanded) R.string.ui_hide_rgb else R.string.ui_rgb_tune)) { }
+        val fineTuneButton = actionButton(activity, getString(if (rgbExpanded) R.string.ui_hide_rgb else R.string.ui_rgb_tune)) { }.apply {
+            activity.styleAirTonalButton(this, AirTonalButtonTone.DEFAULT)
+        }
         val rgbPanel = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             visibility = if (rgbExpanded) View.VISIBLE else View.GONE
-            setPadding(0, dp(AirUiTokens.Space.Lg), 0, 0)
+            setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
         }
         addView(fineTuneButton)
         addView(rgbPanel)
 
         fun currentColor(): Int = Color.argb(alpha, red, green, blue)
 
-        fun selectedStandardColor(): Int? {
-            val current = currentColor()
-            return standardColors.firstOrNull { (_, swatchColor) ->
-                Color.red(current) == Color.red(swatchColor) &&
-                    Color.green(current) == Color.green(swatchColor) &&
-                    Color.blue(current) == Color.blue(swatchColor) &&
-                    Color.alpha(current) == Color.alpha(swatchColor)
-            }?.second
-        }
+        fun selectedStandardColor(): Int? = standardColors.firstOrNull { (_, swatchColor) ->
+            AirColorUtils.opaqueRgb(swatchColor) == AirColorUtils.opaqueRgb(currentColor())
+        }?.second
 
-        fun swatchBackground(swatchColor: Int, selected: Boolean): GradientDrawable {
-            return GradientDrawable().apply {
-                cornerRadius = dp(AirUiTokens.Space.ButtonH).toFloat()
-                setColor(swatchColor)
-                setStroke(dp(if (selected) 3 else 1), if (selected) colorAccent else colorStroke)
+        fun colorSample(swatchColor: Int, selected: Boolean): android.graphics.drawable.Drawable {
+            val displayed = ColorUtils.compositeColors(swatchColor, colorSurfaceLight)
+            val circle = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(displayed)
+                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
             }
+            val drawable = if (selected) {
+                val check = requireNotNull(AppCompatResources.getDrawable(activity, R.drawable.ic_air_check)).mutate()
+                check.setTint(if (AirColorUtils.isDarkColor(displayed)) Color.WHITE else Color.BLACK)
+                LayerDrawable(arrayOf(circle, check)).apply {
+                    val inset = dp(AirUiTokens.Space.Sm)
+                    setLayerInset(1, inset, inset, inset, inset)
+                }
+            } else circle
+            drawable.setBounds(0, 0, dp(AirUiTokens.SettingsPanel.ColorSampleSize), dp(AirUiTokens.SettingsPanel.ColorSampleSize))
+            return drawable
         }
 
         fun refreshSwatches() {
-            val current = currentColor()
             val selectedPreset = selectedStandardColor()
             swatchViews.forEach { (presetColor, view) ->
-                val selected = if (presetColor == null) {
-                    selectedPreset == null
-                } else {
-                    selectedPreset != null &&
-                        Color.red(selectedPreset) == Color.red(presetColor) &&
-                        Color.green(selectedPreset) == Color.green(presetColor) &&
-                        Color.blue(selectedPreset) == Color.blue(presetColor)
-                }
-                val displayColor = presetColor ?: current
-                view.background = swatchBackground(displayColor, selected)
-                view.setTextColor(if (AirColorUtils.isDarkColor(displayColor)) Color.WHITE else Color.rgb(28, 34, 46))
+                val selected = if (presetColor == null) selectedPreset == null else presetColor == selectedPreset
+                activity.styleAirTonalButton(view, if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT)
+                view.isSelected = selected
+                view.setCompoundDrawablesRelative(null, colorSample(presetColor ?: currentColor(), selected), null, null)
+                view.compoundDrawablePadding = dp(AirUiTokens.Space.Xl)
             }
         }
 
         fun refreshPreview(dispatch: Boolean) {
             val newColor = currentColor()
-            preview.text = getString(R.string.floating_color_summary, title, AirColorUtils.colorSummary(newColor))
-            preview.background = colorPreviewBackground(newColor)
+            valueText.text = if (includeOpacity) {
+                String.format(Locale.ROOT, "#%06X · A%d", newColor and 0x00FFFFFF, Color.alpha(newColor))
+            } else {
+                String.format(Locale.ROOT, "#%06X", newColor and 0x00FFFFFF)
+            }
+            valueText.contentDescription = AirColorUtils.colorSummary(newColor)
+            sample.background = colorSample(newColor, false)
             refreshSwatches()
             if (dispatch) onChanged(newColor)
         }
@@ -207,98 +224,71 @@ internal fun MainUiHost.colorControlImpl(
             sliderTitle: String,
             initialValue: Int,
             onValueChanged: (Int) -> Unit
-        ): Pair<SeekBar, TextView> {
-            val row = LinearLayout(activity).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Sm))
-            }
-            val valueText = TextView(activity).apply {
-                text = getString(R.string.floating_slider_value, sliderTitle, initialValue)
-                textSize = AirUiTokens.TextSize.Body
-                setTextColor(colorText)
-                setPadding(0, 0, 0, dp(AirUiTokens.Space.Lg))
-            }
-            row.addView(valueText)
-            val seekBar = SeekBar(activity).apply {
+        ): SettingsSliderRow {
+            val row = SettingsSliderRow(activity, sliderTitle, initialValue.toString())
+            row.seekBar.apply {
                 max = 255
                 progress = initialValue.coerceIn(0, 255)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        valueText.text = getString(R.string.floating_slider_value, sliderTitle, progress)
+                        row.updateValue(progress.toString())
                         if (fromUser) {
                             onValueChanged(progress)
                             refreshPreview(dispatch = true)
                         }
                     }
-
                     override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
                     override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
                 })
             }
-            row.addView(seekBar)
             rgbPanel.addView(row)
-            return seekBar to valueText
+            return row
         }
 
         val redSlider = colorSliderRow("R", red) { red = it }
         val greenSlider = colorSliderRow("G", green) { green = it }
         val blueSlider = colorSliderRow("B", blue) { blue = it }
-        val alphaSlider = if (includeOpacity) {
-            colorSliderRow(getString(R.string.ui_opacity), alpha) { alpha = it }
-        } else {
-            null
-        }
-
-        fun setSlider(pair: Pair<SeekBar, TextView>, titleText: String, value: Int) {
-            pair.first.progress = value.coerceIn(0, 255)
-            pair.second.text = getString(R.string.field_value, titleText, value)
-        }
+        val alphaSlider = if (includeOpacity) colorSliderRow(getString(R.string.ui_opacity), alpha) { alpha = it } else null
 
         fun syncSliders() {
-            setSlider(redSlider, "R", red)
-            setSlider(greenSlider, "G", green)
-            setSlider(blueSlider, "B", blue)
-            alphaSlider?.let { setSlider(it, getString(R.string.ui_opacity), alpha) }
-        }
-
-        fun makeSwatch(label: String, presetColor: Int?, onClick: () -> Unit): TextView {
-            return TextView(activity).apply {
-                text = label
-                textSize = AirUiTokens.TextSize.Caption
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                setPadding(dp(AirUiTokens.Space.Lg), 0, dp(AirUiTokens.Space.Lg), 0)
-                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-                setOnClickListener {
-                    onClick()
-                    playTinyPulse(this)
-                }
-                swatchViews.add(presetColor to this)
-            }
+            redSlider.seekBar.progress = red
+            greenSlider.seekBar.progress = green
+            blueSlider.seekBar.progress = blue
+            alphaSlider?.seekBar?.progress = alpha
         }
 
         val swatches = standardColors.map { (label, swatchColor) ->
-            Pair(label, swatchColor as Int?)
-        } + listOf(getString(R.string.ui_custom) to null)
+            label to (swatchColor as Int?)
+        } + (getString(R.string.ui_custom) to null)
 
         swatches.forEach { (label, presetColor) ->
-            swatchGrid.addView(makeSwatch(label, presetColor) {
-                if (presetColor == null) {
-                    rgbExpanded = true
-                    controlKey?.let { interactions.write(it) { putBoolean("expanded", true) } }
-                    rgbPanel.visibility = View.VISIBLE
-                    fineTuneButton.setText(R.string.ui_hide_rgb)
-                } else {
-                    red = Color.red(presetColor)
-                    green = Color.green(presetColor)
-                    blue = Color.blue(presetColor)
-                    syncSliders()
-                    refreshPreview(dispatch = true)
+            val swatch = TextView(activity).apply {
+                text = label
+                textSize = AirUiTokens.TextSize.BodySmall
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                minimumHeight = dp(AirUiTokens.Layout.IconTouchSize)
+                isFocusable = true
+                setPadding(dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Xl), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Xl))
+                enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+                setOnClickListener {
+                    if (presetColor == null) {
+                        rgbExpanded = true
+                        controlKey?.let { interactions.write(it) { putBoolean("expanded", true) } }
+                        rgbPanel.visibility = View.VISIBLE
+                        fineTuneButton.setText(R.string.ui_hide_rgb)
+                    } else {
+                        red = Color.red(presetColor)
+                        green = Color.green(presetColor)
+                        blue = Color.blue(presetColor)
+                        syncSliders()
+                        refreshPreview(dispatch = true)
+                    }
+                    playTinyPulse(this)
                 }
-            }.apply {
-                minimumHeight = dp(AirUiTokens.Layout.ColorSwatchHeight)
-                setPadding(dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Sm), dp(AirUiTokens.Space.Sm))
-            })
+            }
+            swatchViews.add(presetColor to swatch)
+            swatchGrid.addView(swatch)
         }
 
         fineTuneButton.setOnClickListener {
@@ -308,16 +298,7 @@ internal fun MainUiHost.colorControlImpl(
             fineTuneButton.setText(if (rgbExpanded) R.string.ui_hide_rgb else R.string.ui_rgb_tune)
             playTinyPulse(fineTuneButton)
         }
-
         syncSliders()
         refreshPreview(dispatch = false)
-    }
-}
-
-internal fun MainUiHost.colorPreviewBackgroundImpl(color: Int): GradientDrawable {
-    return GradientDrawable().apply {
-        cornerRadius = dp(AirUiTokens.Radius.Md).toFloat()
-        setColor(AirColorUtils.withAlpha(color, 42))
-        setStroke(dp(AirUiTokens.Stroke.Hairline), AirColorUtils.withAlpha(color, 190))
     }
 }

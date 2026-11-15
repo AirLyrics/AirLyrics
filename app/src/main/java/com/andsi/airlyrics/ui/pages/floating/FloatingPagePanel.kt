@@ -17,11 +17,36 @@ internal data class FloatingPanelReset(
     val undo: (Bundle) -> Unit
 )
 
+/** Optional nested page navigation; ordinary settings keep their existing header and back path. */
+internal class FloatingPanelNavigation {
+    private var title: String? = null
+    private var back: (() -> Unit)? = null
+    private var updateHeader: ((String?, (() -> Unit)?) -> Unit)? = null
+
+    fun showPage(title: String? = null, onBack: (() -> Unit)? = null) {
+        this.title = title
+        back = onBack
+        updateHeader?.invoke(title, onBack)
+    }
+
+    fun bind(update: (String?, (() -> Unit)?) -> Unit) {
+        updateHeader = update
+        update(title, back)
+    }
+
+    fun navigateBack(): Boolean {
+        val action = back ?: return false
+        action()
+        return true
+    }
+}
+
 internal fun FloatingPageScope.openPanel(
     anchor: View,
     title: String,
     subtitle: String,
     reset: FloatingPanelReset? = null,
+    navigation: FloatingPanelNavigation? = null,
     content: LinearLayout.() -> Unit
 ): (() -> Unit)? {
     val overlay = focusOverlay ?: return null
@@ -80,6 +105,8 @@ internal fun FloatingPageScope.openPanel(
         content()
     }
     val bubble = bubbleHandle.view
+    activePanelNavigation = navigation
+    navigation?.bind(bubbleHandle.updateNavigation)
 
     overlay.removeAllViews()
     overlay.visibility = View.VISIBLE
@@ -91,6 +118,7 @@ internal fun FloatingPageScope.openPanel(
     // whatever it lands on.
     overlay.isFocusableInTouchMode = true
     overlay.requestFocus()
+    setBackgroundBlockedByPanel(true)
     activeBubble = bubble
     activePanelResetStateUpdater = reset?.let { resetAction ->
         {
@@ -156,7 +184,9 @@ internal fun FloatingPageScope.openPanel(
 
 internal fun FloatingPageScope.installBackHandler() {
     host.floatingPanelBackHandler = {
-        if (activeBubble != null || focusOverlay?.visibility == View.VISIBLE) {
+        if (activePanelNavigation?.navigateBack() == true) {
+            true
+        } else if (activeBubble != null || focusOverlay?.visibility == View.VISIBLE) {
             closePanel()
             true
         } else {
@@ -170,6 +200,7 @@ private fun FloatingPageScope.closePanel() {
     val overlay = focusOverlay ?: return
     val bubble = activeBubble
     activeBubble = null
+    activePanelNavigation = null
     overlay.setOnClickListener { /* absorb touches until the panel is removed */ }
     bubble?.animate()?.cancel()
     overlay.animate().cancel()
@@ -211,7 +242,9 @@ private fun FloatingPageScope.closePanel() {
 }
 
 private fun FloatingPageScope.clearContentFocus() {
+    setBackgroundBlockedByPanel(false)
     activePanelResetStateUpdater = null
+    activePanelNavigation = null
     activeDisplayScopePanelRefresh = null
     selectedTileView?.let { tile ->
         tile.animate().cancel()

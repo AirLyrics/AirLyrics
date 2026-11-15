@@ -246,16 +246,16 @@ internal class MainActivityUiHost(
         max: Int,
         suffix: String,
         step: Int,
+        compact: Boolean,
         onChangeFinished: ((Int) -> Unit)?,
         onChanged: (Int) -> Unit
-    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, step, onChangeFinished, onChanged)
+    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, step, onChangeFinished, onChanged, compact)
     override fun colorControl(
         title: String,
         color: Int,
         includeOpacity: Boolean,
         onChanged: (Int) -> Unit
     ): LinearLayout = colorControlImpl(title, color, includeOpacity, onChanged)
-    override fun colorPreviewBackground(color: Int): GradientDrawable = colorPreviewBackgroundImpl(color)
     override fun settingGrid(vararg items: FloatingSettingTile): LinearLayout = settingGridImpl(*items)
     override fun floatingTile(item: FloatingSettingTile): LinearLayout = floatingTileImpl(item)
     override fun floatingFocusBubble(
