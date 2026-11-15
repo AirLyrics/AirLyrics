@@ -22,6 +22,7 @@ internal abstract class MainUiHost(
     OptionControlsHost,
     FloatingUiHost,
     SettingsUiHost {
+    val appearance by lazy { com.andsi.airlyrics.ui.theme.AppearanceTransition(this) }
     private val currentLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
     private val recentLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
     private val savedLoad = com.andsi.airlyrics.ui.async.LatestUiTaskRunner()
@@ -64,6 +65,7 @@ internal abstract class MainUiHost(
                     if (activity.isFinishing) {
                         interactions.read("aux.order")?.getStringArrayList("items")?.toList()?.forEach { forgetAuxiliaryDialog(it) }
                     }
+                    appearance.dispose()
                     onInteractionsDestroyed(activity.isFinishing)
                 }
             },

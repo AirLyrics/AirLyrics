@@ -2,19 +2,21 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
-import android.animation.AnimatorSet
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.graphics.Canvas
+import android.graphics.Rect
 import android.graphics.Typeface
+import android.content.res.ColorStateList
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.animation.PathInterpolator
+import android.view.animation.LinearInterpolator
+import kotlin.math.ceil
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.ButtonStyle
@@ -25,6 +27,8 @@ import com.andsi.airlyrics.ui.components.adaptiveHeader
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.styleAirTonalButton
+import com.andsi.airlyrics.ui.components.applyAirTonalButtonStyle
+import com.andsi.airlyrics.ui.theme.bindAppearance
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -78,6 +82,12 @@ private class SettingsAppearanceHeader(
         val restored = host.interactions.read(APPEARANCE_MENU_KEY)?.getString("menu")
         AppearanceMenu.entries.firstOrNull { it.name == restored && it != AppearanceMenu.NONE }?.let(::toggle)
     }
+    private var pickerProgress = if (menuState.openMenu == AppearanceMenu.NONE) 0f else 1f
+    private var surfaceMenu = menuState.openMenu.takeIf { it != AppearanceMenu.NONE } ?: AppearanceMenu.ACCENT
+    private var fullPickerHeight = 0
+    private var pickerTarget = pickerProgress
+    private val surface = AppearancePanelSurface()
+    private val anchorBounds = Rect()
     private val accentContent: LinearLayout = createAccentContent()
     private val buttonStyleContent: LinearLayout = createButtonStyleContent()
     private val contentTouchBlocker = View(host).apply {
@@ -103,10 +113,11 @@ private class SettingsAppearanceHeader(
     private val pickerContainer: FrameLayout = createPickerContainer()
     private val accentButton: FrameLayout = createAccentButton()
     private val buttonStyleButton: FrameLayout = createButtonStyleButton()
-    private var pickerAnimator: AnimatorSet? = null
+    private var pickerAnimator: ValueAnimator? = null
     private var contentAnimator: ValueAnimator? = null
 
     init {
+        setWillNotDraw(false)
         orientation = VERTICAL
         setPadding(0, 0, 0, host.dp(AirUiTokens.Space.Xl + AirUiTokens.Space.Lg))
 
@@ -114,7 +125,7 @@ private class SettingsAppearanceHeader(
             setText(R.string.ui_settings)
             textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(host.colorTextStrong)
+            host.bindAppearance(this) { it.setTextColor(host.colorTextStrong) }
         }
         val controls = LinearLayout(host).apply {
             orientation = HORIZONTAL
@@ -125,13 +136,11 @@ private class SettingsAppearanceHeader(
         addView(host.adaptiveHeader(heading, controls))
 
         addView(pickerContainer)
-        menuState.openMenu.takeIf { it != AppearanceMenu.NONE }?.let { menu ->
-            showContent(menu)
-            pickerContainer.visibility = VISIBLE
-            pickerContainer.alpha = 1f
-            pickerContent.alpha = 1f
-            accentButton.background = host.appearanceControlBackground(menu == AppearanceMenu.ACCENT)
-            buttonStyleButton.background = host.appearanceControlBackground(menu == AppearanceMenu.BUTTON_STYLE)
+        if (menuState.openMenu != AppearanceMenu.NONE) showContent(menuState.openMenu)
+        applyProgress(pickerProgress)
+        host.bindAppearance(this) { header ->
+            header.updateControls()
+            header.invalidate()
         }
     }
 
@@ -144,13 +153,8 @@ private class SettingsAppearanceHeader(
         } else {
             setContentInteractive(AppearanceMenu.NONE)
         }
-        pickerContainer.layoutParams = pickerContainer.layoutParams.apply {
-            height = LayoutParams.WRAP_CONTENT
-        }
-        pickerContainer.visibility = if (openMenu == AppearanceMenu.NONE) GONE else VISIBLE
-        pickerContainer.alpha = if (openMenu == AppearanceMenu.NONE) 0f else 1f
-        pickerContent.alpha = if (openMenu == AppearanceMenu.NONE) 0f else 1f
-        pickerContainer.translationY = 0f
+        pickerTarget = if (openMenu == AppearanceMenu.NONE) 0f else 1f
+        applyProgress(pickerTarget)
         super.onDetachedFromWindow()
     }
 
@@ -219,27 +223,41 @@ private class SettingsAppearanceHeader(
     }
 
     private fun createPickerContainer(): FrameLayout {
-        return FrameLayout(host).apply {
-            visibility = GONE
-            alpha = 0f
+        return object : FrameLayout(host) {
+            override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+                // Always measure content at its final size; only reserve animated layout space.
+                super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+                fullPickerHeight = measuredHeight
+                setMeasuredDimension(measuredWidth, ceil(fullPickerHeight * AppearancePanelMotion.travel(pickerProgress)).toInt())
+            }
+
+            override fun dispatchDraw(canvas: Canvas) {
+                val g = panelGeometry()
+                val save = canvas.save()
+                // Use the same outline, including its rounded corners, to reveal native content.
+                // Transform the clip into header coordinates without moving the controls.
+                canvas.translate(0f, -top.toFloat())
+                surface.clipContent(canvas, g, pickerProgress)
+                canvas.translate(0f, top.toFloat())
+                super.dispatchDraw(canvas)
+                canvas.restoreToCount(save)
+            }
+        }.apply {
+            id = R.id.appearance_picker_panel
+            visibility = if (pickerProgress == 0f) GONE else VISIBLE
             setPadding(
                 host.dp(AirUiTokens.Space.CardH),
-                host.dp(AirUiTokens.Space.Xxl),
+                host.dp(AirUiTokens.Space.Xxl * 2),
                 host.dp(AirUiTokens.Space.CardH),
                 host.dp(AirUiTokens.Space.Xxl)
             )
             layoutParams = LayoutParams(
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
-            ).apply {
-                setMargins(0, host.dp(AirUiTokens.Space.Xxl), 0, 0)
-            }
-            background = GradientDrawable().apply {
-                cornerRadius = host.dp(AirUiTokens.Radius.Md).toFloat()
-                setColor(host.colorCard)
-                setStroke(host.dp(AirUiTokens.Stroke.Hairline), host.colorStroke)
-            }
-            clipToOutline = true
+            )
+            // The header draws the entire moving contour behind native controls.
+            clipChildren = false
+            clipToPadding = false
             addView(pickerContent)
         }
     }
@@ -255,7 +273,7 @@ private class SettingsAppearanceHeader(
                 setText(titleRes)
                 textSize = AirUiTokens.TextSize.BodySmall
                 typeface = Typeface.DEFAULT_BOLD
-                setTextColor(host.colorTextMuted)
+                host.bindAppearance(this) { it.setTextColor(host.colorTextMuted) }
             })
             optionRow.setPadding(0, host.dp(AirUiTokens.Space.Xl), 0, 0)
             addView(optionRow)
@@ -305,15 +323,19 @@ private class SettingsAppearanceHeader(
             ).apply {
                 if (style == ButtonStyle.TRANSPARENT) marginStart = host.dp(AirUiTokens.Space.Lg)
             }
-            host.styleAirTonalButton(
-                this,
-                AirTonalButtonTone.PRIMARY,
-                buttonStyle = style,
-                selectionOutline = selected
-            )
+            host.bindAppearance(this) { option ->
+                val selectedNow = style == host.buttonStyle()
+                option.isSelected = selectedNow
+                option.contentDescription = if (selectedNow) {
+                    host.getString(R.string.ui_button_style_selected, label)
+                } else label
+                host.applyAirTonalButtonStyle(
+                    option, AirTonalButtonTone.PRIMARY, buttonStyle = style, selectionOutline = selectedNow
+                )
+            }
             enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
             setOnClickListener {
-                if (selected) {
+                if (style == host.buttonStyle()) {
                     toggleMenu(AppearanceMenu.BUTTON_STYLE)
                 } else {
                     host.uiActions.selectButtonStyle(style)
@@ -355,22 +377,45 @@ private class SettingsAppearanceHeader(
                     host.dp(AirUiTokens.Layout.ThemeAccentSwatchSize),
                     Gravity.CENTER
                 )
-                if (selected) {
-                    addView(host.airIconView(
-                        R.drawable.ic_air_check,
-                        iconColorOnAccent(palette.onAccent)
-                    ).apply {
-                        layoutParams = FrameLayout.LayoutParams(
-                            host.dp(AirUiTokens.Layout.IconSize),
-                            host.dp(AirUiTokens.Layout.IconSize),
-                            Gravity.CENTER
-                        )
-                    })
-                }
+                addView(host.airIconView(
+                    R.drawable.ic_air_check,
+                    iconColorOnAccent(palette.onAccent)
+                ).apply {
+                    visibility = if (selected) VISIBLE else INVISIBLE
+                    layoutParams = FrameLayout.LayoutParams(
+                        host.dp(AirUiTokens.Layout.IconSize),
+                        host.dp(AirUiTokens.Layout.IconSize),
+                        Gravity.CENTER
+                    )
+                })
             })
 
+            host.bindAppearance(this) { swatch ->
+                val selectedNow = accent == host.themeAccent()
+                val colors = AirLyricsTheme.palette(false, accent).interpolate(
+                    AirLyricsTheme.palette(true, accent), host.appearance.frame.darkFraction
+                )
+                swatch.isSelected = selectedNow
+                swatch.contentDescription = host.getString(
+                    if (selectedNow) R.string.ui_accent_color_selected else R.string.ui_accent_color_option,
+                    colorName
+                )
+                val dot = swatch.getChildAt(0) as FrameLayout
+                (dot.background as GradientDrawable).apply {
+                    setColor(colors.accent)
+                    setStroke(
+                        host.dp(if (selectedNow) AirUiTokens.Stroke.Selected else AirUiTokens.Stroke.Hairline),
+                        if (selectedNow) host.colorTextStrong else host.colorStroke
+                    )
+                }
+                (dot.getChildAt(0) as android.widget.ImageView).apply {
+                    visibility = if (selectedNow) VISIBLE else INVISIBLE
+                    imageTintList = ColorStateList.valueOf(iconColorOnAccent(colors.onAccent))
+                }
+            }
+
             setOnClickListener {
-                if (selected) {
+                if (accent == host.themeAccent()) {
                     toggleMenu(AppearanceMenu.ACCENT)
                 } else {
                     host.uiActions.selectThemeAccent(accent)
@@ -387,8 +432,8 @@ private class SettingsAppearanceHeader(
         } else {
             host.interactions.write(APPEARANCE_MENU_KEY) { putString("menu", current.name) }
         }
-        accentButton.background = host.appearanceControlBackground(current == AppearanceMenu.ACCENT)
-        buttonStyleButton.background = host.appearanceControlBackground(current == AppearanceMenu.BUTTON_STYLE)
+        if (current != AppearanceMenu.NONE) surfaceMenu = current
+        updateControls()
 
         when {
             current == AppearanceMenu.NONE -> {
@@ -405,7 +450,10 @@ private class SettingsAppearanceHeader(
                 }
                 animatePicker(expanded = true)
             }
-            else -> switchContent(current)
+            else -> {
+                switchContent(current)
+                animatePicker(expanded = true)
+            }
         }
     }
 
@@ -415,7 +463,7 @@ private class SettingsAppearanceHeader(
         buttonStyleContent.visibility = if (menu == AppearanceMenu.BUTTON_STYLE) VISIBLE else INVISIBLE
         accentContent.alpha = if (menu == AppearanceMenu.ACCENT) 1f else 0f
         buttonStyleContent.alpha = if (menu == AppearanceMenu.BUTTON_STYLE) 1f else 0f
-        setContentInteractive(menu)
+        syncInteractiveContent()
     }
 
     private fun setContentInteractive(menu: AppearanceMenu) {
@@ -443,6 +491,12 @@ private class SettingsAppearanceHeader(
         } else {
             IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }
+        for (index in 0 until (accentContent.getChildAt(1) as LinearLayout).childCount) {
+            (accentContent.getChildAt(1) as LinearLayout).getChildAt(index).isEnabled = accentActive
+        }
+        for (index in 0 until (buttonStyleContent.getChildAt(1) as LinearLayout).childCount) {
+            (buttonStyleContent.getChildAt(1) as LinearLayout).getChildAt(index).isEnabled = buttonStyleActive
+        }
         contentTouchBlocker.visibility = if (menu == AppearanceMenu.NONE) VISIBLE else GONE
     }
 
@@ -464,8 +518,8 @@ private class SettingsAppearanceHeader(
         buttonStyleContent.visibility = VISIBLE
         setContentInteractive(AppearanceMenu.NONE)
         contentAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = AirUiTokens.Layout.FastFadeMs * 2
-            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
+            duration = AirUiTokens.Motion.ThemePickerContentSwapMs
+            interpolator = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
             addUpdateListener { animation ->
                 val progress = animation.animatedValue as Float
                 val (accentAlpha, buttonStyleAlpha) = menuCrossfadeAlphas(
@@ -476,8 +530,8 @@ private class SettingsAppearanceHeader(
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    showContent(menu)
                     contentAnimator = null
+                    showContent(menu)
                 }
             })
             start()
@@ -485,81 +539,102 @@ private class SettingsAppearanceHeader(
     }
 
     private fun animatePicker(expanded: Boolean) {
+        val target = if (expanded) 1f else 0f
+        if (pickerAnimator != null && pickerTarget == target) return
         cancelPickerAnimation()
-        val wasHidden = pickerContainer.isGone
-        val startHeight = if (wasHidden) 0 else {
-            pickerContainer.layoutParams.height.takeIf { it >= 0 } ?: pickerContainer.height
-        }
-        val fullHeight = measurePickerHeight()
-        val targetHeight = if (expanded) fullHeight else 0
-        if (expanded) {
-            pickerContainer.visibility = VISIBLE
-            if (wasHidden) {
-                pickerContainer.alpha = 0f
-                pickerContainer.translationY =
-                    -host.dp(AirUiTokens.Layout.ThemePickerSlideDistance).toFloat()
-            }
-        }
-        pickerContent.alpha = heightRevealContentAlpha(
-            startHeight, fullHeight - pickerContainer.paddingBottom, fullHeight
-        )
-        if (!isAttachedToWindow || !ValueAnimator.areAnimatorsEnabled()) {
-            pickerContainer.layoutParams = pickerContainer.layoutParams.apply {
-                height = LayoutParams.WRAP_CONTENT
-            }
-            pickerContainer.visibility = if (expanded) VISIBLE else GONE
-            pickerContainer.alpha = if (expanded) 1f else 0f
-            pickerContent.alpha = if (expanded) 1f else 0f
-            pickerContainer.translationY = 0f
+        pickerTarget = target
+        if (!isAttachedToWindow || !ValueAnimator.areAnimatorsEnabled() ||
+            kotlin.math.abs(target - pickerProgress) < 0.001f) {
+            applyProgress(target)
             return
         }
-        val animatedParams = pickerContainer.layoutParams.apply { height = startHeight }
-        pickerContainer.layoutParams = animatedParams
-        val heightAnimator = ValueAnimator.ofInt(startHeight, targetHeight).apply {
-            addUpdateListener { animation ->
-                animatedParams.height = animation.animatedValue as Int
-                pickerContent.alpha = heightRevealContentAlpha(
-                    animatedParams.height, fullHeight - pickerContainer.paddingBottom, fullHeight
-                )
-                pickerContainer.requestLayout()
-            }
-        }
-        val alphaAnimator = ObjectAnimator.ofFloat(
-            pickerContainer, ALPHA, pickerContainer.alpha, if (expanded) 1f else 0f
+        pickerContainer.visibility = VISIBLE
+        // Resolve final geometry before the first animated frame, including on a cold open.
+        pickerContainer.measure(
+            MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
         )
-        val translationAnimator = ObjectAnimator.ofFloat(
-            pickerContainer,
-            TRANSLATION_Y,
-            pickerContainer.translationY,
-            if (expanded) 0f else -host.dp(AirUiTokens.Layout.ThemePickerSlideDistance).toFloat()
-        )
-        pickerAnimator = AnimatorSet().apply {
-            duration = AirUiTokens.Motion.ThemePickerExpandMs
-            interpolator = if (expanded) {
-                PathInterpolator(0.2f, 0f, 0f, 1f)
-            } else {
-                PathInterpolator(0.4f, 0f, 1f, 1f)
-            }
-            playTogether(heightAnimator, alphaAnimator, translationAnimator)
+        val from = pickerProgress
+        pickerAnimator = ValueAnimator.ofFloat(from, target).apply {
+            duration = AppearancePanelMotion.duration(
+                from, target, AirUiTokens.Motion.ThemePickerExpandMs, AirUiTokens.Motion.ThemePickerCollapseMs
+            )
+            // Easing is inside draw(), not here: all phases share the HTML's linear clock.
+            interpolator = LinearInterpolator()
+            addUpdateListener { applyProgress(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    pickerContainer.layoutParams = animatedParams.apply {
-                        height = LayoutParams.WRAP_CONTENT
-                    }
-                    pickerContent.alpha = if (expanded) 1f else 0f
-                    if (!expanded) {
-                        pickerContainer.visibility = GONE
-                        pickerContainer.translationY = 0f
-                    }
                     pickerAnimator = null
+                    applyProgress(target)
                 }
             })
             start()
         }
     }
 
+    private fun applyProgress(progress: Float) {
+        pickerProgress = progress
+        pickerContainer.visibility = if (progress == 0f && pickerTarget == 0f) GONE else VISIBLE
+        pickerContent.alpha = AppearancePanelMotion.contentAlpha(progress)
+        syncInteractiveContent()
+        pickerContainer.requestLayout()
+        invalidate()
+    }
+
+    private fun syncInteractiveContent() {
+        setContentInteractive(
+            if (pickerProgress > 0.63f && contentAnimator == null) menuState.openMenu else AppearanceMenu.NONE
+        )
+    }
+
+    private fun updateControls() {
+        val menu = menuState.openMenu
+        updateControlBackground(accentButton, menu == AppearanceMenu.ACCENT)
+        updateControlBackground(buttonStyleButton, menu == AppearanceMenu.BUTTON_STYLE)
+        (accentButton.getChildAt(0).background as GradientDrawable).setColor(host.colorAccent)
+        buttonStyleButton.contentDescription = host.getString(
+            R.string.ui_choose_button_style, host.getString(host.buttonStyle().labelRes())
+        )
+    }
+
+    private fun updateControlBackground(button: View, expanded: Boolean) {
+        button.isSelected = expanded
+        (button.background as GradientDrawable).apply {
+            setColor(host.colorSurfaceLight)
+            setStroke(
+                host.dp(if (expanded) AirUiTokens.Stroke.Selected else AirUiTokens.Stroke.Hairline),
+                if (expanded) host.colorAccent else host.colorStroke
+            )
+        }
+    }
+
+    private fun panelGeometry(): AppearancePanelMotion.Geometry {
+        val button = if (surfaceMenu == AppearanceMenu.ACCENT) accentButton else buttonStyleButton
+        anchorBounds.set(0, 0, button.width, button.height)
+        offsetDescendantRectToMyCoords(button, anchorBounds)
+        val gap = host.dp(AirUiTokens.Space.Xxl).toFloat()
+        val inset = host.dp(AirUiTokens.Stroke.Hairline) / 2f
+        return AppearancePanelMotion.Geometry(
+            anchorBounds.exactCenterX(), anchorBounds.exactCenterY(),
+            button.width.toFloat(), button.height.toFloat(),
+            inset, getChildAt(0).bottom + gap + inset,
+            (width - inset * 2f).coerceAtLeast(0f),
+            (fullPickerHeight - gap - inset * 2f).coerceAtLeast(0f),
+            host.dp(AirUiTokens.Radius.Md).toFloat()
+        )
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        surface.draw(
+            canvas, panelGeometry(), pickerProgress, host.colorCard, host.colorStroke,
+            host.dp(AirUiTokens.Stroke.Hairline).toFloat()
+        )
+    }
+
     private fun cancelPickerAnimation() {
         pickerAnimator?.removeAllListeners()
+        pickerAnimator?.removeAllUpdateListeners()
         pickerAnimator?.cancel()
         pickerAnimator = null
     }
@@ -571,14 +646,6 @@ private class SettingsAppearanceHeader(
         contentAnimator = null
     }
 
-    private fun measurePickerHeight(): Int {
-        val availableWidth = width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
-        pickerContainer.measure(
-            MeasureSpec.makeMeasureSpec(availableWidth, MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-        )
-        return pickerContainer.measuredHeight
-    }
 }
 
 internal fun MainUiHost.appearanceControlBackground(expanded: Boolean = false): GradientDrawable =

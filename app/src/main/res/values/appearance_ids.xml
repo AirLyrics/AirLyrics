@@ -1,0 +1,4 @@
+<resources>
+    <item name="appearance_color_binding" type="id" />
+    <item name="appearance_picker_panel" type="id" />
+</resources>

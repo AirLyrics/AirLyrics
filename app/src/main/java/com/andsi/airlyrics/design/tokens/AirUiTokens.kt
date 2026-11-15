@@ -102,7 +102,10 @@ object AirUiTokens {
         const val FeedbackHoldMs = 900L
         const val SnackbarEnterMs = 360L
         const val SnackbarExitMs = 240L
-        const val ThemePickerExpandMs = 190L
+        const val ThemePickerExpandMs = 310L
+        const val ThemePickerCollapseMs = 240L
+        const val ThemePickerContentSwapMs = 150L
+        const val ThemeColorChangeMs = 450L
         const val LyricsSourceReorderMs = 250L
         const val MediaPlayerEnterMs = 400L
         const val MediaPlayerEnterScale = 0.94f

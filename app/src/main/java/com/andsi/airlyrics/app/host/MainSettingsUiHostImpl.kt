@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app.host
 
+import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
@@ -23,6 +24,9 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
 import com.andsi.airlyrics.ui.pages.settings.appearanceControlBackground
 import com.andsi.airlyrics.ui.pages.settings.createSettingsAppearanceHeader
+import com.andsi.airlyrics.ui.theme.bindAppearance
+import com.andsi.airlyrics.ui.theme.colorStroke
+import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorIconOnAccent
@@ -115,6 +119,21 @@ internal fun MainUiHost.themeToggleButtonImpl(): View {
             setMargins(dp(AirUiTokens.Space.Xxl), 0, 0, 0)
         }
         background = appearanceControlBackground()
+        bindAppearance(this) { button ->
+            val dark = isDarkTheme()
+            if (button.tag != dark) {
+                button.tag = dark
+                button.setImageResource(if (dark) R.drawable.ic_air_light_mode else R.drawable.ic_air_dark_mode)
+                button.contentDescription = getString(
+                    if (dark) R.string.ui_switch_to_light_mode else R.string.ui_switch_to_dark_mode
+                )
+            }
+            button.imageTintList = ColorStateList.valueOf(colorAccentText)
+            (button.background as GradientDrawable).apply {
+                setColor(colorSurfaceLight)
+                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+            }
+        }
         elevation = dp(AirUiTokens.Space.Xxs).toFloat()
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {
@@ -145,7 +164,11 @@ internal fun MainUiHost.settingsCategoryCardImpl(
                 shape = GradientDrawable.OVAL
                 setColor(colorAccent)
             }
+            bindAppearance(this) { bubble ->
+                (bubble.background as GradientDrawable).setColor(colorAccent)
+            }
             addView(airIconView(iconRes, colorIconOnAccent).apply {
+                bindAppearance(this) { it.imageTintList = ColorStateList.valueOf(colorIconOnAccent) }
                 layoutParams = FrameLayout.LayoutParams(
                     dp(AirUiTokens.Layout.IconSize),
                     dp(AirUiTokens.Layout.IconSize),
@@ -163,6 +186,7 @@ internal fun MainUiHost.settingsCategoryCardImpl(
         })
 
         addView(airIconView(R.drawable.ic_air_chevron_right, colorAccentText).apply {
+            bindAppearance(this) { it.imageTintList = ColorStateList.valueOf(colorAccentText) }
             layoutParams = LinearLayout.LayoutParams(
                 dp(AirUiTokens.Layout.IconSize),
                 dp(AirUiTokens.Layout.IconSize)

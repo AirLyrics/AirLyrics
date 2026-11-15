@@ -16,6 +16,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.SwitchCompat
 import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.theme.bindAppearance
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorOnAccent
@@ -65,7 +66,7 @@ internal fun sectionTitle(activity: MainUiHost, title: String): View = with(acti
             text = title
             textSize = AirUiTokens.TextSize.PageTitle
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
+            bindAppearance(this) { it.setTextColor(colorTextStrong) }
         })
     }
 }
@@ -85,6 +86,12 @@ internal fun card(activity: MainUiHost, content: LinearLayout.() -> Unit): Linea
             cornerRadius = dp(AirUiTokens.Radius.Card).toFloat()
             setColor(colorCard)
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+        }
+        bindAppearance(this) { card ->
+            (card.background as GradientDrawable).apply {
+                setColor(colorCard)
+                setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
+            }
         }
         content()
     }
@@ -179,12 +186,12 @@ internal fun settingRow(
     val labelView = TextView(activity).apply {
         text = name
         textSize = AirUiTokens.TextSize.Button
-        setTextColor(colorTextStrong)
+        bindAppearance(this) { it.setTextColor(colorTextStrong) }
     }
     val valueView = TextView(activity).apply {
         text = value
         textSize = AirUiTokens.TextSize.Body
-        setTextColor(colorText)
+        bindAppearance(this) { it.setTextColor(colorText) }
         gravity = Gravity.START
         if (valuePolicy == TextDisplayPolicy.SingleLineSummary) bindReadOnlyText(this, name)
     }
@@ -211,7 +218,7 @@ internal fun settingSwitch(
     return SwitchCompat(this).apply {
         this.text = text
         textSize = AirUiTokens.TextSize.Button
-        setTextColor(colorTextStrong)
+        bindAppearance(this) { it.setTextColor(colorTextStrong) }
         isChecked = checked
         applyAirThemeTint(activity)
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, dp(AirUiTokens.Space.Xl))
@@ -259,7 +266,7 @@ internal fun bigText(activity: MainUiHost, text: String): TextView  = with(activ
         this.text = text
         textSize = AirUiTokens.TextSize.Title
         typeface = Typeface.DEFAULT_BOLD
-        setTextColor(colorTextStrong)
+        bindAppearance(this) { it.setTextColor(colorTextStrong) }
     }
 }
 
@@ -267,7 +274,7 @@ internal fun normalText(activity: MainUiHost, text: String): TextView  = with(ac
     return TextView(this).apply {
         this.text = text
         textSize = AirUiTokens.TextSize.Body
-        setTextColor(colorText)
+        bindAppearance(this) { it.setTextColor(colorText) }
         setPadding(0, dp(AirUiTokens.Space.Md), 0, 0)
     }
 }
@@ -276,7 +283,7 @@ internal fun smallHint(activity: MainUiHost, text: String): TextView  = with(act
     return TextView(this).apply {
         this.text = text
         textSize = AirUiTokens.TextSize.BodySmall
-        setTextColor(colorTextMuted)
+        bindAppearance(this) { it.setTextColor(colorTextMuted) }
         setPadding(0, dp(AirUiTokens.Space.Xl), 0, 0)
     }
 }

@@ -25,6 +25,7 @@ import com.andsi.airlyrics.ui.pages.media.MediaPlayerEntranceMotion
 import com.andsi.airlyrics.ui.pages.settings.createSettingsPage
 import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.theme.colorBackground
+import com.andsi.airlyrics.ui.theme.bindAppearance
 
 /** Renderer for the existing handwritten main UI. */
 internal class MainHandRenderer(
@@ -55,7 +56,7 @@ internal class MainHandRenderer(
         host.contentContainer = content
         graph.viewRefs.feedbackAnchor = content
         return com.andsi.airlyrics.ui.layout.AdaptiveWindowLayout(host, content).apply {
-            setBackgroundColor(host.colorBackground)
+            host.bindAppearance(this) { it.setBackgroundColor(host.colorBackground) }
             ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
                 val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
                 val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
@@ -73,6 +74,7 @@ internal class MainHandRenderer(
         settingsNavigation: SettingsNavigation?
     ) {
         val container = host.contentContainer ?: return
+        host.appearance.finish()
         pageTransition.cancel(settleIncoming = false)
         settingsPageTransition.cancel(settleIncoming = false)
         graph.beginPageRebuild()

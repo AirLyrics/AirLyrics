@@ -21,6 +21,7 @@ import androidx.annotation.StringRes
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.setAirTopIcon
+import com.andsi.airlyrics.ui.theme.bindAppearance
 import com.andsi.airlyrics.ui.theme.colorAccent
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorIconOnAccent
@@ -62,7 +63,10 @@ internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) crea
         }
     }
 
+    bindAppearance(shell) { (it.background as GradientDrawable).setColor(colorSurface) }
+
     tabHighlight = WaterTabHighlightView(this, colorAccent).apply {
+        bindAppearance(this) { it.setAccentColor(colorAccent) }
         layoutParams = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.MATCH_PARENT
@@ -132,6 +136,13 @@ internal fun addTab(
         )
     }
 
+    bindAppearance(tab) { label ->
+        val selected = page == currentPage
+        label.setTextColor(if (selected) colorOnAccent else colorTextMuted)
+        label.compoundDrawablesRelative.filterNotNull().forEach {
+            androidx.core.graphics.drawable.DrawableCompat.setTint(it, if (selected) colorIconOnAccent else colorTextMuted)
+        }
+    }
     tabViews[page] = tab
     slot.addView(tab)
     slot.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {

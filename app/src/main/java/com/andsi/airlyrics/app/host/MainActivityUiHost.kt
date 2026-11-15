@@ -17,7 +17,6 @@ import android.media.session.MediaController
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -84,6 +83,8 @@ import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.ui.model.RecentLyricsUiState
 import com.andsi.airlyrics.ui.model.SavedLyricsUiState
 import com.andsi.airlyrics.ui.navigation.Page
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
+import com.andsi.airlyrics.ui.theme.bindAppearance
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
 import com.andsi.airlyrics.ui.pages.floating.previewTextSizeSp
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
@@ -631,8 +632,23 @@ internal class MainActivityUiHost(
         if (muted) graph.feedback.dismiss()
     }
 
+    private var lastDarkTheme = isDarkTheme()
+
     fun toggleThemeMode() {
+        // Persist and notify AppCompat as before. MainActivity handles uiMode without recreation.
         AppNightMode.setDark(this, enabled = !isDarkTheme())
+        onNightModeChanged()
+    }
+
+    fun onNightModeChanged() {
+        val dark = isDarkTheme()
+        if (lastDarkTheme == dark) return
+        lastDarkTheme = dark
+        val settingsHome = currentPage == Page.SETTINGS && settingsSubPage == SettingsSubPage.HOME
+        appearance.transition(animate = settingsHome && contentContainer?.isAttachedToWindow == true)
+        // The theme control only exists on Settings home. Other routes still get fresh
+        // resource-dependent controls after an external system-night-mode change.
+        if (!settingsHome) rebuildMainView()
     }
 
     fun selectThemeAccent(accent: ThemeAccent) {
@@ -651,33 +667,25 @@ internal class MainActivityUiHost(
 
     private fun applyPaletteChange(updateSetting: () -> Unit) {
         updateSetting()
-        applySystemBarsTheme()
-        val oldContainer = contentContainer
-        oldContainer?.animate()
-            ?.alpha(0f)
-            ?.setDuration(AirUiTokens.Layout.FastFadeMs)
-            ?.withEndAction {
-                rebuildMainView()
-                contentContainer?.alpha = 0f
-                contentContainer?.animate()
-                    ?.alpha(1f)
-                    ?.setDuration(AirUiTokens.Layout.RestoreFadeMs)
-                    ?.setInterpolator(DecelerateInterpolator())
-                    ?.start()
-            }
-            ?.start()
-            ?: run {
-                rebuildMainView()
-            }
+        // Keep the mounted panel, its motion progress, focus and scroll position.
+        // A selection made during a night-mode fade retargets from the displayed colors.
+        appearance.transition(animate = appearance.isAnimating)
     }
 
     @Suppress("DEPRECATION")
     fun applySystemBarsTheme() {
         val lightTheme = !isDarkTheme()
-        val backgroundColor = colorBackground
-        activity.window.setBackgroundDrawable(backgroundColor.toDrawable())
-        activity.window.decorView.setBackgroundColor(backgroundColor)
-        activity.findViewById<View>(android.R.id.content)?.setBackgroundColor(backgroundColor)
+        activity.window.setBackgroundDrawable(colorBackground.toDrawable())
+        bindAppearance(activity.window.decorView) { decor ->
+            val backgroundColor = colorBackground
+            decor.setBackgroundColor(backgroundColor)
+            activity.findViewById<View>(android.R.id.content)?.setBackgroundColor(backgroundColor)
+            val lightBars = appearance.frame.darkFraction < 0.5f
+            WindowCompat.getInsetsController(activity.window, decor).apply {
+                isAppearanceLightStatusBars = lightBars
+                isAppearanceLightNavigationBars = lightBars
+            }
+        }
 
         WindowCompat.setDecorFitsSystemWindows(activity.window, false)
         activity.enableEdgeToEdge(

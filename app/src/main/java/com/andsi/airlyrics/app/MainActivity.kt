@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.app
 
 import android.os.Bundle
+import android.content.res.Configuration
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.app.viewmodel.MainViewModel
@@ -16,6 +17,16 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         graph = MainGraph(this, mainViewModel)
         graph.onCreate()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        if (::graph.isInitialized) graph.uiHost.onNightModeChanged()
+    }
+
+    override fun onNightModeChanged(mode: Int) {
+        super.onNightModeChanged(mode)
+        if (::graph.isInitialized) graph.uiHost.onNightModeChanged()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
