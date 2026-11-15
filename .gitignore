@@ -30,3 +30,13 @@ app/src/main/jniLibs/**/*.so
 # Signing keys
 *.jks
 *.keystore
+
+# Local development reports and validation material
+/docs/IMPLEMENTATION-zh-CN.md
+/docs/REVIEW-zh-CN.md
+/docs/design/
+/tmp/
+
+# Local tool inputs and rendered intermediates
+/scripts/.local/
+/video/opening/output/*.ffconcat

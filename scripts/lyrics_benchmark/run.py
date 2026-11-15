@@ -6,6 +6,8 @@ import json
 import math
 import os
 from pathlib import Path
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -17,6 +19,40 @@ HERE = Path(__file__).resolve().parent
 PROVIDERS = ('netease', 'musixmatch', 'lrclib', 'spicy')
 DEFAULT_PROVIDERS = ('netease', 'lrclib', 'spicy')
 MATCHING_SOURCE_PREFIXES = ('lyrics-core/src/', 'lyrics-core/data/', 'app/src/main/java/')
+
+
+def java_environment(environment=None):
+    env = dict(os.environ if environment is None else environment)
+    executable = 'java.exe' if os.name == 'nt' else 'java'
+    configured_home = env.get('JAVA_HOME', '').strip()
+    java = (str(Path(configured_home).expanduser() / 'bin' / executable) if configured_home
+            else shutil.which(executable, path=env.get('PATH', os.defpath)))
+    if not java:
+        raise ValueError('JDK 17 is required; set JAVA_HOME or add its bin directory to PATH')
+    settings = subprocess.run([java, '-XshowSettings:properties', '-version'],
+                              env=env, capture_output=True, text=True, check=True, timeout=15)
+    properties = settings.stdout + settings.stderr
+    version = re.search(r'^\s*java\.specification\.version\s*=\s*(\S+)\s*$', properties, re.M)
+    home = re.search(r'^\s*java\.home\s*=\s*(.+?)\s*$', properties, re.M)
+    if not version or version.group(1) != '17' or not home:
+        raise ValueError('JDK 17 is required; select it with JAVA_HOME or PATH')
+    java_home = Path(home.group(1)).resolve()
+    javac = java_home / 'bin' / ('javac.exe' if os.name == 'nt' else 'javac')
+    if not javac.is_file():
+        raise ValueError('A full JDK 17 with javac is required')
+    env['JAVA_HOME'] = str(java_home)
+    env['PATH'] = str(java_home / 'bin') + os.pathsep + env.get('PATH', os.defpath)
+    return env, str(java_home / 'bin' / executable), str(javac)
+
+
+def load_classpath(path):
+    entries = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(entries, list) or not entries:
+        raise ValueError('Gradle returned an empty benchmark classpath')
+    if any(not isinstance(entry, str) or not entry or not Path(entry).is_file()
+           or Path(entry).suffix != '.jar' for entry in entries):
+        raise ValueError('Gradle returned a missing or invalid benchmark JAR')
+    return list(dict.fromkeys(Path(entry) for entry in entries))
 
 
 def load_cases(path):
@@ -123,8 +159,10 @@ def main():
         cases = load_cases(fixture)
     except (OSError, ValueError, KeyError) as error:
         parser.error(f'Invalid input file: {error}')
-    env = dict(os.environ, JAVA_HOME='/usr/lib/jvm/java-17-openjdk')
-    env['PATH'] = env['JAVA_HOME'] + '/bin:' + env['PATH']
+    try:
+        env, java, javac = java_environment()
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        parser.error(f'Cannot use JDK 17: {error}')
     if args.proxy:
         from urllib.parse import urlsplit
         proxy = urlsplit(args.proxy)
@@ -134,16 +172,19 @@ def main():
             env[name] = args.proxy
         env['NO_PROXY'] = env['no_proxy'] = 'localhost,127.0.0.1'
     subprocess.run(['cargo', 'build', '--manifest-path', 'lyrics-core/Cargo.toml'], cwd=ROOT, env=env, check=True)
-    subprocess.run(['./gradlew', ':app:bundleDebugClassesToRuntimeJar', '-Pairlyrics.skipRustBuild=true'], cwd=ROOT, env=env, check=True)
-    cache = Path(os.environ.get('GRADLE_USER_HOME', '/mnt/data/dev-cache/gradle')) / 'caches/modules-2/files-2.1'
-    jars = [ROOT / 'app/build/intermediates/runtime_app_classes_jar/debug/bundleDebugClassesToRuntimeJar/classes.jar']
-    for artifact, version in [('org.json/json', '20260814'), ('org.jetbrains.kotlin/kotlin-stdlib', '2.4.10')]:
-        jars.append(next(p for p in (cache / artifact / version).rglob('*.jar') if not p.name.endswith(('-sources.jar', '-javadoc.jar'))))
+    gradlew = 'gradlew.bat' if os.name == 'nt' else './gradlew'
+    subprocess.run([gradlew, ':app:writeLyricsBenchmarkClasspath', '-Pairlyrics.skipRustBuild=true'],
+                   cwd=ROOT, env=env, check=True)
+    try:
+        jars = load_classpath(ROOT / 'app/build/lyrics-benchmark/classpath.json')
+    except (OSError, ValueError) as error:
+        parser.error(f'Cannot load benchmark dependencies: {error}')
     with tempfile.TemporaryDirectory(prefix='airlyrics-benchmark-') as build:
         cp = os.pathsep.join(map(str, [Path(build), *jars]))
-        subprocess.run([env['JAVA_HOME']+'/bin/javac', '-cp', cp, '-d', build, str(HERE/'Benchmark.java')], check=True)
+        subprocess.run([javac, '--release', '17', '-cp', cp, '-d', build, str(HERE/'Benchmark.java')],
+                       env=env, check=True)
         if 'spicy' in args.providers:
-            subprocess.run([env['JAVA_HOME']+'/bin/java', '-cp', cp, 'Benchmark', '--check-spicy-key'],
+            subprocess.run([java, '-cp', cp, 'Benchmark', '--check-spicy-key'],
                            check=True, env=env)
         if args.prepare_only:
             print(f'Prepared {len(cases)} cases × {len(args.providers)} providers; no API requests sent.')
@@ -187,7 +228,7 @@ def main():
         manifest.pop('process_failures', None)
         (output/'manifest.json').write_text(json.dumps(manifest, indent=2)+'\n')
         def run(provider, start_index):
-            subprocess.run([env['JAVA_HOME']+'/bin/java', '-Djava.library.path='+str(ROOT/'lyrics-core/target/debug'), '-cp', cp,
+            subprocess.run([java, '-Djava.library.path='+str(ROOT/'lyrics-core/target/debug'), '-cp', cp,
                 'Benchmark', provider, str(normalized_fixture), str(output/f'{provider}.jsonl'), str(start_index)],
                 check=True, stderr=subprocess.DEVNULL, env=env)
         process_failures = {}

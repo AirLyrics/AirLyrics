@@ -2,16 +2,18 @@
 """Fetch Apple Music lyric TTML for offline auditing.
 
 Usage:
-  apple_lyrics_fetch.py "彩虹" "周杰伦" --out DIR [--storefronts tr,cn,jp,us]
+  apple_lyrics_fetch.py "Song title" "Artist" --out OUTPUT
+    --index-js SCRIPT --media-token-file TOKEN_FILE [--storefronts tr,cn,jp,us]
 
-Credentials are read from local files and never printed:
-  media user token: /opt/hermes/work/airlyrics-credentials/apple-media-user-token.txt
-  developer token:  extracted from /tmp/am_index.js (or the cached music.apple.com page)
+File paths can also be set with AIRLYRICS_APPLE_INDEX_JS and
+AIRLYRICS_APPLE_MEDIA_TOKEN_FILE. Keep credential files and fetched output
+under scripts/.local/ (ignored by Git). Credentials are never printed.
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import re
 import sys
@@ -19,8 +21,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-INDEX_JS = "/tmp/am_index.js"
-MEDIA_TOKEN = "/opt/hermes/work/airlyrics-credentials/apple-media-user-token.txt"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
@@ -40,8 +40,8 @@ def http(url: str, token: str | None = None, media: str | None = None):
         return error.code, error.read()
 
 
-def developer_token() -> str:
-    raw = pathlib.Path(INDEX_JS).read_text(encoding="utf-8", errors="ignore")
+def developer_token(index_js: pathlib.Path) -> str:
+    raw = index_js.expanduser().read_text(encoding="utf-8", errors="ignore")
     for candidate in re.findall(r"eyJ[A-Za-z0-9_.-]{100,}", raw):
         try:
             payload = candidate.split(".")[1]
@@ -51,7 +51,7 @@ def developer_token() -> str:
             continue
         if str(claims.get("iss", "")).startswith(("AMPWebPlay", "M85D85FTQ", "5IKPP2IECQ")):
             return candidate
-    raise SystemExit("no usable developer token in %s" % INDEX_JS)
+    raise ValueError("No usable developer token in the --index-js file")
 
 
 def pick(songs: list[dict], title: str, artist: str) -> dict | None:
@@ -71,18 +71,36 @@ def pick(songs: list[dict], title: str, artist: str) -> dict | None:
     return ranked[0] if ranked and score(ranked[0]) >= 3 else None
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Fetch Apple Music lyric TTML for offline auditing.")
     parser.add_argument("title")
     parser.add_argument("artist", nargs="?", default="")
     parser.add_argument("--out", required=True)
     parser.add_argument("--storefronts", default="tr,cn,jp,us,hk,tw")
-    args = parser.parse_args()
+    parser.add_argument("--index-js", type=pathlib.Path,
+                        default=os.environ.get("AIRLYRICS_APPLE_INDEX_JS") or None,
+                        help="Apple Music script file; or set AIRLYRICS_APPLE_INDEX_JS")
+    parser.add_argument("--media-token-file", type=pathlib.Path,
+                        default=os.environ.get("AIRLYRICS_APPLE_MEDIA_TOKEN_FILE") or None,
+                        help="Media user token file; or set AIRLYRICS_APPLE_MEDIA_TOKEN_FILE")
+    args = parser.parse_args(argv)
+
+    if args.index_js is None:
+        parser.error("Set --index-js or AIRLYRICS_APPLE_INDEX_JS")
+    if args.media_token_file is None:
+        parser.error("Set --media-token-file or AIRLYRICS_APPLE_MEDIA_TOKEN_FILE")
+    try:
+        token = developer_token(args.index_js)
+        media = args.media_token_file.expanduser().read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError):
+        parser.error("Cannot read the configured script or media token file")
+    except ValueError as error:
+        parser.error(str(error))
+    if not media:
+        parser.error("The media token file is empty")
 
     out = pathlib.Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    token = developer_token()
-    media = pathlib.Path(MEDIA_TOKEN).read_text().strip()
 
     storefronts = [s.strip() for s in args.storefronts.split(",") if s.strip()]
     candidates: dict[str, dict] = {}

@@ -377,3 +377,41 @@ val checkArchitecture = tasks.register<Exec>("checkArchitecture") {
     }
 }
 tasks.named("check") { dependsOn(checkArchitecture) }
+
+abstract class WriteLyricsBenchmarkClasspath : DefaultTask() {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.ABSOLUTE)
+    abstract val classpath: ConfigurableFileCollection
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun writeClasspath() {
+        val destination = outputFile.get().asFile
+        destination.parentFile.mkdirs()
+        destination.writeText(
+            groovy.json.JsonOutput.toJson(classpath.files.map { it.absolutePath }),
+            Charsets.UTF_8
+        )
+    }
+}
+
+val lyricsBenchmarkDependencies = providers.provider {
+    configurations.getByName("debugUnitTestRuntimeClasspath").incoming.artifactView {
+        componentFilter { component ->
+            component is ModuleComponentIdentifier &&
+                ((component.group == "org.json" && component.module == "json") ||
+                    (component.group == "org.jetbrains.kotlin" && component.module.startsWith("kotlin-stdlib")))
+        }
+    }.files
+}
+
+tasks.register<WriteLyricsBenchmarkClasspath>("writeLyricsBenchmarkClasspath") {
+    group = "verification"
+    description = "Export app classes and resolved JVM dependencies for the lyrics benchmark."
+    dependsOn("bundleDebugClassesToRuntimeJar")
+    classpath.from(providers.provider { tasks.named("bundleDebugClassesToRuntimeJar").get().outputs.files })
+    classpath.from(lyricsBenchmarkDependencies)
+    outputFile.set(layout.buildDirectory.file("lyrics-benchmark/classpath.json"))
+}
