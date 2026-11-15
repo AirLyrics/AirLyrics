@@ -14,7 +14,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "net"] }
 regex = "1"
-base64 = "0.22"
+base64 = "0.23"
 flate2 = "1"
 quick-xml = "0.38"
 openssl = { version = "0.10", features = ["vendored"] }
