@@ -19,22 +19,24 @@ import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.settings.store.FloatingColorSwatchStore
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.AdaptiveLabelValueLayout
-import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.GridColumnPolicy
 import com.andsi.airlyrics.ui.components.SettingsSliderRow
-import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.beginFloatingPanelChange
 import com.andsi.airlyrics.ui.components.canAnimateFloatingControl
 import com.andsi.airlyrics.ui.components.floatingPanelEaseOut
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
-import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorStroke
@@ -64,7 +66,6 @@ internal class FloatingColorPanelContent(
     private var sampleColor: Int = AirColorUtils.opaqueRgb(currentColor())
     private var sampleAnimator: ValueAnimator? = null
     private var sampleTargetColor: Int? = null
-    private var renderedSavedState: Boolean? = null
     private val customHex = hexText(AirUiTokens.TextSize.Body)
     private val customRow: View
     private val presetSwatches = mutableListOf<Pair<Int, FloatingColorSwatch>>()
@@ -74,13 +75,36 @@ internal class FloatingColorPanelContent(
     private var favorites = FloatingColorSwatchStore.colors(host)
     private val savedGrid = swatchGrid("floating.color.saved")
     private val savedSection: View
-    private val saveButton = actionButton(host, host.getString(R.string.ui_save_color_swatch)) {
-        FloatingColorSwatchStore.save(host, currentColor())
-        // The overview is GONE here. Mutating it inside a window-wide Fade can draw its
-        // children in the transition overlay, briefly flashing the palette over the RGB page.
-        // Keep the editor stable; reconcile the saved views before revealing the overview.
-        favorites = FloatingColorSwatchStore.colors(host)
+    private var saveState = newSaveState()
+    private var favoritesJob: Job? = null
+    private val saveButton = FloatingColorSaveButton(host) { saveCurrentColor() }
+
+    private fun newSaveState(): FloatingColorSaveState {
+        val rgb = AirColorUtils.opaqueRgb(currentColor())
+        return FloatingColorSaveState(rgb, rgb in favorites)
+    }
+
+    private fun saveCurrentColor() {
+        val session = saveState
+        val request = session.begin() ?: return
         renderColor()
+        val appContext = host.applicationContext
+        host.runOnAppIo {
+            val result = runCatching { FloatingColorSwatchStore.save(appContext, request.color) }
+            host.runOnMainThread {
+                if (saveState !== session || session.isClosed) return@runOnMainThread
+                favorites = FloatingColorSwatchStore.colors(appContext)
+                val rgb = AirColorUtils.opaqueRgb(currentColor())
+                session.edit(rgb, rgb in favorites)
+                if (!session.complete(request, result.isSuccess)) return@runOnMainThread
+                // Do not mutate the hidden palette during an editor/window Fade.
+                if (!editingRgb) refreshSavedSwatches()
+                renderColor()
+                if (result.isFailure && host.interactions.panel == ownerPanel) {
+                    host.showMessage(R.string.ui_save_failed)
+                }
+            }
+        }
     }
 
     init {
@@ -262,13 +286,22 @@ internal class FloatingColorPanelContent(
         if (!swatch.isEnabled) return
         when {
             pendingDeleteColor == color -> {
-                beginFloatingPanelChange()
                 pendingDeleteColor = null
-                FloatingColorSwatchStore.remove(host, color)
                 swatch.isEnabled = false
-                refreshSavedSwatches()
-                // Removing a favorite never changes the applied color or its alpha.
-                renderColor()
+                swatch.setRemovalArmed(false)
+                val session = saveState
+                val appContext = host.applicationContext
+                // Mutations serialize with confirmed saves. Never wait on that disk lock on the UI.
+                host.runOnAppIo {
+                    FloatingColorSwatchStore.remove(appContext, color)
+                    host.runOnMainThread {
+                        if (saveState !== session || session.isClosed) return@runOnMainThread
+                        beginFloatingPanelChange()
+                        refreshSavedSwatches()
+                        // Removing a favorite never changes the applied color or its alpha.
+                        renderColor()
+                    }
+                }
             }
             color == AirColorUtils.opaqueRgb(currentColor()) -> {
                 pendingDeleteColor = color
@@ -336,16 +369,9 @@ internal class FloatingColorPanelContent(
         }
         renderSwatchState()
         rgbRows.forEachIndexed { channel, row -> row.seekBar.progress = channelValue(rgb, channel) }
-        val saved = rgb in favorites
-        if (renderedSavedState != saved) {
-            renderedSavedState = saved
-            saveButton.animate().cancel()
-            saveButton.setText(if (saved) R.string.ui_saved else R.string.ui_save_color_swatch)
-            saveButton.contentDescription = saveButton.text
-            saveButton.isEnabled = !saved
-            saveButton.alpha = if (saved) AirUiTokens.Button.DisabledAlpha else 1f
-            host.styleAirTonalButton(saveButton, if (saved) AirTonalButtonTone.DEFAULT else AirTonalButtonTone.PRIMARY)
-        }
+        saveState.edit(rgb, rgb in favorites)
+        saveState.reconcile(rgb in favorites)
+        saveButton.render(saveState.status, saveState.canSave)
     }
 
     private fun updateSamples(color: Int) {
@@ -357,6 +383,9 @@ internal class FloatingColorPanelContent(
     }
 
     override fun onDetachedFromWindow() {
+        saveState.close()
+        favoritesJob?.cancel()
+        favoritesJob = null
         clearPendingDeletion()
         sampleAnimator?.cancel()
         sampleAnimator = null
@@ -390,6 +419,24 @@ internal class FloatingColorPanelContent(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
+        favorites = FloatingColorSwatchStore.colors(host)
+        if (saveState.isClosed) saveState = newSaveState()
+        favoritesJob?.cancel()
+        favoritesJob = host.activity.lifecycleScope.launch {
+            host.activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                FloatingColorSwatchStore.changes.collect {
+                    val confirmedColors = FloatingColorSwatchStore.colors(host)
+                    val changed = favorites != confirmedColors
+                    favorites = confirmedColors
+                    if (!editingRgb) {
+                        if (changed) beginFloatingPanelChange()
+                        refreshSavedSwatches()
+                    }
+                    renderColor()
+                }
+            }
+        }
+        renderColor()
         post { if (isAttachedToWindow && editingRgb) hexEditor.restoreIfNeeded() }
     }
 

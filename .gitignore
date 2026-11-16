@@ -37,6 +37,6 @@ app/src/main/jniLibs/**/*.so
 /docs/design/
 /tmp/
 
-# Local tool inputs and rendered intermediates
+# Local tool inputs and video workspace
 /scripts/.local/
-/video/opening/output/*.ffconcat
+/video/

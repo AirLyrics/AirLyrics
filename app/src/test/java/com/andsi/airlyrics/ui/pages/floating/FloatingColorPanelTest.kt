@@ -103,6 +103,25 @@ class FloatingColorPanelTest {
             it.getTag(R.id.interaction_anchor) == "floating.color.custom"
         } else it.contentDescription == host.getString(label)
     }
+    private fun saveCurrentColor() {
+        val button = action(R.string.ui_save_color_swatch)
+        button.performClick()
+        awaitSaved(button)
+    }
+
+    private fun awaitSaved(button: View) = awaitUi {
+        button.contentDescription == host.getString(R.string.ui_saved)
+    }
+
+    private fun awaitUi(completed: () -> Boolean) {
+        val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(5)
+        while (!completed()) {
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+            check(System.nanoTime() < deadline) { "Color operation did not complete" }
+            Thread.sleep(1)
+        }
+    }
+
     private fun glow() = visible(panel()).filterIsInstance<SwitchCompat>().single()
     private fun rgb(name: String) = visible(panel()).filterIsInstance<SeekBar>().single {
         it.getTag(R.id.interaction_anchor) == "floating.color.rgb.$name"
@@ -201,7 +220,7 @@ class FloatingColorPanelTest {
         editRgb(favorite)
         assertEquals(3, visible(panel()).filterIsInstance<SeekBar>().size)
         assertTrue(visible(panel()).none { it is SwitchCompat })
-        action(R.string.ui_save_color_swatch).performClick()
+        saveCurrentColor()
         action(R.string.ui_back).performClick()
         layout()
         assertEquals(listOf(favorite), FloatingColorSwatchStore.colors(host))
@@ -433,7 +452,7 @@ class FloatingColorPanelTest {
 
         val favorite = Color.rgb(168, 83, 80)
         editRgb(favorite)
-        action(R.string.ui_save_color_swatch).performClick()
+        saveCurrentColor()
         layout()
         assertFalse(action(R.string.ui_saved).isEnabled)
         action(R.string.ui_back).performClick()
@@ -514,6 +533,7 @@ class FloatingColorPanelTest {
         panel().offsetDescendantRectToMyCoords(save, saveBounds)
         assertTrue(saveBounds.bottom <= scroll.bottom)
         save.performClick()
+        awaitSaved(save)
         assertEquals(colors + Color.rgb(71, 83, 109), FloatingColorSwatchStore.colors(host))
     }
 
@@ -667,6 +687,7 @@ class FloatingColorPanelTest {
         swatch.performClick()
         assertTrue(swatch.removalArmed)
         swatch.performClick()
+        awaitUi { swatch.parent == null }
         layout()
         assertFalse(swatch.isEnabled)
         assertEquals(listOf(other), FloatingColorSwatchStore.colors(host))
@@ -697,12 +718,13 @@ class FloatingColorPanelTest {
             swatch.performClick()
             assertTrue(swatch.removalArmed)
             swatch.performClick()
+            awaitUi { swatch.parent == null }
             layout()
             assertTrue(FloatingColorSwatchStore.colors(host).isEmpty())
             assertEquals(original, host.floatingStyle())
             assertTrue(visible(panel()).none { it.getTag(R.id.interaction_anchor) == "floating.color.saved" })
             action(R.string.ui_custom_color).performClick()
-            action(R.string.ui_save_color_swatch).performClick()
+            saveCurrentColor()
             action(R.string.ui_back).performClick()
             layout()
             assertEquals(listOf(com.andsi.airlyrics.core.color.AirColorUtils.opaqueRgb(original.backgroundColor)),
@@ -766,6 +788,7 @@ class FloatingColorPanelTest {
             assertTrue("Saving must not flash palette pixels over the RGB editor",
                 before.contentEquals(protectedPixels()))
         }
+        awaitSaved(save)
         assertEquals(style, host.floatingStyle())
         assertEquals(1, FloatingColorSwatchStore.colors(host).size)
         assertFalse(action(R.string.ui_saved).isEnabled)

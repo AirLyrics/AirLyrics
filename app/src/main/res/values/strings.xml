@@ -352,6 +352,7 @@ Word-timed TTML:
     <string name="ui_save_changes">Save changes</string>
     <string name="ui_save_failed">Save failed</string>
     <string name="ui_save_folder">Save folder: </string>
+    <string name="ui_saving">Saving…</string>
     <string name="ui_saved">Saved</string>
     <string name="ui_saved_lyrics">Saved lyrics</string>
     <string name="ui_saved_lyrics_empty_hint">No saved lyrics yet</string>

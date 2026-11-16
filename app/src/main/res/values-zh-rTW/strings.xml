@@ -351,6 +351,7 @@
     <string name="ui_save_changes">儲存修改</string>
     <string name="ui_save_failed">儲存失敗</string>
     <string name="ui_save_folder">儲存資料夾：</string>
+    <string name="ui_saving">儲存中…</string>
     <string name="ui_saved">已儲存</string>
     <string name="ui_saved_lyrics">已儲存歌詞</string>
     <string name="ui_saved_lyrics_empty_hint">尚無已儲存歌詞</string>

@@ -351,6 +351,7 @@ TTML de tiempo por palabra:
     <string name="ui_save_changes">Guardar cambios</string>
     <string name="ui_save_failed">Falló el guardado</string>
     <string name="ui_save_folder">Carpeta de guardado: </string>
+    <string name="ui_saving">Guardando…</string>
     <string name="ui_saved">Guardado</string>
     <string name="ui_saved_lyrics">Letras guardadas</string>
     <string name="ui_saved_lyrics_empty_hint">Aún no hay letras guardadas</string>
