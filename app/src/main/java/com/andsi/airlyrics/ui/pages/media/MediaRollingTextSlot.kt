@@ -49,9 +49,10 @@ internal class MediaRollingTextSlot(
         val top: Int,
         val right: Int,
         val bottom: Int,
-        val delayIndex: Int
+        val delayIndex: Int,
+        val windowBottom: Int = bottom
     ) {
-        val height: Int get() = bottom - top
+        val windowHeight: Int get() = windowBottom - top
     }
 
     private data class TextFrame(val bitmap: Bitmap, val left: Int, val strips: List<Strip>)
@@ -66,6 +67,7 @@ internal class MediaRollingTextSlot(
 
     private val content = host.expandableText(textView)
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+    private val sourceRect = Rect()
     private val destinationRect = RectF()
     private var displayedText = textView.text.toString()
     private var animator: ValueAnimator? = null
@@ -98,10 +100,11 @@ internal class MediaRollingTextSlot(
         if (displayedText == text) return
         val canAnimate = ValueAnimator.areAnimatorsEnabled() && isAttachedToWindow &&
             width > 0 && textView.width > 0 && textView.maxLines <= 2
+        val interrupted = animator != null
         val oldFrame = if (canAnimate) {
-            if (animator != null) captureVisibleFrame() else captureTextFrame()
+            if (interrupted) captureVisibleFrame() else captureTextFrame()
         } else null
-        val oldEdges = if (canAnimate && animator == null) stableEdges(displayedText, stablePrefix, stableSuffix) else null
+        val oldEdges = if (canAnimate && !interrupted) stableEdges(displayedText, stablePrefix, stableSuffix) else null
         val oldHeight = heightOverride ?: measuredHeight
         clearMotion(requestFinalLayout = false)
         displayedText = text
@@ -119,7 +122,15 @@ internal class MediaRollingTextSlot(
             return
         }
         val newEdges = stableEdges(text, stablePrefix, stableSuffix)
-        if (oldEdges != null && newEdges != null) {
+        val sameLineWindows = oldFrame.strips.map { it.top to it.bottom }.distinct() ==
+            newFrame.strips.map { it.top to it.bottom }.distinct()
+        if (interrupted || !sameLineWindows) {
+            // Different line counts/metrics (or a partially rolled frame) need one shared
+            // window and travel distance, so the old and new blocks cannot cross.
+            val windowHeight = maxOf(oldFrame.bitmap.height, newFrame.bitmap.height)
+            outgoing = oldFrame.asBlock(windowHeight)
+            incoming = newFrame.asBlock(windowHeight)
+        } else if (oldEdges != null && newEdges != null) {
             stableInk = buildStableInk(oldFrame, newFrame, oldEdges, newEdges, stablePrefix, stableSuffix)
             outgoing = oldFrame.clippedTo(oldEdges.prefixEnd, oldEdges.suffixStart)
             incoming = newFrame.clippedTo(newEdges.prefixEnd, newEdges.suffixStart)
@@ -127,6 +138,7 @@ internal class MediaRollingTextSlot(
             outgoing = oldFrame
             incoming = newFrame
         }
+        incoming = incoming?.waitForExit(requireNotNull(outgoing))
         fromHeight = oldHeight
         toHeight = contentHeight
         motionWidth = width
@@ -248,6 +260,21 @@ internal class MediaRollingTextSlot(
         if (right > left) strip.copy(left = left, right = right) else null
     })
 
+    private fun TextFrame.asBlock(windowHeight: Int) = copy(
+        strips = listOf(Strip(0, 0, bitmap.width, bitmap.height, 0, windowHeight))
+    )
+
+    private fun TextFrame.waitForExit(old: TextFrame) = copy(strips = strips.map { strip ->
+        // Grapheme groups need not occupy the same columns in the two strings. Do not
+        // let an entering group overtake any outgoing group in its horizontal window.
+        val exitDelay = old.strips.asSequence().filter { other ->
+            other.top == strip.top &&
+                old.left + other.left < left + strip.right &&
+                old.left + other.right > left + strip.left
+        }.maxOfOrNull(Strip::delayIndex) ?: 0
+        strip.copy(delayIndex = maxOf(strip.delayIndex, exitDelay))
+    })
+
     private fun buildStableInk(
         old: TextFrame,
         next: TextFrame,
@@ -343,20 +370,37 @@ internal class MediaRollingTextSlot(
         }
     }
 
-    private fun drawFrame(canvas: Canvas, frame: TextFrame, incomingFrame: Boolean) {
+    private fun stripOffset(strip: Strip, incomingFrame: Boolean): Float {
         val travelDuration = (role.durationMs - motionMaxDelayMs).coerceAtLeast(1f)
+        val local = ((motionTimeMs - strip.delayIndex * role.staggerMs) / travelDuration).coerceIn(0f, 1f)
+        val eased = local * local * (3f - 2f * local)
+        // Both frames share this curve; an incoming-only overshoot would cross the
+        // outgoing ink before it has fully left the window.
+        return strip.windowHeight * if (incomingFrame) 1f - eased else -eased
+    }
+
+    private fun drawFrame(canvas: Canvas, frame: TextFrame, incomingFrame: Boolean) {
         frame.strips.forEach { strip ->
-            val local = ((motionTimeMs - strip.delayIndex * role.staggerMs) / travelDuration).coerceIn(0f, 1f)
-            val eased = local * local * (3f - 2f * local) // the two rows stay one window apart
-            val landing = if (incomingFrame && local > 0.78f) {
-                eased + 0.055f * kotlin.math.sin(Math.PI.toFloat() * (local - 0.78f) / 0.22f)
-            } else eased
-            val dy = if (incomingFrame) strip.height * (1f - landing) else -strip.height * eased
-            canvas.withClip(frame.left + strip.left, strip.top, frame.left + strip.right, strip.bottom) {
-                drawBitmap(frame.bitmap, frame.left.toFloat(), dy, bitmapPaint)
+            val dy = stripOffset(strip, incomingFrame)
+            sourceRect.set(strip.left, strip.top, strip.right, strip.bottom)
+            destinationRect.set(
+                (frame.left + strip.left).toFloat(), strip.top + dy,
+                (frame.left + strip.right).toFloat(), strip.bottom + dy
+            )
+            canvas.withClip(frame.left + strip.left, strip.top, frame.left + strip.right, strip.windowBottom) {
+                // Crop the source as well as the destination. Moving the whole bitmap
+                // would pull adjacent lines into this strip's stationary window.
+                drawBitmap(frame.bitmap, sourceRect, destinationRect, bitmapPaint)
             }
         }
     }
+
+    private fun TextFrame.visibleBottom(incomingFrame: Boolean): Int = strips.maxOfOrNull { strip ->
+        val dy = stripOffset(strip, incomingFrame)
+        val top = maxOf(strip.top.toFloat(), strip.top + dy)
+        val bottom = minOf(strip.windowBottom.toFloat(), strip.bottom + dy)
+        if (bottom > top) ceil(bottom).toInt() else 0
+    } ?: 0
 
     private fun updateHeight(fraction: Float) {
         if (fromHeight == toHeight) return
@@ -366,7 +410,13 @@ internal class MediaRollingTextSlot(
             ((fraction - 0.12f) / 0.88f).coerceIn(0f, 1f)
         }
         val eased = 1f - (1f - heightProgress).let { it * it * it }
-        val nextHeight = (fromHeight + (toHeight - fromHeight) * eased).roundToInt()
+        // Layout follows the visible ink's actual motion, including delayed groups,
+        // rather than cutting it off with an independently shrinking clip.
+        val nextHeight = maxOf(
+            (fromHeight + (toHeight - fromHeight) * eased).roundToInt(),
+            outgoing?.visibleBottom(incomingFrame = false) ?: 0,
+            incoming?.visibleBottom(incomingFrame = true) ?: 0
+        )
         if (heightOverride != nextHeight) {
             heightOverride = nextHeight
             requestLayout()
