@@ -200,6 +200,11 @@ internal class FloatingController(
         notifyStyleChanged()
     }
 
+    fun applyBackgroundBlurPercent(percent: Int) {
+        FloatingLyricsStyleStore.setBackgroundBlurPercent(appContext, percent)
+        notifyStyleChanged()
+    }
+
     fun applyGravity(gravity: Int) {
         FloatingLyricsStyleStore.setGravity(appContext, gravity)
         notifyStyleChanged()

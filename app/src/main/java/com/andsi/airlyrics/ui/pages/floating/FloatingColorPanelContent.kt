@@ -50,7 +50,8 @@ internal class FloatingColorPanelContent(
     private val navigation: FloatingPanelNavigation,
     private val currentColor: () -> Int,
     private val onColorChanged: (Int) -> Unit,
-    additionalControls: View? = null
+    additionalControls: View? = null,
+    leadingControls: View? = null
 ) : LinearLayout(host) {
     private val pageStateKey = "panel.color"
     private var editingRgb = host.interactions.read(pageStateKey)?.getBoolean("rgb") ?: false
@@ -78,6 +79,16 @@ internal class FloatingColorPanelContent(
     private var saveState = newSaveState()
     private var favoritesJob: Job? = null
     private val saveButton = FloatingColorSaveButton(host) { saveCurrentColor() }
+
+    private fun addOverviewDivider() {
+        overview.addView(View(host).apply {
+            setBackgroundColor(ColorUtils.setAlphaComponent(host.colorStroke, 128))
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, LayoutParams(LayoutParams.MATCH_PARENT, host.dp(AirUiTokens.Stroke.Hairline)).apply {
+            topMargin = host.dp(AirUiTokens.Space.Xl)
+            bottomMargin = host.dp(AirUiTokens.Space.Xl)
+        })
+    }
 
     private fun newSaveState(): FloatingColorSaveState {
         val rgb = AirColorUtils.opaqueRgb(currentColor())
@@ -110,6 +121,10 @@ internal class FloatingColorPanelContent(
     init {
         orientation = VERTICAL
         overview.setPadding(0, host.dp(AirUiTokens.Space.Sm), 0, 0)
+        leadingControls?.let { controls ->
+            overview.addView(controls)
+            addOverviewDivider()
+        }
         val presets = listOf(
             R.string.ui_blue to Color.rgb(66, 165, 245),
             R.string.ui_purple to Color.rgb(126, 87, 194),
@@ -179,13 +194,7 @@ internal class FloatingColorPanelContent(
         }
         overview.addView(customRow)
         additionalControls?.let { controls ->
-            overview.addView(View(host).apply {
-                setBackgroundColor(ColorUtils.setAlphaComponent(host.colorStroke, 128))
-                importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
-            }, LayoutParams(LayoutParams.MATCH_PARENT, host.dp(AirUiTokens.Stroke.Hairline)).apply {
-                topMargin = host.dp(AirUiTokens.Space.Xl)
-                bottomMargin = host.dp(AirUiTokens.Space.Xl)
-            })
+            addOverviewDivider()
             overview.addView(controls)
         }
 

@@ -175,6 +175,36 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
     }
 
     @Test
+    fun backgroundBlurPersistsIndependentlyAndResetsWithPreset() {
+        assertEquals(0, FloatingLyricsStyleStore.getStyle(context).backgroundBlurPercent)
+        FloatingLyricsStyleStore.setBackgroundBlurPercent(context, 65)
+        FloatingLyricsStyleStore.setBackgroundEnabled(context, false)
+        FloatingLyricsStyleStore.setBackgroundAlpha(context, 90)
+        FloatingLyricsStyleStore.setBackgroundColor(context, Color.RED)
+
+        var style = FloatingLyricsStyleStore.getStyle(context)
+        assertEquals(65, style.backgroundBlurPercent)
+        assertEquals(90, style.backgroundAlpha)
+        assertEquals(Color.RED, style.backgroundColor)
+        assertFalse(style.backgroundEnabled)
+
+        FloatingLyricsStyleStore.applyPreset(context, FloatingLyricsStyleStore.PRESET_BUBBLE)
+        assertEquals(0, FloatingLyricsStyleStore.getStyle(context).backgroundBlurPercent)
+        FloatingLyricsStyleStore.setStyle(context, style)
+        assertEquals(style, FloatingLyricsStyleStore.getStyle(context))
+
+        FloatingLyricsStyleStore.setBackgroundBlurPercent(context, 200)
+        assertEquals(100, FloatingLyricsStyleStore.getStyle(context).backgroundBlurPercent)
+        FloatingLyricsStyleStore.setStyle(context, style.copy(backgroundBlurPercent = -10))
+        assertEquals(0, FloatingLyricsStyleStore.getStyle(context).backgroundBlurPercent)
+
+        context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE).edit()
+            .putInt("background_blur_percent", 200).commit()
+        style = FloatingLyricsStyleStore.getStyle(context)
+        assertEquals(100, style.backgroundBlurPercent)
+    }
+
+    @Test
     fun wordByWordHighlightColor_usesCompatibilityPreferenceKey() {
         val preferences = context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
         val writtenColor = Color.rgb(12, 34, 56)

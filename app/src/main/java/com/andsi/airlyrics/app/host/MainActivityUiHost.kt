@@ -427,6 +427,7 @@ internal class MainActivityUiHost(
     }
     override fun applyFloatingBackgroundEnabled(enabled: Boolean) = graph.floatingController.applyBackgroundEnabled(enabled)
     override fun applyFloatingBackgroundAlpha(alpha: Int) = graph.floatingController.applyBackgroundAlpha(alpha)
+    override fun applyFloatingBackgroundBlurPercent(percent: Int) = graph.floatingController.applyBackgroundBlurPercent(percent)
     override fun applyFloatingGravity(gravity: Int) = graph.floatingController.applyGravity(gravity)
     override fun applyFloatingShadowRadius(radius: Float) = graph.floatingController.applyShadowRadius(radius)
     override fun applyFloatingShadowColor(color: Int) = graph.floatingController.applyShadowColor(color)

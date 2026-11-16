@@ -59,6 +59,7 @@
     <string name="ui_available_local_word_by_word_lyrics">可用 · 本機逐字歌詞</string>
     <string name="ui_back_to_edit">返回編輯</string>
     <string name="ui_background">背景</string>
+    <string name="ui_blur_amount">模糊程度</string>
     <string name="ui_background_bubble">背景氣泡</string>
     <string name="ui_background_off">背景：關閉</string>
     <string name="ui_background_on">背景：開啟</string>

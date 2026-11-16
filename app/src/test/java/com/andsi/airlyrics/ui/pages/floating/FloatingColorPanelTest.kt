@@ -62,10 +62,17 @@ class FloatingColorPanelTest {
         clearPreferences()
     }
 
-    private fun open(id: FloatingPanelId, width: Int = 360, height: Int = 640, scale: Float = 1f, initialize: Boolean = true) {
+    private fun open(
+        id: FloatingPanelId,
+        width: Int = 360,
+        height: Int = 640,
+        scale: Float = 1f,
+        initialize: Boolean = true,
+        locale: String = "en-rUS"
+    ) {
         this.width = width
         this.height = height
-        RuntimeEnvironment.setQualifiers("en-rUS-w${width}dp-h${height}dp-mdpi")
+        RuntimeEnvironment.setQualifiers("${locale}-w${width}dp-h${height}dp-mdpi")
         RuntimeEnvironment.setFontScale(scale)
         host = Robolectric.buildActivity(MainActivity::class.java).setup().also { controller = it }.get().graph.uiHost
         if (initialize) {
@@ -201,19 +208,29 @@ class FloatingColorPanelTest {
         ThemeSettingsStore.setDark(RuntimeEnvironment.getApplication(), true)
         open(FloatingPanelId.BACKGROUND)
         host.applyFloatingStyle(host.floatingStyle().copy(
-            backgroundEnabled = true, backgroundAlpha = 123, backgroundColor = Color.rgb(9, 19, 29)
+            backgroundEnabled = true, backgroundAlpha = 123, backgroundColor = Color.rgb(9, 19, 29),
+            backgroundBlurPercent = 35
         ))
         scope.panelOpeners.getValue(FloatingPanelId.BACKGROUND).invoke()
         layout()
         val initial = host.floatingStyle()
         val backgroundSwitch = visible(panel()).filterIsInstance<SwitchCompat>().single()
         backgroundSwitch.performClick()
-        val opacity = visible(panel()).filterIsInstance<SeekBar>().single()
+        val opacity = visible(panel()).filterIsInstance<SeekBar>().single {
+            it.contentDescription == host.getString(R.string.ui_opacity)
+        }
         drag(opacity, 0.7f)
+        val blur = visible(panel()).filterIsInstance<SeekBar>().single {
+            it.contentDescription == host.getString(R.string.ui_blur_amount)
+        }
+        drag(blur, 0.8f)
+        val blurPercent = host.floatingStyle().backgroundBlurPercent
+        assertTrue(blurPercent > initial.backgroundBlurPercent)
         val alpha = host.floatingStyle().backgroundAlpha
         action(R.string.ui_blue).performClick()
         assertEquals(Color.rgb(66, 165, 245), host.floatingStyle().backgroundColor)
         assertEquals(alpha, host.floatingStyle().backgroundAlpha)
+        assertEquals(blurPercent, host.floatingStyle().backgroundBlurPercent)
         assertFalse(host.floatingStyle().backgroundEnabled)
 
         val favorite = Color.rgb(168, 83, 80)
@@ -226,6 +243,7 @@ class FloatingColorPanelTest {
         assertEquals(listOf(favorite), FloatingColorSwatchStore.colors(host))
         assertEquals(favorite, host.floatingStyle().backgroundColor)
         assertEquals(alpha, host.floatingStyle().backgroundAlpha)
+        assertEquals(blurPercent, host.floatingStyle().backgroundBlurPercent)
         assertFalse(host.floatingStyle().backgroundEnabled)
         capture("background-palette")
         val adjusted = host.floatingStyle()
@@ -234,6 +252,7 @@ class FloatingColorPanelTest {
         val defaults = host.floatingStyleDefaults(adjusted.presetName)
         assertEquals(defaults.backgroundColor, host.floatingStyle().backgroundColor)
         assertEquals(defaults.backgroundAlpha, host.floatingStyle().backgroundAlpha)
+        assertEquals(defaults.backgroundBlurPercent, host.floatingStyle().backgroundBlurPercent)
         assertEquals(defaults.backgroundEnabled, host.floatingStyle().backgroundEnabled)
         assertEquals(initial.textColor, host.floatingStyle().textColor)
         assertEquals(initial.shadowColor, host.floatingStyle().shadowColor)
@@ -249,6 +268,64 @@ class FloatingColorPanelTest {
         assertEquals(Color.alpha(initial.shadowColor), Color.alpha(host.floatingStyle().shadowColor))
         assertEquals(adjusted.backgroundColor, host.floatingStyle().backgroundColor)
         assertEquals(adjusted.wordByWordHighlightColor, host.floatingStyle().wordByWordHighlightColor)
+    }
+
+    @Test fun backgroundLayoutKeepsControlsAndColorsReachableAcrossLocalesAndFontScales() {
+        listOf("en-rUS", "zh-rCN").forEach { locale ->
+            listOf(360 to 1f, 320 to 1f, 320 to 1.8f).forEach { (screenWidth, fontScale) ->
+                controller?.close()
+                controller = null
+                clearPreferences()
+                ThemeSettingsStore.setDark(RuntimeEnvironment.getApplication(), fontScale > 1f)
+                open(FloatingPanelId.BACKGROUND, width = screenWidth, scale = fontScale, locale = locale)
+                assertEquals(if (locale == "zh-rCN") "背景气泡" else "Background bubble",
+                    host.getString(R.string.ui_background_bubble))
+
+                val bubble = panel()
+                fun bounds(view: View) = Rect(0, 0, view.width, view.height).also {
+                    bubble.offsetDescendantRectToMyCoords(view, it)
+                }
+                val toggle = visible(bubble).filterIsInstance<SwitchCompat>().single()
+                val opacity = visible(bubble).filterIsInstance<SeekBar>().single {
+                    it.contentDescription == host.getString(R.string.ui_opacity)
+                }
+                val blur = visible(bubble).filterIsInstance<SeekBar>().single {
+                    it.contentDescription == host.getString(R.string.ui_blur_amount)
+                }
+                val opacityBounds = bounds(opacity)
+                val blurBounds = bounds(blur)
+                assertEquals(opacityBounds.left, blurBounds.left)
+                assertEquals(opacityBounds.right, blurBounds.right)
+                assertTrue(bounds(toggle).bottom <= opacityBounds.top)
+                assertTrue(opacityBounds.bottom <= blurBounds.top)
+                assertTrue(opacity.width >= host.dp(96))
+                assertTrue(opacity.height >= host.dp(48))
+                assertTrue(blur.height >= host.dp(48))
+                val scroll = visible(bubble).filterIsInstance<ScrollView>().single()
+                assertTrue(blurBounds.bottom <= scroll.bottom)
+                visible(bubble).filterIsInstance<TextView>().forEach textViews@ { text ->
+                    val textLayout = text.layout ?: return@textViews
+                    repeat(textLayout.lineCount) { line ->
+                        assertEquals("Text must remain complete: ${text.text}", 0, textLayout.getEllipsisCount(line))
+                    }
+                    assertTrue("Text must stay inside the panel: ${text.text}",
+                        bounds(text).left >= 0 && bounds(text).right <= bubble.width)
+                }
+                val name = "background-layout-final-${locale}-${screenWidth}-${fontScale}"
+                capture("$name-top")
+                scroll.scrollTo(0, scroll.getChildAt(0).height)
+                layout()
+                val custom = action(R.string.ui_custom_color)
+                val customBounds = bounds(custom)
+                assertTrue(customBounds.top >= scroll.top)
+                assertTrue(customBounds.bottom <= scroll.bottom)
+                assertTrue(custom.height >= host.dp(48))
+                capture("$name-bottom")
+                custom.performClick()
+                layout()
+                assertEquals(3, visible(bubble).filterIsInstance<SeekBar>().size)
+            }
+        }
     }
 
     @Test fun shadowPalettePreservesArgbAndRadiusAndKeepsLastControlReachableWithLargeFonts() {

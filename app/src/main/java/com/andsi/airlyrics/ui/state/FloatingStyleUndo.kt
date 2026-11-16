@@ -14,6 +14,7 @@ internal fun FloatingLyricsStyle.undoChangesTo(next: FloatingLyricsStyle): Bundl
     if (backgroundEnabled != next.backgroundEnabled) putBoolean("backgroundEnabled", backgroundEnabled)
     if (backgroundColor != next.backgroundColor) putInt("backgroundColor", backgroundColor)
     if (backgroundAlpha != next.backgroundAlpha) putInt("backgroundAlpha", backgroundAlpha)
+    if (backgroundBlurPercent != next.backgroundBlurPercent) putInt("backgroundBlurPercent", backgroundBlurPercent)
     if (cornerRadiusDp != next.cornerRadiusDp) putInt("cornerRadiusDp", cornerRadiusDp)
     if (paddingHorizontalDp != next.paddingHorizontalDp) putInt("paddingHorizontalDp", paddingHorizontalDp)
     if (paddingVerticalDp != next.paddingVerticalDp) putInt("paddingVerticalDp", paddingVerticalDp)
@@ -36,6 +37,7 @@ internal fun FloatingLyricsStyle.restoreFields(snapshot: Bundle): FloatingLyrics
     backgroundEnabled = if (snapshot.containsKey("backgroundEnabled")) snapshot.getBoolean("backgroundEnabled") else backgroundEnabled,
     backgroundColor = if (snapshot.containsKey("backgroundColor")) snapshot.getInt("backgroundColor") else backgroundColor,
     backgroundAlpha = if (snapshot.containsKey("backgroundAlpha")) snapshot.getInt("backgroundAlpha") else backgroundAlpha,
+    backgroundBlurPercent = if (snapshot.containsKey("backgroundBlurPercent")) snapshot.getInt("backgroundBlurPercent") else backgroundBlurPercent,
     cornerRadiusDp = if (snapshot.containsKey("cornerRadiusDp")) snapshot.getInt("cornerRadiusDp") else cornerRadiusDp,
     paddingHorizontalDp = if (snapshot.containsKey("paddingHorizontalDp")) snapshot.getInt("paddingHorizontalDp") else paddingHorizontalDp,
     paddingVerticalDp = if (snapshot.containsKey("paddingVerticalDp")) snapshot.getInt("paddingVerticalDp") else paddingVerticalDp,

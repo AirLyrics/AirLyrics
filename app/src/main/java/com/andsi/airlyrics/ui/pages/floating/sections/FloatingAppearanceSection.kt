@@ -103,13 +103,15 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                             isAtDefault = { current, defaults ->
                                 current.backgroundEnabled == defaults.backgroundEnabled &&
                                     current.backgroundColor == defaults.backgroundColor &&
-                                    current.backgroundAlpha == defaults.backgroundAlpha
+                                    current.backgroundAlpha == defaults.backgroundAlpha &&
+                                    current.backgroundBlurPercent == defaults.backgroundBlurPercent
                             },
                             restoreDefaults = { current, defaults ->
                                 current.copy(
                                     backgroundEnabled = defaults.backgroundEnabled,
                                     backgroundColor = defaults.backgroundColor,
-                                    backgroundAlpha = defaults.backgroundAlpha
+                                    backgroundAlpha = defaults.backgroundAlpha,
+                                    backgroundBlurPercent = defaults.backgroundBlurPercent
                                 )
                             }
                         ),
@@ -127,10 +129,19 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                                 value = alphaToOpacityPercent(style().backgroundAlpha),
                                 min = 0,
                                 max = 100,
-                                suffix = "%",
-                                compact = true
+                                suffix = "%"
                             ) { value ->
                                 applyFloatingBackgroundAlpha(opacityPercentToAlpha(value))
+                                refreshFloatingPreview()
+                            })
+                            addView(sliderRow(
+                                title = getString(R.string.ui_blur_amount),
+                                value = style().backgroundBlurPercent,
+                                min = 0,
+                                max = 100,
+                                suffix = "%"
+                            ) { value ->
+                                applyFloatingBackgroundBlurPercent(value)
                                 refreshFloatingPreview()
                             })
                         }
@@ -142,7 +153,7 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                                 applyFloatingBackgroundColor(color, refreshPage = false)
                                 refreshFloatingPreview()
                             },
-                            additionalControls = controls
+                            leadingControls = controls
                         ))
                     }
                 }

@@ -57,6 +57,7 @@
     <string name="ui_available_local_word_by_word_lyrics">Available · local word-by-word lyrics</string>
     <string name="ui_back_to_edit">Back to edit</string>
     <string name="ui_background">Background</string>
+    <string name="ui_blur_amount">Blur amount</string>
     <string name="ui_background_bubble">Background bubble</string>
     <string name="ui_background_off">Background: off</string>
     <string name="ui_background_on">Background: on</string>

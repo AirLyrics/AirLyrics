@@ -29,6 +29,7 @@ object FloatingLyricsStyleStore {
     private const val KEY_BACKGROUND_ENABLED = "background_enabled"
     private const val KEY_BACKGROUND_COLOR = "background_color"
     private const val KEY_BACKGROUND_ALPHA = "background_alpha"
+    private const val KEY_BACKGROUND_BLUR = "background_blur_percent"
     private const val KEY_CORNER_RADIUS = "corner_radius"
     private const val KEY_PADDING_HORIZONTAL = "padding_horizontal"
     private const val KEY_PADDING_VERTICAL = "padding_vertical"
@@ -132,6 +133,7 @@ object FloatingLyricsStyleStore {
             backgroundEnabled = prefs.getBoolean(KEY_BACKGROUND_ENABLED, true),
             backgroundColor = prefs.getInt(KEY_BACKGROUND_COLOR, Color.rgb(10, 14, 24)),
             backgroundAlpha = prefs.getInt(KEY_BACKGROUND_ALPHA, 170),
+            backgroundBlurPercent = prefs.getInt(KEY_BACKGROUND_BLUR, 0).coerceIn(0, 100),
             cornerRadiusDp = prefs.getInt(KEY_CORNER_RADIUS, 20),
             paddingHorizontalDp = prefs.getInt(KEY_PADDING_HORIZONTAL, 18),
             paddingVerticalDp = prefs.getInt(KEY_PADDING_VERTICAL, 10),
@@ -184,6 +186,7 @@ object FloatingLyricsStyleStore {
             putBoolean(KEY_BACKGROUND_ENABLED, style.backgroundEnabled)
             putInt(KEY_BACKGROUND_COLOR, style.backgroundColor)
             putInt(KEY_BACKGROUND_ALPHA, style.backgroundAlpha)
+            putInt(KEY_BACKGROUND_BLUR, style.backgroundBlurPercent.coerceIn(0, 100))
             putInt(KEY_CORNER_RADIUS, style.cornerRadiusDp)
             putInt(KEY_PADDING_HORIZONTAL, style.paddingHorizontalDp)
             putInt(KEY_PADDING_VERTICAL, style.paddingVerticalDp)
@@ -210,6 +213,7 @@ object FloatingLyricsStyleStore {
             putBoolean(KEY_BACKGROUND_ENABLED, values.backgroundEnabled)
             putInt(KEY_BACKGROUND_COLOR, values.backgroundColor)
             putInt(KEY_BACKGROUND_ALPHA, values.backgroundAlpha)
+            putInt(KEY_BACKGROUND_BLUR, 0)
             putInt(KEY_CORNER_RADIUS, values.cornerRadiusDp)
             putInt(KEY_PADDING_HORIZONTAL, values.paddingHorizontalDp)
             putInt(KEY_PADDING_VERTICAL, values.paddingVerticalDp)
@@ -248,6 +252,10 @@ object FloatingLyricsStyleStore {
 
     fun setBackgroundAlpha(context: Context, alpha: Int) {
         prefs(context).setInt(KEY_BACKGROUND_ALPHA, alpha.coerceIn(0, 255))
+    }
+
+    fun setBackgroundBlurPercent(context: Context, percent: Int) {
+        prefs(context).setInt(KEY_BACKGROUND_BLUR, percent.coerceIn(0, 100))
     }
 
     fun setGravity(context: Context, gravity: Int) {

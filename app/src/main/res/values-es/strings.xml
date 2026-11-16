@@ -59,6 +59,7 @@
     <string name="ui_available_local_word_by_word_lyrics">Disponible · letras locales palabra por palabra</string>
     <string name="ui_back_to_edit">Volver a editar</string>
     <string name="ui_background">Fondo</string>
+    <string name="ui_blur_amount">Desenfoque</string>
     <string name="ui_background_bubble">Burbuja de fondo</string>
     <string name="ui_background_off">Fondo: desactivado</string>
     <string name="ui_background_on">Fondo: activado</string>

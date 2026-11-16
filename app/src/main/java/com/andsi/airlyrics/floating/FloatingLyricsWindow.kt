@@ -1,10 +1,12 @@
 package com.andsi.airlyrics.floating
 
+import android.app.Dialog
 import android.content.Context
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.Rect
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.provider.Settings
@@ -13,6 +15,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.TextView
@@ -22,6 +25,7 @@ import com.andsi.airlyrics.core.model.FloatingPosition
 import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Owns the floating lyrics window itself: creation, removal, dragging,
@@ -44,6 +48,7 @@ class FloatingLyricsWindow(
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     private var lyricsView: TextView? = null
+    private var overlayDialog: Dialog? = null
     private var params: WindowManager.LayoutParams? = null
     private var position: FloatingPosition? = null
     private var geometry: FloatingWindowGeometry? = null
@@ -94,6 +99,14 @@ class FloatingLyricsWindow(
             return refreshed
         }
 
+        // A Window is required for public, rounded background blur. Blur-behind on
+        // LayoutParams would blur the entire screen rather than just the bubble.
+        val dialog = if (Build.VERSION.SDK_INT >= 31) {
+            Dialog(windowContext, R.style.Theme_AirLyrics_FloatingOverlay).apply {
+                setCancelable(false)
+                setCanceledOnTouchOutside(false)
+            }
+        } else null
         val view = FloatingLyricsTextView(windowContext).apply {
             text = this@FloatingLyricsWindow.context.getString(R.string.ui_waiting_for_media_message)
             includeFontPadding = false
@@ -117,11 +130,31 @@ class FloatingLyricsWindow(
 
         return runCatching {
             lyricsView = view
-            params = layoutParams
+            overlayDialog = dialog
             position = FloatingLyricsStyleStore.getRelativePosition(context)
-            applyStyle(view)
-            calculateLayout(view, layoutParams, remap = true)
-            windowManager.addView(view, layoutParams)
+            if (dialog != null) {
+                val window = requireNotNull(dialog.window)
+                window.attributes = layoutParams
+                val attributes = window.attributes
+                params = attributes
+                dialog.setContentView(
+                    view,
+                    ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    )
+                )
+                applyStyle(view)
+                window.decorView.setPadding(0, 0, 0, 0)
+                calculateLayout(view, attributes, remap = true)
+                dialog.show()
+            } else {
+                // Keep the lightweight overlay on versions without background blur.
+                params = layoutParams
+                applyStyle(view)
+                calculateLayout(view, layoutParams, remap = true)
+                windowManager.addView(view, layoutParams)
+            }
             view.onWindowConfigurationChanged = ::onConfigurationChanged
             view.addOnLayoutChangeListener(layoutListener)
             view.setOnApplyWindowInsetsListener { _, insets ->
@@ -147,12 +180,13 @@ class FloatingLyricsWindow(
         remapPending = false
         geometry = null
         position = null
-        val removed = if (view != null) {
-            runCatching { windowManager.removeView(view) }.isSuccess
-        } else {
-            true
-        }
+        val removed = runCatching {
+            val dialog = overlayDialog
+            if (dialog != null) dialog.dismiss()
+            else if (view != null) windowManager.removeView(view)
+        }.isSuccess
 
+        overlayDialog = null
         lyricsView = null
         params = null
         if (notifyVisibilityChanged) {
@@ -166,7 +200,7 @@ class FloatingLyricsWindow(
         val p = params ?: return true
         return runCatching {
             applyStyle(view)
-            if (calculateLayout(view, p, remap = true)) windowManager.updateViewLayout(view, p)
+            if (calculateLayout(view, p, remap = true)) windowManager.updateViewLayout(view.rootView, p)
             true
         }.getOrElse {
             hideAfterFailure()
@@ -216,7 +250,7 @@ class FloatingLyricsWindow(
                         if (view.layoutDirection == View.LAYOUT_DIRECTION_RTL) -1 else 1
                     p.x = (startX + dx).coerceIn(0, bounds.travelX)
                     p.y = (startY + (event.rawY - touchStartY).toInt()).coerceIn(0, bounds.travelY)
-                    runCatching { windowManager.updateViewLayout(view, p) }
+                    runCatching { windowManager.updateViewLayout(view.rootView, p) }
                         .onFailure { hideAfterFailure() }
                         .isSuccess
                 }
@@ -292,13 +326,26 @@ class FloatingLyricsWindow(
             view.setShadowLayer(0f, 0f, 0f, Color.TRANSPARENT)
         }
 
-        view.background = if (style.backgroundEnabled) {
+        val background = if (style.backgroundEnabled) {
             GradientDrawable().apply {
                 cornerRadius = dp(style.cornerRadiusDp).toFloat()
                 setColor(AirColorUtils.withAlpha(style.backgroundColor, style.backgroundAlpha))
             }
-        } else {
-            null
+        } else null
+        val window = overlayDialog?.window
+        if (window == null) {
+            view.background = background
+            return
+        }
+        window.setBackgroundDrawable(background ?: ColorDrawable(Color.TRANSPARENT))
+        if (Build.VERSION.SDK_INT >= 31) {
+            val radius = if (style.backgroundEnabled) {
+                (dp(32) * style.backgroundBlurPercent.coerceIn(0, 100) / 100f)
+                    .roundToInt().coerceAtMost(150)
+            } else 0
+            // Window tracks cross-window blur availability, including battery saver
+            // changes. Unsupported devices keep the user's normal bubble background.
+            window.setBackgroundBlurRadius(radius)
         }
     }
 
@@ -315,7 +362,7 @@ class FloatingLyricsWindow(
         val p = params ?: return
         runCatching {
             if (remap) applyStyle(view)
-            if (calculateLayout(view, p, remap)) windowManager.updateViewLayout(view, p)
+            if (calculateLayout(view, p, remap)) windowManager.updateViewLayout(view.rootView, p)
         }.onFailure {
             Log.w("FloatingLyricsWindow", "Unable to update overlay geometry", it)
             hideAfterFailure()
@@ -390,7 +437,7 @@ class FloatingLyricsWindow(
         val p = params ?: return true
         return runCatching {
             p.flags = windowFlagsForCurrentBehavior()
-            windowManager.updateViewLayout(view, p)
+            windowManager.updateViewLayout(view.rootView, p)
             true
         }.getOrElse {
             hideAfterFailure()
@@ -403,11 +450,14 @@ class FloatingLyricsWindow(
     }
 
     private fun windowFlagsForCurrentBehavior(): Int {
+        var flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+        if (Build.VERSION.SDK_INT >= 31) {
+            flags = flags or WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+        }
         return if (FloatingLyricsStyleStore.isClickThrough(context)) {
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
         } else {
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+            flags
         }
     }
 

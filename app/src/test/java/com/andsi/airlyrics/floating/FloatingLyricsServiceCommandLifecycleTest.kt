@@ -71,9 +71,10 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertEquals(Service.START_STICKY, send(service, FloatingServiceCommand.Show, startId = 1))
         val windowManager = shadowWindowManager(service)
         val firstView = requireNotNull(service.lyricsView)
+        val firstWindow = firstView.rootView
         assertTrue(service.windowController.isVisible)
         assertTrue(QuickFloatingStore.isDesiredVisible(service))
-        assertEquals(1, windowManager.views.count { it === firstView })
+        assertEquals(1, windowManager.views.count { it === firstWindow })
 
         send(service, FloatingServiceCommand.Show, startId = 2)
 
@@ -81,7 +82,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertEquals(
             "Repeated Show must reuse the production floating view",
             1,
-            windowManager.views.count { it === firstView }
+            windowManager.views.count { it === firstWindow }
         )
 
         send(service, FloatingServiceCommand.Hide, startId = 3)
@@ -89,13 +90,13 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertFalse(service.windowController.isVisible)
         assertFalse(QuickFloatingStore.isDesiredVisible(service))
         assertNull(service.lyricsView)
-        assertFalse(windowManager.views.any { it === firstView })
+        assertFalse(windowManager.views.any { it === firstWindow })
 
         send(service, FloatingServiceCommand.Hide, startId = 4)
 
         assertFalse(service.windowController.isVisible)
         assertNull(service.lyricsView)
-        assertFalse(windowManager.views.any { it === firstView })
+        assertFalse(windowManager.views.any { it === firstWindow })
     }
 
     @Test
@@ -107,7 +108,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
         val windowManager = shadowWindowManager(service)
         send(service, FloatingServiceCommand.Show)
         val view = requireNotNull(service.lyricsView)
-        val layoutParams = view.layoutParams as WindowManager.LayoutParams
+        val layoutParams = view.rootView.layoutParams as WindowManager.LayoutParams
 
         assertTrue(layoutParams.hasFlag(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE))
         assertFalse(layoutParams.hasFlag(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE))
@@ -236,6 +237,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
 
         send(service, FloatingServiceCommand.Show)
         val lyricsView = requireNotNull(service.lyricsView)
+        val windowView = lyricsView.rootView
         val windowManager = shadowWindowManager(service)
         application.sendBroadcast(mediaIntent)
         ShadowLooper.idleMainLooper()
@@ -250,7 +252,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
         service.markLyricsUnavailable(service.currentMedia.playbackLyricsKey())
         val textAtDestroy = lyricsView.text.toString()
 
-        assertTrue(windowManager.views.any { it === lyricsView })
+        assertTrue(windowManager.views.any { it === windowView })
         assertNotNull(service.activeLyricsLookupRequestKey)
         assertTrue(service.syncHandler.hasCallbacks(service.syncRunnable))
         assertTrue(service.syncHandler.hasCallbacks(service.pauseAutoHideRunnable))
@@ -262,7 +264,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
 
         assertFalse(service.windowController.isVisible)
         assertNull(service.lyricsView)
-        assertFalse(windowManager.views.any { it === lyricsView })
+        assertFalse(windowManager.views.any { it === windowView })
         assertNull(service.activeLyricsLookupRequestKey)
         assertFalse(service.syncHandler.hasCallbacks(service.syncRunnable))
         assertFalse(service.syncHandler.hasCallbacks(service.pauseAutoHideRunnable))
@@ -300,7 +302,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
     }
 
     private fun shadowWindowManager(service: FloatingLyricsService): ShadowWindowManagerImpl {
-        val windowManager = (service.lyricsView?.context ?: service).getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val windowManager = (service.lyricsView?.rootView?.context ?: service).getSystemService(Context.WINDOW_SERVICE) as WindowManager
         return Shadow.extract(windowManager)
     }
 
