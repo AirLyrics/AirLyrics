@@ -2,6 +2,7 @@ package com.andsi.airlyrics.ui.components
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -28,7 +29,8 @@ internal open class AdaptiveGridLayout(
     private val verticalGap: Int,
     private val comfortableLines: Int = 1,
     private val fillCells: Boolean = true,
-    private val columnPolicy: GridColumnPolicy = GridColumnPolicy.Content
+    private val columnPolicy: GridColumnPolicy = GridColumnPolicy.Content,
+    private val rowGravity: Int = Gravity.END
 ) : LinearLayout(context) {
     internal var columns: Int = 1
         private set
@@ -102,7 +104,13 @@ internal open class AdaptiveGridLayout(
         var y = paddingTop
         rows.forEach { row ->
             val rowWidth = row.sumOf { it.measuredWidth } + horizontalGap * (row.size - 1)
-            var offset = if (fillCells) 0 else (width - paddingLeft - paddingRight - rowWidth).coerceAtLeast(0)
+            val remaining = (width - paddingLeft - paddingRight - rowWidth).coerceAtLeast(0)
+            var offset = when {
+                fillCells -> 0
+                rowGravity == Gravity.CENTER_HORIZONTAL -> remaining / 2
+                rowGravity == Gravity.START -> 0
+                else -> remaining
+            }
             row.forEach { child ->
                 val x = if (layoutDirection == LAYOUT_DIRECTION_RTL) {
                     width - paddingRight - offset - child.measuredWidth

@@ -24,15 +24,21 @@ data class FloatingLyricsStyle(
     val fontFamily: FloatingLyricsFontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT,
     val fontWeight: Int = FloatingLyricsFontWeight.DEFAULT,
     val glow: LyricsGlowStyle = LyricsGlowStyle(),
-    val backgroundBlurPercent: Int = 0
-)
+    val backgroundBlurPercent: Int = 0,
+    val customFontId: String? = null
+) {
+    val fontId: String
+        get() = if (fontFamily == FloatingLyricsFontFamily.CUSTOM) {
+            customFontId ?: FloatingLyricsFontFamily.CUSTOM.key
+        } else fontFamily.key
+}
 
 /** Font sources that can be applied only to the floating lyrics text. */
 enum class FloatingLyricsFontFamily(val key: String) {
     SYSTEM_DEFAULT("system_default"),
-    SANS_SERIF("sans_serif"),
     SERIF("serif"),
-    MONOSPACE("monospace"),
+    ROUNDED("swei_gothic_sc"),
+    HANDWRITING("wenkai"),
     CUSTOM("custom");
 
     companion object {

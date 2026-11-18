@@ -20,7 +20,10 @@ internal fun FloatingLyricsStyle.undoChangesTo(next: FloatingLyricsStyle): Bundl
     if (paddingVerticalDp != next.paddingVerticalDp) putInt("paddingVerticalDp", paddingVerticalDp)
     if (maxWidthPercent != next.maxWidthPercent) putInt("maxWidthPercent", maxWidthPercent)
     if (gravity != next.gravity) putInt("gravity", gravity)
-    if (fontFamily != next.fontFamily) putString("fontFamily", fontFamily.key)
+    if (fontFamily != next.fontFamily || customFontId != next.customFontId) {
+        putString("fontFamily", fontFamily.key)
+        putString("customFontId", customFontId)
+    }
     if (fontWeight != next.fontWeight) putInt("fontWeight", fontWeight)
     if (glow.enabled != next.glow.enabled) putBoolean("glowEnabled", glow.enabled)
     if (glow.strengthPercent != next.glow.strengthPercent) putInt("glowStrengthPercent", glow.strengthPercent)
@@ -44,6 +47,7 @@ internal fun FloatingLyricsStyle.restoreFields(snapshot: Bundle): FloatingLyrics
     maxWidthPercent = if (snapshot.containsKey("maxWidthPercent")) snapshot.getInt("maxWidthPercent") else maxWidthPercent,
     gravity = if (snapshot.containsKey("gravity")) snapshot.getInt("gravity") else gravity,
     fontFamily = if (snapshot.containsKey("fontFamily")) FloatingLyricsFontFamily.fromKey(snapshot.getString("fontFamily")) else fontFamily,
+    customFontId = if (snapshot.containsKey("customFontId")) snapshot.getString("customFontId") else customFontId,
     fontWeight = if (snapshot.containsKey("fontWeight")) snapshot.getInt("fontWeight") else fontWeight,
     glow = glow.copy(
         enabled = if (snapshot.containsKey("glowEnabled")) snapshot.getBoolean("glowEnabled") else glow.enabled,

@@ -36,6 +36,7 @@ object FloatingLyricsStyleStore {
     private const val KEY_MAX_WIDTH_PERCENT = "max_width_percent"
     private const val KEY_GRAVITY = "gravity"
     private const val KEY_FONT_FAMILY = "font_family"
+    private const val KEY_CUSTOM_FONT_ID = "custom_font_id"
     private const val KEY_FONT_WEIGHT = "font_weight"
     private const val KEY_LOCKED = "locked"
     private const val KEY_CLICK_THROUGH = "click_through"
@@ -121,9 +122,9 @@ object FloatingLyricsStyleStore {
         ).normalized()
     }
 
-    fun getStyle(context: Context): FloatingLyricsStyle {
+    fun getStyle(context: Context): FloatingLyricsStyle = synchronized(FloatingLyricsFontStore.mutationLock) {
         val prefs = prefs(context)
-        return FloatingLyricsStyle(
+        val style = FloatingLyricsStyle(
             presetName = normalizePreset(prefs.getString(KEY_PRESET, DEFAULT_PRESET)),
             textSizeSp = prefs.getFloat(KEY_TEXT_SIZE, 18f),
             textColor = prefs.getInt(KEY_TEXT_COLOR, Color.WHITE),
@@ -145,8 +146,18 @@ object FloatingLyricsStyleStore {
             fontWeight = FloatingLyricsFontWeight.normalize(
                 prefs.getInt(KEY_FONT_WEIGHT, FloatingLyricsFontWeight.DEFAULT)
             ),
-            glow = getGlowStyle(context)
+            glow = getGlowStyle(context),
+            customFontId = prefs.getString(KEY_CUSTOM_FONT_ID)
         )
+        val available = FloatingLyricsFontStore.normalizeStyle(context, style)
+        if (available.fontFamily.key != prefs.getString(KEY_FONT_FAMILY,
+                FloatingLyricsFontFamily.SYSTEM_DEFAULT.key) || available.customFontId != style.customFontId) {
+            prefs.edit {
+                putString(KEY_FONT_FAMILY, available.fontFamily.key)
+                putString(KEY_CUSTOM_FONT_ID, available.customFontId)
+            }
+        }
+        available
     }
 
     fun getPresetDefaults(preset: String): FloatingLyricsStyle {
@@ -171,7 +182,8 @@ object FloatingLyricsStyleStore {
         )
     }
 
-    fun setStyle(context: Context, style: FloatingLyricsStyle) {
+    fun setStyle(context: Context, style: FloatingLyricsStyle) = synchronized(FloatingLyricsFontStore.mutationLock) {
+        val available = FloatingLyricsFontStore.normalizeStyle(context, style)
         prefs(context).edit {
             putString(KEY_PRESET, normalizePreset(style.presetName))
             putFloat(KEY_TEXT_SIZE, style.textSizeSp)
@@ -192,7 +204,8 @@ object FloatingLyricsStyleStore {
             putInt(KEY_PADDING_VERTICAL, style.paddingVerticalDp)
             putInt(KEY_MAX_WIDTH_PERCENT, style.maxWidthPercent)
             putInt(KEY_GRAVITY, style.gravity)
-            putString(KEY_FONT_FAMILY, style.fontFamily.key)
+            putString(KEY_FONT_FAMILY, available.fontFamily.key)
+            putString(KEY_CUSTOM_FONT_ID, available.customFontId)
             putInt(KEY_FONT_WEIGHT, FloatingLyricsFontWeight.normalize(style.fontWeight))
         }
     }
@@ -263,7 +276,12 @@ object FloatingLyricsStyleStore {
     }
 
     fun setFontFamily(context: Context, fontFamily: FloatingLyricsFontFamily) {
-        prefs(context).setString(KEY_FONT_FAMILY, fontFamily.key)
+        setStyle(context, getStyle(context).copy(
+            fontFamily = fontFamily,
+            customFontId = if (fontFamily == FloatingLyricsFontFamily.CUSTOM) {
+                FloatingLyricsFontStore.preferredCustomId(context)
+            } else null
+        ))
     }
 
     fun setShadowColor(context: Context, color: Int) {

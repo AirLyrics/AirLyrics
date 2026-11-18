@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.ui.model
 
+import android.graphics.Typeface
 import android.view.View
 import android.widget.TextView
 
@@ -13,6 +14,7 @@ internal data class KeyedOptionItem(
     val key: String,
     val title: String,
     val selected: Boolean,
+    val typeface: Typeface? = null,
     val action: () -> Unit
 )
 

@@ -123,6 +123,11 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
         cachedText = text
     }
 
+    fun invalidateLayout() {
+        // Keep the old runs so rebuilding preserves their playback springs.
+        cachedLayout = null
+    }
+
     fun prepare() {
         val layout = view.layout ?: return
         val text = view.text as? Spanned ?: return

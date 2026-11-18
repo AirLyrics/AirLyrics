@@ -303,7 +303,8 @@ class FloatingLyricsWindow(
         FloatingLyricsFontStore.applyTypeface(
             view,
             style.fontFamily,
-            style.fontWeight
+            style.fontWeight,
+            style.customFontId
         )
         view.setTextColor(style.textColor)
         view.gravity = style.gravity

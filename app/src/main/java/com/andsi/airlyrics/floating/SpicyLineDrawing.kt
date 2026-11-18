@@ -95,6 +95,11 @@ internal class SpicyLineDrawing(private val view: FloatingLyricsTextView) {
         lastFrame = 0L
     }
 
+    fun invalidateLayout() {
+        // Keep the old groups so rebuilding preserves their playback springs.
+        cachedLayout = null
+    }
+
     fun prepare() {
         val layout = view.layout ?: return
         val text = view.text as? Spanned ?: return

@@ -40,6 +40,7 @@ internal fun MainUiHost.liveOptionGridImpl(items: List<KeyedOptionItem>): Linear
                 selection.select(option.key == item.key)
             }
         }).apply {
+            item.typeface?.let { typeface = it }
             minimumHeight = dp(AirUiTokens.SettingsPanel.OptionMinHeight)
             setPaddingRelative(
                 dp(AirUiTokens.SettingsPanel.ControlGap), dp(AirUiTokens.Space.ControlV),

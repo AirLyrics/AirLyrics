@@ -30,6 +30,9 @@ internal class MainLaunchers(
     private val floatingFontMimeTypes = arrayOf(
         "font/ttf",
         "font/otf",
+        "font/collection",
+        "application/x-font-ttc",
+        "font/sfnt",
         "application/font-sfnt",
         "application/x-font-ttf",
         "application/x-font-truetype",

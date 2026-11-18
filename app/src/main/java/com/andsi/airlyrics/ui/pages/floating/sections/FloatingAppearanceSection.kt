@@ -4,17 +4,14 @@ import android.graphics.Color
 import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.ui.components.actionButton
-import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.panelSwitch
-import com.andsi.airlyrics.ui.components.smallHint
-import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.FloatingPanelNavigation
 import com.andsi.airlyrics.ui.pages.floating.FloatingColorPanelContent
+import com.andsi.airlyrics.ui.pages.floating.FloatingFontPanelContent
 import com.andsi.airlyrics.ui.pages.floating.alphaToOpacityPercent
 import com.andsi.airlyrics.ui.pages.floating.compactColorSummary
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
@@ -197,42 +194,30 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = fontFamilySubtitle(),
                 iconRes = R.drawable.ic_air_font,
                 onClick = { tile ->
+                    val navigation = FloatingPanelNavigation()
                     openPanel(
                         tile,
                         getString(R.string.ui_font),
-                        ""
-                    ) {
-                        val availableFonts = FloatingLyricsFontFamily.entries.filter { fontFamily ->
-                            fontFamily != FloatingLyricsFontFamily.CUSTOM || hasFloatingCustomFont()
-                        }
-                        addView(liveOptionGrid(
-                            availableFonts.map { fontFamily ->
-                                KeyedOptionItem(
-                                    key = fontFamily.key,
-                                    title = localizedFontFamilyTitle(fontFamily),
-                                    selected = fontFamily == style().fontFamily,
-                                    action = {
-                                        applyFloatingStyle(style().copy(fontFamily = fontFamily))
-                                        refreshFloatingPreview()
-                                    }
+                        "",
+                        reset = stylePanelReset(
+                            isAtDefault = { current, _ ->
+                                current.fontFamily == FloatingLyricsFontFamily.SYSTEM_DEFAULT
+                            },
+                            restoreDefaults = { current, _ ->
+                                current.copy(
+                                    fontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT,
+                                    customFontId = null
                                 )
                             }
-                        ))
-                        addView(actionButton(
-                            host,
-                            getString(
-                                if (hasFloatingCustomFont()) {
-                                    R.string.ui_reimport_font
-                                } else {
-                                    R.string.ui_import_font
-                                }
-                            )
-                        ) {
-                            selectFloatingFontFile()
-                        }.apply {
-                            host.styleAirTonalButton(this, AirTonalButtonTone.DEFAULT)
+                        ),
+                        navigation = navigation
+                    ) {
+                        val manager = FloatingFontPanelContent(host, navigation, onChanged = {
+                            refreshFloatingPreview()
+                            notifyFloatingStyleChanged()
                         })
-                        addView(smallHint(host, getString(R.string.ui_font_formats_hint)))
+                        pageRefs.refreshFonts = manager::showImportedFont
+                        addView(manager)
                     }
                 }
             ),

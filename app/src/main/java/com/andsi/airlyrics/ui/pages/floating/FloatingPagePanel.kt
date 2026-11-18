@@ -21,6 +21,11 @@ internal class FloatingPanelNavigation {
     private var title: String? = null
     private var back: (() -> Unit)? = null
     private var updateHeader: ((String?, (() -> Unit)?) -> Unit)? = null
+    private var headerAction: View? = null
+    private var hideReset = false
+    private var updateAction: ((View?, Boolean) -> Unit)? = null
+    private var clearPendingUndo: (() -> Unit)? = null
+    var onClose: (() -> Unit)? = null
 
     fun showPage(title: String? = null, onBack: (() -> Unit)? = null) {
         this.title = title
@@ -28,10 +33,27 @@ internal class FloatingPanelNavigation {
         updateHeader?.invoke(title, onBack)
     }
 
-    fun bind(update: (String?, (() -> Unit)?) -> Unit) {
-        updateHeader = update
-        update(title, back)
+    fun setHeaderAction(action: View?, hideReset: Boolean = false) {
+        headerAction = action
+        this.hideReset = hideReset
+        updateAction?.invoke(action, hideReset)
     }
+
+    fun bind(
+        update: (String?, (() -> Unit)?) -> Unit,
+        updateAction: (View?, Boolean) -> Unit = { _, _ -> },
+        clearUndo: () -> Unit = {}
+    ) {
+        updateHeader = update
+        this.updateAction = updateAction
+        clearPendingUndo = clearUndo
+        update(title, back)
+        updateAction(headerAction, hideReset)
+    }
+
+    fun clearUndo() { clearPendingUndo?.invoke() }
+
+    fun close() { onClose?.invoke() }
 
     fun navigateBack(): Boolean {
         val action = back ?: return false
@@ -50,6 +72,7 @@ internal fun FloatingPageScope.openPanel(
 ): (() -> Unit)? {
     val overlay = focusOverlay ?: return null
     val id = openingPanelId ?: return null
+    activePanelNavigation?.close()
     overlay.animate().cancel()
     overlay.getChildAt(0)?.animate()?.cancel()
     selectedTileView?.takeIf { it !== anchor }?.let { previousTile ->
@@ -107,7 +130,13 @@ internal fun FloatingPageScope.openPanel(
     }
     val bubble = bubbleHandle.view
     activePanelNavigation = navigation
-    navigation?.bind(bubbleHandle.updateNavigation)
+    navigation?.bind(bubbleHandle.updateNavigation, bubbleHandle.updateHeaderAction) {
+        pendingUndo = null
+        if (activeBubble === bubbleHandle.view && host.interactions.panel == id) {
+            host.interactions.write("panel") { remove("undo") }
+            updateActivePanelResetState()
+        }
+    }
 
     overlay.removeAllViews()
     overlay.visibility = View.VISIBLE
@@ -198,6 +227,8 @@ internal fun FloatingPageScope.installBackHandler() {
 }
 
 private fun FloatingPageScope.closePanel() {
+    // Cancel nested work before the closing animation can deliver a late completion.
+    activePanelNavigation?.close()
     host.interactions.panel = null
     val overlay = focusOverlay ?: return
     val bubble = activeBubble

@@ -36,6 +36,7 @@ internal sealed interface MainUiEffect {
     ) : MainUiEffect
 
     data class FloatingFontImported(
-        val displayName: String
+        val displayName: String,
+        val fontId: String = "custom"
     ) : MainUiEffect
 }

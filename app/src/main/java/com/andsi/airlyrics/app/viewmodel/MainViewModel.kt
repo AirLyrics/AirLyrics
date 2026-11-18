@@ -226,12 +226,14 @@ internal class MainViewModel(
             }) {
                 is FloatingFontImportOutcome.Success -> {
                     notifyFloatingStructureChanged()
-                    uiEffectChannel.trySend(MainUiEffect.FloatingFontImported(outcome.displayName))
+                    uiEffectChannel.trySend(MainUiEffect.FloatingFontImported(outcome.displayName, outcome.fontId))
                 }
                 FloatingFontImportOutcome.UnsupportedFormat ->
                     showMessage(R.string.ui_font_format_unsupported, error = true)
                 FloatingFontImportOutcome.TooLarge ->
                     showMessage(R.string.ui_font_file_too_large, error = true)
+                FloatingFontImportOutcome.TooManyFaces ->
+                    showMessage(R.string.ui_font_collection_too_many_faces, error = true)
                 FloatingFontImportOutcome.InvalidFont ->
                     showMessage(R.string.ui_invalid_font_file, error = true)
                 FloatingFontImportOutcome.ReadFailed ->

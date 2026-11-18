@@ -42,6 +42,7 @@ import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsImportFormatErrorMess
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
+import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
@@ -581,6 +582,12 @@ internal class MainGraph(
                     wordByWordImportEnabled = effect.wordByWordImportEnabled
                 )
             is MainUiEffect.FloatingFontImported -> {
+                if (uiHost.interactions.panel == com.andsi.airlyrics.ui.state.FloatingPanelId.FONT) {
+                    val imported = FloatingLyricsFontStore.font(activity, effect.fontId)
+                    val pageId = imported?.collectionId ?: effect.fontId
+                    uiHost.interactions.write("panel.font") { putString("font_id", pageId) }
+                    uiHost.floatingPageRefs?.refreshFonts?.invoke(pageId)
+                }
                 floatingController.notifyStyleChanged()
                 feedback.showMessage(
                     activity.getString(R.string.ui_font_import_success, effect.displayName)

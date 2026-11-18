@@ -114,6 +114,14 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         ).toInt() else 0
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        // TextView can reuse a BoringLayout instance after font or size changes.
+        // Identity alone cannot tell the drawing caches that its paint/geometry changed.
+        spicyDrawing.invalidateLayout()
+        spicyLineDrawing.invalidateLayout()
+    }
+
     override fun getCompoundPaddingTop() = super.getCompoundPaddingTop() + spicyInset()
     override fun getCompoundPaddingBottom() = super.getCompoundPaddingBottom() + spicyInset()
 

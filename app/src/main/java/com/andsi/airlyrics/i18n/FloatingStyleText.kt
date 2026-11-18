@@ -33,12 +33,22 @@ internal fun Context.localizedFloatingFontFamilyTitle(fontFamily: FloatingLyrics
 @StringRes
 internal fun floatingFontFamilyTitleRes(fontFamily: FloatingLyricsFontFamily): Int = when (fontFamily) {
     FloatingLyricsFontFamily.SYSTEM_DEFAULT -> R.string.ui_system_default_font
-    FloatingLyricsFontFamily.SANS_SERIF -> R.string.ui_sans_serif
     FloatingLyricsFontFamily.SERIF -> R.string.ui_serif
-    FloatingLyricsFontFamily.MONOSPACE -> R.string.ui_monospace
+    FloatingLyricsFontFamily.ROUNDED -> R.string.ui_rounded_font
+    FloatingLyricsFontFamily.HANDWRITING -> R.string.ui_handwriting_font
     FloatingLyricsFontFamily.CUSTOM -> R.string.ui_custom_font
 }
 
 internal fun localizedFloatingFontWeightTitle(fontWeight: Int): String {
     return FloatingLyricsFontWeight.toLevel(fontWeight).toString()
+}
+
+/** SI units match the full font download sizes. */
+internal fun Context.localizedFloatingFontSize(bytes: Long): String {
+    val locale = resources.configuration.locales[0]
+    return when {
+        bytes >= 1_000_000L -> String.format(locale, "%.1f MB", bytes / 1_000_000.0)
+        bytes >= 1_000L -> String.format(locale, "%.1f KB", bytes / 1_000.0)
+        else -> String.format(locale, "%d B", bytes)
+    }
 }

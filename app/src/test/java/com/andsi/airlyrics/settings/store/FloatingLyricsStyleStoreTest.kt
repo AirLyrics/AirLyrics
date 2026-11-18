@@ -106,13 +106,13 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
         FloatingLyricsStyleStore.setStyle(
             context,
             FloatingLyricsStyleStore.getStyle(context).copy(
-                fontFamily = FloatingLyricsFontFamily.MONOSPACE,
+                fontFamily = FloatingLyricsFontFamily.SERIF,
                 fontWeight = 555
             )
         )
 
         var style = FloatingLyricsStyleStore.getStyle(context)
-        assertEquals(FloatingLyricsFontFamily.MONOSPACE, style.fontFamily)
+        assertEquals(FloatingLyricsFontFamily.SERIF, style.fontFamily)
         assertEquals(600, style.fontWeight)
 
         context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
@@ -124,6 +124,21 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
         style = FloatingLyricsStyleStore.getStyle(context)
         assertEquals(FloatingLyricsFontFamily.SYSTEM_DEFAULT, style.fontFamily)
         assertEquals(FloatingLyricsFontWeight.MAX, style.fontWeight)
+    }
+
+    @Test
+    fun removedFontFamiliesFallBackToSystemDefaultWithoutChangingOtherSettings() {
+        val prefs = context.getSharedPreferences("floating_lyrics_style", Context.MODE_PRIVATE)
+        FloatingLyricsStyleStore.setTextSize(context, 32f)
+        for (key in listOf("sans_serif", "monospace", "sans_serif_condensed")) {
+            prefs.edit().putString("font_family", key).putInt("font_weight", 600).commit()
+
+            val style = FloatingLyricsStyleStore.getStyle(context)
+
+            assertEquals(key, FloatingLyricsFontFamily.SYSTEM_DEFAULT, style.fontFamily)
+            assertEquals(600, style.fontWeight)
+            assertEquals(32f, style.textSizeSp)
+        }
     }
 
     @Test

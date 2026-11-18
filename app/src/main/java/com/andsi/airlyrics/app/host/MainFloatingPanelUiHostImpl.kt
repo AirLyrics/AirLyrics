@@ -110,6 +110,7 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
         updateNavigation = { pageTitle, onBack ->
             header.updateNavigation(pageTitle, onBack)
             androidx.core.view.ViewCompat.setAccessibilityPaneTitle(shell, pageTitle ?: title)
-        }
+        },
+        updateHeaderAction = header::updateHeaderAction
     )
 }

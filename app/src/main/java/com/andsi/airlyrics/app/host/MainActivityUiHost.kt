@@ -269,7 +269,8 @@ internal class MainActivityUiHost(
     override fun floatingStyle(): FloatingLyricsStyle = FloatingLyricsStyleStore.getStyle(this)
     override fun floatingStyleDefaults(preset: String): FloatingLyricsStyle = FloatingLyricsStyleStore.getPresetDefaults(preset)
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
-    override fun floatingCustomFontName(): String? = FloatingLyricsFontStore.customFontDisplayName(this)
+    override fun floatingCustomFontName(): String? =
+        FloatingLyricsFontStore.customFontDisplayName(this, floatingStyle().customFontId)
     override fun hasFloatingCustomFont(): Boolean = FloatingLyricsFontStore.hasCustomFont(this)
     override fun selectFloatingFontFile() = graph.viewModel.selectFloatingFontFile()
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)
@@ -377,7 +378,7 @@ internal class MainActivityUiHost(
         val thumbnailTextSizeSp = previewTextSizeSp(style.textSizeSp, lyricsLineDisplayMode())
         val thumbnailScale = (thumbnailTextSizeSp / style.textSizeSp.coerceAtLeast(1f)).coerceAtMost(1f)
         textSize = thumbnailTextSizeSp
-        FloatingLyricsFontStore.applyTypeface(this, style.fontFamily, style.fontWeight)
+        FloatingLyricsFontStore.applyTypeface(this, style.fontFamily, style.fontWeight, style.customFontId)
         gravity = style.gravity
         textAlignment = View.TEXT_ALIGNMENT_GRAVITY
         setTextColor(style.textColor)

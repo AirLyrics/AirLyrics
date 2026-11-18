@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.ui.model
 
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
+import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
@@ -14,7 +15,8 @@ internal data class FloatingFocusBubbleHandle(
     val view: LinearLayout,
     val rebuildContent: () -> Unit,
     val updateResetAction: (Boolean, Boolean) -> Unit,
-    val updateNavigation: (String?, (() -> Unit)?) -> Unit = { _, _ -> }
+    val updateNavigation: (String?, (() -> Unit)?) -> Unit = { _, _ -> },
+    val updateHeaderAction: (View?, Boolean) -> Unit = { _, _ -> }
 )
 
 internal data class FloatingPreviewHighlightProgress(

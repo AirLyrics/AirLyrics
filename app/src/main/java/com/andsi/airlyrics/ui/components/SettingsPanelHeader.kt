@@ -5,6 +5,8 @@ import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -29,6 +31,7 @@ internal class SettingsPanelHeader(
 ) : LinearLayout(host) {
     private var reset: FrameLayout? = null
     private var back: FrameLayout? = null
+    private var accessory: FrameLayout? = null
     private var resetState: Pair<Boolean, Boolean>? = null
     private lateinit var titleView: TextView
     private val titleColumn: LinearLayout
@@ -102,6 +105,10 @@ internal class SettingsPanelHeader(
             end -= it.measuredWidth
             placeAction(it, end)
         }
+        accessory?.let {
+            end -= it.measuredWidth
+            placeAction(it, end)
+        }
         back?.takeIf { it.visibility != GONE }?.let { placeAction(it, 0) }
         val titleTop = paddingTop + host.dp(AirUiTokens.Layout.IconTouchSize)
         titleColumn.layout(paddingLeft, titleTop, width - paddingRight, titleTop + titleColumn.measuredHeight)
@@ -132,6 +139,19 @@ internal class SettingsPanelHeader(
             visibility = if (onBack == null) GONE else VISIBLE
             setOnClickListener { onBack?.invoke() }
         }
+    }
+
+    fun updateHeaderAction(view: View?, hideReset: Boolean) {
+        accessory?.let(::removeView)
+        accessory = view?.let { action ->
+            (action.parent as? ViewGroup)?.removeView(action)
+            FrameLayout(host).apply {
+                layoutParams = LayoutParams(host.dp(AirUiTokens.Layout.IconTouchSize), host.dp(AirUiTokens.Layout.IconTouchSize))
+                addView(action, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            }.also { addView(it, childCount - 1) }
+        }
+        reset?.visibility = if (hideReset) GONE else VISIBLE
+        requestLayout()
     }
 
     fun updateResetAction(enabled: Boolean, isUndo: Boolean) {
