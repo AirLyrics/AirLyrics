@@ -273,15 +273,13 @@ fn extract_content(raw: &str) -> Result<String, String> {
         loop {
             match reader.read_event().map_err(|_| "ParseError")? {
                 Event::Start(element) | Event::Empty(element)
-                    if element.name().as_ref() == b"Lyric_1" =>
+                    if element.name().as_ref() == "Lyric_1" =>
                 {
                     for attr in element.attributes() {
                         let attr = attr.map_err(|_| "ParseError")?;
-                        if attr.key.as_ref() == b"LyricContent" {
-                            let value = std::str::from_utf8(attr.value.as_ref())
-                                .map_err(|_| "ParseError")?;
+                        if attr.key.as_ref() == "LyricContent" {
                             content = Some(
-                                quick_xml::escape::unescape(value)
+                                quick_xml::escape::unescape(attr.value.as_ref())
                                     .map_err(|_| "ParseError")?
                                     .into_owned(),
                             );
