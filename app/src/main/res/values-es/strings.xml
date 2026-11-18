@@ -138,7 +138,7 @@
     <string name="ui_font_formats_hint">Se admiten fuentes TTF, OTF y variables</string>
     <string name="ui_font_import_failed">No se pudo importar esta fuente</string>
     <string name="ui_font_import_success">Fuente importada: %1$s</string>
-    <string name="ui_font_opacity">Opacidad</string>
+    <string name="ui_font_opacity">Opacidad de fuente</string>
     <string name="ui_font_size">Tamaño de fuente</string>
     <string name="ui_font_weight">Grosor de fuente</string>
     <string name="ui_import_font">Importar fuente</string>
