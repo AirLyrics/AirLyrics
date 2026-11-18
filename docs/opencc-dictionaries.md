@@ -1,7 +1,9 @@
 # OpenCC dictionaries
 
-The following files are from [BYVoid/OpenCC](https://github.com/BYVoid/OpenCC), revision
-`3ac34aa439a9908dd49fa92b5174b46314787ac2`, licensed under Apache-2.0 (see `LICENSE`):
+The [bundled dictionaries](../app/src/main/assets/opencc/) are from
+[BYVoid/OpenCC](https://github.com/BYVoid/OpenCC), revision
+`3ac34aa439a9908dd49fa92b5174b46314787ac2`. The [Apache-2.0 license](../app/src/main/assets/third_party/opencc/LICENSE)
+is included with the app.
 
 | File | Role |
 | --- | --- |
