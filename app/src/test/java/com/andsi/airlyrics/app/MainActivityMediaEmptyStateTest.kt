@@ -95,19 +95,22 @@ class MainActivityMediaEmptyStateTest {
                 shadowOf(manager).addController(controller)
                 playback(PlaybackState.STATE_PLAYING)
                 val trackPage = page(host)
+                val playerCardKey = "media.player.test.player"
+                val playing = host.getPlaybackStateText(PlaybackState.STATE_PLAYING)
                 assertTrue("Song" in cardTexts(trackPage))
-                assertTrue(host.getPlaybackStateText(PlaybackState.STATE_PLAYING) in cardTexts(trackPage))
+                assertFalse(playing in cardTexts(trackPage))
                 assertNotNull(anchor(trackPage, "media.players.heading"))
-                assertNotNull(anchor(trackPage, "media.player.test.player"))
+                assertTrue(playing in cardTexts(trackPage, playerCardKey))
                 assertNotNull(anchor(trackPage, "media.refresh"))
                 assertNull(anchor(trackPage, "media.notification_access"))
 
                 playback(PlaybackState.STATE_PAUSED)
                 ShadowLooper.idleMainLooper(AirUiTokens.Motion.MediaStatusSwapMs + 32L, TimeUnit.MILLISECONDS)
+                val paused = host.getPlaybackStateText(PlaybackState.STATE_PAUSED)
                 assertSame(trackPage, page(host))
                 assertTrue("Song" in cardTexts(trackPage))
-                assertTrue(host.getPlaybackStateText(PlaybackState.STATE_PAUSED) in cardTexts(trackPage))
-                assertNotNull(anchor(trackPage, "media.player.test.player"))
+                assertFalse(paused in cardTexts(trackPage))
+                assertTrue(paused in cardTexts(trackPage, playerCardKey))
 
                 shadowOf(manager).clearControllers()
                 host.refreshMediaContent()
@@ -191,9 +194,9 @@ class MainActivityMediaEmptyStateTest {
     private fun anchor(root: View, key: String): View? =
         descendants(root).singleOrNull { it.getTag(R.id.interaction_anchor) == key }
 
-    private fun cardTexts(page: View): List<String> =
-        descendants(anchor(page, "media.current")!!).filterIsInstance<TextView>()
-            .map { it.text.toString() }.toList()
+    private fun cardTexts(page: View, cardKey: String = "media.current"): List<String> =
+        descendants(requireNotNull(anchor(page, cardKey)) { "Missing card $cardKey" })
+            .filterIsInstance<TextView>().map { it.text.toString() }.toList()
 
     private fun assertEmptyPage(host: MainUiHost, accessGranted: Boolean) {
         val page = page(host)

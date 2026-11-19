@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.settings.store.FloatingColorSwatchStore
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.AdaptiveLabelValueLayout
 import com.andsi.airlyrics.ui.components.GridColumnPolicy
@@ -73,7 +72,7 @@ internal class FloatingColorPanelContent(
     private val savedSwatches = linkedMapOf<Int, FloatingColorSwatch>()
     private var pendingDeleteColor: Int? = null
     private val rgbRows = mutableListOf<SettingsSliderRow>()
-    private var favorites = FloatingColorSwatchStore.colors(host)
+    private var favorites = host.floatingColorSwatches()
     private val savedGrid = swatchGrid("floating.color.saved")
     private val savedSection: View
     private var saveState = newSaveState()
@@ -99,12 +98,11 @@ internal class FloatingColorPanelContent(
         val session = saveState
         val request = session.begin() ?: return
         renderColor()
-        val appContext = host.applicationContext
         host.runOnAppIo {
-            val result = runCatching { FloatingColorSwatchStore.save(appContext, request.color) }
+            val result = runCatching { host.saveFloatingColorSwatch(request.color) }
             host.runOnMainThread {
                 if (saveState !== session || session.isClosed) return@runOnMainThread
-                favorites = FloatingColorSwatchStore.colors(appContext)
+                favorites = host.floatingColorSwatches()
                 val rgb = AirColorUtils.opaqueRgb(currentColor())
                 session.edit(rgb, rgb in favorites)
                 if (!session.complete(request, result.isSuccess)) return@runOnMainThread
@@ -273,7 +271,7 @@ internal class FloatingColorPanelContent(
     }
 
     private fun refreshSavedSwatches() {
-        favorites = FloatingColorSwatchStore.colors(host)
+        favorites = host.floatingColorSwatches()
         savedSwatches.keys.filterNot { it in favorites }.forEach { color ->
             savedSwatches.remove(color)?.let { savedGrid.removeView(it) }
         }
@@ -299,10 +297,9 @@ internal class FloatingColorPanelContent(
                 swatch.isEnabled = false
                 swatch.setRemovalArmed(false)
                 val session = saveState
-                val appContext = host.applicationContext
                 // Mutations serialize with confirmed saves. Never wait on that disk lock on the UI.
                 host.runOnAppIo {
-                    FloatingColorSwatchStore.remove(appContext, color)
+                    host.removeFloatingColorSwatch(color)
                     host.runOnMainThread {
                         if (saveState !== session || session.isClosed) return@runOnMainThread
                         beginFloatingPanelChange()
@@ -428,13 +425,13 @@ internal class FloatingColorPanelContent(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        favorites = FloatingColorSwatchStore.colors(host)
+        favorites = host.floatingColorSwatches()
         if (saveState.isClosed) saveState = newSaveState()
         favoritesJob?.cancel()
         favoritesJob = host.activity.lifecycleScope.launch {
             host.activity.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                FloatingColorSwatchStore.changes.collect {
-                    val confirmedColors = FloatingColorSwatchStore.colors(host)
+                host.floatingColorSwatchChanges.collect {
+                    val confirmedColors = host.floatingColorSwatches()
                     val changed = favorites != confirmedColors
                     favorites = confirmedColors
                     if (!editingRgb) {

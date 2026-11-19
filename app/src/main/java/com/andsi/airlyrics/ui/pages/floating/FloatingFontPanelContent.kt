@@ -30,7 +30,6 @@ import com.andsi.airlyrics.core.model.FloatingFontSource
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.localizedFloatingFontFamilyTitle
 import com.andsi.airlyrics.i18n.localizedFloatingFontSize
-import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.actionButton
@@ -59,12 +58,15 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Small injectable boundary keeps the real settings-entry flows testable without the network. */
 internal interface FontPanelOperations {
+    val changes: Flow<Long> get() = emptyFlow()
     fun fonts(): List<FloatingFont>
     fun collections(): List<FloatingFontCollection> = emptyList()
     fun removeCollection(id: String): Boolean = false
@@ -75,26 +77,13 @@ internal interface FontPanelOperations {
     suspend fun download(id: String, onProgress: (Int) -> Unit)
 }
 
-private class StoredFontPanelOperations(private val host: MainUiHost) : FontPanelOperations {
-    override fun fonts() = FloatingLyricsFontStore.fonts(host)
-    override fun collections() = FloatingLyricsFontStore.collections(host)
-    override fun removeCollection(id: String) = FloatingLyricsFontStore.removeCollection(host, id)
-    override fun selectedId() = host.floatingStyle().fontId
-    override fun previewTypeface(id: String) =
-        FloatingLyricsFontStore.resolvePreviewTypeface(host, id, host.floatingStyle().fontWeight)
-    override fun select(id: String) = FloatingLyricsFontStore.selectFont(host, id)
-    override fun remove(id: String) = FloatingLyricsFontStore.removeFont(host, id)
-    override suspend fun download(id: String, onProgress: (Int) -> Unit) =
-        FloatingLyricsFontStore.downloadFont(host.applicationContext, id, onProgress)
-}
-
 /** List, specimen and downloads share the existing setting panel rather than opening another modal. */
 @SuppressLint("ViewConstructor")
 internal class FloatingFontPanelContent(
     private val host: MainUiHost,
     private val navigation: FloatingPanelNavigation,
     private val onChanged: () -> Unit,
-    private val operations: FontPanelOperations = StoredFontPanelOperations(host)
+    private val operations: FontPanelOperations = host.floatingFontOperations
 ) : LinearLayout(host) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val confirmation = FontDeleteConfirmation()
@@ -591,7 +580,7 @@ internal class FloatingFontPanelContent(
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         changesJob = scope.launch {
-            FloatingLyricsFontStore.changes.collect {
+            operations.changes.collect {
                 if (!closed && !deleting && downloadJob == null) renderPage(animate = false)
             }
         }

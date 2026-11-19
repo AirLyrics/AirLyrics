@@ -3,8 +3,8 @@ package com.andsi.airlyrics.ui.components
 import android.content.res.ColorStateList
 import android.graphics.Color
 import androidx.core.graphics.ColorUtils
-import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
+import com.andsi.airlyrics.ui.theme.appearancePreferences
 import com.google.android.material.button.MaterialButton
 import kotlin.math.roundToInt
 
@@ -15,8 +15,8 @@ internal fun MaterialButton.styleAirTonalButton(tone: AirTonalButtonTone = AirTo
 
 /** Inline disclosures and navigation actions keep their text-only hierarchy in either style. */
 internal fun MaterialButton.styleAirTextButton() {
-    val dark = ThemeSettingsStore.isDark(context)
-    val palette = AirLyricsTheme.palette(dark, ThemeSettingsStore.getAccent(context))
+    val (dark, accent) = context.appearancePreferences()
+    val palette = AirLyricsTheme.palette(dark, accent)
     val foreground = if (dark) palette.accent else ColorUtils.blendARGB(palette.accent, palette.textStrong, 0.6f)
     applyAirButtonColors(AirTonalButtonStyle(Color.TRANSPARENT, Color.TRANSPARENT, foreground, 0))
 }

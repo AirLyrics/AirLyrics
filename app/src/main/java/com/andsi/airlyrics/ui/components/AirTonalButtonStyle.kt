@@ -7,11 +7,11 @@ import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.andsi.airlyrics.ui.theme.airLyricsPalette
+import com.andsi.airlyrics.ui.theme.appearancePreferences
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.theme.bindAppearance
@@ -46,9 +46,8 @@ internal fun MainUiHost.airTonalButtonStyle(
 ): AirTonalButtonStyle = airLyricsPalette.airTonalButtonStyle(tone, buttonStyle, isDarkTheme(), appearance.frame.darkFraction)
 
 internal fun Context.airTonalButtonStyle(tone: AirTonalButtonTone): AirTonalButtonStyle {
-    val dark = ThemeSettingsStore.isDark(this)
-    return AirLyricsTheme.palette(dark, ThemeSettingsStore.getAccent(this))
-        .airTonalButtonStyle(tone, ThemeSettingsStore.getButtonStyle(this), dark)
+    val (dark, accent, buttonStyle) = appearancePreferences()
+    return AirLyricsTheme.palette(dark, accent).airTonalButtonStyle(tone, buttonStyle, dark)
 }
 
 internal fun AirLyricsPalette.airTonalButtonStyle(

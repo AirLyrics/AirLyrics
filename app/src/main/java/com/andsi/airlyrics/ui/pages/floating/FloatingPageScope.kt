@@ -193,8 +193,7 @@ internal class FloatingPageScope(
 
     internal fun fontFamilySubtitle(fontFamily: FloatingLyricsFontFamily = style().fontFamily): String {
         return if (fontFamily == FloatingLyricsFontFamily.CUSTOM) {
-            com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
-                .customFontDisplayName(host, style().customFontId) ?: localizedFontFamilyTitle(fontFamily)
+            host.floatingCustomFontName() ?: localizedFontFamilyTitle(fontFamily)
         } else {
             localizedFontFamilyTitle(fontFamily)
         }

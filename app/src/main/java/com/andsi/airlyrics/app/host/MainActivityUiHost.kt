@@ -59,6 +59,7 @@ import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.toSongIdentity
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
+import com.andsi.airlyrics.settings.store.FloatingColorSwatchStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
@@ -86,6 +87,7 @@ import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.theme.bindAppearance
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageTokens
+import com.andsi.airlyrics.ui.pages.floating.FontPanelOperations
 import com.andsi.airlyrics.ui.pages.floating.previewTextSizeSp
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
 import com.andsi.airlyrics.ui.theme.colorBackground
@@ -269,10 +271,17 @@ internal class MainActivityUiHost(
     override fun floatingStyle(): FloatingLyricsStyle = FloatingLyricsStyleStore.getStyle(this)
     override fun floatingStyleDefaults(preset: String): FloatingLyricsStyle = FloatingLyricsStyleStore.getPresetDefaults(preset)
     override fun floatingPresets() = FloatingLyricsStyleStore.presets
+    override val floatingFontOperations: FontPanelOperations = StoredFontPanelOperations(this)
     override fun floatingCustomFontName(): String? =
         FloatingLyricsFontStore.customFontDisplayName(this, floatingStyle().customFontId)
     override fun hasFloatingCustomFont(): Boolean = FloatingLyricsFontStore.hasCustomFont(this)
     override fun selectFloatingFontFile() = graph.viewModel.selectFloatingFontFile()
+
+    override val floatingColorSwatchChanges get() = FloatingColorSwatchStore.changes
+    override fun floatingColorSwatches() = FloatingColorSwatchStore.colors(this)
+    override fun saveFloatingColorSwatch(color: Int) = FloatingColorSwatchStore.save(applicationContext, color)
+    override fun removeFloatingColorSwatch(color: Int) = FloatingColorSwatchStore.remove(applicationContext, color)
+
     override fun isFloatingPreviewExpanded(): Boolean = FloatingLyricsStyleStore.isPreviewExpanded(this)
     override fun setFloatingPreviewExpanded(expanded: Boolean) = FloatingLyricsStyleStore.setPreviewExpanded(this, expanded)
 

@@ -10,6 +10,8 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.ui.pages.floating.FontPanelOperations
+import kotlinx.coroutines.flow.Flow
 
 internal data class FloatingFocusBubbleHandle(
     val view: LinearLayout,
@@ -41,9 +43,14 @@ internal interface FloatingUiHost {
     fun floatingStyle(): FloatingLyricsStyle
     fun floatingStyleDefaults(preset: String): FloatingLyricsStyle
     fun floatingPresets(): List<FloatingLyricsPreset>
+    val floatingFontOperations: FontPanelOperations
     fun floatingCustomFontName(): String?
     fun hasFloatingCustomFont(): Boolean
     fun selectFloatingFontFile()
+    val floatingColorSwatchChanges: Flow<Long>
+    fun floatingColorSwatches(): List<Int>
+    fun saveFloatingColorSwatch(color: Int): Boolean
+    fun removeFloatingColorSwatch(color: Int): Boolean
     fun isFloatingPreviewExpanded(): Boolean
     fun setFloatingPreviewExpanded(expanded: Boolean)
     fun floatingDisplaySummary(): String
