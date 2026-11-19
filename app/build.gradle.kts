@@ -185,6 +185,10 @@ android {
     }
 }
 
+tasks.withType<Test>().configureEach {
+    maxHeapSize = "1g"
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
