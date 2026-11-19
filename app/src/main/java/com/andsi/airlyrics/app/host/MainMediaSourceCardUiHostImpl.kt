@@ -85,6 +85,7 @@ internal fun MainUiHost.mediaSourceCardImpl(controller: MediaController, selecte
         }
     }
     val stateMotion = MediaStatusMotion(activity, stateView)
+    val selectionMotion = MediaStatusMotion(activity, selectionView, textFadeFloor = 0f)
     var shownSelected = selected
     return object : MediaSourceCardBinding {
         override val view: View = root
@@ -100,14 +101,17 @@ internal fun MainUiHost.mediaSourceCardImpl(controller: MediaController, selecte
             stateMotion.show(getPlaybackStateText(controller.playbackState?.state))
             if (shownSelected != selected) {
                 shownSelected = selected
-                selectionView.setText(if (selected) R.string.ui_connected else R.string.ui_available)
-                selectionView.setTextColor(if (selected) colorAccentText else colorTextMuted)
+                selectionMotion.show(
+                    getString(if (selected) R.string.ui_connected else R.string.ui_available),
+                    foreground = if (selected) colorAccentText else colorTextMuted,
+                )
             }
         }
 
         override fun finish() {
             songView.finish()
             stateMotion.finish()
+            selectionMotion.finish()
         }
     }
 }

@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.ui.components
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.graphics.Canvas
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextDirectionHeuristics
@@ -8,12 +10,14 @@ import android.text.TextUtils
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.animation.doOnEnd
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorTextMuted
+import kotlin.math.roundToInt
 
 internal enum class TextDisplayPolicy { Full, CompactTitle, SingleLineSummary, ExpandableSummary }
 
@@ -82,58 +86,166 @@ internal class ExpandableTextLayout(
     private var expansionState: MutableSet<String>? = null
     private var stateKey: String? = null
     private var canExpand = false
+    private var measuredAvailableWidth = 0
+    private var transitionWidth = 0
+    private var animatedHeight: Int? = null
+    private var animator: ValueAnimator? = null
     private val action = host.airIconView(R.drawable.ic_air_chevron_right, host.colorTextMuted).apply {
         isFocusable = true
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
-        setOnClickListener {
-            expanded = !expanded
-            stateKey?.let { key -> if (expanded) expansionState?.add(key) else expansionState?.remove(key) }
-            updateAction()
-            requestLayout()
-        }
+        setOnClickListener { toggle() }
     }
 
     init {
         addView(textView)
         addView(action)
-        updateAction()
+        updateActionLabel()
+        finishExpansion()
     }
 
     fun bindExpansion(state: MutableSet<String>, key: String) {
+        val next = key in state
         expansionState = state
+        if (stateKey == key && expanded == next && TextUtils.equals(boundText, textView.text)) return
         stateKey = key
         boundText = textView.text.toString()
-        expanded = key in state
-        updateAction()
+        expanded = next
+        updateActionLabel()
+        finishExpansion()
         requestLayout()
     }
 
-    private fun updateAction() {
-        action.rotation = if (expanded) -90f else 90f
+    private fun toggle() {
+        if (!canExpand) return
+        val startHeight = animatedHeight ?: height
+        val startRotation = action.rotation
+        stopAnimation()
+        expanded = !expanded
+        stateKey?.let { key -> if (expanded) expansionState?.add(key) else expansionState?.remove(key) }
+        updateActionLabel()
+
+        if (!isLaidOut || !action.canAnimateFloatingControl()) {
+            finishExpansion()
+            requestLayout()
+            return
+        }
+
+        transitionWidth = measuredAvailableWidth
+        setTextExpanded(expanded)
+        measureText(transitionWidth - action.measuredWidth)
+        val targetHeight = naturalHeight()
+        val targetRotation = targetRotation()
+
+        // Keep the revealed lines mounted and clip them as the viewport shrinks.
+        setTextExpanded(true)
+        animatedHeight = startHeight
+        requestLayout()
+        val motion = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = AirUiTokens.Motion.LayoutChangeMs
+            interpolator = floatingPanelEaseOut
+            addUpdateListener {
+                val amount = it.animatedValue as Float
+                val nextHeight = (startHeight + (targetHeight - startHeight) * amount).roundToInt()
+                if (nextHeight != animatedHeight) {
+                    animatedHeight = nextHeight
+                    requestLayout()
+                }
+                action.rotation = startRotation + (targetRotation - startRotation) * amount
+            }
+            doOnEnd {
+                if (animator === it) {
+                    animator = null
+                    finishExpansion()
+                    requestLayout()
+                }
+            }
+        }
+        animator = motion
+        motion.start()
+    }
+
+    private fun updateActionLabel() {
         action.contentDescription = host.getString(if (expanded) R.string.ui_collapse_text else R.string.ui_expand_text)
         action.tooltipText = action.contentDescription
+    }
+
+    private fun targetRotation() = if (expanded) -90f else 90f
+
+    private fun setTextExpanded(expanded: Boolean) {
         textView.maxLines = if (expanded) Int.MAX_VALUE else 2
         textView.ellipsize = if (expanded) null else TextUtils.TruncateAt.END
+    }
+
+    private fun stopAnimation() {
+        val running = animator
+        animator = null
+        running?.cancel()
+    }
+
+    private fun finishExpansion() {
+        stopAnimation()
+        animatedHeight = null
+        action.rotation = targetRotation()
+        setTextExpanded(expanded)
+    }
+
+    override fun onDetachedFromWindow() {
+        finishExpansion()
+        super.onDetachedFromWindow()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         if (!TextUtils.equals(boundText, textView.text)) {
             boundText = textView.text.toString()
             expanded = false
-            updateAction()
+            updateActionLabel()
+            finishExpansion()
         }
         val bounded = MeasureSpec.getMode(widthMeasureSpec) != MeasureSpec.UNSPECIFIED
-        val available = if (bounded) (MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight).coerceAtLeast(0) else 0
-        textView.measure(if (bounded) MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST) else MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
-        canExpand = bounded && textView.fullTextLineCount(available) > 2
+        val available = if (bounded) {
+            (MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight).coerceAtLeast(0)
+        } else 0
+        // An unconstrained measurement may be a parent's probe before the actual layout.
+        // Only a changed bounded width invalidates the animation's measured heights.
+        if (bounded && animatedHeight != null && available != transitionWidth) finishExpansion()
+        val moving = bounded && animatedHeight != null
+        measuredAvailableWidth = available
+        if (moving) {
+            canExpand = true
+        } else if (bounded) {
+            measureText(available)
+            canExpand = textView.fullTextLineCount(available) > 2
+        } else {
+            textView.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
+            canExpand = false
+        }
+
         action.visibility = if (canExpand) VISIBLE else GONE
         val actionWidth = if (canExpand) host.dp(AirUiTokens.Layout.IconTouchSize).coerceAtMost(available) else 0
-        action.measure(MeasureSpec.makeMeasureSpec(actionWidth, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(actionWidth, MeasureSpec.EXACTLY))
-        if (canExpand) textView.measure(MeasureSpec.makeMeasureSpec((available - actionWidth).coerceAtLeast(0), MeasureSpec.AT_MOST), MeasureSpec.UNSPECIFIED)
+        val actionSpec = MeasureSpec.makeMeasureSpec(actionWidth, MeasureSpec.EXACTLY)
+        action.measure(actionSpec, actionSpec)
+        if (canExpand) measureText(available - actionWidth)
         setMeasuredDimension(
             resolveSize(textView.measuredWidth + actionWidth + paddingLeft + paddingRight, widthMeasureSpec),
-            resolveSize(maxOf(textView.measuredHeight, action.measuredHeight) + paddingTop + paddingBottom, heightMeasureSpec)
+            resolveSize(if (moving) requireNotNull(animatedHeight) else naturalHeight(), heightMeasureSpec),
         )
+    }
+
+    private fun measureText(available: Int) {
+        textView.measure(MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST), MeasureSpec.UNSPECIFIED)
+    }
+
+    private fun naturalHeight() = maxOf(textView.measuredHeight, action.measuredHeight) + paddingTop + paddingBottom
+
+    override fun dispatchDraw(canvas: Canvas) {
+        if (animatedHeight == null) {
+            super.dispatchDraw(canvas)
+            return
+        }
+        val save = canvas.save()
+        canvas.clipRect(0, 0, width, height)
+        super.dispatchDraw(canvas)
+        canvas.restoreToCount(save)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {

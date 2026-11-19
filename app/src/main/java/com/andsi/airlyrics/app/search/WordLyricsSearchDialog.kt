@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
@@ -97,7 +98,11 @@ class WordLyricsSearchDialog : DialogFragment() {
             setPadding(dp(4),dp(8),dp(4),dp(8))
         }
         body.addView(more,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
-        body.addView(advanced,LinearLayout.LayoutParams(-1,-2))
+        val advancedSlot = FrameLayout(requireContext()).apply {
+            addView(advanced, FrameLayout.LayoutParams(-1, -2))
+        }
+        body.addView(advancedSlot, LinearLayout.LayoutParams(-1, 0))
+        val advancedReveal = LyricsSearchReveal(advancedSlot, advanced, 0, 240L, dp(8).toFloat(), 0.25f)
         val (_,albumEdit)=input(R.string.search_album,ALBUM,EditorInfo.IME_ACTION_NEXT,advanced)
         val (durationField,durationEdit)=input(R.string.search_duration_match,DURATION_TEXT,EditorInfo.IME_ACTION_SEARCH,advanced)
         durationField.placeholderText=arguments?.getString(DURATION_TEXT)?.takeIf(String::isNotBlank)
@@ -108,6 +113,7 @@ class WordLyricsSearchDialog : DialogFragment() {
         durationHelpVisible=savedInstanceState?.getBoolean("duration-help")==true
         fun renderDurationHelp() {
             durationField.helperText=if(durationHelpVisible) getString(R.string.search_duration_help) else null
+            advancedReveal.contentChanged()
         }
         renderDurationHelp()
         durationField.setEndIconOnClickListener {
@@ -117,12 +123,20 @@ class WordLyricsSearchDialog : DialogFragment() {
         albumInput=albumEdit
         durationInput=durationEdit
         optionsExpanded=savedInstanceState?.getBoolean("match-options") ?: false
-        fun renderOptions() {
-            advanced.visibility=if(optionsExpanded) android.view.View.VISIBLE else android.view.View.GONE
-            more.setText(if(optionsExpanded) R.string.search_hide_match_options else R.string.search_match_options)
+        fun renderOptions(animate: Boolean = false) {
+            if (!optionsExpanded) {
+                if (albumEdit.hasFocus()) albumEdit.clearFocus()
+                if (durationEdit.hasFocus()) durationEdit.clearFocus()
+            }
+            advancedReveal.setExpanded(optionsExpanded, animate)
+            if (!animate) advancedReveal.finish()
+            more.setText(if (optionsExpanded) R.string.search_hide_match_options else R.string.search_match_options)
         }
         renderOptions()
-        more.setOnClickListener { optionsExpanded=!optionsExpanded;renderOptions() }
+        more.setOnClickListener {
+            optionsExpanded = !optionsExpanded
+            renderOptions(animate = more.isInTouchMode || !more.hasFocus())
+        }
         val actions = AdaptiveGridLayout(requireContext(),2,dp(8),dp(8)).apply {
             setPadding(0,dp(20),0,0)
         }

@@ -3,17 +3,13 @@ package com.andsi.airlyrics.ui.pages.floating
 import android.annotation.SuppressLint
 import android.animation.ValueAnimator
 import android.content.res.ColorStateList
-import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.InsetDrawable
-import android.graphics.drawable.RippleDrawable
 import android.os.SystemClock
-import android.text.Layout
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -31,13 +27,11 @@ import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.localizedFloatingFontFamilyTitle
 import com.andsi.airlyrics.i18n.localizedFloatingFontSize
-import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.SettingsUndoTarget
+import com.andsi.airlyrics.ui.components.TonalSelectionMotion
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.airIconView
-import com.andsi.airlyrics.ui.components.airTonalButtonStyle
-import com.andsi.airlyrics.ui.components.applyAirTonalButtonStyle
 import com.andsi.airlyrics.ui.components.beginFloatingPanelContentReplacement
 import com.andsi.airlyrics.ui.components.canAnimateFloatingControl
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
@@ -50,7 +44,6 @@ import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -103,8 +96,7 @@ internal class FloatingFontPanelContent(
     private var applyButton: FontApplyButton? = null
     private var cancelButton: TextView? = null
     private var statusView: TextView? = null
-    private var sampleView: TextView? = null
-    private var languageButtons = emptyList<Pair<String, TextView>>()
+    private var languagePreview: FloatingFontLanguagePreview? = null
     private val rowSelectionUpdates = mutableListOf<(String) -> Unit>()
     private val closeCallback: () -> Unit = { close() }
 
@@ -182,8 +174,7 @@ internal class FloatingFontPanelContent(
         applyButton = null
         cancelButton = null
         statusView = null
-        sampleView = null
-        languageButtons = emptyList()
+        languagePreview = null
         rowSelectionUpdates.clear()
         deleteButton?.dispose()
         deleteButton = null
@@ -293,8 +284,15 @@ internal class FloatingFontPanelContent(
                 setTag(R.id.interaction_anchor, "floating.font.size.${font.id}")
             }
         }
-        val unselectedIcon = if (font.available) R.drawable.ic_air_chevron_right else R.drawable.ic_air_download
-        val icon = host.airIconView(if (selected) R.drawable.ic_air_check else unselectedIcon, host.colorTextMuted)
+        val unselectedIcon = host.airIconView(
+            if (font.available) R.drawable.ic_air_chevron_right else R.drawable.ic_air_download,
+            host.colorTextMuted,
+        )
+        val selectedIcon = host.airIconView(R.drawable.ic_air_check, host.colorTextMuted)
+        val iconSlot = FrameLayout(host).apply {
+            addView(unselectedIcon, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            addView(selectedIcon, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        }
         return LinearLayout(host).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -307,32 +305,30 @@ internal class FloatingFontPanelContent(
             })
             val text = if (size == null) label else FontRowTextLayout(host, label, size)
             addView(text, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-            addView(icon, LayoutParams(host.dp(AirUiTokens.Layout.IconSize), host.dp(AirUiTokens.Layout.IconSize)).apply {
+            addView(iconSlot, LayoutParams(host.dp(AirUiTokens.Layout.IconSize), host.dp(AirUiTokens.Layout.IconSize)).apply {
                 marginStart = host.dp(AirUiTokens.Space.Xl)
             })
-            isSelected = selected
             isEnabled = !deleting
             isFocusable = true
             contentDescription = listOfNotNull(name, sizeLabel).joinToString(", ")
             ViewCompat.setStateDescription(this, if (selected) host.getString(R.string.ui_applied) else null)
             setTag(R.id.interaction_anchor, "floating.font.row.${font.id}")
-            fun renderSelectionTone() {
-                val tone = if (isSelected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
-                host.applyAirTonalButtonStyle(this, tone)
-                val color = host.airTonalButtonStyle(tone).textColor
+            val selection = TonalSelectionMotion(host, this, selected) { style, amount ->
+                val color = style.textColor
                 sample.setTextColor(color)
                 label.setTextColor(color)
-                size?.setTextColor(if (isSelected) color else host.colorTextMuted)
-                icon.imageTintList = ColorStateList.valueOf(color)
+                size?.setTextColor(ColorUtils.blendARGB(host.colorTextMuted, color, amount))
+                val tint = ColorStateList.valueOf(color)
+                unselectedIcon.imageTintList = tint
+                selectedIcon.imageTintList = tint
+                unselectedIcon.alpha = 1f - amount
+                selectedIcon.alpha = amount
             }
-            host.bindAppearance(this) { renderSelectionTone() }
             rowSelectionUpdates.add { id ->
                 val checked = represents(id)
                 if (isSelected != checked) {
-                    isSelected = checked
-                    icon.setImageResource(if (checked) R.drawable.ic_air_check else unselectedIcon)
+                    selection.select(checked)
                     ViewCompat.setStateDescription(this, if (checked) host.getString(R.string.ui_applied) else null)
-                    renderSelectionTone()
                 }
             }
             enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
@@ -340,67 +336,21 @@ internal class FloatingFontPanelContent(
         }
     }
 
-    // TextView supports Layout's balanced break strategy from API 23.
-    @SuppressLint("WrongConstant")
     private fun renderDetail(font: FloatingFont) {
         navigation.showPage(title(font)) { showEntry(font.collectionId) }
         if (font.source != FloatingFontSource.SYSTEM && font.available) {
             deleteButton = FontDeleteButton(host, ::onDeleteClick)
         }
         navigation.setHeaderAction(deleteButton, hideReset = true)
-        sampleView = TextView(host).apply {
-            gravity = Gravity.CENTER
-            textAlignment = TEXT_ALIGNMENT_CENTER
-            textSize = 25f
-            typeface = operations.previewTypeface(font.id)
-            minimumHeight = host.dp(122)
-            includeFontPadding = false
-            breakStrategy = Layout.BREAK_STRATEGY_BALANCED
-            letterSpacing = .035f
-            setLineSpacing(0f, 1.6f)
-            setPadding(host.dp(AirUiTokens.Space.Xl), host.dp(AirUiTokens.SettingsPanel.ControlGap),
-                host.dp(AirUiTokens.Space.Xl), host.dp(AirUiTokens.SettingsPanel.ControlGap))
-            host.bindAppearance(this) { setTextColor(host.colorTextStrong) }
-            setTag(R.id.interaction_anchor, "floating.font.sample")
-        }.also { addView(it, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)) }
-        val languages = AdaptiveGridLayout(
-            host, 3, host.dp(AirUiTokens.Space.Xl), host.dp(AirUiTokens.Space.Sm),
-            fillCells = false, rowGravity = Gravity.CENTER_HORIZONTAL
-        ).apply {
-            contentDescription = host.getString(R.string.ui_font_preview_language)
-            setPadding(0, 0, 0, host.dp(AirUiTokens.SettingsPanel.ControlGap))
-        }
-        languageButtons = listOf(Locale.JAPANESE, Locale.CHINESE, Locale.ENGLISH).map { locale ->
-            val code = locale.language
-            val button = TextView(host).apply {
-                text = locale.getDisplayLanguage(locale)
-                textSize = AirUiTokens.TextSize.BodySmall
-                typeface = Typeface.DEFAULT
-                gravity = Gravity.CENTER
-                includeFontPadding = false
-                minimumWidth = host.dp(AirUiTokens.Layout.IconTouchSize)
-                minimumHeight = host.dp(AirUiTokens.Layout.IconTouchSize)
-                setPaddingRelative(host.dp(AirUiTokens.SettingsPanel.ControlGap),
-                    host.dp(AirUiTokens.Space.Xxl), host.dp(AirUiTokens.SettingsPanel.ControlGap),
-                    host.dp(AirUiTokens.Space.Xxl))
-                isFocusable = true
-                isEnabled = !deleting
-                setTag(R.id.interaction_anchor, "floating.font.language.$code")
-                host.bindAppearance(this) { styleLanguageButton(this) }
-                enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
-                setOnClickListener {
-                    if (!deleting) {
-                        cancelConfirmation()
-                        language = code
-                        persistPage()
-                        renderLanguage()
-                    }
-                }
+        languagePreview = FloatingFontLanguagePreview(
+            host, operations.previewTypeface(font.id), language,
+        ) { code ->
+            cancelConfirmation()
+            if (language != code) {
+                language = code
+                persistPage()
             }
-            languages.addView(button)
-            code to button
-        }
-        addView(languages)
+        }.also { addView(it, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)) }
         statusView = TextView(host).apply {
             textSize = AirUiTokens.TextSize.BodySmall
             visibility = GONE
@@ -419,42 +369,7 @@ internal class FloatingFontPanelContent(
             visibility = GONE
             setTag(R.id.interaction_anchor, "floating.font.cancel")
         }.also { addView(it) }
-        renderLanguage()
         renderAction(font)
-    }
-
-    private fun renderLanguage() {
-        val config = Configuration(host.resources.configuration)
-        val locale = when (language) {
-            "zh" -> Locale.SIMPLIFIED_CHINESE
-            "en" -> Locale.ENGLISH
-            else -> Locale.JAPANESE
-        }
-        config.setLocale(locale)
-        val localized = host.createConfigurationContext(config)
-        sampleView?.text = localized.getString(
-            if (language == "ja") R.string.ui_this_is_a_lyric_preview
-            else R.string.ui_this_is_a_lyric_preview_translation
-        )
-        languageButtons.forEach { (code, button) ->
-            button.isSelected = code == language
-            styleLanguageButton(button)
-        }
-    }
-
-    private fun styleLanguageButton(button: TextView) {
-        val fill = if (button.isSelected) {
-            ColorUtils.blendARGB(host.colorSurfaceLight, host.colorTextStrong, .06f)
-        } else android.graphics.Color.TRANSPARENT
-        fun pill(color: Int) = InsetDrawable(GradientDrawable().apply {
-            cornerRadius = host.dp(AirUiTokens.Radius.Pill).toFloat()
-            setColor(color)
-        }, 0, host.dp(AirUiTokens.Space.Xl), 0, host.dp(AirUiTokens.Space.Xl))
-        button.background = RippleDrawable(
-            ColorStateList.valueOf(ColorUtils.setAlphaComponent(host.colorTextStrong, 24)),
-            pill(fill), pill(android.graphics.Color.WHITE)
-        )
-        button.setTextColor(if (button.isSelected) host.colorTextStrong else host.colorTextMuted)
     }
 
     private fun renderAction(font: FloatingFont) {
@@ -469,7 +384,7 @@ internal class FloatingFontPanelContent(
             isEnabled = !deleting && !downloading && operations.selectedId() != font.id
         }
         deleteButton?.isEnabled = !deleting && !downloading
-        languageButtons.forEach { it.second.isEnabled = !deleting }
+        languagePreview?.setLanguageButtonsEnabled(!deleting)
         cancelButton?.visibility = if (downloading) VISIBLE else GONE
     }
 
@@ -625,6 +540,7 @@ internal class FloatingFontPanelContent(
         cancelConfirmation()
         cancelDownload(announce = false)
         closed = true
+        languagePreview?.finishMotion()
         deleteButton?.dispose()
         changesJob?.cancel()
         if (navigation.onClose === closeCallback) navigation.onClose = null

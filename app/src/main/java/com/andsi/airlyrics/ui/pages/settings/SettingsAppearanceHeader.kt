@@ -14,9 +14,11 @@ import android.view.View
 import android.view.animation.PathInterpolator
 import android.view.animation.LinearInterpolator
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.ButtonStyle
@@ -329,8 +331,12 @@ private class SettingsAppearanceHeader(
                 option.contentDescription = if (selectedNow) {
                     host.getString(R.string.ui_button_style_selected, label)
                 } else label
+                val solid = host.appearance.frame.solidButtonFraction
                 host.applyAirTonalButtonStyle(
-                    option, AirTonalButtonTone.PRIMARY, buttonStyle = style, selectionOutline = selectedNow
+                    option,
+                    AirTonalButtonTone.PRIMARY,
+                    buttonStyle = style,
+                    selectionOutlineAmount = if (style == ButtonStyle.SOLID) solid else 1f - solid,
                 )
             }
             enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
@@ -392,8 +398,10 @@ private class SettingsAppearanceHeader(
 
             host.bindAppearance(this) { swatch ->
                 val selectedNow = accent == host.themeAccent()
+                val frame = host.appearance.frame
+                val amount = frame.accentSelectionFraction(accent)
                 val colors = AirLyricsTheme.palette(false, accent).interpolate(
-                    AirLyricsTheme.palette(true, accent), host.appearance.frame.darkFraction
+                    AirLyricsTheme.palette(true, accent), frame.darkFraction
                 )
                 swatch.isSelected = selectedNow
                 swatch.contentDescription = host.getString(
@@ -403,13 +411,16 @@ private class SettingsAppearanceHeader(
                 val dot = swatch.getChildAt(0) as FrameLayout
                 (dot.background as GradientDrawable).apply {
                     setColor(colors.accent)
+                    val normalStroke = host.dp(AirUiTokens.Stroke.Hairline)
+                    val selectedStroke = host.dp(AirUiTokens.Stroke.Selected)
                     setStroke(
-                        host.dp(if (selectedNow) AirUiTokens.Stroke.Selected else AirUiTokens.Stroke.Hairline),
-                        if (selectedNow) host.colorTextStrong else host.colorStroke
+                        (normalStroke + (selectedStroke - normalStroke) * amount).roundToInt(),
+                        ColorUtils.blendARGB(host.colorStroke, host.colorTextStrong, amount),
                     )
                 }
                 (dot.getChildAt(0) as android.widget.ImageView).apply {
-                    visibility = if (selectedNow) VISIBLE else INVISIBLE
+                    alpha = amount
+                    visibility = if (amount > 0f) VISIBLE else INVISIBLE
                     imageTintList = ColorStateList.valueOf(iconColorOnAccent(colors.onAccent))
                 }
             }

@@ -1,6 +1,7 @@
 package com.andsi.airlyrics.ui.components
 
 import com.andsi.airlyrics.ui.state.bindInteractionScroll
+import android.animation.ValueAnimator
 import android.app.Dialog
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -77,22 +78,13 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
         )
     }
 
-    lateinit var lrcTab: TextView
-    lateinit var ttmlTab: TextView
+    lateinit var lrcSelection: TonalSelectionMotion
+    lateinit var ttmlSelection: TonalSelectionMotion
     var selectedPage = if (restoredPage == "TTML") LyricsFormatGuidePage.TTML else LyricsFormatGuidePage.LRC
     bindInteractionScroll(pageScroll, "formatGuide.scroll")
     var transitionGeneration = 0
 
-    fun updateTab(tab: TextView, selected: Boolean) {
-        tab.isSelected = selected
-        styleAirTonalButton(
-            tab,
-            if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT,
-            radiusDp = AirUiTokens.Radius.Sm
-        )
-    }
-
-    fun selectPage(page: LyricsFormatGuidePage) {
+    fun selectPage(page: LyricsFormatGuidePage, animate: Boolean) {
         if (page == selectedPage) return
 
         val direction = if (page == LyricsFormatGuidePage.TTML) 1f else -1f
@@ -101,17 +93,33 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
         interactions.write("formatGuide") { putString("page", page.name) }
         transitionGeneration += 1
         val generation = transitionGeneration
-        updateTab(lrcTab, page == LyricsFormatGuidePage.LRC)
-        updateTab(ttmlTab, page == LyricsFormatGuidePage.TTML)
+        lrcSelection.select(page == LyricsFormatGuidePage.LRC, animate)
+        ttmlSelection.select(page == LyricsFormatGuidePage.TTML, animate)
 
+        val targetText = if (page == LyricsFormatGuidePage.LRC) lrcGuide else ttmlGuide
         pageText.animate().cancel()
+        if (!animate || !ValueAnimator.areAnimatorsEnabled() || !pageText.isAttachedToWindow) {
+            pageText.text = targetText
+            pageScroll.scrollTo(0, 0)
+            pageText.alpha = 1f
+            pageText.translationX = 0f
+            return
+        }
+        if (pageText.text.toString() == targetText) {
+            // The user switched back before the outgoing page was replaced.
+            pageText.animate().alpha(1f).translationX(0f)
+                .setDuration(AirUiTokens.Motion.LayoutChangeMs)
+                .setInterpolator(floatingPanelEaseOut)
+                .start()
+            return
+        }
         pageText.animate()
             .alpha(0f)
             .translationX(-direction * slideDistance)
             .setDuration(AirUiTokens.Layout.FastFadeMs)
             .withEndAction {
                 if (generation != transitionGeneration) return@withEndAction
-                pageText.text = if (page == LyricsFormatGuidePage.LRC) lrcGuide else ttmlGuide
+                pageText.text = targetText
                 pageScroll.scrollTo(0, 0)
                 pageText.translationX = direction * slideDistance
                 pageText.animate()
@@ -140,17 +148,14 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
                 1f
             )
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
-            setOnClickListener {
-                selectPage(page)
-                playTinyPulse(this)
-            }
+            setOnClickListener { selectPage(page, animate = canAnimateFloatingControl()) }
         }
     }
 
-    lrcTab = formatTab(getString(R.string.ui_lyrics_format_lrc_tab), LyricsFormatGuidePage.LRC)
-    ttmlTab = formatTab(getString(R.string.ui_lyrics_format_ttml_tab), LyricsFormatGuidePage.TTML)
-    updateTab(lrcTab, selected = selectedPage == LyricsFormatGuidePage.LRC)
-    updateTab(ttmlTab, selected = selectedPage == LyricsFormatGuidePage.TTML)
+    val lrcTab = formatTab(getString(R.string.ui_lyrics_format_lrc_tab), LyricsFormatGuidePage.LRC)
+    val ttmlTab = formatTab(getString(R.string.ui_lyrics_format_ttml_tab), LyricsFormatGuidePage.TTML)
+    lrcSelection = TonalSelectionMotion(this, lrcTab, selectedPage == LyricsFormatGuidePage.LRC, AirUiTokens.Radius.Sm)
+    ttmlSelection = TonalSelectionMotion(this, ttmlTab, selectedPage == LyricsFormatGuidePage.TTML, AirUiTokens.Radius.Sm)
 
     val tabs = LinearLayout(this).apply {
         orientation = LinearLayout.HORIZONTAL

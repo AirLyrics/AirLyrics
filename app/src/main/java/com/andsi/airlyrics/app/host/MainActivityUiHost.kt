@@ -680,9 +680,11 @@ internal class MainActivityUiHost(
 
     private fun applyPaletteChange(updateSetting: () -> Unit) {
         updateSetting()
-        // Keep the mounted panel, its motion progress, focus and scroll position.
-        // A selection made during a night-mode fade retargets from the displayed colors.
-        appearance.transition(animate = appearance.isAnimating)
+        // Retarget from the displayed colors while keeping the mounted picker's focus and scroll.
+        appearance.transition(
+            animate = contentContainer?.isAttachedToWindow == true,
+            durationMs = AirUiTokens.Motion.LayoutChangeMs,
+        )
     }
 
     @Suppress("DEPRECATION")

@@ -10,11 +10,11 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
-import com.andsi.airlyrics.ui.theme.airLyricsPalette
 import com.andsi.airlyrics.ui.theme.appearancePreferences
 import com.andsi.airlyrics.ui.theme.colorOnAccent
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.theme.bindAppearance
+import kotlin.math.roundToInt
 
 internal enum class AirTonalButtonTone {
     PRIMARY,
@@ -30,7 +30,18 @@ internal data class AirTonalButtonStyle(
     val strokeColor: Int,
     val textColor: Int,
     val strokeWidthDp: Int
-)
+) {
+    fun interpolate(target: AirTonalButtonStyle, amount: Float): AirTonalButtonStyle {
+        if (amount <= 0f) return this
+        if (amount >= 1f) return target
+        return AirTonalButtonStyle(
+            ColorUtils.blendARGB(fillColor, target.fillColor, amount),
+            ColorUtils.blendARGB(strokeColor, target.strokeColor, amount),
+            ColorUtils.blendARGB(textColor, target.textColor, amount),
+            (strokeWidthDp + (target.strokeWidthDp - strokeWidthDp) * amount).roundToInt(),
+        )
+    }
+}
 
 private data class AirTonalButtonToneSpec(
     val fillTint: Float,
@@ -42,8 +53,18 @@ private data class AirTonalButtonToneSpec(
 /** The main screen and standalone windows share the same button color rules. */
 internal fun MainUiHost.airTonalButtonStyle(
     tone: AirTonalButtonTone,
-    buttonStyle: ButtonStyle = buttonStyle()
-): AirTonalButtonStyle = airLyricsPalette.airTonalButtonStyle(tone, buttonStyle, isDarkTheme(), appearance.frame.darkFraction)
+    buttonStyle: ButtonStyle? = null,
+): AirTonalButtonStyle {
+    val frame = appearance.frame
+    fun style(mode: ButtonStyle) = frame.palette.airTonalButtonStyle(tone, mode, isDarkTheme(), frame.darkFraction)
+    if (buttonStyle != null) return style(buttonStyle)
+    val solid = frame.solidButtonFraction
+    return when {
+        solid == 0f -> style(ButtonStyle.TRANSPARENT)
+        solid == 1f -> style(ButtonStyle.SOLID)
+        else -> style(ButtonStyle.TRANSPARENT).interpolate(style(ButtonStyle.SOLID), solid)
+    }
+}
 
 internal fun Context.airTonalButtonStyle(tone: AirTonalButtonTone): AirTonalButtonStyle {
     val (dark, accent, buttonStyle) = appearancePreferences()
@@ -121,10 +142,9 @@ internal fun MainUiHost.styleAirTonalButton(
     tone: AirTonalButtonTone = AirTonalButtonTone.DEFAULT,
     radiusDp: Int = AirUiTokens.Radius.Md,
     buttonStyle: ButtonStyle? = null,
-    selectionOutline: Boolean = false
 ) {
     bindAppearance(view) {
-        applyAirTonalButtonStyle(it, tone, radiusDp, buttonStyle ?: buttonStyle(), selectionOutline)
+        applyAirTonalButtonStyle(it, tone, radiusDp, buttonStyle)
     }
 }
 
@@ -133,18 +153,30 @@ internal fun MainUiHost.applyAirTonalButtonStyle(
     view: View,
     tone: AirTonalButtonTone = AirTonalButtonTone.DEFAULT,
     radiusDp: Int = AirUiTokens.Radius.Md,
-    buttonStyle: ButtonStyle = buttonStyle(),
-    selectionOutline: Boolean = false
+    buttonStyle: ButtonStyle? = null,
+    selectionOutlineAmount: Float = 0f,
 ) {
     val style = airTonalButtonStyle(tone, buttonStyle)
+    val visual = if (selectionOutlineAmount > 0f) {
+        style.interpolate(
+            style.copy(
+                strokeColor = if (buttonStyle == ButtonStyle.SOLID) colorOnAccent else colorTextStrong,
+                strokeWidthDp = AirUiTokens.Stroke.Selected,
+            ),
+            selectionOutlineAmount,
+        )
+    } else style
+    applyAirTonalButtonStyle(view, visual, radiusDp)
+}
+
+internal fun MainUiHost.applyAirTonalButtonStyle(
+    view: View,
+    style: AirTonalButtonStyle,
+    radiusDp: Int = AirUiTokens.Radius.Md,
+) {
     val shape = (view.background as? GradientDrawable) ?: GradientDrawable().also { view.background = it }
     shape.cornerRadius = dp(radiusDp).toFloat()
     shape.setColor(style.fillColor)
-    shape.setStroke(
-        dp(if (selectionOutline) AirUiTokens.Stroke.Selected else style.strokeWidthDp),
-        if (selectionOutline) {
-            if (buttonStyle == ButtonStyle.SOLID) colorOnAccent else colorTextStrong
-        } else style.strokeColor
-    )
+    shape.setStroke(dp(style.strokeWidthDp), style.strokeColor)
     (view as? TextView)?.setTextColor(style.textColor)
 }

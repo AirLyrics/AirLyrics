@@ -7,6 +7,8 @@ import android.view.View
 import android.view.animation.PathInterpolator
 import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.core.model.ButtonStyle
+import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 import java.util.WeakHashMap
@@ -15,25 +17,37 @@ import java.util.WeakHashMap
 internal data class AppearanceFrame(
     val palette: AirLyricsPalette,
     val accentText: Int,
-    val darkFraction: Float
+    val darkFraction: Float,
+    val solidButtonFraction: Float,
+    private val accentSelection: Map<ThemeAccent, Float>,
 ) {
+    fun accentSelectionFraction(accent: ThemeAccent): Float = accentSelection[accent] ?: 0f
+
     fun interpolate(to: AppearanceFrame, fraction: Float): AppearanceFrame {
         val t = fraction.coerceIn(0f, 1f)
         return AppearanceFrame(
             palette.interpolate(to.palette, t),
             ColorUtils.blendARGB(accentText, to.accentText, t),
-            darkFraction + (to.darkFraction - darkFraction) * t
+            darkFraction + (to.darkFraction - darkFraction) * t,
+            solidButtonFraction + (to.solidButtonFraction - solidButtonFraction) * t,
+            (accentSelection.keys + to.accentSelection.keys).associateWith { accent ->
+                val from = accentSelectionFraction(accent)
+                from + (to.accentSelectionFraction(accent) - from) * t
+            },
         )
     }
 
     companion object {
         fun resolve(host: MainUiHost): AppearanceFrame {
             val dark = host.isDarkTheme()
-            val palette = AirLyricsTheme.palette(dark, host.themeAccent())
+            val accent = host.themeAccent()
+            val palette = AirLyricsTheme.palette(dark, accent)
             return AppearanceFrame(
                 palette,
                 if (dark) palette.accent else ColorUtils.blendARGB(palette.accent, palette.textStrong, 0.6f),
-                if (dark) 1f else 0f
+                if (dark) 1f else 0f,
+                if (host.buttonStyle() == ButtonStyle.SOLID) 1f else 0f,
+                mapOf(accent to 1f),
             )
         }
     }
@@ -59,7 +73,10 @@ internal class AppearanceTransition(private val host: MainUiHost) {
         update(view)
     }
 
-    fun transition(animate: Boolean) {
+    fun transition(
+        animate: Boolean,
+        durationMs: Long = AirUiTokens.Motion.ThemeColorChangeMs,
+    ) {
         val target = AppearanceFrame.resolve(host)
         if (target == destination && animator != null) {
             refresh()
@@ -74,7 +91,7 @@ internal class AppearanceTransition(private val host: MainUiHost) {
             return
         }
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = AirUiTokens.Motion.ThemeColorChangeMs
+            duration = durationMs
             interpolator = PathInterpolator(0.25f, 0.1f, 0.25f, 1f) // CSS ease
             addUpdateListener {
                 frame = from.interpolate(target, it.animatedValue as Float)

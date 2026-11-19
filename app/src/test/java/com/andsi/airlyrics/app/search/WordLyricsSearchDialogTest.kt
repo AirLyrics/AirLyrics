@@ -143,6 +143,43 @@ class WordLyricsSearchDialogTest {
         }
     }
 
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun matchingFieldsRetargetTheirVisibleHeight() {
+        Robolectric.buildActivity(LyricsSearchActivity::class.java, intent()).setup().visible().use { controller ->
+            val activity = controller.get()
+            val dialog = show(activity).requireDialog()
+            settle()
+            val decor = dialog.window!!.decorView
+            layout(decor, 320, 740)
+            val toggle = descendants(decor).filterIsInstance<TextView>().single {
+                it.text.toString() == activity.getString(R.string.search_match_options)
+            }
+            val options = fields(dialog)[2].parent as View
+            val slot = options.parent as View
+            toggle.isFocusable = false // A synthetic click does not enter touch mode.
+            pauseCloseFrames()
+            fun frames(count: Int) {
+                repeat(count) { ShadowLooper.idleMainLooper(16, TimeUnit.MILLISECONDS) }
+                layout(decor, 320, 740)
+            }
+
+            assertTrue(toggle.performClick())
+            frames(5)
+            val openingHeight = slot.height
+            assertTrue("Partially revealed height ${slot.height} of ${options.height}", openingHeight in 1 until options.height)
+            assertTrue(toggle.performClick())
+            assertEquals(openingHeight, slot.height)
+            frames(4)
+            assertTrue(slot.height < openingHeight)
+            assertTrue(toggle.performClick())
+            frames(20)
+            assertEquals(View.VISIBLE, slot.visibility)
+            assertEquals(options.height, slot.height)
+            assertEquals(1f, options.alpha, 0.01f)
+        }
+    }
+
     @Test fun cancelUsesTheSameWindowAndPreservesUnderlyingDimming() {
         Robolectric.buildActivity(LyricsSearchActivity::class.java,intent()).setup().visible().use { controller ->
             val activity=controller.get()

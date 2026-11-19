@@ -28,31 +28,36 @@ private fun clamp(value: Float) = value.coerceIn(0f, 1f)
 private fun outCubic(value: Float): Float = 1f - (1f - clamp(value)).let { it * it * it }
 private fun inCubic(value: Float): Float = clamp(value).let { it * it * it }
 
-/** Playback changes are intentionally shorter and quieter than a song replacement. */
+/** Status labels change more quietly than song titles and artwork. */
 internal class MediaStatusMotion(
     private val host: MainUiHost,
     private val view: TextView,
-    private var playing: Boolean? = null
+    private var playing: Boolean? = null,
+    private val textFadeFloor: Float = 0.8f,
 ) {
     private var shownText = view.text.toString()
+    private var foregroundOverride: Int? = null
     private var animator: ValueAnimator? = null
 
-    fun show(text: String, isPlaying: Boolean? = playing) {
-        if (shownText == text && playing == isPlaying) return
-        stopAnimation()
-        val fromPlaying = playing
+    fun show(text: String, isPlaying: Boolean? = playing, foreground: Int? = foregroundOverride) {
+        if (shownText == text && playing == isPlaying && foregroundOverride == foreground) return
+        cancelAnimation()
+        val background = view.background as? GradientDrawable
+        val oldBackground = background?.color?.defaultColor ?: statusBackground(playing)
+        val oldForeground = view.currentTextColor
+        val textChanges = view.text.toString() != text
+        val startAlpha = view.alpha
+        val startY = view.translationY
         shownText = text
         playing = isPlaying
+        foregroundOverride = foreground
         if (!ValueAnimator.areAnimatorsEnabled() || !view.isAttachedToWindow) {
             applyFinal()
             return
         }
-        val oldText = view.text.toString()
-        val oldBackground = statusBackground(fromPlaying)
+
         val newBackground = statusBackground(isPlaying)
-        val oldForeground = statusForeground(fromPlaying)
-        val newForeground = statusForeground(isPlaying)
-        val background = view.background as? GradientDrawable
+        val newForeground = foreground ?: statusForeground(isPlaying)
         val colors = ArgbEvaluator()
         val rise = host.dp(2).toFloat()
         var textSwitched = false
@@ -62,31 +67,40 @@ internal class MediaStatusMotion(
             addUpdateListener { animation ->
                 if (animator !== animation) return@addUpdateListener
                 val progress = animation.animatedValue as Float
-                if (oldText != text) {
-                    val switched = progress >= 0.5f
-                    if (switched && !textSwitched) {
-                        view.text = text
-                        textSwitched = true
-                    }
-                    view.alpha = if (switched) {
-                        0.8f + 0.2f * outCubic((progress - 0.5f) / 0.5f)
+                if (textChanges) {
+                    if (progress >= 0.5f) {
+                        if (!textSwitched) {
+                            view.text = text
+                            textSwitched = true
+                        }
+                        val amount = outCubic((progress - 0.5f) * 2f)
+                        view.alpha = textFadeFloor + (1f - textFadeFloor) * amount
+                        view.translationY = rise * (1f - amount)
                     } else {
-                        1f - 0.2f * inCubic(progress / 0.5f)
+                        val amount = inCubic(progress * 2f)
+                        view.alpha = startAlpha + (textFadeFloor - startAlpha) * amount
+                        view.translationY = startY + (-rise - startY) * amount
                     }
-                    view.translationY = if (switched) rise * (1f - outCubic((progress - 0.5f) / 0.5f))
-                        else -rise * inCubic(progress / 0.5f)
+                } else {
+                    // A fast reversal can keep the visible label and bring it back to rest.
+                    val amount = outCubic(progress)
+                    view.alpha = startAlpha + (1f - startAlpha) * amount
+                    view.translationY = startY * (1f - amount)
                 }
                 if (oldBackground != null && newBackground != null) {
                     background?.setColor(colors.evaluate(progress, oldBackground, newBackground) as Int)
                 }
-                if (oldForeground != null && newForeground != null) {
-                    val foregroundProgress = if (oldText == text) progress else if (textSwitched) 1f else 0f
-                    view.setTextColor(colors.evaluate(foregroundProgress, oldForeground, newForeground) as Int)
+                if (newForeground != null) {
+                    val colorAmount = if (!textChanges || foreground != null) progress else if (textSwitched) 1f else 0f
+                    view.setTextColor(colors.evaluate(colorAmount, oldForeground, newForeground) as Int)
                 }
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
-                    if (animator === animation) stopAnimation()
+                    if (animator === animation) {
+                        animator = null
+                        applyFinal()
+                    }
                 }
             })
         }
@@ -94,21 +108,23 @@ internal class MediaStatusMotion(
         running.start()
     }
 
-    fun finish() = stopAnimation()
-
-    private fun stopAnimation() {
-        val running = animator
-        animator = null
-        running?.cancel()
+    fun finish() {
+        cancelAnimation()
         applyFinal()
     }
 
+    private fun cancelAnimation() {
+        val running = animator
+        animator = null
+        running?.cancel()
+    }
+
     private fun applyFinal() {
-        view.text = shownText
+        if (view.text.toString() != shownText) view.text = shownText
         view.alpha = 1f
         view.translationY = 0f
         statusBackground(playing)?.let { (view.background as? GradientDrawable)?.setColor(it) }
-        statusForeground(playing)?.let(view::setTextColor)
+        (foregroundOverride ?: statusForeground(playing))?.let(view::setTextColor)
     }
 
     private fun statusBackground(value: Boolean?): Int? = when (value) {

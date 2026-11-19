@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.components
 
+import android.animation.ValueAnimator
+import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -10,6 +12,7 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.createBottomTabs
+import java.time.Duration
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Test
@@ -17,8 +20,10 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowChoreographer
 
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -136,6 +141,59 @@ class AdaptiveTextLayoutTest {
         text.text = "Short"
         layout(parent, host.dp(240))
         assertEquals(View.GONE, action.visibility)
+    }
+
+    @Test fun expandableTitleReversesHeightAndChevronFromTheVisibleFrame() {
+        RuntimeEnvironment.setFontScale(1.7f)
+        val host = host()
+        val text = TextView(host).apply {
+            setText("A long title with 歌詞 and several visible lines ".repeat(5))
+            textSize = 18f
+        }
+        val summary = host.expandableText(text)
+        val parent = LinearLayout(host).apply { addView(summary) }
+        val activity = requireNotNull(controller)
+        activity.get().setContentView(parent)
+        activity.visible()
+        val width = host.dp(320)
+        layout(parent, width)
+        val collapsed = summary.height
+        val chevron = summary.getChildAt(1).apply { isFocusable = false }
+        val durationScale = ValueAnimator::class.java.getDeclaredMethod("setDurationScale", Float::class.javaPrimitiveType)
+        val originalScale = ValueAnimator.getDurationScale()
+        durationScale.invoke(null, 1f)
+        ShadowChoreographer.setPaused(true)
+        ShadowChoreographer.setFrameDelay(Duration.ofMillis(16))
+        try {
+            fun advance(count: Int) {
+                repeat(count) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16)) }
+                layout(parent, width)
+            }
+
+            assertTrue(chevron.performClick())
+            advance(4)
+            val midHeight = summary.height
+            val midRotation = chevron.rotation
+            assertTrue("Height ${summary.height}, underlying text ${text.height}", midHeight in (collapsed + 1) until text.height)
+            assertTrue(midRotation in -89f..89f)
+            assertTrue(chevron.performClick())
+            assertEquals(midHeight, summary.height)
+            assertEquals(midRotation, chevron.rotation, 0.001f)
+            advance(16)
+            assertEquals(collapsed, summary.height)
+            assertEquals(90f, chevron.rotation, 0.001f)
+            assertEquals(2, text.maxLines)
+
+            assertTrue(chevron.performClick())
+            advance(4)
+            layout(parent, host.dp(360))
+            assertEquals(Int.MAX_VALUE, text.maxLines)
+            assertEquals(-90f, chevron.rotation, 0.001f)
+            assertTrue(summary.height >= text.height)
+        } finally {
+            ShadowChoreographer.setPaused(false)
+            durationScale.invoke(null, originalScale)
+        }
     }
 
     @Test fun bottomNavigationGrowsInsteadOfClippingLargeLabels() {

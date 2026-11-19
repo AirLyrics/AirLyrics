@@ -108,11 +108,23 @@ class FloatingFontPanelTest {
         assertEquals("serif", f.host.floatingStyle().fontId)
         val serif = f.tag("floating.font.row.serif")
         assertTrue(serif.isSelected)
+        val row = serif as ViewGroup
+        val icons = row.getChildAt(row.childCount - 1) as ViewGroup
+        assertEquals(1f, icons.getChildAt(1).alpha, 0.001f)
+        setDurationScale(1f)
         f.click("floating.panel.undo")
         assertEquals("system_default", f.host.floatingStyle().fontId)
         assertSame(serif, f.tag("floating.font.row.serif"))
         assertFalse(serif.isSelected)
         assertTrue(f.tag("floating.font.row.system_default").isSelected)
+        repeat(4) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16)) }
+        assertTrue(icons.getChildAt(0).alpha in 0.01f..0.99f)
+        assertTrue(icons.getChildAt(1).alpha in 0.01f..0.99f)
+        repeat(14) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16)) }
+        assertEquals(1f, icons.getChildAt(0).alpha, 0.001f)
+        assertEquals(0f, icons.getChildAt(1).alpha, 0.001f)
+        setDurationScale(0f)
+        f.settle()
 
         f.click("floating.font.row.serif")
         f.click("floating.font.apply")
@@ -402,6 +414,67 @@ class FloatingFontPanelTest {
                 capture(f, case.name)
                 f.closePanel()
             }
+        }
+
+    @Test fun languageTransitionRetargetsBothTheSpecimenAndTheButtons() =
+        runTest(mainDispatcherRule.dispatcher) {
+            val f = fixture()
+            f.click("floating.font.row.serif")
+
+            fun specimen() = f.tag("floating.font.sample") as TextView
+            fun button(code: String) = f.tag("floating.font.language.$code") as TextView
+            fun tap(code: String) { assertTrue(button(code).performClick()) }
+            fun advanceFrames(count: Int) {
+                repeat(count) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16)) }
+            }
+
+            val japanese = specimen()
+            val viewport = japanese.parent as ViewGroup
+            val originalHeight = viewport.height
+            val originalButtonTop = (button("en").parent as View).top
+            val englishBackground = button("en").background
+            val unselectedColor = button("en").currentTextColor
+            val selectedColor = button("ja").currentTextColor
+
+            setDurationScale(1f)
+            tap("en")
+            val english = specimen()
+            assertEquals("This is a lyric preview", english.text.toString())
+            assertTrue(button("en").isSelected)
+            assertFalse(button("ja").isSelected)
+            assertEquals(0f, english.alpha, .01f)
+            assertTrue(english.translationY > 0f)
+            advanceFrames(4)
+            f.settle()
+            assertTrue("Outgoing specimen alpha: ${japanese.alpha}", japanese.alpha in 0.01f..0.99f)
+            assertTrue("Incoming specimen alpha: ${english.alpha}", english.alpha in 0.01f..0.99f)
+            assertNotEquals(unselectedColor, button("en").currentTextColor)
+            assertNotEquals(selectedColor, button("en").currentTextColor)
+            assertSame(englishBackground, button("en").background)
+            assertEquals(originalHeight, viewport.height)
+            assertEquals(originalButtonTop, (button("en").parent as View).top)
+
+            tap("zh")
+            assertTrue(button("zh").isSelected)
+            assertEquals("这是一行歌词预览", specimen().text.toString())
+            assertEquals(2, all(viewport).filterIsInstance<TextView>().count { it.visibility == View.VISIBLE })
+            tap("ja")
+            advanceFrames(18)
+            f.settle()
+            assertSame(japanese, specimen())
+            assertTrue(button("ja").isSelected)
+            assertEquals(selectedColor, button("ja").currentTextColor)
+            assertEquals(unselectedColor, button("en").currentTextColor)
+            assertEquals(1f, japanese.alpha, .01f)
+            assertEquals(0f, japanese.translationY, .01f)
+            assertEquals(1, all(viewport).filterIsInstance<TextView>().count { it.visibility == View.VISIBLE })
+
+            setDurationScale(0f)
+            tap("en")
+            assertSame(english, specimen())
+            assertEquals(1f, english.alpha, .01f)
+            assertEquals(0f, english.translationY, .01f)
+            assertTrue(button("en").isSelected)
         }
 
     @Test fun nativeScreensShowListAndThreeSpecimenLanguagesAcrossWidthsLocalesAndThemes() =
