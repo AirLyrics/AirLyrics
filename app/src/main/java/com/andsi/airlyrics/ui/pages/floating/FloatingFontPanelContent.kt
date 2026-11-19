@@ -353,9 +353,10 @@ internal class FloatingFontPanelContent(
             contentDescription = host.getString(R.string.ui_font_preview_language)
             setPadding(0, 0, 0, host.dp(AirUiTokens.SettingsPanel.ControlGap))
         }
-        languageButtons = listOf("ja" to "日本語", "zh" to "中文", "en" to "English").map { (code, label) ->
+        languageButtons = listOf(Locale.JAPANESE, Locale.CHINESE, Locale.ENGLISH).map { locale ->
+            val code = locale.language
             val button = TextView(host).apply {
-                text = label
+                text = locale.getDisplayLanguage(locale)
                 textSize = AirUiTokens.TextSize.BodySmall
                 typeface = Typeface.DEFAULT
                 gravity = Gravity.CENTER
