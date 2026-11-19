@@ -9,9 +9,11 @@ import com.andsi.airlyrics.R
 
 import android.app.Dialog
 import android.content.Context
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.os.Build
 import android.view.Gravity
 import android.view.View
@@ -20,7 +22,10 @@ import android.view.Window
 import android.view.WindowManager
 import android.view.animation.AccelerateInterpolator
 import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.core.widget.NestedScrollView
 import android.widget.TextView
@@ -32,6 +37,7 @@ import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
+import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -40,6 +46,8 @@ private const val DEFAULT_POSITIVE_TEXT = "__airlyrics_default_positive__"
 private const val DIALOG_ENTER_MS = 180L
 private const val DIALOG_ENTER_START_SCALE = 0.98f
 private const val DIALOG_ENTER_TRANSLATION_Y_DP = 10
+private const val DIALOG_POP_ENTER_MS = 220L
+private const val DIALOG_POP_SCALE = 0.94f
 private const val DIALOG_EXIT_MS = 120L
 private const val DIALOG_EXIT_END_SCALE = 0.98f
 private const val DIALOG_EXIT_TRANSLATION_Y_DP = 8
@@ -47,7 +55,8 @@ private const val DIALOG_EXIT_TRANSLATION_Y_DP = 8
 private class AirAnimatedDialog(
     context: Context,
     themeResId: Int,
-    val backgroundDimAmount: Float
+    val backgroundDimAmount: Float,
+    private val exitScale: Float,
 ) : Dialog(context, themeResId) {
     val targetDimAmount = maxOf(AirUiTokens.Layout.DialogDimAmount, backgroundDimAmount)
     var animatedContent: View? = null
@@ -117,8 +126,8 @@ private class AirAnimatedDialog(
         content.animate().cancel()
         content.animate()
             .alpha(0f)
-            .scaleX(DIALOG_EXIT_END_SCALE)
-            .scaleY(DIALOG_EXIT_END_SCALE)
+            .scaleX(exitScale)
+            .scaleY(exitScale)
             .translationY(exitTranslationYPx)
             .setDuration(DIALOG_EXIT_MS)
             .setInterpolator(AccelerateInterpolator())
@@ -184,15 +193,22 @@ internal fun MainUiHost.showAirDialog(
     onNegative: () -> Unit = {},
     onUserDismiss: () -> Unit = {},
     onPositive: () -> Unit = {},
-    coordinatedDim: Boolean = false
+    coordinatedDim: Boolean = false,
+    popIn: Boolean = false,
+    showCloseButton: Boolean = false
 ): Dialog {
     val host = this
+    val enterMs = if (popIn) DIALOG_POP_ENTER_MS else DIALOG_ENTER_MS
+    val startScale = if (popIn) DIALOG_POP_SCALE else DIALOG_ENTER_START_SCALE
     // The dialog owns input in a separate window, so Activity feedback must leave first.
     dismissMessage()
     // WindowManager uses the top dimming window, rather than adding each window's dim.
     // Keep the lower modal's shade when a confirmation takes over.
     val dialog = AirAnimatedDialog(
-        this, android.R.style.Theme_Translucent_NoTitleBar, interactionUi.maxShowingDimAmount()
+        this,
+        android.R.style.Theme_Translucent_NoTitleBar,
+        interactionUi.maxShowingDimAmount(),
+        exitScale = if (popIn) DIALOG_POP_SCALE else DIALOG_EXIT_END_SCALE
     )
     dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
     dialog.coordinatedDim = coordinatedDim
@@ -206,7 +222,7 @@ internal fun MainUiHost.showAirDialog(
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
 
-        if (!title.isNullOrBlank() || headerAction != null) {
+        if (!title.isNullOrBlank() || headerAction != null || showCloseButton) {
             val heading = TextView(this@showAirDialog).apply {
                 text = title.orEmpty()
                 textSize = AirUiTokens.TextSize.DialogTitle
@@ -224,7 +240,8 @@ internal fun MainUiHost.showAirDialog(
             val iconOnly = actionGroup != null && (0 until actionGroup.childCount).all {
                 actionGroup.getChildAt(it) !is TextView
             }
-            addView(adaptiveHeader(heading, actionGroup.takeUnless { iconOnly }, actionGroup.takeIf { iconOnly }))
+            val endAction = if (showCloseButton) dialogCloseButton(dialog::dismiss) else actionGroup.takeIf { iconOnly }
+            addView(adaptiveHeader(heading, actionGroup.takeUnless { it === endAction }, endAction))
         }
 
         if (!message.isNullOrBlank()) {
@@ -292,8 +309,8 @@ internal fun MainUiHost.showAirDialog(
     animatedContent.apply {
         val animateEntry = !coordinatedDim || ValueAnimator.areAnimatorsEnabled()
         alpha = if (animateEntry) 0f else 1f
-        scaleX = if (animateEntry) DIALOG_ENTER_START_SCALE else 1f
-        scaleY = if (animateEntry) DIALOG_ENTER_START_SCALE else 1f
+        scaleX = if (animateEntry) startScale else 1f
+        scaleY = if (animateEntry) startScale else 1f
         translationY = if (animateEntry) dp(DIALOG_ENTER_TRANSLATION_Y_DP).toFloat() else 0f
     }
 
@@ -347,7 +364,7 @@ internal fun MainUiHost.showAirDialog(
             if (!dialog.isShowing || dialog.isLeaving) return@post
             ViewCompat.requestApplyInsets(root)
             if (coordinatedDim) {
-                dialog.animateDimTo(dialog.targetDimAmount, DIALOG_ENTER_MS)
+                dialog.animateDimTo(dialog.targetDimAmount, enterMs)
                 if (!ValueAnimator.areAnimatorsEnabled()) {
                     animatedContent.alpha = 1f
                     animatedContent.scaleX = 1f
@@ -361,8 +378,8 @@ internal fun MainUiHost.showAirDialog(
                 .scaleX(1f)
                 .scaleY(1f)
                 .translationY(0f)
-                .setDuration(DIALOG_ENTER_MS)
-                .setInterpolator(DecelerateInterpolator())
+                .setDuration(enterMs)
+                .setInterpolator(if (popIn) OvershootInterpolator() else DecelerateInterpolator())
                 .withLayer()
                 .start()
         }
@@ -394,6 +411,27 @@ private fun Window.applyAirDialogSystemBars(host: MainUiHost) {
         val useDarkIcons = !host.isDarkTheme()
         isAppearanceLightStatusBars = useDarkIcons
         isAppearanceLightNavigationBars = useDarkIcons
+    }
+}
+
+private fun MainUiHost.dialogCloseButton(onClick: () -> Unit): ImageButton {
+    val size = dp(AirUiTokens.Layout.IconTouchSize)
+    val inset = (size - dp(AirUiTokens.Layout.DialogCloseSize)) / 2
+    return ImageButton(this).apply {
+        layoutParams = ViewGroup.LayoutParams(size, size)
+        background = InsetDrawable(GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(colorSurfaceLight)
+        }, inset)
+        setPadding(0, 0, 0, 0)
+        setImageResource(R.drawable.ic_air_close)
+        imageTintList = ColorStateList.valueOf(colorTextMuted)
+        scaleType = ImageView.ScaleType.CENTER
+        contentDescription = getString(R.string.ui_close)
+        tooltipText = contentDescription
+        isFocusable = true
+        enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
+        setOnClickListener { onClick() }
     }
 }
 

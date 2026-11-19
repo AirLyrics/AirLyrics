@@ -426,6 +426,9 @@ TTML de tiempo por palabra:
     <string name="ui_unknown_time">Tiempo desconocido</string>
     <string name="ui_unknown_type">Tipo desconocido</string>
     <string name="ui_updated">Actualizado</string>
+    <string name="ui_app_update_available">Versión %1$s, actualización disponible</string>
+    <string name="ui_app_update_title">Actualización de la app</string>
+    <string name="ui_app_update_preview">Solo vista previa</string>
     <string name="ui_using_local_lyrics_only">Usando solo letras locales</string>
     <string name="ui_undo">Deshacer</string>
     <string name="ui_undo_last_change">Deshacer el último cambio</string>

@@ -426,6 +426,10 @@ Word-timed TTML:
     <string name="ui_unknown_time">Unknown time</string>
     <string name="ui_unknown_type">Unknown type</string>
     <string name="ui_updated">Updated</string>
+    <string name="ui_app_update_available">Version %1$s, update available</string>
+    <string name="ui_app_update_title">App update</string>
+    <string name="ui_app_update_preview">Preview only</string>
+    <string name="ui_app_update_badge" translatable="false">NEW</string>
     <string name="ui_using_local_lyrics_only">Using local lyrics only</string>
     <string name="ui_undo">Undo</string>
     <string name="ui_undo_last_change">Undo last change</string>

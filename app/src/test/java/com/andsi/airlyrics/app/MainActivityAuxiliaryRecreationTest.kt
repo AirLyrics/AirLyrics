@@ -45,8 +45,13 @@ class MainActivityAuxiliaryRecreationTest {
             ShadowLooper.idleMainLooper(400, TimeUnit.MILLISECONDS)
             await { host.auxiliaryDialogs["changelog"]?.isShowing == true }
             assertFalse(preview.isShowing)
-            host.auxiliaryDialogs["changelog"]!!.dismiss()
+            val fullChangelog = host.auxiliaryDialogs.getValue("changelog")
+            val close = descendants(fullChangelog.window!!.decorView).single {
+                it.contentDescription == host.getString(R.string.ui_close) && it.hasOnClickListeners()
+            }
+            assertTrue(close.performClick())
             ShadowLooper.idleMainLooper(300, TimeUnit.MILLISECONDS)
+            assertFalse(fullChangelog.isShowing)
             assertNull(host.interactions.read("aux.changelog"))
         }
     }

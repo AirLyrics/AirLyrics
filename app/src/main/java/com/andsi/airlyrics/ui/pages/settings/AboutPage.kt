@@ -17,6 +17,9 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.doOnPreDraw
+import androidx.core.widget.NestedScrollView
+import com.andsi.airlyrics.ui.layout.WindowLayoutSpec
+import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import com.andsi.airlyrics.ui.state.rememberAuxiliaryDialog
 import com.andsi.airlyrics.ui.state.isAuxiliaryDialogShowing
 import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
@@ -27,7 +30,6 @@ import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
 import com.andsi.airlyrics.ui.components.playTinyPulse
 import com.andsi.airlyrics.ui.components.scroll
 import com.andsi.airlyrics.ui.components.showAirDialog
-import com.andsi.airlyrics.ui.components.statusPill
 import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorAccentSoft
@@ -177,13 +179,11 @@ private fun MainUiHost.aboutLogoHeader(dragOverlay: MascotDragOverlay): LinearLa
                 ViewGroup.LayoutParams.WRAP_CONTENT
             )
 
-            addView(statusPill(activity, getAppVersionName(), playing = true).apply {
-                val lp = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-                lp.setMargins(0, 0, dp(AirUiTokens.Space.Xl), 0)
-                layoutParams = lp
+            addView(aboutVersionEntry(), LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = dp(AirUiTokens.Space.Xl)
             })
 
             addView(githubIconButton(activity, dragOverlay))
@@ -248,6 +248,7 @@ private fun MainUiHost.changeLogButton(): View {
 private fun MainUiHost.showUpdateLogDialog() {
     var dialog: Dialog? = null
     var openFullLog = false
+    var closing = false
     val bodyViews = mutableListOf<View>()
     val prepareBodyView: (View) -> View = { view ->
         if (ValueAnimator.areAnimatorsEnabled()) {
@@ -259,15 +260,23 @@ private fun MainUiHost.showUpdateLogDialog() {
     }
     dialog = showAirDialog(
         title = getString(R.string.ui_whats_new),
-        message = null,
-        positiveText = getString(R.string.ui_ok),
+        positiveText = null,
+        useOuterScroll = false,
+        maxWidthDp = WindowLayoutSpec.DIALOG_MAX,
         coordinatedDim = true,
+        showCloseButton = true,
+        onUserDismiss = {
+            closing = true
+            bodyViews.forEach { it.animate().cancel() }
+        },
         afterUserDismiss = { if (openFullLog) showFullUpdateLogDialog() },
         body = {
-            addView(prepareBodyView(changelogTextView(loadCurrentChangelogText())))
+            addView(prepareBodyView(changelogScroll(loadCurrentChangelogText())))
             addView(prepareBodyView(changelogDialogButton(getString(R.string.ui_view_full_changelog)) {
-                openFullLog = true
-                dialog?.dismiss()
+                if (!closing) {
+                    openFullLog = true
+                    dialog?.dismiss()
+                }
             }))
         }
     )
@@ -284,6 +293,7 @@ private fun MainUiHost.showUpdateLogDialog() {
             }
         })
         post {
+            if (closing) return@post
             if (!dialog.isShowing || !ValueAnimator.areAnimatorsEnabled()) {
                 bodyViews.forEach { it.alpha = 1f; it.translationY = 0f }
                 return@post
@@ -307,24 +317,45 @@ internal fun MainUiHost.showFullUpdateLogDialog() {
     rememberAuxiliaryDialog("changelog")
     auxiliaryDialogs["changelog"] = showAirDialog(
         title = getString(R.string.ui_changelog),
-        scrollStateKey = "aux.changelog.scroll",
-        onUserDismiss = { forgetAuxiliaryDialog("changelog") },
-        message = null,
-        positiveText = getString(R.string.ui_ok),
+        positiveText = null,
+        useOuterScroll = false,
+        maxWidthDp = WindowLayoutSpec.DIALOG_MAX,
         coordinatedDim = true,
+        showCloseButton = true,
+        onUserDismiss = { forgetAuxiliaryDialog("changelog") },
         body = {
-            addView(changelogTextView(loadChangelogText()))
+            val scroll = changelogScroll(loadChangelogText())
+            bindInteractionScroll(scroll, "aux.changelog.scroll")
+            addView(scroll)
         }
     )
 }
 
-private fun MainUiHost.changelogTextView(text: String): View {
-    return TextView(this).apply {
-        this.text = text
-        textSize = AirUiTokens.TextSize.Body
-        setTextColor(colorTextMuted)
-        setLineSpacing(dp(AirUiTokens.Space.Sm).toFloat(), 1f)
-        setPadding(0, dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs), 0, dp(AirUiTokens.Space.Sm))
+private fun MainUiHost.changelogScroll(text: String): NestedScrollView {
+    return object : NestedScrollView(this) {
+        override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+            // The dialog bounds this viewport. A short log can still wrap its text.
+            val heightLimit = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.EXACTLY) {
+                MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(heightMeasureSpec), MeasureSpec.AT_MOST)
+            } else heightMeasureSpec
+            super.onMeasure(widthMeasureSpec, heightLimit)
+        }
+    }.apply {
+        overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        layoutParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            resources.displayMetrics.heightPixels,
+            1f,
+        ).apply {
+            topMargin = dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs)
+        }
+        addView(TextView(this@changelogScroll).apply {
+            this.text = text
+            textSize = AirUiTokens.TextSize.Body
+            setTextColor(colorTextMuted)
+            setLineSpacing(dp(AirUiTokens.Space.Sm).toFloat(), 1f)
+            setPadding(0, 0, 0, dp(AirUiTokens.Space.Sm))
+        })
     }
 }
 
@@ -350,10 +381,7 @@ private fun MainUiHost.changelogDialogButton(
         isClickable = true
         isFocusable = true
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale + 0.01f)
-        setOnClickListener {
-            playTinyPulse(this)
-            onClick()
-        }
+        setOnClickListener { onClick() }
     }
 }
 

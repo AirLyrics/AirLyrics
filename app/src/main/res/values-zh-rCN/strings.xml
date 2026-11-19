@@ -424,6 +424,9 @@
     <string name="ui_unknown_time">未知时间</string>
     <string name="ui_unknown_type">未知类型</string>
     <string name="ui_updated">已更新</string>
+    <string name="ui_app_update_available">版本 %1$s，有可用更新</string>
+    <string name="ui_app_update_title">应用更新</string>
+    <string name="ui_app_update_preview">仅供预览</string>
     <string name="ui_using_local_lyrics_only">仅使用本地歌词</string>
     <string name="ui_undo">撤销</string>
     <string name="ui_undo_last_change">撤销上次更改</string>
