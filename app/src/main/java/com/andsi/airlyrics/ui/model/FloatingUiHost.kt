@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.ui.model
 
-import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -10,13 +9,17 @@ import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.WordByWordAnimationMode
+import com.andsi.airlyrics.ui.components.SettingsUndoAction
 import com.andsi.airlyrics.ui.pages.floating.FontPanelOperations
 import kotlinx.coroutines.flow.Flow
 
 internal data class FloatingFocusBubbleHandle(
     val view: LinearLayout,
     val rebuildContent: () -> Unit,
-    val updateResetAction: (Boolean, Boolean) -> Unit,
+    val updateActions: (Boolean, SettingsUndoAction?) -> Unit,
+    val animateUndo: () -> Unit,
+    val finishUndoAnimation: () -> Unit,
     val updateNavigation: (String?, (() -> Unit)?) -> Unit = { _, _ -> },
     val updateHeaderAction: (View?, Boolean) -> Unit = { _, _ -> }
 )
@@ -37,6 +40,8 @@ internal interface FloatingUiHost {
         subtitle: String,
         onReset: (() -> Unit)?,
         onClose: () -> Unit,
+        onUndo: (() -> Unit)? = null,
+        onInteraction: (() -> Unit)? = null,
         content: LinearLayout.() -> Unit
     ): FloatingFocusBubbleHandle
 

@@ -4,9 +4,9 @@ import android.graphics.Color
 import com.andsi.airlyrics.ui.state.FloatingPanelId
 import android.widget.LinearLayout
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.ui.components.panelSwitch
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.FloatingPanelNavigation
@@ -17,6 +17,7 @@ import com.andsi.airlyrics.ui.pages.floating.compactColorSummary
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.opacityPercentToAlpha
 import com.andsi.airlyrics.ui.pages.floating.openPanel
+import com.andsi.airlyrics.ui.pages.floating.openStylePanel
 import com.andsi.airlyrics.core.color.AirColorUtils
 
 internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(host) {
@@ -53,30 +54,26 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 iconRes = R.drawable.ic_air_text_color,
                 onClick = { tile ->
                     val navigation = FloatingPanelNavigation()
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_text_color),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults ->
-                                AirColorUtils.opaqueRgb(current.textColor) == AirColorUtils.opaqueRgb(defaults.textColor)
-                            },
-                            restoreDefaults = { current, defaults ->
-                                current.copy(
-                                    textColor = AirColorUtils.withAlpha(
-                                        defaults.textColor,
-                                        Color.alpha(current.textColor)
-                                    )
+                        navigation = navigation,
+                        restoreDefaults = { current, defaults ->
+                            current.copy(
+                                textColor = AirColorUtils.withAlpha(
+                                    defaults.textColor,
+                                    Color.alpha(current.textColor)
                                 )
-                            }
-                        ),
-                        navigation = navigation
-                    ) {
-                        setPadding(paddingLeft, paddingTop, paddingRight, dp(12))
+                            )
+                        }
+                    ) { edits ->
                         addView(FloatingColorPanelContent(
                             host = host,
                             navigation = navigation,
-                            currentColor = { style().textColor },
+                            edits = edits,
+                            colorLabel = R.string.ui_text_color,
+                            readColor = FloatingLyricsStyle::textColor,
+                            withColor = { style, color -> style.copy(textColor = color) },
                             onColorChanged = { color ->
                                 applyFloatingTextColor(color, refreshPage = false)
                                 refreshFloatingPreview()
@@ -92,60 +89,46 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 iconRes = R.drawable.ic_air_chat_bubble,
                 onClick = { tile ->
                     val navigation = FloatingPanelNavigation()
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_background_bubble),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults ->
-                                current.backgroundEnabled == defaults.backgroundEnabled &&
-                                    current.backgroundColor == defaults.backgroundColor &&
-                                    current.backgroundAlpha == defaults.backgroundAlpha &&
-                                    current.backgroundBlurPercent == defaults.backgroundBlurPercent
-                            },
-                            restoreDefaults = { current, defaults ->
-                                current.copy(
-                                    backgroundEnabled = defaults.backgroundEnabled,
-                                    backgroundColor = defaults.backgroundColor,
-                                    backgroundAlpha = defaults.backgroundAlpha,
-                                    backgroundBlurPercent = defaults.backgroundBlurPercent
-                                )
-                            }
-                        ),
-                        navigation = navigation
-                    ) {
-                        setPadding(paddingLeft, paddingTop, paddingRight, dp(12))
+                        navigation = navigation,
+                        restoreDefaults = { current, defaults ->
+                            current.copy(
+                                backgroundEnabled = defaults.backgroundEnabled,
+                                backgroundColor = defaults.backgroundColor,
+                                backgroundAlpha = defaults.backgroundAlpha,
+                                backgroundBlurPercent = defaults.backgroundBlurPercent
+                            )
+                        }
+                    ) { edits ->
                         val controls = LinearLayout(host).apply {
                             orientation = LinearLayout.VERTICAL
-                            addView(panelSwitch(host, getString(R.string.ui_background), style().backgroundEnabled) { enabled ->
-                                applyFloatingBackgroundEnabled(enabled)
-                                refreshFloatingPreview()
-                            })
-                            addView(sliderRow(
+                            addView(edits.toggle(
+                                getString(R.string.ui_background),
+                                FloatingLyricsStyle::backgroundEnabled,
+                                ::applyFloatingBackgroundEnabled
+                            ))
+                            addView(edits.slider(
                                 title = getString(R.string.ui_opacity),
-                                value = alphaToOpacityPercent(style().backgroundAlpha),
-                                min = 0,
-                                max = 100,
-                                suffix = "%"
-                            ) { value ->
-                                applyFloatingBackgroundAlpha(opacityPercentToAlpha(value))
-                                refreshFloatingPreview()
-                            })
-                            addView(sliderRow(
+                                read = { alphaToOpacityPercent(it.backgroundAlpha) },
+                                min = 0, max = 100, suffix = "%",
+                                write = { applyFloatingBackgroundAlpha(it.backgroundAlpha) }
+                            ) { style, value -> style.copy(backgroundAlpha = opacityPercentToAlpha(value)) })
+                            addView(edits.slider(
                                 title = getString(R.string.ui_blur_amount),
-                                value = style().backgroundBlurPercent,
-                                min = 0,
-                                max = 100,
-                                suffix = "%"
-                            ) { value ->
-                                applyFloatingBackgroundBlurPercent(value)
-                                refreshFloatingPreview()
-                            })
+                                read = FloatingLyricsStyle::backgroundBlurPercent,
+                                min = 0, max = 100, suffix = "%",
+                                write = { applyFloatingBackgroundBlurPercent(it.backgroundBlurPercent) }
+                            ) { style, value -> style.copy(backgroundBlurPercent = value) })
                         }
                         addView(FloatingColorPanelContent(
                             host = host,
                             navigation = navigation,
-                            currentColor = { style().backgroundColor },
+                            edits = edits,
+                            colorLabel = R.string.ui_background_bubble,
+                            readColor = FloatingLyricsStyle::backgroundColor,
+                            withColor = { style, color -> style.copy(backgroundColor = color) },
                             onColorChanged = { color ->
                                 applyFloatingBackgroundColor(color, refreshPage = false)
                                 refreshFloatingPreview()
@@ -161,30 +144,17 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = "${style().textSizeSp.toInt()} sp",
                 iconRes = R.drawable.ic_air_format_size,
                 onClick = { tile ->
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_font_size),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults -> current.textSizeSp == defaults.textSizeSp },
-                            restoreDefaults = { current, defaults -> current.copy(textSizeSp = defaults.textSizeSp) }
-                        )
-                    ) {
-                        addView(
-                            sliderRow(
-                                title = getString(R.string.ui_size),
-                                value = style().textSizeSp.toInt(),
-                                min = 14,
-                                max = 56,
-                                suffix = " sp",
-                                onChangeFinished = { value ->
-                                    applyFloatingTextSize(value.toFloat(), refreshPage = false)
-                                    refreshFloatingPreview()
-                                }
-                            ) { value ->
-                                previewFloatingTextSize(value.toFloat())
-                            }
-                        )
+                        restoreDefaults = { current, defaults -> current.copy(textSizeSp = defaults.textSizeSp) }
+                    ) { edits ->
+                        addView(edits.slider(
+                            title = getString(R.string.ui_size),
+                            read = { it.textSizeSp.toInt() },
+                            min = 14, max = 56, suffix = " sp",
+                            write = { applyFloatingTextSize(it.textSizeSp, refreshPage = false) }
+                        ) { style, value -> style.copy(textSizeSp = value.toFloat()) })
                     }
                 }
             ),
@@ -195,27 +165,25 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 iconRes = R.drawable.ic_air_font,
                 onClick = { tile ->
                     val navigation = FloatingPanelNavigation()
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_font),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, _ ->
-                                current.fontFamily == FloatingLyricsFontFamily.SYSTEM_DEFAULT
+                        navigation = navigation,
+                        restoreDefaults = { current, _ ->
+                            current.copy(
+                                fontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT,
+                                customFontId = null
+                            )
+                        }
+                    ) { edits ->
+                        val manager = FloatingFontPanelContent(
+                            host, navigation,
+                            onChanged = {
+                                refreshFloatingPreview()
+                                notifyFloatingStyleChanged()
                             },
-                            restoreDefaults = { current, _ ->
-                                current.copy(
-                                    fontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT,
-                                    customFontId = null
-                                )
-                            }
-                        ),
-                        navigation = navigation
-                    ) {
-                        val manager = FloatingFontPanelContent(host, navigation, onChanged = {
-                            refreshFloatingPreview()
-                            notifyFloatingStyleChanged()
-                        })
+                            edits = edits
+                        )
                         pageRefs.refreshFonts = manager::showImportedFont
                         addView(manager)
                     }
@@ -227,31 +195,19 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = fontWeightSubtitle(),
                 iconRes = R.drawable.ic_air_font_weight,
                 onClick = { tile ->
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_font_weight),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults -> current.fontWeight == defaults.fontWeight },
-                            restoreDefaults = { current, defaults -> current.copy(fontWeight = defaults.fontWeight) }
-                        )
-                    ) {
-                        addView(sliderRow(
+                        restoreDefaults = { current, defaults -> current.copy(fontWeight = defaults.fontWeight) }
+                    ) { edits ->
+                        addView(edits.slider(
                             title = getString(R.string.ui_font_weight),
-                            value = FloatingLyricsFontWeight.toLevel(style().fontWeight),
+                            read = { FloatingLyricsFontWeight.toLevel(it.fontWeight) },
                             min = FloatingLyricsFontWeight.LEVEL_MIN,
                             max = FloatingLyricsFontWeight.LEVEL_MAX,
                             suffix = "",
-                            step = FloatingLyricsFontWeight.LEVEL_STEP,
-                            onChangeFinished = { level ->
-                                applyFloatingStyle(
-                                    style().copy(fontWeight = FloatingLyricsFontWeight.fromLevel(level))
-                                )
-                                refreshFloatingPreview()
-                            }
-                        ) { level ->
-                            previewFloatingFontWeight(FloatingLyricsFontWeight.fromLevel(level))
-                        })
+                            step = FloatingLyricsFontWeight.LEVEL_STEP
+                        ) { style, level -> style.copy(fontWeight = FloatingLyricsFontWeight.fromLevel(level)) })
                     }
                 }
             ),
@@ -261,39 +217,25 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = fontOpacitySubtitle(),
                 iconRes = R.drawable.ic_air_opacity,
                 onClick = { tile ->
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_font_opacity),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults ->
-                                Color.alpha(current.textColor) == Color.alpha(defaults.textColor)
-                            },
-                            restoreDefaults = { current, defaults ->
-                                current.copy(
-                                    textColor = AirColorUtils.withAlpha(
-                                        current.textColor,
-                                        Color.alpha(defaults.textColor)
-                                    )
+                        restoreDefaults = { current, defaults ->
+                            current.copy(
+                                textColor = AirColorUtils.withAlpha(
+                                    current.textColor,
+                                    Color.alpha(defaults.textColor)
                                 )
-                            }
-                        )
-                    ) {
-                        addView(sliderRow(
+                            )
+                        }
+                    ) { edits ->
+                        addView(edits.slider(
                             title = getString(R.string.ui_opacity),
-                            value = alphaToOpacityPercent(Color.alpha(style().textColor)),
-                            min = 0,
-                            max = 100,
-                            suffix = "%",
-                            onChangeFinished = { percent ->
-                                applyFloatingTextAlpha(
-                                    opacityPercentToAlpha(percent),
-                                    refreshPage = false
-                                )
-                                refreshFloatingPreview()
-                            }
-                        ) { percent ->
-                            previewFloatingFontOpacity(percent)
+                            read = { alphaToOpacityPercent(Color.alpha(it.textColor)) },
+                            min = 0, max = 100, suffix = "%",
+                            write = { applyFloatingTextAlpha(Color.alpha(it.textColor), refreshPage = false) }
+                        ) { style, percent ->
+                            style.copy(textColor = AirColorUtils.withAlpha(style.textColor, opacityPercentToAlpha(percent)))
                         })
                     }
                 }
@@ -305,50 +247,41 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 iconRes = R.drawable.ic_air_shadow,
                 onClick = { tile ->
                     val navigation = FloatingPanelNavigation()
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_shadow_stroke),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults ->
-                                current.shadowRadius == defaults.shadowRadius &&
-                                    current.shadowColor == defaults.shadowColor
-                            },
-                            restoreDefaults = { current, defaults ->
-                                current.copy(
-                                    shadowRadius = defaults.shadowRadius,
-                                    shadowColor = defaults.shadowColor
-                                )
-                            }
-                        ),
-                        navigation = navigation
-                    ) {
-                        setPadding(paddingLeft, paddingTop, paddingRight, dp(12))
+                        navigation = navigation,
+                        restoreDefaults = { current, defaults ->
+                            current.copy(
+                                shadowRadius = defaults.shadowRadius,
+                                shadowColor = defaults.shadowColor
+                            )
+                        }
+                    ) { edits ->
                         val controls = LinearLayout(host).apply {
                             orientation = LinearLayout.VERTICAL
-                            addView(sliderRow(
+                            addView(edits.slider(
                                 title = getString(R.string.ui_shadow_radius),
-                                value = style().shadowRadius.toInt(),
-                                min = 0, max = 24, suffix = "", compact = true
-                            ) { value ->
-                                applyFloatingShadowRadius(value.toFloat())
-                                refreshFloatingPreview()
-                            })
-                            addView(sliderRow(
+                                read = { it.shadowRadius.toInt() },
+                                min = 0, max = 24, suffix = "", compact = true,
+                                write = { applyFloatingShadowRadius(it.shadowRadius) }
+                            ) { style, value -> style.copy(shadowRadius = value.toFloat()) })
+                            addView(edits.slider(
                                 title = getString(R.string.ui_opacity),
-                                value = alphaToOpacityPercent(Color.alpha(style().shadowColor)),
-                                min = 0, max = 100, suffix = "%", compact = true
-                            ) { value ->
-                                applyFloatingShadowColor(AirColorUtils.withAlpha(
-                                    style().shadowColor, opacityPercentToAlpha(value)
-                                ))
-                                refreshFloatingPreview()
+                                read = { alphaToOpacityPercent(Color.alpha(it.shadowColor)) },
+                                min = 0, max = 100, suffix = "%", compact = true,
+                                write = { applyFloatingShadowColor(it.shadowColor) }
+                            ) { style, value ->
+                                style.copy(shadowColor = AirColorUtils.withAlpha(style.shadowColor, opacityPercentToAlpha(value)))
                             })
                         }
                         addView(FloatingColorPanelContent(
                             host = host,
                             navigation = navigation,
-                            currentColor = { style().shadowColor },
+                            edits = edits,
+                            colorLabel = R.string.ui_shadow_stroke,
+                            readColor = FloatingLyricsStyle::shadowColor,
+                            withColor = { style, color -> style.copy(shadowColor = color) },
                             onColorChanged = { color ->
                                 applyFloatingShadowColor(color)
                                 refreshFloatingPreview()
@@ -364,43 +297,38 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                 subtitle = getString(R.string.ui_width) + " ${style().maxWidthPercent}%",
                 iconRes = R.drawable.ic_air_pip,
                 onClick = { tile ->
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_window_layout),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults ->
-                                current.maxWidthPercent == defaults.maxWidthPercent &&
-                                    current.paddingHorizontalDp == defaults.paddingHorizontalDp &&
-                                    current.paddingVerticalDp == defaults.paddingVerticalDp &&
-                                    current.cornerRadiusDp == defaults.cornerRadiusDp
-                            },
-                            restoreDefaults = { current, defaults ->
-                                current.copy(
-                                    maxWidthPercent = defaults.maxWidthPercent,
-                                    paddingHorizontalDp = defaults.paddingHorizontalDp,
-                                    paddingVerticalDp = defaults.paddingVerticalDp,
-                                    cornerRadiusDp = defaults.cornerRadiusDp
-                                )
-                            }
-                        )
-                    ) {
-                        addView(sliderRow(getString(R.string.ui_max_width), style().maxWidthPercent, 45, 100, "%") { value ->
-                            applyFloatingMaxWidthPercent(value)
-                            refreshFloatingPreview()
-                        })
-                        addView(sliderRow(getString(R.string.ui_horizontal_padding), style().paddingHorizontalDp, 0, 36, "dp") { value ->
-                            applyFloatingPaddingHorizontal(value)
-                            refreshFloatingPreview()
-                        })
-                        addView(sliderRow(getString(R.string.ui_vertical_padding), style().paddingVerticalDp, 0, 28, "dp") { value ->
-                            applyFloatingPaddingVertical(value)
-                            refreshFloatingPreview()
-                        })
-                        addView(sliderRow(getString(R.string.ui_corner_radius), style().cornerRadiusDp, 0, 36, "dp") { value ->
-                            applyFloatingCornerRadius(value)
-                            refreshFloatingPreview()
-                        })
+                        restoreDefaults = { current, defaults ->
+                            current.copy(
+                                maxWidthPercent = defaults.maxWidthPercent,
+                                paddingHorizontalDp = defaults.paddingHorizontalDp,
+                                paddingVerticalDp = defaults.paddingVerticalDp,
+                                cornerRadiusDp = defaults.cornerRadiusDp
+                            )
+                        }
+                    ) { edits ->
+                        addView(edits.slider(
+                            getString(R.string.ui_max_width), FloatingLyricsStyle::maxWidthPercent,
+                            min = 45, max = 100, suffix = "%",
+                            write = { applyFloatingMaxWidthPercent(it.maxWidthPercent) }
+                        ) { style, value -> style.copy(maxWidthPercent = value) })
+                        addView(edits.slider(
+                            getString(R.string.ui_horizontal_padding), FloatingLyricsStyle::paddingHorizontalDp,
+                            min = 0, max = 36, suffix = "dp",
+                            write = { applyFloatingPaddingHorizontal(it.paddingHorizontalDp) }
+                        ) { style, value -> style.copy(paddingHorizontalDp = value) })
+                        addView(edits.slider(
+                            getString(R.string.ui_vertical_padding), FloatingLyricsStyle::paddingVerticalDp,
+                            min = 0, max = 28, suffix = "dp",
+                            write = { applyFloatingPaddingVertical(it.paddingVerticalDp) }
+                        ) { style, value -> style.copy(paddingVerticalDp = value) })
+                        addView(edits.slider(
+                            getString(R.string.ui_corner_radius), FloatingLyricsStyle::cornerRadiusDp,
+                            min = 0, max = 36, suffix = "dp",
+                            write = { applyFloatingCornerRadius(it.cornerRadiusDp) }
+                        ) { style, value -> style.copy(cornerRadiusDp = value) })
                     }
                 }
             )

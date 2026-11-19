@@ -333,6 +333,7 @@
     <string name="ui_range">範圍</string>
     <string name="ui_read_failed">讀取失敗</string>
     <string name="ui_reset">重設</string>
+    <string name="ui_reset_to_default">重設為預設值</string>
     <string name="ui_recent_local_lyrics">最近歌詞</string>
     <string name="ui_red">紅</string>
     <string name="ui_refresh_media_status">重新整理</string>
@@ -425,6 +426,9 @@
     <string name="ui_updated">已更新</string>
     <string name="ui_using_local_lyrics_only">僅使用本機歌詞</string>
     <string name="ui_undo">復原</string>
+    <string name="ui_undo_last_change">復原上次變更</string>
+    <string name="ui_undo_reset_to_default">復原重設為預設值</string>
+    <string name="ui_undo_setting_change">復原變更，將%1$s還原為%2$s。</string>
     <string name="ui_version_project_link_and_changelog">原始碼與更新記錄</string>
     <string name="ui_vertical_padding">上下內邊界</string>
     <string name="ui_view_current_setup">檢視目前設定</string>

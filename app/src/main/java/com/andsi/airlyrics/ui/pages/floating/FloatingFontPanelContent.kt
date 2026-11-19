@@ -27,11 +27,13 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.FloatingFont
 import com.andsi.airlyrics.core.model.FloatingFontCollection
 import com.andsi.airlyrics.core.model.FloatingFontSource
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.localizedFloatingFontFamilyTitle
 import com.andsi.airlyrics.i18n.localizedFloatingFontSize
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.AirTonalButtonTone
+import com.andsi.airlyrics.ui.components.SettingsUndoTarget
 import com.andsi.airlyrics.ui.components.actionButton
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.airTonalButtonStyle
@@ -83,7 +85,8 @@ internal class FloatingFontPanelContent(
     private val host: MainUiHost,
     private val navigation: FloatingPanelNavigation,
     private val onChanged: () -> Unit,
-    private val operations: FontPanelOperations = host.floatingFontOperations
+    private val operations: FontPanelOperations = host.floatingFontOperations,
+    private val edits: FloatingStylePanelEdits? = null
 ) : LinearLayout(host) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val confirmation = FontDeleteConfirmation()
@@ -102,6 +105,7 @@ internal class FloatingFontPanelContent(
     private var statusView: TextView? = null
     private var sampleView: TextView? = null
     private var languageButtons = emptyList<Pair<String, TextView>>()
+    private val rowSelectionUpdates = mutableListOf<(String) -> Unit>()
     private val closeCallback: () -> Unit = { close() }
 
     init {
@@ -109,6 +113,19 @@ internal class FloatingFontPanelContent(
         setTag(R.id.interaction_anchor, "floating.font.manager")
         navigation.onClose = closeCallback
         renderPage(animate = false)
+        edits?.bindControl(
+            read = FloatingLyricsStyle::fontId,
+            target = { id ->
+                val name = operations.fonts().firstOrNull { it.id == id }?.let(::title) ?: id
+                SettingsUndoTarget(host.getString(R.string.ui_font), name)
+            }
+        ) {
+            { _, _ ->
+                val selected = operations.selectedId()
+                rowSelectionUpdates.forEach { it(selected) }
+                currentFont()?.let(::renderAction)
+            }
+        }
     }
 
     internal fun showImportedFont(id: String) {
@@ -167,6 +184,7 @@ internal class FloatingFontPanelContent(
         statusView = null
         sampleView = null
         languageButtons = emptyList()
+        rowSelectionUpdates.clear()
         deleteButton?.dispose()
         deleteButton = null
         when {
@@ -200,7 +218,9 @@ internal class FloatingFontPanelContent(
                 val row = font.copy(
                     id = collection.id, displayName = collection.displayName, sizeBytes = collection.sizeBytes
                 )
-                addFontRow(fontRow(row, selectedMember != null, previewId = selectedMember?.id ?: font.id))
+                addFontRow(fontRow(row, selectedMember != null, previewId = selectedMember?.id ?: font.id) { id ->
+                    fonts.any { it.id == id && it.collectionId == collectionId }
+                })
             }
         }
         addView(actionButton(host, host.getString(R.string.ui_import_font)) {
@@ -240,7 +260,10 @@ internal class FloatingFontPanelContent(
     }
 
     private fun fontRow(
-        font: FloatingFont, selected: Boolean, previewId: String? = font.id
+        font: FloatingFont,
+        selected: Boolean,
+        previewId: String? = font.id,
+        represents: (String) -> Boolean = { it == font.id }
     ): View {
         val name = title(font)
         val face = previewId?.let(operations::previewTypeface) ?: Typeface.DEFAULT
@@ -270,13 +293,8 @@ internal class FloatingFontPanelContent(
                 setTag(R.id.interaction_anchor, "floating.font.size.${font.id}")
             }
         }
-        val icon = host.airIconView(
-            when {
-                selected -> R.drawable.ic_air_check
-                !font.available -> R.drawable.ic_air_download
-                else -> R.drawable.ic_air_chevron_right
-            }, host.colorTextMuted
-        )
+        val unselectedIcon = if (font.available) R.drawable.ic_air_chevron_right else R.drawable.ic_air_download
+        val icon = host.airIconView(if (selected) R.drawable.ic_air_check else unselectedIcon, host.colorTextMuted)
         return LinearLayout(host).apply {
             orientation = HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -298,14 +316,24 @@ internal class FloatingFontPanelContent(
             contentDescription = listOfNotNull(name, sizeLabel).joinToString(", ")
             ViewCompat.setStateDescription(this, if (selected) host.getString(R.string.ui_applied) else null)
             setTag(R.id.interaction_anchor, "floating.font.row.${font.id}")
-            host.bindAppearance(this) {
-                val tone = if (selected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
+            fun renderSelectionTone() {
+                val tone = if (isSelected) AirTonalButtonTone.SELECTED else AirTonalButtonTone.DEFAULT
                 host.applyAirTonalButtonStyle(this, tone)
                 val color = host.airTonalButtonStyle(tone).textColor
                 sample.setTextColor(color)
                 label.setTextColor(color)
-                size?.setTextColor(if (selected) color else host.colorTextMuted)
+                size?.setTextColor(if (isSelected) color else host.colorTextMuted)
                 icon.imageTintList = ColorStateList.valueOf(color)
+            }
+            host.bindAppearance(this) { renderSelectionTone() }
+            rowSelectionUpdates.add { id ->
+                val checked = represents(id)
+                if (isSelected != checked) {
+                    isSelected = checked
+                    icon.setImageResource(if (checked) R.drawable.ic_air_check else unselectedIcon)
+                    ViewCompat.setStateDescription(this, if (checked) host.getString(R.string.ui_applied) else null)
+                    renderSelectionTone()
+                }
             }
             enableSoftPressFeedback(AirUiTokens.Motion.OptionPressScale)
             setOnClickListener { if (!deleting) showEntry(font.id) }
@@ -445,12 +473,16 @@ internal class FloatingFontPanelContent(
         cancelButton?.visibility = if (downloading) VISIBLE else GONE
     }
 
+    private fun selectFont(id: String): Boolean = runCatching {
+        edits?.edit { operations.select(id) } ?: operations.select(id)
+    }.getOrDefault(false)
+
     private fun applyOrDownload(id: String) {
         cancelConfirmation()
         if (closed || deleting || downloadJob != null || focusedId != id) return
         val font = currentFont() ?: return
         if (font.available) {
-            if (runCatching { operations.select(id) }.getOrDefault(false)) {
+            if (selectFont(id)) {
                 onChanged()
                 showList()
             } else showFailure(R.string.ui_font_apply_failed)
@@ -470,7 +502,7 @@ internal class FloatingFontPanelContent(
                 if (!isActive || closed || token != generation || focusedId != id ||
                     !isAttachedToWindow || parent == null || host.floatingPageRefs !== ownerPageRefs ||
                     host.interactions.panel != com.andsi.airlyrics.ui.state.FloatingPanelId.FONT) return@launch
-                if (runCatching { operations.select(id) }.getOrDefault(false)) {
+                if (selectFont(id)) {
                     stopProgress()
                     downloadJob = null
                     onChanged()
@@ -553,10 +585,7 @@ internal class FloatingFontPanelContent(
                     }.getOrDefault(false)
                 }
                 deleting = false
-                if (removed) {
-                    navigation.clearUndo()
-                    onChanged()
-                }
+                if (removed) onChanged()
                 if (closed) {
                     scope.cancel()
                 } else {

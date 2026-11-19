@@ -158,18 +158,22 @@ class AdaptiveTextLayoutTest {
         var resets = 0
         var closes = 0
         val panel = host.floatingFocusBubble(
-            "Tamaño de fuente de los subtítulos", "", { resets++ }, { closes++ }
+            "Tamaño de fuente de los subtítulos", "", { resets++ }, { closes++ }, onUndo = {}
         ) {
             addView(TextView(host).apply { text = "Contenido de configuración\n".repeat(30); textSize = 18f })
         }
-        panel.updateResetAction(true, false)
+        panel.updateActions(true, null)
         val parent = FrameLayout(host).apply { addView(panel.view) }
         layout(parent, host.dp(320), host.dp(240))
         assertTrue(panel.view.left >= 0 && panel.view.right <= parent.width)
         assertTrue(panel.view.top >= 0 && panel.view.bottom <= parent.height)
         val scroll = descendants(panel.view).filterIsInstance<ScrollView>().single()
         assertTrue(scroll.getChildAt(0).height > scroll.height)
-        val reset = descendants(panel.view).single { it.contentDescription == host.getString(R.string.ui_reset) }
+        val reset = descendants(panel.view).single { it.getTag(R.id.interaction_anchor) == "floating.panel.reset" }
+        assertTrue("The controls need a scrollable viewport", scroll.height > 0)
+        assertTrue(reset.parent === scroll.getChildAt(0))
+        scroll.scrollTo(0, reset.bottom)
+        assertTrue(reset.bottom - scroll.scrollY <= scroll.height)
         reset.performClick()
         descendants(panel.view).single { it.contentDescription == host.getString(R.string.ui_close) }.performClick()
         assertEquals(1, resets)

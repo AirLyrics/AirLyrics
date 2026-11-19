@@ -333,6 +333,7 @@ TTML de tiempo por palabra:
     <string name="ui_range">Rango</string>
     <string name="ui_read_failed">Falló la lectura</string>
     <string name="ui_reset">Restaurar</string>
+    <string name="ui_reset_to_default">Restaurar valores predeterminados</string>
     <string name="ui_recent_local_lyrics">Letras locales recientes</string>
     <string name="ui_red">Rojo</string>
     <string name="ui_refresh_media_status">Actualizar</string>
@@ -427,6 +428,9 @@ TTML de tiempo por palabra:
     <string name="ui_updated">Actualizado</string>
     <string name="ui_using_local_lyrics_only">Usando solo letras locales</string>
     <string name="ui_undo">Deshacer</string>
+    <string name="ui_undo_last_change">Deshacer el último cambio</string>
+    <string name="ui_undo_reset_to_default">Deshacer el restablecimiento</string>
+    <string name="ui_undo_setting_change">Deshacer el cambio. Restaurar %1$s a %2$s.</string>
     <string name="ui_version_project_link_and_changelog">Código fuente y registro de cambios</string>
     <string name="ui_vertical_padding">Relleno vertical</string>
     <string name="ui_view_current_setup">Ver configuración actual</string>

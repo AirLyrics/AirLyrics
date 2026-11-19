@@ -35,8 +35,6 @@ import com.andsi.airlyrics.ui.pages.floating.sections.addBehaviorSection
 import com.andsi.airlyrics.ui.pages.floating.sections.addLyricsDisplaySection
 import com.andsi.airlyrics.ui.refs.FloatingPageRefs
 import com.andsi.airlyrics.ui.state.FloatingPanelId
-import com.andsi.airlyrics.ui.state.restoreFields
-import com.andsi.airlyrics.ui.state.undoChangesTo
 
 internal class FloatingPageScope(
     internal val host: MainUiHost
@@ -65,7 +63,7 @@ internal class FloatingPageScope(
     internal var focusOverlay: FrameLayout? = null
     internal var activeBubble: LinearLayout? = null
     internal var selectedTileView: View? = null
-    internal var activePanelResetStateUpdater: (() -> Unit)? = null
+    internal var activeStylePanel: FloatingStylePanelEdits? = null
     internal var activePanelNavigation: FloatingPanelNavigation? = null
     internal var activeDisplayScopePanelRefresh: (() -> Unit)? = null
     internal val pageRefs = FloatingPageRefs()
@@ -190,10 +188,6 @@ internal class FloatingPageScope(
         return host.getString(if (value) R.string.ui_on else R.string.ui_off)
     }
 
-    internal fun updateActivePanelResetState() {
-        activePanelResetStateUpdater?.invoke()
-    }
-
     internal fun localizedPresetTitle(key: String): String {
         return host.localizedFloatingPresetTitle(key)
     }
@@ -223,30 +217,6 @@ internal class FloatingPageScope(
     }
 
     internal fun style() = host.floatingStyle()
-
-    internal fun stylePanelReset(
-        isAtDefault: (FloatingLyricsStyle, FloatingLyricsStyle) -> Boolean,
-        restoreDefaults: (FloatingLyricsStyle, FloatingLyricsStyle) -> FloatingLyricsStyle
-    ): FloatingPanelReset {
-        return FloatingPanelReset(
-            isAtDefault = {
-                val current = style()
-                isAtDefault(current, host.floatingStyleDefaults(current.presetName))
-            },
-            reset = {
-                val previous = style()
-                val defaults = host.floatingStyleDefaults(previous.presetName)
-                val next = restoreDefaults(previous, defaults)
-                host.applyFloatingStyle(next)
-                refreshFloatingPreview()
-                previous.undoChangesTo(next)
-            },
-            undo = { snapshot ->
-                host.applyFloatingStyle(style().restoreFields(snapshot))
-                refreshFloatingPreview()
-            }
-        )
-    }
 
     internal fun contentDisplayMode() = host.lyricsContentDisplayMode()
     internal fun scriptPreference() = host.lyricsScriptPreference()
@@ -417,7 +387,7 @@ internal class FloatingPageScope(
             autoHideSummary()
         )
         updateFloatingTileSubtitle(host.getString(R.string.ui_display_scope), host.displayScopeSummary())
-        updateActivePanelResetState()
+        activeStylePanel?.updateActions(latestStyle)
     }
 
     private fun refreshDisplayScopeControls() {
@@ -483,33 +453,6 @@ internal class FloatingPageScope(
         refreshFloatingSettingTiles()
     }
 
-    internal fun previewFloatingTextSize(textSizeSp: Float) {
-        val previewStyle = style().copy(textSizeSp = textSizeSp)
-        renderFloatingPreview(previewStyle)
-        updateFloatingTileSubtitle(host.getString(R.string.ui_font_size), "${textSizeSp.toInt()} sp")
-    }
-
-    internal fun previewFloatingFontWeight(fontWeight: Int) {
-        val previewStyle = style().copy(fontWeight = fontWeight)
-        renderFloatingPreview(previewStyle)
-        updateFloatingTileSubtitle(host.getString(R.string.ui_font_weight), fontWeightSubtitle(fontWeight))
-    }
-
-    internal fun previewFloatingFontOpacity(opacityPercent: Int) {
-        val currentStyle = style()
-        val previewStyle = currentStyle.copy(
-            textColor = AirColorUtils.withAlpha(
-                currentStyle.textColor,
-                opacityPercentToAlpha(opacityPercent)
-            )
-        )
-        renderFloatingPreview(previewStyle)
-        updateFloatingTileSubtitle(
-            host.getString(R.string.ui_font_opacity),
-            fontOpacitySubtitle(previewStyle.textColor)
-        )
-    }
-
     internal fun highlightEffectsSubtitle(current: FloatingLyricsStyle = style()): String =
         compactColorSummary(current.wordByWordHighlightColor)
 
@@ -523,7 +466,7 @@ internal class FloatingPageScope(
         previewHandle?.bodyView?.requestLayout()
     }
 
-    private fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {
+    internal fun renderFloatingPreview(latestStyle: FloatingLyricsStyle) {
         previewStyleForAnimation = latestStyle
         previewHandle?.updateText?.invoke(if (wordByWordLyricsEnabled()) {
                 wordByWordPreviewText(latestStyle)

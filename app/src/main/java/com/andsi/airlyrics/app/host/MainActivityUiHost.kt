@@ -266,8 +266,10 @@ internal class MainActivityUiHost(
         subtitle: String,
         onReset: (() -> Unit)?,
         onClose: () -> Unit,
+        onUndo: (() -> Unit)?,
+        onInteraction: (() -> Unit)?,
         content: LinearLayout.() -> Unit
-    ): FloatingFocusBubbleHandle = floatingFocusBubbleImpl(title, subtitle, onReset, onClose, content)
+    ): FloatingFocusBubbleHandle = floatingFocusBubbleImpl(title, subtitle, onReset, onClose, onUndo, onInteraction, content)
     override fun floatingStyle(): FloatingLyricsStyle = FloatingLyricsStyleStore.getStyle(this)
     override fun floatingStyleDefaults(preset: String): FloatingLyricsStyle = FloatingLyricsStyleStore.getPresetDefaults(preset)
     override fun floatingPresets() = FloatingLyricsStyleStore.presets

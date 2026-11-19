@@ -4,8 +4,10 @@ import android.annotation.SuppressLint
 import android.animation.ValueAnimator
 import android.view.MotionEvent
 import android.content.res.ColorStateList
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
@@ -14,8 +16,9 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
-import android.widget.SeekBar
 import android.widget.TextView
+import androidx.annotation.StringRes
+import androidx.core.animation.doOnEnd
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
@@ -26,11 +29,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.AdaptiveLabelValueLayout
 import com.andsi.airlyrics.ui.components.GridColumnPolicy
 import com.andsi.airlyrics.ui.components.SettingsSliderRow
+import com.andsi.airlyrics.ui.components.SettingsUndoTarget
 import com.andsi.airlyrics.ui.components.beginFloatingPanelChange
 import com.andsi.airlyrics.ui.components.canAnimateFloatingControl
 import com.andsi.airlyrics.ui.components.floatingPanelEaseOut
@@ -47,7 +52,10 @@ import com.andsi.airlyrics.ui.theme.colorTextStrong
 internal class FloatingColorPanelContent(
     private val host: MainUiHost,
     private val navigation: FloatingPanelNavigation,
-    private val currentColor: () -> Int,
+    private val edits: FloatingStylePanelEdits,
+    @param:StringRes private val colorLabel: Int,
+    private val readColor: (FloatingLyricsStyle) -> Int,
+    private val withColor: (FloatingLyricsStyle, Int) -> FloatingLyricsStyle,
     private val onColorChanged: (Int) -> Unit,
     additionalControls: View? = null,
     leadingControls: View? = null
@@ -58,14 +66,16 @@ internal class FloatingColorPanelContent(
     private val editor = ColorPanelPage(host).apply { setTag(R.id.interaction_anchor, "floating.color.editor") }
     private val ownerPanel = host.interactions.panel
     private val hexEditor = FloatingHexColorEditor(
-        host, { editingRgb && host.interactions.panel == ownerPanel }, currentColor, { applyRgb(it, animateSample = true) }
+        host, { editingRgb && host.interactions.panel == ownerPanel }, ::currentColor, { applyRgb(it, animateSample = true) }
     )
-    private val editorSample = View(host)
+    private val editorSample = FloatingColorSample(host)
     private val editorHex = hexText(AirUiTokens.TextSize.Title)
-    private val customSample = View(host)
-    private var sampleColor: Int = AirColorUtils.opaqueRgb(currentColor())
+    private val customSample = FloatingColorSample(host).apply {
+        setTag(R.id.interaction_anchor, "floating.color.custom.sample")
+    }
     private var sampleAnimator: ValueAnimator? = null
     private var sampleTargetColor: Int? = null
+    private var draftRgb: Int? = null
     private val customHex = hexText(AirUiTokens.TextSize.Body)
     private val customRow: View
     private val presetSwatches = mutableListOf<Pair<Int, FloatingColorSwatch>>()
@@ -78,6 +88,8 @@ internal class FloatingColorPanelContent(
     private var saveState = newSaveState()
     private var favoritesJob: Job? = null
     private val saveButton = FloatingColorSaveButton(host) { saveCurrentColor() }
+
+    private fun currentColor(): Int = readColor(host.floatingStyle())
 
     private fun addOverviewDivider() {
         overview.addView(View(host).apply {
@@ -218,23 +230,22 @@ internal class FloatingColorPanelContent(
         listOf("R", "G", "B").forEachIndexed { channel, name ->
             val initial = channelValue(currentColor(), channel)
             val row = SettingsSliderRow(host, name, initial.toString(), compact = true)
-            row.seekBar.apply {
-                max = 255
-                progress = initial
-                setTag(R.id.interaction_anchor, "floating.color.rgb.$name")
-                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                        row.updateValue(progress.toString())
-                        if (!fromUser) return
-                        val color = currentColor()
-                        val channels = intArrayOf(Color.red(color), Color.green(color), Color.blue(color))
-                        channels[channel] = progress
-                        applyRgb(Color.rgb(channels[0], channels[1], channels[2]))
-                    }
-                    override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-                    override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-                })
-            }
+            row.seekBar.setTag(R.id.interaction_anchor, "floating.color.rgb.$name")
+            row.bindRange(
+                initial, min = 0, max = 255, format = Int::toString,
+                onPreview = { value ->
+                    val color = replaceChannel(currentColor(), channel, value)
+                    draftRgb = AirColorUtils.opaqueRgb(color)
+                    edits.preview { withColor(it, color) }
+                    renderColor()
+                },
+                onCommit = { value -> applyRgb(replaceChannel(currentColor(), channel, value)) },
+                onCancel = {
+                    draftRgb = null
+                    edits.preview { it }
+                    renderColor()
+                }
+            )
             rgbRows += row
             editor.addView(row)
         }
@@ -244,6 +255,21 @@ internal class FloatingColorPanelContent(
         if (!editingRgb) refreshSavedSwatches()
         applyPage()
         renderColor()
+        edits.bindControl(
+            read = { AirColorUtils.opaqueRgb(readColor(it)) },
+            target = { SettingsUndoTarget(host.getString(colorLabel), compactColorSummary(it), color = it) },
+            finishMotion = ::finishColorMotion
+        ) {
+            val previousSample = sampleTargetColor
+            val applyToChannels = rgbRows.map(SettingsSliderRow::captureRestore)
+            val render: (Int, Boolean) -> Unit = { rgb, isUndo ->
+                pendingDeleteColor = null
+                draftRgb = null
+                renderColor(previousSample, if (isUndo) ColorChange.UNDO else ColorChange.RESET)
+                applyToChannels.forEachIndexed { channel, apply -> apply(channelValue(rgb, channel)) }
+            }
+            render
+        }
     }
 
     private fun hexText(size: Float) = TextView(host).apply {
@@ -322,13 +348,20 @@ internal class FloatingColorPanelContent(
         savedSwatches.values.forEach { it.setRemovalArmed(false) }
     }
 
-    private fun renderSwatchState() {
-        val rgb = AirColorUtils.opaqueRgb(currentColor())
-        presetSwatches.forEach { (color, view) -> view.isSelected = color == rgb }
+    private fun renderSwatchState(
+        rgb: Int = AirColorUtils.opaqueRgb(currentColor()),
+        returning: Boolean = false
+    ) {
+        presetSwatches.forEach { (color, view) -> view.showSelection(color == rgb, animate = true, returning = returning) }
         savedSwatches.forEach { (color, view) ->
-            view.isSelected = color == rgb
+            view.showSelection(color == rgb, animate = true, returning = returning)
             view.setRemovalArmed(color == pendingDeleteColor && color == rgb)
         }
+    }
+
+    private fun replaceChannel(color: Int, channel: Int, value: Int): Int {
+        val shift = (2 - channel) * 8
+        return (color and (0xFF shl shift).inv()) or (value shl shift)
     }
 
     private fun channelValue(color: Int, channel: Int): Int = when (channel) {
@@ -339,63 +372,94 @@ internal class FloatingColorPanelContent(
 
     private fun applyRgb(rgb: Int, animateSample: Boolean = false) {
         clearPendingDeletion()
+        val hadDraft = draftRgb != null
+        draftRgb = null
         val current = currentColor()
         val next = AirColorUtils.withAlpha(rgb, Color.alpha(current))
-        if (next != current) onColorChanged(next)
-        renderColor(animateSample)
+        val previousSample = if (next != current) {
+            edits.edit {
+                val displayed = sampleTargetColor.takeIf { animateSample }
+                onColorChanged(next)
+                displayed
+            }
+        } else {
+            if (hadDraft) edits.preview { it }
+            null
+        }
+        renderColor(previousSample)
     }
 
-    private fun colorSample(rgb: Int) = GradientDrawable().apply {
-        shape = GradientDrawable.OVAL
-        setColor(rgb)
-        setStroke(host.dp(AirUiTokens.Stroke.Hairline), host.colorStroke)
-    }
-
-    private fun renderColor(animateSample: Boolean = false) {
-        val rgb = AirColorUtils.opaqueRgb(currentColor())
+    private fun renderColor(
+        previousSample: Int? = null,
+        change: ColorChange = ColorChange.SELECTION
+    ) {
+        val rgb = draftRgb ?: AirColorUtils.opaqueRgb(currentColor())
         val code = compactColorSummary(rgb)
         editorHex.text = code
         editorHex.contentDescription = listOf(host.getString(R.string.ui_color_hex), code).joinToString(", ")
         customHex.text = code
         customRow.contentDescription = listOf(host.getString(R.string.ui_custom_color), code).joinToString(", ")
-        if (sampleTargetColor != rgb) {
-            sampleTargetColor = rgb
-            sampleAnimator?.cancel()
-            val visibleSample = if (editingRgb) editorSample else customSample
-            if (animateSample && visibleSample.canAnimateFloatingControl() && sampleColor != rgb) {
-                sampleAnimator = ValueAnimator.ofArgb(sampleColor, rgb).apply {
-                    duration = AirUiTokens.Motion.LayoutChangeMs
-                    interpolator = floatingPanelEaseOut
-                    addUpdateListener { updateSamples(it.animatedValue as Int) }
-                    start()
-                }
-            } else {
-                updateSamples(rgb)
-            }
+        val colorChanged = sampleTargetColor != rgb
+        if (colorChanged || previousSample != null) renderSamples(rgb, previousSample, change)
+        renderSwatchState(rgb, returning = change == ColorChange.UNDO)
+        if (draftRgb != null) return
+        if (colorChanged && change == ColorChange.SELECTION) rgbRows.forEachIndexed { channel, row ->
+            row.showRangeValue(channelValue(rgb, channel))
         }
-        renderSwatchState()
-        rgbRows.forEachIndexed { channel, row -> row.seekBar.progress = channelValue(rgb, channel) }
         saveState.edit(rgb, rgb in favorites)
         saveState.reconcile(rgb in favorites)
         saveButton.render(saveState.status, saveState.canSave)
     }
 
-    private fun updateSamples(color: Int) {
-        sampleColor = color
-        listOf(editorSample, customSample).forEach { sample ->
-            val shape = sample.background as? GradientDrawable
-            if (shape == null) sample.background = colorSample(color) else shape.setColor(color)
+    private fun renderSamples(rgb: Int, previous: Int?, change: ColorChange) {
+        finishSampleMotion()
+        sampleTargetColor = rgb
+        editorSample.setColor(rgb)
+        customSample.setColor(rgb)
+        val visibleSample = if (editingRgb) editorSample else customSample
+        if (previous == null || previous == rgb || !visibleSample.canAnimateFloatingControl()) return
+
+        visibleSample.showOutgoingColor(previous)
+        val animation = ValueAnimator.ofFloat(0f, change.offset).apply {
+            duration = AirUiTokens.Motion.ColorSampleSlideMs
+            interpolator = floatingPanelEaseOut
+            addUpdateListener { visibleSample.showOutgoingColor(previous, it.animatedValue as Float) }
+            doOnEnd {
+                if (sampleAnimator === it) {
+                    sampleAnimator = null
+                    visibleSample.showOutgoingColor(null)
+                }
+            }
         }
+        sampleAnimator = animation
+        animation.start()
+    }
+
+    private enum class ColorChange(val offset: Float) {
+        SELECTION(1f), RESET(-1f), UNDO(-1f)
+    }
+
+    private fun finishSampleMotion() {
+        val running = sampleAnimator ?: return
+        sampleAnimator = null
+        running.cancel()
+        editorSample.showOutgoingColor(null)
+        customSample.showOutgoingColor(null)
+    }
+
+    private fun finishColorMotion() {
+        finishSampleMotion()
+        presetSwatches.forEach { (_, view) -> view.finishAnimation() }
+        savedSwatches.values.forEach { it.finishAnimation() }
+        rgbRows.forEach { it.finishRangeAnimation() }
     }
 
     override fun onDetachedFromWindow() {
+        finishColorMotion()
         saveState.close()
         favoritesJob?.cancel()
         favoritesJob = null
         clearPendingDeletion()
-        sampleAnimator?.cancel()
-        sampleAnimator = null
-        updateSamples(AirColorUtils.opaqueRgb(currentColor()))
         super.onDetachedFromWindow()
     }
 
@@ -404,6 +468,7 @@ internal class FloatingColorPanelContent(
 
     private fun showEditor(editing: Boolean) {
         if (editingRgb == editing) return
+        finishColorMotion()
         clearPendingDeletion()
         // Prepare hidden content before the transition captures it, so only the page enters.
         if (!editing) refreshSavedSwatches()
@@ -456,6 +521,83 @@ internal class FloatingColorPanelContent(
         } else {
             navigation.showPage()
         }
+    }
+}
+
+/** Clips the outgoing swatch to the fixed fill, leaving its border in place. */
+@SuppressLint("ViewConstructor")
+private class FloatingColorSample(host: MainUiHost) : View(host) {
+    private val strokeWidth = host.dp(AirUiTokens.Stroke.Hairline)
+    private val fill = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setStroke(strokeWidth, host.colorStroke)
+    }
+    private val clip = Path()
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val edgePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = this@FloatingColorSample.strokeWidth.toFloat()
+    }
+    private var radius = 0f
+    private var outgoingColor: Int? = null
+    private var edgeColor: Int? = null
+    private var offsetFraction = 0f
+
+    init {
+        background = fill
+    }
+
+    fun setColor(color: Int) {
+        fill.setColor(color)
+    }
+
+    fun showOutgoingColor(color: Int?, fraction: Float = 0f) {
+        if (outgoingColor == color && offsetFraction == fraction) return
+        if (outgoingColor != color) {
+            outgoingColor = color
+            edgeColor = color?.let(::wipeEdgeColor)
+        }
+        offsetFraction = fraction
+        invalidate()
+    }
+
+    private fun wipeEdgeColor(previous: Int): Int? {
+        val next = fill.color?.defaultColor ?: return null
+        if (ColorUtils.calculateContrast(previous, next) >= MIN_WIPE_CONTRAST) return null
+        // Near-equal luminance can make the moving boundary disappear in a small sample.
+        val midpoint = ColorUtils.blendARGB(previous, next, .5f)
+        val ink = if (ColorUtils.calculateContrast(Color.BLACK, midpoint) >=
+            ColorUtils.calculateContrast(Color.WHITE, midpoint)) Color.BLACK else Color.WHITE
+        return ColorUtils.setAlphaComponent(ink, WIPE_EDGE_ALPHA)
+    }
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        radius = (minOf(w, h) / 2f - strokeWidth).coerceAtLeast(0f)
+        clip.reset()
+        clip.addCircle(w / 2f, h / 2f, radius, Path.Direction.CW)
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        paint.color = outgoingColor ?: return
+        val cx = width / 2f + width * offsetFraction
+        val cy = height / 2f
+        val save = canvas.save()
+        canvas.clipPath(clip)
+        canvas.drawCircle(cx, cy, radius, paint)
+        val edge = edgeColor
+        if (edge != null && offsetFraction != 0f) {
+            edgePaint.color = edge
+            val startAngle = if (offsetFraction > 0f) 90f else -90f
+            canvas.drawArc(cx - radius, cy - radius, cx + radius, cy + radius, startAngle, 180f, false, edgePaint)
+        }
+        canvas.restoreToCount(save)
+    }
+
+    private companion object {
+        const val MIN_WIPE_CONTRAST = 1.25
+        const val WIPE_EDGE_ALPHA = 153
     }
 }
 

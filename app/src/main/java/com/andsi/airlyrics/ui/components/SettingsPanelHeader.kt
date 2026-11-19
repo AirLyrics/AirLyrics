@@ -1,21 +1,17 @@
 package com.andsi.airlyrics.ui.components
 
 import android.annotation.SuppressLint
-import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.theme.colorAccent
-import com.andsi.airlyrics.ui.theme.colorAccentMint
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
@@ -26,13 +22,21 @@ internal class SettingsPanelHeader(
     private val host: MainUiHost,
     private val title: String,
     subtitle: String,
-    onReset: (() -> Unit)?,
+    onUndo: (() -> Unit)?,
     onClose: () -> Unit
 ) : LinearLayout(host) {
-    private var reset: FrameLayout? = null
+    private val undo = onUndo?.let { SettingsPanelUndoButton(host, it) }
+    private val undoSlot = undo?.let { button ->
+        FrameLayout(host).apply {
+            clipChildren = false
+            addView(button, FrameLayout.LayoutParams(
+                LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.END or Gravity.TOP
+            ))
+        }
+    }
+    private val close = action(R.drawable.ic_air_close, R.string.ui_close, onClose)
     private var back: FrameLayout? = null
     private var accessory: FrameLayout? = null
-    private var resetState: Pair<Boolean, Boolean>? = null
     private lateinit var titleView: TextView
     private val titleColumn: LinearLayout
     private var titleBelowActions = false
@@ -40,6 +44,8 @@ internal class SettingsPanelHeader(
     init {
         orientation = HORIZONTAL
         gravity = Gravity.TOP
+        isBaselineAligned = false
+        clipChildren = false
         titleColumn = LinearLayout(host).apply {
             orientation = VERTICAL
             setPaddingRelative(0, host.dp(AirUiTokens.Space.Sm), host.dp(AirUiTokens.Space.Xl), 0)
@@ -59,33 +65,49 @@ internal class SettingsPanelHeader(
             })
         }
         addView(titleColumn, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
-        if (onReset != null) {
-            reset = action(R.drawable.ic_air_reset, R.string.ui_reset, onReset)
-            addView(reset)
-            updateResetAction(enabled = false, isUndo = false)
-        }
-        addView(action(R.drawable.ic_air_close, R.string.ui_close, onClose))
+        undoSlot?.let { addView(it, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)) }
+        addView(close)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         titleColumn.setPaddingRelative(0, host.dp(AirUiTokens.Space.Sm), host.dp(AirUiTokens.Space.Xl), 0)
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
-        val wordWidth = titleView.text.splitToSequence(' ', '\n')
+        val widestWord = titleView.text.splitToSequence(' ', '\n')
             .maxOfOrNull { titleView.paint.measureText(it) } ?: 0f
-        titleBelowActions = wordWidth > titleView.measuredWidth
+        val titleWidth = android.text.Layout.getDesiredWidth(titleView.text, titleView.paint)
+        val titlePadding = titleColumn.paddingStart + titleColumn.paddingEnd
+        val actionHeight = host.dp(AirUiTokens.Layout.IconTouchSize)
+        val availableWidth = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+        if (undo != null && undoSlot != null) {
+            val occupied = actionHeight * (1 + listOfNotNull(back, accessory).count { it.visibility != GONE })
+            val free = availableWidth - occupied
+            val labelWidth = undo.labelWidth
+            val roomWithUndo = free - labelWidth - titlePadding
+            val minTitleWidth = if (titleWidth <= roomWithUndo) titleWidth else widestWord
+            val showLabel = free >= labelWidth
+            // Reserve the same title space as the target comes and goes, outside the button's hit area.
+            val targetBudget = if (showLabel) {
+                (roomWithUndo - minTitleWidth).toInt().coerceIn(0, undo.maxTargetExtraWidth)
+            } else 0
+            undo.setPresentation(showLabel, targetBudget)
+            undoSlot.layoutParams.width = if (showLabel) labelWidth + targetBudget else actionHeight
+        }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        titleBelowActions = widestWord > titleView.measuredWidth
         if (titleBelowActions) {
             titleColumn.setPaddingRelative(0, host.dp(AirUiTokens.Space.Sm), 0, 0)
             titleColumn.measure(
                 MeasureSpec.makeMeasureSpec((measuredWidth - paddingLeft - paddingRight).coerceAtLeast(0), MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
             )
-            val actionHeight = host.dp(AirUiTokens.Layout.IconTouchSize)
             setMeasuredDimension(measuredWidth, resolveSize(
-                paddingTop + actionHeight + titleColumn.measuredHeight + paddingBottom,
+                paddingTop + actionRowHeight + titleColumn.measuredHeight + paddingBottom,
                 heightMeasureSpec
             ))
         }
     }
+
+    private val actionRowHeight: Int
+        get() = maxOf(close.measuredHeight, undoSlot?.measuredHeight ?: 0)
 
     override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
         if (!titleBelowActions) {
@@ -93,24 +115,19 @@ internal class SettingsPanelHeader(
             return
         }
         val rtl = layoutDirection == LAYOUT_DIRECTION_RTL
-        fun placeAction(view: FrameLayout, start: Int) {
+        fun placeAction(view: View, start: Int) {
             val x = if (rtl) width - paddingRight - start - view.measuredWidth else paddingLeft + start
             view.layout(x, paddingTop, x + view.measuredWidth, paddingTop + view.measuredHeight)
         }
-        val availableWidth = width - paddingLeft - paddingRight
-        val close = getChildAt(childCount - 1) as FrameLayout
-        var end = availableWidth - close.measuredWidth
-        placeAction(close, end)
-        reset?.takeIf { it.visibility != GONE }?.let {
-            end -= it.measuredWidth
-            placeAction(it, end)
-        }
-        accessory?.let {
-            end -= it.measuredWidth
-            placeAction(it, end)
+        var end = width - paddingLeft - paddingRight
+        for (index in childCount - 1 downTo 0) {
+            val action = getChildAt(index)
+            if (action === titleColumn || action === back || action.visibility == GONE) continue
+            end -= action.measuredWidth
+            placeAction(action, end)
         }
         back?.takeIf { it.visibility != GONE }?.let { placeAction(it, 0) }
-        val titleTop = paddingTop + host.dp(AirUiTokens.Layout.IconTouchSize)
+        val titleTop = paddingTop + actionRowHeight
         titleColumn.layout(paddingLeft, titleTop, width - paddingRight, titleTop + titleColumn.measuredHeight)
     }
 
@@ -141,42 +158,21 @@ internal class SettingsPanelHeader(
         }
     }
 
-    fun updateHeaderAction(view: View?, hideReset: Boolean) {
+    fun updateHeaderAction(view: View?) {
         accessory?.let(::removeView)
         accessory = view?.let { action ->
             (action.parent as? ViewGroup)?.removeView(action)
             FrameLayout(host).apply {
                 layoutParams = LayoutParams(host.dp(AirUiTokens.Layout.IconTouchSize), host.dp(AirUiTokens.Layout.IconTouchSize))
                 addView(action, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-            }.also { addView(it, childCount - 1) }
+            }.also { addView(it, indexOfChild(undoSlot ?: close)) }
         }
-        reset?.visibility = if (hideReset) GONE else VISIBLE
         requestLayout()
     }
 
-    fun updateResetAction(enabled: Boolean, isUndo: Boolean) {
-        val state = enabled to isUndo
-        if (resetState == state) return
-        resetState = state
-        reset?.apply {
-            animate().cancel()
-            scaleX = 1f
-            scaleY = 1f
-            isEnabled = enabled
-            val targetAlpha = if (enabled) 1f else 0.34f
-            if (canAnimateFloatingControl()) {
-                animate().alpha(targetAlpha)
-                    .setStartDelay(0)
-                    .setDuration(AirUiTokens.Motion.PressUpMs)
-                    .setInterpolator(floatingPanelEaseOut)
-                    .start()
-            } else alpha = targetAlpha
-            contentDescription = host.getString(if (isUndo) R.string.ui_undo else R.string.ui_reset)
-            tooltipText = contentDescription
-            (getChildAt(0) as ImageView).apply {
-                setImageResource(if (isUndo) R.drawable.ic_air_undo else R.drawable.ic_air_reset)
-                imageTintList = ColorStateList.valueOf(if (isUndo) host.colorAccentMint else host.colorAccent)
-            }
-        }
-    }
+    fun updateUndoAction(action: SettingsUndoAction?) { undo?.updateAction(action) }
+
+    fun animateUndo() { undo?.animateUndo() }
+
+    fun finishUndoAnimation() { undo?.finishAnimation() }
 }

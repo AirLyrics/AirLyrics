@@ -34,9 +34,10 @@ internal fun TextView.setAirStartIcon(
     host: MainUiHost,
     @DrawableRes iconRes: Int?,
     @ColorInt tint: Int,
-    paddingDp: Int = AirUiTokens.Space.Lg
+    paddingDp: Int = AirUiTokens.Space.Lg,
+    sizeDp: Int = AirUiTokens.Layout.IconSize
 ) {
-    val icon = iconRes?.let { host.airIconDrawable(it, tint) }
+    val icon = iconRes?.let { host.airIconDrawable(it, tint, sizeDp) }
     setCompoundDrawablesRelative(icon, null, null, null)
     compoundDrawablePadding = if (icon == null) 0 else host.dp(paddingDp)
 }
@@ -54,11 +55,12 @@ internal fun TextView.setAirTopIcon(
 
 private fun MainUiHost.airIconDrawable(
     @DrawableRes iconRes: Int,
-    @ColorInt tint: Int
+    @ColorInt tint: Int,
+    sizeDp: Int = AirUiTokens.Layout.IconSize
 ): Drawable {
     val drawable = requireNotNull(AppCompatResources.getDrawable(this, iconRes)).mutate()
     DrawableCompat.setTint(drawable, tint)
-    val size = dp(AirUiTokens.Layout.IconSize)
+    val size = dp(sizeDp)
     drawable.setBounds(0, 0, size, size)
     return drawable
 }

@@ -1,15 +1,17 @@
 package com.andsi.airlyrics.ui.state
 
+import android.graphics.Color
 import android.os.Bundle
-import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 
 internal fun FloatingLyricsStyle.undoChangesTo(next: FloatingLyricsStyle): Bundle = Bundle().apply {
     if (presetName != next.presetName) putString("presetName", presetName)
     if (textSizeSp != next.textSizeSp) putFloat("textSizeSp", textSizeSp)
-    if (textColor != next.textColor) putInt("textColor", textColor)
+    putColorChanges("textColor", textColor, next.textColor)
     if (wordByWordHighlightColor != next.wordByWordHighlightColor) putInt("wordByWordHighlightColor", wordByWordHighlightColor)
-    if (shadowColor != next.shadowColor) putInt("shadowColor", shadowColor)
+    putColorChanges("shadowColor", shadowColor, next.shadowColor)
     if (shadowRadius != next.shadowRadius) putFloat("shadowRadius", shadowRadius)
     if (backgroundEnabled != next.backgroundEnabled) putBoolean("backgroundEnabled", backgroundEnabled)
     if (backgroundColor != next.backgroundColor) putInt("backgroundColor", backgroundColor)
@@ -33,9 +35,9 @@ internal fun FloatingLyricsStyle.undoChangesTo(next: FloatingLyricsStyle): Bundl
 internal fun FloatingLyricsStyle.restoreFields(snapshot: Bundle): FloatingLyricsStyle = copy(
     presetName = if (snapshot.containsKey("presetName")) snapshot.getString("presetName") ?: presetName else presetName,
     textSizeSp = if (snapshot.containsKey("textSizeSp")) snapshot.getFloat("textSizeSp") else textSizeSp,
-    textColor = if (snapshot.containsKey("textColor")) snapshot.getInt("textColor") else textColor,
+    textColor = snapshot.restoreColor("textColor", textColor),
     wordByWordHighlightColor = if (snapshot.containsKey("wordByWordHighlightColor")) snapshot.getInt("wordByWordHighlightColor") else wordByWordHighlightColor,
-    shadowColor = if (snapshot.containsKey("shadowColor")) snapshot.getInt("shadowColor") else shadowColor,
+    shadowColor = snapshot.restoreColor("shadowColor", shadowColor),
     shadowRadius = if (snapshot.containsKey("shadowRadius")) snapshot.getFloat("shadowRadius") else shadowRadius,
     backgroundEnabled = if (snapshot.containsKey("backgroundEnabled")) snapshot.getBoolean("backgroundEnabled") else backgroundEnabled,
     backgroundColor = if (snapshot.containsKey("backgroundColor")) snapshot.getInt("backgroundColor") else backgroundColor,
@@ -55,3 +57,16 @@ internal fun FloatingLyricsStyle.restoreFields(snapshot: Bundle): FloatingLyrics
         spreadPercent = if (snapshot.containsKey("glowSpreadPercent")) snapshot.getInt("glowSpreadPercent") else glow.spreadPercent
     ).normalized()
 )
+
+// Color and opacity are separate controls even when stored as one ARGB value.
+private fun Bundle.putColorChanges(key: String, previous: Int, next: Int) {
+    val rgb = AirColorUtils.opaqueRgb(previous)
+    if (rgb != AirColorUtils.opaqueRgb(next)) putInt("${key}Rgb", rgb)
+    val alpha = Color.alpha(previous)
+    if (alpha != Color.alpha(next)) putInt("${key}Alpha", alpha)
+}
+
+private fun Bundle.restoreColor(key: String, current: Int): Int {
+    val base = getInt(key, current) // Full ARGB snapshots saved before the controls were split.
+    return AirColorUtils.withAlpha(getInt("${key}Rgb", base), getInt("${key}Alpha", Color.alpha(base)))
+}

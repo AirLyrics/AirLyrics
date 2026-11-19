@@ -15,9 +15,11 @@ import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.FloatingPanelNavigation
 import com.andsi.airlyrics.ui.pages.floating.FloatingColorPanelContent
 import com.andsi.airlyrics.core.color.AirColorUtils
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import android.graphics.Color
 import com.andsi.airlyrics.ui.pages.floating.floatingSectionTitle
 import com.andsi.airlyrics.ui.pages.floating.openPanel
+import com.andsi.airlyrics.ui.pages.floating.openStylePanel
 
 internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(host) {
     list.addView(floatingSectionTitle(getString(R.string.ui_animation)))
@@ -75,66 +77,61 @@ internal fun FloatingPageScope.addAnimationSection(list: LinearLayout) = with(ho
                 iconRes = R.drawable.ic_air_highlight,
                 onClick = { tile ->
                     val navigation = FloatingPanelNavigation()
-                    openPanel(
+                    openStylePanel(
                         tile,
                         getString(R.string.ui_highlight_effects),
-                        "",
-                        reset = stylePanelReset(
-                            isAtDefault = { current, defaults ->
-                                AirColorUtils.opaqueRgb(current.wordByWordHighlightColor) ==
-                                    AirColorUtils.opaqueRgb(defaults.wordByWordHighlightColor) &&
-                                    current.glow == defaults.glow
-                            },
-                            restoreDefaults = { current, defaults ->
-                                current.copy(
-                                    wordByWordHighlightColor = AirColorUtils.withAlpha(
-                                        defaults.wordByWordHighlightColor, Color.alpha(current.wordByWordHighlightColor)
-                                    ),
-                                    glow = defaults.glow
-                                )
-                            }
-                        ),
-                        navigation = navigation
-                    ) {
-                        setPadding(paddingLeft, paddingTop, paddingRight, dp(12))
+                        navigation = navigation,
+                        restoreDefaults = { current, defaults ->
+                            current.copy(
+                                wordByWordHighlightColor = AirColorUtils.withAlpha(
+                                    defaults.wordByWordHighlightColor, Color.alpha(current.wordByWordHighlightColor)
+                                ),
+                                glow = defaults.glow
+                            )
+                        }
+                    ) { edits ->
                         val glowControls = LinearLayout(host).apply {
                             orientation = LinearLayout.VERTICAL
                             visibility = if (style().glow.enabled) View.VISIBLE else View.GONE
-                            addView(sliderRow(
-                                title = getString(R.string.ui_glow_strength_short),
-                                value = style().glow.strengthPercent,
-                                min = 0, max = 200, suffix = "%", step = 10, compact = true,
-                                onChangeFinished = { value ->
-                                    applyFloatingStyle(style().copy(glow = style().glow.copy(strengthPercent = value)))
-                                    previewFloatingGlow(style().glow)
-                                    refreshFloatingSettingTiles()
-                                }
-                            ) { value -> previewFloatingGlow(style().glow.copy(strengthPercent = value)) })
-                            addView(sliderRow(
-                                title = getString(R.string.ui_glow_spread_short),
-                                value = style().glow.spreadPercent,
-                                min = 50, max = 200, suffix = "%", step = 10, compact = true,
-                                onChangeFinished = { value ->
-                                    applyFloatingStyle(style().copy(glow = style().glow.copy(spreadPercent = value)))
-                                    previewFloatingGlow(style().glow)
-                                    refreshFloatingSettingTiles()
-                                }
-                            ) { value -> previewFloatingGlow(style().glow.copy(spreadPercent = value)) })
                         }
+                        val toggle = edits.toggle(
+                            title = getString(R.string.ui_glow),
+                            read = { it.glow.enabled },
+                            write = { enabled -> applyFloatingStyle(style().copy(glow = style().glow.copy(enabled = enabled))) }
+                        ) { enabled, userChange ->
+                            if (userChange) glowControls.beginFloatingPanelChange()
+                            glowControls.visibility = if (enabled) View.VISIBLE else View.GONE
+                        }
+                        fun refreshGlow() {
+                            previewFloatingGlow(style().glow)
+                            refreshFloatingSettingTiles()
+                        }
+                        glowControls.addView(edits.slider(
+                            title = getString(R.string.ui_glow_strength_short),
+                            read = { it.glow.strengthPercent },
+                            min = 0, max = 200, suffix = "%", step = 10, compact = true,
+                            preview = { previewFloatingGlow(it.glow) },
+                            refreshPreview = ::refreshGlow
+                        ) { current, value -> current.copy(glow = current.glow.copy(strengthPercent = value)) })
+                        glowControls.addView(edits.slider(
+                            title = getString(R.string.ui_glow_spread_short),
+                            read = { it.glow.spreadPercent },
+                            min = 50, max = 200, suffix = "%", step = 10, compact = true,
+                            preview = { previewFloatingGlow(it.glow) },
+                            refreshPreview = ::refreshGlow
+                        ) { current, value -> current.copy(glow = current.glow.copy(spreadPercent = value)) })
                         val effects = LinearLayout(host).apply {
                             orientation = LinearLayout.VERTICAL
-                            addView(panelSwitch(host, getString(R.string.ui_glow), style().glow.enabled) { enabled ->
-                                beginFloatingPanelChange()
-                                applyFloatingStyle(style().copy(glow = style().glow.copy(enabled = enabled)))
-                                glowControls.visibility = if (enabled) View.VISIBLE else View.GONE
-                                refreshFloatingPreview()
-                            })
+                            addView(toggle)
                             addView(glowControls)
                         }
                         addView(FloatingColorPanelContent(
                             host = host,
                             navigation = navigation,
-                            currentColor = { style().wordByWordHighlightColor },
+                            edits = edits,
+                            colorLabel = R.string.ui_highlight_color,
+                            readColor = FloatingLyricsStyle::wordByWordHighlightColor,
+                            withColor = { style, color -> style.copy(wordByWordHighlightColor = color) },
                             onColorChanged = { color ->
                                 applyFloatingWordByWordHighlightColor(color)
                                 refreshFloatingPreview()

@@ -87,6 +87,9 @@ object AirUiTokens {
         const val PulseUpMs = 80L
         const val PulseDownMs = 140L
         const val LayoutChangeMs = 170L
+        const val UndoControlMs = 280L
+        const val ColorSampleSlideMs = 712L
+        const val UndoArrowMs = 320L
         const val PageEnterMs = 230L
         const val PageExitMs = 120L
         const val PageEnterDelayMs = 18L

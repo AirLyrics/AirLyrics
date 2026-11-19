@@ -53,44 +53,17 @@ internal fun MainUiHost.sliderRowImpl(
     fun valueLabel(value: Int): String =
         String.format(resources.configuration.locales[0], "%d%s", value, suffix)
     val row = SettingsSliderRow(this, title, valueLabel(safeValue), compact)
-    row.seekBar.apply {
-        this.max = (max - min) / safeStep
-        progress = (safeValue - min) / safeStep
-        var latestValue = safeValue
-        var isTracking = false
-        var changedWhileTracking = false
-        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                val newValue = min + progress * safeStep
-                latestValue = newValue
-                row.updateValue(valueLabel(newValue))
-                if (fromUser) {
-                    key?.let { interactions.write(it) { putInt("preview", newValue) } }
-                    onChanged(newValue)
-                    if (isTracking) {
-                        changedWhileTracking = true
-                    } else {
-                        onChangeFinished?.invoke(newValue)
-                        key?.let(interactions::remove)
-                    }
-                }
-            }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-                isTracking = true
-                changedWhileTracking = false
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-                isTracking = false
-                if (changedWhileTracking) {
-                    onChangeFinished?.invoke(latestValue)
-                    key?.let(interactions::remove)
-                }
-                changedWhileTracking = false
-            }
-        })
-    }
+    row.bindRange(
+        safeValue, min, max, safeStep, ::valueLabel,
+        onPreview = { value ->
+            key?.let { interactions.write(it) { putInt("preview", value) } }
+            onChanged(value)
+        },
+        onCommit = { value ->
+            onChangeFinished?.invoke(value)
+            key?.let(interactions::remove)
+        }
+    )
     return row
 }
 

@@ -333,6 +333,7 @@ Word-timed TTML:
     <string name="ui_range">Range</string>
     <string name="ui_read_failed">Read failed</string>
     <string name="ui_reset">Reset</string>
+    <string name="ui_reset_to_default">Reset to default</string>
     <string name="ui_recent_local_lyrics">Recent local lyrics</string>
     <string name="ui_red">Red</string>
     <string name="ui_refresh_media_status">Refresh</string>
@@ -427,6 +428,9 @@ Word-timed TTML:
     <string name="ui_updated">Updated</string>
     <string name="ui_using_local_lyrics_only">Using local lyrics only</string>
     <string name="ui_undo">Undo</string>
+    <string name="ui_undo_last_change">Undo last change</string>
+    <string name="ui_undo_reset_to_default">Undo reset to default</string>
+    <string name="ui_undo_setting_change">Undo change. Restore %1$s to %2$s.</string>
     <string name="ui_version_project_link_and_changelog">Source code and changelog</string>
     <string name="ui_vertical_padding">Vertical padding</string>
     <string name="ui_view_current_setup">View current setup</string>

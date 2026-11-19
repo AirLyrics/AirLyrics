@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.ui.pages.floating
 
+import android.animation.Keyframe
+import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.graphics.Canvas
@@ -8,7 +10,9 @@ import android.graphics.Paint
 import android.graphics.drawable.Drawable
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.animation.LinearInterpolator
 import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.animation.doOnEnd
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withScale
 import com.andsi.airlyrics.R
@@ -33,6 +37,7 @@ internal class FloatingColorSwatch(
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var selectionAmount = 0f
     private var removalAmount = 0f
+    private var discScale = 1f
     private var stateAnimator: ValueAnimator? = null
     var removalArmed: Boolean = false
         private set
@@ -69,13 +74,17 @@ internal class FloatingColorSwatch(
     }
 
     override fun setSelected(selected: Boolean) {
+        showSelection(selected, animate = true)
+    }
+
+    fun showSelection(selected: Boolean, animate: Boolean, returning: Boolean = false) {
         if (isSelected == selected) return
         super.setSelected(selected)
         if (!selected && removalArmed) {
             removalArmed = false
             updateRemovalAction()
         }
-        animateState()
+        animateState(animate, returning && selected)
     }
 
     fun setRemovalArmed(armed: Boolean) {
@@ -92,36 +101,56 @@ internal class FloatingColorSwatch(
         tooltipText = if (removalArmed) action else null
     }
 
-    private fun animateState() {
+    private fun animateState(animate: Boolean = true, bounce: Boolean = false) {
         stateAnimator?.cancel()
+        stateAnimator = null
         val selectionTarget = if (isSelected) 1f else 0f
         val removalTarget = if (removalArmed) 1f else 0f
-        if (!canAnimateFloatingControl()) {
-            selectionAmount = selectionTarget
-            removalAmount = removalTarget
-            invalidate()
+        if (!animate || !canAnimateFloatingControl()) {
+            settleSelection()
             return
         }
         val fromSelection = selectionAmount
         val fromRemoval = removalAmount
-        stateAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = AirUiTokens.Motion.LayoutChangeMs
-            interpolator = floatingPanelEaseOut
+        val scale = if (bounce) PropertyValuesHolder.ofKeyframe(
+            "scale", Keyframe.ofFloat(0f, .90f), Keyframe.ofFloat(.60f, 1.10f),
+            Keyframe.ofFloat(.86f, .99f), Keyframe.ofFloat(1f, 1f)
+        ) else PropertyValuesHolder.ofFloat("scale", discScale, 1f)
+        stateAnimator = ValueAnimator.ofPropertyValuesHolder(PropertyValuesHolder.ofFloat("progress", 0f, 1f), scale).apply {
+            duration = if (bounce) AirUiTokens.Motion.UndoArrowMs else AirUiTokens.Motion.LayoutChangeMs
+            interpolator = LinearInterpolator()
             addUpdateListener {
-                val fraction = it.animatedValue as Float
+                val fraction = floatingPanelEaseOut.getInterpolation(it.animatedFraction)
                 selectionAmount = fromSelection + (selectionTarget - fromSelection) * fraction
                 removalAmount = fromRemoval + (removalTarget - fromRemoval) * fraction
+                discScale = it.getAnimatedValue("scale") as Float
                 invalidate()
             }
-            start()
-        }
+            doOnEnd {
+                if (stateAnimator === it) {
+                    stateAnimator = null
+                    settleSelection()
+                }
+            }
+        }.also { it.start() }
+    }
+
+    fun finishAnimation() {
+        val running = stateAnimator ?: return
+        stateAnimator = null
+        running.cancel()
+        settleSelection()
+    }
+
+    private fun settleSelection() {
+        selectionAmount = if (isSelected) 1f else 0f
+        removalAmount = if (removalArmed) 1f else 0f
+        discScale = 1f
+        invalidate()
     }
 
     override fun onDetachedFromWindow() {
-        stateAnimator?.cancel()
-        stateAnimator = null
-        selectionAmount = if (isSelected) 1f else 0f
-        removalAmount = if (removalArmed) 1f else 0f
+        finishAnimation()
         super.onDetachedFromWindow()
     }
 
@@ -135,13 +164,15 @@ internal class FloatingColorSwatch(
         val cx = width / 2f
         val cy = height / 2f
         val radius = host.dp(18) - host.dp(AirUiTokens.Stroke.Selected) * selectionAmount
-        paint.style = Paint.Style.FILL
-        paint.color = color
-        canvas.drawCircle(cx, cy, radius, paint)
-        paint.style = Paint.Style.STROKE
-        paint.strokeWidth = host.dp(AirUiTokens.Stroke.Hairline).toFloat()
-        paint.color = ColorUtils.blendARGB(host.colorStroke, host.colorTextStrong, 0.5f)
-        canvas.drawCircle(cx, cy, radius, paint)
+        canvas.withScale(discScale, discScale, cx, cy) {
+            paint.style = Paint.Style.FILL
+            paint.color = color
+            drawCircle(cx, cy, radius, paint)
+            paint.style = Paint.Style.STROKE
+            paint.strokeWidth = host.dp(AirUiTokens.Stroke.Hairline).toFloat()
+            paint.color = ColorUtils.blendARGB(host.colorStroke, host.colorTextStrong, 0.5f)
+            drawCircle(cx, cy, radius, paint)
+        }
 
         val ringAmount = if (isFocused) 1f else selectionAmount
         if (ringAmount > 0f) {
@@ -160,7 +191,7 @@ internal class FloatingColorSwatch(
             canvas.drawCircle(cx, cy, host.dp(13).toFloat(), paint)
         }
         drawMark(canvas, check, cx, cy, selectionAmount * (1f - removalAmount),
-            0.9f + 0.1f * selectionAmount)
+            discScale * (0.9f + 0.1f * selectionAmount))
         drawMark(canvas, cross, cx, cy, deleteAlpha, 0.9f + 0.1f * removalAmount)
     }
 

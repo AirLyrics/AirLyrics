@@ -1,7 +1,7 @@
 package com.andsi.airlyrics.ui.pages.floating
 
 import android.animation.ValueAnimator
-import android.os.Bundle
+import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import com.andsi.airlyrics.ui.state.findInteractionScroll
 import android.view.View
@@ -9,12 +9,6 @@ import android.view.ViewGroup
 import com.andsi.airlyrics.ui.components.floatingPanelEaseOut
 import com.andsi.airlyrics.ui.components.endFloatingPanelChanges
 import android.widget.LinearLayout
-
-internal data class FloatingPanelReset(
-    val isAtDefault: () -> Boolean,
-    val reset: () -> Bundle,
-    val undo: (Bundle) -> Unit
-)
 
 /** Optional nested page navigation; ordinary settings keep their existing header and back path. */
 internal class FloatingPanelNavigation {
@@ -24,7 +18,6 @@ internal class FloatingPanelNavigation {
     private var headerAction: View? = null
     private var hideReset = false
     private var updateAction: ((View?, Boolean) -> Unit)? = null
-    private var clearPendingUndo: (() -> Unit)? = null
     var onClose: (() -> Unit)? = null
 
     fun showPage(title: String? = null, onBack: (() -> Unit)? = null) {
@@ -41,17 +34,13 @@ internal class FloatingPanelNavigation {
 
     fun bind(
         update: (String?, (() -> Unit)?) -> Unit,
-        updateAction: (View?, Boolean) -> Unit = { _, _ -> },
-        clearUndo: () -> Unit = {}
+        updateAction: (View?, Boolean) -> Unit
     ) {
         updateHeader = update
         this.updateAction = updateAction
-        clearPendingUndo = clearUndo
         update(title, back)
         updateAction(headerAction, hideReset)
     }
-
-    fun clearUndo() { clearPendingUndo?.invoke() }
 
     fun close() { onClose?.invoke() }
 
@@ -66,12 +55,30 @@ internal fun FloatingPageScope.openPanel(
     anchor: View,
     title: String,
     subtitle: String,
-    reset: FloatingPanelReset? = null,
-    navigation: FloatingPanelNavigation? = null,
     content: LinearLayout.() -> Unit
+): (() -> Unit)? = openFloatingPanel(anchor, title, subtitle, content = { content() })
+
+internal fun FloatingPageScope.openStylePanel(
+    anchor: View,
+    title: String,
+    navigation: FloatingPanelNavigation? = null,
+    restoreDefaults: (FloatingLyricsStyle, FloatingLyricsStyle) -> FloatingLyricsStyle,
+    content: LinearLayout.(FloatingStylePanelEdits) -> Unit
+): (() -> Unit)? = openFloatingPanel(anchor, title, "", navigation, restoreDefaults) { edits ->
+    content(requireNotNull(edits))
+}
+
+private fun FloatingPageScope.openFloatingPanel(
+    anchor: View,
+    title: String,
+    subtitle: String,
+    navigation: FloatingPanelNavigation? = null,
+    restoreDefaults: ((FloatingLyricsStyle, FloatingLyricsStyle) -> FloatingLyricsStyle)? = null,
+    content: LinearLayout.(FloatingStylePanelEdits?) -> Unit
 ): (() -> Unit)? {
     val overlay = focusOverlay ?: return null
     val id = openingPanelId ?: return null
+    activeStylePanel?.finishMotion()
     activePanelNavigation?.close()
     overlay.animate().cancel()
     overlay.getChildAt(0)?.animate()?.cancel()
@@ -82,6 +89,7 @@ internal fun FloatingPageScope.openPanel(
         previousTile.alpha = 1f
     }
     host.interactions.panel = id
+    val edits = restoreDefaults?.let { FloatingStylePanelEdits(this, it) }
     selectedTileView = anchor
 
     val animatePanel = !restoringPanel && ValueAnimator.areAnimatorsEnabled() &&
@@ -94,49 +102,34 @@ internal fun FloatingPageScope.openPanel(
         .setInterpolator(floatingPanelEaseOut)
         .start()
 
-    lateinit var bubbleHandle: com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
-    var pendingUndo = host.interactions.read("panel")?.getBundle("undo")
-
-    fun rebuildContentIfOpen() {
-        if (activeBubble === bubbleHandle.view) {
-            bubbleHandle.rebuildContent()
-        }
-    }
-
-    fun performResetOrUndo() {
-        val resetAction = reset ?: return
-        pendingUndo?.let { undo ->
-            pendingUndo = null
-            host.interactions.write("panel") { remove("undo") }
-            host.interactions.removePrefix("panel.control.")
-            resetAction.undo(undo)
-            rebuildContentIfOpen()
-            updateActivePanelResetState()
-            return
-        }
-        if (resetAction.isAtDefault()) return
-
-        pendingUndo = resetAction.reset()
-        host.interactions.write("panel") { putBundle("undo", pendingUndo) }
-        host.interactions.removePrefix("panel.control.")
-        rebuildContentIfOpen()
-        updateActivePanelResetState()
-    }
-
-    val onReset = if (reset == null) null else ::performResetOrUndo
-    bubbleHandle = host.floatingFocusBubble(title, subtitle, onReset, ::closePanel) {
+    val bubbleHandle = host.floatingFocusBubble(
+        title, subtitle,
+        onReset = edits?.let { it::reset },
+        onClose = ::closePanel,
+        onUndo = edits?.let { it::undo },
+        onInteraction = edits?.let { it::finishMotion }
+    ) {
         host.beginPanelControls()
-        content()
+        edits?.beginContent()
+        content(edits)
     }
     val bubble = bubbleHandle.view
-    activePanelNavigation = navigation
-    navigation?.bind(bubbleHandle.updateNavigation, bubbleHandle.updateHeaderAction) {
-        pendingUndo = null
-        if (activeBubble === bubbleHandle.view && host.interactions.panel == id) {
-            host.interactions.write("panel") { remove("undo") }
-            updateActivePanelResetState()
+
+    fun rebuildContentIfOpen() {
+        if (activeBubble === bubble) {
+            bubbleHandle.rebuildContent()
+            edits?.updateActions()
         }
     }
+
+    activePanelNavigation = navigation
+    navigation?.bind(
+        update = { pageTitle, onBack ->
+            edits?.finishMotion()
+            bubbleHandle.updateNavigation(pageTitle, onBack)
+        },
+        updateAction = bubbleHandle.updateHeaderAction
+    )
 
     overlay.removeAllViews()
     overlay.visibility = View.VISIBLE
@@ -150,16 +143,8 @@ internal fun FloatingPageScope.openPanel(
     overlay.requestFocus()
     setBackgroundBlockedByPanel(true)
     activeBubble = bubble
-    activePanelResetStateUpdater = reset?.let { resetAction ->
-        {
-            val undoAvailable = pendingUndo != null
-            bubbleHandle.updateResetAction(
-                undoAvailable || !resetAction.isAtDefault(),
-                undoAvailable
-            )
-        }
-    }
-    updateActivePanelResetState()
+    activeStylePanel = edits
+    edits?.bindBubble(bubbleHandle)
     bubble.findInteractionScroll()?.let { host.bindInteractionScroll(it, "panel.scroll") }
 
     bubble.setOnClickListener { /* absorb clicks inside the restored panel, too */ }
@@ -228,6 +213,8 @@ internal fun FloatingPageScope.installBackHandler() {
 
 private fun FloatingPageScope.closePanel() {
     // Cancel nested work before the closing animation can deliver a late completion.
+    activeStylePanel?.finishMotion()
+    activeStylePanel = null
     activePanelNavigation?.close()
     host.interactions.panel = null
     val overlay = focusOverlay ?: return
@@ -279,7 +266,6 @@ private fun FloatingPageScope.closePanel() {
 
 private fun FloatingPageScope.clearContentFocus() {
     setBackgroundBlockedByPanel(false)
-    activePanelResetStateUpdater = null
     activePanelNavigation = null
     activeDisplayScopePanelRefresh = null
     selectedTileView?.let { tile ->

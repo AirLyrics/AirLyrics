@@ -62,7 +62,7 @@ class MainActivityInteractionRecreationTest {
         floatingPage()
         descendants(activity.window.decorView).single { it.getTag(R.id.interaction_anchor) == "panel:TEXT_SIZE" }.performClick()
         settle()
-        action(R.string.ui_reset).performClick()
+        action(R.string.ui_reset_to_default).performClick()
         assertEquals(18f, FloatingLyricsStyleStore.getStyle(activity).textSizeSp)
         controller.recreate(); settle()
         assertEquals(FloatingPanelId.TEXT_SIZE, activity.graph.viewModel.interactions.panel)
@@ -363,7 +363,13 @@ class MainActivityInteractionRecreationTest {
         activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
         settle()
     }
-    private fun action(res: Int): View = descendants(activity.window.decorView).first { it.contentDescription == activity.getString(res) }
+    private fun action(res: Int): View = descendants(activity.window.decorView).first {
+        when (res) {
+            R.string.ui_reset_to_default -> it.getTag(R.id.interaction_anchor) == "floating.panel.reset"
+            R.string.ui_undo -> it.getTag(R.id.interaction_anchor) == "floating.panel.undo"
+            else -> it.contentDescription == activity.getString(res)
+        }
+    }
     private fun button(dialog: Dialog, res: Int): View = descendants(dialog.window!!.decorView).filterIsInstance<TextView>().first { it.text.toString().lineSequence().first() == activity.getString(res) }
     private fun latestDialogOrNull(): Dialog? = ShadowDialog.getLatestDialog()?.takeIf { it.isShowing }
     private fun latestDialog(): Dialog = requireNotNull(latestDialogOrNull())

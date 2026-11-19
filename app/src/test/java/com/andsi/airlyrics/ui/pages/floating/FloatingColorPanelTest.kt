@@ -5,10 +5,13 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Rect
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
@@ -106,9 +109,12 @@ class FloatingColorPanelTest {
 
     private fun panel() = requireNotNull(scope.activeBubble)
     private fun action(label: Int) = visible(panel()).single {
-        it.isClickable && if (label == R.string.ui_custom_color) {
-            it.getTag(R.id.interaction_anchor) == "floating.color.custom"
-        } else it.contentDescription == host.getString(label)
+        it.isClickable && when (label) {
+            R.string.ui_custom_color -> it.getTag(R.id.interaction_anchor) == "floating.color.custom"
+            R.string.ui_reset_to_default -> it.getTag(R.id.interaction_anchor) == "floating.panel.reset"
+            R.string.ui_undo -> it.getTag(R.id.interaction_anchor) == "floating.panel.undo"
+            else -> it.contentDescription == host.getString(label)
+        }
     }
     private fun saveCurrentColor() {
         val button = action(R.string.ui_save_color_swatch)
@@ -220,6 +226,14 @@ class FloatingColorPanelTest {
             it.contentDescription == host.getString(R.string.ui_opacity)
         }
         drag(opacity, 0.7f)
+        val alphaBeforeUndo = host.floatingStyle().backgroundAlpha
+        backgroundSwitch.performClick()
+        assertTrue(host.floatingStyle().backgroundEnabled)
+        action(R.string.ui_undo).performClick()
+        assertFalse(backgroundSwitch.isChecked)
+        assertFalse(host.floatingStyle().backgroundEnabled)
+        assertEquals(alphaBeforeUndo, host.floatingStyle().backgroundAlpha)
+        assertFalse(action(R.string.ui_undo).isEnabled)
         val blur = visible(panel()).filterIsInstance<SeekBar>().single {
             it.contentDescription == host.getString(R.string.ui_blur_amount)
         }
@@ -247,7 +261,7 @@ class FloatingColorPanelTest {
         assertFalse(host.floatingStyle().backgroundEnabled)
         capture("background-palette")
         val adjusted = host.floatingStyle()
-        action(R.string.ui_reset).performClick()
+        action(R.string.ui_reset_to_default).performClick()
         layout()
         val defaults = host.floatingStyleDefaults(adjusted.presetName)
         assertEquals(defaults.backgroundColor, host.floatingStyle().backgroundColor)
@@ -311,7 +325,16 @@ class FloatingColorPanelTest {
                     assertTrue("Text must stay inside the panel: ${text.text}",
                         bounds(text).left >= 0 && bounds(text).right <= bubble.width)
                 }
-                val name = "background-layout-final-${locale}-${screenWidth}-${fontScale}"
+                val name = "background-undo-capsule-${locale}-${screenWidth}-${fontScale}"
+                val undo = action(R.string.ui_undo)
+                val close = action(R.string.ui_close)
+                val closeBounds = bounds(close)
+                assertFalse(undo.isEnabled)
+                toggle.performClick()
+                layout()
+                assertTrue(undo.isEnabled)
+                assertEquals(closeBounds, bounds(close))
+                assertEquals(closeBounds.left, bounds(undo).right)
                 capture("$name-top")
                 scroll.scrollTo(0, scroll.getChildAt(0).height)
                 layout()
@@ -325,6 +348,84 @@ class FloatingColorPanelTest {
                 layout()
                 assertEquals(3, visible(bubble).filterIsInstance<SeekBar>().size)
             }
+        }
+    }
+
+    @Test fun fontWeightAndTextColorUseOneUndoCapsuleAndACompactReset() {
+        for ((locale, viewport) in listOf("en-rUS" to 360, "zh-rCN" to 320)) {
+            controller?.close()
+            controller = null
+            clearPreferences()
+            ThemeSettingsStore.setDark(RuntimeEnvironment.getApplication(), true)
+            open(FloatingPanelId.FONT_WEIGHT, width = viewport, initialize = false, locale = locale)
+            fun bounds(view: View) = Rect(0, 0, view.width, view.height).also {
+                panel().offsetDescendantRectToMyCoords(view, it)
+            }
+            fun capsule(): View {
+                val undo = action(R.string.ui_undo)
+                return visible(undo).single { it.background is RippleDrawable }.also {
+                    assertEquals(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS, it.importantForAccessibility)
+                    assertEquals(bounds(undo).right, bounds(it).right)
+                }
+            }
+            fun assertInlineTarget(capsule: View, target: View) {
+                val children = visible(capsule)
+                val arrow = children.filterIsInstance<ImageView>().single()
+                val label = children.filterIsInstance<TextView>().single { it.text.toString() == host.getString(R.string.ui_undo) }
+                val labelBounds = bounds(label)
+                assertEquals(host.dp(6), labelBounds.left - bounds(arrow).right)
+                assertEquals(host.dp(6), bounds(target).left - labelBounds.right)
+                assertTrue(bounds(capsule).contains(bounds(target)))
+                assertFalse(target.isClickable)
+                assertFalse(target.isFocusable)
+            }
+
+            val reset = action(R.string.ui_reset_to_default) as TextView
+            val slider = visible(panel()).filterIsInstance<SeekBar>().single()
+            assertFalse(reset.isEnabled)
+            assertTrue(Color.alpha(reset.currentTextColor) < 255)
+            assertEquals(host.dp(13), reset.compoundDrawablesRelative[0]!!.bounds.width())
+            assertEquals(host.dp(6), reset.compoundDrawablePadding)
+            assertEquals(12f, reset.textSize, .1f)
+            assertTrue(reset.height >= host.dp(48))
+            assertEquals(bounds(slider).right, bounds(reset).right)
+            assertTrue(bounds(reset).top - bounds(slider).bottom in 0..host.dp(6))
+
+            drag(slider, .125f)
+            layout()
+            assertEquals(200, host.floatingStyle().fontWeight)
+            assertTrue(reset.isEnabled)
+            val weightCapsule = capsule()
+            val value = visible(weightCapsule).filterIsInstance<TextView>().single { it.text.toString() == "4" }
+            assertInlineTarget(weightCapsule, value)
+            assertEquals(11f, value.textSize, .1f)
+            capture("undo-capsule-font-weight-$locale")
+            action(R.string.ui_undo).performClick()
+            layout()
+            assertEquals(400, host.floatingStyle().fontWeight)
+            assertFalse(reset.isEnabled)
+            assertEquals(1, visible(capsule()).filterIsInstance<TextView>().size)
+
+            val cyan = Color.rgb(38, 198, 218)
+            host.applyFloatingTextColor(cyan, refreshPage = false)
+            scope.panelOpeners.getValue(FloatingPanelId.TEXT_COLOR).invoke()
+            layout()
+            action(R.string.ui_pink).performClick()
+            layout()
+            val colorCapsule = capsule()
+            val swatch = visible(colorCapsule).single {
+                (it.background as? GradientDrawable)?.color?.defaultColor == cyan
+            }
+            assertEquals(host.dp(12), swatch.width)
+            assertEquals(host.dp(12), swatch.height)
+            assertInlineTarget(colorCapsule, swatch)
+            capture("undo-capsule-text-color-$locale")
+            action(R.string.ui_undo).performClick()
+            assertEquals(cyan, host.floatingStyle().textColor)
+            action(R.string.ui_reset_to_default).performClick()
+            val defaults = host.floatingStyleDefaults(host.floatingStyle().presetName)
+            assertEquals(defaults.textColor, host.floatingStyle().textColor)
+            assertFalse(action(R.string.ui_reset_to_default).isEnabled)
         }
     }
 
@@ -377,7 +478,7 @@ class FloatingColorPanelTest {
         val adjusted = host.floatingStyle()
         assertEquals(Color.argb(adjustedAlpha, 18, 52, 86), adjusted.shadowColor)
         assertEquals(adjustedRadius, adjusted.shadowRadius)
-        action(R.string.ui_reset).performClick()
+        action(R.string.ui_reset_to_default).performClick()
         layout()
         assertEquals(3, visible(panel()).filterIsInstance<SeekBar>().size)
         val defaults = host.floatingStyleDefaults(adjusted.presetName)
@@ -389,9 +490,51 @@ class FloatingColorPanelTest {
         action(R.string.ui_back).performClick()
         layout()
         assertEquals(FloatingPanelId.SHADOW, host.interactions.panel)
+        action(R.string.ui_blue).performClick()
+        action(R.string.ui_blue).performClick()
+        action(R.string.ui_undo).performClick()
+        layout()
+        assertEquals(adjusted, host.floatingStyle())
+        val custom = action(R.string.ui_custom_color)
+        assertTrue(custom.contentDescription.toString().endsWith("#123456"))
+        val sample = all(custom).firstNotNullOf { it.background as? android.graphics.drawable.GradientDrawable }
+        assertEquals(Color.rgb(18, 52, 86), sample.color?.defaultColor)
+        assertEquals(com.andsi.airlyrics.core.color.AirColorUtils.multiplyAlpha(
+            adjusted.shadowColor, Color.alpha(adjusted.textColor)
+        ), scope.previewHandle!!.lyricTextView.shadowColor)
+        assertFalse(action(R.string.ui_undo).isEnabled)
         assertEquals(initial.textColor, host.floatingStyle().textColor)
         assertEquals(initial.backgroundColor, host.floatingStyle().backgroundColor)
         assertEquals(initial.wordByWordHighlightColor, host.floatingStyle().wordByWordHighlightColor)
+    }
+
+    @Test fun layoutUndoRestoresOnlyTheLatestEditOrAllChangesFromOneReset() {
+        open(FloatingPanelId.WINDOW_LAYOUT)
+        fun slider(label: Int) = visible(panel()).filterIsInstance<SeekBar>().single {
+            it.contentDescription == host.getString(label)
+        }
+        val initial = host.floatingStyle()
+        drag(slider(R.string.ui_max_width), .25f)
+        val widthChanged = host.floatingStyle()
+        assertNotEquals(initial.maxWidthPercent, widthChanged.maxWidthPercent)
+        drag(slider(R.string.ui_horizontal_padding), .8f)
+        assertNotEquals(initial.paddingHorizontalDp, host.floatingStyle().paddingHorizontalDp)
+        val undo = action(R.string.ui_undo)
+        undo.performClick()
+        assertEquals(widthChanged, host.floatingStyle())
+        assertFalse(undo.isEnabled)
+
+        drag(slider(R.string.ui_horizontal_padding), .8f)
+        drag(slider(R.string.ui_vertical_padding), .85f)
+        val edited = host.floatingStyle()
+        val reset = action(R.string.ui_reset_to_default)
+        reset.performClick()
+        assertEquals(initial, host.floatingStyle())
+        assertFalse(reset.isEnabled)
+        reset.performClick()
+        undo.performClick()
+        assertEquals(edited, host.floatingStyle())
+        assertFalse(undo.isEnabled)
     }
 
     @Test fun textPresetsStayInTwoRowsAndRgbKeepsBothAlphaAndHighlightColor() {
@@ -438,7 +581,7 @@ class FloatingColorPanelTest {
         layout()
         drag(rgb("G"), 0.8f)
         val adjusted = host.floatingStyle()
-        action(R.string.ui_reset).performClick()
+        action(R.string.ui_reset_to_default).performClick()
         layout()
         val reset = host.floatingStyle()
         val defaults = host.floatingStyleDefaults(reset.presetName)
@@ -567,7 +710,7 @@ class FloatingColorPanelTest {
         glow().performClick()
         layout()
         capture("highlight-favorites")
-        action(R.string.ui_reset).performClick()
+        action(R.string.ui_reset_to_default).performClick()
         layout()
         assertEquals(listOf(favorite), FloatingColorSwatchStore.colors(host))
         assertEquals(blue, host.floatingStyle().textColor)
@@ -599,7 +742,7 @@ class FloatingColorPanelTest {
         assertTrue(bounds.bottom <= scroll.bottom)
         drag(slider, 1f)
         assertEquals(200, host.floatingStyle().glow.spreadPercent)
-        capture("landscape-many-favorites")
+        capture("landscape-undo-many-favorites")
 
         action(R.string.ui_custom_color).performClick()
         layout()

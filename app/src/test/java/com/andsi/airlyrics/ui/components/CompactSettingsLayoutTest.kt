@@ -107,24 +107,38 @@ class CompactSettingsLayoutTest {
     }
 
     @Test fun headerActionsKeepTouchTargetsAndPositionAcrossTitleAndUndoChanges() {
+        RuntimeEnvironment.setQualifiers("es-w320dp-h640dp-mdpi")
         val host = host()
         for (scale in listOf(1f, 1.3f, 2f)) {
             RuntimeEnvironment.setFontScale(scale)
             for (width in listOf(240, 320, 360)) {
-                val short = SettingsPanelHeader(host, "Color", "", {}, {})
-                val long = SettingsPanelHeader(host, "Opacidad de la fuente de los subtítulos", "", {}, {})
-                layout(short, host.dp(width))
-                layout(long, host.dp(width))
-                for (index in 1..2) {
-                    assertEquals(short.getChildAt(index).left, long.getChildAt(index).left)
-                    assertEquals(0, long.getChildAt(index).top)
-                    assertEquals(host.dp(48), long.getChildAt(index).width)
+                val header = SettingsPanelHeader(host, "Opacidad de la fuente de los subtítulos", "", {}, {})
+                layout(header, host.dp(width))
+                val undo = descendants(header).filterIsInstance<SettingsPanelUndoButton>().single()
+                val slot = undo.parent as View
+                val close = header.getChildAt(2)
+                val stableBounds = listOf(header.getChildAt(0), slot, close).associateWith {
+                    Rect(it.left, it.top, it.right, it.bottom)
                 }
-                val left = long.getChildAt(1).left
-                long.updateResetAction(enabled = true, isUndo = true)
-                layout(long, host.dp(width))
-                assertEquals(left, long.getChildAt(1).left)
-                assertEquals(host.getString(R.string.ui_undo), long.getChildAt(1).contentDescription)
+                assertFalse(undo.isEnabled)
+                assertTrue(undo.width >= host.dp(48))
+                assertEquals(host.dp(48), close.width)
+                val height = header.height
+                val description = "Restaurar la tipografía personalizada para los subtítulos"
+                header.updateUndoAction(SettingsUndoAction(description,
+                    SettingsUndoTarget("Tipografía", "Una tipografía personalizada para los subtítulos")))
+                layout(header, host.dp(width))
+                assertTrue(undo.isEnabled)
+                assertEquals(description, undo.contentDescription)
+                assertEquals(close.left, slot.left + undo.right)
+                assertEquals(height, header.height)
+                val longTarget = descendants(undo).filterIsInstance<TextView>()
+                    .single { it.text.toString() == "Una tipografía personalizada para los subtítulos" }
+                assertEquals(View.GONE, longTarget.visibility)
+                stableBounds.forEach { (view, rect) ->
+                    assertEquals(rect, Rect(view.left, view.top, view.right, view.bottom))
+                    assertTrue(rect.left >= 0 && rect.right <= header.width)
+                }
             }
         }
     }
