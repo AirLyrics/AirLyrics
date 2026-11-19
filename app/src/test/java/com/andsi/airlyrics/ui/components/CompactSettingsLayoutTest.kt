@@ -14,10 +14,14 @@ import android.graphics.Color
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.MainActivity
+import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.ui.layout.WindowLayoutSpec
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.MainUiHost
 import org.junit.After
@@ -244,7 +248,7 @@ class CompactSettingsLayoutTest {
         layoutPage(page, 320, 470)
         val panel = requireNotNull(scope.activeBubble)
         val header = descendants(panel).filterIsInstance<SettingsPanelHeader>().single()
-        val scroll = descendants(panel).filterIsInstance<android.widget.ScrollView>().single()
+        val scroll = descendants(panel).filterIsInstance<ScrollView>().single()
         assertTrue(scroll.height > 0)
         assertTrue(scroll.getChildAt(0).height > scroll.height)
         val top = header.top
@@ -323,6 +327,107 @@ class CompactSettingsLayoutTest {
             app.getSharedPreferences("app_theme", Context.MODE_PRIVATE).edit().clear().commit()
         }
     }
+
+    @Test fun floatingPreviewOverlaysSettingsAndFoldingKeepsScrollPosition() {
+        for ((locale, size) in listOf("en-rUS" to (390 to 720), "zh-rCN" to (320 to 420))) {
+            val (width, height) = size
+            RuntimeEnvironment.setQualifiers("$locale-w${width}dp-h${height}dp-mdpi")
+            val app = RuntimeEnvironment.getApplication()
+            ThemeSettingsStore.setDark(app, locale == "en-rUS")
+            val host = host()
+            host.windowLayout = WindowLayoutSpec(width.toFloat(), height.toFloat(), 1f)
+            try {
+                host.setFloatingPreviewExpanded(true)
+                val scope = FloatingPageScope(host)
+                val page = scope.createView() as ViewGroup
+                layoutPage(page, width, height)
+                val preview = requireNotNull(scope.previewHandle)
+                if (host.windowLayout.compact) {
+                    descendants(preview.cardView).single {
+                        it.contentDescription == host.getString(R.string.ui_expand_preview)
+                    }.performClick()
+                    layoutPage(page, width, height)
+                }
+                val settings = floatingSettingsScroll(page)
+                fun boundsOf(view: View) = Rect().apply {
+                    view.getDrawingRect(this)
+                    page.offsetDescendantRectToMyCoords(view, this)
+                }
+
+                val initialBounds = boundsOf(preview.cardView)
+                val expandedInset = settings.paddingTop
+                assertEquals(0, boundsOf(settings).top)
+                assertTrue(initialBounds.top >= 0 && initialBounds.bottom <= expandedInset)
+                settings.scrollTo(0, host.dp(400))
+                val scrollY = settings.scrollY
+                assertTrue(scrollY > 0)
+                assertEquals(locale, initialBounds, boundsOf(preview.cardView))
+                val lyric = preview.lyricTextView
+                assertTrue(lyric.text.contains(host.getString(R.string.ui_this_is_a_lyric_preview_translation)))
+                assertTrue(lyric.layout.height + lyric.compoundPaddingTop + lyric.compoundPaddingBottom <= lyric.height)
+
+                val toggle = descendants(preview.cardView).single {
+                    it.contentDescription == host.getString(R.string.ui_collapse_preview)
+                }
+                val toggleBounds = boundsOf(toggle)
+                toggle.performClick()
+                layoutPage(page, width, height)
+                assertEquals(View.GONE, preview.bodyView.visibility)
+                assertEquals(0, settings.paddingTop)
+                assertEquals(0, settings.getChildAt(0).top)
+                assertEquals(scrollY, settings.scrollY)
+                assertEquals(toggleBounds, boundsOf(toggle))
+                assertEquals(host.dp(48), toggle.width)
+                assertEquals(host.getString(R.string.ui_expand_preview), toggle.contentDescription)
+
+                toggle.performClick()
+                layoutPage(page, width, height)
+                assertEquals(expandedInset, settings.paddingTop)
+                assertEquals(scrollY, settings.scrollY)
+            } finally {
+                controller?.close()
+                controller = null
+                app.getSharedPreferences("app_theme", Context.MODE_PRIVATE).edit().clear().commit()
+            }
+        }
+    }
+
+    @Test fun tallFloatingPreviewLeavesRoomForSettingsAndItsToggle() {
+        RuntimeEnvironment.setQualifiers("zh-rCN-w320dp-h320dp-mdpi")
+        RuntimeEnvironment.setFontScale(2f)
+        val host = host()
+        host.windowLayout = WindowLayoutSpec(320f, 320f, 2f)
+        host.setLyricsLineDisplayMode(LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT)
+        FloatingLyricsStyleStore.setTextSize(host, 56f)
+        val scope = FloatingPageScope(host)
+        val page = scope.createView() as ViewGroup
+        layoutPage(page, 320, 320)
+        val preview = requireNotNull(scope.previewHandle)
+        val toggle = descendants(preview.cardView).single {
+            it.contentDescription == host.getString(R.string.ui_expand_preview)
+        }
+
+        toggle.performClick()
+        layoutPage(page, 320, 320)
+        val settings = floatingSettingsScroll(page)
+        val previewScroll = preview.bodyView as ScrollView
+        assertTrue(previewScroll.canScrollVertically(1))
+        assertEquals(host.dp(48), toggle.height)
+        assertTrue(toggle.bottom <= preview.cardView.height)
+        assertTrue(settings.height - settings.paddingTop >= host.dp(120))
+
+        previewScroll.scrollTo(0, preview.lyricTextView.height)
+        assertTrue(previewScroll.scrollY > 0)
+        assertEquals(0, settings.scrollY)
+        toggle.performClick()
+        layoutPage(page, 320, 320)
+        assertEquals(0, settings.paddingTop)
+    }
+
+    private fun floatingSettingsScroll(page: View): ScrollView =
+        descendants(page).filterIsInstance<ScrollView>().single { scroll ->
+            descendants(scroll).any { it.getTag(R.id.interaction_anchor) == "floating.settings" }
+        }
 
     private fun layoutPage(view: View, width: Int, height: Int) {
         // Detached renders need an explicit direction to resolve relative icon drawables.

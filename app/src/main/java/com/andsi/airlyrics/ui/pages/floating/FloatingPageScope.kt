@@ -26,6 +26,7 @@ import com.andsi.airlyrics.i18n.localizedLyricsSwitchAnimationTitle
 import com.andsi.airlyrics.i18n.localizedOffsetDescription
 import com.andsi.airlyrics.i18n.localizedScriptPreferenceTitle
 import com.andsi.airlyrics.ui.components.pageContainer
+import com.andsi.airlyrics.ui.layout.ResponsivePage
 import com.andsi.airlyrics.ui.model.FloatingSettingTile
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.pages.floating.sections.addAnimationSection
@@ -41,7 +42,7 @@ internal class FloatingPageScope(
     internal val host: MainUiHost
 ) {
     private val rootFrame = FrameLayout(host)
-    private var backgroundPage: ViewGroup? = null
+    private var backgroundPage: ResponsivePage? = null
     private var backgroundInteractionState: Pair<Int, Int>? = null
     private val root = LinearLayout(host).apply {
         orientation = LinearLayout.VERTICAL
@@ -88,9 +89,11 @@ internal class FloatingPageScope(
             isWordByWordLyricsEnabled = ::wordByWordLyricsEnabled,
             plainPreviewText = { previewLyricsText(style()) },
             wordByWordPreviewText = { wordByWordPreviewText(style()) },
-            onVisibilityChanged = ::syncPreviewAnimations
+            onVisibilityChanged = ::syncPreviewAnimations,
+            onExpansionFrame = { backgroundPage?.renderHeaderExpansion() }
         )
         previewHandle = createdPreviewHandle
+        val isPreviewVisible = createdPreviewHandle::isPreviewVisible
         previewClassicLoop = FloatingPreviewClassicLoop(
             view = createdPreviewHandle.lyricTextView,
             sampleLine = {
@@ -108,7 +111,8 @@ internal class FloatingPageScope(
                 )
             },
             progressForLine = host::classicPreviewProgressForLine,
-            onPositionChanged = { position -> host.updateFloatingPreviewPlayback(createdPreviewHandle.lyricTextView, position) }
+            onPositionChanged = { position -> host.updateFloatingPreviewPlayback(createdPreviewHandle.lyricTextView, position) },
+            isVisible = isPreviewVisible
         )
         previewSwitchLoop = FloatingPreviewSwitchLoop(
             view = createdPreviewHandle.lyricTextView,
@@ -117,7 +121,8 @@ internal class FloatingPageScope(
                     switchAnimationMode() != LyricsSwitchAnimationMode.SPICY &&
                     !hasAnimatedPreview()
             },
-            play = ::playPreviewSwitchAnimation
+            play = ::playPreviewSwitchAnimation,
+            isVisible = isPreviewVisible
         )
         createdPreviewHandle.cardView.setTag(R.id.interaction_anchor, "floating.preview")
         root.addView(createdPreviewHandle.cardView)
@@ -132,7 +137,17 @@ internal class FloatingPageScope(
 
         list.setTag(R.id.interaction_anchor, "floating.settings")
         root.addView(list)
-        val page = com.andsi.airlyrics.ui.layout.ResponsivePage(host, root, setOf(0), "scroll.FLOATING.root")
+        val page = ResponsivePage(
+            host,
+            root,
+            leftIndices = setOf(0),
+            key = "scroll.FLOATING.root",
+            singleColumnHeader = ResponsivePage.Header(
+                cardIndex = 0,
+                isExpanded = createdPreviewHandle.isExpanded,
+                expansionFraction = createdPreviewHandle.expansionFraction
+            )
+        )
         backgroundPage = page
         rootFrame.addView(page,
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
@@ -531,8 +546,8 @@ internal class FloatingPageScope(
     }
 
     private fun syncPreviewAnimations() {
-        previewHandle?.lyricTextView?.let { view ->
-            host.syncFloatingPreviewVisibility(view, view.isPreviewFullyVisible())
+        previewHandle?.let { preview ->
+            host.syncFloatingPreviewVisibility(preview.lyricTextView, preview.isPreviewVisible())
         }
         previewClassicLoop?.sync()
         previewSwitchLoop?.sync()

@@ -53,12 +53,16 @@ class MainActivityWindowLayoutTest {
     }
 
     @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
-    @Test fun resizingWithinSingleColumnKeepsTheSameTextAnchor() {
+    @Test fun resizingBelowPinnedHeaderKeepsTheSameTextAnchor() {
         Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { controller ->
             val activity = controller.get()
             val host = activity.graph.uiHost
             val source = LinearLayout(activity).apply {
                 orientation = LinearLayout.VERTICAL
+                addView(android.widget.TextView(activity).apply {
+                    text = "Preview"
+                    minimumHeight = host.dp(48)
+                }, LinearLayout.LayoutParams(-1, -2))
                 repeat(12) { index ->
                     addView(android.widget.TextView(activity).apply {
                         text = "Card $index " + "wrapping content ".repeat(20)
@@ -66,7 +70,10 @@ class MainActivityWindowLayoutTest {
                     }, LinearLayout.LayoutParams(-1, -2))
                 }
             }
-            val page = ResponsivePage(host, source, setOf(0), "resizeTest")
+            val page = ResponsivePage(
+                host, source, setOf(0), "resizeTest",
+                singleColumnHeader = ResponsivePage.Header(0, isExpanded = { true })
+            )
             activity.setContentView(page)
             fun resize(width: Int) {
                 host.windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(width.toFloat(), 300f, 1f)
@@ -76,10 +83,12 @@ class MainActivityWindowLayoutTest {
             }
             resize(360)
             val scroll = descendants(page).filterIsInstance<android.widget.ScrollView>().single()
-            scroll.scrollTo(0, (scroll.getChildAt(0) as ViewGroup).getChildAt(3).top + host.dp(10))
+            val anchor = (scroll.getChildAt(0) as ViewGroup).getChildAt(3)
+            assertTrue(scroll.paddingTop > 0)
+            scroll.scrollTo(0, anchor.top + host.dp(10))
             host.interactionUi.capture()
             val before = host.interactions.read("resizeTest.single")!!
-            assertNotNull(before.getString("anchor"))
+            assertEquals(anchor.getTag(R.id.interaction_anchor), before.getString("anchor"))
             val previousY = scroll.scrollY
             resize(500)
             host.interactionUi.capture()

@@ -14,9 +14,9 @@ internal object FloatingPageTokens {
     const val SECTION_TITLE_PADDING_TOP_DP = 12
     const val SECTION_TITLE_PADDING_BOTTOM_DP = 10
 
-    const val PREVIEW_CARD_MARGIN_BOTTOM_DP = 8
     const val PREVIEW_LINE_SPACING_EXTRA_DP = 2
-    const val PREVIEW_TOGGLE_TEXT_SP = 16f
+    const val PREVIEW_TOGGLE_TOUCH_SIZE_DP = 48
+    const val PREVIEW_TOGGLE_VISIBLE_SIZE_DP = 32
 
     const val PANEL_SELECTED_SCALE = 0.985f
     const val PANEL_SELECTED_ALPHA = 0.92f
@@ -29,6 +29,8 @@ internal object FloatingPageTokens {
     const val PANEL_OVERLAY_FADE_MS = 170L
     const val PANEL_OPEN_MS = 250L
     const val PANEL_CLOSE_MS = 180L
+    const val PREVIEW_EXPAND_MS = 250L
+    const val PREVIEW_COLLAPSE_MS = 180L
     const val PREVIEW_FADE_MS = 170L
     const val PREVIEW_SLIDE_MS = 190L
     const val PREVIEW_SCALE_FADE_MS = 180L

@@ -46,7 +46,8 @@ internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String, onInter
             result += parent.top - parent.scrollY
             parent = parent.parent as? View
         }
-        return result
+        // Scroll offsets are relative to the start of the padded viewport.
+        return result - scroll.paddingTop
     }
     fun capture() {
         if (restoring || !scroll.isAttachedToWindow) return
