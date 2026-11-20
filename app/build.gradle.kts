@@ -59,6 +59,8 @@ if (spicyClientKey.isNotEmpty() && !Regex("sl_pk_[A-Za-z0-9_-]+").matches(spicyC
 }
 
 val buildX8664 = providers.gradleProperty("airlyrics.buildX86_64").orNull == "true"
+// Only direct-distribution builds may opt in to the update installer.
+val enableAppUpdateInstaller = providers.gradleProperty("airlyrics.enableAppUpdateInstaller").orNull == "true"
 
 fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } ?: rootProject.file(path)
 
@@ -94,6 +96,7 @@ android {
 
     defaultConfig {
         applicationId = "com.andsi.airlyrics"
+        buildConfigField("boolean", "APP_UPDATE_INSTALLER_ENABLED", enableAppUpdateInstaller.toString())
         buildConfigField("String", "SPICY_CLIENT_KEY", "\"$spicyClientKey\"")
         minSdk = 26
         //noinspection OldTargetApi
@@ -181,6 +184,14 @@ android {
     sourceSets {
         getByName("test") {
             resources.directories.add(rootProject.file("lyrics-core/testdata").path)
+        }
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        if (enableAppUpdateInstaller) {
+            variant.sources.manifests.addStaticManifestFile("src/appUpdates/AndroidManifest.xml")
         }
     }
 }

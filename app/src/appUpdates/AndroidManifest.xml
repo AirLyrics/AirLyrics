@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <queries>
+        <intent>
+            <action android:name="android.content.pm.action.CONFIRM_INSTALL" />
+        </intent>
+    </queries>
+
+    <application>
+        <receiver
+            android:name="com.andsi.airlyrics.app.update.AppUpdateInstallReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>
