@@ -104,9 +104,24 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         if (selecting) interactions.write("savedLyricsSelection") { putStringArrayList("keys", ArrayList(selection)) }
         else interactions.remove("savedLyricsSelection")
     }
+    fun setSelection(keys: Set<String>) {
+        if (selecting && selection == keys) return
+        if (!selecting) {
+            selectionPanel.setExpanded(true, animate = false)
+            selecting = true
+        }
+        selection.clear()
+        selection.addAll(keys)
+        saveSelection()
+        updateSelectionUi()
+    }
     fun toggleSelection(item: LocalLyricsUiItem) {
-        if (!selecting) return
-        if (!selection.add(itemKey(item))) selection.remove(itemKey(item))
+        val key = itemKey(item)
+        if (!selecting) {
+            setSelection(setOf(key))
+            return
+        }
+        if (!selection.add(key)) selection.remove(key)
         saveSelection()
         updateSelectionUi()
     }
@@ -657,12 +672,7 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
         enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
         setOnClickListener {
-            if (!endSelection()) {
-                selectionPanel.setExpanded(true, animate = false)
-                selecting = true
-                saveSelection()
-                updateSelectionUi()
-            }
+            if (!endSelection()) setSelection(emptySet())
         }
     }
     selectionMotion = SavedLyricsSelectionMotion(selectionAction, if (selecting) 1f else 0f) { progress ->
@@ -707,17 +717,10 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
     }.apply { addView(container) }
 
     SavedLyricsDragSelectionLayout(activity, listBody,
-        selectionEnabled = { selecting },
+        isSelecting = { selecting },
         items = { adapter.attachedItems(listBody) },
-        selectedKeys = { selection.toSet() },
-        select = { keys ->
-            if (selecting && selection != keys) {
-                selection.clear()
-                selection.addAll(keys)
-                saveSelection()
-                updateSelectionUi()
-            }
-        },
+        selectedKeys = { selection },
+        select = ::setSelection,
         itemKeys = { adapter.keys },
         excludeTouch = selectionPanel::containsControl
     ).apply {

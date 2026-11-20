@@ -30,7 +30,7 @@ class SavedLyricsDragSelectionLayoutTest {
     private lateinit var scroll: ScrollView
     private val rows = mutableListOf<SavedLyricsDragItem>()
     private val selected = mutableSetOf<String>()
-    private var enabled = true
+    private var selecting = true
     private var clicks = 0
     private var downTime = 0L
 
@@ -53,7 +53,14 @@ class SavedLyricsDragSelectionLayoutTest {
             rows += SavedLyricsDragItem("$index", row)
         }
         scroll = ScrollView(activity).apply { addView(body) }
-        root = SavedLyricsDragSelectionLayout(activity, scroll, { enabled }, { rows }, { selected.toSet() }, { selected.clear(); selected.addAll(it) }).apply {
+        root = SavedLyricsDragSelectionLayout(
+            activity, scroll, { selecting }, { rows }, { selected },
+            { keys ->
+                selecting = true
+                selected.clear()
+                selected.addAll(keys)
+            }
+        ).apply {
             orientation = LinearLayout.VERTICAL
             addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         }
@@ -107,6 +114,7 @@ class SavedLyricsDragSelectionLayoutTest {
     }
 
     @Test fun normalSwipeAndTapDoNotStartDragSelection() {
+        selecting = false
         touch(MotionEvent.ACTION_DOWN, 30f, 120f)
         touch(MotionEvent.ACTION_UP, 30f, 120f)
         advance(2)
@@ -119,6 +127,22 @@ class SavedLyricsDragSelectionLayoutTest {
         touch(MotionEvent.ACTION_UP, 240f, 40f)
         assertTrue(selected.isEmpty())
         assertTrue(scroll.scrollY > 0)
+        assertFalse(selecting)
+    }
+
+    @Test fun longPressEntersSelectionAndWaitsForDragBeforeScrolling() {
+        selecting = false
+        touch(MotionEvent.ACTION_DOWN, 240f, 390f)
+        hold()
+        advance(20)
+        assertTrue(selecting)
+        assertEquals(setOf("4"), selected)
+        assertEquals(0, scroll.scrollY)
+
+        touch(MotionEvent.ACTION_MOVE, 240f, 310f)
+        touch(MotionEvent.ACTION_UP, 240f, 310f)
+        assertEquals(setOf("3", "4"), selected)
+        assertEquals(0, clicks)
     }
 
     @Test fun stationaryEdgeScrollsAndSelectsNewRowsThenStopsOnRelease() {
@@ -141,13 +165,7 @@ class SavedLyricsDragSelectionLayoutTest {
         assertEquals(0, clicks)
     }
 
-    @Test fun disabledSelectionAndCancelledGesturesCannotSelectOrScroll() {
-        enabled = false
-        touch(MotionEvent.ACTION_DOWN, 30f, 120f)
-        hold()
-        touch(MotionEvent.ACTION_UP, 30f, 120f)
-        assertTrue(selected.isEmpty())
-        enabled = true
+    @Test fun cancelledGestureStopsSelectingAndScrolling() {
         touch(MotionEvent.ACTION_DOWN, 240f, 120f)
         hold()
         touch(MotionEvent.ACTION_MOVE, 240f, 399f)

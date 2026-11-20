@@ -2,8 +2,13 @@ package com.andsi.airlyrics.app
 
 import android.content.Context
 import android.animation.ValueAnimator
+import android.graphics.Rect
 import android.net.Uri
+import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewConfiguration
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.FrameLayout
 import android.widget.EditText
 import android.widget.CheckBox
@@ -18,6 +23,7 @@ import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.testutil.awaitUiCondition
 import com.andsi.airlyrics.testutil.descendants
 import com.andsi.airlyrics.testutil.resetLyricsStorage
+import com.andsi.airlyrics.ui.pages.settings.SavedLyricsDragSelectionLayout
 import com.andsi.airlyrics.ui.pages.settings.SavedLyricsSelectionIconView
 import com.andsi.airlyrics.ui.pages.settings.SavedLyricsSelectionPanel
 import com.andsi.airlyrics.ui.navigation.Page
@@ -76,6 +82,46 @@ class MainActivityBatchLyricsTest {
         rows(activity).first().performClick()
         ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
         assertFits()
+    }
+
+    @Test fun longPressSelectsTheHeldLyricBeforeRelease() {
+        val activity = launch()
+        val host = activity.graph.uiHost
+        val root = descendants(activity.window.decorView).filterIsInstance<SavedLyricsDragSelectionLayout>().single()
+        val row = rows(activity).last()
+        val visibleBounds = Rect()
+        assertTrue(row.getLocalVisibleRect(visibleBounds))
+        val rowLocation = IntArray(2).also(row::getLocationOnScreen)
+        val rootLocation = IntArray(2).also(root::getLocationOnScreen)
+        val x = (visibleBounds.centerX() + rowLocation[0] - rootLocation[0]).toFloat()
+        val y = (visibleBounds.centerY() + rowLocation[1] - rootLocation[1]).toFloat()
+        val downTime = SystemClock.uptimeMillis()
+        fun dispatchTouch(action: Int) {
+            val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
+            root.dispatchTouchEvent(event)
+            event.recycle()
+        }
+
+        dispatchTouch(MotionEvent.ACTION_DOWN)
+        assertNull(host.interactions.read("savedLyricsSelection"))
+        ShadowLooper.idleMainLooper(ViewConfiguration.getLongPressTimeout().toLong(), TimeUnit.MILLISECONDS)
+        assertTrue(row.isSelected)
+        assertEquals(1, checkboxes(activity).count { it.isChecked })
+
+        dispatchTouch(MotionEvent.ACTION_UP)
+        ShadowLooper.idleMainLooper()
+        assertTrue(row.isSelected)
+        assertEquals(1, checkboxes(activity).count { it.isChecked })
+        assertNull(host.editorSession.state.value)
+    }
+
+    @Test fun accessibilityLongClickSelectsTheFocusedLyric() {
+        val activity = launch()
+        val row = rows(activity).first()
+
+        assertTrue(row.performAccessibilityAction(AccessibilityNodeInfo.ACTION_LONG_CLICK, null))
+        assertTrue(row.isSelected)
+        assertEquals(1, checkboxes(activity).count { it.isChecked })
     }
 
     @Test fun selectionButtonSurvivesRecreationAndBackExitsSelection() {

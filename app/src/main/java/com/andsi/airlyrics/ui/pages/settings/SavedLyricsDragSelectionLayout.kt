@@ -17,12 +17,12 @@ import kotlin.math.min
 
 internal data class SavedLyricsDragItem(val key: String, val view: View)
 
-/** Observes ordinary touches, claiming the stream only after a long press in selection mode. */
+/** Claims a row's long press to start or extend multi-selection. */
 @SuppressLint("ViewConstructor")
 internal class SavedLyricsDragSelectionLayout(
     context: Context,
     private val scroll: View,
-    private val selectionEnabled: () -> Boolean,
+    private val isSelecting: () -> Boolean,
     private val items: () -> List<SavedLyricsDragItem>,
     private val selectedKeys: () -> Set<String>,
     private val select: (Set<String>) -> Unit,
@@ -37,8 +37,9 @@ internal class SavedLyricsDragSelectionLayout(
     private var downY = 0f
     private var pointerY = 0f
     private var downTime = 0L
-    private var armed = false
+    private var pressedItemKey: String? = null
     private var dragging = false
+    private var awaitingDrag = false
     private var claimed = false
     private var candidates = emptyList<String>()
     private var positions = emptyMap<String, Int>()
@@ -50,27 +51,31 @@ internal class SavedLyricsDragSelectionLayout(
     private var scrollRemainder = 0f
 
     private val activate = Runnable {
-        if (armed && selectionEnabled() && isAttachedToWindow) {
-            armed = false
-            dragging = true
-            claimed = true
-            // Cancel the original checkbox/row/text gesture so releasing cannot toggle it again.
-            val cancel = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, downX, downY, 0)
-            super.dispatchTouchEvent(cancel)
-            cancel.recycle()
-            parent?.requestDisallowInterceptTouchEvent(true)
-            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            initialSelection = selectedKeys().toSet()
-            lastIndex = -1
-            selectCrossedRows()
-            scheduleScroll()
-        }
+        val key = pressedItemKey ?: return@Runnable
+        pressedItemKey = null
+        if (!isAttachedToWindow) return@Runnable
+
+        candidates = itemKeys()
+        positions = candidates.withIndex().associate { it.value to it.index }
+        anchorIndex = positions[key] ?: return@Runnable
+        initialSelection = selectedKeys().toSet()
+        awaitingDrag = !isSelecting()
+        dragging = true
+        claimed = true
+        // Cancel the row or checkbox press before changing the selection.
+        val cancel = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, downX, downY, 0)
+        super.dispatchTouchEvent(cancel)
+        cancel.recycle()
+        parent?.requestDisallowInterceptTouchEvent(true)
+        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        selectThrough(anchorIndex)
+        if (!awaitingDrag) scheduleScroll()
     }
 
     private val scrollFrame = object : Runnable {
         override fun run() {
             framePosted = false
-            if (!dragging || !selectionEnabled()) {
+            if (!dragging || !isSelecting()) {
                 cancelSelectionGesture()
                 return
             }
@@ -93,42 +98,42 @@ internal class SavedLyricsDragSelectionLayout(
             MotionEvent.ACTION_DOWN -> {
                 cancelSelectionGesture()
                 claimed = false
-                if (selectionEnabled()) {
-                    candidates = itemKeys()
-                    positions = candidates.withIndex().associate { it.value to it.index }
-                    getLocationOnScreen(location)
-                    val screenX = location[0] + event.x
-                    val screenY = location[1] + event.y
-                    val anchor = if (excludeTouch(screenX.toInt(), screenY.toInt())) null else items().firstOrNull {
-                        it.view.getGlobalVisibleRect(bounds) && bounds.contains(screenX.toInt(), screenY.toInt())
-                    }
-                    anchorIndex = anchor?.let { positions[it.key] } ?: -1
-                    if (anchorIndex >= 0) {
-                        downX = event.x
-                        downY = event.y
-                        pointerY = event.y
-                        downTime = event.downTime
-                        armed = true
-                        postDelayed(activate, ViewConfiguration.getLongPressTimeout().toLong())
-                    }
+                getLocationOnScreen(location)
+                val screenX = (location[0] + event.x).toInt()
+                val screenY = (location[1] + event.y).toInt()
+                if (!excludeTouch(screenX, screenY)) {
+                    pressedItemKey = items().firstOrNull { item ->
+                        val view = item.view
+                        view.getLocationOnScreen(location)
+                        view.isVisible && view.getLocalVisibleRect(bounds) &&
+                            bounds.contains(screenX - location[0], screenY - location[1])
+                    }?.key
+                }
+                if (pressedItemKey != null) {
+                    downX = event.x
+                    downY = event.y
+                    pointerY = event.y
+                    downTime = event.downTime
+                    postDelayed(activate, ViewConfiguration.getLongPressTimeout().toLong())
                 }
             }
             MotionEvent.ACTION_MOVE -> {
                 pointerY = event.y
                 if (dragging) {
-                    if (!selectionEnabled()) cancelSelectionGesture()
-                    else {
+                    if (!isSelecting()) cancelSelectionGesture()
+                    else if (!awaitingDrag || movedBeyondSlop(event)) {
+                        awaitingDrag = false
                         selectCrossedRows()
                         scheduleScroll()
                     }
-                } else if (armed && (abs(event.x - downX) > touchSlop || abs(event.y - downY) > touchSlop)) {
+                } else if (pressedItemKey != null && movedBeyondSlop(event)) {
                     cancelSelectionGesture()
                 }
             }
             MotionEvent.ACTION_POINTER_DOWN -> cancelSelectionGesture()
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 val consume = claimed
-                if (dragging && event.actionMasked == MotionEvent.ACTION_UP) {
+                if (dragging && !awaitingDrag && event.actionMasked == MotionEvent.ACTION_UP) {
                     pointerY = event.y
                     selectCrossedRows()
                 }
@@ -145,15 +150,16 @@ internal class SavedLyricsDragSelectionLayout(
         removeCallbacks(activate)
         removeCallbacks(scrollFrame)
         framePosted = false
-        armed = false
+        pressedItemKey = null
+        if (dragging) parent?.requestDisallowInterceptTouchEvent(false)
         dragging = false
+        awaitingDrag = false
         candidates = emptyList()
         positions = emptyMap()
         initialSelection = emptySet()
         anchorIndex = -1
         lastIndex = -1
         scrollRemainder = 0f
-        parent?.requestDisallowInterceptTouchEvent(false)
         // Keep a claimed stream consumed until UP/CANCEL, even if the mode changed mid-gesture.
     }
 
@@ -162,6 +168,9 @@ internal class SavedLyricsDragSelectionLayout(
         claimed = false
         super.onDetachedFromWindow()
     }
+
+    private fun movedBeyondSlop(event: MotionEvent): Boolean =
+        abs(event.x - downX) > touchSlop || abs(event.y - downY) > touchSlop
 
     private fun viewportY(): Float {
         getLocationOnScreen(location)
@@ -189,6 +198,10 @@ internal class SavedLyricsDragSelectionLayout(
             }
         } ?: return
         val index = positions[nearest.key] ?: return
+        selectThrough(index)
+    }
+
+    private fun selectThrough(index: Int) {
         if (index == lastIndex) return
         lastIndex = index
         val result = initialSelection.toMutableSet()

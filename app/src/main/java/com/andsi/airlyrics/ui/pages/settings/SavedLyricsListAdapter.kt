@@ -11,6 +11,8 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ListView
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -71,10 +73,15 @@ internal class SavedLyricsListAdapter(
     private inner class Holder(initial: LocalLyricsUiItem) {
         var item = initial
         private var openedKey = initial.selectionKey()
-        val row = host.localLyricsRow(initial, onLyricsChanged = { changed(it, openedKey) }, onClickIntercept = {
+        val row = (host.localLyricsRow(initial, onLyricsChanged = { changed(it, openedKey) }, onClickIntercept = {
             openedKey = item.selectionKey()
             if (selecting()) { toggle(item); true } else false
-        }) as LocalLyricsRowView
+        }) as LocalLyricsRowView).apply {
+            ViewCompat.replaceAccessibilityAction(this, AccessibilityActionCompat.ACTION_LONG_CLICK, null) { _, _ ->
+                toggle(item)
+                true
+            }
+        }
         val checkbox = CheckBox(host).apply {
             buttonTintList = ColorStateList.valueOf(host.colorAccent)
             minimumWidth = host.dp(AirUiTokens.Layout.IconTouchSize)
