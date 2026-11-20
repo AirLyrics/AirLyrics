@@ -69,13 +69,13 @@ class FloatingPreviewRenderingTest {
     }
 
     @Test
-    fun glowAndTransformedInkCannotPaintOutsideTheView() {
+    fun glowInkCannotPaintOutsideTheViewDuringFade() {
         val view = preview(SpannableStringBuilder("Glow").apply {
             applyPreviewLyricsHighlight(this, toString(), 0, Color.CYAN)
         })
         view.syncPreviewVisibility(true)
         ShadowSystemClock.advanceBy(Duration.ofMillis(1_000))
-        view.setLyricsTextAnimationState(1f, 15f, 1.4f, 1.4f)
+        view.setLyricsTextAlpha(0.5f)
         val width = view.width + 120
         val height = view.height + 120
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)

@@ -10,7 +10,8 @@ Thank you for reading this guide!
 2. [Select a Player](#select-a-player)
 3. [Use Floating Lyrics](#use-floating-lyrics)
 4. [Lyrics and Local Files](#lyrics-and-local-files)
-5. [Troubleshooting](#troubleshooting)
+5. [App Updates](#app-updates)
+6. [Troubleshooting](#troubleshooting)
 
 ## First Launch
 
@@ -44,6 +45,8 @@ is enabled.
 - **Word-by-word lyrics** supports local imports, manual searches on NetEase Cloud Music, Kugou, and
   QQ Music, plus Spicy Lyrics and Apple Music when timing is available.
 - **Highlight effects** lets you adjust the highlight color, glow strength, and glow spread.
+- **Font** lets you preview and manage custom fonts, including TTC collections.
+- **Blur amount** adjusts the window background blur on supported devices.
 
 ## Lyrics and Local Files
 
@@ -60,7 +63,7 @@ Plain text lyrics can be imported from TXT files, saved, and edited, but cannot 
 
 ### Manage Saved Lyrics in Batches
 
-Tap **Select multiple** (the top-right button) in **Saved lyrics** (Recent local lyrics -> View all):
+In **Saved lyrics** (Recent local lyrics -> View all), long-press a lyric or tap **Select multiple** to select multiple entries.
 
 - **Export** saves a ZIP containing LRC files, or TXT files for plain text lyrics. Edit them, then **Import and replace**. Keep `airlyrics-key` tags in LRC files to match the original entries.
 - Imports match selected songs: export tags take priority, followed by LRC title and artist tags. Without a title tag, filenames are matched; use `Title - Artist.lrc` or `Title - Artist.txt`. One selected song and one file without an export tag map directly.
@@ -100,6 +103,10 @@ On the Spicy source page, choose **Search by Spotify ID** and paste a Spotify tr
 
 See [Lyrics Format](LYRICS_FORMAT.md) for supported LRC, TTML, and TXT examples. I generally do not plan to
 add support for more lyrics formats; you can use AI to convert them yourself.
+
+## App Updates
+
+In a GitHub build, tap the version in **Settings > About**. If **Update available** appears, open it and tap **Update**. After the download finishes, tap **Install** and confirm in Android.
 
 ## Troubleshooting
 

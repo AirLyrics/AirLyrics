@@ -1,0 +1,10 @@
+v1.2.11
+• Adjust the floating window background blur on supported devices.
+• Open the changelog from the version number in About, with in-app updates for GitHub builds.
+• Browse the changelog by version.
+• Improve font selection and imports, including TTC collections.
+• Keep the lyrics preview at the top while scrolling.
+• Improve undo in floating lyrics settings.
+• Adjust color settings.
+• Remove the Slide up and Scale fade lyric transitions.
+• Fix various small issues.

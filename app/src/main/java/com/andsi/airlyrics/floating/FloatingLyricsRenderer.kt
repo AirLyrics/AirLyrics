@@ -695,29 +695,7 @@ class FloatingLyricsRenderer(
 
         when (mode) {
             LyricsSwitchAnimationMode.NONE, LyricsSwitchAnimationMode.SPICY -> setTextImmediately(text)
-            LyricsSwitchAnimationMode.FADE -> startTextSwitchAnimation(
-                text = text,
-                textKey = textKey,
-                initialTranslationYDp = 0f,
-                initialScale = AirUiTokens.Motion.RestScale,
-                durationMs = AirUiTokens.Layout.LyricsFadeMs
-            )
-
-            LyricsSwitchAnimationMode.SLIDE_UP -> startTextSwitchAnimation(
-                text = text,
-                textKey = textKey,
-                initialTranslationYDp = AirUiTokens.Layout.LyricsSlideDistanceDp.toFloat(),
-                initialScale = AirUiTokens.Motion.RestScale,
-                durationMs = AirUiTokens.Layout.LyricsSlideMs
-            )
-
-            LyricsSwitchAnimationMode.SCALE_FADE -> startTextSwitchAnimation(
-                text = text,
-                textKey = textKey,
-                initialTranslationYDp = 0f,
-                initialScale = AirUiTokens.Layout.LyricsScaleStart,
-                durationMs = AirUiTokens.Layout.LyricsScaleFadeMs
-            )
+            LyricsSwitchAnimationMode.FADE -> fadeInText(text, textKey)
         }
     }
 
@@ -735,31 +713,14 @@ class FloatingLyricsRenderer(
         }
     }
 
-    private fun startTextSwitchAnimation(
-        text: CharSequence,
-        textKey: String,
-        initialTranslationYDp: Float,
-        initialScale: Float,
-        durationMs: Long
-    ) {
-        val view = prepareTextSwitchAnimation(text, textKey) ?: return
-        setTextAnimationState(
-            view = view,
-            alpha = 0f,
-            translationY = initialTranslationYDp * view.resources.displayMetrics.density,
-            scaleX = initialScale,
-            scaleY = initialScale
-        )
-        animateTextToRest(view, durationMs)
-    }
-
-    private fun prepareTextSwitchAnimation(text: CharSequence, textKey: String): TextView? {
-        val view = textViewProvider() ?: return null
+    private fun fadeInText(text: CharSequence, textKey: String) {
+        val view = textViewProvider() ?: return
         cancelTextAnimation(view)
         view.text = credited(text)
         lastRenderedText = textKey
         updateSpicyPlayback()
-        return view
+        setTextAnimationAlpha(view, 0f)
+        animateTextToRest(view)
     }
 
     private fun resetTextAnimationState() {
@@ -768,13 +729,7 @@ class FloatingLyricsRenderer(
 
     private fun resetTextAnimationState(view: TextView) {
         cancelTextAnimation(view)
-        setTextAnimationState(
-            view = view,
-            alpha = AirUiTokens.Motion.RestAlpha,
-            translationY = 0f,
-            scaleX = AirUiTokens.Motion.RestScale,
-            scaleY = AirUiTokens.Motion.RestScale
-        )
+        setTextAnimationAlpha(view, AirUiTokens.Motion.RestAlpha)
     }
 
     private fun cancelTextAnimation(view: TextView) {
@@ -782,41 +737,26 @@ class FloatingLyricsRenderer(
         (view as? LyricsTextAnimationTarget)?.cancelLyricsTextAnimation()
     }
 
-    private fun setTextAnimationState(
-        view: TextView,
-        alpha: Float,
-        translationY: Float,
-        scaleX: Float,
-        scaleY: Float
-    ) {
+    private fun setTextAnimationAlpha(view: TextView, alpha: Float) {
         val textTarget = view as? LyricsTextAnimationTarget
         if (textTarget != null) {
             // The TextView is also the WindowManager root. Keep its background and hit area fixed.
             view.alpha = AirUiTokens.Motion.RestAlpha
-            view.translationY = 0f
-            view.scaleX = AirUiTokens.Motion.RestScale
-            view.scaleY = AirUiTokens.Motion.RestScale
-            textTarget.setLyricsTextAnimationState(alpha, translationY, scaleX, scaleY)
+            textTarget.setLyricsTextAlpha(alpha)
         } else {
             view.alpha = alpha
-            view.translationY = translationY
-            view.scaleX = scaleX
-            view.scaleY = scaleY
         }
     }
 
-    private fun animateTextToRest(view: TextView, durationMs: Long) {
+    private fun animateTextToRest(view: TextView) {
         val interpolator = DecelerateInterpolator()
         val textTarget = view as? LyricsTextAnimationTarget
         if (textTarget != null) {
-            textTarget.animateLyricsTextToRest(durationMs, interpolator)
+            textTarget.animateLyricsTextToRest(AirUiTokens.Layout.LyricsFadeMs, interpolator)
         } else {
             view.animate()
                 .alpha(AirUiTokens.Motion.RestAlpha)
-                .translationY(0f)
-                .scaleX(AirUiTokens.Motion.RestScale)
-                .scaleY(AirUiTokens.Motion.RestScale)
-                .setDuration(durationMs)
+                .setDuration(AirUiTokens.Layout.LyricsFadeMs)
                 .setInterpolator(interpolator)
                 .start()
         }

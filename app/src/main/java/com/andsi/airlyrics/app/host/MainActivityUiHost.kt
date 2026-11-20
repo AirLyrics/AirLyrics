@@ -70,6 +70,7 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsFontStore
 import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
+import com.andsi.airlyrics.ui.model.AppUpdateUi
 import com.andsi.airlyrics.ui.model.CurrentLyricsUiState
 import com.andsi.airlyrics.ui.model.CurrentMediaUiInfo
 import com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
@@ -119,11 +120,15 @@ internal class MainActivityUiHost(
     }
     override val interactions get() = graph.viewModel.interactions
     override val mascotSession get() = graph.viewModel.mascotSession
-    override val appUpdates: AppUpdateModel? by lazy {
-        if (!BuildConfig.APP_UPDATE_INSTALLER_ENABLED) null
-        else ViewModelProvider(activity, viewModelFactory {
+    override var appUpdates: AppUpdateUi? = null
+        private set
+
+    fun bindAppUpdates() {
+        if (!BuildConfig.APP_UPDATE_INSTALLER_ENABLED || appUpdates != null) return
+        val model = ViewModelProvider(activity, viewModelFactory {
             initializer { AppUpdateModel(activity.applicationContext) }
         })[AppUpdateModel::class.java]
+        appUpdates = model.bind(activity)
     }
 
     var editorObserverInstalled = false
@@ -369,8 +374,8 @@ internal class MainActivityUiHost(
     override fun hasAnimatedFloatingPreviewHighlight(view: TextView): Boolean =
         hasAnimatedPreviewLyricsHighlight(view)
 
-    override fun animateFloatingPreviewText(view: TextView, durationMs: Long, offsetY: Float, scale: Float) =
-        animatePreviewLyricsText(view, durationMs, offsetY, scale)
+    override fun animateFloatingPreviewText(view: TextView, durationMs: Long) =
+        animatePreviewLyricsText(view, durationMs)
 
     override fun classicPreviewProgressForLine(lineText: String): (Long) -> FloatingPreviewHighlightProgress =
         createClassicPreviewProgress(lineText)

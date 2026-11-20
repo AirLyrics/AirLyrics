@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.content.pm.Signature
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.BuildConfig
+import com.andsi.airlyrics.ui.model.AppUpdateCheckStatus
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.time.LocalDate

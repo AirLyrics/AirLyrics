@@ -89,7 +89,5 @@ internal fun Context.localizedLyricsSwitchAnimationTitle(mode: LyricsSwitchAnima
 internal fun lyricsSwitchAnimationTitleRes(mode: LyricsSwitchAnimationMode): Int = when (mode) {
     LyricsSwitchAnimationMode.NONE -> R.string.ui_off
     LyricsSwitchAnimationMode.FADE -> R.string.ui_soft_fade
-    LyricsSwitchAnimationMode.SLIDE_UP -> R.string.ui_slide_up
-    LyricsSwitchAnimationMode.SCALE_FADE -> R.string.ui_scale_fade
     LyricsSwitchAnimationMode.SPICY -> R.string.ui_animation_spicy
 }

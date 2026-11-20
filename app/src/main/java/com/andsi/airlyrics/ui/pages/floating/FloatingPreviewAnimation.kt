@@ -59,31 +59,10 @@ internal class FloatingPreviewSwitchLoop(
 internal fun FloatingPageScope.playPreviewSwitchAnimation() {
     val view = previewHandle?.lyricTextView ?: return
 
-    val duration: Long
-    val offset: Float
-    val scale: Float
-    when (switchAnimationMode()) {
-        LyricsSwitchAnimationMode.NONE, LyricsSwitchAnimationMode.SPICY -> {
-            duration = 0L
-            offset = 0f
-            scale = 1f
-        }
-        LyricsSwitchAnimationMode.FADE -> {
-            duration = FloatingPageTokens.PREVIEW_FADE_MS
-            offset = 0f
-            scale = 1f
-        }
-        LyricsSwitchAnimationMode.SLIDE_UP -> {
-            duration = FloatingPageTokens.PREVIEW_SLIDE_MS
-            offset = host.dp(FloatingPageTokens.PREVIEW_SLIDE_Y_DP).toFloat()
-            scale = 1f
-        }
-        LyricsSwitchAnimationMode.SCALE_FADE -> {
-            duration = FloatingPageTokens.PREVIEW_SCALE_FADE_MS
-            offset = 0f
-            scale = FloatingPageTokens.PREVIEW_SCALE_START
-        }
+    val durationMs = when (switchAnimationMode()) {
+        LyricsSwitchAnimationMode.NONE, LyricsSwitchAnimationMode.SPICY -> 0L
+        LyricsSwitchAnimationMode.FADE -> FloatingPageTokens.PREVIEW_FADE_MS
     }
 
-    host.animateFloatingPreviewText(view, duration, offset, scale)
+    host.animateFloatingPreviewText(view, durationMs)
 }

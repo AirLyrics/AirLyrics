@@ -367,7 +367,6 @@
     <string name="ui_saved_lyrics">已儲存歌詞</string>
     <string name="ui_saved_lyrics_empty_hint">尚無已儲存歌詞</string>
     <string name="ui_saved_lyrics_no_search_results">沒有符合的歌詞</string>
-    <string name="ui_scale_fade">輕微縮放</string>
     <string name="ui_search">搜尋</string>
     <string name="ui_search_saved_lyrics_hint">搜尋歌曲、歌手或來源</string>
     <string name="ui_search_strategy">搜尋與儲存</string>
@@ -386,7 +385,6 @@
     <string name="ui_skipping_next">切到下一首</string>
     <string name="ui_skipping_previous">切到上一首</string>
     <string name="ui_skipping_queue">切換佇列</string>
-    <string name="ui_slide_up">向上滑入</string>
     <string name="ui_soft_fade">柔和淡入</string>
     <string name="ui_lyrics_settings_summary">歌詞來源、儲存與本機管理</string>
     <string name="ui_stopped">已停止</string>

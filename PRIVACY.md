@@ -2,7 +2,7 @@
 
 [English](PRIVACY.md) · [简体中文](PRIVACY.zh-CN.md)
 
-AirLyrics is designed to show floating synced lyrics on Android. Its developer does not receive personal data from the app. Optional online features connect directly to the selected services.
+AirLyrics is designed to show floating synced lyrics on Android. Its developer does not receive personal data from the app. Online features connect directly to the services they use.
 
 ## Data collection
 
@@ -20,8 +20,9 @@ AirLyrics asks for the following Android permissions only when they are needed f
 | Notification access     | Detects current media playback information from local notifications / media sessions |
 | Notifications           | Keeps the foreground floating lyrics service visible to Android                      |
 | Usage access            | Checks whether apps selected in Display scope are visible (Android 10+)               |
-| Internet access         | Searches lyrics online and signs in to Apple Music when those features are used       |
+| Internet access         | Searches for lyrics, signs in to Apple Music, and checks for app updates where available |
 | File picker             | Lets the user import or export local lyrics files                                    |
+| Install unknown apps    | Lets supported builds request installation of an update through Android              |
 
 Notification access is used locally on the device to detect media playback metadata such as the playing app, title, artist, album, playback state, and available media controls. AirLyrics does not upload notification content.
 
@@ -46,6 +47,10 @@ Apple Music sign-in takes place on Apple's page inside the app. AirLyrics does n
 When Spicy Lyrics is selected, AirLyrics uses a Spotify track ID supplied by the selected Spotify player or entered by you to request lyrics directly from the Spicy Lyrics API. Without an ID, it sends the song title to Spotify to identify the recording first. For pasted IDs, it also asks Spotify for the track title. Spicy requests use the app's publishable API key. These services receive normal network information such as the requesting IP address. No AirLyrics server is involved.
 
 Spicy lyrics and any edits are stored in private app storage excluded from backup, for at most 30 days of use after acquisition. Expired content is unavailable and is removed on access, app startup or scheduled cleanup. Android may delay scheduled cleanup while the app is stopped. AirLyrics does not offer file export or sharing for this content.
+
+## App updates
+
+Builds with in-app updates enabled automatically check GitHub for new releases. GitHub receives normal network information such as the requesting IP address. Tapping **Update** downloads the APK to the app cache. Android asks for confirmation before installing it.
 
 ## Third-party services
 

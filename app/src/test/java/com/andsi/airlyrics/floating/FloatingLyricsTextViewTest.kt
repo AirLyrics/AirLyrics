@@ -62,7 +62,7 @@ class FloatingLyricsTextViewTest {
         val visible = pixels()
         assertTrue("Positive control must actually draw glyphs", visible.any { it != backgroundColor })
 
-        view.setLyricsTextAnimationState(0f, 12f, 0.9f, 0.9f)
+        view.setLyricsTextAlpha(0f)
         assertTrue("Transparent glyphs must leave only the bubble", pixels().all { it == backgroundColor })
         assertEquals(1f, view.alpha)
         assertEquals(0f, view.translationY)

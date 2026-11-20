@@ -24,8 +24,6 @@ import androidx.viewpager2.widget.ViewPager2
 import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.update.AppUpdateChecker
-import com.andsi.airlyrics.app.update.AppUpdateCheckStatus
-import com.andsi.airlyrics.app.update.AppUpdateDownloadState
 import com.andsi.airlyrics.app.update.AppUpdateInstallResult
 import com.andsi.airlyrics.app.update.AppUpdateModel
 import com.andsi.airlyrics.app.update.AppUpdateRelease
@@ -34,6 +32,8 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.showFullText
 import com.andsi.airlyrics.ui.state.restoreAuxiliaryDialogs
 import com.andsi.airlyrics.ui.state.confirmOperation
+import com.andsi.airlyrics.ui.model.AppUpdateCheckStatus
+import com.andsi.airlyrics.ui.model.AppUpdateDownloadState
 import com.andsi.airlyrics.ui.model.ConfirmationAction
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
@@ -78,7 +78,8 @@ class MainActivityAuxiliaryRecreationTest {
             val host = activity.graph.uiHost
             val installed = host.getAppVersionName()
             val releases = host.loadBundledReleaseNotes()
-            val older = releases.first { it.version != installed }
+            // Use a release with enough notes to exercise scrolling.
+            val older = releases.first { it.version == "1.2.9" }
             val entryLabel = host.getString(R.string.ui_app_version_changelog, installed)
             activity.graph.viewModel.selectPage(Page.SETTINGS)
             activity.graph.viewModel.openSettingsSubPage(SettingsSubPage.ABOUT)
@@ -202,7 +203,7 @@ class MainActivityAuxiliaryRecreationTest {
             assertEquals(selectorTop, visibleBounds(olderTitle).top)
             previewVersionLayout(root, "history-scrolled-en")
 
-            val adjacent = releases.first { it.version != installed && it.version != older.version }
+            val adjacent = releases[releases.indexOf(older) + 1]
             assertTrue(pager.beginFakeDrag())
             assertTrue(pager.fakeDragBy(-pager.width.toFloat()))
             assertTrue(pager.endFakeDrag())
@@ -269,7 +270,7 @@ class MainActivityAuxiliaryRecreationTest {
             })[AppUpdateModel::class.java]
             controller.setup().visible()
             val host = activity.graph.uiHost
-            assertSame(model, host.appUpdates)
+            assertSame(model.availableUpdate, host.appUpdates?.availableUpdate)
             await("The automatic update check should finish") { model.checkStatus.value == AppUpdateCheckStatus.Complete }
             val installed = host.getAppVersionName()
             val entryLabel = host.getString(R.string.ui_app_version_changelog, installed)

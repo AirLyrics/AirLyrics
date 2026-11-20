@@ -367,7 +367,6 @@ TTML de tiempo por palabra:
     <string name="ui_saved_lyrics">Letras guardadas</string>
     <string name="ui_saved_lyrics_empty_hint">Aún no hay letras guardadas</string>
     <string name="ui_saved_lyrics_no_search_results">No hay letras coincidentes</string>
-    <string name="ui_scale_fade">Desvanecido con escala</string>
     <string name="ui_search">Buscar</string>
     <string name="ui_search_saved_lyrics_hint">Buscar canciones, artistas o fuentes</string>
     <string name="ui_search_strategy">Búsqueda y guardado</string>
@@ -386,7 +385,6 @@ TTML de tiempo por palabra:
     <string name="ui_skipping_next">Pasando a la siguiente</string>
     <string name="ui_skipping_previous">Volviendo a la anterior</string>
     <string name="ui_skipping_queue">Saltando en la cola</string>
-    <string name="ui_slide_up">Deslizar hacia arriba</string>
     <string name="ui_soft_fade">Desvanecido suave</string>
     <string name="ui_lyrics_settings_summary">Fuentes, almacenamiento y letras locales</string>
     <string name="ui_stopped">Detenido</string>

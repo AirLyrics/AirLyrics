@@ -174,10 +174,7 @@ object AirUiTokens {
         const val FastFadeMs = 90L
         const val RestoreFadeMs = 180L
         const val LyricsFadeMs = 170L
-        const val LyricsSlideMs = 190L
-        const val LyricsScaleFadeMs = 180L
         const val LyricsSlideDistanceDp = 8
-        const val LyricsScaleStart = 0.96f
         const val TabOvershoot = 1.08f
         const val MediaDoneRotation = -2f
         const val MediaDoneScale = 1.018f

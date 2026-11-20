@@ -39,6 +39,8 @@ The main UI handles user actions; the floating service follows the selected play
 
 Imports, edits and deletions notify the UI and floating service through `LyricsChangedBroadcast`. Cross-component actions use dedicated broadcast or command objects to avoid duplicate action and extra definitions.
 
+The updater in `app/update/` checks stable GitHub releases tagged `v<version>`. It verifies the matching `AirLyrics-v<version>.apk` before passing it to Android's installer. The About UI receives release details and actions through `AppUpdateUi`.
+
 ## Package boundaries
 
 `scripts/architecture/policy.json` defines the allowed dependencies in this generated table:

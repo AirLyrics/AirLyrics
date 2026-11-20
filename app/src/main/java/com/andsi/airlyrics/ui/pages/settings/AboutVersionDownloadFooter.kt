@@ -18,10 +18,10 @@ import androidx.core.animation.doOnEnd
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.lifecycleScope
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.app.update.AppUpdateDownloadState
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.AirTonalButtonTone
 import com.andsi.airlyrics.ui.components.styleAirTonalButton
+import com.andsi.airlyrics.ui.model.AppUpdateDownloadState
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorTextStrong

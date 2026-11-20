@@ -51,7 +51,7 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         spicyDrawing.reset()
         spicyLineDrawing.reset()
         cancelLyricsTextAnimation()
-        setLyricsTextAnimationState(REST_ALPHA, 0f, REST_SCALE, REST_SCALE)
+        setLyricsTextAlpha(REST_ALPHA)
         updateSpicyPlayback(spicyPosition, spicyPlaying)
     }
 
@@ -183,9 +183,6 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
     }
 
     private var lyricContentAlpha: Float = REST_ALPHA
-    private var lyricContentTranslationY: Float = 0f
-    private var lyricContentScaleX: Float = REST_SCALE
-    private var lyricContentScaleY: Float = REST_SCALE
 
     private var lyricAnimator: ValueAnimator? = null
 
@@ -195,16 +192,8 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         animator.cancel()
     }
 
-    override fun setLyricsTextAnimationState(
-        alpha: Float,
-        translationY: Float,
-        scaleX: Float,
-        scaleY: Float
-    ) {
+    override fun setLyricsTextAlpha(alpha: Float) {
         lyricContentAlpha = alpha.coerceIn(0f, 1f)
-        lyricContentTranslationY = translationY
-        lyricContentScaleX = scaleX.coerceAtLeast(0f)
-        lyricContentScaleY = scaleY.coerceAtLeast(0f)
         invalidate()
     }
 
@@ -214,41 +203,19 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
     ) {
         cancelLyricsTextAnimation()
 
-        val startAlpha = lyricContentAlpha
-        val startTranslationY = lyricContentTranslationY
-        val startScaleX = lyricContentScaleX
-        val startScaleY = lyricContentScaleY
-        if (
-            startAlpha == REST_ALPHA &&
-            startTranslationY == 0f &&
-            startScaleX == REST_SCALE &&
-            startScaleY == REST_SCALE
-        ) {
-            return
-        }
+        if (lyricContentAlpha == REST_ALPHA) return
 
-        val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+        val animator = ValueAnimator.ofFloat(lyricContentAlpha, REST_ALPHA).apply {
             duration = durationMs
             this.interpolator = interpolator
             addUpdateListener { animation ->
-                val fraction = animation.animatedValue as Float
-                setLyricsTextAnimationState(
-                    alpha = lerp(startAlpha, REST_ALPHA, fraction),
-                    translationY = lerp(startTranslationY, 0f, fraction),
-                    scaleX = lerp(startScaleX, REST_SCALE, fraction),
-                    scaleY = lerp(startScaleY, REST_SCALE, fraction)
-                )
+                setLyricsTextAlpha(animation.animatedValue as Float)
             }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     if (lyricAnimator !== animation) return
                     lyricAnimator = null
-                    setLyricsTextAnimationState(
-                        alpha = REST_ALPHA,
-                        translationY = 0f,
-                        scaleX = REST_SCALE,
-                        scaleY = REST_SCALE
-                    )
+                    setLyricsTextAlpha(REST_ALPHA)
                 }
             })
         }
@@ -262,13 +229,6 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         canvas.withSave {
             // Contain shadow layers and animated glyphs even under a scrolling parent's clip.
             clipRect(0, 0, width, height)
-            translate(0f, lyricContentTranslationY)
-            scale(
-                lyricContentScaleX,
-                lyricContentScaleY,
-                width / 2f,
-                height / 2f
-            )
             if (lyricContentAlpha >= REST_ALPHA) {
                 drawLyrics(this)
             } else {
@@ -290,12 +250,7 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         spicyDrawing.reset()
         spicyLineDrawing.reset()
         cancelLyricsTextAnimation()
-        setLyricsTextAnimationState(
-            alpha = REST_ALPHA,
-            translationY = 0f,
-            scaleX = REST_SCALE,
-            scaleY = REST_SCALE
-        )
+        setLyricsTextAlpha(REST_ALPHA)
         super.onDetachedFromWindow()
     }
 
@@ -304,26 +259,16 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         return true
     }
 
-    private fun lerp(start: Float, end: Float, fraction: Float): Float {
-        return start + (end - start) * fraction
-    }
-
     private companion object {
         val PREVIEW_GLOW_SPACE = LyricsGlowStyle(spreadPercent = LyricsGlowStyle.MAX_SPREAD_PERCENT)
         const val REST_ALPHA = 1f
-        const val REST_SCALE = 1f
     }
 }
 
 internal interface LyricsTextAnimationTarget {
     fun cancelLyricsTextAnimation()
 
-    fun setLyricsTextAnimationState(
-        alpha: Float,
-        translationY: Float,
-        scaleX: Float,
-        scaleY: Float
-    )
+    fun setLyricsTextAlpha(alpha: Float)
 
     fun animateLyricsTextToRest(durationMs: Long, interpolator: TimeInterpolator)
 }

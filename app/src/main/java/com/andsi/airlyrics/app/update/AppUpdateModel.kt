@@ -9,6 +9,10 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
+import com.andsi.airlyrics.ui.model.AppUpdateCheckStatus
+import com.andsi.airlyrics.ui.model.AppUpdateDownloadState
+import com.andsi.airlyrics.ui.model.AppUpdateReleaseInfo
+import com.andsi.airlyrics.ui.model.AppUpdateUi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
@@ -17,18 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.launch
-
-internal sealed interface AppUpdateDownloadState {
-    data object Idle : AppUpdateDownloadState
-    data class Progress(val percent: Int) : AppUpdateDownloadState
-    data object Failed : AppUpdateDownloadState
-    data object Ready : AppUpdateDownloadState
-    data object Installing : AppUpdateDownloadState
-    data object PermissionRequired : AppUpdateDownloadState
-    data object InstallFailed : AppUpdateDownloadState
-    data object Incompatible : AppUpdateDownloadState
-    data object Installed : AppUpdateDownloadState
-}
 
 internal class AppUpdateModel(
     app: Context,
@@ -51,7 +43,7 @@ internal class AppUpdateModel(
     private var generation = 0L
     private var permissionRelease: AppUpdateRelease? = null
 
-    fun bind(activity: ComponentActivity) {
+    fun bind(activity: ComponentActivity): AppUpdateUi {
         checker.startAutomaticChecks(activity)
         activity.lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onResume(owner: LifecycleOwner) {
@@ -60,6 +52,26 @@ internal class AppUpdateModel(
                 if (activity.packageManager.canRequestPackageInstalls()) install(activity, release)
             }
         })
+
+        val model = this
+        return object : AppUpdateUi {
+            override val availableUpdate = model.availableUpdate
+            override val checkStatus = model.checkStatus
+            override val state = model.state
+            override val activeRelease get() = model.activeRelease
+
+            override fun checkNow() = model.checkNow()
+
+            override fun download(release: AppUpdateReleaseInfo) {
+                if (release is AppUpdateRelease) model.download(release)
+            }
+
+            override fun install(release: AppUpdateReleaseInfo) {
+                if (release is AppUpdateRelease) model.install(activity, release)
+            }
+
+            override fun reset() = model.reset()
+        }
     }
 
     @MainThread

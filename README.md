@@ -54,6 +54,8 @@ If something isn't working or there's a feature you'd like to see, you're very w
 3. Play some music, then manually select the corresponding player on the **Media** page.
 4. Open the **Floating** page and tap **Show** in the bottom bar.
 
+GitHub builds can check for and install updates in **Settings > About**.
+
 For more settings and help with common problems, see the [User Guide](docs/USER_GUIDE.md).
 
 ---
@@ -67,9 +69,8 @@ For more settings and help with common problems, see the [User Guide](docs/USER_
   lyrics can be saved and edited but cannot be displayed in the overlay.
   Manual word-by-word search also supports NetEase Cloud Music, Kugou, and QQ Music.
 - **Overlay appearance**: Adjust the font, weight, colors, opacity, glow, window style, and transition
-  animations, with a live preview as you make changes. You can also import your own fonts.
-- **Themes**: Choose a light or dark theme, or follow the system setting, with several accent colors
-  available.
+  animations with a live preview. Manage custom fonts, including TTC collections, and blur the
+  window background on supported devices.
 - **Display controls**: Automatically hide lyrics when playback is paused, lock the window, let taps
   pass through it, or control it from the notification. You can also limit the overlay to selected
   apps.
@@ -160,8 +161,9 @@ AirLyrics uses the following permissions and system features:
 | Notification access | Read information about the media currently playing |
 | Notifications | Show the foreground service notification and control buttons |
 | Usage access | Check whether selected apps are visible to control when the lyrics overlay appears (optional, Android 10+) |
-| Network access | Search for lyrics online |
+| Network access | Search for lyrics online and check for app updates in GitHub builds |
 | File picker | Import local lyrics and choose a folder for saving lyrics |
+| Install unknown apps | Install a GitHub update with Android confirmation |
 
 For details about permissions, data storage, and online searches, see the
 [Privacy Policy](PRIVACY.md).

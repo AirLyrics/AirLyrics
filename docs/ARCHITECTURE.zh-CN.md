@@ -39,6 +39,8 @@ Gradle 通过 `cargo ndk` 构建 `libairlyrics_lyrics.so`，输出到 `app/src/m
 
 导入、编辑或删除歌词后，通过 `LyricsChangedBroadcast` 通知界面和悬浮服务刷新。跨组件操作使用专用广播或命令对象，避免重复定义 action 和 extra。
 
+`app/update/` 查询带有 `v<version>` 标签的 GitHub 正式发布，验证对应的 `AirLyrics-v<version>.apk` 后交给 Android 安装器。「关于」页面通过 `AppUpdateUi` 获取版本信息及更新操作。
+
 ## 包边界
 
 依赖规则由 `scripts/architecture/policy.json` 维护，以下为自动生成的允许依赖表：

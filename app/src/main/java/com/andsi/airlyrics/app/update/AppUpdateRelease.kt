@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app.update
 
+import com.andsi.airlyrics.ui.model.AppUpdateReleaseInfo
 import java.time.LocalDate
 
 internal data class AppUpdateVersion(
@@ -31,9 +32,11 @@ internal data class AppUpdateRelease private constructor(
     val version: AppUpdateVersion,
     val sizeBytes: Long,
     val sha256: String,
-    val publishedOn: LocalDate?,
-    val notes: String
-) {
+    override val publishedOn: LocalDate?,
+    override val notes: String
+) : AppUpdateReleaseInfo {
+    override val versionName: String get() = version.toString()
+
     companion object {
         private const val MAX_APK_BYTES = 256L * 1024 * 1024
         private val sha256Pattern = Regex("[a-fA-F0-9]{64}")

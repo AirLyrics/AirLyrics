@@ -7,6 +7,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.andsi.airlyrics.BuildConfig
+import com.andsi.airlyrics.ui.model.AppUpdateCheckStatus
 import java.io.IOException
 import java.time.LocalDate
 import kotlin.time.Duration.Companion.milliseconds
@@ -22,8 +23,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-
-internal enum class AppUpdateCheckStatus { Unchecked, Checking, Complete, Failed }
 
 /** Share one checker across the settings entry and the About page. */
 internal class AppUpdateChecker(

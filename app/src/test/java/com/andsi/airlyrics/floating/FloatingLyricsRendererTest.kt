@@ -495,11 +495,11 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
-    fun animatedLineSwitch_keepsFloatingBubbleTransformAtRest() {
+    fun softFadeLineSwitch_keepsFloatingBubbleTransformAtRest() {
         val textView = RecordingAnimationView(context)
         val renderer = renderer(
             textView = textView,
-            switchAnimationMode = LyricsSwitchAnimationMode.SLIDE_UP
+            switchAnimationMode = LyricsSwitchAnimationMode.FADE
         )
         renderer.updatePlayback(positionMs = 1_100L, isPlaying = false)
         renderer.parseAndShow(
@@ -514,9 +514,6 @@ class FloatingLyricsRendererTest {
         assertEquals(1, textView.animationDurations.size)
         assertTrue(textView.animationDurations.single() > 0L)
         assertEquals(0f, textView.contentAlpha)
-        assertTrue("SLIDE_UP must animate content from below", textView.contentTranslationY > 0f)
-        assertEquals(1f, textView.contentScaleX)
-        assertEquals(1f, textView.contentScaleY)
         assertEquals(1f, textView.alpha)
         assertEquals(0f, textView.translationY)
         assertEquals(1f, textView.scaleX)
@@ -557,17 +554,11 @@ class FloatingLyricsRendererTest {
 
     private class RecordingAnimationView(context: Context) : TextView(context), LyricsTextAnimationTarget {
         var contentAlpha = 1f
-        var contentTranslationY = 0f
-        var contentScaleX = 1f
-        var contentScaleY = 1f
         val animationDurations = mutableListOf<Long>()
 
         override fun cancelLyricsTextAnimation() = Unit
-        override fun setLyricsTextAnimationState(alpha: Float, translationY: Float, scaleX: Float, scaleY: Float) {
+        override fun setLyricsTextAlpha(alpha: Float) {
             contentAlpha = alpha
-            contentTranslationY = translationY
-            contentScaleX = scaleX
-            contentScaleY = scaleY
         }
         override fun animateLyricsTextToRest(durationMs: Long, interpolator: TimeInterpolator) {
             animationDurations += durationMs

@@ -24,14 +24,14 @@ import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.app.update.AppUpdateCheckStatus
-import com.andsi.airlyrics.app.update.AppUpdateDownloadState
-import com.andsi.airlyrics.app.update.AppUpdateModel
-import com.andsi.airlyrics.app.update.AppUpdateRelease
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.airIconView
 import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.layout.WindowLayoutSpec
+import com.andsi.airlyrics.ui.model.AppUpdateCheckStatus
+import com.andsi.airlyrics.ui.model.AppUpdateDownloadState
+import com.andsi.airlyrics.ui.model.AppUpdateReleaseInfo
+import com.andsi.airlyrics.ui.model.AppUpdateUi
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.state.bindInteractionScroll
 import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
@@ -55,12 +55,12 @@ internal data class AboutVersionUpdate(
     val onUpdate: () -> Unit
 )
 
-private fun MainUiHost.versionUpdate(model: AppUpdateModel, release: AppUpdateRelease) = AboutVersionUpdate(
-    release = AppReleaseNotes(release.version.toString(), release.publishedOn, formatGitHubReleaseNotes(release.notes)),
-    download = model.state,
-    onCancel = model::reset,
-    onInstall = { model.install(activity, release) },
-    onUpdate = { model.download(release) }
+private fun versionUpdate(updates: AppUpdateUi, release: AppUpdateReleaseInfo) = AboutVersionUpdate(
+    release = AppReleaseNotes(release.versionName, release.publishedOn, formatGitHubReleaseNotes(release.notes)),
+    download = updates.state,
+    onCancel = updates::reset,
+    onInstall = { updates.install(release) },
+    onUpdate = { updates.download(release) }
 )
 
 internal fun MainUiHost.showAppUpdateDialog(update: AboutVersionUpdate? = null) {
@@ -161,7 +161,7 @@ internal fun MainUiHost.showAppUpdateDialog(update: AboutVersionUpdate? = null) 
     )
 }
 
-private fun MainUiHost.currentReleaseStatus(updates: AppUpdateModel?): TextView = TextView(this).apply {
+private fun MainUiHost.currentReleaseStatus(updates: AppUpdateUi?): TextView = TextView(this).apply {
     setText(R.string.ui_app_up_to_date)
     setTextColor(colorText)
     textSize = AirUiTokens.TextSize.Body

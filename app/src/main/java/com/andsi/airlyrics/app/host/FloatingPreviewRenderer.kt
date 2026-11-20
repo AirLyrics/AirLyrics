@@ -99,7 +99,7 @@ internal fun hasAnimatedPreviewLyricsHighlight(view: TextView): Boolean {
         text.getSpans(0, text.length, SpicyLineSpan::class.java).any { it.animated }
 }
 
-internal fun animatePreviewLyricsText(view: TextView, durationMs: Long, offsetY: Float, scale: Float) {
+internal fun animatePreviewLyricsText(view: TextView, durationMs: Long) {
     val target = view as? LyricsTextAnimationTarget
     view.animate().cancel()
     target?.cancelLyricsTextAnimation()
@@ -108,22 +108,13 @@ internal fun animatePreviewLyricsText(view: TextView, durationMs: Long, offsetY:
     val alpha = if (animate) 0f else 1f
     if (target != null) {
         view.alpha = 1f
-        view.translationY = 0f
-        view.scaleX = 1f
-        view.scaleY = 1f
-        target.setLyricsTextAnimationState(alpha, offsetY, scale, scale)
+        target.setLyricsTextAlpha(alpha)
         if (animate) target.animateLyricsTextToRest(durationMs, DecelerateInterpolator())
     } else {
         view.alpha = alpha
-        view.translationY = offsetY
-        view.scaleX = scale
-        view.scaleY = scale
         if (animate) {
             view.animate()
                 .alpha(1f)
-                .translationY(0f)
-                .scaleX(1f)
-                .scaleY(1f)
                 .setDuration(durationMs)
                 .setInterpolator(DecelerateInterpolator())
                 .start()

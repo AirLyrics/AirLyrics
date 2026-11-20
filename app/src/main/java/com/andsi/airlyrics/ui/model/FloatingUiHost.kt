@@ -72,7 +72,7 @@ internal interface FloatingUiHost {
     fun updateFloatingPreviewText(view: TextView, text: CharSequence)
     fun syncFloatingPreviewVisibility(view: TextView, visible: Boolean)
     fun hasAnimatedFloatingPreviewHighlight(view: TextView): Boolean
-    fun animateFloatingPreviewText(view: TextView, durationMs: Long, offsetY: Float, scale: Float)
+    fun animateFloatingPreviewText(view: TextView, durationMs: Long)
     fun classicPreviewProgressForLine(lineText: String): (Long) -> FloatingPreviewHighlightProgress
     fun applyAnimatedFloatingPreviewHighlight(
         text: android.text.SpannableStringBuilder,

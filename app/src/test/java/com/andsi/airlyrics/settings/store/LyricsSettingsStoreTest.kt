@@ -303,6 +303,15 @@ class LyricsSettingsStoreTest {
     }
 
     @Test
+    fun retiredSwitchAnimationsFallBackToSoftFade() {
+        val preferences = context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE)
+        for (key in listOf("slide_up", "scale_fade")) {
+            preferences.edit().putString("switch_animation_mode", key).commit()
+            assertEquals(LyricsSwitchAnimationMode.FADE, LyricsSettingsStore.getSwitchAnimationMode(context))
+        }
+    }
+
+    @Test
     fun wordByWordLyricsEnabled_usesCompatibilityPreferenceKey() {
         val preferences = context.getSharedPreferences("lyrics_settings", Context.MODE_PRIVATE)
 
