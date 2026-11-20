@@ -8,6 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.andsi.airlyrics.BuildConfig
 import java.io.IOException
+import java.time.LocalDate
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -22,6 +23,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
+internal enum class AppUpdateCheckStatus { Unchecked, Checking, Complete, Failed }
+
 /** Share one checker across the settings entry and the About page. */
 internal class AppUpdateChecker(
     context: Context,
@@ -35,6 +38,8 @@ internal class AppUpdateChecker(
     private val checkLock = Mutex()
     private val mutableAvailableUpdate = MutableStateFlow<AppUpdateRelease?>(null)
     val availableUpdate = mutableAvailableUpdate.asStateFlow()
+    private val mutableCheckStatus = MutableStateFlow(AppUpdateCheckStatus.Unchecked)
+    val checkStatus = mutableCheckStatus.asStateFlow()
 
     /** Checks while the owner's UI is started. Results only update [availableUpdate]. */
     fun startAutomaticChecks(owner: LifecycleOwner): Job = owner.lifecycleScope.launch {
@@ -67,12 +72,28 @@ internal class AppUpdateChecker(
             AppUpdateRelease.create(
                 it,
                 preferences.getLong(SIZE, 0),
-                preferences.getString(SHA256, null).orEmpty()
+                preferences.getString(SHA256, null).orEmpty(),
+                preferences.getString(PUBLISHED_ON, null)?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+                preferences.getString(NOTES, null).orEmpty()
             )
+        }
+        if (mutableCheckStatus.value == AppUpdateCheckStatus.Unchecked && preferences.contains(NEXT_CHECK)) {
+            mutableCheckStatus.value = if (preferences.getBoolean(CHECK_FAILED, false)) AppUpdateCheckStatus.Failed
+                else AppUpdateCheckStatus.Complete
         }
     }
 
     private suspend fun refresh(): Result<AppUpdateRelease?> {
+        val previous = mutableCheckStatus.value
+        mutableCheckStatus.value = AppUpdateCheckStatus.Checking
+        try {
+            return fetchAndCache()
+        } finally {
+            if (mutableCheckStatus.value == AppUpdateCheckStatus.Checking) mutableCheckStatus.value = previous
+        }
+    }
+
+    private suspend fun fetchAndCache(): Result<AppUpdateRelease?> {
         val result = try {
             val current = installedVersion ?: throw IOException("Unsupported installed version name")
             Result.success(latestRelease(current)?.takeIf { it.version > current })
@@ -84,20 +105,26 @@ internal class AppUpdateChecker(
         preferences.edit {
             val interval = if (result.isSuccess) CHECK_INTERVAL_MS else RETRY_INTERVAL_MS
             putLong(NEXT_CHECK, now() + interval)
+            putBoolean(CHECK_FAILED, result.isFailure)
             if (result.isSuccess) {
                 val release = result.getOrThrow()
                 if (release == null) {
                     remove(VERSION)
                     remove(SIZE)
                     remove(SHA256)
+                    remove(PUBLISHED_ON)
+                    remove(NOTES)
                 } else {
                     putString(VERSION, release.version.toString())
                     putLong(SIZE, release.sizeBytes)
                     putString(SHA256, release.sha256)
+                    putString(PUBLISHED_ON, release.publishedOn?.toString())
+                    putString(NOTES, release.notes)
                 }
             }
         }
         if (result.isSuccess) mutableAvailableUpdate.value = result.getOrThrow()
+        mutableCheckStatus.value = if (result.isSuccess) AppUpdateCheckStatus.Complete else AppUpdateCheckStatus.Failed
         return result
     }
 
@@ -108,5 +135,8 @@ internal class AppUpdateChecker(
         const val VERSION = "version"
         const val SIZE = "size"
         const val SHA256 = "sha256"
+        const val PUBLISHED_ON = "published_on"
+        const val NOTES = "notes"
+        const val CHECK_FAILED = "check_failed"
     }
 }

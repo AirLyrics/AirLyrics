@@ -7,8 +7,6 @@ internal object AboutTokens {
     const val GITHUB_BUTTON_WIDTH_DP = 42
     const val GITHUB_BUTTON_HEIGHT_DP = 32
     const val GITHUB_ICON_SIZE_DP = 20
-    const val CHANGE_LOG_HORIZONTAL_PADDING_DP = 28
-    const val CHANGE_LOG_VERTICAL_PADDING_DP = 11
     const val SEGMENT_TEXT_SP = 17f
     const val SEGMENT_SIDE_MARGIN_DP = 22
     const val SEGMENT_GAP_DP = 8

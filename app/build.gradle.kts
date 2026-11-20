@@ -59,8 +59,10 @@ if (spicyClientKey.isNotEmpty() && !Regex("sl_pk_[A-Za-z0-9_-]+").matches(spicyC
 }
 
 val buildX8664 = providers.gradleProperty("airlyrics.buildX86_64").orNull == "true"
-// Only direct-distribution builds may opt in to the update installer.
-val enableAppUpdateInstaller = providers.gradleProperty("airlyrics.enableAppUpdateInstaller").orNull == "true"
+// Signed upstream release APKs use the direct updater. Store and development builds may override it explicitly.
+val appUpdateInstallerOverride = providers.gradleProperty("airlyrics.enableAppUpdateInstaller").orNull?.let { it == "true" }
+fun appUpdateInstallerEnabled(buildType: String?) =
+    appUpdateInstallerOverride ?: (buildType == "release" && hasReleaseSigning)
 
 fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } ?: rootProject.file(path)
 
@@ -96,7 +98,7 @@ android {
 
     defaultConfig {
         applicationId = "com.andsi.airlyrics"
-        buildConfigField("boolean", "APP_UPDATE_INSTALLER_ENABLED", enableAppUpdateInstaller.toString())
+        buildConfigField("boolean", "APP_UPDATE_INSTALLER_ENABLED", appUpdateInstallerEnabled(null).toString())
         buildConfigField("String", "SPICY_CLIENT_KEY", "\"$spicyClientKey\"")
         minSdk = 26
         //noinspection OldTargetApi
@@ -128,6 +130,7 @@ android {
 
     buildTypes {
         release {
+            buildConfigField("boolean", "APP_UPDATE_INSTALLER_ENABLED", appUpdateInstallerEnabled("release").toString())
             isMinifyEnabled = true
             isShrinkResources = true
             if (hasReleaseSigning) {
@@ -190,7 +193,7 @@ android {
 
 androidComponents {
     onVariants { variant ->
-        if (enableAppUpdateInstaller) {
+        if (appUpdateInstallerEnabled(variant.buildType)) {
             variant.sources.manifests.addStaticManifestFile("src/appUpdates/AndroidManifest.xml")
         }
     }

@@ -169,6 +169,7 @@ internal class MainGraph(
         viewModel.refreshForegroundState()
         uiHost.applySystemBarsTheme()
         registerBackNavigationCallback()
+        uiHost.appUpdates?.bind(activity)
         activity.setContentView(mainHandRenderer.createMainView())
         uiHost.applySystemBarsTheme()
         uiInvalidator.rebuildCurrentPage()

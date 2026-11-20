@@ -20,13 +20,17 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
+internal class AppUpdateIncompatibleException(message: String) : IOException(message)
+internal class AppUpdateDownloadMissingException : IOException("The verified update is no longer cached")
+
 internal object AppUpdateApk {
     private val apkLock = Mutex()
 
     suspend fun useVerifiedApk(
         context: Context,
         release: AppUpdateRelease,
-        onProgress: (Int) -> Unit,
+        onProgress: (Int) -> Unit = {},
+        allowDownload: Boolean = true,
         useApk: suspend (File) -> Unit
     ) = withContext(Dispatchers.IO) {
         apkLock.withLock {
@@ -38,7 +42,10 @@ internal object AppUpdateApk {
             try {
                 val cached = apk.isFile && apk.length() == release.sizeBytes &&
                     apk.inputStream().use { verifyApkContents(it, release) }
-                if (!cached) download(release, partial, onProgress)
+                if (!cached) {
+                    if (!allowDownload) throw AppUpdateDownloadMissingException()
+                    partial.outputStream().use { output -> downloadVerifiedApkContents(release, output, onProgress) }
+                }
 
                 val verified = if (cached) apk else partial
                 verifyArchive(context, verified, release)
@@ -59,19 +66,6 @@ internal object AppUpdateApk {
         }
     }
 
-    private suspend fun download(release: AppUpdateRelease, partial: File, onProgress: (Int) -> Unit) {
-        GitHubAppUpdateSource.download(release) { connection ->
-            val length = connection.contentLengthLong
-            if (length >= 0 && length != release.sizeBytes) throw IOException("Unexpected APK download size")
-            val valid = connection.inputStream.use { input ->
-                partial.outputStream().use { output ->
-                    verifyApkContents(input, release, output, onProgress)
-                }
-            }
-            if (!valid) throw IOException("APK checksum or size mismatch")
-        }
-    }
-
     @Suppress("DEPRECATION")
     private fun verifyArchive(context: Context, file: File, release: AppUpdateRelease) {
         val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -86,8 +80,21 @@ internal object AppUpdateApk {
             throw IOException("Installed package cannot be verified", failure)
         }
         val candidate = manager.getPackageArchiveInfo(file.path, flags)
-            ?: throw IOException("The file is not a valid Android package")
+            ?: throw AppUpdateIncompatibleException("The file is not a valid Android package")
         verifyUpdatePackage(installed, candidate, release)
+    }
+}
+
+internal suspend fun downloadVerifiedApkContents(
+    release: AppUpdateRelease,
+    output: OutputStream? = null,
+    onProgress: (Int) -> Unit
+) {
+    GitHubAppUpdateSource.download(release) { connection ->
+        val length = connection.contentLengthLong
+        if (length >= 0 && length != release.sizeBytes) throw IOException("Unexpected APK download size")
+        val valid = connection.inputStream.use { verifyApkContents(it, release, output, onProgress) }
+        if (!valid) throw IOException("APK checksum or size mismatch")
     }
 }
 
@@ -121,22 +128,22 @@ internal suspend fun verifyApkContents(
 }
 
 internal fun verifyUpdatePackage(installed: PackageInfo, candidate: PackageInfo, release: AppUpdateRelease) {
-    if (candidate.packageName != installed.packageName) throw IOException("APK package name mismatch")
-    if (candidate.versionName != release.version.toString()) throw IOException("APK version does not match the release")
+    if (candidate.packageName != installed.packageName) throw AppUpdateIncompatibleException("APK package name mismatch")
+    if (candidate.versionName != release.version.toString()) throw AppUpdateIncompatibleException("APK version does not match the release")
     if (PackageInfoCompat.getLongVersionCode(candidate) <= PackageInfoCompat.getLongVersionCode(installed)) {
-        throw IOException("APK version code is not newer than the installed version")
+        throw AppUpdateIncompatibleException("APK version code is not newer than the installed version")
     }
 
     val installedSigners = currentSigners(installed)
     val candidateSigners = currentSigners(candidate)
-    if (installedSigners.isEmpty() || candidateSigners.isEmpty()) throw IOException("Missing APK signing certificate")
+    if (installedSigners.isEmpty() || candidateSigners.isEmpty()) throw AppUpdateIncompatibleException("Missing APK signing certificate")
     if (candidateSigners == installedSigners) return
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && installedSigners.size == 1 && candidateSigners.size == 1 &&
         candidate.signingInfo?.signingCertificateHistory?.contains(installedSigners.single()) == true
     ) {
         return
     }
-    throw IOException("APK signing certificate does not match the installed app")
+    throw AppUpdateIncompatibleException("APK signing certificate does not match the installed app")
 }
 
 @Suppress("DEPRECATION")

@@ -69,8 +69,6 @@
     <string name="ui_cannot_read_word_by_word_lyrics_file">Cannot read word-by-word lyrics file</string>
     <string name="ui_cannot_read_this_lyric_file">Cannot read lyrics file</string>
     <string name="ui_center">Center</string>
-    <string name="ui_changelog">Changelog</string>
-    <string name="ui_view_full_changelog">Full changelog</string>
     <string name="ui_check_format">Check format</string>
     <string name="ui_edit_line">Edit</string>
     <string name="ui_add_next_line">Add next line</string>
@@ -427,8 +425,21 @@ Word-timed TTML:
     <string name="ui_unknown_type">Unknown type</string>
     <string name="ui_updated">Updated</string>
     <string name="ui_app_update_available">Version %1$s, update available</string>
-    <string name="ui_app_update_title">App update</string>
-    <string name="ui_app_update_preview">Preview only</string>
+    <string name="ui_app_update_available_label">Update available</string>
+    <string name="ui_app_version_changelog">Version %1$s, changelog</string>
+    <string name="ui_app_version_select">Choose version, %1$s</string>
+    <string name="ui_app_update_install">Update</string>
+    <string name="ui_app_update_retry_download">Retry download</string>
+    <string name="ui_app_update_checking">Checking for updates…</string>
+    <string name="ui_app_update_check_retry">Check failed. Retry</string>
+    <string name="ui_app_update_ready_install">Install</string>
+    <string name="ui_app_update_installing">Installing…</string>
+    <string name="ui_app_update_install_retry">Retry installation</string>
+    <string name="ui_app_update_allow_install">Allow installation</string>
+    <string name="ui_app_update_installed">Installed</string>
+    <string name="ui_app_update_incompatible">Update incompatible with this installation</string>
+    <string name="ui_app_update_progress">Update progress</string>
+    <string name="ui_app_up_to_date">there is nothing to do</string>
     <string name="ui_app_update_badge" translatable="false">NEW</string>
     <string name="ui_using_local_lyrics_only">Using local lyrics only</string>
     <string name="ui_undo">Undo</string>
@@ -445,7 +456,6 @@ Word-timed TTML:
     <string name="ui_usage_access_description">Detect foreground apps</string>
     <string name="ui_usage_access_required">Usage access required</string>
     <string name="ui_waiting_for_media_message">Waiting for media…</string>
-    <string name="ui_whats_new">New in this version</string>
     <string name="ui_white">White</string>
     <string name="ui_width">Width</string>
     <string name="ui_window_layout">Window layout</string>

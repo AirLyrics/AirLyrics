@@ -21,67 +21,75 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withRotation
 import androidx.core.graphics.withScale
 import androidx.core.graphics.withTranslation
-import com.andsi.airlyrics.BuildConfig
+import androidx.lifecycle.lifecycleScope
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.components.enableSoftPressFeedback
-import com.andsi.airlyrics.ui.components.showAirDialog
 import com.andsi.airlyrics.ui.components.statusPill
 import com.andsi.airlyrics.ui.model.MainUiHost
-import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
-import com.andsi.airlyrics.ui.state.isAuxiliaryDialogShowing
-import com.andsi.airlyrics.ui.state.rememberAuxiliaryDialog
 import com.andsi.airlyrics.ui.theme.airLyricsPalette
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorTextStrong
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlin.math.hypot
-
-internal const val APP_UPDATE_DIALOG = "appUpdate"
-
-// Replace this with release availability when the updater is connected.
-private val hasAppUpdate = BuildConfig.DEBUG
 
 internal fun MainUiHost.aboutVersionEntry(): View {
     val version = getAppVersionName()
-    val pill = statusPill(this, version, playing = true)
+    val updates = appUpdates
+    val pill = statusPill(this, version, playing = true).apply {
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
     return object : FrameLayout(this) {
-        override fun getAccessibilityClassName(): CharSequence =
-            if (isClickable) Button::class.java.name else super.getAccessibilityClassName()
+        override fun getAccessibilityClassName(): CharSequence = Button::class.java.name
     }.apply {
-        // Both states reserve the same space. The sticker is drawn over the pill.
+        // Keep space for the sticker when an update is available.
         minimumWidth = dp(AirUiTokens.Layout.IconTouchSize)
         minimumHeight = dp(AirUiTokens.Layout.IconTouchSize + AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs)
         addView(pill, FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER))
-        if (!hasAppUpdate) return@apply
-
-        contentDescription = getString(R.string.ui_app_update_available, version)
-        pill.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         isFocusable = true
-        foreground = RippleDrawable(
-            ColorStateList.valueOf(ColorUtils.setAlphaComponent(colorTextStrong, 32)),
-            UpdateStickerDrawable(this@aboutVersionEntry),
-            GradientDrawable().apply {
-                cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
-                setColor(Color.WHITE)
-            },
-        )
+        var stickerVisible: Boolean? = null
+        fun renderUpdate(available: Boolean) {
+            if (stickerVisible == available) return
+            stickerVisible = available
+            contentDescription = getString(
+                if (available) R.string.ui_app_update_available else R.string.ui_app_version_changelog,
+                version
+            )
+            foreground = RippleDrawable(
+                ColorStateList.valueOf(ColorUtils.setAlphaComponent(colorTextStrong, 32)),
+                if (available) UpdateStickerDrawable(this@aboutVersionEntry) else null,
+                GradientDrawable().apply {
+                    cornerRadius = dp(AirUiTokens.Radius.Pill).toFloat()
+                    setColor(Color.WHITE)
+                }
+            )
+        }
+        if (updates == null) renderUpdate(false)
+        else bindAppUpdateState(this, updates.availableUpdate) { renderUpdate(it != null) }
         enableSoftPressFeedback()
-        setOnClickListener { showAppUpdateDialog() }
+        setOnClickListener {
+            showAppUpdateDialog()
+            updates?.checkNow()
+        }
     }
 }
 
-internal fun MainUiHost.showAppUpdateDialog() {
-    if (!hasAppUpdate || isAuxiliaryDialogShowing(APP_UPDATE_DIALOG)) return
-    rememberAuxiliaryDialog(APP_UPDATE_DIALOG)
-    auxiliaryDialogs[APP_UPDATE_DIALOG] = showAirDialog(
-        title = getString(R.string.ui_app_update_title),
-        message = getString(R.string.ui_app_update_preview),
-        positiveText = null,
-        coordinatedDim = true,
-        popIn = true,
-        showCloseButton = true,
-        onUserDismiss = { forgetAuxiliaryDialog(APP_UPDATE_DIALOG) },
-    )
+internal fun <T> MainUiHost.bindAppUpdateState(view: View, state: StateFlow<T>, render: (T) -> Unit) {
+    render(state.value)
+    var observer: Job? = null
+    fun start() {
+        observer = activity.lifecycleScope.launch { state.collect { render(it) } }
+    }
+    view.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(view: View) = start()
+        override fun onViewDetachedFromWindow(view: View) {
+            observer?.cancel()
+            observer = null
+        }
+    })
+    if (view.isAttachedToWindow) start()
 }
 
 private class UpdateStickerDrawable(host: MainUiHost) : Drawable() {

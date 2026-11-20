@@ -1,11 +1,20 @@
 package com.andsi.airlyrics.ui.pages.settings
 
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.FrameLayout
+import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceList
+import com.andsi.airlyrics.ui.theme.bindAppearance
+import com.andsi.airlyrics.ui.theme.colorAccentText
 
 internal fun createSettingsHomePage(activity: MainUiHost, animateChildren: Boolean = true): View  = with(activity) createSettingsHomePage@ {
     // The accent picker owns its height animation. A second CHANGING
@@ -38,16 +47,7 @@ internal fun createSettingsHomePage(activity: MainUiHost, animateChildren: Boole
         }
     )
 
-    container.addView(
-        settingsCategoryCard(
-            title = getString(R.string.ui_about),
-            subtitle = getString(R.string.ui_version_project_link_and_changelog),
-            status = "AirLyrics ${getAppVersionName()}",
-            iconRes = R.drawable.ic_air_info
-        ) {
-            uiActions.openSettingsSubPage(SettingsSubPage.ABOUT)
-        }
-    )
+    container.addView(aboutSettingsCard())
 
 
     val categories = (1 until container.childCount).map(container::getChildAt)
@@ -57,4 +57,29 @@ internal fun createSettingsHomePage(activity: MainUiHost, animateChildren: Boole
         categories.forEach { addView(it) }
     })
     return scroll(activity, container, animateChildren = animateChildren, maxWidthDp = 1200)
+}
+
+private fun MainUiHost.aboutSettingsCard(): View {
+    val card = settingsCategoryCard(
+        title = getString(R.string.ui_about),
+        subtitle = getString(R.string.ui_version_project_link_and_changelog),
+        status = "AirLyrics ${getAppVersionName()}",
+        iconRes = R.drawable.ic_air_info
+    ) { uiActions.openSettingsSubPage(SettingsSubPage.ABOUT) }
+    val updates = appUpdates ?: return card
+    val dot = GradientDrawable().apply {
+        shape = GradientDrawable.OVAL
+        setSize(dp(7), dp(7))
+        setColor(colorAccentText)
+    }
+    val badge = InsetDrawable(dot, dp(13))
+    return FrameLayout(this).apply {
+        addView(card, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        foregroundGravity = Gravity.TOP or Gravity.END
+        bindAppearance(this) { dot.setColor(colorAccentText) }
+        bindAppUpdateState(this, updates.availableUpdate) { release ->
+            foreground = release?.let { badge }
+            ViewCompat.setStateDescription(card, release?.let { getString(R.string.ui_app_update_available_label) })
+        }
+    }
 }

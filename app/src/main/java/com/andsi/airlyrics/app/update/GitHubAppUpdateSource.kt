@@ -3,6 +3,7 @@ package com.andsi.airlyrics.app.update
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.net.URL
+import java.time.LocalDate
 import javax.net.ssl.HttpsURLConnection
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -61,8 +62,13 @@ internal object GitHubAppUpdateSource {
                     ?: throw IOException("The release has no standard AirLyrics APK")
                 val digest = asset.getString("digest")
                 if (!digest.startsWith("sha256:")) throw IOException("The release has no SHA-256 digest")
-                AppUpdateRelease.create(version, asset.getLong("size"), digest.removePrefix("sha256:"))
-                    ?: throw IOException("Invalid APK size or SHA-256 digest")
+                AppUpdateRelease.create(
+                    version,
+                    asset.getLong("size"),
+                    digest.removePrefix("sha256:"),
+                    runCatching { LocalDate.parse(json.optString("published_at").take(10)) }.getOrNull(),
+                    json.optString("body", "")
+                ) ?: throw IOException("Invalid APK size or SHA-256 digest")
             }
         } catch (failure: JSONException) {
             throw IOException("Invalid release metadata", failure)

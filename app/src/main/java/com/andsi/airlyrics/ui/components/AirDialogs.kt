@@ -195,7 +195,9 @@ internal fun MainUiHost.showAirDialog(
     onPositive: () -> Unit = {},
     coordinatedDim: Boolean = false,
     popIn: Boolean = false,
-    showCloseButton: Boolean = false
+    showCloseButton: Boolean = false,
+    titleView: View? = null,
+    preferredHeightDp: Int? = null
 ): Dialog {
     val host = this
     val enterMs = if (popIn) DIALOG_POP_ENTER_MS else DIALOG_ENTER_MS
@@ -222,8 +224,8 @@ internal fun MainUiHost.showAirDialog(
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
 
-        if (!title.isNullOrBlank() || headerAction != null || showCloseButton) {
-            val heading = TextView(this@showAirDialog).apply {
+        if (titleView != null || !title.isNullOrBlank() || headerAction != null || showCloseButton) {
+            val heading = titleView ?: TextView(this@showAirDialog).apply {
                 text = title.orEmpty()
                 textSize = AirUiTokens.TextSize.DialogTitle
                 typeface = Typeface.DEFAULT_BOLD
@@ -291,7 +293,12 @@ internal fun MainUiHost.showAirDialog(
                 val fixedHeight = panel.measuredHeight - boundedBodies.sumOf { it.first.measuredHeight }
                 val remaining = (MeasureSpec.getSize(heightMeasureSpec) - fixedHeight).coerceAtLeast(0) / boundedBodies.size
                 boundedBodies.forEach { (body, preferredHeight) ->
-                    body.layoutParams.height = remaining.coerceIn(minOf(dp(96), preferredHeight), preferredHeight)
+                    val height = remaining.coerceIn(minOf(dp(96), preferredHeight), preferredHeight)
+                    if (body.layoutParams.height != height) {
+                        body.layoutParams.height = height
+                        // The sizing probe and the scroll view can use the same measure specs.
+                        panel.forceLayout()
+                    }
                 }
             }
             super.onMeasure(widthMeasureSpec, heightMeasureSpec)
@@ -325,6 +332,14 @@ internal fun MainUiHost.showAirDialog(
             setPadding(rootPadding + safeLeft, rootPadding + safeTop, rootPadding + safeRight, rootPadding + safeBottom)
             val available = (width - paddingLeft - paddingRight).coerceAtLeast(0)
             animatedContent.layoutParams.width = available.coerceAtMost(dp(maxWidthDp))
+            if (preferredHeightDp != null) {
+                val availableHeight = (MeasureSpec.getSize(heightMeasureSpec) - paddingTop - paddingBottom).coerceAtLeast(0)
+                animatedContent.layoutParams.height = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED) {
+                    dp(preferredHeightDp)
+                } else {
+                    minOf(dp(preferredHeightDp), availableHeight)
+                }
+            }
             super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         }
     }.apply {

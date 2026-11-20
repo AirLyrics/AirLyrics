@@ -3,6 +3,7 @@ package com.andsi.airlyrics.ui.model
 import com.andsi.airlyrics.ui.state.forgetAuxiliaryDialog
 import android.content.ContextWrapper
 import androidx.appcompat.app.AppCompatActivity
+import com.andsi.airlyrics.app.update.AppUpdateModel
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
@@ -41,6 +42,7 @@ internal abstract class MainUiHost(
     var windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(0f, 0f, 1f)
     open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
     open val mascotSession by lazy { MascotSession() }
+    open val appUpdates: AppUpdateModel? get() = null
     val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
     var savedLyricsSelectionBackHandler: (() -> Boolean)? = null
     /** A confirmed deletion keeps the current list in place until its data refresh can animate. */

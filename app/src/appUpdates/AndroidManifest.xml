@@ -6,6 +6,10 @@
         <intent>
             <action android:name="android.content.pm.action.CONFIRM_INSTALL" />
         </intent>
+        <intent>
+            <action android:name="android.settings.MANAGE_UNKNOWN_APP_SOURCES" />
+            <data android:scheme="package" />
+        </intent>
     </queries>
 
     <application>

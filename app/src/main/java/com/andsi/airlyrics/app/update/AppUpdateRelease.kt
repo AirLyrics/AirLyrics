@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app.update
 
+import java.time.LocalDate
+
 internal data class AppUpdateVersion(
     val major: Int,
     val minor: Int,
@@ -28,15 +30,23 @@ internal data class AppUpdateVersion(
 internal data class AppUpdateRelease private constructor(
     val version: AppUpdateVersion,
     val sizeBytes: Long,
-    val sha256: String
+    val sha256: String,
+    val publishedOn: LocalDate?,
+    val notes: String
 ) {
     companion object {
         private const val MAX_APK_BYTES = 256L * 1024 * 1024
         private val sha256Pattern = Regex("[a-fA-F0-9]{64}")
 
-        fun create(version: AppUpdateVersion, sizeBytes: Long, sha256: String): AppUpdateRelease? {
+        fun create(
+            version: AppUpdateVersion,
+            sizeBytes: Long,
+            sha256: String,
+            publishedOn: LocalDate? = null,
+            notes: String = ""
+        ): AppUpdateRelease? {
             if (sizeBytes !in 1..MAX_APK_BYTES || !sha256Pattern.matches(sha256)) return null
-            return AppUpdateRelease(version, sizeBytes, sha256.lowercase())
+            return AppUpdateRelease(version, sizeBytes, sha256.lowercase(), publishedOn, notes.take(20_000).trim())
         }
     }
 }

@@ -26,9 +26,14 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.WindowCompat
 import com.andsi.airlyrics.app.interaction.LyricsReadKind
 import com.andsi.airlyrics.app.interaction.LyricsReadSnapshot
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.launch
+import com.andsi.airlyrics.BuildConfig
 import com.andsi.airlyrics.R
+import com.andsi.airlyrics.app.update.AppUpdateModel
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.app.platform.AppNightMode
 import com.andsi.airlyrics.app.render.MainActivityViewRefs
@@ -114,6 +119,12 @@ internal class MainActivityUiHost(
     }
     override val interactions get() = graph.viewModel.interactions
     override val mascotSession get() = graph.viewModel.mascotSession
+    override val appUpdates: AppUpdateModel? by lazy {
+        if (!BuildConfig.APP_UPDATE_INSTALLER_ENABLED) null
+        else ViewModelProvider(activity, viewModelFactory {
+            initializer { AppUpdateModel(activity.applicationContext) }
+        })[AppUpdateModel::class.java]
+    }
 
     var editorObserverInstalled = false
     var editorChangeCallback: ((LocalLyricsUiChange) -> Unit)? = null

@@ -18,11 +18,12 @@ import androidx.lifecycle.Lifecycle
 import com.andsi.airlyrics.BuildConfig
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
@@ -33,7 +34,7 @@ internal sealed interface AppUpdateInstallResult {
     data object Disabled : AppUpdateInstallResult
     data object Busy : AppUpdateInstallResult
     data class PermissionRequired(val settingsIntent: Intent) : AppUpdateInstallResult
-    data object ConfirmationOpened : AppUpdateInstallResult
+    data object Cancelled : AppUpdateInstallResult
     data object Installed : AppUpdateInstallResult
     data class Failed(val cause: Exception) : AppUpdateInstallResult
 }
@@ -41,11 +42,10 @@ internal sealed interface AppUpdateInstallResult {
 internal object AppUpdateInstaller {
     private val installLock = Mutex()
 
-    /** Call from the update action. Progress callbacks run on the I/O dispatcher. */
+    /** Commit a locally verified update from an explicit foreground install action. */
     suspend fun install(
         activity: ComponentActivity,
-        release: AppUpdateRelease,
-        onProgress: (Int) -> Unit = {}
+        release: AppUpdateRelease
     ): AppUpdateInstallResult = withContext(Dispatchers.Main.immediate) {
         if (!BuildConfig.APP_UPDATE_INSTALLER_ENABLED) return@withContext AppUpdateInstallResult.Disabled
         if (!installLock.tryLock()) return@withContext AppUpdateInstallResult.Busy
@@ -53,11 +53,13 @@ internal object AppUpdateInstaller {
             requireForeground(activity)
             val manager = activity.packageManager
             if (!manager.canRequestPackageInstalls()) {
-                AppUpdateInstallResult.PermissionRequired(
-                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.fromParts("package", activity.packageName, null))
+                val settings = Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.fromParts("package", activity.packageName, null)
                 )
+                AppUpdateInstallResult.PermissionRequired(settings.setComponent(systemHandler(manager, settings)))
             } else {
-                stageAndConfirm(activity, release, onProgress)
+                stageAndConfirm(activity, release)
             }
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -70,17 +72,16 @@ internal object AppUpdateInstaller {
 
     private suspend fun stageAndConfirm(
         activity: ComponentActivity,
-        release: AppUpdateRelease,
-        onProgress: (Int) -> Unit
+        release: AppUpdateRelease
     ): AppUpdateInstallResult {
         val app = activity.applicationContext
         val installer = app.packageManager.packageInstaller
-        val response = CompletableDeferred<InstallResponse>()
+        val responses = Channel<InstallResponse>(Channel.BUFFERED)
         var sessionId = -1
         var statusIntent: PendingIntent? = null
         var handedOff = false
         try {
-            AppUpdateApk.useVerifiedApk(app, release, onProgress) { apk ->
+            AppUpdateApk.useVerifiedApk(app, release, allowDownload = false) { apk ->
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                     setAppPackageName(app.packageName)
                     setSize(release.sizeBytes)
@@ -93,15 +94,15 @@ internal object AppUpdateInstaller {
                 }
                 val id = installer.createSession(params)
                 sessionId = id
-                pendingResponses[id] = response
+                pendingResponses[id] = responses
 
-                // PackageInstaller adds status extras to this explicit, one-shot callback.
+                // PackageInstaller uses this explicit callback for both confirmation and the final result.
                 val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
                 val pending = PendingIntent.getBroadcast(
                     app,
                     id,
                     Intent(app, AppUpdateInstallReceiver::class.java).setAction(INSTALL_STATUS),
-                    flags or PendingIntent.FLAG_ONE_SHOT
+                    flags
                 )
                 statusIntent = pending
                 installer.openSession(id).use { session ->
@@ -121,24 +122,30 @@ internal object AppUpdateInstaller {
                     session.commit(pending.intentSender)
                 }
             }
-            val result = withTimeoutOrNull(30.seconds) { response.await() }
+            var result = withTimeoutOrNull(30.seconds) { responses.receive() }
                 ?: throw IOException("The package installer did not respond")
-            when (result.status) {
-                PackageInstaller.STATUS_PENDING_USER_ACTION -> {
-                    requireForeground(activity)
-                    activity.startActivity(systemConfirmation(activity.packageManager, result.confirmation, sessionId))
-                    handedOff = true
-                    return AppUpdateInstallResult.ConfirmationOpened
-                }
+            if (result.status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
+                requireForeground(activity)
+                activity.startActivity(systemConfirmation(activity.packageManager, result.confirmation, sessionId))
+                handedOff = true
+                result = withTimeoutOrNull(5.minutes) {
+                    var next = responses.receive()
+                    while (next.status == PackageInstaller.STATUS_PENDING_USER_ACTION) next = responses.receive()
+                    next
+                } ?: throw IOException("The package installer did not report a result")
+            }
+            return when (result.status) {
                 PackageInstaller.STATUS_SUCCESS -> {
                     handedOff = true
-                    return AppUpdateInstallResult.Installed
+                    AppUpdateInstallResult.Installed
                 }
+                PackageInstaller.STATUS_FAILURE_ABORTED -> AppUpdateInstallResult.Cancelled
                 else -> throw IOException("Package installer returned status ${result.status}")
             }
         } finally {
             pendingResponses.remove(sessionId)
             statusIntent?.cancel()
+            responses.close()
             if (!handedOff && sessionId >= 0) {
                 withContext(NonCancellable + Dispatchers.IO) {
                     runCatching { installer.abandonSession(sessionId) }
@@ -157,17 +164,21 @@ internal object AppUpdateInstaller {
         if (intent?.action != CONFIRM_INSTALL || intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1) != sessionId) {
             throw IOException("Invalid package installer confirmation")
         }
-        val handler = manager.resolveActivity(intent, PackageManager.MATCH_SYSTEM_ONLY)?.activityInfo
-            ?: throw ActivityNotFoundException("No system package installer")
-        val component = ComponentName(handler.packageName, handler.name)
+        val component = systemHandler(manager, intent)
         return IntentSanitizer.Builder()
             .allowComponent(component)
-            .allowPackage(handler.packageName)
+            .allowPackage(component.packageName)
             .allowAction(CONFIRM_INSTALL)
             .allowExtra(PackageInstaller.EXTRA_SESSION_ID, Int::class.javaObjectType) { it == sessionId }
             .allowExtra("android.content.pm.extra.RESOLVED_BASE_PATH", String::class.java)
             .build()
             .sanitizeByFiltering(Intent(intent).setComponent(component))
+    }
+
+    private fun systemHandler(manager: PackageManager, intent: Intent): ComponentName {
+        val handler = manager.resolveActivity(intent, PackageManager.MATCH_SYSTEM_ONLY)?.activityInfo
+            ?: throw ActivityNotFoundException("No system handler for ${intent.action}")
+        return ComponentName(handler.packageName, handler.name)
     }
 }
 
@@ -178,7 +189,7 @@ internal class AppUpdateInstallReceiver : BroadcastReceiver() {
         val response = pendingResponses[id] ?: return
         val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
         val confirmation = IntentCompat.getParcelableExtra(intent, Intent.EXTRA_INTENT, Intent::class.java)
-        response.complete(InstallResponse(status, confirmation))
+        response.trySend(InstallResponse(status, confirmation))
     }
 }
 
@@ -186,4 +197,4 @@ private data class InstallResponse(val status: Int, val confirmation: Intent?)
 
 private const val INSTALL_STATUS = "com.andsi.airlyrics.app.update.INSTALL_STATUS"
 private const val CONFIRM_INSTALL = "android.content.pm.action.CONFIRM_INSTALL"
-private val pendingResponses = ConcurrentHashMap<Int, CompletableDeferred<InstallResponse>>()
+private val pendingResponses = ConcurrentHashMap<Int, Channel<InstallResponse>>()

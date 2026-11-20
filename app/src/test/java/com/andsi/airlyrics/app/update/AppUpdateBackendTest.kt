@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.BuildConfig
 import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.time.LocalDate
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -25,7 +26,9 @@ import org.robolectric.annotation.Config
 @Config(sdk = [27])
 class AppUpdateBackendTest {
     private val installedVersion = AppUpdateVersion(1, 2, 9)
-    private val release = requireNotNull(AppUpdateRelease.create(AppUpdateVersion(1, 2, 10), 3, SHA256))
+    private val release = requireNotNull(AppUpdateRelease.create(
+        AppUpdateVersion(1, 2, 10), 3, SHA256, LocalDate.of(2026, 11, 11), "### Fixed"
+    ))
 
     @Test
     fun latestReleaseComparesNumericVersionsAndSelectsStandardApk() {
@@ -73,6 +76,7 @@ class AppUpdateBackendTest {
 
         offline = true
         assertTrue(reopened.checkNow().isFailure)
+        assertEquals(AppUpdateCheckStatus.Failed, reopened.checkStatus.value)
         assertEquals(release, reopened.availableUpdate.value)
         assertEquals(HOUR_MS, reopened.checkIfDue())
         assertEquals(2, calls)
@@ -142,6 +146,8 @@ class AppUpdateBackendTest {
         """
         {
           "tag_name": "v1.2.10",
+          "published_at": "2026-11-11T04:54:00Z",
+          "body": "### Fixed",
           "draft": false,
           "prerelease": $prerelease,
           "assets": [

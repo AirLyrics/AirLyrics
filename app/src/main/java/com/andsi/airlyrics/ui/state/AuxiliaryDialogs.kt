@@ -9,7 +9,6 @@ import com.andsi.airlyrics.ui.components.showFullText
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.pages.settings.APP_UPDATE_DIALOG
 import com.andsi.airlyrics.ui.pages.settings.showAppUpdateDialog
-import com.andsi.airlyrics.ui.pages.settings.showFullUpdateLogDialog
 import com.andsi.airlyrics.ui.pages.settings.showLanguageDialog
 import java.util.UUID
 import kotlinx.coroutines.launch
@@ -63,7 +62,10 @@ internal fun MainUiHost.restoreAuxiliaryDialogs() {
             val saved = interactions.read("aux.$kind") ?: continue
             when (kind) {
                 "language" -> showLanguageDialog(this@restoreAuxiliaryDialogs)
-                "changelog" -> showFullUpdateLogDialog()
+                "changelog" -> {
+                    forgetAuxiliaryDialog(kind)
+                    showAppUpdateDialog()
+                }
                 APP_UPDATE_DIALOG -> showAppUpdateDialog()
                 "info" -> showPersistentInfo(saved.getInt("titleRes"), saved.getInt("textRes"))
                 "reader" -> {
