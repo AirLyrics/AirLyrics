@@ -4,12 +4,15 @@ import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.core.model.FloatingFontNetworkException
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import java.io.File
 import java.io.IOException
 import java.io.ByteArrayInputStream
 import java.io.Closeable
 import java.io.InputStream
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.security.MessageDigest
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -283,6 +286,30 @@ class FloatingLyricsFontStoreTest {
     }
 
     @Test
+    fun transportFailuresReportNetworkErrorAndClearPendingFiles() = runBlocking {
+        val connectionFailure = UnknownHostException("Font source unavailable")
+        val readFailure = SocketTimeoutException("Font response stalled")
+        val connectionDownloader = FloatingFontDownloader { _, _ -> throw connectionFailure }
+        val readDownloader = FloatingFontDownloader { _, _ ->
+            val input = object : InputStream() {
+                override fun read(): Int = throw readFailure
+            }
+            response(input, 16L)
+        }
+        val spec = FloatingFontDownloadSpec("swei_gothic_sc", "test", 16L, "0".repeat(64))
+
+        for ((downloader, cause) in listOf(connectionDownloader to connectionFailure, readDownloader to readFailure)) {
+            val failure = runCatching {
+                FloatingLyricsFontStore.downloadFont(context, spec.id, {}, downloader, spec)
+            }.exceptionOrNull()
+            assertTrue(failure is FloatingFontNetworkException)
+            assertSame(cause, failure?.cause)
+            assertFalse(FloatingLyricsFontStore.isAvailable(context, spec.id))
+            assertTrue(pendingFiles().isEmpty())
+        }
+    }
+
+    @Test
     fun failedVerificationPreservesCurrentFontAndAllowsRetry() = runBlocking {
         val bytes = File(testDirectory, "download.ttf").also(::writeValidFontFixture).readBytes()
         assertTrue(FloatingLyricsFontStore.selectFont(context, "serif"))
@@ -294,6 +321,7 @@ class FloatingLyricsFontStoreTest {
             failure = caught
         }
         assertTrue(failure is IOException)
+        assertFalse(failure is FloatingFontNetworkException)
         assertFalse(FloatingLyricsFontStore.isAvailable(context, "swei_gothic_sc"))
         assertEquals("serif", FloatingLyricsStyleStore.getStyle(context).fontId)
         assertTrue(pendingFiles().isEmpty())

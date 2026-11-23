@@ -22,6 +22,7 @@ import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.FloatingFont
 import com.andsi.airlyrics.core.model.FloatingFontCollection
+import com.andsi.airlyrics.core.model.FloatingFontNetworkException
 import com.andsi.airlyrics.core.model.FloatingFontSource
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -425,8 +426,15 @@ internal class FloatingFontPanelContent(
                 } else showFailure(R.string.ui_font_apply_failed)
             } catch (cancelled: CancellationException) {
                 throw cancelled
-            } catch (_: Exception) {
-                if (!closed && token == generation && focusedId == id) showFailure()
+            } catch (failure: Exception) {
+                if (!closed && token == generation && focusedId == id) {
+                    val message = if (failure is FloatingFontNetworkException) {
+                        R.string.ui_font_download_network_error
+                    } else {
+                        R.string.ui_font_download_failed
+                    }
+                    showFailure(message)
+                }
             } finally {
                 if (token == generation) {
                     downloadJob = null
@@ -448,7 +456,7 @@ internal class FloatingFontPanelContent(
         renderAction(font)
     }
 
-    private fun showFailure(message: Int = R.string.ui_font_download_failed) {
+    private fun showFailure(message: Int) {
         statusView?.setText(message)
         statusView?.visibility = VISIBLE
         applyButton?.setProgress(0)

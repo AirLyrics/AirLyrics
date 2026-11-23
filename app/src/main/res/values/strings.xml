@@ -151,6 +151,7 @@
     <string name="ui_font_download_apply">Download &amp; apply</string>
     <string name="ui_font_downloading_progress">Downloading · %1$d%%</string>
     <string name="ui_font_download_failed">Download failed</string>
+    <string name="ui_font_download_network_error">Network error</string>
     <string name="ui_font_download_cancelled">Download cancelled</string>
     <string name="ui_font_apply_failed">Couldn’t apply font</string>
     <string name="ui_font_delete_failed">Couldn’t remove font</string>

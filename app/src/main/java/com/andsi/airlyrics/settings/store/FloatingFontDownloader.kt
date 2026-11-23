@@ -1,10 +1,12 @@
 package com.andsi.airlyrics.settings.store
 
+import com.andsi.airlyrics.core.model.FloatingFontNetworkException
 import java.io.Closeable
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
+import java.net.MalformedURLException
 import java.net.URL
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicReference
@@ -54,11 +56,13 @@ internal class FloatingFontDownloader(
         Dispatchers.IO.dispatch(continuation.context, Runnable {
             try {
                 if (!continuation.isActive) return@Runnable
-                val opened = transport.open(spec.url) { connection ->
-                    pendingConnection.set(connection)
-                    if (!continuation.isActive) {
-                        connection.close()
-                        throw kotlinx.coroutines.CancellationException("Font download cancelled")
+                val opened = networkIo {
+                    transport.open(spec.url) { connection ->
+                        pendingConnection.set(connection)
+                        if (!continuation.isActive) {
+                            connection.close()
+                            throw kotlinx.coroutines.CancellationException("Font download cancelled")
+                        }
                     }
                 }
                 response.set(opened)
@@ -73,7 +77,7 @@ internal class FloatingFontDownloader(
                     temporary.outputStream().use { output ->
                         val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                         while (continuation.isActive) {
-                            val count = source.input.read(buffer)
+                            val count = networkIo { source.input.read(buffer) }
                             if (count == -1) break
                             total += count
                             if (total > spec.bytes) throw IOException("Font download exceeds expected size")
@@ -102,11 +106,20 @@ internal class FloatingFontDownloader(
         })
     }
 
+    private inline fun <T> networkIo(operation: () -> T): T = try {
+        operation()
+    } catch (failure: IOException) {
+        if (failure is DownloadProtocolException || failure is MalformedURLException) throw failure
+        throw FloatingFontNetworkException(failure)
+    }
+
+    private class DownloadProtocolException(message: String) : IOException(message)
+
     private companion object {
         fun openHttps(url: String, registerCancellation: (Closeable) -> Unit): FloatingFontDownloadResponse {
             var next = URL(url)
             repeat(8) {
-                if (next.protocol != "https") throw IOException("Font downloads require HTTPS")
+                if (next.protocol != "https") throw DownloadProtocolException("Font downloads require HTTPS")
                 val connection = (next.openConnection() as HttpURLConnection).apply {
                     connectTimeout = 15_000
                     readTimeout = 15_000
@@ -118,11 +131,13 @@ internal class FloatingFontDownloader(
                     val status = connection.responseCode
                     if (status in listOf(301, 302, 303, 307, 308)) {
                         val location = connection.getHeaderField("Location")
-                            ?: throw IOException("Missing font download redirect")
+                            ?: throw DownloadProtocolException("Missing font download redirect")
                         next = URL(next, location)
                         connection.disconnect()
                     } else {
-                        if (status !in 200..299) throw IOException("Font download failed: $status")
+                        if (status !in 200..299) {
+                            throw DownloadProtocolException("Font download failed: $status")
+                        }
                         val stream = connection.inputStream
                         return object : FloatingFontDownloadResponse {
                             override val input = stream
@@ -137,7 +152,7 @@ internal class FloatingFontDownloader(
                     throw failure
                 }
             }
-            throw IOException("Too many font download redirects")
+            throw DownloadProtocolException("Too many font download redirects")
         }
     }
 }

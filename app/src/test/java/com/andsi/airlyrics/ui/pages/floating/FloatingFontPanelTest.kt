@@ -21,6 +21,7 @@ import com.andsi.airlyrics.app.controller.FloatingFontImporter
 import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.core.model.FloatingFont
+import com.andsi.airlyrics.core.model.FloatingFontNetworkException
 import com.andsi.airlyrics.core.model.FloatingFontSource
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
@@ -34,6 +35,7 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorBackground
 import java.io.File
 import java.io.IOException
+import java.net.SocketTimeoutException
 import java.time.Duration
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -353,7 +355,7 @@ class FloatingFontPanelTest {
         f.click("floating.font.row.swei_gothic_sc")
         f.click("floating.font.apply")
         scheduler.runCurrent()
-        operations.requests.single().result.completeExceptionally(IOException("Offline"))
+        operations.requests.single().result.completeExceptionally(IOException("Unexpected font download size"))
         scheduler.runCurrent()
         assertTrue(f.tag("floating.font.apply").isEnabled)
         assertEquals(f.host.getString(R.string.ui_font_download_apply), f.text("floating.font.apply"))
@@ -369,6 +371,33 @@ class FloatingFontPanelTest {
         f.settle()
         assertEquals(listOf("swei_gothic_sc"), operations.selections)
         assertTrue(f.tag("floating.font.row.swei_gothic_sc").isSelected)
+    }
+
+    @Test fun networkFailureShowsLocalizedStatusAndAllowsRetry() = runTest(mainDispatcherRule.dispatcher) {
+        for ((locale, label) in listOf("en-rUS" to "Network error", "zh-rCN" to "网络错误")) {
+            for (width in listOf(360, 320)) {
+                val f = fixture(locale, width)
+                val operations = FakeOperations()
+                f.inject(operations)
+                f.click("floating.font.row.swei_gothic_sc")
+                f.click("floating.font.apply")
+                operations.requests.single().result.completeExceptionally(
+                    FloatingFontNetworkException(SocketTimeoutException())
+                )
+                f.settle()
+
+                val status = all(f.manager).filterIsInstance<TextView>().single { it.text.toString() == label }
+                val retry = f.tag("floating.font.apply")
+                assertTrue("Retry must be enabled after a network error", retry.isEnabled)
+                assertTrue(operations.selections.isEmpty())
+                all(f.bubble).filterIsInstance<ScrollView>().single().fullScroll(View.FOCUS_DOWN)
+                assertLayout(f)
+                assertTrue(status.getGlobalVisibleRect(android.graphics.Rect()))
+                assertTrue(retry.getGlobalVisibleRect(android.graphics.Rect()))
+                capture(f, "$locale-network-error-$width")
+                f.closePanel()
+            }
+        }
     }
 
     @Test fun fullFileSizesAndImportedNamesRemainReadableAcrossWidthsAndFontScales() =

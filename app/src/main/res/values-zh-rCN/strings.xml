@@ -151,6 +151,7 @@
     <string name="ui_font_download_apply">下载并应用</string>
     <string name="ui_font_downloading_progress">下载中 · %1$d%%</string>
     <string name="ui_font_download_failed">下载失败</string>
+    <string name="ui_font_download_network_error">网络错误</string>
     <string name="ui_font_download_cancelled">已取消下载</string>
     <string name="ui_font_apply_failed">无法应用字体</string>
     <string name="ui_font_delete_failed">无法删除字体</string>

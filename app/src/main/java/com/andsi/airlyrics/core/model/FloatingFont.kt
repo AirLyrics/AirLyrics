@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.core.model
 
+import java.io.IOException
+
 /** A stable identity shared by the font catalogue, downloads, imports and selection. */
 data class FloatingFont(
     val id: String,
@@ -22,3 +24,6 @@ data class FloatingFontCollection(
 enum class FloatingFontSource {
     SYSTEM, PRESET, DOWNLOAD, IMPORTED
 }
+
+/** The font source connection or response stream failed. */
+internal class FloatingFontNetworkException(cause: IOException) : IOException(cause)
