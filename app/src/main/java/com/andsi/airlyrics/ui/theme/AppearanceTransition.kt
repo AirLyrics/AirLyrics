@@ -13,7 +13,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 import java.util.WeakHashMap
 
-/** Colors currently on screen, independent of the already-persisted theme choice. */
 internal data class AppearanceFrame(
     val palette: AirLyricsPalette,
     val accentText: Int,
@@ -92,7 +91,7 @@ internal class AppearanceTransition(private val host: MainUiHost) {
         }
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = durationMs
-            interpolator = PathInterpolator(0.25f, 0.1f, 0.25f, 1f) // CSS ease
+            interpolator = PathInterpolator(0.25f, 0.1f, 0.25f, 1f)
             addUpdateListener {
                 frame = from.interpolate(target, it.animatedValue as Float)
                 refresh()
@@ -118,7 +117,6 @@ internal class AppearanceTransition(private val host: MainUiHost) {
         }
     }
 
-    /** A new route starts in the last requested theme, never in an intermediate palette. */
     fun finish() {
         cancel()
         frame = destination

@@ -44,7 +44,6 @@ internal fun MainUiHost.aboutVersionEntry(): View {
     return object : FrameLayout(this) {
         override fun getAccessibilityClassName(): CharSequence = Button::class.java.name
     }.apply {
-        // Keep space for the sticker when an update is available.
         minimumWidth = dp(AirUiTokens.Layout.IconTouchSize)
         minimumHeight = dp(AirUiTokens.Layout.IconTouchSize + AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs)
         addView(pill, FrameLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT, Gravity.CENTER))

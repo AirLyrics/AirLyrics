@@ -4,7 +4,6 @@ import androidx.annotation.StringRes
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 
-/** One-off Android UI work emitted by the retained main-screen state owner. */
 internal sealed interface MainUiEffect {
     data object RestoreOperationConfirmation : MainUiEffect
     data object RequestOverlayPermission : MainUiEffect

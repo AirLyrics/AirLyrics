@@ -113,7 +113,6 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertTrue(layoutParams.hasFlag(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE))
         assertFalse(layoutParams.hasFlag(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE))
 
-        // Once click-through is explicitly configured, lock and click-through are independent.
         send(service, FloatingServiceCommand.ClickThroughOff)
         send(service, FloatingServiceCommand.Lock)
 

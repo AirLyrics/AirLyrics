@@ -9,7 +9,6 @@ MAX_STRING_KEY_LENGTH = 40
 STRING_NAME_RE = re.compile(r'^[a-z][a-z0-9_]*$')
 CJK_RE = re.compile(r'[\u4e00-\u9fff]')
 
-# Keys that naturally contain small numbers or units and are not generated from prose.
 NUMERIC_KEY_ALLOWLIST = {
     'ui_advance_0_1s',
     'ui_advance_1s',

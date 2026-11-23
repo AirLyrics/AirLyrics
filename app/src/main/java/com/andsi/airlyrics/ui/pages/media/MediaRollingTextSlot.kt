@@ -125,8 +125,6 @@ internal class MediaRollingTextSlot(
         val sameLineWindows = oldFrame.strips.map { it.top to it.bottom }.distinct() ==
             newFrame.strips.map { it.top to it.bottom }.distinct()
         if (interrupted || !sameLineWindows) {
-            // Different line counts/metrics (or a partially rolled frame) need one shared
-            // window and travel distance, so the old and new blocks cannot cross.
             val windowHeight = maxOf(oldFrame.bitmap.height, newFrame.bitmap.height)
             outgoing = oldFrame.asBlock(windowHeight)
             incoming = newFrame.asBlock(windowHeight)

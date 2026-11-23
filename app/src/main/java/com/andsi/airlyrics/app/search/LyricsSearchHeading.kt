@@ -5,7 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import kotlin.math.max
 
-/** Keeps a useful title width; large type and compact windows move the action to a second row. */
 @android.annotation.SuppressLint("ViewConstructor")
 internal class LyricsSearchHeading(
     context: Context,
@@ -48,7 +47,6 @@ internal class LyricsSearchHeading(
         place(back, 0, (rowHeight - back.measuredHeight) / 2)
         place(title, back.measuredWidth, (rowHeight - title.measuredHeight) / 2)
         if (action.visibility != GONE) {
-            // This control is the physical top-right anchor of the container transform.
             val top = if (stacked) rowHeight + gap else (rowHeight - action.measuredHeight) / 2
             val left = width - action.measuredWidth
             action.layout(left, top, width, top + action.measuredHeight)

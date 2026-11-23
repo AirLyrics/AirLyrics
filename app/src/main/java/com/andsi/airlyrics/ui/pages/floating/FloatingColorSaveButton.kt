@@ -33,10 +33,6 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.bindAppearance
 import kotlin.math.hypot
 
-/**
- * The actionButton's original text, padding and layout params remain the measurement source.
- * Only drawing and scale change: no animated child participates in the panel's layout.
- */
 @SuppressLint("ViewConstructor")
 internal class FloatingColorSaveButton(private val host: MainUiHost, onSave: () -> Unit) : AppCompatTextView(host) {
     private enum class Visual { IDLE, WAITING, REVEAL, SAVED }

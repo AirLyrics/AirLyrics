@@ -3,7 +3,6 @@ package com.andsi.airlyrics.ui.pages.floating
 import kotlin.math.min
 import kotlin.random.Random
 
-/** Confirmation belongs to one visit, and ignores taps before the changed icon can be read. */
 internal class FontDeleteConfirmation {
     enum class Click { ARMED, WAIT, DELETE }
     private var armedAt: Long? = null
@@ -27,7 +26,6 @@ internal class FontDeleteConfirmation {
     }
 }
 
-/** A changing delivery rhythm can lag real bytes, but can never invent downloaded progress. */
 internal class FontDownloadCadence(private val random: Random = Random.Default) {
     var displayed: Int = 0
         private set

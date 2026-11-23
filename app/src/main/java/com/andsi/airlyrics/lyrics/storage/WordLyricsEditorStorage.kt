@@ -6,7 +6,6 @@ import com.andsi.airlyrics.lyrics.WordLyricsDocument
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
 
-/** Structured editing is separate from the public LRC read/export interface. */
 internal object WordLyricsEditorStorage {
     fun read(context: Context, item: LyricsStorage.LocalLyricsItem): String? = LyricsStorage.withStorageLock {
         if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX)) {

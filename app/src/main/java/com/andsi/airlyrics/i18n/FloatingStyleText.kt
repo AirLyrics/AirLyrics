@@ -43,7 +43,6 @@ internal fun localizedFloatingFontWeightTitle(fontWeight: Int): String {
     return FloatingLyricsFontWeight.toLevel(fontWeight).toString()
 }
 
-/** SI units match the full font download sizes. */
 internal fun Context.localizedFloatingFontSize(bytes: Long): String {
     val locale = resources.configuration.locales[0]
     return when {

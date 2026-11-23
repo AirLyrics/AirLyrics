@@ -39,10 +39,6 @@ internal fun MainUiHost.floatingSectionTitle(title: CharSequence): TextView {
     }
 }
 
-/**
- * Maps the real floating-window size to a stable thumbnail size. More visible
- * lyric blocks use a smaller range so changing the setting never takes over the page.
- */
 internal fun previewTextSizeSp(
     textSizeSp: Float,
     lineMode: LyricsLineDisplayMode
@@ -61,7 +57,6 @@ internal fun alphaToOpacityPercent(alpha: Int): Int {
     return (alpha.coerceIn(0, 255) * 100f / 255f).roundToInt()
 }
 
-/** Compact tile value; the expanded controls still show each RGB channel. */
 internal fun compactColorSummary(color: Int): String =
     String.format(Locale.ROOT, "#%06X", color and 0x00FFFFFF)
 

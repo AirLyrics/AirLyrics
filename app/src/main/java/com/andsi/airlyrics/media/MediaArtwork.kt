@@ -22,7 +22,6 @@ internal fun Bitmap.mediaArtworkRefreshKey(contentKey: String = ""): String {
     val size = "${width}x${height}"
     if (config == Bitmap.Config.HARDWARE) return "bitmap:hardware:$size:$contentKey"
 
-    // A bounded grid identifies visible artwork without scanning or copying the whole bitmap.
     var hash = -3750763034362895579L
     for (row in 0..6) {
         val y = (height - 1) * row / 6

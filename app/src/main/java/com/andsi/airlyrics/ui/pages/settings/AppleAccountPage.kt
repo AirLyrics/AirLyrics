@@ -68,7 +68,6 @@ private fun createAppleAccountCard(activity: MainUiHost): View = with(activity) 
             if (settingsSubPage == SettingsSubPage.APPLE_ACCOUNT) {
                 setExpanded(false)
             } else {
-                // The leaving page remains attached briefly for its Pop animation.
                 isEnabled = false
                 activity.activity.onBackPressedDispatcher.onBackPressed()
             }
@@ -239,7 +238,6 @@ private fun createAppleAccountCard(activity: MainUiHost): View = with(activity) 
 
 private data class AppleLoginPanel(val view: View, val captureButton: View, val dispose: () -> Unit)
 
-/** Created on demand inside the account card; disposed after collapse or leaving the page. */
 @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
 private fun createAppleLoginPanel(activity: MainUiHost, onSignedIn: () -> Unit): AppleLoginPanel = with(activity) {
     val root = LinearLayout(activity).apply {
@@ -337,7 +335,6 @@ private fun createAppleLoginPanel(activity: MainUiHost, onSignedIn: () -> Unit):
     }
 }
 
-/** Best-effort extraction of the media user token after Apple's sign-in page settles. */
 internal object AppleMusicLoginCapture {
 
     const val USER_AGENT =

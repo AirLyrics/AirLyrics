@@ -232,7 +232,6 @@ private fun installExpandedTouchTarget(
     parent: ViewGroup,
     target: View
 ) {
-    // Keep the inline marker visually quiet while preserving a full touch target.
     parent.post {
         if (target.parent == null || parent.width == 0 || parent.height == 0) return@post
 

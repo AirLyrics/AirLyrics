@@ -31,7 +31,6 @@ internal fun interface FloatingFontDownloadTransport {
     fun open(url: String, registerCancellation: (Closeable) -> Unit): FloatingFontDownloadResponse
 }
 
-/** Streams a pinned font without retaining the full file in memory. */
 internal class FloatingFontDownloader(
     private val transport: FloatingFontDownloadTransport = FloatingFontDownloadTransport(::openHttps)
 ) {

@@ -26,7 +26,6 @@ internal data class DisplayScopeUsageEvent(
     val activityName: String?
 )
 
-/** Reconstructs the set of visible activities from UsageEvents on Android 10+. */
 internal class VisibleActivityTracker {
     private data class ActivityKey(val packageName: String, val activityName: String)
 
@@ -72,7 +71,6 @@ internal class VisibleActivityTracker {
     }
 }
 
-/** Polls UsageEvents off the service main thread and publishes best-effort visibility snapshots. */
 internal class DisplayScopeMonitor(
     context: Context,
     private val onSnapshot: (DisplayScopeVisibilitySnapshot) -> Unit

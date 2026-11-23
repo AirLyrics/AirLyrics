@@ -28,7 +28,6 @@ internal object SongAliasStore {
         val confidence: Double,
         val confirmedAt: Long
     ) {
-        /** Native engine entry: the alias artist is also acceptable as a spelling of the artist. */
         fun toJson(): JSONObject = JSONObject()
             .put("original_title", originalTitle)
             .put("original_artist", originalArtist)
@@ -81,7 +80,6 @@ internal object SongAliasStore {
         readAlias(file(context, song))
     }
 
-    /** Saves (or replaces) the mapping for this recording and returns what was stored. */
     fun save(context: Context, song: SongIdentity, alias: Alias): Alias = LyricsStorage.withStorageLock {
         val target = file(context, song)
         val dir = directory(context)
@@ -97,7 +95,6 @@ internal object SongAliasStore {
         alias
     }
 
-    /** Removes the mapping; returns true when a mapping existed. */
     fun forget(context: Context, song: SongIdentity): Boolean = LyricsStorage.withStorageLock {
         val target = file(context, song)
         val existed = target.baseFile.exists() || File(target.baseFile.path + ".bak").exists()
@@ -111,7 +108,6 @@ internal object SongAliasStore {
             ?: emptyList()
     }
 
-    /** Payload accepted by `SongAliasNative.registerJson`. */
     fun toNativeJson(aliases: List<Alias>): String {
         val array = JSONArray()
         aliases.forEach { alias -> array.put(alias.toJson()) }

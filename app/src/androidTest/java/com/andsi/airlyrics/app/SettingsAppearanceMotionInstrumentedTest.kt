@@ -23,7 +23,6 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Exercises real Canvas rendering, frame clocks and AppCompat; saves reviewable key frames. */
 @RunWith(AndroidJUnit4::class)
 class SettingsAppearanceMotionInstrumentedTest {
     @Test fun interruptedMotionKeepsMountedViewsAndLastChoice() {
@@ -136,11 +135,9 @@ class SettingsAppearanceMotionInstrumentedTest {
                 it.graph.uiInvalidator.rebuildCurrentPage(false, false)
             }
             pause(600)
-            // Keep this diagnostic sequence out of the normal-speed recording.
             lateinit var animator: android.animation.ValueAnimator
             scenario.onActivity { a ->
                 val panel = a.findViewById<View>(R.id.appearance_picker_panel)
-                // Start from closed even if the preceding test left the menu open.
                 if (panel.visibility == View.VISIBLE) {
                     a.graph.uiHost.interactions.remove("settings.home.appearanceMenu")
                     a.graph.uiInvalidator.rebuildCurrentPage(false, false)

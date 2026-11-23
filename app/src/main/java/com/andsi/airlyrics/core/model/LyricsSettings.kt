@@ -1,8 +1,6 @@
 package com.andsi.airlyrics.core.model
 
-/** User-facing lyrics lookup and display configuration. */
 data class LyricsSettings(
-    /** Selected online lookup sources in priority order. Empty disables online lookup. */
     val plainLyricsSearchSources: List<PlainLyricsSearchSource>,
     val autoSearchOnline: Boolean,
     val autoSaveLocal: Boolean,
@@ -14,7 +12,6 @@ data class LyricsSettings(
     val wordByWordAnimationMode: WordByWordAnimationMode = WordByWordAnimationMode.CLASSIC
 )
 
-/** An online lookup source. Local lyrics are always checked first. */
 enum class PlainLyricsSearchSource(val key: String, val supportsWordTiming: Boolean = false) {
     /** Persisted compatibility value. New UI models local-only behavior with [LyricsSettings.autoSearchOnline]. */
     LOCAL_ONLY("local_only"),
@@ -34,7 +31,6 @@ enum class PlainLyricsSearchSource(val key: String, val supportsWordTiming: Bool
     }
 }
 
-/** Controls which lyric text should be rendered when translations are available. */
 enum class LyricsContentDisplayMode(val key: String) {
     ORIGINAL_WITH_TRANSLATION("original_with_translation"),
     ORIGINAL_ONLY("original_only"),
@@ -71,7 +67,6 @@ enum class LyricsScriptPreference(val key: String) {
     }
 }
 
-/** Controls how many neighboring lyric lines should be rendered around the current line. */
 enum class LyricsLineDisplayMode(val key: String) {
     CURRENT_ONLY("current_only"),
     PREVIOUS_AND_CURRENT("previous_and_current"),
@@ -87,7 +82,6 @@ enum class LyricsLineDisplayMode(val key: String) {
     }
 }
 
-/** Controls the animation used when the floating lyric text changes to a new line. */
 enum class LyricsSwitchAnimationMode(val key: String) {
     NONE("none"),
     FADE("fade"),
@@ -102,7 +96,6 @@ enum class LyricsSwitchAnimationMode(val key: String) {
     }
 }
 
-/** Independent of line-switch animation and the word timing availability switch. */
 enum class WordByWordAnimationMode(val key: String) {
     CLASSIC("classic"), SPICY("spicy");
     companion object {

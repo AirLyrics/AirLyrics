@@ -18,7 +18,6 @@ import com.andsi.airlyrics.lyrics.display.FormattedPlainLyrics
 import kotlin.math.abs
 import kotlin.math.min
 
-/** Original and translation are separate paragraphs with a shared source time window. */
 internal data class SpicyLineTiming(
     val lineIndex: Int, val partIndex: Int, val startMs: Long, val endMs: Long
 )
@@ -96,7 +95,6 @@ internal class SpicyLineDrawing(private val view: FloatingLyricsTextView) {
     }
 
     fun invalidateLayout() {
-        // Keep the old groups so rebuilding preserves their playback springs.
         cachedLayout = null
     }
 
@@ -117,7 +115,6 @@ internal class SpicyLineDrawing(private val view: FloatingLyricsTextView) {
             if (start < 0 || end <= start) continue
             val first = layout.getLineForOffset(start)
             val last = layout.getLineForOffset(end - 1)
-            // Keep native ellipsis and constrained-line fallback readable.
             if ((first..last).any { it >= maxLines || layout.getEllipsisCount(it) > 0 }) continue
             val runs = mutableListOf<Run>()
             var left = Float.POSITIVE_INFINITY
@@ -184,7 +181,6 @@ internal class SpicyLineDrawing(private val view: FloatingLyricsTextView) {
             if (seek || !motion) group.glow.reset(targetGlow)
             val glow = if (active) group.glow.step(targetGlow, delta).coerceIn(0f, 1f) else 0f
             val scale = if (motion && group.span.animated) lineScale(position, timing.startMs, timing.endMs) else 1f
-            // Use the native paragraph alignment as the scale origin.
             val alignment = view.layout.getParagraphAlignment(view.layout.getLineForOffset(text.getSpanStart(group.span)))
             val pivotX = when (alignment) {
                 Layout.Alignment.ALIGN_CENTER -> (group.left + group.right) / 2f
@@ -197,7 +193,6 @@ internal class SpicyLineDrawing(private val view: FloatingLyricsTextView) {
                     if (group.rtl) run.matrix.setTranslate(group.right - progress * (group.right - group.left), 0f)
                     else run.matrix.setTranslate(0f, group.top + progress * (group.bottom - group.top))
                     run.gradient.setLocalMatrix(run.matrix)
-                    // Neighbors stay subdued; the wipe belongs only to the active source sentence.
                     run.paint.alpha = run.alpha
                     run.paint.shader = if (active) run.gradient else null
                     if (!active) {

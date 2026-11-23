@@ -33,8 +33,6 @@ pub(crate) struct QqCandidate {
     pub(crate) duration_ms: u64,
 }
 
-/// Resolves a romanised title to its CJK release title. Returns `None` when the title already
-/// carries CJK text (nothing to resolve) or when no candidate is close enough in running time.
 pub(crate) fn resolve_alias(
     title: &str,
     artist: &str,
@@ -86,7 +84,6 @@ fn artist_matches(query_artist: &str, candidate_artists: &str) -> bool {
     candidate.contains(&query) || query.contains(&candidate)
 }
 
-/// Chooses the candidate whose running time is closest to the player's, within the window.
 fn pick_candidate(duration_ms: u64, candidates: &[QqCandidate]) -> Option<&QqCandidate> {
     candidates
         .iter()
@@ -244,8 +241,6 @@ mod tests {
         }
     }
 
-    /// Live check against the public endpoints (network); run with
-    /// `cargo test --lib -- --ignored live_smartbox`.
     #[test]
     #[ignore]
     fn live_smartbox_resolves_shouldnt_be() {
@@ -275,7 +270,6 @@ mod tests {
 
     #[test]
     fn artist_gate_rejects_unresolvable_scripts() {
-        // Same title, same duration, but the acts cannot be tied together: refuse.
         assert!(!artist_matches("Jay Chou", "莫叫姐姐"));
         assert!(!artist_matches("", "周杰伦"));
         assert!(!artist_matches("Jay Chou", ""));

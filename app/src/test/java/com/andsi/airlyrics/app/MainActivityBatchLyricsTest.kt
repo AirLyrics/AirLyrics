@@ -158,7 +158,6 @@ class MainActivityBatchLyricsTest {
         clickAction(R.string.ui_multi_select)
         clickAction(R.string.ui_search)
         descendants(activity.window.decorView).filterIsInstance<EditText>().single().setText("One")
-        // Select all must use the current query even before the delayed filter runs.
         descendants(activity.window.decorView).filterIsInstance<TextView>().single {
             it.text == activity.getString(R.string.ui_select_all)
         }.performClick()
@@ -173,7 +172,6 @@ class MainActivityBatchLyricsTest {
         selectionButton(R.string.ui_batch_deselect_all).performClick()
         assertEquals(0, checkboxes(activity).count { it.isChecked })
         selectionButton(R.string.ui_select_all).performClick()
-        // Deselecting another search result must preserve the hidden selection.
         descendants(activity.window.decorView).filterIsInstance<EditText>().single().setText("Two")
         ShadowLooper.idleMainLooper(400L, TimeUnit.MILLISECONDS)
         selectionButton(R.string.ui_select_all).performClick()
@@ -371,7 +369,7 @@ class MainActivityBatchLyricsTest {
         val session = recreated.graph.uiHost.batchLyricsSession
         assertEquals(BatchLyricsStage.DELETE, session.state.value?.stage)
         clickDialogButton(recreated.getString(R.string.ui_delete))
-        session.confirm() // Repeated taps must not start a second operation.
+        session.confirm()
         awaitUiCondition { session.state.value?.stage == BatchLyricsStage.FINISHED }
         assertEquals(1, session.state.value!!.completed)
         assertEquals(listOf("Two"), LyricsStorage.listAllLyrics(context).map { it.title })

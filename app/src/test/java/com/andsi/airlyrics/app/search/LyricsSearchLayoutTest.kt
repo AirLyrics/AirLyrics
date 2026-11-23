@@ -340,7 +340,6 @@ class LyricsSearchLayoutTest {
             val versionsList=descendants(content).filterIsInstance<RecyclerView>().single {
                 it.isShown && it.adapter is androidx.recyclerview.widget.ConcatAdapter
             }
-            // The recording detail contains its lyric choices, with no cross-source action or catalogue footer.
             assertEquals(2,versionsList.adapter!!.itemCount)
         }
     }
@@ -459,13 +458,12 @@ class LyricsSearchLayoutTest {
             val progress=descendants(footer).filterIsInstance<LyricsLoadingView>().single { it.isShown }
             assertEquals(footerTop,footer.top)
             assertEquals(1,descendants(content).filterIsInstance<LyricsLoadingView>().count { it.isShown })
-            // Provider callbacks keep the same footer animation running until the prepared batch is ready.
             show(batch.copy(loading=true))
             assertReadingPosition()
             assertSame(progress,descendants(footer).filterIsInstance<LyricsLoadingView>().single { it.isShown })
             val next=if(appendRows) rows else batch.candidates
             show(batch.copy(candidates=next,wordResults=mapOf(supplier to WordSourceResults(page=2))))
-            val expectedCount=next.size+1 // The end status keeps the footer space when no new songs arrive.
+            val expectedCount=next.size+1
             val deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(5)
             while(list.adapter!!.itemCount!=expectedCount && System.nanoTime()<deadline) {
                 ShadowLooper.idleMainLooper()

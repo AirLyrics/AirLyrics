@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 
-/** Keeps the app's stored appearance choice and AppCompat's DayNight configuration aligned. */
 internal object AppNightMode {
     fun applyStoredMode(context: Context) {
         applyMode(ThemeSettingsStore.getDarkModeOverride(context))

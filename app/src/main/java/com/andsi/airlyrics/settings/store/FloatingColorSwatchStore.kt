@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 
-/** Shared RGB favorites, independent of both applied colors and style resets. */
 internal object FloatingColorSwatchStore {
     private const val PREFS_NAME = "floating_color_swatches"
     private const val KEY_COLORS = "rgb_colors"

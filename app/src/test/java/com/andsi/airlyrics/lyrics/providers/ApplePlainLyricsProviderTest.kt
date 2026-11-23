@@ -201,7 +201,6 @@ class ApplePlainLyricsProviderTest {
         val translated = ApplePlainLyricsProvider.parse(json, "測試", "測試", "", 60000)
             ?.wordByWordLines?.single()?.translatedSegments.orEmpty()
 
-        // 真实翻译无法逐字对齐：不给时间轴，UI 走“原文+译文”且译文不高亮。
         assertTrue(translated.isEmpty())
     }
     @Test
@@ -214,8 +213,6 @@ class ApplePlainLyricsProviderTest {
 
     @Test
     fun phraseAcrossTokens_reusesTimingWhenTheConversionKeepsLength() {
-        // 甦醒/瞭解 split across tokens: the line-level conversion is authoritative when the
-        // character count is preserved, so the tokens keep their timings.
         ChineseText.installTableForTest(emptyMap(), phrases = mapOf("甲乙" to "丙丁"))
         assertEquals(listOf("丙", "丁"), translatedSegmentsFor("甲乙", "丙丁").map { it.text })
     }

@@ -8,7 +8,6 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-/** Shared ownership of searches for the same song, including their durable commit. */
 internal object LyricsSearchCoordinator {
     private val lock = ReentrantLock()
     private val searchesChanged = lock.newCondition()

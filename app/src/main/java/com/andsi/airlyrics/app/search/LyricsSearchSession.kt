@@ -49,7 +49,6 @@ internal data class SourceResults(
     val wordResults: Map<ManualWordSource, WordSourceResults> = emptyMap(),
     val wordQuery: SongIdentity? = null,
     val wordDetail: WordRecordingState? = null,
-    // Keep published song order across pagination, retries, and lyric-detail navigation.
     val wordCatalogue: List<LyricsCandidate> = emptyList(),
 )
 internal data class WordSourceResults(
@@ -88,7 +87,6 @@ internal data class LyricsSearchState(
             preview.lyrics.manualUnavailableReason() == null
 }
 
-/** Owns requests across recreation. Only application-scoped dependencies may be captured. */
 internal class LyricsSearchSession(
     target: SongIdentity,
     sources: Set<PlainLyricsSearchSource>,
@@ -196,7 +194,6 @@ internal class LyricsSearchSession(
             }
         }
     }
-    /** Explicit ID queries replace Spicy only; other providers keep their results and requests. */
     fun searchSpotifyId(value: String): Boolean {
         if (state.value.applying) return false
         val id = SpotifyTrackId.parse(value) ?: return false
@@ -390,7 +387,6 @@ internal class LyricsSearchSession(
             mutable.value=state.value.copy(preview=loaded,previewUnavailableReason=reason,previewLoading=false)
         }, { mutable.value=state.value.copy(previewLoading=false,error=it) })
     }
-    /** Like Spotify ID search, replaces one source page without changing the main query. */
     fun searchWordLyrics(query:SongIdentity):Boolean {
         val before=state.value
         if(before.applying || query.title.isBlank()) return false
@@ -475,7 +471,6 @@ internal class LyricsSearchSession(
         val source=PlainLyricsSearchSource.NETEASE
         cancel("word-presentation")
         mutable.value=state.value.copy(results=state.value.results+(source to result.copy(loading=true,error=null)))
-        // Publish one complete batch. Partial provider callbacks update progress, not the visible list.
         if(result.wordDetail?.loading==true ||
             (result.wordDetail==null && result.wordResults.values.any { it.loading })) return
         launch("word-presentation",{
@@ -493,7 +488,6 @@ internal class LyricsSearchSession(
         })
     }
 
-    /** Pure model work: no View, adapter, or mutable session state is touched on the worker. */
     private fun buildWordCandidates(result:SourceResults):List<LyricsCandidate> {
         val detail=result.wordDetail
         return if(detail==null) {

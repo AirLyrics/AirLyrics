@@ -28,7 +28,6 @@ private fun clamp(value: Float) = value.coerceIn(0f, 1f)
 private fun outCubic(value: Float): Float = 1f - (1f - clamp(value)).let { it * it * it }
 private fun inCubic(value: Float): Float = clamp(value).let { it * it * it }
 
-/** Status labels change more quietly than song titles and artwork. */
 internal class MediaStatusMotion(
     private val host: MainUiHost,
     private val view: TextView,
@@ -82,7 +81,6 @@ internal class MediaStatusMotion(
                         view.translationY = startY + (-rise - startY) * amount
                     }
                 } else {
-                    // A fast reversal can keep the visible label and bring it back to rest.
                     val amount = outCubic(progress)
                     view.alpha = startAlpha + (1f - startAlpha) * amount
                     view.translationY = startY * (1f - amount)
@@ -140,7 +138,6 @@ internal class MediaStatusMotion(
     }
 }
 
-/** Survives a media-page View rebuild, keeping artwork identity and small decoded URI images. */
 internal class MediaArtworkMotionState {
     private val decodedUris = object : LruCache<String, Bitmap>(4 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
@@ -163,7 +160,6 @@ internal class MediaArtworkMotionState {
     fun cacheHardwareKey(bitmap: Bitmap, key: String) { hardwareKeys[bitmap] = key }
 }
 
-/** Only a resolved image moves; the fixed rounded frame keeps the card layout stable. */
 @SuppressLint("ViewConstructor")
 internal class MediaArtworkSwap(
     private val host: MainUiHost,
@@ -353,7 +349,6 @@ internal class MediaArtworkSwap(
         motionState.presented(key, next.bitmap())
         val old = if (incoming != null) current else null
         val rise = host.dp(6).toFloat()
-        // The About-page logo's compressed start and overshoot, scaled down for 72dp artwork.
         val overshoot = OvershootInterpolator(1.55f)
         val running = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = AirUiTokens.Motion.MediaArtworkSwapMs

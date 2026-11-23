@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.pages.floating
 
 internal enum class ColorSaveStatus { UNSAVED, SAVING, SAVED, FAILED }
 
-/** One editor session. A disk write may outlive it, but its result cannot. */
 internal class FloatingColorSaveState(initialColor: Int, saved: Boolean) {
     class Request internal constructor(val color: Int, internal val revision: Long)
 
@@ -45,7 +44,6 @@ internal class FloatingColorSaveState(initialColor: Int, saved: Boolean) {
         return true
     }
 
-    /** Reopened editors follow committed favorites, without confirming a locally edited draft. */
     fun reconcile(saved: Boolean) {
         if (isClosed || request != null || status == ColorSaveStatus.FAILED) return
         if (!edited || (status == ColorSaveStatus.SAVED && !saved)) {

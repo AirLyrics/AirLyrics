@@ -42,7 +42,6 @@ fn success(versions: Vec<Value>) -> Value {
     json!({"ok":true,"versions":versions})
 }
 
-/// Catalogue search never downloads lyrics or removes low-scoring recordings.
 pub(crate) async fn catalog(
     request: &crate::manual::Request,
     lookup: i64,
@@ -66,7 +65,6 @@ pub(crate) async fn catalog(
     let (mut tracks, mut more) = catalog_page(&client, &request.provider, &term, page).await?;
     let mut keyword = term;
     let mut partial = None;
-    // A broader query is a search fallback, never a change to the user's matching evidence.
     if page == 1 && request.keyword.is_empty() && !tracks.iter().any(|t| related(query, t)) {
         let mut terms = Vec::new();
         for plan in crate::matching::build_search_queries(&query.title, &query.artist) {
@@ -80,7 +78,6 @@ pub(crate) async fn catalog(
                 terms.push(term);
             }
         }
-        // Bound extra network work, but never truncate the catalogue or lyric options.
         for term in terms.into_iter().take(2) {
             check_lookup_cancelled(lookup)?;
             match catalog_page(&client, &request.provider, &term, 1).await {
@@ -133,7 +130,6 @@ pub(crate) async fn catalog(
     )
 }
 fn related(query: &Track, track: &Track) -> bool {
-    // Title evidence determines the default group; performer and length cannot rescue an unrelated title.
     crate::matching::score_metadata_alias(query.metadata(), track.metadata()).title_similarity
         >= 0.55
 }
@@ -198,7 +194,6 @@ async fn catalog_page(
     if provider != "kugou" {
         return parse_error();
     }
-    // Keep the existing HTTPS client and use a signed catalogue request, with the legacy endpoint as fallback.
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|_| "NativeError")?

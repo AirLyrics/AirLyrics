@@ -9,7 +9,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import kotlin.math.cos
 import kotlin.math.exp
 
-/** Keeps a player's entrance at the same progress when media callbacks rebuild the page. */
 internal class MediaPlayerEntranceMotion {
     private val settleEnd = 1.0 - exp(-5.5) * cos(6.0)
 

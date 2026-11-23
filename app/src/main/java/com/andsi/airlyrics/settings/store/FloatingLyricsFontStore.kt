@@ -33,7 +33,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
-/** Font identities and files are independent of the currently applied lyrics style. */
 object FloatingLyricsFontStore {
     private const val PREFS_NAME = "floating_lyrics_font"
     private const val KEY_CUSTOM_FONT_NAME = "custom_font_name"
@@ -109,7 +108,6 @@ object FloatingLyricsFontStore {
         }
     }
 
-    /** Retired downloads have their own IDs and can never be mistaken for replacement fonts. */
     internal fun removeRetiredFontFiles(context: Context) = synchronized(mutationLock) {
         var removed = false
         for (id in listOf("casual", "rounded", "cursive")) {
@@ -139,7 +137,6 @@ object FloatingLyricsFontStore {
 
     fun isAvailable(context: Context, id: String): Boolean = font(context, id)?.available == true
 
-    /** Rejects missing IDs rather than choosing a different imported face. */
     fun normalizeStyle(context: Context, style: FloatingLyricsStyle): FloatingLyricsStyle =
         synchronized(mutationLock) {
             val id = if (style.fontFamily == FloatingLyricsFontFamily.CUSTOM && style.customFontId == null) {
@@ -275,7 +272,6 @@ object FloatingLyricsFontStore {
             synchronized(mutationLock) {
                 val catalog = readCatalog(context)
                 val destination = File(fontDirectory(context), records.first().fileName)
-                // The pending file is already in this directory and has a unique destination.
                 if (destination.exists() || !temporary.renameTo(destination)) {
                     throw IOException("Could not store font")
                 }

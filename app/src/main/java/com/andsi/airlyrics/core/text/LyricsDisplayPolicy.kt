@@ -45,8 +45,6 @@ object LyricsDisplayPolicy {
     ): Rendered {
         if (translation.isBlank()) return Rendered(original)
         if (original.isBlank()) return Rendered(translation)
-        // A real translation says something else, so both lines stay. Only a duplicate pair — the
-        // same sentence in two scripts — can collapse into a single line.
         return when (preference) {
             LyricsScriptPreference.NONE -> Rendered(original, translation)
             LyricsScriptPreference.SIMPLIFIED, LyricsScriptPreference.TRADITIONAL -> {
@@ -63,7 +61,6 @@ object LyricsDisplayPolicy {
         }
     }
 
-    /** Keeps an existing simplified copy; a traditional-only line is left untouched. */
     private fun simplifiedCopy(original: String, translation: String): String = when {
         !ChineseText.containsTraditional(translation) -> translation
         !ChineseText.containsTraditional(original) -> original
@@ -74,7 +71,6 @@ object LyricsDisplayPolicy {
         else -> original
     }
 
-    /** Keeps an existing traditional copy; a simplified-only line is left untouched. */
     private fun traditionalCopy(original: String, translation: String): String = when {
         ChineseText.containsTraditional(original) -> original
         ChineseText.containsTraditional(translation) -> translation

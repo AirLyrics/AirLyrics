@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Only the source picker: its content draws the rounded surface. -->
     <style name="ThemeOverlay.AirLyrics.LyricsSources" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
         <item name="bottomSheetStyle">@style/Widget.AirLyrics.LyricsSources</item>
     </style>

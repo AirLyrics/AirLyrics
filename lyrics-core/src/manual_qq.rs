@@ -124,7 +124,6 @@ pub(crate) async fn catalog(
     .await
     {
         Ok(data) => data,
-        // A compatibility fallback, never a long rate-limit sleep or retry loop.
         Err(error) if error == "HttpError" || error == "ParseError" => {
             request(
                 client,
@@ -312,7 +311,6 @@ fn timed_text(raw: &str) -> Result<Option<String>, String> {
 fn parse_qrc(raw: &str) -> Result<Vec<Value>, String> {
     let line_re = Regex::new(r"^\[(\d+),(\d+)\](.*)$").unwrap();
     let word_re = Regex::new(r"\((\d+),(\d+)\)").unwrap();
-    // A line-only response is valid, but never gets a word label from a provider flag.
     if !raw
         .lines()
         .any(|line| line_re.is_match(line) && word_re.is_match(line))

@@ -41,7 +41,6 @@ internal data class ForegroundUiSnapshot(
     val lyricsRevision: Long = 0L
 )
 
-/** Immutable state for the logical main screen, retained across Activity recreation. */
 internal data class MainScreenState(
     override val currentPage: Page = Page.MEDIA,
     override val settingsSubPage: SettingsSubPage = SettingsSubPage.HOME,

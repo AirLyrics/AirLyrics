@@ -19,7 +19,6 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccentText
 import com.andsi.airlyrics.ui.theme.colorSuccessIcon
 
-/** Refresh feedback stays inside the existing 48dp action; data callbacks are never delayed. */
 internal class LyricsSettingsRefreshIcon(
     val view: FrameLayout,
     private val refreshIcon: ImageView,

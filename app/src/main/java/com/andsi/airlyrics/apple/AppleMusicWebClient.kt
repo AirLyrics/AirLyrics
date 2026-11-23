@@ -41,7 +41,6 @@ object AppleMusicWebClient {
             }
         }
 
-    /** Returns the account's storefront (e.g. `tr`, `cn`, `us`). */
     suspend fun resolveStorefront(mediaUserToken: String, developerToken: String): Result<String> =
         withContext(Dispatchers.IO) {
             runCatching {

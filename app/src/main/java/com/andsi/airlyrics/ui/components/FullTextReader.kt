@@ -24,7 +24,6 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import java.lang.ref.WeakReference
 
-/** Full static text is always the default; motion is an optional, explicit reading aid. */
 internal fun MainUiHost.showFullText(
     title: String?,
     text: String,
@@ -110,7 +109,6 @@ internal class FullTextReader(
         activeReader?.get()?.stopReading()
         activeReader = WeakReference(this)
         reading = true
-        // Keep the full text visible. Motion replaces only the fixed-size action area.
         scrollAction.visibility = INVISIBLE
         viewport.visibility = VISIBLE
         postDelayed(begin, AirUiTokens.Motion.TextScrollDelayMs)
@@ -175,7 +173,6 @@ internal class FullTextReader(
     }
 
     companion object {
-        // At most one moving reader, without retaining a window or Activity.
         private var activeReader: WeakReference<FullTextReader>? = null
     }
 }

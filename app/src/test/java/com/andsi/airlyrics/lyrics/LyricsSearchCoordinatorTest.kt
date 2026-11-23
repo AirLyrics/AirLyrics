@@ -57,7 +57,6 @@ class LyricsSearchCoordinatorTest {
             automaticToken.cancel()
             assertTrue(future.get(5, TimeUnit.SECONDS))
             assertNull(LyricsSearchCoordinator.current(automaticToken))
-            // Cancellation must finish while the manual owner is still active.
             assertEquals(LyricsSearchMode.Original, LyricsSearchCoordinator.manualMode(song))
         } finally {
             manual.close()

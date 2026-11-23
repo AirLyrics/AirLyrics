@@ -31,7 +31,6 @@ import com.andsi.airlyrics.ui.components.styleAirTonalButton
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.button.MaterialButton
 
-/** The compact search prompt uses the same color, type and shape tokens as AirDialogs. */
 @Suppress("DEPRECATION")
 internal class MissingSourcesDialog(
     context: Context,

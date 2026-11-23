@@ -222,7 +222,6 @@ internal class AboutVersionDownloadFooter(
             ((fraction - PROGRESS_REVEAL_START) / (1f - PROGRESS_REVEAL_START)).coerceIn(0f, 1f)
         )
 
-        // Collapse the action into the same horizontal line that the progress track occupies.
         val trackY = progressRow.top + bar.top + bar.lineCenterY
         updateButton.pivotY = (trackY - updateButton.top).coerceIn(0f, updateButton.height.toFloat())
         updateButton.scaleY = 1f - 0.94f * collapse

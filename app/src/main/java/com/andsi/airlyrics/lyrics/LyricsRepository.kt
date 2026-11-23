@@ -20,14 +20,6 @@ import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
 import java.util.concurrent.CancellationException
 
-/**
- * Central lyrics lookup entry point.
- *
- * Lookup order:
- * 1. Local plain lyrics, so imported/saved files always win.
- * 2. Selected online providers in priority order, only when the user allows online search.
- * 3. Optional local plain cache save for successful online results.
- */
 object LyricsRepository {
     private val onlinePlainLyricsProviders = mapOf(
         PlainLyricsSearchSource.NETEASE to NeteasePlainLyricsProvider,
@@ -143,10 +135,6 @@ object LyricsRepository {
         }
     }
 
-    /**
-     * Reuse a mapping the user already confirmed for this recording. The native engine only sees
-     * aliases that are registered explicitly; nothing is guessed from the English title.
-     */
     private fun registerConfirmedAliases(context: Context, song: SongIdentity) {
         val alias = runCatching { SongAliasStore.read(context, song) }.getOrNull() ?: return
         runCatching {

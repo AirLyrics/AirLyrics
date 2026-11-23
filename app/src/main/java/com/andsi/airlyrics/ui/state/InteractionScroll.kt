@@ -12,7 +12,6 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import kotlin.math.roundToInt
 
-/** Structural keys are stable for static cards; dynamic rows supply their own business keys. */
 internal fun View.markInteractionAnchors(prefix: String) {
     val ownKey = getTag(R.id.interaction_anchor) as? String ?: prefix
     setTag(R.id.interaction_anchor, ownKey)
@@ -25,7 +24,6 @@ internal fun View.findInteractionScroll(): View? {
     return null
 }
 
-// The touch observer returns false; the scroll view retains its normal click handling.
 @SuppressLint("ClickableViewAccessibility")
 internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String, onInteraction: () -> Unit = {}): () -> Unit {
     val group = scroll as? ViewGroup ?: return {}
@@ -46,7 +44,6 @@ internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String, onInter
             result += parent.top - parent.scrollY
             parent = parent.parent as? View
         }
-        // Scroll offsets are relative to the start of the padded viewport.
         return result - scroll.paddingTop
     }
     fun capture() {

@@ -13,7 +13,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import androidx.core.widget.doAfterTextChanged
 import kotlin.math.ceil
 
-/** Animates drawing only: the ellipsized line's size, baseline and accessibility text stay intact. */
 internal class InlineOverflowTextView(context: Context) : AppCompatTextView(context) {
     private var readingLayout: StaticLayout? = null
     internal var readingOffset = 0f

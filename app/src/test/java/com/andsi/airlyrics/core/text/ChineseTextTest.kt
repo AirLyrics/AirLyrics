@@ -121,15 +121,11 @@ class ChineseTextTest {
     @Test
     fun scriptConversion_ignoresARepeatedPerformanceTail() {
         install()
-        // Singers echo the tail ("…會繞會繞", "…睡得著(睡得著)"); the translation does not.
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著(蓋著)", "苏产绣盖着"))
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著", "苏产绣盖着"))
         assertTrue(ChineseText.isScriptConversion("蓋著蓋著", "盖着"))
-        // Broken parenthetical echo: the sung span only kept the closing bracket.
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著蓋著)", "苏产绣盖着"))
-        // A space inside the echo must not hide it.
         assertTrue(ChineseText.isScriptConversion("蘇產繡蓋著 蓋著", "苏产绣盖着"))
-        // One-character echo whose bracket survived on the original side only.
         assertTrue(
             ChineseText.isScriptConversion(
                 "看不見妳的笑 我怎麼睡得著著)",

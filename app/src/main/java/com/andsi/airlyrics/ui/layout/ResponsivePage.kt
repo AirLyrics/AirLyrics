@@ -21,7 +21,6 @@ import com.andsi.airlyrics.ui.theme.bindAppearance
 import com.andsi.airlyrics.ui.theme.colorBackground
 import kotlin.math.roundToInt
 
-/** Reparents the same cards at breakpoints; it never recreates their controls or callbacks. */
 @SuppressLint("ViewConstructor")
 internal class ResponsivePage(
     private val host: MainUiHost,

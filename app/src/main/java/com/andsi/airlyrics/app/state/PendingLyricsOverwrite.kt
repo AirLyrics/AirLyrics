@@ -4,7 +4,6 @@ import android.net.Uri
 import android.os.Bundle
 import com.andsi.airlyrics.core.model.SongIdentity
 
-/** Immutable overwrite request waiting for an explicit user decision. */
 internal data class PendingLyricsOverwrite(
     val uri: Uri,
     val target: SongIdentity,

@@ -37,13 +37,11 @@ object ChineseText {
     @Volatile
     private var loaded = false
 
-    /** Loads the conversion tables; safe to call repeatedly and from any thread. */
     fun ensureLoaded(context: Context) {
         if (loaded) return
         load { path -> context.assets.open(path) }
     }
 
-    /** Test hook: drop installed dictionaries so a test can load its own. */
     internal fun resetForTest() {
         synchronized(this) {
             loaded = false
@@ -52,7 +50,6 @@ object ChineseText {
         }
     }
 
-    /** Test hook: load the real dictionaries from a directory instead of the APK assets. */
     internal fun loadFromDirectory(directory: java.io.File) {
         load { path -> java.io.File(directory, path.substringAfterLast('/')).inputStream() }
     }
@@ -93,7 +90,6 @@ object ChineseText {
         }
     }
 
-    /** Test hook: install dictionaries without an Android [Context]. */
     internal fun installTableForTest(
         entries: Map<Char, Char>,
         variants: Map<Char, Char> = emptyMap(),
@@ -168,8 +164,6 @@ object ChineseText {
             if (compact.regionMatches(length - 2 * unit, tail, 0, unit)) {
                 return compact.substring(0, length - unit)
             }
-            // The echo often repeats the tail behind a particle whose opening bracket was lost:
-            // "…是我們的阻礙" + "(的阻礙)" arrives as "…阻礙的阻礙".
             if (length - 2 * unit - 1 >= 0) {
                 val particle = compact[length - unit - 1]
                 if ((particle.code == 0x7684 || particle.code == 0x5730 || particle.code == 0x5F97) &&
@@ -182,10 +176,6 @@ object ChineseText {
         return value
     }
 
-    /**
-     * Script and spacing normalisation without echo handling. Used for token-sized comparisons
-     * inside a line, where a trailing bracket belongs to the token rather than marking an echo.
-     */
     fun normalizedForm(text: String): String {
         var value = comparable(toSimplified(text))
         repeat(2) {
@@ -196,11 +186,6 @@ object ChineseText {
         return value
     }
 
-    /**
-     * Comparison-only form: simplified, script-folded, whitespace/punctuation removed, and the
-     * singer's echoed tail dropped. Cleaning comes before the echo scan so a space or bracket
-     * inside the echo ("…阻礙 的阻礙") cannot hide the repeat.
-     */
     fun comparisonForm(text: String): String {
         // Strip the echo on the raw text first: it needs the brackets as evidence, and the
         // comparison form itself treats brackets as punctuation.
@@ -236,9 +221,9 @@ object ChineseText {
      * exact characters the lyric shipped with.
      */
     private fun foldComparisonVariant(character: Char): Char = when (character.code) {
-        0x59B3 -> 0x4F60.toChar()   // 妳 -> 你
-        0x7942 -> 0x4ED6.toChar()   // 祂 -> 他
-        0x7260 -> 0x5B83.toChar()   // 牠 -> 它
+        0x59B3 -> 0x4F60.toChar()
+        0x7942 -> 0x4ED6.toChar()
+        0x7260 -> 0x5B83.toChar()
         0x8457 -> 0x7740.toChar()   // 著 -> 着 (lyric usage; tw2s only covers a few phrases)
         0x8367 -> 0x8424.toChar()   // 荧 -> 萤 (荧幕/萤幕 are the same word in different standards)
         else -> character
@@ -303,13 +288,8 @@ object ChineseText {
                 .toList()
         }
 
-    /** True when the phrase-aware traditional→simplified conversion changes the text. */
     fun containsTraditional(text: String): Boolean = toSimplified(text) != text
 
-    /**
-     * How many Han characters would change under tw2s. Phrase protection still applies to the
-     * whole string ([containsTraditional]); this count only ranks two copies of the same line.
-     */
     fun traditionalCharacterCount(text: String): Int = text.count { character ->
         isHan(character) && toSimplified(character.toString()) != character.toString()
     }

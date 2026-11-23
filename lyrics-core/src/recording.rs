@@ -29,7 +29,6 @@ impl VersionMarkers {
             || self.session
     }
 
-    /// Bit mask so two marker sets can be compared symmetrically.
     fn mask(self) -> u8 {
         (self.live as u8)
             | (self.remix as u8) << 1
@@ -118,7 +117,6 @@ pub(crate) fn version_conflict(left: &MatchMetadata<'_>, right: &MatchMetadata<'
     (left_markers.any() || right_markers.any()) && left_markers.mask() != right_markers.mask()
 }
 
-/// Duration evidence: identical recordings of the same master usually land within seconds.
 pub(crate) fn duration_close(
     left: Option<u64>,
     right: Option<u64>,

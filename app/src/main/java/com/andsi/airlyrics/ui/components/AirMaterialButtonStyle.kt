@@ -8,12 +8,10 @@ import com.andsi.airlyrics.ui.theme.appearancePreferences
 import com.google.android.material.button.MaterialButton
 import kotlin.math.roundToInt
 
-/** Keep Material's shape, ripple and insets while using the app's button preference. */
 internal fun MaterialButton.styleAirTonalButton(tone: AirTonalButtonTone = AirTonalButtonTone.DEFAULT) {
     applyAirButtonColors(context.airTonalButtonStyle(tone))
 }
 
-/** Inline disclosures and navigation actions keep their text-only hierarchy in either style. */
 internal fun MaterialButton.styleAirTextButton() {
     val (dark, accent) = context.appearancePreferences()
     val palette = AirLyricsTheme.palette(dark, accent)

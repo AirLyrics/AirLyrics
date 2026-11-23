@@ -50,7 +50,6 @@ private data class AirTonalButtonToneSpec(
     val strokeWidthDp: Int
 )
 
-/** The main screen and standalone windows share the same button color rules. */
 internal fun MainUiHost.airTonalButtonStyle(
     tone: AirTonalButtonTone,
     buttonStyle: ButtonStyle? = null,
@@ -148,7 +147,6 @@ internal fun MainUiHost.styleAirTonalButton(
     }
 }
 
-/** Color-only update; keeps the existing shape, measurement, listeners and focus. */
 internal fun MainUiHost.applyAirTonalButtonStyle(
     view: View,
     tone: AirTonalButtonTone = AirTonalButtonTone.DEFAULT,

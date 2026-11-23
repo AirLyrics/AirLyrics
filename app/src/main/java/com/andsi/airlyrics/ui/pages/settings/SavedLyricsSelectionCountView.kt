@@ -12,7 +12,6 @@ import androidx.core.graphics.withClip
 import androidx.core.graphics.withSave
 import java.text.NumberFormat
 
-/** Keeps the count's layout fixed while the old and new glyphs briefly separate and settle. */
 @SuppressLint("ViewConstructor")
 internal class SavedLyricsSelectionCountView(
     context: Context,

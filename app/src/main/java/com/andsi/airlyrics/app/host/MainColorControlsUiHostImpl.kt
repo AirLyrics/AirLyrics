@@ -48,7 +48,6 @@ internal fun MainUiHost.sliderRowImpl(
     val safeValue = restoredValue.coerceIn(min, max).let {
         min + ((it - min + safeStep / 2) / safeStep) * safeStep
     }.coerceAtMost(max)
-    // Preview and persistence remain separate, including during activity recreation.
     if (restoredValue != value && onChangeFinished != null) onChanged(safeValue)
     fun valueLabel(value: Int): String =
         String.format(resources.configuration.locales[0], "%d%s", value, suffix)

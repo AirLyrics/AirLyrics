@@ -100,7 +100,6 @@ import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 import kotlin.math.roundToInt
 
-/** Bridges handwritten main UI helpers to the UI-facing host boundary. */
 internal class MainActivityUiHost(
     private val graph: MainGraph,
 ) : MainUiHost(graph.activity, { graph.state }) {
@@ -696,7 +695,6 @@ internal class MainActivityUiHost(
 
     private fun applyPaletteChange(updateSetting: () -> Unit) {
         updateSetting()
-        // Retarget from the displayed colors while keeping the mounted picker's focus and scroll.
         appearance.transition(
             animate = contentContainer?.isAttachedToWindow == true,
             durationMs = AirUiTokens.Motion.LayoutChangeMs,

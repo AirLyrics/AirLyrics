@@ -217,7 +217,6 @@ class FloatingPreviewCardTest {
                     assertEquals(0f, content.translationY, 0.01f)
                     assertEquals(scrollY, settings.scrollY)
 
-                    // The list also stays against the bottom if it was scrolled to its end.
                     settings.scrollTo(0, content.height)
                     fun contentBottom() = contentTop() + content.height
                     assertEquals(settings.height.toFloat(), contentBottom(), 0.01f)

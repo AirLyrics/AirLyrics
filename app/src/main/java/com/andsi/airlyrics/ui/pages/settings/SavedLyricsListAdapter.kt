@@ -25,7 +25,6 @@ import kotlin.math.roundToInt
 
 internal fun LocalLyricsUiItem.selectionKey() = indexKey.ifBlank { "root:$name" }
 
-/** Views are bounded by the viewport; selection and expansion belong to song keys. */
 internal class SavedLyricsListAdapter(
     private val host: MainUiHost,
     private val selecting: () -> Boolean,
@@ -96,7 +95,6 @@ internal class SavedLyricsListAdapter(
         val wrapper = LinearLayout(host).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            // Padding belongs to the wrapper so the card's bottom border stays inside its bounds.
             setPadding(0, host.dp(AirUiTokens.Space.Xxl), 0, 0)
             addView(slot, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT))
             addView(row, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))

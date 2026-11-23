@@ -143,7 +143,6 @@ class FloatingColorPanelTest {
         it.contentDescription == host.getString(R.string.ui_glow_spread_short)
     }
 
-    /** Dispatch real SeekBar gestures so preview callbacks and release commits both run. */
     private fun drag(slider: SeekBar, fraction: Float) {
         val x = slider.paddingLeft + (slider.width - slider.paddingLeft - slider.paddingRight) * fraction
         val start = SystemClock.uptimeMillis()
@@ -646,7 +645,6 @@ class FloatingColorPanelTest {
         }
     }
 
-    /** Flush Android's queued writes, drop its preference cache, and open without saved UI state. */
     private fun coldRestart(id: FloatingPanelId) {
         val app = RuntimeEnvironment.getApplication()
         controller?.close()
@@ -899,7 +897,6 @@ class FloatingColorPanelTest {
         swatch.performClick()
         swatch.performClick()
         assertTrue(swatch.removalArmed)
-        // Entering and leaving the editor cancels the armed delete.
         action(R.string.ui_custom_color).performClick()
         action(R.string.ui_back).performClick()
         layout()
@@ -914,7 +911,6 @@ class FloatingColorPanelTest {
         assertSame(otherView, savedGrid().getChildAt(0))
         assertEquals(applied, host.floatingStyle())
 
-        // Built-in colors never enter delete mode, including a duplicate of a saved color.
         repeat(3) { action(R.string.ui_blue).performClick() }
         assertEquals(listOf(other), FloatingColorSwatchStore.colors(host))
         assertEquals(original.wordByWordHighlightColor, host.floatingStyle().wordByWordHighlightColor)

@@ -123,7 +123,6 @@ internal class SettingsPageTransition {
         }
     }
 
-    /** A following navigation can use the incoming page's current pose as its outgoing pose. */
     fun cancel(settleIncoming: Boolean = true) {
         animator?.let {
             it.removeAllUpdateListeners()

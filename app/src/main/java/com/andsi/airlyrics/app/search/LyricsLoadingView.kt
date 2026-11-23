@@ -14,7 +14,6 @@ import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 
-/** Reserves all six dots so the centered label stays still as the dots advance. */
 @SuppressLint("ViewConstructor")
 internal class LyricsLoadingView(context: Context, palette: AirLyricsPalette) : AppCompatTextView(context) {
     private val label = context.getString(R.string.ui_loading).trimEnd('…', '.', ' ')

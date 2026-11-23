@@ -27,7 +27,7 @@ class MascotArtTest {
             val encoded = context.assets.open("${layer.file}.png.b64").use { it.readBytes() }
             val png = Base64.getDecoder().decode(encoded)
             assertEquals(layer.file, 0x89, png[0].toInt() and 0xff)
-            assertEquals(layer.file, 6, png[25].toInt() and 0xff) // PNG RGBA color type
+            assertEquals(layer.file, 6, png[25].toInt() and 0xff)
             assertTrue(layer.file, png.size > 100)
         }
     }
@@ -36,7 +36,7 @@ class MascotArtTest {
         val art = MascotArt(ApplicationProvider.getApplicationContext())
         val rest = art.cloudMesh(0f, 0f, 0f).copyOf()
         val pulled = art.cloudMesh(40f, 24f, 0.07f)
-        val upper = ((4 * 9) + 3) * 2 // x=192, y=256, next to the left paw
+        val upper = ((4 * 9) + 3) * 2
         val lower = ((7 * 9) + 3) * 2
         val pawX = 40f * MascotArt.CLOUD_ATTACHMENT_FRACTION
         val pawY = (24f * MascotArt.CLOUD_ATTACHMENT_FRACTION) +

@@ -25,7 +25,6 @@ internal interface MainChromeHost {
         animateTabs: Boolean = true
     )
 
-    /** Updates mounted Media content while keeping its cards and controls in place. */
     fun refreshMediaContent()
 
     fun rebuildMainView()

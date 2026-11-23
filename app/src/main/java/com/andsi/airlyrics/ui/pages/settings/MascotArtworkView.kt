@@ -36,7 +36,6 @@ internal fun cloudSpringRemaining(progress: Float): Float {
     return exp(-5.6f * t) * (cos(10.5f * t) + (0.31f * sin(10.5f * t)))
 }
 
-/** Drawn above the About scroll view so the lifted cat can fall and be grabbed anywhere on the page. */
 @SuppressLint("ViewConstructor", "ClickableViewAccessibility")
 internal class MascotDragOverlay(activity: MainUiHost) : View(activity) {
     private enum class GrabMode { UNDECIDED, DRAG, SPRING }
@@ -202,7 +201,6 @@ internal class MascotDragOverlay(activity: MainUiHost) : View(activity) {
         invalidate()
     }
 
-    /** Direct dragging stays bounded by the lifted cat's visible body, not transparent art margins. */
     fun update(rawDx: Float, rawDy: Float, rawLift: Float, fromTouch: Boolean = false) {
         if (!isShowing) return
         val minX = -anchorX - (artSize * 0.18f)
@@ -380,7 +378,6 @@ internal class MascotDragOverlay(activity: MainUiHost) : View(activity) {
         )
     }
 
-    /** Keep the cat at its screen position if the About content scrolls behind it. */
     private fun refreshAnchor() {
         val owner = source ?: return
         owner.getLocationInWindow(sourceLocation)

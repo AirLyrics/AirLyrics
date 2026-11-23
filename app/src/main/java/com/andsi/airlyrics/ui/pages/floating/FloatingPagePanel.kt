@@ -10,7 +10,6 @@ import com.andsi.airlyrics.ui.components.floatingPanelEaseOut
 import com.andsi.airlyrics.ui.components.endFloatingPanelChanges
 import android.widget.LinearLayout
 
-/** Optional nested page navigation; ordinary settings keep their existing header and back path. */
 internal class FloatingPanelNavigation {
     private var title: String? = null
     private var back: (() -> Unit)? = null
@@ -147,7 +146,7 @@ private fun FloatingPageScope.openFloatingPanel(
     edits?.bindBubble(bubbleHandle)
     bubble.findInteractionScroll()?.let { host.bindInteractionScroll(it, "panel.scroll") }
 
-    bubble.setOnClickListener { /* absorb clicks inside the restored panel, too */ }
+    bubble.setOnClickListener { }
     bubble.isClickable = true
     if (!animatePanel) {
         overlay.alpha = 1f
@@ -155,7 +154,7 @@ private fun FloatingPageScope.openFloatingPanel(
         return ::rebuildContentIfOpen
     }
 
-    bubble.setOnClickListener { /* keep clicks inside the bubble */ }
+    bubble.setOnClickListener { }
     bubble.isClickable = true
     bubble.alpha = 0f
     bubble.scaleX = FloatingPageTokens.PANEL_OPEN_START_SCALE
@@ -211,7 +210,6 @@ internal fun FloatingPageScope.installBackHandler() {
 }
 
 private fun FloatingPageScope.closePanel() {
-    // Cancel nested work before the closing animation can deliver a late completion.
     activeStylePanel?.finishMotion()
     activeStylePanel = null
     activePanelNavigation?.close()
@@ -220,7 +218,7 @@ private fun FloatingPageScope.closePanel() {
     val bubble = activeBubble
     activeBubble = null
     activePanelNavigation = null
-    overlay.setOnClickListener { /* absorb touches until the panel is removed */ }
+    overlay.setOnClickListener { }
     bubble?.endFloatingPanelChanges()
     bubble?.animate()?.cancel()
     overlay.animate().cancel()

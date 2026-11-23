@@ -31,7 +31,7 @@ class SpicyLyricsTest {
         assertEquals(listOf("e\u0301", "👨‍👩‍👧‍👦", "好"), units.map { text.substring(it.start, it.end) })
         assertEquals(1, spicyTimings(line("hello", 999), "hello").size)
         assertEquals(5, spicyTimings(line("hello", 1000), "hello").size)
-        assertEquals(1250L, units.last().endMs) // Spicy normal-mode emphasis finishes 250ms early.
+        assertEquals(1250L, units.last().endMs)
     }
 
     @Test fun repeatedWordsMapForwardAndInvalidMappingFallsBack() {

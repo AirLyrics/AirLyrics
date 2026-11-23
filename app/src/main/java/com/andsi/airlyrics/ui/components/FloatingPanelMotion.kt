@@ -27,7 +27,6 @@ internal fun View.canAnimateFloatingControl(): Boolean =
     isAttachedToWindow && isShown && ValueAnimator.areAnimatorsEnabled() &&
         (isInTouchMode || !hasFocus())
 
-/** Capture the modal and its centered bounds, never the settings page underneath it. */
 internal fun View.beginFloatingPanelChange() {
     val root = floatingPanelMotionRoot() ?: return
     root.beginPanelTransition(TransitionSet().apply {
@@ -40,11 +39,8 @@ internal fun View.beginFloatingPanelChange() {
 /** Replacing a form must not lift old controls or their hidden pages into a Fade overlay. */
 internal fun View.beginFloatingPanelContentReplacement() {
     val root = floatingPanelMotionRoot() ?: return
-    // Finish both pending page transitions and running ghosts before removing their views.
     endFloatingPanelChanges()
     val bounds = ChangeBounds()
-    // Only these container instances survive the replacement. New/removed descendants
-    // update immediately, while the opaque shell and its viewport can still resize smoothly.
     generateSequence(this) { if (it === root) null else it.parent as? View }
         .forEach { bounds.addTarget(it) }
     root.beginPanelTransition(bounds)

@@ -17,7 +17,6 @@ import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import kotlin.math.abs
 
-/** FLIP the surviving visible rows while snapshots of the deleted rows leave the viewport. */
 internal class SavedLyricsDeletionMotion(
     private val host: MainUiHost,
     private val container: ViewGroup,
@@ -67,7 +66,6 @@ internal class SavedLyricsDeletionMotion(
             val visibleTop = bounds.top.coerceAtLeast(viewport.top)
             val visibleBottom = bounds.bottom.coerceAtMost(viewport.bottom)
             if (bound.key in removed && row.width > 0 && visibleBottom > visibleTop) {
-                // Only visible deleted rows are copied; the data change is never held for the exit.
                 val bitmap = createBitmap(row.width, visibleBottom - visibleTop, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
                 canvas.translate(0f, (bounds.top - visibleTop).toFloat())

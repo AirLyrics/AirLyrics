@@ -18,7 +18,6 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Opt-in diagnostics: remote availability is not a prerequisite for the offline test suite. */
 @RunWith(AndroidJUnit4::class)
 class ManualSearchLiveInstrumentedTest {
     @Test fun reportLiveSearchAndExactCandidateFetch() {

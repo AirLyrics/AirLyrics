@@ -16,7 +16,6 @@ import com.andsi.airlyrics.ui.theme.colorIconOnAccent
 import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
 
-/** All setting groups share this single-line, equal-size tile, including live subtitles. */
 @SuppressLint("ViewConstructor")
 internal class SettingTileLayout(private val host: MainUiHost, item: FloatingSettingTile) :
     LinearLayout(host) {
@@ -31,7 +30,6 @@ internal class SettingTileLayout(private val host: MainUiHost, item: FloatingSet
         textSize = AirUiTokens.TextSize.BodySmall
         setTextColor(host.colorTextMuted)
         setPadding(0, host.dp(AirUiTokens.Space.Lg), 0, 0)
-        // Keep the view even for an initially empty value: it may be updated later.
         item.onSubtitleViewCreated?.invoke(this)
     }
     private val labels = LinearLayout(host).apply {
@@ -67,8 +65,6 @@ internal class SettingTileLayout(private val host: MainUiHost, item: FloatingSet
                 item.onClick(this)
             }
         }
-        // Long press reads in place without consuming the normal settings action.
-        // Reduced motion and screen readers retain a static full-text fallback.
         textScroll.bind(host) {
             host.showFullText(titleView.text.toString(), summaryView.text.toString())
         }

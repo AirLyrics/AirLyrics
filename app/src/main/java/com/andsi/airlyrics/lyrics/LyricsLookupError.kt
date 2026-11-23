@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.lyrics
 
-/** Structured provider failure that can be shown to users and logged during tests. */
 class LyricsLookupException(
     val providerId: String,
     val providerName: String,

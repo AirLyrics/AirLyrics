@@ -52,7 +52,6 @@ internal object SpicyLyricsCurves {
         out.glow = (glow.at(phase) * glowFalloff).coerceIn(0f, 1f)
     }
 
-    /** Normal-mode letters use d3 easeSinOut; ordinary words fill linearly. */
     fun fillProgress(timing: SpicyTiming, position: Long): Float {
         val p = spicyProgress(position, timing.startMs, timing.endMs)
         return if (timing.emphasized) kotlin.math.sin(p * Math.PI / 2).toFloat() else p

@@ -35,7 +35,6 @@ struct AliasFile {
     entries: Vec<AliasEntry>,
 }
 
-/// Result of a successful alias lookup, carrying provenance for UI and logs.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct AliasHit {
     pub(crate) title: String,
@@ -63,7 +62,6 @@ fn runtime() -> &'static RwLock<Vec<AliasEntry>> {
     RUNTIME.get_or_init(|| RwLock::new(Vec::new()))
 }
 
-/// Aliases confirmed at runtime (user selections) take precedence over the bundled catalogue.
 pub(crate) fn register(entry: AliasEntry) {
     if entry.confidence < MIN_ENTRY_CONFIDENCE {
         return;
@@ -90,7 +88,6 @@ fn same_text(left: &str, right: &str) -> bool {
 
 fn artist_matches(entry: &AliasEntry, artist: &str) -> bool {
     if artist.trim().is_empty() {
-        // Without an artist we cannot confirm a cross-language identity.
         return false;
     }
     let mut candidates: Vec<&str> = entry
@@ -107,7 +104,6 @@ fn artist_matches(entry: &AliasEntry, artist: &str) -> bool {
     })
 }
 
-/// Look up an alias for the player's metadata. Returns `None` when nothing matches confidently.
 pub(crate) fn lookup(title: &str, artist: &str) -> Option<AliasHit> {
     if title.trim().is_empty() {
         return None;
@@ -128,7 +124,6 @@ pub(crate) fn lookup(title: &str, artist: &str) -> Option<AliasHit> {
         })
 }
 
-/// Owned lookup parts for a candidate that is scored against the *original* query.
 pub(crate) fn metadata_parts(hit: &AliasHit) -> (String, String) {
     (hit.title.clone(), hit.artist.clone().unwrap_or_default())
 }
@@ -153,7 +148,6 @@ pub(crate) fn register_artist_alias(original: &str, localized: &str) {
     }
 }
 
-/// The localized spelling of this artist, when one has been learned.
 pub(crate) fn localized_artist(artist: &str) -> Option<String> {
     let artist = artist.trim();
     if artist.is_empty() {
@@ -192,7 +186,6 @@ pub(crate) fn search_queries(title: &str, artist: &str) -> Vec<(String, Option<S
     }
 }
 
-/// Free-text form of [`search_queries`].
 pub(crate) fn search_keywords(title: &str, artist: &str) -> Vec<String> {
     search_queries(title, artist)
         .into_iter()

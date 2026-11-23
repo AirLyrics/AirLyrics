@@ -11,7 +11,6 @@ internal data class AppearancePreferences(
     val buttonStyle: ButtonStyle
 )
 
-/** The application supplies preferences for standalone views and their themed contexts. */
 internal interface AppearancePreferencesProvider {
     fun appearancePreferences(context: Context): AppearancePreferences
 }

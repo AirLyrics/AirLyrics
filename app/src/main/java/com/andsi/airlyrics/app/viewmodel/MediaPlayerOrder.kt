@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.viewmodel
 
-/** Keeps visible players in their first-seen order while replacing their latest controller data. */
 internal class MediaPlayerOrder {
     private var orderedPackages: List<String> = emptyList()
 

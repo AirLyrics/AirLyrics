@@ -40,7 +40,6 @@ internal data class EditorSession(
     val untimedTranslation: String? = null
 )
 
-/** Retains only application context and data; UI subscribes anew after recreation. */
 internal class LyricsEditorSession(
     context: Context,
     private val interactions: MainInteractionState,

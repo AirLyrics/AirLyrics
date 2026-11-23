@@ -37,7 +37,6 @@ internal data class LyricsReadSnapshot(
     val deletable: LyricsStorage.DeletableLyrics = LyricsStorage.DeletableLyrics()
 )
 
-/** A bounded, per-ViewModel cache of raw data. It never retains UI mapping callbacks. */
 internal class LyricsReadSession(
     context: Context,
     private val scope: CoroutineScope,

@@ -26,10 +26,6 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/**
- * One measured panel, one drawn surface, one reversible clock. Only clipping, drawing and
- * child render properties change per frame; neither the panel nor the activity is remeasured.
- */
 @SuppressLint("ViewConstructor")
 internal class LyricsSourcesMorphView(
     context: Context,
@@ -153,7 +149,6 @@ internal class LyricsSourcesMorphView(
             return
         }
         val running = ValueAnimator.ofFloat(progress, target).apply {
-            // Linear clock; geometry and supporting content sample the same timeline in both directions.
             duration = ((if (open) OPEN_MS else CLOSE_MS) * abs(target - progress)).roundToInt().toLong()
                 .coerceAtLeast(1)
             interpolator = LinearInterpolator()

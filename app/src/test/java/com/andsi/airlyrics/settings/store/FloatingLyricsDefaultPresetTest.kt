@@ -12,7 +12,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
-/** Independent default preset contract; visual default changes are reviewed here. */
 class FloatingLyricsDefaultPresetTest : SettingsStoreTestBase() {
     @Test
     fun returnsDefaultBubbleStyle() {

@@ -143,7 +143,6 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
             return@synchronized LyricsStorage.LocalLyricsUpdateResult(false, edited.invalidLines())
         if (original.wordByWordLines == edited.lines && original.translatedLrc == edited.translatedLrc)
             return@synchronized LyricsStorage.LocalLyricsUpdateResult(true)
-        // The raw response, access policy and fetchedAt stay intact.
         write(key, doc.put("wordEdit", edited.serialize()).put("edit", edited.originalLrc)
             .put("translatedEdit", edited.translatedLrc.orEmpty()).put("updatedAt", clock()))
         LyricsStorage.LocalLyricsUpdateResult(true)

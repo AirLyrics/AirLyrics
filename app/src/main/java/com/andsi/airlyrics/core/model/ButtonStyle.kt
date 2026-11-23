@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.core.model
 
-/** Stable preference values for the app-wide button appearance. */
 enum class ButtonStyle(val preferenceValue: String) {
     SOLID("solid"),
     TRANSPARENT("transparent");

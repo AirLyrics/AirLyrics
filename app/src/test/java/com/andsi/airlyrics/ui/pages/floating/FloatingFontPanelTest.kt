@@ -626,7 +626,6 @@ class FloatingFontPanelTest {
         val page = scope.createView()
         controller.get().setContentView(page)
         controller.visible()
-        // Advance finite frames so the window attaches before testing view lifecycle events.
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(32))
         return Fixture(controller, host, scope, page, width).also {
             fixtures += it
@@ -659,7 +658,6 @@ class FloatingFontPanelTest {
         repeat(100) {
             scheduler.runCurrent()
             if (condition()) return
-            // Real repository mutations deliberately use Dispatchers.IO.
             withContext(Dispatchers.IO) { delay(10.milliseconds) }
         }
         assertTrue("The asynchronous font operation did not complete", condition())
@@ -734,7 +732,7 @@ class FloatingFontPanelTest {
             val pending = Pending(onProgress).also(requests::add)
             if (ignoreCancellation) {
                 try { withContext(NonCancellable) { pending.result.await() } }
-                catch (_: CancellationException) { /* Simulate a transport returning after cancellation. */ }
+                catch (_: CancellationException) { }
             } else pending.result.await()
             available = true
         }

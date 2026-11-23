@@ -117,7 +117,6 @@ class LyricsSourcesSheet : DialogFragment() {
         count = label("", 14f)
         actions.addView(count, LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = dp(8) })
         footer.addView(actions, LinearLayout.LayoutParams(-1, -2))
-        // Reserve this line so the panel and Apply never jump when the last source is unchecked.
         hint = label(getString(R.string.search_sources_choose_one), 13f).apply {
             setTextColor(palette.text)
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
@@ -159,7 +158,6 @@ class LyricsSourcesSheet : DialogFragment() {
         morph = LyricsSourcesMorphView(context, palette, content, capsule,
             anchor = { (activity as? LyricsSearchActivity)?.sourceCapsule() },
             onContentProgress = { p ->
-                // The surface leads; capped 30ms row offsets overlap rather than queue.
                 fun reveal(view: View, startMs: Float, durationMs: Float) {
                     val alpha = LyricsSourcesMorphView.segment(p, startMs / 450f, (startMs + durationMs) / 450f)
                     view.alpha = alpha

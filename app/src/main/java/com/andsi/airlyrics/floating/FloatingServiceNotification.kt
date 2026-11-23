@@ -11,12 +11,6 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.theme.ThemeAccentPalettes
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 
-/**
- * Builds the foreground-service notification used by the floating lyrics service.
- *
- * The notification doubles as the always-available remote control for the floating
- * window, so users can unlock / move / restore click-through without opening the app.
- */
 internal object FloatingServiceNotification {
     const val NOTIFICATION_ID = 1
 

@@ -59,7 +59,6 @@ class MainActivityDialogDimmingTest {
             assertFalse(dialog.isShowing)
             assertTrue(editor.isShowing)
 
-            // A registered window that is no longer showing must not affect later dialogs.
             editor.dismissAirDialogImmediately()
             val standalone = host.showAirDialog(title = "Info", coordinatedDim = true)
             assertEquals(0f, standalone.window!!.attributes.dimAmount, 0.001f)

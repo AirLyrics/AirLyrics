@@ -27,7 +27,6 @@ import com.andsi.airlyrics.ui.theme.colorDanger
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-/** Selection and the optional delete confirmation share one interruptible animation. */
 @SuppressLint("ViewConstructor")
 internal class FloatingColorSwatch(
     private val host: MainUiHost,
@@ -185,7 +184,6 @@ internal class FloatingColorSwatch(
 
         val deleteAlpha = selectionAmount * removalAmount
         if (deleteAlpha > 0f) {
-            // A solid backing keeps the red cross legible even on a red favorite.
             paint.style = Paint.Style.FILL
             paint.color = ColorUtils.setAlphaComponent(host.colorBubble, (255 * deleteAlpha).toInt())
             canvas.drawCircle(cx, cy, host.dp(13).toFloat(), paint)

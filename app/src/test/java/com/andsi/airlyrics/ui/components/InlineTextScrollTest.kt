@@ -113,7 +113,6 @@ class InlineTextScrollTest {
         File(directory, "inline-scrolling.png").outputStream().use { during.compress(Bitmap.CompressFormat.PNG, 100, it) }
         before.recycle()
         during.recycle()
-        // Wait for the title to finish, then verify the overflowing summary also moves.
         repeat(60) { if (!lines[1].isReading) advance(500) }
         assertTrue(lines[1].isReading)
         advance(2000)

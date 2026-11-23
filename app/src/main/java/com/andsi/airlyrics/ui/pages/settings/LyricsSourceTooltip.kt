@@ -13,7 +13,6 @@ import com.andsi.airlyrics.ui.theme.colorCard
 import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-/** A transient, non-modal label above its source button. */
 internal class LyricsSourceTooltip(
     private val host: MainUiHost,
     private val anchor: View

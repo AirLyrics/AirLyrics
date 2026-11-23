@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.navigation
 
 internal enum class SettingsNavigationDirection { PUSH, POP }
 
-/** A user-initiated move between adjacent levels of the settings hierarchy. */
 internal data class SettingsNavigation(
     val from: SettingsSubPage,
     val to: SettingsSubPage,

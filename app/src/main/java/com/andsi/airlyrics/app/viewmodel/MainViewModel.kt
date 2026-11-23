@@ -61,7 +61,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Owns main-screen state and state transitions; Android UI work remains in MainGraph. */
 internal class MainViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val lyricsController: LyricsOperations,

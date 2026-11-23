@@ -459,7 +459,6 @@ internal class FloatingPageScope(
     internal fun previewFloatingGlow(glow: com.andsi.airlyrics.core.model.LyricsGlowStyle) {
         val previewStyle = style().copy(glow = glow)
         previewStyleForAnimation = previewStyle
-        // Preserve the playback phase while dragging: restarting at zero would hide the halo.
         previewHandle?.lyricTextView?.let { view ->
             with(host) { view.applyFloatingPreviewStyle(previewStyle) }
         }

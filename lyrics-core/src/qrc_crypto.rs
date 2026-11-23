@@ -65,7 +65,6 @@ const KEY_COMPRESSION: [u32; 48] = [
     30, 36, 46, 54, 29, 39, 50, 44, 32, 47, 43, 48, 38, 55, 33, 52, 45, 41, 49, 35, 28, 31,
 ];
 
-/// 子密钥的使用方向：解密时 16 轮子密钥倒序排列。
 #[derive(Clone, Copy, PartialEq)]
 enum Mode {
     Encrypt,
@@ -412,7 +411,6 @@ pub(crate) fn decrypt(input: &str, limit: usize) -> Result<String, String> {
     String::from_utf8(decoded).map_err(|_| "ParseError".into())
 }
 
-/// Synthetic encrypted responses for protocol/parser tests; never used in production.
 #[cfg(test)]
 pub(crate) fn encrypt_fixture(raw: &str) -> String {
     use std::io::Write;

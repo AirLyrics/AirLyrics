@@ -25,7 +25,6 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
-/** The fragment owns input restoration; the dialog owns motion and the window's lifetime. */
 class SpotifyIdSearchDialog : DialogFragment() {
     private var input: TextInputEditText? = null
     private var submitted = false

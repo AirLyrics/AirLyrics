@@ -59,7 +59,6 @@ object LrcParser {
 
     enum class TimeTagValidation { VALID, INVALID_FORMAT, SECONDS_OUT_OF_RANGE }
 
-    /** Shares the ordinary LRC parser's timestamp syntax and bounds with inline editing. */
     fun validateTimeTag(tag: String): TimeTagValidation {
         val match = timeTagRegex.matchEntire(tag) ?: return TimeTagValidation.INVALID_FORMAT
         if (match.groupValues[2].toInt() >= 60) return TimeTagValidation.SECONDS_OUT_OF_RANGE

@@ -74,7 +74,6 @@ class FloatingFontCollectionTest {
         val handwritingId = fonts[1].id
         assertTrue(FloatingLyricsFontStore.selectFont(context, handwritingId))
         val undo = FloatingLyricsStyleStore.getStyle(context).undoChangesTo(defaultStyle)
-        // A new directory bypasses the in-memory catalogue and typeface caches.
         val reopened = contextFor(temporary.newFolder())
         fontDirectory(context).copyRecursively(fontDirectory(reopened))
         assertEquals(collection, FloatingLyricsFontStore.collections(reopened).single())

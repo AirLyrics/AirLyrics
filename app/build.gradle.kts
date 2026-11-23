@@ -155,11 +155,7 @@ android {
 
     lint {
         disable += setOf(
-            // Keep targetSdk changes explicit: floating windows, foreground
-            // service behavior, notifications, and storage need device testing.
             "OldTargetApi",
-            // Release builds intentionally ship arm64 only. x86_64 Rust/OpenSSL
-            // cross-compilation is opt-in via -Pairlyrics.buildX86_64=true.
             "ChromeOsAbiSupport"
         )
     }

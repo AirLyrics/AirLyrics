@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.displayscope
 
-/** Stateful UsageEvents reader kept separate from Android scheduling so its failure policy is deterministic. */
 internal class DisplayScopeSnapshotReader(
     private val hasUsageAccess: () -> Boolean,
     private val currentTimeMillis: () -> Long,

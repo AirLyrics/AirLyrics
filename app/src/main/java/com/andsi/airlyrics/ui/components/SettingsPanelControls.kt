@@ -22,7 +22,6 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import kotlin.math.roundToInt
 
-/** The same value layout and drag target are used for style and RGB sliders. */
 @SuppressLint("ViewConstructor")
 internal class SettingsSliderRow(
     host: MainUiHost,

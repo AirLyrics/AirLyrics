@@ -42,7 +42,6 @@ internal sealed interface AppUpdateInstallResult {
 internal object AppUpdateInstaller {
     private val installLock = Mutex()
 
-    /** Commit a locally verified update from an explicit foreground install action. */
     suspend fun install(
         activity: ComponentActivity,
         release: AppUpdateRelease

@@ -12,7 +12,6 @@ import com.andsi.airlyrics.media.mediaArtwork
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
-/** Reads platform and persisted sources into a stable main-screen snapshot. */
 internal fun interface ForegroundSnapshotReader {
     fun read(): ForegroundUiSnapshot
 }

@@ -2,7 +2,6 @@ package com.andsi.airlyrics.design.theme
 
 import com.andsi.airlyrics.core.model.ThemeAccent
 
-/** Shared light/dark accent tones for UI surfaces and platform integrations. */
 internal object ThemeAccentPalettes {
     fun resolve(accent: ThemeAccent, isDark: Boolean): ThemeAccentColors {
         return if (isDark) dark(accent) else light(accent)

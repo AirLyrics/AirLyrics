@@ -58,7 +58,6 @@ internal fun FloatingLyricsStyle.restoreFields(snapshot: Bundle): FloatingLyrics
     ).normalized()
 )
 
-// Color and opacity are separate controls even when stored as one ARGB value.
 private fun Bundle.putColorChanges(key: String, previous: Int, next: Int) {
     val rgb = AirColorUtils.opaqueRgb(previous)
     if (rgb != AirColorUtils.opaqueRgb(next)) putInt("${key}Rgb", rgb)

@@ -142,7 +142,6 @@ internal fun createMediaPage(
             val sourceCard = source.view.apply {
                 setTag(R.id.interaction_anchor, "media.player.${controller.packageName}")
             }
-            // Keep the press feedback on the card independent from its entrance transform.
             val cardHolder = FrameLayout(activity).apply {
                 layoutParams = sourceCard.layoutParams
                 clipChildren = false

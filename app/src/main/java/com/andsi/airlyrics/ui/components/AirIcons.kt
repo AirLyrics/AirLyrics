@@ -11,7 +11,6 @@ import androidx.core.graphics.drawable.DrawableCompat
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 
-/** Shared rendering helpers for the app's local 24dp Material Symbols. */
 internal fun MainUiHost.airIconView(
     @DrawableRes iconRes: Int,
     @ColorInt tint: Int,

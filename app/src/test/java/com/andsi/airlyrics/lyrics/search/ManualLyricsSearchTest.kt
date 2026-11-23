@@ -278,7 +278,6 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
                 "search" -> """{"ok":true,"candidates":[{"id":"$trackId","title":"Blossom","artist":"PIKASONIC","album":"Blossom","duration_ms":180000,"score":1.0}]}"""
                 "fetch" -> {
                     assertEquals(trackId, request.getJSONObject("track").getString("id"))
-                    // Native result for this track's real Spicy lyrics_not_found response.
                     """{"ok":true,"content_state":"empty","reason":"source_empty"}"""
                 }
                 else -> error("Unexpected operation")

@@ -13,7 +13,6 @@ internal object InternationalTitleNative {
     external fun resolveJson(title: String, artist: String, album: String, durationMs: Long, lookupId: Long): String
 }
 
-/** Transforms only lookup metadata; storage always keeps the player's song identity. */
 internal object InternationalTitleResolver {
     fun resolve(request: PlainLyricsSearchRequest): PlainLyricsSearchRequest {
         request.cancellationToken?.throwIfCancellationRequested()

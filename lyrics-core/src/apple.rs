@@ -69,7 +69,6 @@ fn key_regex() -> &'static Regex {
     RE.get_or_init(|| Regex::new(r#"itunes:key="([^"]+)""#).expect("key regex"))
 }
 
-/// Parses `12.345`, `1:02.345` and `1:02:03.456`.
 pub(crate) fn parse_time(value: &str) -> Option<u64> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
@@ -109,7 +108,6 @@ fn strip_tags_raw(value: &str) -> String {
     decode_entities(&regex.replace_all(value, ""))
 }
 
-/// Parses Apple's lyric TTML into timed lines, word spans and per-line translations.
 pub(crate) fn parse_ttml(ttml: &str) -> ParsedTtml {
     let mut parsed = ParsedTtml::default();
     for (source_index, paragraph) in paragraph_regex().captures_iter(ttml).enumerate() {
@@ -250,8 +248,6 @@ fn collect_timed_spans(fragment: &str, words: &mut Vec<Word>) {
     }
 }
 
-/// Finds the `</span>` that closes a span whose inner content starts at `from`, skipping over
-/// nested spans. Returns the offset just past the closing tag.
 fn find_span_close(from: usize, fragment: &str) -> Option<usize> {
     let mut depth = 1usize;
     let mut cursor = from;
@@ -787,7 +783,6 @@ async fn manual_request(
     }
 }
 
-/// Shared offline/network TTML conversion. Trace fields describe the parser output, not UI policy.
 pub(crate) fn parse_native(ttml: &str) -> (Value, Value) {
     let parsed = parse_ttml(ttml);
     let has_translation_blocks = translation_regex().is_match(ttml);
@@ -1256,8 +1251,6 @@ mod tests {
 
     #[test]
     fn cross_script_candidate_requires_strong_artist_and_matching_duration() {
-        // The localized annotation supplies title evidence while the full query and
-        // candidate still differ in script. Duration alone must not corroborate it.
         let mut candidate = catalogue_candidate("Sunny Day", "无关歌手", 200_000);
         assert_eq!(
             select_candidate(

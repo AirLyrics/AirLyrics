@@ -58,7 +58,6 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
 
-/** A dedicated window gives the keyboard, candidates and preview their own lifecycle. */
 class LyricsSearchActivity : AppCompatActivity() {
     internal val interactionUi = InteractionUiRegistry()
     private lateinit var session: LyricsSearchSession
@@ -207,7 +206,6 @@ class LyricsSearchActivity : AppCompatActivity() {
         } else if (state.results[PlainLyricsSearchSource.NETEASE]?.wordDetail!=null) {
             session.backToWordRecordings()
         } else if (state.results.isNotEmpty() && (pendingSourceFocus || session.resultsScroll > 0 || appBar.top < 0)) {
-            // Returning from results reveals the query without discarding any source/page state.
             pendingSourceFocus=false
             appBar.setExpanded(true,ValueAnimator.areAnimatorsEnabled())
         } else {
@@ -364,7 +362,6 @@ class LyricsSearchActivity : AppCompatActivity() {
         val previewBody=column()
         preview.addView(previewBody)
         scroll.addView(preview)
-        // The header survives loading, empty and failure states.
         preview=previewBody
         previewPanel.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
         previewRetry=textAction(R.string.search_retry) {

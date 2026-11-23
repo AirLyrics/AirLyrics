@@ -31,7 +31,6 @@ import androidx.dynamicanimation.animation.SpringForce
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 
-/** A fixed-height minimum target with a right-to-left selected wash and independent check spring. */
 @SuppressLint("ViewConstructor")
 internal class LyricsSourceSelectionRow(
     context: Context,

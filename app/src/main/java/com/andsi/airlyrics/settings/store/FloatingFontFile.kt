@@ -4,7 +4,6 @@ import java.io.File
 import java.io.RandomAccessFile
 import java.nio.charset.Charset
 
-/** Reads bounded SFNT/TTC metadata without loading font data into a byte array. */
 internal object FloatingFontFile {
     const val MAX_FACES = 64
     private const val MAX_TABLES = 512

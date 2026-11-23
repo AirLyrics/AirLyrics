@@ -106,7 +106,6 @@ internal fun MainUiHost.showLyricsFormatGuideDialog(
             return
         }
         if (pageText.text.toString() == targetText) {
-            // The user switched back before the outgoing page was replaced.
             pageText.animate().alpha(1f).translationX(0f)
                 .setDuration(AirUiTokens.Motion.LayoutChangeMs)
                 .setInterpolator(floatingPanelEaseOut)

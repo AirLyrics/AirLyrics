@@ -7,7 +7,6 @@ import java.nio.file.*;
 import java.time.Instant;
 import java.io.*;
 
-/** Live availability probe. Never persists response bodies, lyrics, or credentials. */
 public class Benchmark {
     private static final java.lang.reflect.Method CREDIT_CHECK;
     static {

@@ -243,7 +243,6 @@ class LyricsSearchSessionTest {
                 ManualWordSource.entries.map { "recording:${it.key}:weak" }
             assertEquals(expected,first.map { it.id })
 
-            // The footer requests another page from each source, even if scores exceed the first batch.
             ManualWordSource.entries.forEach(session::moreWordRecordings)
             assertTrue(session.state.value.results.getValue(source).loading)
             assertEquals(first,session.state.value.results.getValue(source).candidates)

@@ -3,7 +3,6 @@ package com.andsi.airlyrics.ui.state
 import android.os.Bundle
 import androidx.lifecycle.SavedStateHandle
 
-/** Small, data-only interaction snapshots. Updates do not invalidate the main page. */
 internal class MainInteractionState(private val savedState: SavedStateHandle? = null) {
     private var entries = savedState?.get<Bundle>(KEY) ?: Bundle()
 

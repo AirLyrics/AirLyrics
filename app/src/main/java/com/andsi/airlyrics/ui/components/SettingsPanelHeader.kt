@@ -17,7 +17,6 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-/** Actions retain their touch targets; narrow titles can wrap below the action row. */
 @SuppressLint("ViewConstructor")
 internal class SettingsPanelHeader(
     private val host: MainUiHost,
@@ -85,7 +84,6 @@ internal class SettingsPanelHeader(
             val roomWithUndo = free - labelWidth - titlePadding
             val minTitleWidth = if (titleWidth <= roomWithUndo) titleWidth else widestWord
             val showLabel = free >= labelWidth
-            // Reserve the same title space as the target comes and goes, outside the button's hit area.
             val targetBudget = if (showLabel) {
                 (roomWithUndo - minTitleWidth).toInt().coerceIn(0, undo.maxTargetExtraWidth)
             } else 0

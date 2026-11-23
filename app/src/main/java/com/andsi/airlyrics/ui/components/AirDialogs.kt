@@ -202,7 +202,6 @@ internal fun MainUiHost.showAirDialog(
     val host = this
     val enterMs = if (popIn) DIALOG_POP_ENTER_MS else DIALOG_ENTER_MS
     val startScale = if (popIn) DIALOG_POP_SCALE else DIALOG_ENTER_START_SCALE
-    // The dialog owns input in a separate window, so Activity feedback must leave first.
     dismissMessage()
     // WindowManager uses the top dimming window, rather than adding each window's dim.
     // Keep the lower modal's shade when a confirmation takes over.
@@ -238,7 +237,6 @@ internal fun MainUiHost.showAirDialog(
                     create()
                 }
             }
-            // Icon-only actions retain their top-end position; text actions can reflow.
             val iconOnly = actionGroup != null && (0 until actionGroup.childCount).all {
                 actionGroup.getChildAt(it) !is TextView
             }
@@ -296,7 +294,6 @@ internal fun MainUiHost.showAirDialog(
                     val height = remaining.coerceIn(minOf(dp(96), preferredHeight), preferredHeight)
                     if (body.layoutParams.height != height) {
                         body.layoutParams.height = height
-                        // The sizing probe and the scroll view can use the same measure specs.
                         panel.forceLayout()
                     }
                 }

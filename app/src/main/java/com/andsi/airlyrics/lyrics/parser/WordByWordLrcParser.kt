@@ -12,7 +12,6 @@ data class ParsedWordByWordLyrics(
 )
 
 object WordByWordLrcParser {
-    /** Closed square-tag lines distinguish verbatim LRC from repeated timestamps and compact LRC. */
     fun hasWordTiming(text: String): Boolean = text.lineSequence().any {
         wordTagCandidateRegex.containsMatchIn(it) || isSquareWordLine(it.trim())
     }
@@ -288,7 +287,6 @@ private fun parseRawWordByWordLine(line: String): RawWordByWordLine? {
         val next = tags.getOrNull(index + 1)
         val text = content.substring(tag.range.last + 1, next?.range?.first ?: content.length)
         if (text.isBlank()) return@mapIndexedNotNull null
-        // Do not hide malformed timing tags inside the lyric text.
         if (wordTagCandidateRegex.containsMatchIn(text) || squareTagCandidateRegex.containsMatchIn(text)) return null
         val end = times.getOrNull(index + 1)
         if (end != null && end <= times[index]) return null

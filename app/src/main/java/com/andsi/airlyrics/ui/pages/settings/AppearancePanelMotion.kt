@@ -9,10 +9,6 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/**
- * Port of geometry(), panelContour(), draw() and animateTo() in the confirmed HTML.
- * Coordinates come from measured Views; only the prototype's dimensionless ratios remain.
- */
 internal object AppearancePanelMotion {
     fun smooth(value: Float): Float {
         val t = value.coerceIn(0f, 1f)
@@ -68,7 +64,6 @@ internal object AppearancePanelMotion {
     }
 }
 
-/** Only the surface deforms. Native text and controls are drawn separately, without blur. */
 internal class AppearancePanelSurface {
     private val panel = Path()
     private val neck = Path()

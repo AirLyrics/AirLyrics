@@ -85,7 +85,7 @@ class LyricsSettingsRefreshIconTest {
             icon.start()
             assertEquals(1f, refresh.alpha, 0f)
             icon.complete(true)
-            advance(500) // The first refresh would restore here.
+            advance(500)
             assertEquals(1f, check.alpha, 0f)
             advance(250)
             assertEquals(0f, check.alpha, 0f)

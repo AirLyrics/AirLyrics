@@ -27,13 +27,6 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/**
- * Owns the floating lyrics window itself: creation, removal, dragging,
- * style application, lock state and click-through behavior.
- *
- * FloatingLyricsService keeps the media / lyrics state, while this class keeps
- * the Android WindowManager details in one small box.
- */
 class FloatingLyricsWindow(
     private val context: Context,
     private val onVisibilityChanged: (Boolean) -> Unit
@@ -149,7 +142,6 @@ class FloatingLyricsWindow(
                 calculateLayout(view, attributes, remap = true)
                 dialog.show()
             } else {
-                // Keep the lightweight overlay on versions without background blur.
                 params = layoutParams
                 applyStyle(view)
                 calculateLayout(view, layoutParams, remap = true)

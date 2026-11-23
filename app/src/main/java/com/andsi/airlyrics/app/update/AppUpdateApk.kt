@@ -98,7 +98,6 @@ private suspend fun downloadVerifiedApkContents(
     }
 }
 
-// File and network callers run inside useVerifiedApk on Dispatchers.IO.
 @Suppress("BlockingMethodInNonBlockingContext")
 internal suspend fun verifyApkContents(
     input: InputStream,

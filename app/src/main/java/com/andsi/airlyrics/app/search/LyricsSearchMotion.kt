@@ -22,7 +22,6 @@ private fun smoothStep(value: Float): Float {
 
 private fun segment(value: Float, start: Float, end: Float) = smoothStep((value - start) / (end - start))
 
-/** A measured child stays at its natural size while its parent reveals or hides the space. */
 // Motion Prompt #052 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#052
 internal class LyricsSearchReveal(
     private val slot: FrameLayout,
@@ -168,19 +167,16 @@ internal class LyricsSearchReveal(
     }
 }
 
-/** Keeps the exiting preview visible but non-interactive until the handoff settles. */
 internal class LyricsSearchPreviewPanel(context: Context) : LinearLayout(context) {
     var blocksInteraction = false
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean =
         blocksInteraction || super.onInterceptTouchEvent(event)
 
-    // This pane only absorbs input while another pane is taking over; it has no click action.
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean =
         blocksInteraction || super.onTouchEvent(event)
 }
 
-/** One reversible progress connects result and preview panes, including rapid Back gestures. */
 // Motion Prompt #057 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#057
 internal class LyricsSearchPaneMotion(
     private val results: LyricsSourcePages,

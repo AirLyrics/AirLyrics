@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.lyrics
 
-/** The raw editor exposes exact token boundaries and timings, without estimating new word times. */
 internal object WordLyricsTextEditor {
     fun rawLine(line: WordByWordLine): String = line.segments.mapIndexed { index, segment ->
         val end = if (line.segments.getOrNull(index + 1)?.startMs == segment.endMs) ""
@@ -8,7 +7,6 @@ internal object WordLyricsTextEditor {
         "<${WordLyricsDocument.time(segment.startMs)}>${segment.text}$end"
     }.joinToString("")
 
-    /** Accept a single enhanced LRC line, with an optional ordinary line-start tag when pasted. */
     fun parseRawLine(source: WordByWordLine, raw: String): WordByWordLine? {
         if ('\n' in raw || '\r' in raw) return null
         var content = raw.trim()
@@ -41,7 +39,6 @@ internal object WordLyricsTextEditor {
         return updated.takeIf { WordLyricsDocument(listOf(it)).invalidLines().isEmpty() }
     }
 
-    /** Bounds follow explicit word times. Unchanged leading/trailing padding stays lossless. */
     fun withSegments(
         source: WordByWordLine,
         segments: List<WordByWordSegment>,

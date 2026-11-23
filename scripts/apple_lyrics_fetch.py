@@ -147,7 +147,6 @@ def main(argv: list[str] | None = None) -> int:
                 ttml = attributes.get("ttmlLocalizations") or attributes.get("ttml")
                 if not ttml:
                     continue
-                # keep the richer word-timed payload when both exist
                 path = out / f"{kind}.ttml"
                 path.write_text(ttml, encoding="utf-8")
                 (out / "detail.json").write_bytes(payload)

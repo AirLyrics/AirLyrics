@@ -218,7 +218,6 @@ struct ScoredApiTrack {
     match_score: MatchScore,
     confident_early_match: bool,
     duration_delta_ms: u64,
-    /// True when only a confirmed alias could establish this candidate.
     alias_used: bool,
     decision: crate::confidence::Decision,
 }
@@ -238,7 +237,6 @@ enum SearchCandidateRejection {
     Instrumental,
     NoUsableLyrics,
     Title,
-    /// Passed the title gate but not the confidence policy: not enough independent evidence.
     LowConfidence,
 }
 
@@ -1087,7 +1085,6 @@ fn score_track_with_reason(
     };
     let Some(assessment) = crate::confidence::assess(query.match_metadata(), candidate_metadata)
     else {
-        // Distinguish "not even the same song" from "same song, not enough evidence".
         let Some(title_score) = score_candidate(query.match_metadata(), candidate_metadata) else {
             return Err(SearchCandidateRejection::Title);
         };
@@ -1753,7 +1750,6 @@ mod tests {
         let backend = FakeLrclibBackend::new(
             [Ok(None)],
             [
-                // The alias keywords are searched first and reach the Chinese release.
                 Ok(vec![usable_search_track(
                     41,
                     "电台情歌",
@@ -2220,7 +2216,6 @@ mod manual_tests {
             manual_track_content(v, &t).unwrap_err().error_type(),
             "ParseError"
         );
-        // Fixture captured from LRCLIB search.
         let live: ApiTrack = serde_json::from_str(include_str!(
             "../testdata/lrclib-merry-christmas-mr-lawrence-instrumental.json"
         ))

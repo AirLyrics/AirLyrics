@@ -6,7 +6,6 @@
 #[cfg(not(test))]
 use std::sync::Mutex;
 
-/// The recording the parked candidates were found for.
 #[derive(Clone, Debug, serde::Serialize, PartialEq)]
 pub(crate) struct ParkedCandidate {
     pub(crate) title: String,
@@ -15,7 +14,6 @@ pub(crate) struct ParkedCandidate {
     pub(crate) duration_ms: Option<u64>,
     pub(crate) provider: &'static str,
     pub(crate) score: f64,
-    /// Why it was not used: `title_only`, `weak_evidence`, `version_conflict`, `cross_script`.
     pub(crate) reason: &'static str,
     pub(crate) alias_hit: bool,
 }
@@ -29,7 +27,6 @@ thread_local! {
         const { std::cell::RefCell::new(None) };
 }
 
-/// Key identifying the playback metadata a candidate set belongs to.
 pub(crate) fn query_key(title: &str, artist: &str, duration_ms: Option<u64>) -> String {
     format!(
         "{}|{}|{}",
@@ -39,7 +36,6 @@ pub(crate) fn query_key(title: &str, artist: &str, duration_ms: Option<u64>) -> 
     )
 }
 
-/// Parks one candidate, replacing the slot when the playback metadata changed.
 #[cfg(not(test))]
 pub(crate) fn park(key: &str, candidate: ParkedCandidate) {
     if let Ok(mut slot) = PARKED.lock() {
@@ -60,7 +56,6 @@ pub(crate) fn park(key: &str, candidate: ParkedCandidate) {
 
 const MAX_PARKED: usize = 5;
 
-/// JSON for the UI: `{"query": "<key>", "candidates": [...]}`. Consumes the slot.
 #[cfg(not(test))]
 pub(crate) fn take_json() -> String {
     let taken = PARKED.lock().ok().and_then(|mut slot| slot.take());
@@ -149,7 +144,6 @@ mod tests {
             serde_json::json!("weak_evidence")
         );
 
-        // Consumed: a second read must not resurrect the old candidates.
         let again: serde_json::Value = serde_json::from_str(&take_json()).expect("json");
         assert_eq!(again["candidates"].as_array().map(Vec::len), Some(0));
     }

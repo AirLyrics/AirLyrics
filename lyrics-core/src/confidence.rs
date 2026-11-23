@@ -36,7 +36,6 @@ impl Default for Thresholds {
 }
 
 impl Thresholds {
-    /// Optional overrides for benchmarking; unset or unparsable values keep the defaults.
     pub(crate) fn from_env() -> Self {
         let base = Self::default();
         let read = |key: &str, fallback: f64| {
@@ -84,7 +83,6 @@ impl Evidence {
             .is_some_and(|value| value >= thresholds.album_match)
     }
 
-    /// At least one independent field agrees, not just the title.
     pub(crate) fn corroborated(&self, thresholds: &Thresholds) -> bool {
         self.artist_strong(thresholds)
             || self.duration_close == Some(true)
@@ -94,15 +92,11 @@ impl Evidence {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Decision {
-    /// Show automatically.
     Accept,
-    /// Ask the user: show the candidate list, do not replace the current lyrics.
     Review,
-    /// Do not show; keep searching other sources.
     Reject,
 }
 
-/// Full evaluation result, including the evidence trail (used by `evaluate_with`).
 #[cfg_attr(not(test), allow(dead_code))]
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Evaluation {
@@ -111,8 +105,6 @@ pub(crate) struct Evaluation {
     pub(crate) decision: Decision,
 }
 
-/// Evaluate one candidate. `query` is the metadata actually used for the lookup: the alias when
-/// one was confirmed, otherwise the player's own fields.
 pub(crate) fn evaluate_with(
     query: MatchMetadata<'_>,
     candidate: MatchMetadata<'_>,
@@ -149,8 +141,6 @@ pub(crate) fn evaluate_with(
     }
 }
 
-/// Whether a "review" candidate may still be used by a provider. Off by default: the point of
-/// the review tier is that the user decides, not that the app repeats the same guess as before.
 pub(crate) fn review_is_usable() -> bool {
     std::env::var("AIRLYRICS_ALLOW_REVIEW_MATCH")
         .map(|value| {
@@ -168,12 +158,10 @@ fn allowed(decision: Decision) -> bool {
     }
 }
 
-/// Provider-facing assessment of one candidate.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Assessment {
     pub(crate) score: MatchScore,
     pub(crate) decision: Decision,
-    /// True when the candidate could only be established through a confirmed alias.
     pub(crate) alias_used: bool,
 }
 
@@ -211,7 +199,6 @@ pub(crate) fn assess(query: MatchMetadata<'_>, candidate: MatchMetadata<'_>) -> 
     })
 }
 
-/// Why a candidate was not accepted, for the "pick one" UI and for diagnostics.
 pub(crate) fn rejection_reason(
     query: MatchMetadata<'_>,
     candidate: MatchMetadata<'_>,
@@ -239,7 +226,6 @@ pub(crate) fn decide(
         return Decision::Reject;
     };
     if evidence.version_conflict {
-        // Different recordings: never replace the on-screen lyrics, but still offer candidates.
         return Decision::Review;
     }
 

@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.ui.pages.settings
 
-/** Keep nested content hidden until its full shape fits inside a height reveal. */
 internal fun heightRevealContentAlpha(
     visibleHeight: Int,
     fullyVisibleHeight: Int,

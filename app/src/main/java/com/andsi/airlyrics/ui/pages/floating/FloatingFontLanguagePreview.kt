@@ -89,7 +89,6 @@ internal class FloatingFontLanguagePreview(
         super.onDetachedFromWindow()
     }
 
-    // The balanced break strategy is supported by TextView from API 23.
     @SuppressLint("WrongConstant")
     private fun createLanguage(locale: Locale, face: Typeface): Language {
         val sampleLocale = if (locale == Locale.CHINESE) Locale.SIMPLIFIED_CHINESE else locale

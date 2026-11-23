@@ -100,7 +100,6 @@ class AppleRainbowRenderPathTest : LyricsStorageTestBase() {
     }
 
     private fun checkRendering(path: String, result: LyricsProviderResult) {
-        // First occurrence, its neighbor, and the repeat with the parenthetical echo.
         for (position in listOf(66_400L, 72_000L, 144_200L)) {
             for (preference in listOf(LyricsScriptPreference.NONE, LyricsScriptPreference.SIMPLIFIED)) {
                 val view = TextView(context)

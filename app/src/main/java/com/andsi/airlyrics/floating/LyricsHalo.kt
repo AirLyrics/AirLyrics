@@ -10,7 +10,6 @@ import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.core.model.LyricsGlowStyle
 import kotlin.math.abs
 
-/** Cached paints shared by every highlighting mode. Only shadow parameters change per frame. */
 internal class LyricsHalo(private val view: TextView, paint: TextPaint, private val highlight: Int) {
     private val shadowPaint = TextPaint(paint).apply { shader = null; color = Color.WHITE; clearShadowLayer() }
     private val cutout = TextPaint(shadowPaint).apply {
@@ -20,7 +19,6 @@ internal class LyricsHalo(private val view: TextView, paint: TextPaint, private 
     private val inkTop = paint.fontMetrics.top
     private val inkBottom = paint.fontMetrics.bottom
     private val fontSize = paint.textSize
-    // Preserve hue while giving dark accent colors a visible light source.
     private val light = ColorUtils.blendARGB(highlight or (0xff shl 24), Color.WHITE, .65f) and 0x00ffffff
 
     fun draw(
@@ -44,7 +42,6 @@ internal class LyricsHalo(private val view: TextView, paint: TextPaint, private 
         if (alpha > 0) {
             shadowPaint.setShadowLayer(radius, 0f, 0f, light or (alpha shl 24))
             canvas.drawTextRun(text, start, end, contextStart, contextEnd, x, baseline, rtl, shadowPaint)
-            // A soft broad halo plus a compact bright core stays legible at small overlay sizes.
             shadowPaint.setShadowLayer(radius * .4f, 0f, 0f, light or ((alpha / 2) shl 24))
             canvas.drawTextRun(text, start, end, contextStart, contextEnd, x, baseline, rtl, shadowPaint)
         }

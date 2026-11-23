@@ -62,7 +62,6 @@ import java.text.DateFormat
 import java.util.Date
 import kotlin.math.roundToInt
 
-/** The plain LRC editor keeps its original text in the session until the sheet's Save action. */
 @Suppress("DEPRECATION")
 internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSession): EditorDialogBinding {
     val document = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD)
@@ -126,7 +125,6 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
 
     val list = RecyclerView(this).apply {
         layoutManager = LinearLayoutManager(this@showLocalLyricsEditorSheet)
-        // Row editing and action disclosure notify independently; only explicit insertion animates.
         itemAnimator = null
         overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         setPadding(dp(6), dp(6), dp(6), dp(6))
@@ -558,7 +556,6 @@ private class LrcRowsAdapter(
         val visibleInsert = manager != null && insertIndex in
             manager.findFirstVisibleItemPosition()..(manager.findLastVisibleItemPosition() + 1)
         if (visibleInsert) pendingInserted += added
-        // The first lyric replaces the empty-state action at the same adapter position.
         if (wasEmpty) notifyItemChanged(0) else notifyItemInserted(insertIndex)
         if (visibleInsert) list?.handler?.postDelayed({ pendingInserted.remove(added) }, 400L)
     }
@@ -660,7 +657,6 @@ private class LrcRowsAdapter(
     }
 }
 
-/** The inserted row reveals its measured height, pushing its neighbours during the same motion. */
 @SuppressLint("ViewConstructor")
 private class InsertReveal(context: Context, private val content: LinearLayout) : FrameLayout(context) {
     private var progress = 1f
@@ -732,7 +728,6 @@ private fun actionButton(
     setOnClickListener { onClick() }
 }
 
-/** The row stays put while this measured space moves every following row. */
 private class ActionReveal(context: Context) : FrameLayout(context) {
     var progress = 0f
         private set
@@ -743,7 +738,6 @@ private class ActionReveal(context: Context) : FrameLayout(context) {
         progress = value
         visibility = if (value <= 0f) GONE else VISIBLE
         content?.apply {
-            // Rounded controls only become visible once the reveal can hold their full height.
             alpha = ((value - 0.84f) / 0.16f).coerceIn(0f, 1f)
             translationY = (1f - value.coerceIn(0f, 1f)) * resources.displayMetrics.density * 5f
         }

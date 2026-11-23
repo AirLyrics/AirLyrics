@@ -3,14 +3,12 @@ package com.andsi.airlyrics.ui.state
 import android.app.Dialog
 import android.view.WindowManager
 
-/** Activity-owned windows and snapshot callbacks; never retained in a ViewModel. */
 internal class InteractionUiRegistry {
     private val windows = linkedMapOf<Dialog, () -> Unit>()
     private val snapshots = linkedMapOf<Any, () -> Unit>()
     var releasing = false
         private set
 
-    /** Register before show so themed dialogs and sheets inherit the shade on their first frame. */
     fun register(dialog: Dialog, closeImmediately: () -> Unit) {
         dialog.window?.let { window ->
             if (window.attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND != 0) {
@@ -21,7 +19,6 @@ internal class InteractionUiRegistry {
     }
     fun forget(dialog: Dialog) { windows.remove(dialog) }
 
-    /** A new modal must not replace an existing window's shade with a lighter one. */
     fun maxShowingDimAmount(): Float = windows.keys.asSequence()
         .filter { it.isShowing }
         .mapNotNull { it.window?.attributes }

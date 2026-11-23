@@ -57,7 +57,6 @@ class SettingsAppearanceUpdatesTest {
             val host = controller.get().graph.uiHost
             val header = createSettingsAppearanceHeader(host) as ViewGroup
             controller.get().setContentView(header)
-            // Use the nonanimated initial state so this verifies the selection transaction itself.
             val trigger = header.nodes().single { it.contentDescription == host.getString(R.string.ui_choose_accent_color) }
             val durationScale = ValueAnimator::class.java.getDeclaredMethod("setDurationScale", Float::class.javaPrimitiveType)
             durationScale.invoke(null, 0f)

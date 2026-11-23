@@ -37,7 +37,6 @@ internal fun parseFloatingHexColor(value: String): Int? {
     return AirColorUtils.opaqueRgb(normalized.removePrefix("#").toInt(16))
 }
 
-/** Edits RGB only; the owner applies it through the same alpha-preserving path as sliders. */
 internal class FloatingHexColorEditor(
     private val host: MainUiHost,
     private val isActive: () -> Boolean,

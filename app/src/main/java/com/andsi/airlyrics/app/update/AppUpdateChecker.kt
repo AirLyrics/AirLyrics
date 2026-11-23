@@ -24,7 +24,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-/** Share one checker across the settings entry and the About page. */
 internal class AppUpdateChecker(
     context: Context,
     versionName: String = BuildConfig.VERSION_NAME,
@@ -40,14 +39,12 @@ internal class AppUpdateChecker(
     private val mutableCheckStatus = MutableStateFlow(AppUpdateCheckStatus.Unchecked)
     val checkStatus = mutableCheckStatus.asStateFlow()
 
-    /** Checks while the owner's UI is started. Results only update [availableUpdate]. */
     fun startAutomaticChecks(owner: LifecycleOwner): Job = owner.lifecycleScope.launch {
         owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (isActive) delay(checkIfDue().milliseconds)
         }
     }
 
-    /** A manual check bypasses the automatic interval. A successful null means up to date. */
     suspend fun checkNow(): Result<AppUpdateRelease?> = withContext(Dispatchers.IO) {
         checkLock.withLock {
             publishCachedRelease()

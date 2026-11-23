@@ -7,7 +7,6 @@ import org.json.JSONObject
 import java.util.Locale
 import kotlin.math.roundToLong
 
-/** Parses one response into a single coherent line/word payload; never merges other sources. */
 internal object SpicyLyricsParser {
     const val RETENTION_MS = 30L * 24 * 60 * 60 * 1000
 

@@ -2,7 +2,6 @@ package com.andsi.airlyrics.lyrics.importer
 
 import com.andsi.airlyrics.core.model.SongIdentity
 
-/** Matches only inside the explicit selection. Never guesses from list order or fuzzy titles. */
 internal object BatchLyricsMatcher {
     data class Target(val key: String, val song: SongIdentity)
     data class Document(val name: String, val title: String = "", val artist: String = "", val targetKey: String = "")

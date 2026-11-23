@@ -9,7 +9,6 @@ import android.widget.TextView
 import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.ui.model.FloatingPreviewHighlightProgress
 
-/** Advances the Classic karaoke color across the current sample line. */
 internal class FloatingPreviewClassicLoop(
     private val view: TextView,
     private val sampleLine: () -> String?,

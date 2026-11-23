@@ -33,9 +33,6 @@ internal enum class ParsedLyricsAvailability {
     EMPTY
 }
 
-/**
- * Maintains parsed lyric lines and renders the line matching the current playback position.
- */
 class FloatingLyricsRenderer(
     private val textViewProvider: () -> TextView?,
     private val contentModeProvider: () -> LyricsContentDisplayMode = { LyricsContentDisplayMode.default },
@@ -134,7 +131,6 @@ class FloatingLyricsRenderer(
         view.updateSpicyPlayback(if (active) spicyClock else null, currentIsPlaying)
     }
 
-    /** Wake at a lyric boundary instead of allowing the ordinary 300ms poll to delay a switch. */
     internal fun nextSyncDelayMs(maxDelayMs: Long): Long {
         if (!currentIsPlaying) return maxDelayMs
         val position = getEstimatedPositionMs()
@@ -317,12 +313,6 @@ class FloatingLyricsRenderer(
         )
     }
 
-    /**
-     * Renders exactly the same content modes as [PlainLyricsDisplayFormatter], but replaces only
-     * the current original line with wrap-safe word-by-word highlighting when a matching local word-by-word line exists.
-     * This keeps “original only / translation only / original + translation” independent of
-     * word-by-word highlighting and prevents timed text from leaking translations into original-only mode.
-     */
     private fun renderTextAtIndexWithWordByWord(currentIndex: Int, positionMs: Long): CharSequence {
         if (currentPlainLines.isEmpty() || currentIndex !in currentPlainLines.indices) return ""
 

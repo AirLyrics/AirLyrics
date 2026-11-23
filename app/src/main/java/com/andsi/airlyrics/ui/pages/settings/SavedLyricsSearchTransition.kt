@@ -24,7 +24,6 @@ private const val SEARCH_TRANSITION_MIN_MS = 60L
 private const val SEARCH_ICON_CANVAS_DP = 24f
 private const val SEARCH_BAR_REST_SCALE_X = 0.985f
 
-/** Draws one continuous search-to-close glyph instead of cross-fading two icons. */
 @SuppressLint("ViewConstructor")
 internal class SavedLyricsSearchIconView(
     context: MainUiHost,
@@ -62,8 +61,6 @@ internal class SavedLyricsSearchIconView(
 
             val progress = morphProgress
 
-            // The ring thins and unspools from the handle while that handle grows
-            // into the first diagonal of the close glyph.
             val ringCollapse = smoothSegment(progress, 0.06f, 0.66f)
             val ringAlpha = 1f - smoothSegment(progress, 0.40f, 0.70f)
             if (ringAlpha > 0.001f && ringCollapse < 0.999f) {
@@ -94,8 +91,6 @@ internal class SavedLyricsSearchIconView(
                 strokePaint
             )
 
-            // The second diagonal grows out from the center only after the first
-            // line is recognizable, keeping a clear silhouette throughout.
             val secondaryLine = smoothSegment(progress, 0.48f, 0.94f)
             if (secondaryLine > 0.001f) {
                 strokePaint.alpha = (
@@ -114,7 +109,6 @@ internal class SavedLyricsSearchIconView(
     }
 }
 
-/** Keeps glyph morphing and search-bar reveal on the same reversible progress. */
 internal class SavedLyricsSearchTransition(
     host: MainUiHost,
     private val icon: SavedLyricsSearchIconView,

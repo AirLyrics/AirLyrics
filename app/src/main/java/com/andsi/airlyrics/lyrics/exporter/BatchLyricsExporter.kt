@@ -8,7 +8,6 @@ import java.util.Locale
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/** Stages the archive locally before opening the destination; never modifies source lyrics. */
 internal object BatchLyricsExporter {
     enum class Problem { READ, CHANGED, RESTRICTED }
     data class Failure(val name: String, val problem: Problem)

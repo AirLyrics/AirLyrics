@@ -155,7 +155,6 @@ internal class LyricsSourceOptionButton(
         val style = host.airTonalButtonStyle(tone)
         titleView.setTextColor(style.textColor)
         priorityLabel.setTextColor(style.textColor)
-        // Reserve the final priority width before moving, without showing it early.
         priorityLabel.visibility = when {
             selectedPriority == null -> GONE
             selected -> VISIBLE

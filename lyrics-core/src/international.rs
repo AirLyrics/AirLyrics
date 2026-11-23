@@ -1,4 +1,3 @@
-//! Optional Apple storefront metadata aliases. Does not change provider matching policy.
 use crate::matching::{score_metadata_alias, MatchMetadata};
 use reqwest::Client;
 use serde_json::{json, Value};

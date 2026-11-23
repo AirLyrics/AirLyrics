@@ -4,7 +4,6 @@ import android.content.Context
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.importer.BatchLyricsDocument
 
-/** A per-song transaction. Exact selected keys are used instead of the legacy weak-song lookup. */
 internal object LyricsReplacementOps {
     enum class Result { SAVED, STALE, FAILED, ROLLBACK_FAILED }
 

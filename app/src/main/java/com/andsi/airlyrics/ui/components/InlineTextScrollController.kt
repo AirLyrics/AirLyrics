@@ -13,7 +13,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 import java.lang.ref.WeakReference
 
-/** One user-started pass, reading overflowing lines in order without moving any layout. */
 internal class InlineTextScrollController(
     private val anchor: View,
     private val lines: List<InlineOverflowTextView>

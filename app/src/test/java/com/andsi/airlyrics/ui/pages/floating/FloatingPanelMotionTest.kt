@@ -351,7 +351,6 @@ class FloatingPanelMotionTest {
             val undo = control("floating.panel.undo")
             repeat(2) { pageIndex ->
                 if (pageIndex == 1) {
-                    // Reset will cancel a pending page transition before it can draw.
                     control("floating.color.custom").performClick()
                 }
                 repeat(2) {

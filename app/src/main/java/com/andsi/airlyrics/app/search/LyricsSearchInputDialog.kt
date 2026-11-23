@@ -194,7 +194,6 @@ internal class LyricsSearchInputDialog(
             return
         }
         isLeaving = true
-        // Capture the visible state so dismissal can interrupt entry or layout motion.
         val startScale = card.scaleX
         val startTranslation = card.translationY
         val startOpacity = opacity

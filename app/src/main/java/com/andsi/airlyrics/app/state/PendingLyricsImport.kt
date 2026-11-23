@@ -8,7 +8,6 @@ internal enum class LyricsImportType {
     WORD_BY_WORD
 }
 
-/** Immutable import request kept while the system document picker is open. */
 internal data class PendingLyricsImport(
     val target: SongIdentity,
     val type: LyricsImportType

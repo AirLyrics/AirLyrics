@@ -554,7 +554,7 @@ mod tests {
         let distant = candidate(&track("守護霊", "Yunomi", 230000), query)
             .unwrap()
             .0;
-        assert!(close > distant); // Same soft duration fallback as the other providers.
+        assert!(close > distant);
         let query = MatchMetadata {
             title: "サンダーソニア",
             artist: "PIKASONIC; iMeiden; 小花依ある",
@@ -732,7 +732,6 @@ fn validate_track_response(id: &str, response: &Value) -> Result<(), String> {
     Ok(())
 }
 
-/// Shared by automatic exact-ID lookups and manual previews; never performs discovery.
 async fn fetch_lyrics_by_id(client: &Client, id: &str, key: &str) -> Result<Value, String> {
     if id.len() != 22 || !id.bytes().all(|b| b.is_ascii_alphanumeric()) {
         return Err(err("ParseError"));

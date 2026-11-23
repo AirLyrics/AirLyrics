@@ -29,7 +29,6 @@ private const val STITCH_LENGTH = 21f
 private const val STITCH_COUNT = 9
 private const val STITCH_PITCH = (SEAM_END - SEAM_START - STITCH_LENGTH) / (STITCH_COUNT - 1)
 
-/** Draws one stitch per confirmed download segment. */
 @SuppressLint("ViewConstructor")
 internal class UpdateDownloadProgressView(host: MainUiHost) :
     ProgressBar(host, null, android.R.attr.progressBarStyleHorizontal) {

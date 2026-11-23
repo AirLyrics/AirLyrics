@@ -78,7 +78,6 @@ class FloatingLyricsServiceLatestMediaTest {
         val source = "com.netease.cloudmusic"
         MediaSourceStore.saveSelectedPackage(context, source)
         LyricsSettingsStore.setWordByWordLyricsEnabled(context, true)
-        // A word-by-word import also stores a plain fallback for the same song.
         saveLocalPlainLyrics(OLD_TITLE, "[00:00.00]local words")
         assertTrue(LyricsStorage.saveWordByWordLyrics(
             context = context,

@@ -22,7 +22,6 @@ import com.google.android.material.behavior.SwipeDismissBehavior
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
 
-/** Activity-scoped feedback anchored above the main screen's persistent bottom bar. */
 internal class SnackbarAirFeedback(
     private val activity: AppCompatActivity,
     private val anchorProvider: () -> View?,

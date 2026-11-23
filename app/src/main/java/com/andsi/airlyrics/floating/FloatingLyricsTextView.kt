@@ -47,7 +47,6 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         if (!preview || previewEffectsVisible == visible) return
         previewEffectsVisible = visible
         onPreviewVisibilityChanged?.invoke(visible)
-        // Use the same clean restart for folding and scrolling out of the viewport.
         spicyDrawing.reset()
         spicyLineDrawing.reset()
         cancelLyricsTextAnimation()
@@ -71,7 +70,6 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
                 invalidate()
                 postOnAnimation(this)
             } else {
-                // A preview scrolled off screen needs no frames; resume when it returns.
                 postDelayed(this, 300L)
             }
         }
@@ -100,14 +98,12 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
 
     private fun spicyInset(): Int = if (preview || spicyPosition != null) maxOf(
         kotlin.math.ceil(textSize * .24f).toInt(),
-        // Keep the preview geometry fixed while tuning glow; the overlay uses the actual outset.
         LyricsHalo.outset(textSize, if (preview) PREVIEW_GLOW_SPACE else lyricsGlowStyle)
     ) else 0
     override fun getCompoundPaddingLeft() = super.getCompoundPaddingLeft() + spicyInset() + if (spicyLineActive) lineScaleInset else 0
     override fun getCompoundPaddingRight() = super.getCompoundPaddingRight() + spicyInset() + if (spicyLineActive) lineScaleInset else 0
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        // Reserve the 5% activation scale at either alignment without resizing the window per frame.
         lineScaleInset = if (spicyLineActive) kotlin.math.ceil(
             (MeasureSpec.getSize(widthMeasureSpec) - super.getCompoundPaddingLeft() - super.getCompoundPaddingRight())
                 .coerceAtLeast(0) * .05f
@@ -227,7 +223,6 @@ internal class FloatingLyricsTextView @JvmOverloads constructor(
         if (lyricContentAlpha <= 0f) return
 
         canvas.withSave {
-            // Contain shadow layers and animated glyphs even under a scrolling parent's clip.
             clipRect(0, 0, width, height)
             if (lyricContentAlpha >= REST_ALPHA) {
                 drawLyrics(this)

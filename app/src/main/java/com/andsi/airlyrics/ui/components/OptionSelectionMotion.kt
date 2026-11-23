@@ -11,7 +11,6 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.bindAppearance
 import kotlin.math.roundToInt
 
-/** One continuous selection value keeps the fill, outline, label and check in sync. */
 internal class OptionSelectionMotion(
     private val host: MainUiHost,
     val view: TextView,
@@ -28,7 +27,6 @@ internal class OptionSelectionMotion(
     init {
         view.isSelected = selected
         view.background = shape
-        // The check always occupies the same slot, even while invisible.
         view.setAirStartIcon(host, R.drawable.ic_air_check, selectedStyle.textColor)
         host.bindAppearance(view) {
             idleStyle = host.airTonalButtonStyle(AirTonalButtonTone.DEFAULT)

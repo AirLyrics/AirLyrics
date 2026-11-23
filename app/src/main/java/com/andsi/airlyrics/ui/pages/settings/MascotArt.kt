@@ -70,10 +70,6 @@ internal class MascotArt(context: Context) {
         const val CLOUD_PAW_COMPRESSION_Y = 78f
     }
 
-    /**
-     * Keeps the cloud's upper edge close to the paws while its lower edge has more give.
-     * The same mapping is used for the cloud shape and its lyric marks.
-     */
     fun drawElasticCloud(canvas: Canvas, layer: Layer, pullX: Float, pullY: Float, compression: Float) {
         canvas.drawBitmapMesh(bitmap(layer), 8, 8, cloudMesh(pullX, pullY, compression), 0, null, 0, paint)
     }
@@ -95,7 +91,6 @@ internal class MascotArt(context: Context) {
         return mesh
     }
 
-    /** Maps the same hanging-body texture into the supplied ground rig; no pose crossfade. */
     fun drawGroundBody(canvas: Canvas, groundMix: Float, compression: Float, alpha: Float = 1f) {
         val mix = groundMix.coerceIn(0f, 1f)
         val q = compression.coerceIn(0f, 1f)
@@ -118,7 +113,6 @@ internal class MascotArt(context: Context) {
         paint.alpha = 255
     }
 
-    /** One paw texture follows both the airborne and ground anchors without doubled outlines. */
     fun drawGroundPaws(canvas: Canvas, groundMix: Float, compression: Float, alpha: Float = 1f) {
         val mix = groundMix.coerceIn(0f, 1f)
         val q = compression.coerceIn(0f, 1f) * mix
@@ -157,7 +151,6 @@ internal class MascotArt(context: Context) {
         }
     }
 
-    /** Pulls the lower half down while the head remains anchored to the grabbing hand. */
     fun drawSoftBody(canvas: Canvas, lift: Float, alpha: Float = 1f) {
         val t = lift.coerceIn(0f, 1f)
         for (row in 0..8) {

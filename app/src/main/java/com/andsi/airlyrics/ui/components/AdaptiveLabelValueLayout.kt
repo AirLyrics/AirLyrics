@@ -9,11 +9,7 @@ import android.widget.TextView
 import kotlin.math.ceil
 import kotlin.math.max
 
-/**
- * Keeps a label and trailing value on one line while they fit, then stacks them when
- * either localized or user-provided text would otherwise squeeze the label away.
- */
-@SuppressLint("ViewConstructor") // Programmatic-only view; its children and spacing are required.
+@SuppressLint("ViewConstructor")
 internal class AdaptiveLabelValueLayout(
     context: Context,
     internal val labelView: View,

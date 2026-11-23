@@ -6,12 +6,6 @@ import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 
-/**
- * UI-facing host for the handwritten main screen.
- *
- * Pages receive this small boundary instead of the concrete activity, keeping
- * layout code stable while the app layer continues to own wiring and services.
- */
 internal abstract class MainUiHost(
     val activity: AppCompatActivity,
     private val uiStateProvider: () -> MainUiState,
@@ -45,7 +39,6 @@ internal abstract class MainUiHost(
     open val appUpdates: AppUpdateUi? get() = null
     val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
     var savedLyricsSelectionBackHandler: (() -> Boolean)? = null
-    /** A confirmed deletion keeps the current list in place until its data refresh can animate. */
     var savedLyricsDeletionPending: Set<String>? = null
     var savedLyricsDeletionRefresh: ((Set<String>) -> Unit)? = null
     val interactionUi = com.andsi.airlyrics.ui.state.InteractionUiRegistry()

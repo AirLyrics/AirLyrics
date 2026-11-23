@@ -6,7 +6,6 @@ import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
 import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 
-/** A displayed paragraph, retaining the source identity even when consecutive lyrics repeat. */
 data class PlainLyricsTextRange(
     val start: Int,
     val end: Int,
@@ -18,7 +17,6 @@ data class PlainLyricsTextRange(
 
 data class FormattedPlainLyrics(val text: String, val ranges: List<PlainLyricsTextRange>)
 
-/** Shared display policy for plain text and playback-driven line animation. */
 object PlainLyricsDisplayFormatter {
     private const val NO_TRANSLATION_TEXT = "No translation for this lyric"
     private const val LAST_LINE_MS = 5_000L

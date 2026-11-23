@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.ui.pages.settings
 
-/** Impact-driven expression with a short cooldown so nearby edge contacts do not flicker. */
 internal class MascotCollisionExpression(private val density: Float) {
     enum class Face { NONE, DIZZY, SPEECHLESS }
 

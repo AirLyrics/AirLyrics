@@ -3,9 +3,6 @@ package com.andsi.airlyrics.apple
 import android.content.Context
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Coordinates the two credentials Apple needs and records the account's storefront.
- */
 object AppleMusicAccount {
 
     /**
@@ -15,7 +12,6 @@ object AppleMusicAccount {
      */
     private val generation = AtomicLong(0L)
 
-    /** Validates a freshly captured token and persists it together with the storefront. */
     suspend fun completeLogin(context: Context, mediaUserToken: String): Result<AppleMusicSession> {
         val token = mediaUserToken.trim()
         if (token.isEmpty()) return Result.failure(IllegalArgumentException("Token is empty"))
@@ -35,7 +31,6 @@ object AppleMusicAccount {
         return Result.success(session)
     }
 
-    /** Re-checks the stored token; also refreshes a stale storefront. */
     suspend fun refresh(context: Context): Result<AppleMusicSession> {
         val existing = AppleMusicSessionStore.load(context)
             ?: return Result.failure(IllegalStateException("Not signed in"))
@@ -44,7 +39,6 @@ object AppleMusicAccount {
         val storefront = AppleMusicWebClient.resolveStorefront(existing.mediaUserToken, developerToken)
             .getOrElse { return Result.failure(it) }
         if (generation.get() != myGeneration) {
-            // Logout (or a newer login) happened while the storefront round-trip was pending.
             return Result.failure(IllegalStateException("Refresh superseded"))
         }
         val session = existing.copy(storefront = storefront)

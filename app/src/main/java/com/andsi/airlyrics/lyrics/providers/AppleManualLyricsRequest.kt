@@ -10,7 +10,6 @@ import com.andsi.airlyrics.lyrics.LyricsLookupException
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
-/** Credentials are resolved per operation; catalogue identity belongs to the selected candidate. */
 internal object AppleManualLyricsRequest {
     fun execute(
         context: Context,

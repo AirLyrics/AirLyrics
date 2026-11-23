@@ -43,7 +43,6 @@ internal data class SettingsUndoAction(
     val target: SettingsUndoTarget? = null
 )
 
-/** One touch target for the arrow, label and optional restore value. */
 @SuppressLint("ViewConstructor")
 internal class SettingsPanelUndoButton(
     private val host: MainUiHost,

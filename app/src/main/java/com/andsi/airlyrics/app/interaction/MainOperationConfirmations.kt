@@ -13,7 +13,6 @@ import com.andsi.airlyrics.ui.model.OperationConfirmations
 import com.andsi.airlyrics.ui.state.MainInteractionState
 import java.util.UUID
 
-/** Owns the persisted business request; the UI only sees the prompt and its identity. */
 internal class MainOperationConfirmations(
     private val interactions: MainInteractionState,
     private val editorSessionId: () -> String?,

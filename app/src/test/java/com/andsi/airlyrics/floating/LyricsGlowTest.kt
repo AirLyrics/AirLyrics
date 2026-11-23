@@ -126,7 +126,7 @@ class LyricsGlowTest {
         val spans = text.getSpans(0, text.length, SpicyLyricsSpan::class.java)
         assertTrue(spans.isNotEmpty())
         assertTrue(spans.all { it.haloOnly })
-        assertEquals(2000L, spans.single().timing.endMs) // No Spicy early finish or letter emphasis.
+        assertEquals(2000L, spans.single().timing.endMs)
         measure(view)
         bitmap(view::draw)
         assertTrue(spans.all { !it.hidden })

@@ -512,7 +512,6 @@ internal fun createSavedLyricsPage(activity: MainUiHost): View = with(activity) 
         }
         val bottomPadding = if (selecting) selectionScrollPadding else 0
         if (listBody.paddingBottom != bottomPadding) listBody.setPadding(0, 0, 0, bottomPadding)
-        // Update interaction immediately, while the visual state may still be reversing.
         adapter.progress = selectionMotion.progress
         adapter.refresh(listBody)
         selectionMotion.moveTo(if (selecting) 1f else 0f)

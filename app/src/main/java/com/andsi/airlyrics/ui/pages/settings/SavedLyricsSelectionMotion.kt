@@ -27,7 +27,6 @@ import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** A reversible progress value, settled on detach and when system animations are disabled. */
 internal class SavedLyricsSelectionMotion(
     private val owner: View,
     initial: Float,
@@ -87,7 +86,6 @@ internal class SavedLyricsSelectionMotion(
     }
 }
 
-/** The two outer list strokes fold into a close glyph; the small ticks recede. */
 @SuppressLint("ViewConstructor")
 internal class SavedLyricsSelectionIconView(host: MainUiHost, @ColorInt color: Int) : View(host) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -121,7 +119,6 @@ internal class SavedLyricsSelectionIconView(host: MainUiHost, @ColorInt color: I
     }
 }
 
-/** A transparent layer over the list; only the toolbar and its handle consume touches. */
 @SuppressLint("ViewConstructor")
 internal class SavedLyricsSelectionPanel(
     private val host: MainUiHost,

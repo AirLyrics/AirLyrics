@@ -12,7 +12,6 @@ import com.andsi.airlyrics.ui.model.FloatingFocusBubbleHandle
 import com.andsi.airlyrics.ui.state.restoreFields
 import com.andsi.airlyrics.ui.state.undoChangesTo
 
-/** Keeps one saved change for the open panel and restores its existing controls in place. */
 internal class FloatingStylePanelEdits(
     private val page: FloatingPageScope,
     private val restoreDefaults: (FloatingLyricsStyle, FloatingLyricsStyle) -> FloatingLyricsStyle
@@ -102,7 +101,6 @@ internal class FloatingStylePanelEdits(
     private fun restore(before: FloatingLyricsStyle, target: FloatingLyricsStyle, isUndo: Boolean) {
         finishMotion()
         bubble?.view?.endFloatingPanelChanges()
-        // Capture the mounted controls before committing and render only fields that changed.
         val applyToControls = controls.map { it.capture(before) }
         if (isUndo) {
             clearUndo()

@@ -3,12 +3,6 @@ package com.andsi.airlyrics.ui.pages.settings
 import kotlin.math.abs
 import kotlin.math.exp
 
-/**
- * Small, deterministic page-space simulation for the lifted mascot.
- *
- * Coordinates are offsets from the logo art origin. Bounds keep the visible lifted body on screen;
- * resting on a boundary never docks the cat. Docking belongs to the touch interaction.
- */
 internal class MascotFall(private val density: Float) {
     enum class Edge { LEFT, RIGHT, CEILING, FLOOR }
 
@@ -56,7 +50,6 @@ internal class MascotFall(private val density: Float) {
         collisionSpeed = 0f
     }
 
-    /** Ground-only spring release. A larger pull adds launch energy once, not on each bounce. */
     fun springLaunch(compression: Float, horizontalDirection: Float): Boolean {
         if (!isGrounded || (compression <= 0.05f)) return false
         val q = compression.coerceIn(0f, 1f)
@@ -86,7 +79,6 @@ internal class MascotFall(private val density: Float) {
         collisionSpeed = 0f
     }
 
-    /** Returns true while another frame is useful. */
     fun step(seconds: Float): Boolean {
         val dt = seconds.coerceIn(0f, 0.04f)
         if (dt == 0f) return true

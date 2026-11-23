@@ -12,7 +12,6 @@ internal object LyricsFormatCatalog {
         val matchesContent: (String) -> Boolean
     )
 
-    // Structured formats are checked before permissive text formats.
     private val definitions = listOf(
         FormatDefinition(
             format = LyricsDocumentFormat.TTML,

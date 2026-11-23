@@ -34,7 +34,6 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-/** Activity-bound presentation for the retained lyrics workflow state. */
 internal class MainLyricsWorkflow(
     private val graph: MainGraph
 ) {

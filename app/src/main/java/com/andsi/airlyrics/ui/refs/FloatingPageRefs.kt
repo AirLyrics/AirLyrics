@@ -2,7 +2,6 @@ package com.andsi.airlyrics.ui.refs
 
 import android.widget.TextView
 
-/** Live view references for Floating page fragments that support local refreshes. */
 internal class FloatingPageRefs {
     val tileSubtitles: MutableMap<String, TextView> = mutableMapOf()
     var displayControlSubtitle: TextView? = null

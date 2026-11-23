@@ -20,7 +20,6 @@ internal data class LyricsCandidate(val source: PlainLyricsSearchSource, val id:
 
 internal data class SpotifyIdLyricsResult(val candidate: LyricsCandidate, val lyrics: LyricsProviderResult)
 
-/** Network reads stay separate from the explicit, transactional user selection. */
 internal class ManualLyricsSearch(
     private val context: Context,
     private val nativeCall: (String, LyricsLookupCancellationToken) -> String = { request, token ->

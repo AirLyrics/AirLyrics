@@ -18,7 +18,6 @@ use crate::aliases::AliasEntry;
 use crate::matching::{text_similarity, MatchMetadata};
 use crate::recording::{duration_close, version_conflict};
 
-/// Storefronts that publish CJK titles through the public catalogue API.
 const STOREFRONTS: [&str; 3] = ["tw", "hk", "sg"];
 /// The catalogue's own artist mapping is only trusted when a few of that artist's tracks agree.
 const MIN_ARTIST_TRACKS: usize = 3;
@@ -29,7 +28,6 @@ const ANCHORED_WINDOW_MS: u64 = 40;
 /// Without an anchored reference the player's reported duration may be rounded, so the window
 /// has to absorb that rounding — at the cost of needing a unique title to stay honest.
 const UNANCHORED_WINDOW_MS: u64 = 600;
-/// Storefronts that carry the player's own (usually romanized) metadata.
 const SOURCE_STOREFRONTS: [&str; 2] = ["tr", "us"];
 const CONFIDENCE: f64 = 0.85;
 const CACHE_TTL: Duration = Duration::from_secs(86_400);
@@ -37,8 +35,6 @@ const CACHE_TTL: Duration = Duration::from_secs(86_400);
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct CatalogueArtist {
     pub(crate) name: String,
-    /// Storefront artist id; lets discovery read the artist's whole catalogue instead of relying
-    /// on a relevance-ranked name search.
     pub(crate) id: Option<String>,
 }
 
@@ -139,12 +135,10 @@ pub(crate) fn pick_alias(
         .collect();
     let (picked, _) = *titles.iter().min_by_key(|(_, delta)| *delta)?;
     titles.dedup_by(|(left, _), (right, _)| left.title == right.title);
-    // Distinct titles within the duration window are ambiguous.
     if titles.iter().any(|(track, _)| track.title != picked.title) {
         return None;
     }
 
-    // The localized title must actually differ from the player's title, otherwise it adds nothing.
     if picked.title.trim().eq_ignore_ascii_case(query.title.trim()) {
         return None;
     }
@@ -160,8 +154,6 @@ pub(crate) fn pick_alias(
     })
 }
 
-/// Ask each storefront, best effort: learn the localized artist spelling, and return the first
-/// title alias the evidence supports.
 #[derive(Default)]
 pub(crate) struct DiscoveryOutcome {
     alias: Option<AliasEntry>,
@@ -262,7 +254,6 @@ pub(crate) fn discover_and_register(
     outcome
 }
 
-/// Registers a discovered alias for later lookups in this process, at most once per recording.
 pub(crate) fn ensure_registered(
     title: &str,
     artist: &str,
@@ -272,8 +263,6 @@ pub(crate) fn ensure_registered(
     if title.trim().is_empty() || artist.trim().is_empty() {
         return;
     }
-    // A CJK title needs no romanised-to-localised resolution, and an alias that is already
-    // registered makes the whole catalogue walk redundant.
     if crate::qq::has_cjk(title) || crate::aliases::lookup(title, artist).is_some() {
         return;
     }
@@ -319,7 +308,6 @@ pub(crate) fn ensure_registered(
     }
 }
 
-/// Shared orchestration so cancellation, fallback and cache policy can be tested offline.
 fn discover_with_fallback(
     query: MatchMetadata<'_>,
     backend: &dyn CatalogueBackend,
@@ -513,8 +501,6 @@ fn catalogue_tracks(value: &serde_json::Value) -> Vec<CatalogueTrack> {
 
 #[cfg(test)]
 mod live_tests {
-    /// Live check (network): the public catalogue must resolve the CJK release title.
-    /// Run with `cargo test --lib -- --ignored live_discovery`.
     #[test]
     #[ignore]
     fn live_discovery_resolves_shouldnt_be() {
@@ -785,7 +771,6 @@ mod tests {
             own: Some(track("The Big Sleep", "Cyndi Wang", 239_671)),
             tracks: vec![
                 track("大眠", "王心凌", 239_671),
-                // 20 ms apart: the running time cannot tell these two songs apart.
                 track("另一個歌", "王心凌", 239_680),
             ],
         };
@@ -796,7 +781,6 @@ mod tests {
 
     #[test]
     fn a_nearby_but_different_length_is_not_evidence() {
-        // 1.6 s off: a different song that happens to be about as long, not another release.
         let catalogue = FakeCatalogue {
             artist: Some("王心凌"),
             own: Some(track("The Big Sleep", "Cyndi Wang", 239_671)),

@@ -5,7 +5,6 @@ import com.andsi.airlyrics.lyrics.*
 import com.andsi.airlyrics.lyrics.storage.WordByWordLyricsJsonCodec
 import org.json.JSONObject
 
-/** Word providers are scoped to manual candidate lookup, not automatic search sources. */
 internal enum class ManualWordSource(val key: String) {
     NETEASE("netease"), KUGOU("kugou"), QQ("qq")
 }
@@ -70,7 +69,6 @@ internal fun parseManualWordVersions(
     }
 }
 
-/** Stable provider identity is separate from the current playback target. */
 internal data class ManualWordRecording(
     val source: ManualWordSource, val id: String, val song: SongIdentity,
     val score: Double = 0.0, val related: Boolean = true,

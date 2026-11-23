@@ -50,7 +50,6 @@ internal data class BatchLyricsState(
     val exportFailed: Boolean = false
 )
 
-/** ViewModel-owned work; rotation never repeats an operation or retains an Activity. */
 internal class BatchLyricsSession(
     context: Context,
     private val interactions: MainInteractionState,
@@ -189,7 +188,6 @@ internal class BatchLyricsSession(
                         problem = result.failure?.let { BatchLyricsProblem.valueOf(it.name) },
                         accessRetained = uri !in unretained)
                 }
-                // The list may show both a local copy and an online cache for the same exact identity.
                 val targets = snapshot.items.filter { it.indexKey.isNotBlank() && it.title.isNotBlank() }
                     .groupBy { SongIdentity(it.title, it.artist, it.album, it.durationMs).storageKey() }
                     .values.map { group -> group.firstOrNull { it.source != LyricsStorage.SOURCE_PROVIDER_CACHE } ?: group.first() }

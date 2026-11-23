@@ -23,7 +23,6 @@ internal val MainUiHost.colorStroke: Int
     get() = airLyricsPalette.stroke
 internal val MainUiHost.colorAccent: Int
     get() = airLyricsPalette.accent
-/** Accent for text and small icons on light surfaces. */
 internal val MainUiHost.colorAccentText: Int
     get() = appearance.frame.accentText
 internal val MainUiHost.colorOnAccent: Int

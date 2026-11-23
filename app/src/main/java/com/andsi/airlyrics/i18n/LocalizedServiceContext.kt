@@ -8,7 +8,6 @@ import android.os.Build
 import android.os.LocaleList
 import androidx.appcompat.app.AppCompatDelegate
 
-/** Keeps long-lived services on the same locales as AppCompat without changing shared resources. */
 internal class LocalizedServiceContext private constructor(base: Context) : ContextWrapper(base) {
     private var cachedConfiguration: Configuration? = null
     private var cachedResources: Resources? = null
@@ -20,7 +19,6 @@ internal class LocalizedServiceContext private constructor(base: Context) : Cont
         if (appLocales.isEmpty) return baseResources
 
         val configuration = Configuration(baseResources.configuration)
-        // Match AppCompat's ordering: app languages first, then system fallback languages.
         val tags = (appLocales.toLanguageTags() + "," + configuration.locales.toLanguageTags())
             .split(',').filter(String::isNotEmpty).distinct().joinToString(",")
         configuration.setLocales(LocaleList.forLanguageTags(tags))

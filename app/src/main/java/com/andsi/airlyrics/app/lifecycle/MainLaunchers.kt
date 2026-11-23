@@ -5,12 +5,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.andsi.airlyrics.lyrics.importer.LyricsFormatCatalog
 
-/**
- * Owns ActivityResult launchers for MainActivity.
- *
- * This keeps Android callback registration out of MainActivity while preserving
- * the existing handwritten UI and import/permission behavior.
- */
 internal class MainLaunchers(
     activity: AppCompatActivity,
     private val onLyricsFileResult: (Uri?) -> Unit,

@@ -3,7 +3,6 @@ package com.andsi.airlyrics.lyrics.search
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 
-/** Empty text is an explicit choice; non-empty payloads still need playable lines. */
 internal fun LyricsProviderResult.manualUnavailableReason(): LyricsUnavailableReason? {
     if (isUntimed) return if (untimedLyrics?.hasContent == true) null else LyricsUnavailableReason.NO_USABLE_LINES
     val tracks = listOf(plainLrc, translatedLrc.orEmpty())

@@ -46,7 +46,6 @@ class LyricsSearchDialogDimmingTest {
             val sheet = showSources(activity)
             val shade = sheet.requireDialog().window!!.attributes.dimAmount
 
-            // Cover a queued prompt arriving after another modal has already opened.
             LyricsSearchActivity::class.java.getDeclaredMethod("showMissingSourcesDialog")
                 .apply { isAccessible = true }.invoke(activity)
             val prompt = ShadowDialog.getLatestDialog() as MissingSourcesDialog

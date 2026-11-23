@@ -67,7 +67,6 @@ internal fun spicyTimings(
 internal fun spicyProgress(positionMs: Long, startMs: Long, endMs: Long): Float =
     ((positionMs - startMs).toDouble() / (endMs - startMs).coerceAtLeast(1)).toFloat().coerceIn(0f, 1f)
 
-/** Small, frame-rate independent damped spring. Seeking snaps instead of replaying old motion. */
 internal class SpicySpring(private val frequency: Double, private val damping: Double, var value: Float) {
     private var velocity = 0.0
     fun reset(target: Float) { value = target; velocity = 0.0 }

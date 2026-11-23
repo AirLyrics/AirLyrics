@@ -4,7 +4,6 @@ import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordLyricsDocument
 
-/** A lossless draft view of physical LRC rows. Only simple timed rows are rewritten. */
 internal class EditableLrcDocument private constructor(
     val rows: MutableList<Row>,
     private val lineBreak: String,

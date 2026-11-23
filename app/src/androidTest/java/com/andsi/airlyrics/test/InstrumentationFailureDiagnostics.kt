@@ -12,7 +12,6 @@ import androidx.test.runner.lifecycle.Stage
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
-/** Records lifecycle transitions and writes the device and window state on failure. */
 class InstrumentationFailureDiagnostics : TestWatcher() {
     private val lifecycle = ArrayDeque<String>()
     private var currentTest: Description? = null
@@ -44,7 +43,6 @@ class InstrumentationFailureDiagnostics : TestWatcher() {
         if (!captured) capture(error, description)
     }
 
-    /** Call while the scenario is still open when a wait or input action fails. */
     fun captureNow(error: Throwable) {
         if (!captured) capture(error, currentTest ?: Description.createSuiteDescription("unknown-test"))
     }

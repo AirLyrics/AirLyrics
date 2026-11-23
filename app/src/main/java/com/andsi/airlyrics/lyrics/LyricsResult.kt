@@ -1,9 +1,5 @@
 package com.andsi.airlyrics.lyrics
 
-/**
- * Normalized lyrics: timed tracks or an explicitly untimed text document.
- * A provider may return a translated-only track when no original track is available.
- */
 data class LyricsProviderResult(
     val plainProviderId: String,
     val plainProviderName: String,
@@ -39,5 +35,4 @@ internal fun LyricsProviderResult.hasUsableLyrics(): Boolean {
     return untimedLyrics?.hasContent == true || plainLrc.isNotBlank() || !translatedLrc.isNullOrBlank()
 }
 
-/** Provider response held in memory until the repository chooses and commits it. */
 data class PendingSpicyLyrics(val raw: String, val searchKey: String, val fetchedAtMs: Long)

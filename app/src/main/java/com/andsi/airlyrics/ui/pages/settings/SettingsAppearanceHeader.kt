@@ -42,7 +42,6 @@ import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 import com.andsi.airlyrics.ui.theme.iconColorOnAccent
 
-/** Settings title and the app-wide appearance controls shown beside it. */
 internal fun createSettingsAppearanceHeader(host: MainUiHost): View {
     return SettingsAppearanceHeader(host)
 }
@@ -62,7 +61,6 @@ internal class AppearanceMenuState {
     }
 }
 
-/** Both panes use the same progress so an interrupted fade keeps its current opacity. */
 internal fun menuCrossfadeAlphas(
     accentStart: Float,
     buttonStyleStart: Float,
@@ -77,7 +75,7 @@ internal fun menuCrossfadeAlphas(
         (buttonStyleStart + (buttonStyleTarget - buttonStyleStart) * fraction)
 }
 
-@SuppressLint("ViewConstructor") // Programmatic-only view; MainUiHost is its required UI boundary.
+@SuppressLint("ViewConstructor")
 private class SettingsAppearanceHeader(
     private val host: MainUiHost
 ) : LinearLayout(host) {
@@ -228,7 +226,6 @@ private class SettingsAppearanceHeader(
     private fun createPickerContainer(): FrameLayout {
         return object : FrameLayout(host) {
             override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-                // Always measure content at its final size; only reserve animated layout space.
                 super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
                 fullPickerHeight = measuredHeight
                 setMeasuredDimension(measuredWidth, ceil(fullPickerHeight * AppearancePanelMotion.travel(pickerProgress)).toInt())
@@ -258,7 +255,6 @@ private class SettingsAppearanceHeader(
                 LayoutParams.MATCH_PARENT,
                 LayoutParams.WRAP_CONTENT
             )
-            // The header draws the entire moving contour behind native controls.
             clipChildren = false
             clipToPadding = false
             addView(pickerContent)
@@ -571,7 +567,6 @@ private class SettingsAppearanceHeader(
             duration = AppearancePanelMotion.duration(
                 from, target, AirUiTokens.Motion.ThemePickerExpandMs, AirUiTokens.Motion.ThemePickerCollapseMs
             )
-            // Easing is inside draw(), not here: all phases share the HTML's linear clock.
             interpolator = LinearInterpolator()
             addUpdateListener { applyProgress(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {

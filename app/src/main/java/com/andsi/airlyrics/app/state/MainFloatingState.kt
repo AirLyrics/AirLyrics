@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.state
 
-/** Narrow state boundary used by floating-window coordination. */
 internal interface MainFloatingState {
     val locked: Boolean
     val clickThrough: Boolean

@@ -6,7 +6,6 @@ import com.andsi.airlyrics.core.model.ButtonStyle
 import com.andsi.airlyrics.core.model.ThemeAccent
 import com.andsi.airlyrics.core.prefs.prefs
 
-/** Stores app-wide theme preferences. */
 object ThemeSettingsStore {
     private const val PREF_NAME = "app_theme"
     private const val KEY_DARK_MODE = "dark_mode"
@@ -15,7 +14,6 @@ object ThemeSettingsStore {
 
     private fun store(context: Context) = prefs(context, PREF_NAME)
 
-    /** Returns null until the user explicitly chooses light or dark mode. */
     fun getDarkModeOverride(context: Context): Boolean? {
         val preferences = store(context)
         return if (preferences.contains(KEY_DARK_MODE)) {

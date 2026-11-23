@@ -62,7 +62,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
-/** Small injectable boundary keeps the real settings-entry flows testable without the network. */
 internal interface FontPanelOperations {
     val changes: Flow<Long> get() = emptyFlow()
     fun fonts(): List<FloatingFont>
@@ -75,7 +74,6 @@ internal interface FontPanelOperations {
     suspend fun download(id: String, onProgress: (Int) -> Unit)
 }
 
-/** List, specimen and downloads share the existing setting panel rather than opening another modal. */
 @SuppressLint("ViewConstructor")
 internal class FloatingFontPanelContent(
     private val host: MainUiHost,
@@ -129,7 +127,6 @@ internal class FloatingFontPanelContent(
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        // The header delete action is outside this body; every body touch cancels its armed state.
         if (event.actionMasked == MotionEvent.ACTION_DOWN) cancelConfirmation()
         return super.dispatchTouchEvent(event)
     }
@@ -241,7 +238,6 @@ internal class FloatingFontPanelContent(
         navigation.setHeaderAction(deleteButton, hideReset = true)
         val selected = operations.selectedId()
         operations.fonts().filter { it.collectionId == collection.id }.forEach { font ->
-            // Members are named here; their actual glyphs are loaded individually in the specimen.
             addFontRow(fontRow(font, selected == font.id, previewId = null))
         }
         statusView = TextView(host).apply {
@@ -562,7 +558,6 @@ internal class FloatingFontPanelContent(
     }
 }
 
-/** Keeps sizes at the trailing edge, with a second line when the name needs more room. */
 @SuppressLint("ViewConstructor")
 private class FontRowTextLayout(
     host: MainUiHost,

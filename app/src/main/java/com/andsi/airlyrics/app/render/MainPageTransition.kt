@@ -87,7 +87,6 @@ internal class MainPageTransition {
         }
     }
 
-    /** Keep the entering view's current pose for an immediate next navigation. */
     fun cancel(settleIncoming: Boolean = true) {
         animator?.let {
             it.removeAllUpdateListeners()

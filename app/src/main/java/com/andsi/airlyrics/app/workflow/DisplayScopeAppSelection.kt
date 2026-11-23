@@ -11,7 +11,6 @@ internal data class DisplayScopeAppChoice(
     val searchText: String = "$label\n$packageName".lowercase(Locale.ROOT)
 }
 
-/** Search and selection state for the asynchronously populated display-scope picker. */
 internal class DisplayScopeAppSelection(
     private var choices: List<DisplayScopeAppChoice>,
     private val selectedPackages: MutableSet<String>

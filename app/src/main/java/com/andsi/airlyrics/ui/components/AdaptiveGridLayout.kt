@@ -9,7 +9,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isGone
 
-/** Action groups fit text, swatches fit available width, and setting tiles keep fixed columns. */
 internal sealed interface GridColumnPolicy {
     data object Content : GridColumnPolicy
     data object Fixed : GridColumnPolicy
@@ -20,7 +19,6 @@ internal sealed interface GridColumnPolicy {
     ) : GridColumnPolicy
 }
 
-/** Reflows existing children without replacing views, callbacks or selection. */
 @SuppressLint("ViewConstructor")
 internal open class AdaptiveGridLayout(
     context: Context,

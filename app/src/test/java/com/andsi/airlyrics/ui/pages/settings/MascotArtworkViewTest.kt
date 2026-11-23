@@ -187,7 +187,6 @@ class MascotArtworkViewTest {
             send(logo, MotionEvent.ACTION_DOWN, x, y)
             send(logo, MotionEvent.ACTION_MOVE, x + 75f, y - 90f)
             assertTrue(overlay.isShowing)
-            // Robolectric's short viewport puts the GitHub button below the fold.
             val scroll = descendants(activity.window.decorView).asSequence()
                 .filterIsInstance<android.widget.ScrollView>()
                 .first { page -> descendants(page).any { it === github } }

@@ -85,7 +85,6 @@ class SpicyLyricsInstrumentedTest {
             scenario.onActivity { renderer.updatePlayback(2900, true) }
             instrumentation.waitForIdleSync()
             val playing = screenshot(view, "spicy-playing.png")
-            // Wait for real display frames, with a bounded wait independent of media polling.
             val latch = CountDownLatch(1)
             scenario.onActivity { view.postDelayed({ latch.countDown() }, 350) }
             assertTrue(latch.await(2, TimeUnit.SECONDS))

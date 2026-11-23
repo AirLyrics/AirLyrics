@@ -59,7 +59,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-/** Main-screen composition root and lifecycle orchestrator. */
 internal class MainGraph(
     internal val activity: MainActivity,
     internal val viewModel: MainViewModel
@@ -140,7 +139,6 @@ internal class MainGraph(
     val lyricsWorkflow: MainLyricsWorkflow by lazy { MainLyricsWorkflow(this) }
     val displayScopeWorkflow: MainDisplayScopeWorkflow by lazy { MainDisplayScopeWorkflow(this) }
 
-    /** Owns only the refresh-button feedback sequence exposed through MainUiHost. */
     val mediaRefreshHandler: Handler by lazy { Handler(Looper.getMainLooper()) }
 
     private val receivers: MainReceivers by lazy {
@@ -253,7 +251,6 @@ internal class MainGraph(
                     }
                 }
             } catch (_: LifecycleDestroyedException) {
-                // The UI owner went away before this result could be delivered.
             }
         }
     }

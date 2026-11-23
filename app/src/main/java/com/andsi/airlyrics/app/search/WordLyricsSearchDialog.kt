@@ -27,7 +27,6 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 
-/** Uses the same input window, motion, dimming and result delivery as Spotify ID search. */
 class WordLyricsSearchDialog : DialogFragment() {
     private var titleInput: TextInputEditText? = null
     private var artistInput: TextInputEditText? = null

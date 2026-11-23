@@ -34,13 +34,11 @@ internal fun TextView.applyTextPolicy(policy: TextDisplayPolicy) {
 internal fun TextView.isTextTruncated(): Boolean =
     layout?.let { textLayout -> (0 until textLayout.lineCount).any { textLayout.getEllipsisCount(it) > 0 } } == true
 
-/** Only for read-only values; never consumes a setting's primary click. */
 internal fun MainUiHost.bindReadOnlyText(view: TextView, title: String) {
     view.applyTextPolicy(TextDisplayPolicy.SingleLineSummary)
     bindFullTextReadAction(view, { title }, { view.text.toString() }, allowScroll = true, source = view)
 }
 
-/** Shared long-press and screen-reader action; values are read when opened, not when bound. */
 internal fun MainUiHost.bindFullTextReadAction(
     view: View,
     title: () -> String?,
@@ -59,7 +57,6 @@ internal fun MainUiHost.bindFullTextReadAction(
     ) { _, _ -> open() }
 }
 
-/** Uses the same metrics as TextView, including compound icons, spans and font scaling. */
 internal fun TextView.fullTextLineCount(width: Int = measuredWidth): Int {
     val available = (width - compoundPaddingLeft - compoundPaddingRight).coerceAtLeast(1)
     val displayed = transformationMethod?.getTransformation(text, this) ?: text
@@ -76,7 +73,6 @@ internal fun TextView.fullTextLineCount(width: Int = measuredWidth): Int {
 internal fun MainUiHost.expandableText(textView: TextView): ExpandableTextLayout =
     ExpandableTextLayout(this, textView)
 
-/** The expansion control owns its click, leaving the enclosing card's action untouched. */
 @SuppressLint("ViewConstructor")
 internal class ExpandableTextLayout(
     private val host: MainUiHost,
@@ -137,7 +133,6 @@ internal class ExpandableTextLayout(
         val targetHeight = naturalHeight()
         val targetRotation = targetRotation()
 
-        // Keep the revealed lines mounted and clip them as the viewport shrinks.
         setTextExpanded(true)
         animatedHeight = startHeight
         requestLayout()

@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.core.model
 
-/** Shared by line and word highlighting; percentages scale a font-relative halo. */
 data class LyricsGlowStyle(
     val enabled: Boolean = true,
     val strengthPercent: Int = 100,

@@ -9,12 +9,6 @@ import android.net.Uri
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Public facade for local lyric persistence.
- *
- * Keep external callers here, but keep implementation details in focused helpers:
- * paths, files, index matching, song identity, listing, editing, and word-by-word codecs.
- */
 object LyricsStorage {
     internal val processGeneration: String = java.util.UUID.randomUUID().toString()
     private val storageLock = ReentrantLock()
@@ -24,7 +18,6 @@ object LyricsStorage {
 
     internal fun isWaitingForStorage(thread: Thread): Boolean = storageLock.hasQueuedThread(thread)
 
-    /** Process-local signal used to reconcile visible UI after local lyrics mutations. */
     internal fun currentRevision(): Long = contentRevision.get()
 
     internal fun markContentChanged() {
@@ -225,7 +218,6 @@ object LyricsStorage {
                 ?.let { LocalPlainLyricsInfo(it.title, it.artist, it.durationMs, it.name, it.source, it.provider, it.modifiedTimeMillis, it.indexKey, it.album, isUntimed = it.isUntimed) }
     }
 
-    /** Metadata for the same word upgrade chosen by the repository, without accessing the network. */
     fun preferredOnlineWordItem(context: Context, title: String, artist: String, duration: Long): LocalLyricsItem? = withStorageLock {
         if (ManualLyricsSelectionStore.read(context, SongIdentity(title, artist, durationMs = duration)) != null) return@withStorageLock null
         val local = PlainLyricsStorageOps.getLocalPlainLyricsInfo(context, title, artist, duration)
@@ -430,7 +422,6 @@ object LyricsStorage {
         }
     }
 
-    /** Stored resources, independent of playback selection and display settings. */
     data class DeletableLyrics(val plain: Boolean = false, val wordByWord: Boolean = false) {
         val all: Boolean get() = plain && wordByWord
     }
@@ -465,7 +456,6 @@ object LyricsStorage {
         val cached = (mode == DeleteMode.ALL || (payload != null && mode == cacheMode)) && cache.delete(key)
         val deleted = LocalLyricsDeleteOps.deleteLocalLyrics(context, title, artist, duration, mode) || cached
         if (deleted) {
-            // Reading invalidates only a selection whose underlying resource was removed.
             ManualLyricsSelectionStore.read(context, SongIdentity(title, artist, durationMs = duration))
             markContentChanged()
         }

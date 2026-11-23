@@ -7,7 +7,6 @@ import com.andsi.airlyrics.lyrics.PlainLyricsProvider
 import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 
-/** Reads plain LRC from the user-selected lyrics directory or the app fallback directory. */
 object LocalPlainLyricsProvider : PlainLyricsProvider {
     override val id: String = "local"
     override val name: String = "Local lyrics"

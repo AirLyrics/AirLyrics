@@ -6,7 +6,6 @@ import android.os.Looper
 import android.widget.Toast
 import androidx.annotation.StringRes
 
-/** Toast feedback whose visibility policy is supplied by the owning surface. */
 internal class ToastAirFeedback(
     private val context: Context,
     private val canShow: () -> Boolean

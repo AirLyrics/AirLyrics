@@ -48,7 +48,6 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-/** Applied colors use their owner's callbacks; favorites have a separate shared store. */
 @SuppressLint("ViewConstructor")
 internal class FloatingColorPanelContent(
     private val host: MainUiHost,
@@ -331,7 +330,6 @@ internal class FloatingColorPanelContent(
                         if (saveState !== session || session.isClosed) return@runOnMainThread
                         beginFloatingPanelChange()
                         refreshSavedSwatches()
-                        // Removing a favorite never changes the applied color or its alpha.
                         renderColor()
                     }
                 }
@@ -525,7 +523,6 @@ internal class FloatingColorPanelContent(
     }
 }
 
-/** Clips the outgoing swatch to the fixed fill, leaving its border in place. */
 @SuppressLint("ViewConstructor")
 private class FloatingColorSample(host: MainUiHost) : View(host) {
     private val strokeWidth = host.dp(AirUiTokens.Stroke.Hairline)
@@ -565,7 +562,6 @@ private class FloatingColorSample(host: MainUiHost) : View(host) {
     private fun wipeEdgeColor(previous: Int): Int? {
         val next = fill.color?.defaultColor ?: return null
         if (ColorUtils.calculateContrast(previous, next) >= MIN_WIPE_CONTRAST) return null
-        // Near-equal luminance can make the moving boundary disappear in a small sample.
         val midpoint = ColorUtils.blendARGB(previous, next, .5f)
         val ink = if (ColorUtils.calculateContrast(Color.BLACK, midpoint) >=
             ColorUtils.calculateContrast(Color.WHITE, midpoint)) Color.BLACK else Color.WHITE
@@ -618,7 +614,6 @@ private class ColorPanelPage(host: MainUiHost) : LinearLayout(host) {
         acceptsInput && super.dispatchTouchEvent(event)
 }
 
-/** Color geometry does not grow with fonts; both sections keep the same four-column alignment. */
 @SuppressLint("ViewConstructor")
 private class PaletteColumn(private val host: MainUiHost) : LinearLayout(host) {
     init { orientation = VERTICAL }

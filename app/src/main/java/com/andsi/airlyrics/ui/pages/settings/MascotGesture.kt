@@ -2,10 +2,6 @@ package com.andsi.airlyrics.ui.pages.settings
 
 import kotlin.math.hypot
 
-/**
- * Gesture ownership for the layered About mascot. Coordinates are local to the artwork bounds.
- * The renderer can consume [Phase] without coupling the touch rules to bitmap or animation code.
- */
 internal class MascotGesture(private val touchSlop: Float) {
     enum class Target { CAT, CLOUD }
     enum class Phase { IDLE, PRESSED, DRAGGING }

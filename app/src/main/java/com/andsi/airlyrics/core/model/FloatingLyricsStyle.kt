@@ -1,11 +1,5 @@
 package com.andsi.airlyrics.core.model
 
-/**
- * Visual configuration for the floating lyrics window.
- *
- * Keep this file data-only so UI pages and the floating window controller can
- * share the same contract without depending on each other's implementation.
- */
 data class FloatingLyricsStyle(
     val presetName: String,
     val textSizeSp: Float,
@@ -33,7 +27,6 @@ data class FloatingLyricsStyle(
         } else fontFamily.key
 }
 
-/** Font sources that can be applied only to the floating lyrics text. */
 enum class FloatingLyricsFontFamily(val key: String) {
     SYSTEM_DEFAULT("system_default"),
     SERIF("serif"),
@@ -48,7 +41,6 @@ enum class FloatingLyricsFontFamily(val key: String) {
     }
 }
 
-/** Shared standard values for the floating lyrics font-weight control. */
 object FloatingLyricsFontWeight {
     const val MIN = 100
     const val MAX = 900
@@ -68,7 +60,6 @@ object FloatingLyricsFontWeight {
     fun fromLevel(level: Int): Int = level.coerceIn(LEVEL_MIN, LEVEL_MAX) * STEP
 }
 
-/** A named preset shown in the floating-window settings page. */
 data class FloatingLyricsPreset(
     val key: String,
     val title: String

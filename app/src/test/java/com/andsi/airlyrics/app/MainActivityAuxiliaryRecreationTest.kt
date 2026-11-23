@@ -78,7 +78,6 @@ class MainActivityAuxiliaryRecreationTest {
             val host = activity.graph.uiHost
             val installed = host.getAppVersionName()
             val releases = host.loadBundledReleaseNotes()
-            // Use a release with enough notes to exercise scrolling.
             val older = releases.first { it.version == "1.2.9" }
             val entryLabel = host.getString(R.string.ui_app_version_changelog, installed)
             activity.graph.viewModel.selectPage(Page.SETTINGS)

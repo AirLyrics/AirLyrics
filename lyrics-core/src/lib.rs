@@ -62,7 +62,6 @@ struct CandidateBatchStats {
     returned: usize,
     accepted: usize,
     duplicate: usize,
-    /// Candidates the confidence policy refused (title-only or version-conflicting matches).
     rejected_evidence: usize,
     best_score: Option<f64>,
     best_title_score: Option<f64>,
@@ -95,7 +94,6 @@ pub(crate) struct NativeResult {
     error: Option<String>,
 }
 
-/// Candidates the confidence policy refused to show automatically, for the "pick one" UI.
 #[no_mangle]
 pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LrclibLyricsNative_takeReviewCandidatesJson(
     env: JNIEnv,
@@ -482,8 +480,6 @@ fn fetch_netease_lyrics_json(
         None
     };
 
-    // Best effort: a romanized title can only reach its localized release through an alias,
-    // and the catalogue can supply one without anyone hard-coding it.
     discovery::ensure_registered(&title, &artist, duration_ms, lookup_id);
 
     let result = std::panic::catch_unwind(|| {
@@ -1198,7 +1194,6 @@ fn map_song(
     let match_score = match confidence::assess(query_metadata, candidate_metadata) {
         Some(assessment) => assessment.score,
         None => {
-            // Park the plausible-but-unproven candidates for the "pick one" UI.
             if let Some(title_score) = score_candidate(query_metadata, candidate_metadata) {
                 review::park(
                     &review::query_key(target_title, target_artist, target_duration_ms),
@@ -1500,7 +1495,6 @@ mod netease_tests {
 
     #[test]
     fn radio_love_song_english_lookalike_is_rejected_for_netease() {
-        // Same reported failure as the LRCLIB case: a similar English title must not be shown.
         let candidate = song(
             78,
             "Radio Love Songs",
@@ -1524,7 +1518,6 @@ mod netease_tests {
 
     #[test]
     fn radio_love_song_alias_candidate_is_accepted_for_netease() {
-        // 莫文蔚《电台情歌》is reachable through the confirmed alias, not through the English title.
         let candidate = song(77, "电台情歌", "莫文蔚", "", 241_000);
 
         let mapped = map_song(
@@ -1729,7 +1722,6 @@ mod netease_tests {
 #[cfg(test)]
 mod test_http;
 
-/// Offline Apple audit entry point: native protocol payload and per-line parser trace.
 pub fn audit_apple_ttml(ttml: &str) -> (serde_json::Value, serde_json::Value) {
     apple::parse_native(ttml)
 }

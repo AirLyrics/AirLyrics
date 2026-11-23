@@ -8,7 +8,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.bindAppearance
 
-/** Keeps selection semantics current while the mounted button interpolates its appearance. */
 internal class TonalSelectionMotion(
     private val host: MainUiHost,
     private val view: View,

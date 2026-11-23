@@ -41,7 +41,6 @@ import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
 
-/** Owns app discovery and selection for the optional display-scope allowlist. */
 internal class MainDisplayScopeWorkflow(
     private val graph: MainGraph
 ) {

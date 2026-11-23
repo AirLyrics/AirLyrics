@@ -2,9 +2,6 @@ package com.andsi.airlyrics.media.model
 
 import java.util.concurrent.atomic.AtomicLong
 
-/**
- * Current media state accepted by the app for lyrics operations.
- */
 data class CurrentMediaInfo(
     val sourcePackage: String,
     val title: String,

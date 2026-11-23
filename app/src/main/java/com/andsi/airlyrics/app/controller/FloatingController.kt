@@ -16,7 +16,6 @@ internal enum class FloatingVisibilityOutcome {
     COMMAND_FAILED
 }
 
-/** Applies floating-window commands and persisted settings without owning screen presentation. */
 internal class FloatingController(
     context: Context,
     private val state: MainFloatingState,

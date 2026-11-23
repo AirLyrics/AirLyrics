@@ -2,7 +2,6 @@
 
 package com.andsi.airlyrics.design.tokens
 
-/** Shared UI constants for the classic View-based screens and floating surface. */
 object AirUiTokens {
     object Space {
         const val Xxs = 2
@@ -76,7 +75,6 @@ object AirUiTokens {
         const val InputDialogExitMs = 200L
         const val InputDialogClosedScale = 0.94f
         const val InputDialogTravelDp = 12
-        // AndroidX SpringForce: medium stiffness and a lightly bouncy entry.
         const val InputDialogStiffness = 1500f
         const val InputDialogOpenDamping = 0.5f
         const val TextScrollDelayMs = 700L

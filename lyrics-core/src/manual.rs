@@ -1,4 +1,3 @@
-//! Explicit candidate search. No automatic-match fallback and no durable writes.
 use crate::{
     matching::{score_metadata_alias, MatchMetadata},
     *,

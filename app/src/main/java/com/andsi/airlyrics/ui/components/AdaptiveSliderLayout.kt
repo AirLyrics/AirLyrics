@@ -7,7 +7,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
 import kotlin.math.max
 
-/** Keeps the full drag target; long labels move the track below the name and value. */
 @SuppressLint("ViewConstructor")
 internal class AdaptiveSliderLayout(
     host: MainUiHost,

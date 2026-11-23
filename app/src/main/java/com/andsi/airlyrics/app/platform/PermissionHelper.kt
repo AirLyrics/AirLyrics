@@ -19,7 +19,6 @@ internal object PermissionHelper {
         activity.startActivity(intent)
     }
 
-    /** Whether this app can currently display notifications, across Android versions. */
     fun hasPostNotificationsPermission(context: Context): Boolean {
         return !needsPostNotificationsPermission(context) &&
             NotificationManagerCompat.from(context).areNotificationsEnabled()

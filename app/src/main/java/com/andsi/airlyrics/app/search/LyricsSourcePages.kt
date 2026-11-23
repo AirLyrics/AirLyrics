@@ -33,7 +33,6 @@ import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.tabs.TabLayout
 import java.util.Locale
 
-/** Source keys own pages; positions are never used as request identities. */
 @SuppressLint("ViewConstructor") // Created with session dependencies, never inflated from XML.
 internal class LyricsSourcePages(
     context: Context,
@@ -45,7 +44,6 @@ internal class LyricsSourcePages(
 ) : LinearLayout(context) {
     private val tabs = object : TabLayout(context) {
         override fun selectTab(tab: Tab?, updateIndicator: Boolean) {
-            // Clicks update the destination; the pager owns movement and visual selection.
             super.selectTab(tab, false)
         }
     }
@@ -65,7 +63,6 @@ internal class LyricsSourcePages(
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean =
         blocksInteraction || super.onInterceptTouchEvent(event)
 
-    // This pane only absorbs input while another pane is taking over; it has no click action.
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean =
         blocksInteraction || super.onTouchEvent(event)
@@ -83,7 +80,6 @@ internal class LyricsSourcePages(
         })
         tabs.isTabIndicatorFullWidth = false
         tabs.tabIndicatorAnimationMode = TabLayout.INDICATOR_ANIMATION_MODE_ELASTIC
-        // A pressed ripple would highlight the destination before the indicator arrives.
         tabs.tabRippleColor = null
         tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
@@ -150,7 +146,6 @@ internal class LyricsSourcePages(
                         tab.contentDescription = tabDescription(source)
                         tab.view.isSelected = wasSelected
                     }
-                    // A payload keeps the existing page and its scroll snapshot during loading updates.
                     pages.notifyItemChanged(index, source)
                 }
             }
@@ -469,7 +464,6 @@ internal class LyricsSourcePages(
 
             val preparing=result.loading || (result.candidates.isNotEmpty() && !rows.isCurrentList(key,result.candidates))
             if(keepCatalogue) {
-                // Keep the mounted songs visible while the footer covers fetching, sorting, and diffing.
                 if(preparing && !appendLoading) {
                     appendLoading=true
                     footer.show(true)
@@ -630,7 +624,6 @@ internal class LyricsSourcePages(
             loading.translationY = 0f
             message.alpha = 1f
             message.translationY = 0f
-            // The preview owns the loading indicator during the handoff.
             status.visibility = if (visual == SourceVisual.RESULTS || visual == SourceVisual.IDLE ||
                 (blocksInteraction && visual == SourceVisual.LOADING)) GONE else VISIBLE
             loading.visibility = if (visual == SourceVisual.LOADING) VISIBLE else GONE
@@ -743,7 +736,6 @@ internal class LyricsSourcePages(
             committedSource==key && committedList===next
 
         fun submit(key:PlainLyricsSearchSource,next:List<LyricsCandidate>,onCommitted:()->Unit) {
-            // Null keeps an empty adapter cheap and invalidates any obsolete in-flight diff.
             differ.submitList(next.takeIf { it.isNotEmpty() }) {
                 committedSource=key
                 committedList=next

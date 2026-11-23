@@ -11,7 +11,6 @@ import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.*
 
-/** A reusable song card. Click callbacks always read the currently bound item. */
 @SuppressLint("ViewConstructor")
 internal class LocalLyricsRowView(
     private val host: MainUiHost,

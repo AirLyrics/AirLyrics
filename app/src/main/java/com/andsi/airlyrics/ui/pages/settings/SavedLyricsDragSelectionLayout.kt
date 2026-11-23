@@ -17,7 +17,6 @@ import kotlin.math.min
 
 internal data class SavedLyricsDragItem(val key: String, val view: View)
 
-/** Claims a row's long press to start or extend multi-selection. */
 @SuppressLint("ViewConstructor")
 internal class SavedLyricsDragSelectionLayout(
     context: Context,
@@ -62,7 +61,6 @@ internal class SavedLyricsDragSelectionLayout(
         awaitingDrag = !isSelecting()
         dragging = true
         claimed = true
-        // Cancel the row or checkbox press before changing the selection.
         val cancel = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), MotionEvent.ACTION_CANCEL, downX, downY, 0)
         super.dispatchTouchEvent(cancel)
         cancel.recycle()
@@ -145,7 +143,6 @@ internal class SavedLyricsDragSelectionLayout(
         return if (claimed) true else super.dispatchTouchEvent(event)
     }
 
-    /** Called when filtering, reloading, leaving selection mode, or detaching the page. */
     fun cancelSelectionGesture() {
         removeCallbacks(activate)
         removeCallbacks(scrollFrame)

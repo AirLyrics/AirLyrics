@@ -3,7 +3,6 @@ package com.andsi.airlyrics.settings.store
 import android.content.Context
 import com.andsi.airlyrics.core.prefs.prefs
 
-/** Persists the optional app allowlist used to limit where floating lyrics appear. */
 internal object DisplayScopeStore {
     private const val PREFS_NAME = "display_scope"
     private const val KEY_ENABLED = "enabled"

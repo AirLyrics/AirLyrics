@@ -5,12 +5,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 
-/**
- * Owns the app-local broadcast protocol for media snapshots.
- *
- * Keep media payload field names here so the notification listener, floating service,
- * and main screen cannot drift when CurrentMediaInfo changes.
- */
 object CurrentMediaBroadcast {
     private const val ACTION_MEDIA_UPDATE = "com.andsi.airlyrics.MEDIA_UPDATE"
     private const val ACTION_MEDIA_SOURCE_LOST = "com.andsi.airlyrics.MEDIA_SOURCE_LOST"

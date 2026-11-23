@@ -16,12 +16,6 @@ import com.andsi.airlyrics.lyrics.parser.LrcParser
 import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
-/**
- * Apple Music lyrics: line-level LRC plus Apple's own word timings and subtitle translations.
- *
- * Requires the account tokens captured on the Apple Music account page. The catalogue lookup runs
- * in the Rust core so it shares the same matching policy as the other sources.
- */
 object ApplePlainLyricsProvider : LyricsProvider {
     override val id = "apple"
     override val name = "Apple Music"
@@ -246,7 +240,6 @@ object ApplePlainLyricsProvider : LyricsProvider {
         return conversionSegments(translatedText, segments).orEmpty()
     }
 
-    /** Reuses the original token times when the translation is a pure script conversion. */
     internal fun conversionSegments(
         translatedText: String,
         segments: List<WordByWordSegment>
@@ -272,8 +265,6 @@ object ApplePlainLyricsProvider : LyricsProvider {
             else -> prefixSegments(segments, spoken.length)
         }
         if (timed.isEmpty()) return null
-        // Consume against whatever the display text is: the full translation when the tokens also
-        // carry the echo, otherwise only its spoken part.
         val targetText = if (tokensCarryEcho) translatedText else spokenTranslation
         // Convert the whole line once and slice by boundaries: a phrase such as 甦醒 or 瞭解 can
         // be split across tokens, and converting each token alone would leave it untranslated.
@@ -350,7 +341,6 @@ object ApplePlainLyricsProvider : LyricsProvider {
         character.isWhitespace() ||
         character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014\uFF08\uFF09()\u3010\u3011[]"
 
-    /** The leading segments whose text covers [limit] UTF-16 units; the last one is truncated. */
     private fun prefixSegments(
         segments: List<WordByWordSegment>,
         limit: Int

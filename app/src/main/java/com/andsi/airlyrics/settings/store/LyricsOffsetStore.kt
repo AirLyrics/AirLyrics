@@ -5,10 +5,6 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.core.prefs.prefs
 import java.util.Locale
 
-/**
- * Per-song lyric timing offset. The raw lyric files stay untouched; this store only
- * remembers how much the playback position should be shifted when rendering lyrics.
- */
 object LyricsOffsetStore {
     private const val PREFS_NAME = "lyrics_offset_store"
     private const val KEY_PREFIX = "song_offset_ms_"

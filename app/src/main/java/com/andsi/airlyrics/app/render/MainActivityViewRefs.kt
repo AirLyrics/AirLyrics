@@ -9,7 +9,6 @@ import com.andsi.airlyrics.ui.refs.FloatingPageRefs
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.widgets.WaterTabHighlightView
 
-/** View references owned by [MainGraph] for the handwritten main UI. */
 internal class MainActivityViewRefs {
     var contentContainer: FrameLayout? = null
     var feedbackAnchor: View? = null

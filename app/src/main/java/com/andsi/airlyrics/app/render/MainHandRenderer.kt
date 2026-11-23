@@ -27,7 +27,6 @@ import com.andsi.airlyrics.ui.refresh.PageRebuildReason
 import com.andsi.airlyrics.ui.theme.colorBackground
 import com.andsi.airlyrics.ui.theme.bindAppearance
 
-/** Renderer for the existing handwritten main UI. */
 internal class MainHandRenderer(
     private val graph: MainGraph
 ) : UiInvalidator {

@@ -4,7 +4,6 @@ import android.content.Context
 import java.io.File
 import java.nio.ByteBuffer
 
-/** Creates a TTC from existing test fonts, sharing tables when a resource is used twice. */
 internal fun fontCollectionFixture(
     context: Context,
     file: File,
@@ -18,7 +17,7 @@ internal fun fontCollectionFixture(
     val collection = ByteBuffer.allocate(headerSize + fontResources.sumOf { id ->
         alignToFour(fonts.getValue(id).size)
     })
-    collection.putInt(0x74746366) // ttcf
+    collection.putInt(0x74746366)
     collection.putInt(version shl 16)
     collection.putInt(fontResources.size)
     collection.position(headerSize)

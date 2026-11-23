@@ -527,7 +527,6 @@ class LyricsSearchInstrumentedTest {
                 assertTrue(session(activity).resultsScroll>0)
                 activity.onBackPressedDispatcher.onBackPressed()
                 assertFalse(activity.isFinishing)
-                // A repeated back during expansion must not accidentally close the window.
                 activity.onBackPressedDispatcher.onBackPressed()
                 assertFalse(activity.isFinishing)
             }
@@ -613,7 +612,6 @@ class LyricsSearchInstrumentedTest {
                     assertEquals(initial+added,session(activity).state.value.sources)
                 }
             }
-            // A new search window follows automatic source settings, not the last manual choice.
             ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
                 scenario.onActivity { activity -> assertEquals(initial,session(activity).state.value.sources) }
             }
@@ -755,7 +753,6 @@ class LyricsSearchInstrumentedTest {
         } finally { LyricsSettingsStore.setPlainLyricsSearchSources(context,original) }
     }
 
-    // Seed deterministic network states without introducing production test hooks.
     private fun session(activity:LyricsSearchActivity):LyricsSearchSession =
         LyricsSearchActivity::class.java.getDeclaredField("session").apply { isAccessible=true }
             .get(activity) as LyricsSearchSession

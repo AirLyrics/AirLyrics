@@ -50,7 +50,7 @@ private const val MENU_EXIT_MS = 135L
 // Easing from the sliding layers and character motion on https://yui540.com/.
 internal val aboutVersionMotionEase = PathInterpolator(0f, 0.15f, 0.25f, 0.99f)
 
-@SuppressLint("ViewConstructor") // This picker is created in the dialog with its release list.
+@SuppressLint("ViewConstructor")
 internal class AboutVersionPicker(
     private val host: MainUiHost,
     private var releases: List<AppReleaseNotes>

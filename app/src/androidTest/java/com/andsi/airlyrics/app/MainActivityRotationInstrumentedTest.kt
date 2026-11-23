@@ -171,7 +171,6 @@ class MainActivityRotationInstrumentedTest {
                         now - stableSince >= 300
                 }) {}
                 awaitActivity(scenario, taskId) {
-                    // Very short windows scroll the whole form, including its actions.
                     descendants(editorDialog.window!!.decorView).filterIsInstance<androidx.core.widget.NestedScrollView>()
                         .single().apply {
                             isSmoothScrollingEnabled = false

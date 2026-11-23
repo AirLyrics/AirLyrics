@@ -267,7 +267,7 @@ class MainActivityMediaPageTest {
 
             shadowOf(controller).setMetadata(metadata("Second song", "Second artist", null, null))
             host.refreshMediaContent()
-            host.refreshMediaContent() // The same MediaSession data must not replace the view again.
+            host.refreshMediaContent()
             measurePage(page)
             val playerSong = descendants(card).filterIsInstance<MediaRollingTextSlot>().single()
             assertEquals("Player song roll was cancelled by layout", 0f, playerSong.textView.alpha)

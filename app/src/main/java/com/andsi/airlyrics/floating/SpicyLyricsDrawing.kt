@@ -15,13 +15,11 @@ import androidx.core.graphics.withSave
 import kotlin.math.abs
 import kotlin.math.min
 
-/** Hides only the timed ink from TextView; layout, selection and accessibility remain native. */
 internal class SpicyLyricsSpan(val timing: SpicyTiming, val highlight: Int, val haloOnly: Boolean = false) : CharacterStyle(), UpdateAppearance {
     var hidden = false
     override fun updateDrawState(tp: TextPaint) { if (hidden) { tp.alpha = 0; tp.clearShadowLayer() } }
 }
 
-/** Cached geometry and shaped drawing runs. Nothing here measures or replaces text per frame. */
 internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
     private data class RunKey(val timing: SpicyTiming, val start: Int, val end: Int, val haloOnly: Boolean)
 
@@ -45,7 +43,6 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
             private set
         fun configureWidth(width: Float) {
             totalWidth = width
-            // Normal-mode CSS uses a fade spanning 20% of the word/letter width.
             edge = (width * .2f).coerceAtLeast(.5f)
             gradient = LinearGradient(0f, 0f, edge, 0f, bright, dim, Shader.TileMode.CLAMP)
         }
@@ -165,7 +162,6 @@ internal class SpicyLyricsDrawing(private val view: FloatingLyricsTextView) {
                 !timing.emphasized && p >= .6f -> min(springGlow, target.glow)
                 else -> springGlow
             }
-            // The front travels over visual width, including across wrapped pieces of a word.
             val front = SpicyLyricsCurves.fillProgress(timing, position) * (run.totalWidth + run.edge) - run.edge - run.offset
             if (run.rtl) {
                 run.matrix.setScale(-1f, 1f)

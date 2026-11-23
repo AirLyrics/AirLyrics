@@ -15,7 +15,6 @@ import org.robolectric.RobolectricTestRunner
 import java.io.File
 import java.util.zip.ZipInputStream
 
-/** Synthetic response in the upstream Static.Lines[].Text schema. */
 internal fun staticSpicyFixture(id: String = "123", text: String = "First line\n\n第二段"): String =
     JSONObject(spicyFixture()).apply {
         getJSONObject("track").put("id", id)

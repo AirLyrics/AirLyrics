@@ -7,7 +7,6 @@ import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 
-/** Blocking lyrics operations consumed by the main-screen state owner. */
 internal interface LyricsOperations {
     fun validatePickedDocument(uri: Uri): LyricsDocumentValidation
 

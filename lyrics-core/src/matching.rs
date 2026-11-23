@@ -1,5 +1,3 @@
-//! Shared query planning and candidate policy for every online lyrics provider.
-//! Providers translate queries/results to their APIs; matching rules belong here.
 use crate::lrc;
 use std::collections::{HashMap, HashSet};
 use unicode_normalization::UnicodeNormalization;
@@ -217,7 +215,6 @@ pub(crate) struct SearchQuery {
     pub(crate) artist: Option<String>,
 }
 
-/// Original spelling comes first; annotations and script variants are fallbacks only.
 fn title_variants(title: &str) -> Vec<String> {
     let original = clean_query_part(title);
     let mut variants = vec![original.clone(), simplify_title(&original)];
@@ -252,8 +249,6 @@ fn title_variants(title: &str) -> Vec<String> {
 pub(crate) fn build_search_queries(title: &str, artist: &str) -> Vec<SearchQuery> {
     let mut queries = Vec::new();
     let mut seen = HashSet::new();
-    // A confirmed cross-language alias is the only way a romanized title can reach its
-    // localized catalogue entry, so alias lookup terms come before every relaxed variant.
     for (alias_title, alias_artist) in crate::aliases::search_queries(title, artist) {
         push_unique_query(
             &mut queries,
@@ -264,8 +259,6 @@ pub(crate) fn build_search_queries(title: &str, artist: &str) -> Vec<SearchQuery
     }
     let titles = title_variants(title);
     let artist = non_empty(clean_query_part(artist));
-    // A romanized performer name reaches covers first; its localized spelling reaches the
-    // original, so those variants are searched before the romanized ones.
     if let Some(localized) = artist.as_deref().and_then(crate::aliases::localized_artist) {
         for title in &titles {
             push_unique_query(&mut queries, &mut seen, title, Some(&localized));
@@ -289,8 +282,6 @@ pub(crate) fn build_search_keywords(title: &str, artist: &str, album: &str) -> V
     let title = clean_query_part(title);
     let artist = clean_query_part(artist);
     let album = clean_query_part(album);
-    // A confirmed cross-language alias is the only way a romanized query can reach a localized
-    // catalogue entry, so its keywords are searched before any relaxed variant.
     let mut keywords = crate::aliases::search_keywords(&title, &artist);
     if !title.is_empty() && !artist.is_empty() && !album.is_empty() {
         keywords.push(format!("{title} {album} {artist}"));
@@ -318,7 +309,6 @@ pub(crate) fn score_candidate(
     score_candidate_with_policy(query, candidate, false)
 }
 
-/// Experimental metadata aliases: rank every song, without a title acceptance gate.
 pub(crate) fn score_metadata_alias(
     query: MatchMetadata<'_>,
     candidate: MatchMetadata<'_>,
@@ -403,7 +393,6 @@ pub(crate) fn is_confident_early_match(score: &MatchScore) -> bool {
             .is_some_and(|value| value < EARLY_ACCEPT_MIN_ARTIST_SIMILARITY)
 }
 
-/// Keeps only LRC with at least one parseable timestamp carrying non-empty lyric text.
 pub(crate) fn normalize_usable_lrc(value: String) -> Option<String> {
     let value = value.replace("\r\n", "\n").replace('\r', "\n");
     let has_timed_lyric_body = lrc::parse_lrc_entries(&value)
@@ -963,10 +952,8 @@ mod artist_alias_tests {
 
         crate::aliases::register_artist_alias("Jay Chou", "周杰倫");
         assert_eq!(compare_artists("Jay Chou", "周杰倫"), Some(1.0));
-        // The lyrics source may spell it in simplified characters.
         assert_eq!(compare_artists("Jay Chou", "周杰伦"), Some(1.0));
 
-        // An unrelated cover act still scores zero.
         assert_eq!(compare_artists("Jay Chou", "李鑫ya"), Some(0.0));
         crate::aliases::clear_artist_aliases();
     }

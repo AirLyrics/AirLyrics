@@ -11,7 +11,6 @@ import org.json.JSONObject
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 
-/** Opt-in offline audit of the production parser and display policy. */
 class AppleLyricsAuditTest {
 
     @Test
@@ -27,7 +26,6 @@ class AppleLyricsAuditTest {
         }
     }
 
-    /** Audits every subdirectory that holds a native.json, plus summary.md. */
     @Test
     fun auditDirectory() {
         val directory = System.getenv("AIRLYRICS_AUDIT_DIR")

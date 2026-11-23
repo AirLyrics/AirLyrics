@@ -1,9 +1,5 @@
 package com.andsi.airlyrics.ui.pages.floating
 
-/**
- * Layout and motion constants for the floating lyrics settings page.
- * Keeping these values in one place makes small UI tuning less fragile.
- */
 internal object FloatingPageTokens {
     const val PAGE_PADDING_HORIZONTAL_DP = 20
     const val PAGE_PADDING_TOP_DP = 6

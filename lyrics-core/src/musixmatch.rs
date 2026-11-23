@@ -260,7 +260,6 @@ struct CandidateBatchStats {
     returned: usize,
     accepted: usize,
     duplicates: usize,
-    /// Candidates the confidence policy refused (title-only or version-conflicting matches).
     rejected_evidence: usize,
 }
 
@@ -1836,7 +1835,6 @@ mod tests {
         assert_eq!(pool.tracks.len(), 1);
         assert!(pool.best().expect("candidate").track.has_subtitles);
 
-        // A "(Live)" entry is a different recording: it must not be merged with the studio one.
         let mut flagged_pool = CandidatePool::default();
         flagged_pool.add(
             test_track(8, "Song (Live)", "Artist", "", 180, true, 80),
@@ -2026,7 +2024,6 @@ mod tests {
 
     #[test]
     fn missing_artist_and_version_differences_lower_certainty() {
-        // No artist to corroborate the title: nothing to show automatically.
         let mut no_artist_pool = CandidatePool::default();
         no_artist_pool.add(
             test_track(4, "Song", "Known Artist", "", 180, true, 70),
@@ -2034,7 +2031,6 @@ mod tests {
         );
         assert!(no_artist_pool.tracks.is_empty());
 
-        // A large duration difference alone does not reject when the performer matches.
         let mut duration_pool = CandidatePool::default();
         duration_pool.add(
             test_track(5, "Song", "Artist", "", 300, true, 70),
@@ -2122,7 +2118,6 @@ mod tests {
         );
 
         let ranked = pool.ranked();
-        // The artist-mismatched entry carries no corroborating evidence and never reaches ranking.
         assert_eq!(ranked.len(), 2);
         assert_eq!(ranked[0].track.track_id, 21);
         assert_eq!(ranked[1].track.track_id, 20);
@@ -2317,7 +2312,6 @@ pub(crate) async fn manual(
         Ok(serde_json::json!({"ok":true,"candidates":ranked(tracks,t)}))
     } else {
         let id = t.id.parse::<u64>().map_err(|_| "ParseError")?;
-        // Exact ID only: neither commontrack nor matcher may substitute another recording.
         let subtitle = match await_api(
             client.track_subtitle(TrackId::TrackId(id), SubtitleFormat::Lrc, None, None),
             lookup,

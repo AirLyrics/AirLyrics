@@ -9,9 +9,7 @@ import com.andsi.airlyrics.lyrics.parser.LrcParser
 import java.io.File
 import org.json.JSONObject
 
-/** A durable reference to the last successful manual choice, never a second copy of lyrics. */
 internal object ManualLyricsSelectionStore {
-    // Fault injection is confined to this commit path; rollback always uses real IO.
     internal var beforeCommitStep: ((String) -> Unit)? = null
 
     private fun digest(text: String): String = java.security.MessageDigest.getInstance("SHA-256")
@@ -98,7 +96,6 @@ internal object ManualLyricsSelectionStore {
     fun commit(context: Context, song: SongIdentity, mode: LyricsSearchMode,
         result: LyricsProviderResult, manual: Boolean, savePlain: Boolean): LyricsProviderResult = LyricsStorage.withStorageLock {
         if (result.access == null && !savePlain && !manual) return@withStorageLock result
-        // Imported word tracks keep the existing automatic-search protection.
         if (!manual && result.access == null && LyricsStorage.hasWordByWordLyrics(context, song.title, song.artist, song.durationMs)) return@withStorageLock result
         val selectionFile = file(context, song)
         val previousSelection = if (manual) snapshot(selectionFile) else null
