@@ -20,6 +20,7 @@ import android.widget.TextView
 import androidx.annotation.StringRes
 import androidx.core.animation.doOnEnd
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withClip
 import androidx.core.view.ViewCompat
 import androidx.core.view.doOnLayout
 import androidx.lifecycle.Lifecycle
@@ -583,16 +584,15 @@ private class FloatingColorSample(host: MainUiHost) : View(host) {
         paint.color = outgoingColor ?: return
         val cx = width / 2f + width * offsetFraction
         val cy = height / 2f
-        val save = canvas.save()
-        canvas.clipPath(clip)
-        canvas.drawCircle(cx, cy, radius, paint)
-        val edge = edgeColor
-        if (edge != null && offsetFraction != 0f) {
-            edgePaint.color = edge
-            val startAngle = if (offsetFraction > 0f) 90f else -90f
-            canvas.drawArc(cx - radius, cy - radius, cx + radius, cy + radius, startAngle, 180f, false, edgePaint)
+        canvas.withClip(clip) {
+            drawCircle(cx, cy, radius, paint)
+            val edge = edgeColor
+            if (edge != null && offsetFraction != 0f) {
+                edgePaint.color = edge
+                val startAngle = if (offsetFraction > 0f) 90f else -90f
+                drawArc(cx - radius, cy - radius, cx + radius, cy + radius, startAngle, 180f, false, edgePaint)
+            }
         }
-        canvas.restoreToCount(save)
     }
 
     private companion object {

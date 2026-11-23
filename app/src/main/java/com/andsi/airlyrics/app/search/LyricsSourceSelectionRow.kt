@@ -21,6 +21,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withClip
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
@@ -36,10 +37,9 @@ internal class LyricsSourceSelectionRow(
     context: Context,
     private val palette: AirLyricsPalette,
     title: String,
-    checked: Boolean,
+    private var checked: Boolean,
     private val onToggle: () -> Unit
 ) : LinearLayout(context) {
-    private var checked = checked
     private val wash = SelectionWash()
     private var fill = if (checked) 1f else 0f
     private var animator: ValueAnimator? = null
@@ -154,12 +154,11 @@ internal class LyricsSourceSelectionRow(
             canvas.drawRoundRect(rect, radius, radius, paint)
             clip.rewind()
             clip.addRoundRect(rect, radius, radius, Path.Direction.CW)
-            val save = canvas.save()
-            canvas.clipPath(clip)
-            paint.color = ColorUtils.blendARGB(palette.surface, palette.accent, 0.14f)
-            paint.alpha = (255 * fill).toInt()
-            canvas.drawRect(rect.right - rect.width() * fill, rect.top, rect.right, rect.bottom, paint)
-            canvas.restoreToCount(save)
+            canvas.withClip(clip) {
+                paint.color = ColorUtils.blendARGB(palette.surface, palette.accent, 0.14f)
+                paint.alpha = (255 * fill).toInt()
+                drawRect(rect.right - rect.width() * fill, rect.top, rect.right, rect.bottom, paint)
+            }
             paint.alpha = 255
         }
         override fun setAlpha(alpha: Int) = Unit

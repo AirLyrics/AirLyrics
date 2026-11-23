@@ -48,10 +48,10 @@ internal class FloatingFontDownloader(
         val pendingConnection = AtomicReference<Closeable?>()
         continuation.invokeOnCancellation {
             // Closing a network stream may block; cancellation itself must not block the UI.
-            Dispatchers.IO.dispatch(continuation.context, Runnable {
+            Dispatchers.IO.dispatch(continuation.context) {
                 runCatching { pendingConnection.getAndSet(null)?.close() }
                 runCatching { response.getAndSet(null)?.close() }
-            })
+            }
         }
         Dispatchers.IO.dispatch(continuation.context, Runnable {
             try {

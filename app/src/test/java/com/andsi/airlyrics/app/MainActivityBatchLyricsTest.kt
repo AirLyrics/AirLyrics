@@ -138,7 +138,6 @@ class MainActivityBatchLyricsTest {
         assertEquals(2, checkboxes(activity).size)
         controller!!.recreate()
         val recreated = controller!!.get()
-        // The recycled list should restore its visible rows beneath the floating toolbar.
         awaitUiCondition { checkboxes(recreated).isNotEmpty() }
         assertEquals(1, recreated.graph.uiHost.interactions.read("savedLyricsSelection")
             ?.getStringArrayList("keys")?.size)

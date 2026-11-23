@@ -51,10 +51,10 @@ class LyricsSearchSessionTest {
             downloads++
             return download(option,token)
         }
-        override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken):com.andsi.airlyrics.lyrics.search.SpotifyIdLyricsResult? {
+        override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken):SpotifyIdLyricsResult? {
             idQueries += id
             if (idResultMissing) return null
-            return com.andsi.airlyrics.lyrics.search.SpotifyIdLyricsResult(
+            return SpotifyIdLyricsResult(
                 LyricsCandidate(PlainLyricsSearchSource.SPICY,id,mediaSong ?: SongIdentity("","","",0),0.0,spotifyIdMatch=true),
                 LyricsProviderResult("spicy","Spicy","[00:01.00]Exact ID lyrics"),
             )
@@ -369,7 +369,7 @@ class LyricsSearchSessionTest {
                 old=token;session.switchTarget(song.copy(title="Next"));ManualWordDetails()
             }
             session.preview(session.state.value.results.getValue(source).candidates.first());runCurrent()
-            assertTrue(old!!.isCancellationRequested)
+            assertTrue(old.isCancellationRequested)
             assertTrue(session.state.value.results.isEmpty())
         }
     }

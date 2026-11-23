@@ -2,10 +2,6 @@
     <string name="ui_expand_text">展开文本</string>
     <string name="ui_collapse_text">收起文本</string>
     <string name="app_name">AirLyrics</string>
-    <string name="field_value">%1$s：%2$d</string>
-    <string name="field_value_with_suffix">%1$s：%2$d%3$s</string>
-    <string name="floating_color_summary">%1$s：%2$s</string>
-    <string name="floating_slider_value">%1$s：%2$d</string>
     <string name="local_source_cache_provider">本地缓存 · %1$s</string>
     <string name="lyrics_word_by_word_format_invalid_lines">格式错误：第 %1$s%2$s 行\n\n行时间 [00:12.34] · 字词时间 &lt;00:12.34&gt;；翻译行只需行时间</string>
     <string name="lyrics_lookup_failed">%1$s 搜索失败</string>
@@ -61,8 +57,6 @@
     <string name="ui_background">背景</string>
     <string name="ui_blur_amount">模糊程度</string>
     <string name="ui_background_bubble">背景气泡</string>
-    <string name="ui_background_off">背景：关闭</string>
-    <string name="ui_background_on">背景：开启</string>
     <string name="ui_behavior">行为设置</string>
     <string name="ui_blue">蓝</string>
     <string name="ui_buffering">缓冲中</string>
@@ -71,7 +65,6 @@
     <string name="ui_cannot_read_word_by_word_lyrics_file">无法读取逐字歌词文件</string>
     <string name="ui_cannot_read_this_lyric_file">无法读取歌词文件</string>
     <string name="ui_center">居中</string>
-    <string name="ui_check_format">检查格式</string>
     <string name="ui_edit_line">编辑</string>
     <string name="ui_add_next_line">新增下一行</string>
     <string name="ui_delete_lyric_line">删除当前歌词行</string>
@@ -132,12 +125,10 @@
     <string name="ui_english">English</string>
     <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">逐字</string>
-    <string name="ui_word_by_word_color">逐字高亮颜色</string>
     <string name="ui_word_by_word_lyrics">逐字歌词</string>
     <string name="ui_word_by_word_lyrics_import_success">逐字歌词已导入</string>
     <string name="ui_word_by_word_lyrics_lrc_file">逐字歌词（.lrc / .ttml）</string>
     <string name="ui_word_by_word_lyrics_local_only">支持导入和部分在线来源</string>
-    <string name="ui_word_by_word_lyrics_format_hint">行时间 [00:12.34] · 字词时间 &lt;00:12.34&gt;</string>
     <string name="ui_word_by_word_blocked_by_plain_lrc">请先移除普通歌词</string>
     <string name="ui_plain_lrc_blocked_by_word_by_word">请先移除逐字歌词</string>
     <string name="ui_word_by_word_lyrics_removed">逐字歌词已移除</string>
@@ -163,7 +154,6 @@
     <string name="ui_font_file_too_large">请选择小于 32 MB 的字体文件</string>
     <string name="ui_font_collection_too_many_faces">请选择最多包含 64 款字体的集合</string>
     <string name="ui_font_format_unsupported">请选择 .ttf、.otf 或 .ttc 文件</string>
-    <string name="ui_font_formats_hint">支持 TTF、OTF、TTC 和可变字体</string>
     <string name="ui_font_import_failed">字体导入失败</string>
     <string name="ui_font_import_success">已导入字体：%1$s</string>
     <string name="ui_font_opacity">字体不透明度</string>
@@ -172,7 +162,6 @@
     <string name="ui_import_font">导入字体</string>
     <string name="ui_importing_font">正在导入字体…</string>
     <string name="ui_invalid_font_file">字体文件无效</string>
-    <string name="ui_reimport_font">重新导入字体</string>
     <string name="ui_system_default_font">系统默认</string>
     <string name="ui_format_looks_good">格式正确</string>
     <string name="ui_give_it_a_star">点个 Star！</string>
@@ -331,7 +320,6 @@
     <string name="ui_radius">半径</string>
     <string name="ui_range">范围</string>
     <string name="ui_read_failed">读取失败</string>
-    <string name="ui_reset">重置</string>
     <string name="ui_reset_to_default">重置为默认值</string>
     <string name="ui_recent_local_lyrics">最近歌词</string>
     <string name="ui_red">红</string>
@@ -375,7 +363,6 @@
     <string name="ui_searching_online_again">正在搜索歌词…</string>
     <string name="ui_settings">设置</string>
     <string name="ui_settings_back_label">设置</string>
-    <string name="ui_shadow">阴影</string>
     <string name="ui_shadow_radius">阴影半径</string>
     <string name="ui_shadow_stroke">阴影描边</string>
     <string name="ui_show">显示</string>
@@ -537,9 +524,10 @@
     <string name="search_word_lyrics">逐字歌词</string>
     <string name="search_translation">翻译</string>
     <string name="search_no_content">暂无可用歌词</string>
-    <string name="search_sources_selected">来源 · %1$s</string>
     <string name="search_sources_count">来源 · %1$d</string>
-    <string name="search_sources_selection_count">已选 %1$d 个</string>
+    <plurals name="search_sources_selection_count">
+        <item quantity="other">已选 %1$d 个</item>
+    </plurals>
     <string name="search_sources_choose_one">请至少选择一个来源</string>
     <string name="search_sources_use">应用</string>
     <string name="search_no_sources_selected">还没有选择歌词源哦</string>
@@ -558,10 +546,6 @@
     <string name="search_spotify_track">Spotify 曲目</string>
     <string name="search_id_match">通过 Spotify ID 获取</string>
     <string name="ui_highlight_effects">高亮效果</string>
-    <string name="ui_enable_glow">开启发光</string>
-    <string name="ui_disable_glow">关闭发光</string>
-    <string name="ui_glow_strength">发光强度</string>
-    <string name="ui_glow_spread">扩散范围</string>
     <string name="ui_glow">发光</string>
     <string name="ui_lyrics_background">背景人声</string>
     <string name="ui_lyrics_line_start">行开始时间</string>
@@ -587,24 +571,15 @@
     <string name="search_version_line">逐行</string>
     <string name="search_version_word">逐字</string>
     <string name="search_version">%1$s · %2$s</string>
-    <string name="search_word_loading">%1$s · 查询中…</string>
-    <string name="search_word_missing">%1$s · 没有逐字歌词</string>
     <string name="search_word_search">搜索逐字歌词</string>
     <string name="search_word_results">版本</string>
     <string name="search_title_required">请输入歌名</string>
-    <string name="search_word_query">逐字 · %1$s</string>
     <string name="search_regular_search">普通搜索</string>
-    <string name="search_word_failure_action">%1$s · 获取歌词失败 · %2$s</string>
     <string name="search_use_current">使用当前歌曲</string>
-    <string name="search_duration_seconds">时长（秒，可选）</string>
     <string name="search_duration_invalid">请填写分:秒，例如 4:02</string>
     <string name="search_lyrics_loading">正在加载歌词…</string>
-    <string name="search_word_error_retry">%1$s · %2$s</string>
     <string name="search_no_lyrics">没有可预览的歌词</string>
-    <string name="search_only_line">仅找到逐行歌词</string>
     <string name="search_only_plain">此版本没有同步歌词</string>
-    <string name="search_no_songs">%1$s · 未找到歌曲</string>
-    <string name="search_more_source">加载更多 · %1$s</string>
     <string name="search_back_recordings">歌曲列表</string>
     <string name="search_lyrics_unchecked">歌词尚未加载</string>
     <string name="search_lyric_rating">评分 %1$s</string>

@@ -16,6 +16,7 @@ import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withClip
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.andsi.airlyrics.ui.components.AirTonalButtonTone
@@ -213,10 +214,9 @@ internal class LyricsSourcesMorphView(
     }
 
     override fun dispatchDraw(canvas: Canvas) {
-        val save = canvas.save()
-        canvas.clipPath(outline)
-        super.dispatchDraw(canvas)
-        canvas.restoreToCount(save)
+        canvas.withClip(outline) {
+            super.dispatchDraw(this)
+        }
     }
 
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean {

@@ -166,8 +166,6 @@ internal class MissingSourcesDialog(
     }
 
     // Motion Prompt #049 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#049
-    // Ported to Android Views: the scrim fades to 0.42 while the card grows from 0.9 to 1
-    // over 320 ms; dismissal reverses the motion over 280 ms. Colors and shape use AirLyrics tokens.
     private fun animateTo(target: Float, durationMs: Long, easing: TimeInterpolator, onEnd: () -> Unit = {}) {
         val previous = motion
         motion = null
@@ -203,7 +201,6 @@ internal class MissingSourcesDialog(
     private fun dp(value: Int) = (value * context.resources.displayMetrics.density).toInt()
 
     // Motion Prompt #049-072 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#049
-    // The UI kit's cubic easing functions are expressed here as Android interpolators.
     private companion object {
         val OPEN_EASE = TimeInterpolator { t ->
             val remaining = 1f - t

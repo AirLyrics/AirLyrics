@@ -1,9 +1,5 @@
 <resources>
     <string name="app_name">AirLyrics</string>
-    <string name="field_value">%1$s: %2$d</string>
-    <string name="field_value_with_suffix">%1$s: %2$d%3$s</string>
-    <string name="floating_color_summary">%1$s: %2$s</string>
-    <string name="floating_slider_value">%1$s: %2$d</string>
     <string name="local_source_cache_provider">Cache · %1$s</string>
     <string name="lyrics_word_by_word_format_invalid_lines">Invalid lines: %1$s%2$s\n\nLine [00:12.34] · word &lt;00:12.34&gt;; translation lines need only [00:12.34]</string>
     <string name="lyrics_lookup_failed">%1$s search failed</string>
@@ -59,8 +55,6 @@
     <string name="ui_background">Background</string>
     <string name="ui_blur_amount">Blur amount</string>
     <string name="ui_background_bubble">Background bubble</string>
-    <string name="ui_background_off">Background: off</string>
-    <string name="ui_background_on">Background: on</string>
     <string name="ui_behavior">Behavior</string>
     <string name="ui_blue">Blue</string>
     <string name="ui_buffering">Buffering</string>
@@ -69,7 +63,6 @@
     <string name="ui_cannot_read_word_by_word_lyrics_file">Cannot read word-by-word lyrics file</string>
     <string name="ui_cannot_read_this_lyric_file">Cannot read lyrics file</string>
     <string name="ui_center">Center</string>
-    <string name="ui_check_format">Check format</string>
     <string name="ui_edit_line">Edit</string>
     <string name="ui_add_next_line">Add next line</string>
     <string name="ui_delete_lyric_line">Delete lyric line</string>
@@ -132,12 +125,10 @@
     <string name="ui_english">English</string>
     <string name="ui_spanish">Español</string>
     <string name="ui_word_by_word">Word</string>
-    <string name="ui_word_by_word_color">Word color</string>
     <string name="ui_word_by_word_lyrics">Word-by-word lyrics</string>
     <string name="ui_word_by_word_lyrics_import_success">Word-by-word lyrics imported</string>
     <string name="ui_word_by_word_lyrics_lrc_file">Word-by-word lyrics (.lrc / .ttml)</string>
     <string name="ui_word_by_word_lyrics_local_only">Available from imports and supported online sources</string>
-    <string name="ui_word_by_word_lyrics_format_hint">Line time [00:12.34] · word time &lt;00:12.34&gt;</string>
     <string name="ui_word_by_word_blocked_by_plain_lrc">Remove plain lyrics first</string>
     <string name="ui_plain_lrc_blocked_by_word_by_word">Remove word-by-word lyrics first</string>
     <string name="ui_word_by_word_lyrics_removed">Word-by-word lyrics removed for this song</string>
@@ -159,11 +150,11 @@
     <string name="ui_delete_font_collection">Delete font collection</string>
     <string name="ui_confirm_delete_font_collection">Confirm deletion of all fonts in this collection</string>
     <string name="ui_font_preview_language">Preview language</string>
+    <string name="ui_font_preview_sample" translatable="false">Aa</string>
     <string name="ui_custom_font">Custom font</string>
     <string name="ui_font_file_too_large">Choose a font under 32 MB</string>
     <string name="ui_font_collection_too_many_faces">Choose a collection with up to 64 fonts</string>
     <string name="ui_font_format_unsupported">Choose a .ttf, .otf, or .ttc file</string>
-    <string name="ui_font_formats_hint">TTF, OTF, TTC, and variable fonts supported</string>
     <string name="ui_font_import_failed">Couldn’t import this font</string>
     <string name="ui_font_import_success">Font imported: %1$s</string>
     <string name="ui_font_opacity">Font opacity</string>
@@ -172,7 +163,6 @@
     <string name="ui_import_font">Import font</string>
     <string name="ui_importing_font">Importing font…</string>
     <string name="ui_invalid_font_file">Invalid font file</string>
-    <string name="ui_reimport_font">Reimport font</string>
     <string name="ui_system_default_font">System default</string>
     <string name="ui_format_looks_good">Format looks good</string>
     <string name="ui_give_it_a_star">Give it a star!</string>
@@ -331,7 +321,6 @@ Word-timed TTML:
     <string name="ui_radius">Radius</string>
     <string name="ui_range">Range</string>
     <string name="ui_read_failed">Read failed</string>
-    <string name="ui_reset">Reset</string>
     <string name="ui_reset_to_default">Reset to default</string>
     <string name="ui_recent_local_lyrics">Recent local lyrics</string>
     <string name="ui_red">Red</string>
@@ -376,7 +365,6 @@ Word-timed TTML:
     <string name="ui_searching_online_again">Searching for lyrics…</string>
     <string name="ui_settings">Settings</string>
     <string name="ui_settings_back_label">Settings</string>
-    <string name="ui_shadow">Shadow</string>
     <string name="ui_shadow_radius">Shadow radius</string>
     <string name="ui_shadow_stroke">Shadow stroke</string>
     <string name="ui_show">Show</string>
@@ -542,9 +530,11 @@ Word-timed TTML:
     <string name="search_word_lyrics">Word-synced lyrics</string>
     <string name="search_translation">Translation</string>
     <string name="search_no_content">No usable lyrics</string>
-    <string name="search_sources_selected">Sources · %1$s</string>
     <string name="search_sources_count">Sources · %1$d</string>
-    <string name="search_sources_selection_count">%1$d selected</string>
+    <plurals name="search_sources_selection_count">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
     <string name="search_sources_choose_one">Select at least one source</string>
     <string name="search_sources_use">Apply</string>
     <string name="search_no_sources_selected">You haven’t selected a lyrics source yet.</string>
@@ -564,10 +554,6 @@ Word-timed TTML:
     <string name="search_id_match">Fetched using Spotify ID</string>
     <string name="search_id_badge" translatable="false">ID</string>
     <string name="ui_highlight_effects">Highlight effects</string>
-    <string name="ui_enable_glow">Turn on glow</string>
-    <string name="ui_disable_glow">Turn off glow</string>
-    <string name="ui_glow_strength">Glow strength</string>
-    <string name="ui_glow_spread">Glow spread</string>
     <string name="ui_glow">Glow</string>
     <string name="ui_lyrics_background">Background vocals</string>
     <string name="ui_lyrics_line_start">Line start</string>
@@ -593,24 +579,15 @@ Word-timed TTML:
     <string name="search_version_line">Line-synced</string>
     <string name="search_version_word">Word-synced</string>
     <string name="search_version">%1$s · %2$s</string>
-    <string name="search_word_loading">%1$s · Searching…</string>
-    <string name="search_word_missing">%1$s · No word-synced lyrics</string>
     <string name="search_word_search">Search word-synced lyrics</string>
     <string name="search_word_results">Versions</string>
     <string name="search_title_required">Enter a song title</string>
-    <string name="search_word_query">Word-synced · %1$s</string>
     <string name="search_regular_search">Regular search</string>
-    <string name="search_word_failure_action">%1$s · Couldn’t load lyrics · %2$s</string>
     <string name="search_use_current">Use current song</string>
-    <string name="search_duration_seconds">Duration in seconds (optional)</string>
     <string name="search_duration_invalid">Use min:sec, for example 4:02</string>
     <string name="search_lyrics_loading">Loading lyrics…</string>
-    <string name="search_word_error_retry">%1$s · %2$s</string>
     <string name="search_no_lyrics">No lyrics available to preview</string>
-    <string name="search_only_line">Only line-synced lyrics found</string>
     <string name="search_only_plain">No synced lyrics in this version</string>
-    <string name="search_no_songs">%1$s · No songs found</string>
-    <string name="search_more_source">Load more · %1$s</string>
     <string name="search_back_recordings">Songs</string>
     <string name="search_lyrics_unchecked">Lyrics not loaded</string>
     <string name="search_lyric_rating">Rating %1$s</string>

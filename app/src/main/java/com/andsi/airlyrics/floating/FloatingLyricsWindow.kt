@@ -6,7 +6,6 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Point
 import android.graphics.Rect
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.provider.Settings
@@ -19,6 +18,7 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.TextView
+import androidx.core.graphics.drawable.toDrawable
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.core.model.FloatingPosition
@@ -338,7 +338,7 @@ class FloatingLyricsWindow(
             view.background = background
             return
         }
-        window.setBackgroundDrawable(background ?: ColorDrawable(Color.TRANSPARENT))
+        window.setBackgroundDrawable(background ?: Color.TRANSPARENT.toDrawable())
         if (Build.VERSION.SDK_INT >= 31) {
             val radius = if (style.backgroundEnabled) {
                 (dp(32) * style.backgroundBlurPercent.coerceIn(0, 100) / 100f)

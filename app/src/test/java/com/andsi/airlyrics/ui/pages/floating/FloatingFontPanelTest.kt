@@ -37,6 +37,7 @@ import java.io.File
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -570,11 +571,11 @@ class FloatingFontPanelTest {
         fun click(key: String) { assertTrue(tag(key).performClick()); settle() }
         fun settle() {
             scheduler.runCurrent()
-            layout(controller.get().window.decorView, width, 740)
-            layout(page, width, 740)
+            layout(controller.get().window.decorView, width)
+            layout(page, width)
             shadowOf(Looper.getMainLooper()).idle()
             scheduler.runCurrent()
-            layout(page, width, 740)
+            layout(page, width)
         }
         fun back() {
             assertTrue(host.floatingPanelBackHandler!!.invoke())
@@ -659,7 +660,7 @@ class FloatingFontPanelTest {
             scheduler.runCurrent()
             if (condition()) return
             // Real repository mutations deliberately use Dispatchers.IO.
-            withContext(Dispatchers.IO) { delay(10) }
+            withContext(Dispatchers.IO) { delay(10.milliseconds) }
         }
         assertTrue("The asynchronous font operation did not complete", condition())
     }
@@ -693,10 +694,10 @@ class FloatingFontPanelTest {
         } finally { bitmap.recycle() }
     }
 
-    private fun layout(view: View, width: Int, height: Int) {
+    private fun layout(view: View, width: Int) {
         all(view).forEach { it.layoutDirection = View.LAYOUT_DIRECTION_LTR }
         view.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY))
+            View.MeasureSpec.makeMeasureSpec(740, View.MeasureSpec.EXACTLY))
         view.layout(0, 0, view.measuredWidth, view.measuredHeight)
         view.viewTreeObserver.dispatchOnPreDraw()
     }

@@ -316,7 +316,6 @@ private fun playQuickStatusSwap(
     finalAlpha: Float
 ) {
     // Motion Prompt #060 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#060
-    // The control's label and icon hand off as one clipped state.
     val incoming = copyQuickStatusLabel(activity, tab, incomingIconRes)
     val layer = QuickStatusLayer(activity, incoming, incomingIconRes).apply {
         layoutParams = FrameLayout.LayoutParams(

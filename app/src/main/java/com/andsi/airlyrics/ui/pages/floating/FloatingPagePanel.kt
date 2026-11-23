@@ -180,7 +180,6 @@ private fun FloatingPageScope.openFloatingPanel(
         }
         // Source-linked motion adapted from Motion Prompt #049 · MIT License (c) 2026 Shohei Ohtaki
         // https://showheyohtaki.github.io/motion-prompt/#049
-        // The shell and its opacity settle together, without overshooting text.
         overlay.animate().alpha(1f)
             .setDuration(FloatingPageTokens.PANEL_OVERLAY_FADE_MS)
             .setInterpolator(floatingPanelEaseOut)

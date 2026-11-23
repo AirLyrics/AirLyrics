@@ -35,6 +35,7 @@ internal object RepositoryOnlineLyricsLookupGateway : OnlineLyricsLookupGateway 
         cancellationToken: LyricsLookupCancellationToken
     ): Result<LyricsProviderResult?> = findAndSave(context, media, cancellationToken, LyricsSearchMode.Original)
 
+    @Suppress("SameParameterValue")
     override fun findAndSave(
         context: Context,
         media: CurrentMediaInfo,

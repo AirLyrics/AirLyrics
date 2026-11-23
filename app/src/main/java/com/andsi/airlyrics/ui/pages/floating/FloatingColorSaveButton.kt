@@ -19,6 +19,9 @@ import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import android.widget.LinearLayout
 import androidx.appcompat.widget.AppCompatTextView
+import androidx.core.graphics.withClip
+import androidx.core.graphics.withScale
+import androidx.core.graphics.withTranslation
 import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -209,34 +212,36 @@ internal class FloatingColorSaveButton(private val host: MainUiHost, onSave: () 
     override fun onDraw(canvas: Canvas) {
         val labelLayout = layout ?: return
         val radius = host.dp(AirUiTokens.Radius.Md).toFloat()
+        val buttonWidth = width.toFloat()
+        val buttonHeight = height.toFloat()
         shape.rewind()
-        shape.addRoundRect(0f, 0f, width.toFloat(), height.toFloat(), radius, radius, Path.Direction.CW)
-        val clipped = canvas.save()
-        canvas.clipPath(shape)
-        if (visual == Visual.SAVED || visual == Visual.REVEAL) {
-            val progress = if (visual == Visual.SAVED) 1f else
-                fillCurve.getInterpolation(fraction(revealMs, 80L, 450L))
-            val mask = canvas.save()
-            revealMask.rewind()
-            revealMask.addCircle(width / 2f, height / 2f,
-                hypot(width / 2f, height / 2f) * progress, Path.Direction.CW)
-            canvas.clipPath(revealMask)
-            canvas.drawColor(SUCCESS_FILL)
-            canvas.restoreToCount(mask)
-        }
-        when (visual) {
-            Visual.IDLE -> drawLetters(canvas, labelLayout, before, paddingLeft.toFloat(), entering = false, static = true)
-            Visual.WAITING -> {
-                if (animator != null) drawLetters(canvas, labelLayout, before, paddingLeft.toFloat(), entering = false)
-                drawDots(canvas)
+        shape.addRoundRect(0f, 0f, buttonWidth, buttonHeight, radius, radius, Path.Direction.CW)
+        canvas.withClip(shape) {
+            if (visual == Visual.SAVED || visual == Visual.REVEAL) {
+                val progress = if (visual == Visual.SAVED) 1f else
+                    fillCurve.getInterpolation(fraction(revealMs, 80L, 450L))
+                revealMask.rewind()
+                revealMask.addCircle(
+                    buttonWidth / 2f, buttonHeight / 2f,
+                    hypot(buttonWidth / 2f, buttonHeight / 2f) * progress, Path.Direction.CW
+                )
+                withClip(revealMask) {
+                    drawColor(SUCCESS_FILL)
+                }
             }
-            Visual.REVEAL -> {
-                drawDots(canvas)
-                drawSaved(canvas)
+            when (visual) {
+                Visual.IDLE -> drawLetters(this, labelLayout, before, paddingLeft.toFloat(), entering = false, static = true)
+                Visual.WAITING -> {
+                    if (animator != null) drawLetters(this, labelLayout, before, paddingLeft.toFloat(), entering = false)
+                    drawDots(this)
+                }
+                Visual.REVEAL -> {
+                    drawDots(this)
+                    drawSaved(this)
+                }
+                Visual.SAVED -> drawSaved(this)
             }
-            Visual.SAVED -> drawSaved(canvas)
         }
-        canvas.restoreToCount(clipped)
     }
 
     private fun drawLetters(
@@ -268,13 +273,12 @@ internal class FloatingColorSaveButton(private val host: MainUiHost, onSave: () 
             val rtl = textLayout.isRtlCharAt(letter.start)
             val x = left + textLayout.getPrimaryHorizontal(if (rtl) letter.end else letter.start)
             val y = top + textLayout.getLineBaseline(line)
-            val save = canvas.save()
-            canvas.translate(0f, dy)
-            canvas.scale(scale, scale, x + paint.measureText(textLayout.text, letter.start, letter.end) / 2f, y - textSize * 0.35f)
-            paint.alpha = (alpha * 255).toInt()
-            canvas.drawTextRun(textLayout.text, letter.start, letter.end,
-                textLayout.getLineStart(line), textLayout.getLineEnd(line), x, y, rtl, paint)
-            canvas.restoreToCount(save)
+            canvas.withTranslation(y = dy) {
+                scale(scale, scale, x + paint.measureText(textLayout.text, letter.start, letter.end) / 2f, y - textSize * 0.35f)
+                paint.alpha = (alpha * 255).toInt()
+                drawTextRun(textLayout.text, letter.start, letter.end,
+                    textLayout.getLineStart(line), textLayout.getLineEnd(line), x, y, rtl, paint)
+            }
         }
         paint.alpha = 255
     }
@@ -292,10 +296,9 @@ internal class FloatingColorSaveButton(private val host: MainUiHost, onSave: () 
             val x = width / 2f + dp((index - 1) * 12f) * (1f - collapsing)
             val y = height / 2f - dp(5f) * hop * (1f - collapsing)
             val size = dp(3f)
-            val save = canvas.save()
-            canvas.scale(mix(1.08f, 0.92f, hop), mix(0.92f, 1.12f, hop), x, y)
-            canvas.drawCircle(x, y, size, ink)
-            canvas.restoreToCount(save)
+            canvas.withScale(mix(1.08f, 0.92f, hop), mix(0.92f, 1.12f, hop), x, y) {
+                drawCircle(x, y, size, ink)
+            }
         }
         ink.alpha = 255
     }
@@ -318,26 +321,25 @@ internal class FloatingColorSaveButton(private val host: MainUiHost, onSave: () 
         val scale = if (static) 1f else if (pop < 0.6f) mix(0.5f, 1.1f, ease(pop / 0.6f))
             else mix(1.1f, 1f, ease((pop - 0.6f) / 0.4f))
         val draw = if (static) 1f else fraction(revealMs, 250L, 220L)
-        val save = canvas.save()
-        canvas.translate(left, (height - icon) / 2f)
-        canvas.scale(scale, scale, icon / 2f, icon / 2f)
-        canvas.rotate(if (static) 0f else mix(-12f, 0f, ease(pop)), icon / 2f, icon / 2f)
-        check.rewind()
-        check.moveTo(dp(2f), dp(9f))
-        check.lineTo(dp(7f), dp(14f))
-        check.lineTo(dp(17f), dp(4f))
-        checkMeasure.setPath(check, false)
-        checkSegment.rewind()
-        checkMeasure.getSegment(0f, checkMeasure.length * draw, checkSegment, true)
-        ink.color = SUCCESS_INK
-        ink.alpha = (255 * (pop / 0.6f).coerceIn(0f, 1f)).toInt()
-        ink.style = Paint.Style.STROKE
-        ink.strokeWidth = dp(2.4f)
-        ink.strokeCap = Paint.Cap.ROUND
-        ink.strokeJoin = Paint.Join.ROUND
-        canvas.drawPath(checkSegment, ink)
-        ink.alpha = 255
-        canvas.restoreToCount(save)
+        canvas.withTranslation(left, (height - icon) / 2f) {
+            scale(scale, scale, icon / 2f, icon / 2f)
+            rotate(if (static) 0f else mix(-12f, 0f, ease(pop)), icon / 2f, icon / 2f)
+            check.rewind()
+            check.moveTo(dp(2f), dp(9f))
+            check.lineTo(dp(7f), dp(14f))
+            check.lineTo(dp(17f), dp(4f))
+            checkMeasure.setPath(check, false)
+            checkSegment.rewind()
+            checkMeasure.getSegment(0f, checkMeasure.length * draw, checkSegment, true)
+            ink.color = SUCCESS_INK
+            ink.alpha = (255 * (pop / 0.6f).coerceIn(0f, 1f)).toInt()
+            ink.style = Paint.Style.STROKE
+            ink.strokeWidth = dp(2.4f)
+            ink.strokeCap = Paint.Cap.ROUND
+            ink.strokeJoin = Paint.Join.ROUND
+            drawPath(checkSegment, ink)
+            ink.alpha = 255
+        }
     }
 
     private fun dp(value: Float) = value * resources.displayMetrics.density

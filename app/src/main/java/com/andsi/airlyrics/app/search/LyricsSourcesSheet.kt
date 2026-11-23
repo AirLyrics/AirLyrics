@@ -267,7 +267,8 @@ class LyricsSourcesSheet : DialogFragment() {
     }
 
     private fun updateFooter() {
-        count.text = getString(R.string.search_sources_selection_count, selected.size)
+        val sourceCount = selected.size
+        count.text = resources.getQuantityString(R.plurals.search_sources_selection_count, sourceCount, sourceCount)
         hint.visibility = if (selected.isEmpty()) View.VISIBLE else View.INVISIBLE
         done.isEnabled = selected.isNotEmpty() && !closing
     }

@@ -19,6 +19,7 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withTranslation
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.ButtonStyle
@@ -235,14 +236,14 @@ private class SettingsAppearanceHeader(
 
             override fun dispatchDraw(canvas: Canvas) {
                 val g = panelGeometry()
-                val save = canvas.save()
                 // Use the same outline, including its rounded corners, to reveal native content.
                 // Transform the clip into header coordinates without moving the controls.
-                canvas.translate(0f, -top.toFloat())
-                surface.clipContent(canvas, g, pickerProgress)
-                canvas.translate(0f, top.toFloat())
-                super.dispatchDraw(canvas)
-                canvas.restoreToCount(save)
+                val offset = top.toFloat()
+                canvas.withTranslation(y = -offset) {
+                    surface.clipContent(this, g, pickerProgress)
+                    translate(0f, offset)
+                    super.dispatchDraw(this)
+                }
             }
         }.apply {
             id = R.id.appearance_picker_panel

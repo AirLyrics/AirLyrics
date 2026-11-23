@@ -141,7 +141,7 @@ class FloatingPreviewAnimationTest {
             // Control window visibility explicitly; legacy Robolectric leaves AttachInfo GONE.
             var windowVisible = true
             val lyric = object : TextView(activity) {
-                override fun getWindowVisibility() = if (windowVisible) View.VISIBLE else View.GONE
+                override fun getWindowVisibility() = if (windowVisible) VISIBLE else GONE
             }.apply { text = "Preview" }
             val content = android.widget.LinearLayout(activity).apply {
                 orientation = android.widget.LinearLayout.VERTICAL

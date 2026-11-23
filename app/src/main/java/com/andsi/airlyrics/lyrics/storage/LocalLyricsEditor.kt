@@ -83,14 +83,6 @@ internal object LocalLyricsEditor {
         }
     }
 
-    fun validateWordByWordItemText(wordByWordLrc: String): LyricsStorage.LocalLyricsUpdateResult {
-        val validation = WordByWordLrcParser.validateForStorage(wordByWordLrc)
-        return LyricsStorage.LocalLyricsUpdateResult(
-            saved = validation.isValid,
-            invalidLineNumbers = validation.invalidLineNumbers
-        )
-    }
-
     fun updateWordByWordItemTextWithResult(
         context: Context,
         item: LyricsStorage.LocalLyricsItem,

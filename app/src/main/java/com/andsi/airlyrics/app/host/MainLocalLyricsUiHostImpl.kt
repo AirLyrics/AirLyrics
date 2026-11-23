@@ -6,7 +6,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.combine
-import com.andsi.airlyrics.app.interaction.EditorSession
 import com.andsi.airlyrics.app.interaction.EditorNotice
 import android.view.View
 import com.andsi.airlyrics.R

@@ -664,7 +664,7 @@ internal class MainActivityUiHost(
     private var lastDarkTheme = isDarkTheme()
 
     fun toggleThemeMode() {
-        // Persist and notify AppCompat as before. MainActivity handles uiMode without recreation.
+        // MainActivity handles uiMode changes without recreation.
         AppNightMode.setDark(this, enabled = !isDarkTheme())
         onNightModeChanged()
     }

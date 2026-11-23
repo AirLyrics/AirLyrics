@@ -41,6 +41,7 @@ internal abstract class MainUiHost(
     var windowLayout = com.andsi.airlyrics.ui.layout.WindowLayoutSpec(0f, 0f, 1f)
     open val interactions by lazy { com.andsi.airlyrics.ui.state.MainInteractionState() }
     open val mascotSession by lazy { MascotSession() }
+    @Suppress("SameReturnValue")
     open val appUpdates: AppUpdateUi? get() = null
     val windowGeneration = kotlinx.coroutines.flow.MutableStateFlow(0L)
     var savedLyricsSelectionBackHandler: (() -> Boolean)? = null

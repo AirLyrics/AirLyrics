@@ -148,7 +148,6 @@ object AirUiTokens {
         const val ThemeButtonStyleGlyphHeight = 14
         const val ThemeAccentSwatchSize = 38
         const val ThemeAccentTouchSize = 48
-        const val ThemePickerSlideDistance = 8
         const val LyricsSourceButtonHeight = 48
         const val SettingsIconBubbleSize = 46
         const val FloatingTileIconSize = 40
@@ -172,7 +171,6 @@ object AirUiTokens {
         const val MediaDoneRefreshMs = 260L
         const val MediaRefreshingMs = 650L
         const val FastFadeMs = 90L
-        const val RestoreFadeMs = 180L
         const val LyricsFadeMs = 170L
         const val LyricsSlideDistanceDp = 8
         const val TabOvershoot = 1.08f

@@ -1,7 +1,9 @@
 package com.andsi.airlyrics.settings.store
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import com.andsi.airlyrics.core.color.AirColorUtils
 import java.io.IOException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,15 +60,16 @@ internal object FloatingColorSwatchStore {
         val oldValue = preferences.getString(KEY_COLORS, null)
         writeSnapshot = WriteSnapshot(preferences, previous)
         try {
-            if (!preferences.edit().putString(KEY_COLORS, serialize(previous + rgb)).commit()) {
-                throw IOException("Could not persist color swatch")
-            }
+            // KTX edit discards the commit result needed to detect a failed write.
+            @SuppressLint("UseKtx")
+            val committed = preferences.edit().putString(KEY_COLORS, serialize(previous + rgb)).commit()
+            if (!committed) throw IOException("Could not persist color swatch")
         } catch (failure: Exception) {
             // A failed commit still changed the in-memory map. Restore it so reopening
             // the editor cannot mistake the failed write for a saved favorite.
-            preferences.edit().apply {
+            preferences.edit {
                 if (oldValue == null) remove(KEY_COLORS) else putString(KEY_COLORS, oldValue)
-            }.apply()
+            }
             throw failure
         } finally {
             writeSnapshot = WriteSnapshot(preferences, previous, pending = false)
@@ -79,8 +82,10 @@ internal object FloatingColorSwatchStore {
         val rgb = AirColorUtils.opaqueRgb(color)
         val previous = colors(context)
         if (rgb !in previous) return@synchronized false
-        // Preserve the existing asynchronous deletion behavior.
-        preferences(context).edit().putString(KEY_COLORS, serialize(previous.filterNot { it == rgb })).apply()
+        // SharedPreferences applies the deletion in memory before writing it to disk.
+        preferences(context).edit {
+            putString(KEY_COLORS, serialize(previous.filterNot { it == rgb }))
+        }
         version.value += 1L
         true
     }

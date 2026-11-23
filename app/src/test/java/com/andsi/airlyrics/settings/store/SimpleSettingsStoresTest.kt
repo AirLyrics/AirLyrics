@@ -125,22 +125,15 @@ class SimpleSettingsStoresTest : SettingsStoreTestBase() {
 
     @Test
     fun languageSettingsStore_distinguishesSimplifiedAndTraditionalChineseLocales() {
-        assertEquals(
-            R.string.ui_chinese_simplified,
-            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-CN"))
-        )
-        assertEquals(
-            R.string.ui_chinese_traditional,
-            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-TW"))
-        )
-        assertEquals(
-            R.string.ui_chinese_traditional,
-            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-Hant"))
-        )
-        assertEquals(
-            R.string.ui_chinese_traditional,
-            LanguageSettingsStore.languageNameRes(Locale.forLanguageTag("zh-HK"))
-        )
+        for ((tag, expectedNameRes) in listOf(
+            "zh-CN" to R.string.ui_chinese_simplified,
+            "zh-TW" to R.string.ui_chinese_traditional,
+            "zh-Hant" to R.string.ui_chinese_traditional,
+            "zh-HK" to R.string.ui_chinese_traditional
+        )) {
+            val actualNameRes = LanguageSettingsStore.languageNameRes(Locale.forLanguageTag(tag))
+            assertEquals("Language name for $tag", expectedNameRes, actualNameRes)
+        }
     }
 
     @Test

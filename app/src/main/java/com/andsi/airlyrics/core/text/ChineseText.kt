@@ -216,24 +216,6 @@ object ChineseText {
         return value
     }
 
-    /**
-     * Drops a trailing echo annotation from text that will be *shown*, but only when the
-     * parenthetical repeats the end of the line ("...睡得著 (睡得著)") or the line repeats its own
-     * tail ("...會繞會繞"). A genuine annotation such as "(Live)" stays.
-     */
-    fun withoutPerformanceEcho(text: String): String {
-        var value = text.trim()
-        val trailing = Regex("(.*?)\\s*[（(]([^（）()]{1,24})[）)]\\s*$").matchEntire(value)
-        if (trailing != null) {
-            val head = trailing.groupValues[1].trim()
-            val inner = comparable(trailing.groupValues[2])
-            if (head.isNotEmpty() && inner.isNotEmpty() && comparable(head).endsWith(inner)) {
-                value = head
-            }
-        }
-        return if (comparable(value).isNotEmpty()) value else text.trim()
-    }
-
     private fun comparable(text: String): String {
         val stripped = buildString(text.length) {
             text.forEach { character ->
@@ -321,9 +303,6 @@ object ChineseText {
                 .toList()
         }
 
-    /** True when the text carries Han characters (Chinese script). */
-    fun containsHan(text: String): Boolean = text.any(::isHan)
-
     /** True when the phrase-aware traditional→simplified conversion changes the text. */
     fun containsTraditional(text: String): Boolean = toSimplified(text) != text
 
@@ -334,9 +313,6 @@ object ChineseText {
     fun traditionalCharacterCount(text: String): Int = text.count { character ->
         isHan(character) && toSimplified(character.toString()) != character.toString()
     }
-
-    /** True when the text has any alphabetic content at all. */
-    fun hasLetters(text: String): Boolean = text.any { it.isLetter() }
 
     private fun isHan(character: Char): Boolean {
         val code = character.code

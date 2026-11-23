@@ -198,7 +198,6 @@ internal class LyricsSourcePages(
 
     // Motion Prompt #069 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#069
     // Motion Prompt #072 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#072
-    // The status occupies the same first-row space; no shimmer or extra illustration is needed.
     private inner class Page(val frame: FrameLayout) : RecyclerView.ViewHolder(frame) {
         val list = RecyclerView(context).apply {
             clipToPadding = false
@@ -676,7 +675,7 @@ internal class LyricsSourcePages(
         override fun onCreateViewHolder(parent:ViewGroup,viewType:Int)=FooterView(LinearLayout(context).apply {
             orientation=VERTICAL
             layoutParams=RecyclerView.LayoutParams(-1,-2)
-            accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
+            accessibilityLiveRegion=ACCESSIBILITY_LIVE_REGION_POLITE
         })
         override fun onBindViewHolder(holder:FooterView,position:Int)=bindBody(holder.body)
     }

@@ -178,7 +178,7 @@ internal class LyricsSearchInputDialog(
                 ViewCompat.requestApplyInsets(root)
                 if (useEntryMotion && ValueAnimator.areAnimatorsEnabled()) {
                     spring.animateToFinalPosition(1f)
-                    fadeTo(1f, AirUiTokens.Motion.InputDialogFadeInMs)
+                    fadeIn()
                 } else {
                     renderTransform(1f)
                     renderOpacity(1f)
@@ -194,8 +194,7 @@ internal class LyricsSearchInputDialog(
             return
         }
         isLeaving = true
-        // Capture the presented values before cancelling entry/layout motion.
-        // One clock now carries the card and shade through the entire exit.
+        // Capture the visible state so dismissal can interrupt entry or layout motion.
         val startScale = card.scaleX
         val startTranslation = card.translationY
         val startOpacity = opacity
@@ -250,24 +249,22 @@ internal class LyricsSearchInputDialog(
         positioner.animate().cancel()
     }
 
-    private fun fadeTo(target: Float, durationMs: Long, onEnd: () -> Unit = {}) {
+    private fun fadeIn() {
         val previous = fade
         fade = null
         previous?.cancel()
-        if (abs(opacity - target) < 0.001f) {
-            renderOpacity(target)
-            onEnd()
+        if (abs(opacity - 1f) < 0.001f) {
+            renderOpacity(1f)
             return
         }
-        fade = ValueAnimator.ofFloat(opacity, target).apply {
-            duration = durationMs
+        fade = ValueAnimator.ofFloat(opacity, 1f).apply {
+            duration = AirUiTokens.Motion.InputDialogFadeInMs
             interpolator = easeOut
             addUpdateListener { renderOpacity(it.animatedValue as Float) }
             addListener(object : AnimatorListenerAdapter() {
                 override fun onAnimationEnd(animation: Animator) {
                     if (fade !== animation) return
                     fade = null
-                    onEnd()
                 }
             })
             start()

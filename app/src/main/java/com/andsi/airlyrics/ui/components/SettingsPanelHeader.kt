@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.view.isGone
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -122,7 +123,7 @@ internal class SettingsPanelHeader(
         var end = width - paddingLeft - paddingRight
         for (index in childCount - 1 downTo 0) {
             val action = getChildAt(index)
-            if (action === titleColumn || action === back || action.visibility == GONE) continue
+            if (action === titleColumn || action === back || action.isGone) continue
             end -= action.measuredWidth
             placeAction(action, end)
         }

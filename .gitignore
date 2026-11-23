@@ -31,6 +31,14 @@ app/src/main/jniLibs/**/*.so
 *.jks
 *.keystore
 
+# Local credentials
+/.spicy-lyrics-key
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+
 # Local development reports and validation material
 /docs/IMPLEMENTATION-zh-CN.md
 /docs/REVIEW-zh-CN.md

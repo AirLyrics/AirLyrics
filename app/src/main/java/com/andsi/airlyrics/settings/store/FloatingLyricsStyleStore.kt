@@ -275,15 +275,6 @@ object FloatingLyricsStyleStore {
         prefs(context).setInt(KEY_GRAVITY, gravity)
     }
 
-    fun setFontFamily(context: Context, fontFamily: FloatingLyricsFontFamily) {
-        setStyle(context, getStyle(context).copy(
-            fontFamily = fontFamily,
-            customFontId = if (fontFamily == FloatingLyricsFontFamily.CUSTOM) {
-                FloatingLyricsFontStore.preferredCustomId(context)
-            } else null
-        ))
-    }
-
     fun setShadowColor(context: Context, color: Int) {
         prefs(context).setInt(KEY_SHADOW_COLOR, color)
     }

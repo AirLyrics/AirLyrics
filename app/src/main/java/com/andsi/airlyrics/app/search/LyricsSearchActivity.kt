@@ -120,8 +120,8 @@ class LyricsSearchActivity : AppCompatActivity() {
                     override fun fetch(candidate:LyricsCandidate,target:SongIdentity,token:LyricsLookupCancellationToken)=service.fetch(candidate,target,token)
                     override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken)=service.findBySpotifyId(id,mediaSong,target,token)
                     override fun searchWordRecordings(source:ManualWordSource,query:SongIdentity,page:Int,keyword:String,token:LyricsLookupCancellationToken)=service.searchWordRecordings(source,query,page,keyword,token)
-                    override fun loadWordRecording(recording:com.andsi.airlyrics.lyrics.search.ManualWordRecording,token:LyricsLookupCancellationToken)=service.loadWordRecording(recording,token)
-                    override fun loadWordOption(option:com.andsi.airlyrics.lyrics.search.ManualWordOption,token:LyricsLookupCancellationToken)=service.loadWordOption(option,token)
+                    override fun loadWordRecording(recording:ManualWordRecording,token:LyricsLookupCancellationToken)=service.loadWordRecording(recording,token)
+                    override fun loadWordOption(option:ManualWordOption,token:LyricsLookupCancellationToken)=service.loadWordOption(option,token)
                     override fun protectedRevision(target:SongIdentity)=service.protectedRevision(target)
                     override fun apply(target:SongIdentity,result:LyricsProviderResult,token:LyricsLookupCancellationToken,approvedRevision:String?)=service.apply(target,result,token,approvedRevision)
                 }
@@ -399,10 +399,14 @@ class LyricsSearchActivity : AppCompatActivity() {
             }
             view.isEnabled=!state.applying
         }
-        sourcesButton.text=getString(R.string.search_sources_count,state.sources.size)
+        val sourceCount = state.sources.size
+        sourcesButton.text = getString(R.string.search_sources_count, sourceCount)
         sourcesButton.isEnabled=!state.applying
         sourcesButton.visibility=if(state.previewCandidate==null) View.VISIBLE else View.GONE
-        ViewCompat.setStateDescription(sourcesButton,getString(R.string.search_sources_selection_count,state.sources.size))
+        ViewCompat.setStateDescription(
+            sourcesButton,
+            resources.getQuantityString(R.plurals.search_sources_selection_count, sourceCount, sourceCount)
+        )
         updating=false
         val showPreview=state.previewCandidate!=null
         val changed=inPreview!=showPreview

@@ -192,10 +192,6 @@ object LyricsStorage {
         }
     }
 
-    fun validateWordByWordLyricsItemText(wordByWordLrc: String): LocalLyricsUpdateResult {
-        return LocalLyricsEditor.validateWordByWordItemText(wordByWordLrc)
-    }
-
     fun updateWordByWordLyricsItemTextWithResult(
         context: Context,
         item: LocalLyricsItem,

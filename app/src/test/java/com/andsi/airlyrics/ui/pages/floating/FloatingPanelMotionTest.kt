@@ -163,7 +163,7 @@ class FloatingPanelMotionTest {
         val right = middle + sample.width * 3 / 4
         blue.performClick()
         settle()
-        val alpha = android.graphics.Color.alpha(host.floatingStyle().textColor)
+        val alpha = Color.alpha(host.floatingStyle().textColor)
         red.performClick()
         val firstMark = pixels(red)
         assertEquals(blueColor, pixels(sample)[middle + sample.width / 2])
@@ -196,7 +196,7 @@ class FloatingPanelMotionTest {
         assertEquals(1, swatches.count { it.isSelected })
         assertTrue(finalMark.contentEquals(pixels(red)))
         assertTrue(finalSample.contentEquals(pixels(sample)))
-        assertEquals(alpha, android.graphics.Color.alpha(host.floatingStyle().textColor))
+        assertEquals(alpha, Color.alpha(host.floatingStyle().textColor))
     }
 
     @Test fun pinkAndRedWipeRightOnTouchFromEitherInitialColor() {

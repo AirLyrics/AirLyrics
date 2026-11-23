@@ -10,6 +10,7 @@ import android.widget.ProgressBar
 import androidx.core.animation.doOnEnd
 import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.withClip
+import androidx.core.graphics.withTranslation
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.theme.colorAccent
@@ -116,22 +117,21 @@ internal class UpdateDownloadProgressView(host: MainUiHost) :
         val scale = sceneScale
         if (scale <= 0f) return
 
-        val scene = canvas.save()
-        canvas.translate((width - SCENE_WIDTH * scale) / 2f, (height - SCENE_HEIGHT * scale) / 2f)
-        canvas.scale(scale, scale)
-        if (layoutDirection == LAYOUT_DIRECTION_RTL) {
-            canvas.translate(SCENE_WIDTH, 0f)
-            canvas.scale(-1f, 1f)
-        }
+        canvas.withTranslation((width - SCENE_WIDTH * scale) / 2f, (height - SCENE_HEIGHT * scale) / 2f) {
+            scale(scale, scale)
+            if (layoutDirection == LAYOUT_DIRECTION_RTL) {
+                translate(SCENE_WIDTH, 0f)
+                scale(-1f, 1f)
+            }
 
-        canvas.drawPath(seam, guidePaint)
-        if (displayedStitches > 0f) {
-            val filledEnd = SEAM_START + (displayedStitches - 1f) * STITCH_PITCH + STITCH_LENGTH
-            canvas.withClip(0f, 0f, (filledEnd + seamPaint.strokeWidth).coerceAtLeast(0f), SCENE_HEIGHT) {
-                drawPath(seam, seamPaint)
+            drawPath(seam, guidePaint)
+            if (displayedStitches > 0f) {
+                val filledEnd = SEAM_START + (displayedStitches - 1f) * STITCH_PITCH + STITCH_LENGTH
+                withClip(0f, 0f, (filledEnd + seamPaint.strokeWidth).coerceAtLeast(0f), SCENE_HEIGHT) {
+                    drawPath(seam, seamPaint)
+                }
             }
         }
-        canvas.restoreToCount(scene)
     }
 }
 

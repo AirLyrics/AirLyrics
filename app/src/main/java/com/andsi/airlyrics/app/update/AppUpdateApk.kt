@@ -85,7 +85,7 @@ internal object AppUpdateApk {
     }
 }
 
-internal suspend fun downloadVerifiedApkContents(
+private suspend fun downloadVerifiedApkContents(
     release: AppUpdateRelease,
     output: OutputStream? = null,
     onProgress: (Int) -> Unit
@@ -98,6 +98,8 @@ internal suspend fun downloadVerifiedApkContents(
     }
 }
 
+// File and network callers run inside useVerifiedApk on Dispatchers.IO.
+@Suppress("BlockingMethodInNonBlockingContext")
 internal suspend fun verifyApkContents(
     input: InputStream,
     release: AppUpdateRelease,

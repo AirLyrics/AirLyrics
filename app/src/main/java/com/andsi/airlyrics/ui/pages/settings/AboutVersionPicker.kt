@@ -7,7 +7,6 @@ import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.RippleDrawable
 import android.transition.TransitionValues
@@ -28,6 +27,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.AppCompatTextView
 import androidx.core.animation.doOnEnd
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.isVisible
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -104,7 +104,7 @@ internal class AboutVersionPicker(
         addView(versions, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
     }
     private val popup = PopupWindow(menuSurface, WRAP_CONTENT, WRAP_CONTENT, true).apply {
-        setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        setBackgroundDrawable(Color.TRANSPARENT.toDrawable())
         isOutsideTouchable = true
         inputMethodMode = PopupWindow.INPUT_METHOD_NOT_NEEDED
         animationStyle = 0
@@ -200,7 +200,7 @@ internal class AboutVersionPicker(
             gravity = Gravity.END
         }
         private val checkmark = host.airIconView(R.drawable.ic_air_check, host.colorAccentText).apply {
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         }
 
         init {
@@ -219,7 +219,7 @@ internal class AboutVersionPicker(
             label.text = release.version
             label.typeface = if (selected) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
             releaseDate.text = release.date?.format(dateFormat).orEmpty()
-            checkmark.visibility = if (selected) View.VISIBLE else View.INVISIBLE
+            checkmark.visibility = if (selected) VISIBLE else INVISIBLE
             isActivated = selected
             background = surface(
                 if (selected) ColorUtils.blendARGB(host.colorCard, host.colorAccent, 0.16f) else Color.TRANSPARENT

@@ -38,7 +38,7 @@ internal fun createAboutSettingsPage(activity: MainUiHost, animateChildren: Bool
     container.addView(aboutHeader)
     val page = scroll(activity, container, animateChildren = false)
     if (animateChildren) {
-        // The first child contains the interactive logo and its Easter Egg; leave it untouched.
+        // The logo has its own gesture and animation handlers.
         revealAboutContent(page, aboutHeader.getChildAt(1), aboutHeader.getChildAt(2))
     }
     return FrameLayout(activity).apply {

@@ -18,6 +18,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.withClip
 import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.FloatingFont
@@ -59,6 +60,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Small injectable boundary keeps the real settings-entry flows testable without the network. */
 internal interface FontPanelOperations {
@@ -260,7 +262,7 @@ internal class FloatingFontPanelContent(
         val name = title(font)
         val face = previewId?.let(operations::previewTypeface) ?: Typeface.DEFAULT
         val sample = TextView(host).apply {
-            text = "Aa"
+            setText(R.string.ui_font_preview_sample)
             visibility = if (previewId == null) GONE else VISIBLE
             textSize = AirUiTokens.TextSize.Title
             typeface = face
@@ -449,7 +451,7 @@ internal class FloatingFontPanelContent(
                 applyButton?.setProgress(displayed)
                 val label = host.getString(R.string.ui_font_downloading_progress, displayed)
                 if (applyButton?.text != label) applyButton?.text = label
-                delay(cadence.delayMs)
+                delay(cadence.delayMs.milliseconds)
             }
         }
         downloadJob?.start()
@@ -644,11 +646,11 @@ private class FontApplyButton(
             outline.reset()
             outline.addRoundRect(bounds, host.dp(AirUiTokens.Radius.Md).toFloat(),
                 host.dp(AirUiTokens.Radius.Md).toFloat(), Path.Direction.CW)
-            val save = canvas.save()
-            canvas.clipPath(outline)
-            progressPaint.color = ColorUtils.setAlphaComponent(host.colorOnAccent, 42)
-            canvas.drawRect(0f, 0f, width * progress / 100f, height.toFloat(), progressPaint)
-            canvas.restoreToCount(save)
+            val progressWidth = width * progress / 100f
+            canvas.withClip(outline) {
+                progressPaint.color = ColorUtils.setAlphaComponent(host.colorOnAccent, 42)
+                drawRect(0f, 0f, progressWidth, bounds.bottom, progressPaint)
+            }
         }
         super.onDraw(canvas)
     }
@@ -700,7 +702,6 @@ private class FontDeleteButton(
     }
 
     private fun render() {
-        // Soften the theme's danger red toward the surface in light mode and ink in dark mode.
         val lightSurface = ColorUtils.calculateLuminance(host.colorSurfaceLight) > .5
         val tint = ColorUtils.blendARGB(
             host.colorDanger,

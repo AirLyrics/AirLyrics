@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.settings.store.ThemeSettingsStore
@@ -86,6 +87,58 @@ class LyricsSourcesMorphTest {
             settle()
             assertEquals(initial, session(activity).state.value.sources)
             assertNull(activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG))
+        }
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun selectionCountKeepsLocalizedTextInThePanelAndSourceButton() {
+        val configurations = listOf(
+            Triple("en-rUS", 400, "%d selected"),
+            Triple("zh-rCN", 320, "已选 %d 个"),
+            Triple("zh-rTW", 320, "已選 %d 個"),
+            Triple("es", 400, "Selección: %d")
+        )
+        val originalQualifiers = RuntimeEnvironment.getQualifiers()
+        try {
+            for ((locale, width, countCopy) in configurations) {
+                RuntimeEnvironment.setQualifiers("$locale-w${width}dp-h900dp-mdpi")
+                fun expectedCount(amount: Int) = countCopy.replace("%d", amount.toString())
+                Robolectric.buildActivity(LyricsSearchActivity::class.java, intent()).setup().visible().use { controller ->
+                    val activity = controller.get()
+                    layout(activity.findViewById(android.R.id.content), width, 900)
+                    val initial = setOf(PlainLyricsSearchSource.NETEASE)
+                    session(activity).setSources(initial)
+                    settle()
+                    val capsule = requireNotNull(activity.sourceCapsule())
+                    assertEquals(expectedCount(1), ViewCompat.getStateDescription(capsule).toString())
+
+                    val sheet = show(activity, initial, width)
+                    fun assertVisibleCount(amount: Int) {
+                        layout(sheet.requireDialog().window!!.decorView, width, 900)
+                        val label = sheetViews(sheet).filterIsInstance<TextView>().single {
+                            it.text.toString() == expectedCount(amount)
+                        }
+                        assertTrue(label.isShown)
+                        val textLayout = requireNotNull(label.layout)
+                        assertTrue((0 until textLayout.lineCount).all { textLayout.getEllipsisCount(it) == 0 })
+                    }
+                    val rows = sheetViews(sheet).filterIsInstance<LyricsSourceSelectionRow>()
+                    val selected = rows.single { it.isSelected }
+                    val additional = rows.first { !it.isSelected }
+                    assertVisibleCount(1)
+                    selected.performClick()
+                    assertVisibleCount(0)
+                    selected.performClick()
+                    additional.performClick()
+                    assertVisibleCount(2)
+                    apply(sheet).performClick()
+                    settle()
+                    assertEquals(expectedCount(2), ViewCompat.getStateDescription(capsule).toString())
+                }
+            }
+        } finally {
+            RuntimeEnvironment.setQualifiers(originalQualifiers)
         }
     }
 

@@ -13,7 +13,6 @@ import com.andsi.airlyrics.design.tokens.AirUiTokens
 
 // Motion Prompt #057 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#057
 // Motion Prompt #137 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#137
-/** Short, directional handoff between bottom-navigation pages. */
 internal class MainPageTransition {
     private val exitEase = AccelerateInterpolator()
     private val enterEase = DecelerateInterpolator(1.25f)

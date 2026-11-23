@@ -65,7 +65,7 @@ class ServiceLocaleTest {
         val media = Robolectric.buildService(MediaNotificationListenerService::class.java).create()
         try {
             val feedback = ToastAirFeedback(floating.get()) { true }
-            for ((mode, show, hidden) in listOf(
+            for ((mode, expectedShow, expectedHidden) in listOf(
                 Triple("zh-TW", "顯示", "已隱藏"),
                 Triple("zh-CN", "显示", "已隐藏"),
                 Triple("es", "Mostrar", "Oculto"),
@@ -75,11 +75,13 @@ class ServiceLocaleTest {
             )) {
                 LanguageSettingsStore.setMode(application, mode)
                 shadowOf(Looper.getMainLooper()).idle()
-                assertEquals(show, floating.get().getString(R.string.ui_show))
-                assertEquals(show, media.get().getString(R.string.ui_show))
-                assertEquals(hidden, notificationText())
+                assertEquals(expectedShow, floating.get().getString(R.string.ui_show))
+                assertEquals(expectedShow, media.get().getString(R.string.ui_show))
+                assertEquals(expectedHidden, notificationText())
                 feedback.showMessage(R.string.ui_show)
-                assertEquals(show, ShadowToast.getTextOfLatestToast())
+                val toastText = ShadowToast.getTextOfLatestToast()
+                @Suppress("KotlinMisorderedAssertEqualsArguments")
+                assertEquals(expectedShow, toastText)
                 assertEquals("Show", application.getString(R.string.ui_show))
             }
             feedback.dismiss()

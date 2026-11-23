@@ -146,7 +146,7 @@ object FloatingLyricsFontStore {
                 // Only the old single-file import had no explicit ID. Never substitute a newer import.
                 "custom"
             } else style.fontId
-            val entry = id?.let { font(context, it) }
+            val entry = font(context, id)
             if (entry?.available != true) style.copy(
                 fontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT, customFontId = null
             ) else style.copy(
@@ -191,6 +191,7 @@ object FloatingLyricsFontStore {
             entry.source == FloatingFontSource.IMPORTED && next.imports.any { it.fileName == candidate.name }
         }
         commitRemoval(context, previous, next, file, setOf(id))
+        true
     }
 
     fun removeCollection(context: Context, id: String): Boolean = synchronized(mutationLock) {
@@ -200,11 +201,12 @@ object FloatingLyricsFontStore {
         val next = previous.copy(imports = previous.imports.filterNot { it.collectionId == id })
         val file = File(fontDirectory(context), members.first().fileName)
         commitRemoval(context, previous, next, file, members.map { it.id }.toSet())
+        true
     }
 
     private fun commitRemoval(
         context: Context, previous: Catalog, next: Catalog, file: File?, removedIds: Set<String>
-    ): Boolean {
+    ) {
         val previousStyle = FloatingLyricsStyleStore.getStyle(context)
         val tombstone = file?.takeIf { it.exists() }?.let { source ->
             File(fontDirectory(context), "removing_${UUID.randomUUID()}").also {
@@ -223,7 +225,6 @@ object FloatingLyricsFontStore {
         if (previousStyle.fontId in removedIds) FloatingLyricsStyleStore.setStyle(context, previousStyle.copy(
             fontFamily = FloatingLyricsFontFamily.SYSTEM_DEFAULT, customFontId = null
         ))
-        return true
     }
 
     fun importFont(context: Context, uri: Uri): ImportResult {

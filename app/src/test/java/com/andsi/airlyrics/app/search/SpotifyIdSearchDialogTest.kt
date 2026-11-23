@@ -150,7 +150,6 @@ class SpotifyIdSearchDialogTest {
         assertTrue(dialog.card.translationY > 0f)
         val closedScale=com.andsi.airlyrics.design.tokens.AirUiTokens.Motion.InputDialogClosedScale
         val scaleProgress=(1f-dialog.card.scaleX)/(1f-closedScale)
-        // The card must visibly recede with its fade, rather than fading out ahead of its movement.
         assertEquals(1f-dialog.card.alpha,scaleProgress,0.01f)
     }
 

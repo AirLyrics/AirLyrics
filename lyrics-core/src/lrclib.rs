@@ -1135,9 +1135,7 @@ fn compare_scored_tracks(left: &ScoredApiTrack, right: &ScoredApiTrack) -> Order
         .is_some()
         .cmp(&right.track.synced_lyrics.is_some())
         .then_with(|| left.match_score.total.total_cmp(&right.match_score.total))
-        // Prefer the closest duration when metadata scores are identical.
         .then_with(|| right.duration_delta_ms.cmp(&left.duration_delta_ms))
-        // Make duplicate search results deterministic.
         .then_with(|| right.track.id.cmp(&left.track.id))
 }
 
@@ -1521,7 +1519,6 @@ mod tests {
             result.is_err(),
             "the only candidate carries no corroborating evidence, so the lookup reports a miss"
         );
-        // The rejected candidate did not stop the broader rounds from running.
         assert_eq!(backend.search_calls.lock().unwrap().len(), 2);
     }
 
@@ -2223,7 +2220,7 @@ mod manual_tests {
             manual_track_content(v, &t).unwrap_err().error_type(),
             "ParseError"
         );
-        // Captured from LRCLIB search; its exact-ID endpoint was unavailable during this audit.
+        // Fixture captured from LRCLIB search.
         let live: ApiTrack = serde_json::from_str(include_str!(
             "../testdata/lrclib-merry-christmas-mr-lawrence-instrumental.json"
         ))

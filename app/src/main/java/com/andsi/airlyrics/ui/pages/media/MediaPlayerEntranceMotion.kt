@@ -98,7 +98,6 @@ internal class MediaPlayerEntranceMotion {
     }
 
     private fun applyProgress(view: View, progress: Float, risePx: Float) {
-        // A short damped settle gives about 0.5% scale overshoot and 1 dp of lift.
         val spring = ((1.0 - exp(-5.5 * progress) * cos(6.0 * progress)) / settleEnd).toFloat()
         val scale = AirUiTokens.Motion.MediaPlayerEnterScale +
             (1f - AirUiTokens.Motion.MediaPlayerEnterScale) * spring

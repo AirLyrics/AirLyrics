@@ -99,7 +99,6 @@ internal fun beginLyricsCardContentTransition(card: ViewGroup?) {
     if (card?.isAttachedToWindow != true || !ValueAnimator.areAnimatorsEnabled()) return
     TransitionManager.endTransitions(card)
     // Motion Prompt #057 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#057
-    // Content trades places while the surrounding layout catches up.
     TransitionManager.beginDelayedTransition(card, TransitionSet().apply {
         ordering = TransitionSet.ORDERING_TOGETHER
         duration = 180L

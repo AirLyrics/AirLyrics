@@ -18,7 +18,6 @@ import kotlin.math.roundToInt
 
 // Motion Prompt #137 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#137
 // Motion Prompt #005 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#005
-/** Coupled, reversible depth motion for adjacent settings pages. */
 internal class SettingsPageTransition {
     private val enterEase = PathInterpolator(0.2f, 0f, 0f, 1f)
     private val exitEase = DecelerateInterpolator(1.15f)

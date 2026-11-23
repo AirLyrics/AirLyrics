@@ -91,7 +91,6 @@ pub(crate) fn pick_alias(
     tracks: &[CatalogueTrack],
     window_ms: u64,
 ) -> Option<AliasEntry> {
-    // Nothing to localize when the player already shows a CJK title.
     if has_cjk(query.title) {
         return None;
     }
@@ -140,7 +139,7 @@ pub(crate) fn pick_alias(
         .collect();
     let (picked, _) = *titles.iter().min_by_key(|(_, delta)| *delta)?;
     titles.dedup_by(|(left, _), (right, _)| left.title == right.title);
-    // Two *different* titles at the same running time is a coin flip: refuse to localize.
+    // Distinct titles within the duration window are ambiguous.
     if titles.iter().any(|(track, _)| track.title != picked.title) {
         return None;
     }
@@ -278,7 +277,6 @@ pub(crate) fn ensure_registered(
     if crate::qq::has_cjk(title) || crate::aliases::lookup(title, artist).is_some() {
         return;
     }
-    // Skip the catalogue walk as soon as the player moves on to another song.
     if crate::check_lookup_cancelled(lookup_id).is_err() {
         return;
     }

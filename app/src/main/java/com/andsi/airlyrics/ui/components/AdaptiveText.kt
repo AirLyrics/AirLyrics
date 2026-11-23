@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.animation.doOnEnd
+import androidx.core.graphics.withClip
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import com.andsi.airlyrics.R
@@ -242,10 +243,9 @@ internal class ExpandableTextLayout(
             super.dispatchDraw(canvas)
             return
         }
-        val save = canvas.save()
-        canvas.clipRect(0, 0, width, height)
-        super.dispatchDraw(canvas)
-        canvas.restoreToCount(save)
+        canvas.withClip(0, 0, width, height) {
+            super.dispatchDraw(this)
+        }
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {

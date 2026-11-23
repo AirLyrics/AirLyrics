@@ -8,7 +8,6 @@ import android.graphics.Typeface
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.MotionEvent
-import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.LinearLayout
 import android.widget.SeekBar
@@ -38,7 +37,7 @@ internal class SettingsSliderRow(
         fontFeatureSettings = "tnum"
         gravity = Gravity.END
         setTextColor(host.colorTextStrong)
-        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
     }
 
     private var range: SliderRange? = null
@@ -121,7 +120,7 @@ internal class SettingsSliderRow(
         thumbTintList = ColorStateList.valueOf(host.colorAccent)
         progressTintList = ColorStateList.valueOf(host.colorAccent)
         splitTrack = false
-        androidx.core.view.ViewCompat.setStateDescription(this, initialValue)
+        ViewCompat.setStateDescription(this, initialValue)
     }
 
     init {
@@ -131,7 +130,7 @@ internal class SettingsSliderRow(
             text = title
             textSize = AirUiTokens.TextSize.Button
             setTextColor(host.colorTextStrong)
-            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
         }
         if (compact) {
             valueView.minWidth = kotlin.math.ceil(valueView.paint.measureText(
@@ -242,7 +241,7 @@ internal fun panelSectionLabel(host: MainUiHost, text: String): TextView = TextV
     typeface = Typeface.DEFAULT_BOLD
     setTextColor(host.colorTextMuted)
     setPadding(0, host.dp(AirUiTokens.SettingsPanel.SectionGap), 0, host.dp(AirUiTokens.SettingsPanel.ControlGap))
-    androidx.core.view.ViewCompat.setAccessibilityHeading(this, true)
+    ViewCompat.setAccessibilityHeading(this, true)
 }
 
 internal fun panelSwitch(

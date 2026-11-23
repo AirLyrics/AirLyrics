@@ -13,6 +13,8 @@
     </queries>
 
     <application>
+        <!-- The installer-enabled variant verifies this private receiver in AppUpdateBackendTest. -->
+        <!--suppress AndroidDomInspection -->
         <receiver
             android:name="com.andsi.airlyrics.app.update.AppUpdateInstallReceiver"
             android:exported="false" />

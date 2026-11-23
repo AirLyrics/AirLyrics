@@ -350,10 +350,6 @@ tasks.register<Exec>("buildRustLyrics") {
 
     val rustAbiArgs = mutableListOf("-t", "arm64-v8a")
 
-    // x86_64 emulator builds pull OpenSSL through the NetEase Rust stack and are
-    // much more fragile when cross-compiling on Arch. The release APK only needs
-    // arm64-v8a for modern phones, so keep x86_64 opt-in instead of blocking
-    // normal device builds. Use -Pairlyrics.buildX86_64=true only when you need it.
     if (buildX8664) {
         rustAbiArgs += listOf("-t", "x86_64")
     }

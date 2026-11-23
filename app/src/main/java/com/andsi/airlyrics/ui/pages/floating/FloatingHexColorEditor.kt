@@ -11,6 +11,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
@@ -109,7 +110,7 @@ internal class FloatingHexColorEditor(
         })
         input.doAfterTextChanged {
             snapshot()
-            if (error.visibility == View.VISIBLE && parseFloatingHexColor(it.toString()) != null) showError(false)
+            if (error.isVisible && parseFloatingHexColor(it.toString()) != null) showError(false)
         }
         fun submit() {
             val rgb = parseFloatingHexColor(input.text.toString())

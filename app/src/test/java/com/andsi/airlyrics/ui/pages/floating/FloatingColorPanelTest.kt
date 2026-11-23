@@ -277,7 +277,7 @@ class FloatingColorPanelTest {
 
         scope.panelOpeners.getValue(FloatingPanelId.SHADOW).invoke()
         layout()
-        applySaved("#A85350")
+        applySavedSwatch()
         assertEquals(favorite and 0xFFFFFF, host.floatingStyle().shadowColor and 0xFFFFFF)
         assertEquals(Color.alpha(initial.shadowColor), Color.alpha(host.floatingStyle().shadowColor))
         assertEquals(adjusted.backgroundColor, host.floatingStyle().backgroundColor)
@@ -497,7 +497,7 @@ class FloatingColorPanelTest {
         assertEquals(adjusted, host.floatingStyle())
         val custom = action(R.string.ui_custom_color)
         assertTrue(custom.contentDescription.toString().endsWith("#123456"))
-        val sample = all(custom).firstNotNullOf { it.background as? android.graphics.drawable.GradientDrawable }
+        val sample = all(custom).firstNotNullOf { it.background as? GradientDrawable }
         assertEquals(Color.rgb(18, 52, 86), sample.color?.defaultColor)
         assertEquals(com.andsi.airlyrics.core.color.AirColorUtils.multiplyAlpha(
             adjusted.shadowColor, Color.alpha(adjusted.textColor)
@@ -629,8 +629,8 @@ class FloatingColorPanelTest {
         it.getTag(R.id.interaction_anchor) == "floating.color.saved"
     }
 
-    private fun applySaved(code: String) = visible(savedGrid()).single {
-        it.contentDescription == code && it.isClickable
+    private fun applySavedSwatch() = visible(savedGrid()).single {
+        it.contentDescription == "#A85350" && it.isClickable
     }.performClick()
 
     private fun editRgb(color: Int) {
@@ -687,7 +687,7 @@ class FloatingColorPanelTest {
         assertTrue(action(R.string.ui_custom_color).contentDescription.toString().endsWith("#42A5F5"))
         assertEquals(4, savedGrid().columns)
         assertEquals(presetGrid().getChildAt(0).width, savedGrid().getChildAt(0).width)
-        applySaved("#A85350")
+        applySavedSwatch()
         layout()
         assertEquals(Color.argb(173, 168, 83, 80), host.floatingStyle().textColor)
         capture("text-favorites")
@@ -696,7 +696,7 @@ class FloatingColorPanelTest {
 
         scope.panelOpeners.getValue(FloatingPanelId.HIGHLIGHT_COLOR).invoke()
         layout()
-        applySaved("#A85350")
+        applySavedSwatch()
         layout()
         assertEquals(blue, host.floatingStyle().textColor)
         assertEquals(Color.argb(91, 168, 83, 80), host.floatingStyle().wordByWordHighlightColor)

@@ -17,6 +17,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import androidx.appcompat.widget.AppCompatButton
 import androidx.core.graphics.ColorUtils
+import androidx.core.widget.TextViewCompat
 import com.andsi.airlyrics.ui.components.AdaptiveGridLayout
 import com.andsi.airlyrics.ui.components.GridColumnPolicy
 import com.andsi.airlyrics.ui.components.SettingTileLayout
@@ -98,7 +99,7 @@ internal fun MainUiHost.floatingFocusBubbleImpl(
                 }
             )
             setAirStartIcon(activity, R.drawable.ic_air_reset, muted, sizeDp = 13)
-            compoundDrawableTintList = ink
+            TextViewCompat.setCompoundDrawableTintList(this, ink)
             isEnabled = false
             setTag(R.id.interaction_anchor, "floating.panel.reset")
             enableSoftPressFeedback()
