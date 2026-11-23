@@ -59,10 +59,10 @@ if (spicyClientKey.isNotEmpty() && !Regex("sl_pk_[A-Za-z0-9_-]+").matches(spicyC
 }
 
 val buildX8664 = providers.gradleProperty("airlyrics.buildX86_64").orNull == "true"
-// Signed upstream release APKs use the direct updater. Store and development builds may override it explicitly.
+// Keep the updater independent of signing so F-Droid can reproduce the GitHub APK.
 val appUpdateInstallerOverride = providers.gradleProperty("airlyrics.enableAppUpdateInstaller").orNull?.let { it == "true" }
 fun appUpdateInstallerEnabled(buildType: String?) =
-    appUpdateInstallerOverride ?: (buildType == "release" && hasReleaseSigning)
+    appUpdateInstallerOverride ?: (buildType == "release")
 
 fun releaseSigningStoreFile(path: String) = file(path).takeIf { it.isAbsolute } ?: rootProject.file(path)
 
