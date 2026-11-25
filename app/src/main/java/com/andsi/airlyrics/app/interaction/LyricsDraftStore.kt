@@ -11,12 +11,16 @@ internal class LyricsDraftStore(
     private val directory: File,
     private val executor: java.util.concurrent.ExecutorService = io
 ) {
-    fun write(id: String, text: String): Future<*> = executor.submit {
+    data class Draft(val text: String, val bulkEditing: Boolean)
+
+    fun write(id: String, text: String, bulkEditing: Boolean = false): Future<*> = executor.submit {
         directory.mkdirs()
         val file = atomic(id)
         val stream = file.startWrite()
         try {
-            stream.write(JSONObject().put("version", 1).put("text", text).toString().toByteArray(Charsets.UTF_8))
+            val json = JSONObject().put("version", 1).put("text", text)
+            if (bulkEditing) json.put("bulkEditing", true)
+            stream.write(json.toString().toByteArray(Charsets.UTF_8))
             file.finishWrite(stream)
         } catch (error: Exception) {
             file.failWrite(stream)
@@ -24,10 +28,16 @@ internal class LyricsDraftStore(
         }
     }
 
-    fun read(id: String): Future<String?> = executor.submit<String?> {
+    fun read(id: String): Future<String?> = readDraft(id) { it.getString("text") }
+
+    fun readDraft(id: String): Future<Draft?> = readDraft(id) {
+        Draft(it.getString("text"), it.optBoolean("bulkEditing"))
+    }
+
+    private fun <T> readDraft(id: String, decode: (JSONObject) -> T): Future<T?> = executor.submit<T?> {
         runCatching {
             val json = JSONObject(atomic(id).readFully().toString(Charsets.UTF_8))
-            if (json.getInt("version") == 1) json.getString("text") else null
+            if (json.getInt("version") == 1) decode(json) else null
         }.getOrNull()
     }
 

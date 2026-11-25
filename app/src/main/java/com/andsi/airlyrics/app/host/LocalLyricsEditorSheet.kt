@@ -3,17 +3,21 @@ package com.andsi.airlyrics.app.host
 import android.annotation.SuppressLint
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.Editable
 import android.text.InputType
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 import android.view.animation.PathInterpolator
@@ -24,9 +28,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatEditText
 import androidx.core.graphics.ColorUtils
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.doOnNextLayout
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
+import androidx.core.widget.doOnTextChanged
 import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -56,22 +61,19 @@ import com.andsi.airlyrics.ui.theme.colorStroke
 import com.andsi.airlyrics.ui.theme.colorSurfaceLight
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import com.andsi.airlyrics.ui.theme.colorTextStrong
-import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import java.text.DateFormat
 import java.util.Date
 import kotlin.math.roundToInt
 
 @Suppress("DEPRECATION")
 internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSession): EditorDialogBinding {
-    val document = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD)
-        EditableLrcDocument.fromWords(session.text) else EditableLrcDocument.from(if (session.item.isUntimed) "" else session.text)
+    val wordByWord = session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
+    var showingText = session.showsTextEditor
+    var timelineText = session.text.takeUnless { showingText }
+    fun timelineDocument(text: String): EditableLrcDocument =
+        if (wordByWord) EditableLrcDocument.fromWords(text) else EditableLrcDocument.from(text)
     var closeLineEditor: () -> Boolean = { false }
-    val dialog = object : BottomSheetDialog(this, R.style.ThemeOverlay_AirLyrics_LyricsSources) {
-        override fun cancel() {
-            if (!closeLineEditor()) super.cancel()
-        }
-    }
+    val dialog = LyricsEditorBottomSheet(this) { closeLineEditor() }
     val sheet = FrameLayout(this).apply {
         clipChildren = false
         clipToPadding = false
@@ -123,17 +125,28 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     }
     content.addView(header, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(14) })
 
+    var selectMode: (Boolean) -> Unit = {}
+    val modeSwitch = if (session.item.isUntimed) null else {
+        LyricsEditorModeSwitch(this, session.bulkEditing) { selectMode(it) }.also {
+            content.addView(it.view, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
+        }
+    }
+
     val list = RecyclerView(this).apply {
         layoutManager = LinearLayoutManager(this@showLocalLyricsEditorSheet)
         itemAnimator = null
         overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
         setPadding(dp(6), dp(6), dp(6), dp(6))
         clipToPadding = false
+    }
+    val editorBody = FrameLayout(this).apply {
         background = GradientDrawable().apply {
             cornerRadius = dp(AirUiTokens.Radius.Sm).toFloat()
             setColor(colorSurfaceLight)
             setStroke(dp(AirUiTokens.Stroke.Hairline), colorStroke)
         }
+        clipToOutline = true
+        addView(list, FrameLayout.LayoutParams(-1, -1))
     }
     val overlay = FrameLayout(this).apply {
         visibility = View.GONE
@@ -141,42 +154,47 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
         clipToPadding = false
     }
     lateinit var lineEditor: FloatingLineEditor
-    var onDocumentChanged: (Boolean) -> Unit = {}
+    var onDocumentChanged: () -> Unit = {}
     val rows = LrcRowsAdapter(
-        this, document,
+        this,
+        timelineText?.let(::timelineDocument) ?: EditableLrcDocument.from(""),
         onAction = { row, anchor, insert -> lineEditor.open(row, anchor, insert) },
-        onDelete = { onDocumentChanged(false) }
+        onDelete = { onDocumentChanged() },
     )
     list.adapter = rows
     var captureRaw: () -> Unit = {}
-    val rawInput = if (session.item.isUntimed) object : AppCompatEditText(this) {
+    var queueTextPosition: () -> Unit = {}
+    val rawInput = object : AppCompatEditText(this) {
         override fun onSelectionChanged(selStart: Int, selEnd: Int) {
             super.onSelectionChanged(selStart, selEnd)
-            captureRaw()
+            queueTextPosition()
         }
     }.apply {
         isSaveEnabled = session.access == null
-        setText(session.text)
-        setSelection(session.selectionStart.coerceIn(0, length()), session.selectionEnd.coerceIn(0, length()))
         hint = getString(R.string.ui_lyrics)
         contentDescription = getString(R.string.ui_lyrics)
         textSize = AirUiTokens.TextSize.Body
-        minLines = 8
         gravity = Gravity.TOP or Gravity.START
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+        if (!session.item.isUntimed) typeface = Typeface.MONOSPACE
         setHorizontallyScrolling(false)
         setTextColor(colorTextStrong)
         setHintTextColor(colorTextMuted)
         setPadding(dp(12), dp(12), dp(12), dp(12))
+        setLineSpacing(dp(4).toFloat(), 1f)
         background = null
-    } else null
-    val rawScroll = rawInput?.let { input -> NestedScrollView(this).apply {
+    }
+    val textPane = NestedScrollView(this).apply {
         isFillViewport = true
-        background = list.background.constantState?.newDrawable()
-        addView(LinearLayout(this@showLocalLyricsEditorSheet).apply {
-            orientation = LinearLayout.VERTICAL
-            addView(input, LinearLayout.LayoutParams(-1, -2))
-            session.untimedTranslation?.let { translation ->
+        overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
+        val translation = session.untimedTranslation?.takeIf { session.item.isUntimed }
+        if (translation == null) {
+            addView(rawInput, ViewGroup.LayoutParams(-1, -2))
+        } else {
+            addView(LinearLayout(this@showLocalLyricsEditorSheet).apply {
+                orientation = LinearLayout.VERTICAL
+                rawInput.minLines = 8
+                addView(rawInput, LinearLayout.LayoutParams(-1, -2))
                 addView(TextView(this@showLocalLyricsEditorSheet).apply {
                     text = getString(R.string.search_translation)
                     textSize = AirUiTokens.TextSize.Caption
@@ -190,52 +208,26 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
                     setTextIsSelectable(true)
                     setPadding(dp(12), 0, dp(12), dp(12))
                 })
-            }
-        }, ViewGroup.LayoutParams(-1, -2))
-    } }
-    val editorBody: View = rawScroll ?: list
-    val maxListHeight = (resources.displayMetrics.heightPixels * 0.84f).toInt() - dp(220)
-    var imeInset = 0
-    var listHeightAnimator: ValueAnimator? = null
-    fun listHeight(): Int {
-        val preferred = (if (rawInput != null) dp(280) else rows.itemCount * dp(64)).coerceAtLeast(dp(86))
-            .coerceAtMost(maxListHeight.coerceAtLeast(dp(86)))
-        val available = resources.displayMetrics.heightPixels - imeInset - dp(220)
-        return preferred.coerceAtMost(available.coerceAtLeast(dp(76)))
-    }
-    fun updateListHeight(animate: Boolean = false) {
-        val height = listHeight()
-        val current = editorBody.layoutParams.height
-        val previous = listHeightAnimator
-        listHeightAnimator = null
-        previous?.cancel()
-        if (current == height) return
-        if (!animate || !ValueAnimator.areAnimatorsEnabled() || !editorBody.isAttachedToWindow) {
-            editorBody.layoutParams = editorBody.layoutParams.apply { this.height = height }
-            return
+            }, ViewGroup.LayoutParams(-1, -2))
         }
-        val motion = ValueAnimator.ofInt(current, height).apply {
-            duration = 235L
-            interpolator = PathInterpolator(0.2f, 0f, 0f, 1f)
-            addUpdateListener { animation ->
-                val next = animation.animatedValue as Int
-                if (editorBody.layoutParams.height != next) {
-                    editorBody.layoutParams = editorBody.layoutParams.apply { this.height = next }
-                }
-            }
-            addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    if (listHeightAnimator === animation) {
-                        listHeightAnimator = null
-                        editorBody.layoutParams = editorBody.layoutParams.apply { this.height = height }
-                    }
-                }
-            })
-        }
-        listHeightAnimator = motion
-        motion.start()
     }
-    content.addView(editorBody, LinearLayout.LayoutParams(-1, listHeight()))
+    if (showingText) {
+        list.visibility = View.GONE
+        editorBody.addView(textPane, FrameLayout.LayoutParams(-1, -1))
+    }
+    var animatedPane: View? = null
+    val initialRows = if (showingText) session.text.lineSequence().take(9).count() else rows.itemCount
+    val preferredEditorHeight = if (modeSwitch == null) dp(280) else dp((initialRows.coerceAtMost(9) * 64).coerceAtLeast(280))
+    content.addView(editorBody, LinearLayout.LayoutParams(-1, preferredEditorHeight, 1f))
+    val bulkError = TextView(this).apply {
+        visibility = if (modeSwitch != null) View.INVISIBLE else View.GONE
+        setText(R.string.ui_lyrics_bulk_empty)
+        textSize = AirUiTokens.TextSize.Caption
+        setTextColor(colorDanger)
+        setPadding(dp(6), dp(6), dp(6), 0)
+        accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    content.addView(bulkError, LinearLayout.LayoutParams(-1, -2))
 
     session.access?.let { access ->
         content.addView(TextView(this).apply {
@@ -260,8 +252,10 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
         editorSession.cancel()
         dialog.dismiss()
     }
+    var reportBulkError: (List<Int>) -> Unit = {}
     val save = sheetButton(getString(R.string.ui_save_changes), AirTonalButtonTone.SELECTED) {
-        editorSession.save()
+        if (showingText) captureRaw()
+        editorSession.save(reportBulkError)
     }
     buttons += cancel
     buttons += save
@@ -269,85 +263,227 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     footer.addView(save, LinearLayout.LayoutParams(-2, -2).apply { marginStart = dp(8) })
     content.addView(footer, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(8) })
 
-    if (rawInput != null && rawScroll != null) {
-        captureRaw = {
-            editorSession.edit(rawInput.text.toString(), rawInput.selectionStart, rawInput.selectionEnd, rawScroll.scrollY)
-            save.isEnabled = editorSession.state.value?.busy != true && (!rawInput.text.isNullOrBlank() || !session.untimedTranslation.isNullOrBlank())
-            save.alpha = if (save.isEnabled) 1f else 0.5f
-        }
-        rawInput.doAfterTextChanged { captureRaw() }
-        rawScroll.setOnScrollChangeListener { _, _, _, _, _ -> captureRaw() }
-        interactionUi.snapshot(rawInput, captureRaw)
-        rawInput.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) = Unit
-            override fun onViewDetachedFromWindow(v: View) { interactionUi.forgetSnapshot(rawInput) }
-        })
+    var restoringText = false
+    fun updateSaveAvailability(busy: Boolean) {
+        save.isEnabled = !busy && (!session.item.isUntimed || !rawInput.text.isNullOrBlank() ||
+            !session.untimedTranslation.isNullOrBlank())
+        save.alpha = if (save.isEnabled) 1f else 0.5f
     }
-    val entranceParts = listOf(header, editorBody, footer)
-    if (ValueAnimator.areAnimatorsEnabled()) entranceParts.forEachIndexed { index, view ->
-        view.alpha = 0.72f
-        view.translationY = dp(6 + index * 2).toFloat()
+
+    val cursorBounds = Rect()
+    fun revealTextCursor(offset: Int = rawInput.selectionEnd) {
+        val layout = rawInput.layout ?: return
+        if (!showingText || (offset < 0)) return
+        val line = layout.getLineForOffset(offset.coerceAtMost(rawInput.length()))
+        val padding = rawInput.totalPaddingTop
+        val margin = dp(8)
+        val lineTop = padding + layout.getLineTop(line)
+        val lineBottom = padding + layout.getLineBottom(line)
+        cursorBounds.left = 0
+        cursorBounds.top = (lineTop - margin).coerceAtLeast(0)
+        cursorBounds.right = 1
+        cursorBounds.bottom = (lineBottom + margin).coerceAtMost(rawInput.height)
+        textPane.offsetDescendantRectToMyCoords(rawInput, cursorBounds)
+        val scrollY = textPane.scrollY
+        val visibleTop = scrollY + textPane.paddingTop
+        val visibleBottom = scrollY + (textPane.height - textPane.paddingBottom)
+        when {
+            cursorBounds.bottom > visibleBottom -> textPane.scrollBy(0, cursorBounds.bottom - visibleBottom)
+            cursorBounds.top < visibleTop -> textPane.scrollBy(0, cursorBounds.top - visibleTop)
+        }
+    }
+
+    var errorShake: ObjectAnimator? = null
+    fun clearBulkError() {
+        if (bulkError.isVisible) {
+            bulkError.animate().cancel()
+            errorShake?.cancel()
+            bulkError.translationX = 0f
+            bulkError.visibility = View.INVISIBLE
+        }
+    }
+
+    fun showBulkError(lines: List<Int>) {
+        val line = lines.firstOrNull()
+        val message = if (line == null) getString(R.string.ui_lyrics_bulk_empty)
+            else getString(R.string.ui_lyrics_bulk_invalid_line, line)
+        val firstDisplay = !bulkError.isVisible
+        val changed = firstDisplay || (bulkError.text != message)
+        if (bulkError.text != message) bulkError.text = message
+        if (firstDisplay) {
+            bulkError.visibility = View.VISIBLE
+            bulkError.alpha = 1f
+            bulkError.translationY = 0f
+            if (ValueAnimator.areAnimatorsEnabled()) {
+                bulkError.alpha = 0.55f
+                bulkError.translationY = -dp(3).toFloat()
+                bulkError.animate().alpha(1f).translationY(0f)
+                    .setDuration(AirUiTokens.Layout.FastFadeMs).start()
+            }
+        }
+
+        errorShake?.cancel()
+        if (ValueAnimator.areAnimatorsEnabled()) {
+            val distance = dp(5).toFloat()
+            errorShake = ObjectAnimator.ofFloat(bulkError, View.TRANSLATION_X,
+                bulkError.translationX, -distance, distance, -distance * 0.45f, 0f
+            ).apply { duration = 225L; start() }
+        } else {
+            bulkError.translationX = 0f
+        }
+
+        if (changed && (line != null)) {
+            val text = rawInput.text ?: return
+            val offset = sourceNewline.findAll(text).take(line - 1).lastOrNull()?.range?.last?.plus(1) ?: 0
+            if ((rawInput.selectionStart != offset) || (rawInput.selectionEnd != offset)) {
+                rawInput.setSelection(offset)
+            }
+            revealTextCursor(offset)
+        }
+    }
+    reportBulkError = ::showBulkError
+
+    val saveTextPosition = Runnable {
+        val current = editorSession.state.value?.takeIf { it.id == session.id } ?: return@Runnable
+        if (showingText && !restoringText) {
+            editorSession.edit(current.text, rawInput.selectionStart, rawInput.selectionEnd, textPane.scrollY)
+        }
+    }
+    queueTextPosition = {
+        if (showingText && !restoringText) {
+            textPane.removeCallbacks(saveTextPosition)
+            textPane.postDelayed(saveTextPosition, 140L)
+        }
+    }
+    captureRaw = {
+        if (showingText && !restoringText && (editorSession.state.value?.id == session.id)) {
+            textPane.removeCallbacks(saveTextPosition)
+            editorSession.edit(rawInput.text.toString(), rawInput.selectionStart, rawInput.selectionEnd, textPane.scrollY)
+            updateSaveAvailability(editorSession.state.value?.busy == true)
+        }
+    }
+    var changedStart = 0
+    var changedEnd = 0
+    rawInput.doOnTextChanged { _, start, _, count ->
+        changedStart = start
+        changedEnd = start + count
+    }
+    rawInput.doAfterTextChanged {
+        if ((it != null) && !session.item.isUntimed) {
+            tintEditorTags(it, changedStart, changedEnd, colorTextMuted)
+        }
+        if (!restoringText) {
+            clearBulkError()
+            if (rawInput.isFocused) rawInput.post { if (rawInput.isFocused) revealTextCursor() }
+        }
+        captureRaw()
+    }
+    textPane.setOnScrollChangeListener { _, _, _, _, _ -> queueTextPosition() }
+    rawInput.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+        override fun onViewAttachedToWindow(v: View) { interactionUi.snapshot(v, captureRaw) }
+        override fun onViewDetachedFromWindow(v: View) {
+            textPane.removeCallbacks(saveTextPosition)
+            interactionUi.forgetSnapshot(v)
+        }
+    })
+
+    fun showText(next: EditorSession) {
+        restoringText = true
+        if (rawInput.text.toString() != next.text) rawInput.setText(next.text)
+        val start = next.selectionStart.coerceIn(0, rawInput.length())
+        val end = next.selectionEnd.coerceIn(0, rawInput.length())
+        rawInput.setSelection(start, end)
+        restoringText = false
+        textPane.doOnNextLayout {
+            if (showingText && (rawInput.selectionStart == start) && (rawInput.selectionEnd == end) &&
+                (rawInput.text?.toString() == next.text)
+            ) {
+                restoringText = true
+                textPane.scrollTo(0, next.scrollY)
+                restoringText = false
+            }
+        }
+    }
+
+    fun restoreTimelineScroll(scrollY: Int) {
+        list.doOnNextLayout { if (!showingText && (scrollY > 0)) list.scrollBy(0, scrollY) }
+    }
+
+    fun captureTimelinePosition() {
+        if (showingText) return
+        val current = editorSession.state.value?.takeIf { it.id == session.id } ?: return
+        editorSession.edit(current.text, 0, 0, list.computeVerticalScrollOffset())
+    }
+    interactionUi.snapshot(list, ::captureTimelinePosition)
+
+    selectMode = change@{ bulkEditing ->
+        if (showingText == bulkEditing) return@change
+        if (showingText) captureRaw() else captureTimelinePosition()
+        val next = editorSession.switchMode(bulkEditing, ::showBulkError)
+        if (next == null) {
+            modeSwitch?.select(showingText)
+            return@change
+        }
+        showingText = next.bulkEditing
+        clearBulkError()
+        modeSwitch?.select(showingText)
+        animatedPane?.let { pane ->
+            pane.animate().cancel()
+            pane.alpha = 1f
+            pane.translationX = 0f
+        }
+        if (showingText) {
+            list.visibility = View.GONE
+            editorBody.addView(textPane, FrameLayout.LayoutParams(-1, -1))
+            showText(next)
+        } else {
+            rawInput.clearFocus()
+            getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(rawInput.windowToken, 0)
+            editorBody.removeView(textPane)
+            list.visibility = View.VISIBLE
+            if (timelineText != next.text) {
+                timelineText = next.text
+                rows.replaceDocument(timelineDocument(next.text))
+                (list.layoutManager as LinearLayoutManager).scrollToPosition(0)
+                restoreTimelineScroll(next.timelineScrollY)
+            }
+        }
+        animatedPane = (if (showingText) textPane else list).also { revealEditorPane(it, showingText) }
     }
 
     sheet.addView(overlay, FrameLayout.LayoutParams(-1, -1))
-    onDocumentChanged = { inserted ->
-        val text = document.serialize()
+    onDocumentChanged = {
+        val text = rows.document.serialize()
+        timelineText = text
         editorSession.edit(text, 0, 0, list.computeVerticalScrollOffset())
-        updateListHeight(inserted)
     }
-    lineEditor = FloatingLineEditor(this, sheet, overlay, document, rows, onDocumentChanged)
+    lineEditor = FloatingLineEditor(this, sheet, overlay, rows, { dialog.visibleHeight }, onDocumentChanged)
     closeLineEditor = lineEditor::close
     list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-            if (dy == 0) return
-            val current = editorSession.state.value ?: return
-            editorSession.edit(
-                current.text,
-                current.selectionStart,
-                current.selectionEnd,
-                recyclerView.computeVerticalScrollOffset()
-            )
+        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+            if (newState == RecyclerView.SCROLL_STATE_IDLE) captureTimelinePosition()
         }
     })
+
     sheet.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> lineEditor.reposition() }
-    ViewCompat.setOnApplyWindowInsetsListener(sheet) { _, insets ->
-        imeInset = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-        updateListHeight()
-        insets
+    editorBody.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+        val height = bottom - top
+        val oldHeight = oldBottom - oldTop
+        if (showingText && rawInput.isFocused && (height < oldHeight)) {
+            editorBody.post { if (rawInput.isFocused) revealTextCursor() }
+        }
     }
 
-    dialog.setContentView(sheet)
+    dialog.setEditorContent(sheet)
     dialog.setOnShowListener {
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-        dialog.behavior.apply {
-            maxWidth = dp(640)
-            skipCollapsed = true
-            state = BottomSheetBehavior.STATE_EXPANDED
-        }
-        dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)?.apply {
-            backgroundTintList = null
-            background = null
-            stateListAnimator = null
-            elevation = 0f
-            outlineProvider = null
-        }
-        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        if (ValueAnimator.areAnimatorsEnabled()) {
-            entranceParts.forEachIndexed { index, view ->
-                view.animate().alpha(1f).translationY(0f)
-                    .setStartDelay(index * 28L).setDuration(175L)
-                    .setInterpolator(PathInterpolator(0.2f, 0f, 0f, 1f)).start()
-            }
-        } else {
-            entranceParts.forEach { it.alpha = 1f; it.translationY = 0f }
-        }
-        editorBody.post { if (rawScroll != null) rawScroll.scrollTo(0, session.scrollY) else list.scrollBy(0, session.scrollY) }
-        ViewCompat.requestApplyInsets(sheet)
+        if (showingText) showText(session) else restoreTimelineScroll(session.timelineScrollY)
+        updateSaveAvailability(session.busy)
     }
     dialog.setOnDismissListener {
-        listHeightAnimator?.cancel()
-        listHeightAnimator = null
-        entranceParts.forEach { it.animate().cancel() }
+        animatedPane?.animate()?.cancel()
+        bulkError.animate().cancel()
+        errorShake?.cancel()
+        interactionUi.forgetSnapshot(list)
         lineEditor.dispose()
         interactionUi.forget(dialog)
         if (!interactionUi.releasing && !activity.isChangingConfigurations && !activity.isDestroyed &&
@@ -356,17 +492,55 @@ internal fun MainActivityUiHost.showLocalLyricsEditorSheet(session: EditorSessio
     }
     interactionUi.register(dialog, dialog::dismiss)
     dialog.show()
-    return EditorDialogBinding(session.id, dialog) { busy ->
-        rows.enabled = !busy
-        rawInput?.isEnabled = !busy
-        buttons.forEach { it.isEnabled = !busy; it.alpha = if (busy) 0.55f else 1f }
-        if (rawInput != null) {
-            save.isEnabled = !busy && (!rawInput.text.isNullOrBlank() || !session.untimedTranslation.isNullOrBlank())
-            save.alpha = if (save.isEnabled) 1f else 0.5f
-        }
-        dialog.setCancelable(!busy)
-        dialog.behavior.isDraggable = !busy
+    return EditorDialogBinding(
+        session.id,
+        dialog,
+        setBusy = { busy ->
+            rows.enabled = !busy
+            rawInput.isEnabled = !busy
+            modeSwitch?.setInteractive(!busy)
+            buttons.forEach { it.isEnabled = !busy; it.alpha = if (busy) 0.55f else 1f }
+            updateSaveAvailability(busy)
+            dialog.setCancelable(!busy)
+            dialog.behavior.isDraggable = !busy
+        },
+        showBulkError = ::showBulkError,
+    )
+}
+
+private val sourceNewline = Regex("\\r\\n|\\n|\\r")
+
+private const val SOURCE_TIME_PATTERN = """\d+:\d{2}(?:[.:]\d{1,3})?"""
+private val sourceTag = Regex(
+    """(?<!\\)(?:\[(?:(?:bg )?$SOURCE_TIME_PATTERN(?:-$SOURCE_TIME_PATTERN)?|text|tr(?:-words|-lrc)?|meta)]|<$SOURCE_TIME_PATTERN(?:-$SOURCE_TIME_PATTERN)?>)""",
+)
+
+private class SourceTagSpan(color: Int) : ForegroundColorSpan(color)
+
+private fun tintEditorTags(text: Editable, editStart: Int, editEnd: Int, color: Int) {
+    var start = editStart.coerceIn(0, text.length)
+    var end = editEnd.coerceIn(start, text.length)
+    while ((start > 0) && (text[start - 1] != '\n') && (text[start - 1] != '\r')) start--
+    while ((end < text.length) && (text[end] != '\n') && (text[end] != '\r')) end++
+    text.getSpans(start, end, SourceTagSpan::class.java).forEach(text::removeSpan)
+    sourceTag.findAll(text.substring(start, end)).forEach { match ->
+        text.setSpan(
+            SourceTagSpan(color),
+            start + match.range.first,
+            start + match.range.last + 1,
+            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+        )
     }
+}
+
+private fun MainActivityUiHost.revealEditorPane(pane: View, towardText: Boolean) {
+    if (!ValueAnimator.areAnimatorsEnabled()) return
+    val fromRight = towardText == (pane.layoutDirection != View.LAYOUT_DIRECTION_RTL)
+    pane.translationX = dp(AirUiTokens.Layout.LyricsSlideDistanceDp) * if (fromRight) 1f else -1f
+    pane.alpha = 0.84f
+    pane.animate().translationX(0f).alpha(1f)
+        .setDuration(AirUiTokens.Layout.LyricsFadeMs)
+        .setInterpolator(PathInterpolator(0.23f, 1f, 0.32f, 1f)).start()
 }
 
 private fun roundedFill(color: Int, radiusPx: Int) = GradientDrawable().apply {
@@ -392,15 +566,27 @@ private fun MainActivityUiHost.sheetButton(
 
 private class LrcRowsAdapter(
     private val host: MainActivityUiHost,
-    private val document: EditableLrcDocument,
+    document: EditableLrcDocument,
     private val onAction: (EditableLrcDocument.Row?, View, Boolean) -> Unit,
-    private val onDelete: () -> Unit
+    private val onDelete: () -> Unit,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-    private val visibleRows = document.rows.filter(EditableLrcDocument.Row::isVisible).toMutableList()
+    var document = document
+        private set
+    private val visibleRows = document.rows.filterTo(mutableListOf(), EditableLrcDocument.Row::isVisible)
     private val pendingInserted = mutableSetOf<EditableLrcDocument.Row>()
     private var list: RecyclerView? = null
     private var expanded: EditableLrcDocument.Row? = null
     var enabled = true
+
+    @SuppressLint("NotifyDataSetChanged")
+    fun replaceDocument(replacement: EditableLrcDocument) {
+        document = replacement
+        visibleRows.clear()
+        replacement.rows.filterTo(visibleRows, EditableLrcDocument.Row::isVisible)
+        expanded = null
+        pendingInserted.clear()
+        notifyDataSetChanged()
+    }
 
     override fun getItemCount(): Int = visibleRows.size.coerceAtLeast(1)
     override fun getItemViewType(position: Int): Int = when {
@@ -461,7 +647,7 @@ private class LrcRowsAdapter(
         lyric.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         container.addView(line, LinearLayout.LayoutParams(-1, -2))
 
-        val reveal = ActionReveal(host)
+        val reveal = FrameLayout(host).apply { visibility = View.GONE }
         val actions = LinearLayout(host).apply { gravity = Gravity.CENTER_VERTICAL }
         val edit = actionButton(host, R.string.ui_edit_line) {
             if (enabled) visibleRows.getOrNull(holderPosition(container))?.let { onAction(it, container, false) }
@@ -504,9 +690,19 @@ private class LrcRowsAdapter(
         (list?.findContainingViewHolder(view)?.bindingAdapterPosition ?: RecyclerView.NO_POSITION)
 
     private fun refreshExpansion(row: EditableLrcDocument.Row) {
+        val recycler = list ?: return
         val index = visibleRows.indexOf(row)
         if (index < 0) return
-        (list?.findViewHolderForAdapterPosition(index) as? RowHolder)?.animateExpansion(expanded === row)
+        val holder = recycler.findViewHolderForAdapterPosition(index) as? RowHolder ?: return
+        val open = expanded === row
+        holder.showActions(open, animate = true)
+        if (open) {
+            recycler.doOnNextLayout {
+                if (expanded !== row) return@doOnNextLayout
+                val current = recycler.findViewHolderForAdapterPosition(visibleRows.indexOf(row)) as? RowHolder
+                current?.scrollActionsIntoView(recycler)
+            }
+        }
     }
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
@@ -572,10 +768,9 @@ private class LrcRowsAdapter(
         private val insertion: InsertReveal,
         private val lyricView: TextView,
         private val timeView: TextView?,
-        private val reveal: ActionReveal?,
+        private val reveal: FrameLayout?,
         private val actions: View?
     ) : RecyclerView.ViewHolder(insertion) {
-        private var animator: ValueAnimator? = null
         private var insertionAnimator: ValueAnimator? = null
         private var startInsertion: Runnable? = null
         fun bind(row: EditableLrcDocument.Row, expanded: Boolean, inserted: Boolean) {
@@ -584,7 +779,7 @@ private class LrcRowsAdapter(
             timeView?.text = listOfNotNull(row.timestamp,
                 lyricView.context.getString(R.string.ui_lyrics_background).takeIf { row.wordLine?.isBackground == true }).joinToString("\n")
             insertion.setRowDescription(if (row.isTimed) "${row.timestamp}, ${row.lyric}" else row.raw)
-            reveal?.showProgress(if (expanded) 1f else 0f)
+            showActions(expanded)
             if (inserted) {
                 insertion.showProgress(0f)
                 val start = Runnable {
@@ -618,29 +813,31 @@ private class LrcRowsAdapter(
             motion.start()
         }
 
-        fun animateExpansion(open: Boolean) {
+        fun showActions(open: Boolean, animate: Boolean = false) {
             val panel = reveal ?: return
-            stopAnimation()
-            val target = if (open) 1f else 0f
-            if (!ValueAnimator.areAnimatorsEnabled() || !itemView.isAttachedToWindow) {
-                panel.showProgress(target, actions)
-                return
+            val content = actions ?: return
+            content.animate().cancel()
+            panel.isVisible = open
+            content.alpha = 1f
+            content.translationY = 0f
+            if (open && animate && ValueAnimator.areAnimatorsEnabled() && itemView.isAttachedToWindow) {
+                content.alpha = 0.55f
+                content.translationY = -content.resources.displayMetrics.density * 6f
+                content.animate().alpha(1f).translationY(0f).setDuration(AirUiTokens.Layout.LyricsFadeMs)
+                    .setInterpolator(PathInterpolator(0.23f, 1f, 0.32f, 1f)).start()
             }
-            val animation = ValueAnimator.ofFloat(panel.progress, target).apply {
-                duration = if (open) 310L else 240L
-                interpolator = OvershootInterpolator(if (open) 0.62f else 0.28f)
-                addUpdateListener { panel.showProgress(it.animatedValue as Float, actions) }
-                addListener(object : AnimatorListenerAdapter() {
-                    override fun onAnimationEnd(animation: Animator) {
-                        if (animator === animation) {
-                            animator = null
-                            panel.showProgress(target, actions)
-                        }
-                    }
-                })
+        }
+
+        fun scrollActionsIntoView(recycler: RecyclerView) {
+            val panel = reveal?.takeIf { it.isVisible } ?: return
+            val bounds = Rect()
+            panel.getDrawingRect(bounds)
+            recycler.offsetDescendantRectToMyCoords(panel, bounds)
+            val overflow = bounds.bottom - (recycler.height - recycler.paddingBottom)
+            if (overflow > 0) {
+                if (ValueAnimator.areAnimatorsEnabled()) recycler.smoothScrollBy(0, overflow, null, 190)
+                else recycler.scrollBy(0, overflow)
             }
-            animator = animation
-            animation.start()
         }
 
         fun stopAnimation() {
@@ -650,9 +847,9 @@ private class LrcRowsAdapter(
             insertionAnimator?.cancel()
             insertionAnimator = null
             insertion.showProgress(1f)
-            animator?.removeAllListeners()
-            animator?.cancel()
-            animator = null
+            actions?.animate()?.cancel()
+            actions?.alpha = 1f
+            actions?.translationY = 0f
         }
     }
 }
@@ -728,36 +925,15 @@ private fun actionButton(
     setOnClickListener { onClick() }
 }
 
-private class ActionReveal(context: Context) : FrameLayout(context) {
-    var progress = 0f
-        private set
-
-    init { clipChildren = false; clipToPadding = false }
-
-    fun showProgress(value: Float, content: View? = getChildAt(0)) {
-        progress = value
-        visibility = if (value <= 0f) GONE else VISIBLE
-        content?.apply {
-            alpha = ((value - 0.84f) / 0.16f).coerceIn(0f, 1f)
-            translationY = (1f - value.coerceIn(0f, 1f)) * resources.displayMetrics.density * 5f
-        }
-        requestLayout()
-    }
-
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-        setMeasuredDimension(measuredWidth, (measuredHeight * progress.coerceAtLeast(0f)).roundToInt())
-    }
-}
-
 private class FloatingLineEditor(
     private val host: MainActivityUiHost,
     private val sheet: FrameLayout,
     private val overlay: FrameLayout,
-    private val document: EditableLrcDocument,
     private val rows: LrcRowsAdapter,
-    private val onChanged: (Boolean) -> Unit
+    private val viewportHeight: () -> Int,
+    private val onChanged: () -> Unit,
 ) {
+    private val document: EditableLrcDocument get() = rows.document
     private var card: HeightBoundScrollView? = null
     private var anchor: View? = null
     private var errorBubble: TextView? = null
@@ -810,7 +986,7 @@ private class FloatingLineEditor(
                 document.update(document.rows.indexOf(row), tag, text)
                 rows.update(row)
             }
-            onChanged(insert)
+            onChanged()
             close()
         }.apply { makeCompact(host) }
         footer.addView(cancel)
@@ -1037,7 +1213,7 @@ private class FloatingLineEditor(
                 document.updateWord(row, line)
                 rows.update(row)
             }
-            onChanged(insert)
+            onChanged()
             close()
         }
         footer.addView(confirm, LinearLayout.LayoutParams(-2, -2).apply { marginStart = host.dp(8) })
@@ -1136,10 +1312,7 @@ private class FloatingLineEditor(
     fun reposition() {
         val editorCard = card ?: return
         if (document.isWordByWord && !closing) {
-            val insets = ViewCompat.getRootWindowInsets(sheet)
-                ?.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime())
-            val available = host.resources.displayMetrics.heightPixels -
-                (insets?.top ?: 0) - (insets?.bottom ?: 0) - host.dp(24)
+            val available = viewportHeight() - host.dp(24)
             val height = available.coerceIn(host.dp(80), host.dp(640)).coerceAtLeast(restingMinHeight)
             if (sheet.minimumHeight != height) sheet.minimumHeight = height
         }
@@ -1150,7 +1323,7 @@ private class FloatingLineEditor(
             params.width = width
             editorCard.layoutParams = params
         }
-        editorCard.maxHeightPx = (sheet.height - host.dp(24)).coerceAtLeast(host.dp(80))
+        editorCard.maxHeightPx = (sheet.height - host.dp(24)).coerceAtLeast(host.dp(48))
         val source = anchor ?: return
         if (closing || !source.isAttachedToWindow) return
         val sheetPosition = IntArray(2)
@@ -1222,10 +1395,11 @@ private class FloatingLineEditor(
         val below = iconPosition[1] - screen[1] + icon.height + host.dp(8)
         val top = (if (above >= margin) above else below)
             .coerceIn(margin, (sheet.height - bubble.height - margin).coerceAtLeast(margin))
-        (bubble.layoutParams as FrameLayout.LayoutParams).apply {
-            leftMargin = left
-            topMargin = top
-            bubble.layoutParams = this
+        val params = bubble.layoutParams as FrameLayout.LayoutParams
+        if ((params.leftMargin != left) || (params.topMargin != top)) {
+            params.leftMargin = left
+            params.topMargin = top
+            bubble.layoutParams = params
         }
     }
 

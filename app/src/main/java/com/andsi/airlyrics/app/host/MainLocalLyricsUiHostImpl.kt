@@ -101,9 +101,12 @@ internal fun MainActivityUiHost.observeEditorSession() {
                 session.notice?.let { notice ->
                     editorSession.consumeNotice()
                     when (notice) {
-                        EditorNotice.INVALID -> if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
-                            showWordByWordLyricsFormatErrorDialog(session.invalidLines)
-                        } else showLyricsFormatErrorDialog(session.invalidLines)
+                        EditorNotice.INVALID -> when {
+                            session.bulkEditing -> binding?.showBulkError?.invoke(session.invalidLines)
+                            session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD ->
+                                showWordByWordLyricsFormatErrorDialog(session.invalidLines)
+                            else -> showLyricsFormatErrorDialog(session.invalidLines)
+                        }
                         EditorNotice.VALID -> showAirDialog(title = getString(R.string.ui_format_looks_good))
                         EditorNotice.READ_FAILED -> showMessage(R.string.ui_read_failed)
                         EditorNotice.DELETE_FAILED -> {
@@ -121,7 +124,12 @@ internal fun MainActivityUiHost.observeEditorSession() {
     }
 }
 
-internal data class EditorDialogBinding(val id: String, val dialog: Dialog, val setBusy: (Boolean) -> Unit)
+internal data class EditorDialogBinding(
+    val id: String,
+    val dialog: Dialog,
+    val setBusy: (Boolean) -> Unit,
+    val showBulkError: (List<Int>) -> Unit,
+)
 
 private fun MainActivityUiHost.showLyricsFormatErrorDialog(invalidLineNumbers: List<Int>) {
     showAirDialog(

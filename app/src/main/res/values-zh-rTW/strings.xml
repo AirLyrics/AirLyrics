@@ -66,6 +66,10 @@
     <string name="ui_cannot_read_this_lyric_file">無法讀取歌詞檔案</string>
     <string name="ui_center">置中</string>
     <string name="ui_edit_line">編輯</string>
+    <string name="ui_lyrics_mode_timeline">時間軸</string>
+    <string name="ui_lyrics_mode_text">整段編輯</string>
+    <string name="ui_lyrics_bulk_invalid_line">請檢查第 %1$d 行的格式。</string>
+    <string name="ui_lyrics_bulk_empty">請新增一行帶時間戳的歌詞。</string>
     <string name="ui_add_next_line">新增下一行</string>
     <string name="ui_delete_lyric_line">刪除目前歌詞行</string>
     <string name="ui_confirm_line">確認</string>

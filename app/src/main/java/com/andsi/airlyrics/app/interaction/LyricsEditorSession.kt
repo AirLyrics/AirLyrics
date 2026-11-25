@@ -6,6 +6,7 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 import com.andsi.airlyrics.lyrics.LyricsAccess
+import com.andsi.airlyrics.lyrics.WordLyricsBulkText
 import com.andsi.airlyrics.lyrics.WordLyricsDocument
 import com.andsi.airlyrics.lyrics.storage.WordLyricsEditorStorage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -37,8 +38,12 @@ internal data class EditorSession(
     val invalidLines: List<Int> = emptyList(),
     val finished: LocalLyricsUiChange? = null,
     val access: LyricsAccess? = null,
-    val untimedTranslation: String? = null
-)
+    val untimedTranslation: String? = null,
+    val bulkEditing: Boolean = false,
+    val timelineScrollY: Int = 0,
+) {
+    val showsTextEditor: Boolean get() = item.isUntimed || bulkEditing
+}
 
 internal class LyricsEditorSession(
     context: Context,
@@ -54,6 +59,7 @@ internal class LyricsEditorSession(
     private var operation: Job? = null
     private var restored = false
     private var expiryJob: Job? = null
+    private var bulkValidation: CachedBulkValidation? = null
 
     init { drafts.prune(interactions.read("editor")?.getString("id")) }
 
@@ -65,17 +71,29 @@ internal class LyricsEditorSession(
         val target = LyricsStorage.LocalLyricsEditTarget.entries.find { it.name == saved.getString("target") } ?: return
         val id = saved.getString("id") ?: return
         loading = scope.launch {
-            val draft = if (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE) null else withContext(Dispatchers.IO) { runCatching { drafts.read(id).get() }.getOrNull() }
-            val text = draft ?: withContext(Dispatchers.IO) { runCatching { readText(item, target) }.getOrNull() }
+            val draft = if (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE) null else withContext(Dispatchers.IO) {
+                runCatching { drafts.readDraft(id).get() }.getOrNull()
+            }
+            val text = draft?.text ?: withContext(Dispatchers.IO) { runCatching { readText(item, target) }.getOrNull() }
             val access = withContext(Dispatchers.IO) { LyricsStorage.restrictedLyricsAccess(context, item.indexKey) }
             val translation = withContext(Dispatchers.IO) { LyricsStorage.untimedTranslation(context, item.toStorageItem()) }
             if (text == null || (item.source == LyricsStorage.SOURCE_PROVIDER_CACHE && access == null)) {
                 interactions.remove("editor")
                 current.value = EditorSession(id, item, target, "", notice = EditorNotice.READ_FAILED)
             } else {
-                current.value = EditorSession(id, item, target, text,
-                    saved.getInt("start").coerceIn(0, text.length), saved.getInt("end").coerceIn(0, text.length),
-                    saved.getInt("scroll"), notice = if (draft == null && item.source != LyricsStorage.SOURCE_PROVIDER_CACHE) EditorNotice.READ_FAILED else null, access = access, untimedTranslation = translation)
+                current.value = EditorSession(
+                    id, item, target, text,
+                    selectionStart = saved.getInt("start"),
+                    selectionEnd = saved.getInt("end"),
+                    scrollY = saved.getInt("scroll"),
+                    notice = if ((draft == null) && (item.source != LyricsStorage.SOURCE_PROVIDER_CACHE)) {
+                        EditorNotice.READ_FAILED
+                    } else null,
+                    access = access,
+                    untimedTranslation = translation,
+                    bulkEditing = draft?.bulkEditing == true,
+                    timelineScrollY = saved.getInt("timelineScroll", if (item.isUntimed) 0 else saved.getInt("scroll"))
+                )
                 watchExpiry()
             }
         }
@@ -112,8 +130,16 @@ internal class LyricsEditorSession(
     fun edit(text: String, start: Int, end: Int, scroll: Int) {
         val old = current.value ?: return
         if (old.busy || old.finished != null) return
-        val next = old.copy(text = text, selectionStart = start.coerceIn(0, text.length),
-            selectionEnd = end.coerceIn(0, text.length), scrollY = scroll.coerceAtLeast(0))
+        val next = if (old.showsTextEditor) {
+            old.copy(
+                text = text,
+                selectionStart = start.coerceIn(0, text.length),
+                selectionEnd = end.coerceIn(0, text.length),
+                scrollY = scroll.coerceAtLeast(0),
+            )
+        } else {
+            old.copy(text = text, timelineScrollY = scroll.coerceAtLeast(0))
+        }
         if (next == old) return
         current.value = next
         saveMetadata(next)
@@ -123,22 +149,72 @@ internal class LyricsEditorSession(
         }
     }
 
+    fun switchMode(bulkEditing: Boolean, onInvalid: (List<Int>) -> Unit): EditorSession? {
+        val session = current.value ?: return null
+        if (session.item.isUntimed || session.busy || (session.finished != null) || (session.bulkEditing == bulkEditing)) {
+            return null
+        }
+        val text = if (bulkEditing) {
+            if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
+                WordLyricsBulkText.format(WordLyricsDocument.parse(session.text))
+            } else session.text
+        } else {
+            val (timelineText, _, invalidLines) = cachedBulkValidation(session)
+            timelineText ?: run {
+                onInvalid(invalidLines)
+                return null
+            }
+        }
+        val next = session.copy(text = text, bulkEditing = bulkEditing, notice = null, invalidLines = emptyList())
+        current.value = next
+        flush()
+        return next
+    }
+
+    private data class BulkValidation(val timelineText: String?, val canSave: Boolean, val invalidLines: List<Int>)
+
+    private data class CachedBulkValidation(val id: String, val text: String, val result: BulkValidation)
+
+    private fun cachedBulkValidation(session: EditorSession): BulkValidation {
+        bulkValidation?.let { (id, text, result) ->
+            if ((id == session.id) && (text == session.text)) return result
+        }
+        return validateBulk(session).also { bulkValidation = CachedBulkValidation(session.id, session.text, it) }
+    }
+
+    private fun validateBulk(session: EditorSession): BulkValidation {
+        if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
+            val (document, invalidLines) = WordLyricsBulkText.parse(session.text)
+            return BulkValidation(document?.serialize(), !document?.lines.isNullOrEmpty(), invalidLines)
+        }
+        val (canSave, invalidLines) = LrcParser.validateForStorage(session.text)
+        return BulkValidation(session.text.takeIf { invalidLines.isEmpty() }, canSave, invalidLines)
+    }
+
     private fun saveMetadata(session: EditorSession) {
         interactions.write("editor") {
             putString("id", session.id); putBundle("item", session.item.toEditorBundle())
             putString("target", session.target.name)
             putInt("start", session.selectionStart); putInt("end", session.selectionEnd); putInt("scroll", session.scrollY)
+            putInt("timelineScroll", session.timelineScrollY)
         }
     }
 
     fun flush() {
-        pendingWrite?.cancel(); pendingWrite = null
-        current.value?.takeIf { it.finished == null && interactions.read("editor") != null }?.let { saveMetadata(it); if (it.item.source != LyricsStorage.SOURCE_PROVIDER_CACHE) drafts.write(it.id, it.text) }
+        pendingWrite?.cancel()
+        pendingWrite = null
+        val session = current.value ?: return
+        if ((session.finished != null) || (interactions.read("editor") == null)) return
+        saveMetadata(session)
+        if (session.item.source != LyricsStorage.SOURCE_PROVIDER_CACHE) {
+            drafts.write(session.id, session.text, session.bulkEditing)
+        }
     }
 
     fun cancel() {
         if (current.value?.busy == true) return
         loading?.cancel(); pendingWrite?.cancel(); expiryJob?.cancel()
+        bulkValidation = null
         interactions.read("editor")?.getString("id")?.let(drafts::delete)
         interactions.remove("editor")
         if (interactions.read("confirmation")?.getString("operation") == "DELETE_EDITOR") interactions.remove("confirmation")
@@ -161,10 +237,18 @@ internal class LyricsEditorSession(
     }
 
     fun consumeNotice() { current.value = current.value?.copy(notice = null, invalidLines = emptyList()) }
-    fun acknowledgeCompletion() { expiryJob?.cancel(); expiryJob = null; current.value = null }
+    fun acknowledgeCompletion() {
+        expiryJob?.cancel()
+        expiryJob = null
+        bulkValidation = null
+        current.value = null
+    }
 
     fun check() = operate { session ->
-        val result = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
+        val result = if (session.bulkEditing) {
+            val validation = validateBulk(session)
+            LyricsStorage.LocalLyricsUpdateResult(validation.canSave, validation.invalidLines)
+        } else if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
             val document = WordLyricsDocument.parse(session.text)
             LyricsStorage.LocalLyricsUpdateResult(document.lines.isNotEmpty() && document.invalidLines().isEmpty(), document.invalidLines())
         } else {
@@ -175,14 +259,25 @@ internal class LyricsEditorSession(
         session.copy(notice = if (result.saved) EditorNotice.VALID else EditorNotice.INVALID, invalidLines = result.invalidLineNumbers)
     }
 
-    fun save() = operate { session ->
-        val result = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
-            WordLyricsEditorStorage.save(context, session.item.toStorageItem(), session.text)
-        } else LyricsStorage.updatePlainLyricsItemTextWithResult(context, session.item.toStorageItem(), session.text)
-        if (result.saved) {
-            BroadcastLyricsChangedPublisher(context).publish(SongIdentity(session.item.title, session.item.artist, session.item.album, session.item.durationMs))
-            session.copy(finished = LocalLyricsUiChange.SAVED)
-        } else session.copy(notice = if (result.invalidLineNumbers.isNotEmpty()) EditorNotice.INVALID else EditorNotice.SAVE_FAILED, invalidLines = result.invalidLineNumbers)
+    fun save(onBulkInvalid: ((List<Int>) -> Unit)? = null) {
+        val snapshot = current.value ?: return
+        if (snapshot.busy || (snapshot.finished != null) || (operation?.isActive == true)) return
+        val validation = if (snapshot.bulkEditing) cachedBulkValidation(snapshot) else null
+        if ((validation != null) && (!validation.canSave || (validation.timelineText == null))) {
+            if (onBulkInvalid != null) onBulkInvalid(validation.invalidLines)
+            else current.value = snapshot.copy(notice = EditorNotice.INVALID, invalidLines = validation.invalidLines)
+            return
+        }
+        operate { session ->
+            val text = validation?.timelineText ?: session.text
+            val result = if (session.target == LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD) {
+                WordLyricsEditorStorage.save(context, session.item.toStorageItem(), text)
+            } else LyricsStorage.updatePlainLyricsItemTextWithResult(context, session.item.toStorageItem(), text)
+            if (result.saved) {
+                BroadcastLyricsChangedPublisher(context).publish(SongIdentity(session.item.title, session.item.artist, session.item.album, session.item.durationMs))
+                session.copy(finished = LocalLyricsUiChange.SAVED)
+            } else session.copy(notice = if (result.invalidLineNumbers.isNotEmpty()) EditorNotice.INVALID else EditorNotice.SAVE_FAILED, invalidLines = result.invalidLineNumbers)
+        }
     }
 
     fun delete() = operate(EditorNotice.DELETE_FAILED) { session ->

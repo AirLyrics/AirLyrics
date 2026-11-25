@@ -66,6 +66,10 @@
     <string name="ui_cannot_read_this_lyric_file">No se puede leer el archivo de letras</string>
     <string name="ui_center">Centro</string>
     <string name="ui_edit_line">Editar</string>
+    <string name="ui_lyrics_mode_timeline">Cronología</string>
+    <string name="ui_lyrics_mode_text">Editar todo</string>
+    <string name="ui_lyrics_bulk_invalid_line">Revisa la letra en la línea %1$d.</string>
+    <string name="ui_lyrics_bulk_empty">Añade una línea con una marca de tiempo.</string>
     <string name="ui_add_next_line">Añadir línea</string>
     <string name="ui_delete_lyric_line">Eliminar línea de letra</string>
     <string name="ui_confirm_line">Confirmar</string>

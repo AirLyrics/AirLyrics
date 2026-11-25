@@ -64,6 +64,10 @@
     <string name="ui_cannot_read_this_lyric_file">Cannot read lyrics file</string>
     <string name="ui_center">Center</string>
     <string name="ui_edit_line">Edit</string>
+    <string name="ui_lyrics_mode_timeline">Timeline</string>
+    <string name="ui_lyrics_mode_text">Edit all</string>
+    <string name="ui_lyrics_bulk_invalid_line">Check the lyrics on line %1$d.</string>
+    <string name="ui_lyrics_bulk_empty">Add a lyric line with a timestamp.</string>
     <string name="ui_add_next_line">Add next line</string>
     <string name="ui_delete_lyric_line">Delete lyric line</string>
     <string name="ui_confirm_line">Confirm</string>
