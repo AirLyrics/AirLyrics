@@ -135,12 +135,11 @@ internal fun createRecentLyricsCard(activity: MainUiHost): RefreshableSettingsCa
         if (previous == state) return
 
         val otherRecentLyrics = recentLyrics.filterNot { item ->
-            if (currentItem == null) {
-                false
-            } else if (currentItem.indexKey.isNotBlank() && item.indexKey.isNotBlank()) {
-                currentItem.indexKey == item.indexKey
-            } else {
-                currentItem.name == item.name
+            when {
+                currentItem == null -> false
+                currentItem.indexKey.isNotBlank() && item.indexKey.isNotBlank() ->
+                    currentItem.indexKey == item.indexKey
+                else -> currentItem.name == item.name
             }
         }
         val nextCurrentKey = currentItem?.lyricsRowKey()

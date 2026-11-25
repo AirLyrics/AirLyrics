@@ -166,10 +166,6 @@ class FloatingLyricsRenderer(
         setTextImmediately(text())
     }
 
-    /**
-     * Updates the timing offset. Rendering is caller-controlled so parse/clear flows do
-     * not repaint stale lyrics before replacing the renderer state.
-     */
     fun setLyricsOffset(offsetMs: Long): Boolean {
         if (lyricsOffsetMs == offsetMs) return false
         lyricsOffsetMs = offsetMs
@@ -277,8 +273,6 @@ class FloatingLyricsRenderer(
             return renderPlainTextAtIndex(currentIndex)
         }
 
-        // Safety fallback for unusual payloads. Word-by-word lyrics are independent segment
-        // timing data, so they can still render when the accompanying plain LRC has no usable line.
         if (isWordByWordActive()) {
             val wordByWordIndex = findCurrentWordByWordIndex(positionMs)
             if (wordByWordIndex != null) {
@@ -338,8 +332,6 @@ class FloatingLyricsRenderer(
                 contentMode, original, translation, scriptPreferenceProvider()
             )
             if (rendered.primary.isNotBlank()) {
-                // When the preferred script replaces the line with its translation, keep the
-                // translation's own timing; otherwise the original tokens stay authoritative.
                 val showsTranslationOnly = contentMode == LyricsContentDisplayMode.TRANSLATION_ONLY ||
                     (rendered.secondary == null && rendered.primary.trim() != original.trim())
                 renderedLines += when {
@@ -547,7 +539,6 @@ class FloatingLyricsRenderer(
         display: String,
         segments: List<WordByWordSegment>
     ): List<WordByWordSegment>? {
-        // Require complete, ordered coverage. Do not guess punctuation, missing tokens or offsets.
         if (segments.joinToString("") { it.text } != source) return null
         // Apple can omit spaces at token boundaries (especially before a sung echo).
         // Slice the complete display string, retaining every token's original time range.

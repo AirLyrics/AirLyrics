@@ -96,7 +96,6 @@ internal class LyricsSearchInputDialog(
             if (!ValueAnimator.areAnimatorsEnabled()) {
                 positioner.translationY = 0f
             } else {
-                // FLIP: error text and available-height changes keep the current visual position.
                 positioner.translationY += oldTop - top
                 if (!isLeaving) positioner.animate().translationY(0f)
                     .setDuration(AirUiTokens.Motion.LayoutChangeMs).setInterpolator(easeOut).start()
@@ -226,7 +225,6 @@ internal class LyricsSearchInputDialog(
         }
     }
 
-    /** Lifecycle teardown must never leave an animated window attached to a destroyed Activity. */
     fun dismissImmediately() {
         if (removed) return
         removed = true

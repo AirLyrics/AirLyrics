@@ -96,13 +96,11 @@ fn decode_entities(value: &str) -> String {
 }
 
 fn strip_tags(value: &str) -> String {
-    let stripped = strip_tags_raw(value);
+    let stripped = strip_tags_preserving_spacing(value);
     decode_entities(stripped.trim())
 }
 
-/// Removes tags but keeps the interior spacing, so text split across several spans still
-/// renders with the whitespace between its words.
-fn strip_tags_raw(value: &str) -> String {
+fn strip_tags_preserving_spacing(value: &str) -> String {
     static TAGS: OnceLock<Regex> = OnceLock::new();
     let regex = TAGS.get_or_init(|| Regex::new(r"(?s)<[^>]+>").expect("tag regex"));
     decode_entities(&regex.replace_all(value, ""))
@@ -236,7 +234,7 @@ fn collect_timed_spans(fragment: &str, words: &mut Vec<Word>) {
             collect_timed_spans(inner, words);
             continue;
         };
-        let text = strip_tags_raw(inner);
+        let text = strip_tags_preserving_spacing(inner);
         if text.trim().is_empty() {
             continue;
         }
@@ -384,8 +382,6 @@ fn select_candidate(
             Some((index, difference, assessment.score.total))
         })
         .collect();
-    // The match score is the primary signal; the duration difference only breaks ties. A
-    // closer-but-wrong release must not outrank the best-scoring candidate.
     scored.sort_by(|left, right| {
         right
             .2
@@ -697,7 +693,6 @@ fn check_status(response: &reqwest::Response) -> Result<(), String> {
     }
 }
 
-/// Manual choices are ranked, never filtered by the automatic acceptance policy.
 pub(crate) fn manual(
     raw: &str,
     user: &str,

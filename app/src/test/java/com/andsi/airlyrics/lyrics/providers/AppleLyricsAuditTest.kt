@@ -91,7 +91,6 @@ class AppleLyricsAuditTest {
         val rows = plain.mapIndexed { index, line ->
             val side = trace?.optJSONObject(index)
             val start = side?.optLong("startMs") ?: line.timeMs
-            // Match occurrences in order: duplicate timestamps must not reuse another line.
             val occurrence = plain.take(index).count { it.timeMs == line.timeMs && it.text == line.text }
             val native = (0 until words.length()).mapNotNull { words.optJSONObject(it) }
                 .filter { it.optLong("start_ms") / 10 == line.timeMs / 10 && it.optString("text") == line.text }

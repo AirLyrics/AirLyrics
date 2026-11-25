@@ -112,7 +112,7 @@ internal class SpicyLineDrawing(private val view: FloatingLyricsTextView) {
             span.hidden = false
             val start = text.getSpanStart(span)
             val end = text.getSpanEnd(span)
-            if (start < 0 || end <= start) continue
+            if (start !in 0..<end) continue
             val first = layout.getLineForOffset(start)
             val last = layout.getLineForOffset(end - 1)
             if ((first..last).any { it >= maxLines || layout.getEllipsisCount(it) > 0 }) continue

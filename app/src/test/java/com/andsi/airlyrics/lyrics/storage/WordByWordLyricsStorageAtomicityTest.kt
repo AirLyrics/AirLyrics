@@ -652,19 +652,11 @@ class WordByWordLyricsStorageAtomicityTest {
         private val shouldFailDelete: (relativeFile: String) -> Boolean = { false }
     ) : ManagedLyricsIo by AndroidManagedLyricsIo {
         override fun write(context: Context, fileName: String, lyrics: String): Boolean {
-            return if (shouldFailWrite(fileName, lyrics)) {
-                false
-            } else {
-                AndroidManagedLyricsIo.write(context, fileName, lyrics)
-            }
+            return !shouldFailWrite(fileName, lyrics) && AndroidManagedLyricsIo.write(context, fileName, lyrics)
         }
 
         override fun delete(context: Context, relativeFile: String): Boolean {
-            return if (shouldFailDelete(relativeFile)) {
-                false
-            } else {
-                AndroidManagedLyricsIo.delete(context, relativeFile)
-            }
+            return !shouldFailDelete(relativeFile) && AndroidManagedLyricsIo.delete(context, relativeFile)
         }
     }
 
@@ -751,7 +743,7 @@ class WordByWordLyricsStorageAtomicityTest {
 
         override fun write(context: Context, entries: List<LyricsIndexEntry>): Boolean {
             record(context, "index.write")
-            return if (failCommit) false else AndroidLyricsIndexIo.write(context, entries)
+            return !failCommit && AndroidLyricsIndexIo.write(context, entries)
         }
 
         override fun captureRaw(context: Context): LyricsIndexStore.RawSnapshot {

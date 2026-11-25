@@ -31,9 +31,9 @@ internal object FloatingFontFile {
 
     fun inspect(file: File): Inspection? = runCatching {
         RandomAccessFile(file, "r").use { input ->
-            val header = header(input) ?: return@use null
-            val directories = header.offsets.map { offset ->
-                directory(input, offset, header.end) ?: return@use null
+            val (isCollection, faceOffsets, headerEnd) = header(input) ?: return@use null
+            val directories = faceOffsets.map { offset ->
+                directory(input, offset, headerEnd) ?: return@use null
             }
             for (directory in directories) {
                 val tables = directory.tables
@@ -46,7 +46,7 @@ internal object FloatingFontFile {
                     }
                 }) return@use null
             }
-            Inspection(header.collection, directories.mapIndexed { index, directory ->
+            Inspection(isCollection, directories.mapIndexed { index, directory ->
                 Face(index, directory.tables[NAME]?.let { faceName(input, it) })
             })
         }
@@ -148,13 +148,15 @@ internal object FloatingFontFile {
             val offset = input.readUnsignedShort()
             if (id !in listOf(1, 2, 4, 16, 17) || length !in 1..1024 ||
                 strings.toLong() + offset + length > table.length) return@repeat
-            val charset = when {
-                platform == 0 || platform == 3 -> {
+            val charset = when (platform) {
+                0, 3 -> {
                     if (length % 2 != 0) return@repeat
                     Charsets.UTF_16BE
                 }
-                platform == 1 && encoding == 0 -> runCatching { Charset.forName("x-MacRoman") }
-                    .getOrDefault(Charsets.US_ASCII)
+                1 -> {
+                    if (encoding != 0) return@repeat
+                    runCatching { Charset.forName("x-MacRoman") }.getOrDefault(Charsets.US_ASCII)
+                }
                 else -> return@repeat
             }
             val score = (if (language == 0x0409) 100 else if (language == 0) 70 else 30) +

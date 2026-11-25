@@ -205,7 +205,6 @@ class LyricsRepositoryPersistenceTest {
             val before = durableState()
             com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore.beforeCommitStep = {
                 if (it == step) {
-                    // Model a failed write that has already truncated its target.
                     val song = com.andsi.airlyrics.core.model.SongIdentity(STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS)
                     when (step) {
                         "wordFile" -> assertTrue(LyricsFileStore.writeManagedLyrics(context,

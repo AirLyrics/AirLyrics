@@ -81,7 +81,6 @@ internal object FloatingColorSwatchStore {
         val rgb = AirColorUtils.opaqueRgb(color)
         val previous = colors(context)
         if (rgb !in previous) return@synchronized false
-        // SharedPreferences applies the deletion in memory before writing it to disk.
         preferences(context).edit {
             putString(KEY_COLORS, serialize(previous.filterNot { it == rgb }))
         }

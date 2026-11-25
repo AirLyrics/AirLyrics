@@ -235,8 +235,6 @@ object ApplePlainLyricsProvider : LyricsProvider {
         endMs: Long
     ): List<WordByWordSegment> {
         if (translatedText.isBlank() || endMs <= startMs) return emptyList()
-        // A real translation has no character-level timing we can trust; leave the timing empty so
-        // the UI shows the translation as plain text instead of pretending to be karaoke-accurate.
         return conversionSegments(translatedText, segments).orEmpty()
     }
 

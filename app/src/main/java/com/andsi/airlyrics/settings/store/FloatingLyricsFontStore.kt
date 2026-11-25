@@ -171,7 +171,6 @@ object FloatingLyricsFontStore {
         true
     }
 
-    /** Shared collection files survive until their final member is removed. */
     fun removeFont(context: Context, id: String): Boolean = synchronized(mutationLock) {
         val entry = font(context, id) ?: return@synchronized false
         if (entry.source == FloatingFontSource.SYSTEM) return@synchronized false
@@ -215,7 +214,7 @@ object FloatingLyricsFontStore {
             if (tombstone != null && !tombstone.delete()) throw IOException("Could not delete font file")
         } catch (failure: Exception) {
             runCatching { writeCatalog(context, previous) }
-            if (tombstone != null) tombstone.renameTo(file)
+            tombstone?.renameTo(file)
             throw failure
         }
         invalidateTypefaces()

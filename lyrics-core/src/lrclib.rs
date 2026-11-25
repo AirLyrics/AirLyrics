@@ -477,8 +477,6 @@ async fn fetch_with_fallback_backend_traced<B: LrclibBackend>(
                         request_count,
                     ),
                 );
-                // Exact endpoint failures keep their classification and do not trigger an
-                // unconditional retry cascade.
                 return Err(error);
             }
         };
@@ -1670,7 +1668,7 @@ mod tests {
 
     #[test]
     fn review_candidates_are_parked_and_not_used_as_lyrics() {
-        let _guard = crate::review::test_lock();
+        let _guard = crate::review::lock_review_slot_for_tests();
         crate::review::clear();
         let query = query();
         let track = usable_search_track(50, "Contract Song", "Unrelated Performer", "", 500.0);
@@ -1691,7 +1689,7 @@ mod tests {
 
     #[test]
     fn a_live_variant_is_parked_with_a_version_conflict_reason() {
-        let _guard = crate::review::test_lock();
+        let _guard = crate::review::lock_review_slot_for_tests();
         crate::review::clear();
         let query = query();
         let track = usable_search_track(51, "Contract Song (Live)", "Contract Artist", "", 123.5);

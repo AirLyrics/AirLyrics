@@ -147,7 +147,7 @@ class AdaptiveTextLayoutTest {
         RuntimeEnvironment.setFontScale(1.7f)
         val host = host()
         val text = TextView(host).apply {
-            setText("A long title with 歌詞 and several visible lines ".repeat(5))
+            this.text = "A long title with 歌詞 and several visible lines ".repeat(5)
             textSize = 18f
         }
         val summary = host.expandableText(text)

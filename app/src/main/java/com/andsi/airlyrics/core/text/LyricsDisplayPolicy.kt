@@ -3,17 +3,6 @@ package com.andsi.airlyrics.core.text
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
 
-/**
- * Turns a parsed lyric line into the text the floating window shows.
- *
- * The three content modes are literal: [LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION] shows
- * the original and, when one exists, the translation underneath.
- *
- * The script preference only decides which copy of a *duplicate* line to keep: when a lyric ships
- * the same sentence twice, once in traditional and once in simplified characters, the reader does
- * not need both. It never rewrites a line that exists in a single script — a traditional-only
- * lyric stays traditional, whatever the preference says.
- */
 object LyricsDisplayPolicy {
 
     data class Rendered(val primary: String, val secondary: String? = null) {

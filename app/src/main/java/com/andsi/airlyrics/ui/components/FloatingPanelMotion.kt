@@ -36,7 +36,6 @@ internal fun View.beginFloatingPanelChange() {
     })
 }
 
-/** Replacing a form must not lift old controls or their hidden pages into a Fade overlay. */
 internal fun View.beginFloatingPanelContentReplacement() {
     val root = floatingPanelMotionRoot() ?: return
     endFloatingPanelChanges()

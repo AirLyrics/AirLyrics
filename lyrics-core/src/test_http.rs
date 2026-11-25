@@ -1,4 +1,3 @@
-//! Bounded loopback HTTP fixture. Never uses the machine's proxy configuration.
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::TcpListener;
 use std::sync::{

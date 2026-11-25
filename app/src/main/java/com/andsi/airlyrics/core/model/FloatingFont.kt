@@ -12,7 +12,6 @@ data class FloatingFont(
     val collectionId: String? = null
 )
 
-/** A single stored TTC shared by its independently selectable members. */
 data class FloatingFontCollection(
     val id: String,
     val displayName: String,

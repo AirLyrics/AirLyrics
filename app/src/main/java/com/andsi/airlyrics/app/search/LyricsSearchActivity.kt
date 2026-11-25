@@ -315,7 +315,6 @@ class LyricsSearchActivity : AppCompatActivity() {
                 titleInput.clearFocus();artistInput.clearFocus();albumInput.clearFocus()
                 pendingSourceFocus=true
                 session.search()
-                // Also handle repeated searches whose loading state is unchanged.
                 appBar.post { focusSourcesIfReady() }
             }
         }.apply {

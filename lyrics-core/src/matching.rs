@@ -152,7 +152,6 @@ const VERSION_MARKER_GROUPS: &[&[&str]] = &[
     ],
 ];
 
-// Normalize only metadata used for matching; never transform lyric text or the stored API response.
 fn match_text(text: &str) -> String {
     if text.is_ascii() {
         return text.to_owned();
@@ -330,8 +329,6 @@ fn score_candidate_with_policy(
         .zip(candidate.duration_ms.filter(|ms| *ms > 0))
         .is_some_and(|(left, right)| left.abs_diff(right) <= 2_000);
     let version_penalty = version_difference_penalty(query.title, candidate.title);
-    // Cross-script titles cannot be established by text similarity alone. Require
-    // both performer and recording-length evidence, and no version disagreement.
     let localized_title = title_similarity < MIN_TITLE_SIMILARITY
         && different_scripts(query.title, candidate.title)
         && artist_similarity.is_some_and(|score| score >= 0.85)

@@ -435,7 +435,7 @@ class LyricsSearchLayoutTest {
             layout(content,900);ShadowLooper.idleMainLooper(100,TimeUnit.MILLISECONDS);layout(content,900)
             val manager=list.layoutManager as LinearLayoutManager
             val position=manager.findFirstVisibleItemPosition()
-            assertTrue(position>0 && position<30)
+            assertTrue(position in 1 until 30)
             val id=list.adapter!!.getItemId(position)
             val top=manager.findViewByPosition(position)!!.top
             val appBarBottom=appBar.bottom

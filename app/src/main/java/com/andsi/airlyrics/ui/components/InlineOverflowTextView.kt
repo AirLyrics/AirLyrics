@@ -62,7 +62,6 @@ internal class InlineOverflowTextView(context: Context) : AppCompatTextView(cont
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        // Reserve one typography-based line, not a content-dependent fallback-font height.
         val metrics = paint.fontMetricsInt
         val lineHeight = maxOf(metrics.bottom - metrics.top,
             ceil(textSize * AirUiTokens.Layout.SettingTextLineHeightMultiplier).toInt())

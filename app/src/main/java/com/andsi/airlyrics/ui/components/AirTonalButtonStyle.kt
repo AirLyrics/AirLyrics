@@ -58,9 +58,9 @@ internal fun MainUiHost.airTonalButtonStyle(
     fun style(mode: ButtonStyle) = frame.palette.airTonalButtonStyle(tone, mode, isDarkTheme(), frame.darkFraction)
     if (buttonStyle != null) return style(buttonStyle)
     val solid = frame.solidButtonFraction
-    return when {
-        solid == 0f -> style(ButtonStyle.TRANSPARENT)
-        solid == 1f -> style(ButtonStyle.SOLID)
+    return when (solid) {
+        0f -> style(ButtonStyle.TRANSPARENT)
+        1f -> style(ButtonStyle.SOLID)
         else -> style(ButtonStyle.TRANSPARENT).interpolate(style(ButtonStyle.SOLID), solid)
     }
 }

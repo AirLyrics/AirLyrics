@@ -233,8 +233,6 @@ private class SettingsAppearanceHeader(
 
             override fun dispatchDraw(canvas: Canvas) {
                 val g = panelGeometry()
-                // Use the same outline, including its rounded corners, to reveal native content.
-                // Transform the clip into header coordinates without moving the controls.
                 val offset = top.toFloat()
                 canvas.withTranslation(y = -offset) {
                     surface.clipContent(this, g, pickerProgress)

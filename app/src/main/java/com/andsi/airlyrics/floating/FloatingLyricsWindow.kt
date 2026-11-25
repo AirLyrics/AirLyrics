@@ -336,8 +336,6 @@ class FloatingLyricsWindow(
                 (dp(32) * style.backgroundBlurPercent.coerceIn(0, 100) / 100f)
                     .roundToInt().coerceAtMost(150)
             } else 0
-            // Window tracks cross-window blur availability, including battery saver
-            // changes. Unsupported devices keep the user's normal bubble background.
             window.setBackgroundBlurRadius(radius)
         }
     }
@@ -362,9 +360,8 @@ class FloatingLyricsWindow(
         }
     }
 
-    /** Coordinates are relative to WindowManager's inset-fitted frame, not the physical display. */
     @Suppress("DEPRECATION")
-    private fun availableSize(view: View): Pair<Int, Int> {
+    private fun availableWindowSize(view: View): Pair<Int, Int> {
         if (Build.VERSION.SDK_INT >= 30) {
             val metrics = windowManager.currentWindowMetrics
             val insets = metrics.windowInsets.getInsetsIgnoringVisibility(
@@ -386,7 +383,7 @@ class FloatingLyricsWindow(
     }
 
     private fun calculateLayout(view: TextView, p: WindowManager.LayoutParams, remap: Boolean): Boolean {
-        val (availableWidth, availableHeight) = availableSize(view)
+        val (availableWidth, availableHeight) = availableWindowSize(view)
         val width = FloatingWindowGeometry.width(
             availableWidth, FloatingLyricsStyleStore.getStyle(context).maxWidthPercent
         )
@@ -406,7 +403,7 @@ class FloatingLyricsWindow(
             val (x, y) = FloatingLyricsStyleStore.getPosition(context)
             val initial = if (FloatingLyricsStyleStore.hasLegacyPosition(context)) {
                 next.migrate(x, y, touchSlop)
-            } else next.position(0, y, FloatingPosition(0.5f, 0f)).copy(horizontal = 0.5f)
+            } else next.position(0, y, FloatingPosition(0.5f, 0f)).copy(horizontalTravelFraction = 0.5f)
             // Pre-30 must wait for the fitted frame before migrating pixels permanently.
             if (Build.VERSION.SDK_INT >= 30 || view.isAttachedToWindow) {
                 position = initial

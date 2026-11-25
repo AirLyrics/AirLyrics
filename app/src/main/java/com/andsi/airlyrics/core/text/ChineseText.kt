@@ -131,8 +131,6 @@ object ChineseText {
         if (original.isBlank() || translation.isBlank()) return false
         val left = comparisonForm(original)
         val right = comparisonForm(translation)
-        // Punctuation-only or annotation-only lines carry no comparable text; never treat two of
-        // them as the same sentence.
         return left.isNotEmpty() && right.isNotEmpty() && left == right
     }
 
@@ -157,19 +155,18 @@ object ChineseText {
         // the original text when there is no echo: callers use its length for timing.
         val compact = value.replace(Regex("\\s+"), "")
         val length = compact.length
-        // The repeated block must be at least two characters; single-character echoes ("想想")
-        // are ordinary words far more often than performance repeats.
-        for (unit in (length / 2) downTo if (hadBracket) 1 else 2) {
-            val tail = compact.substring(length - unit)
-            if (compact.regionMatches(length - 2 * unit, tail, 0, unit)) {
-                return compact.substring(0, length - unit)
+        val minimumRepeatLength = if (hadBracket) 1 else 2
+        for (repeatLength in (length / 2) downTo minimumRepeatLength) {
+            val tail = compact.substring(length - repeatLength)
+            if (compact.regionMatches(length - 2 * repeatLength, tail, 0, repeatLength)) {
+                return compact.substring(0, length - repeatLength)
             }
-            if (length - 2 * unit - 1 >= 0) {
-                val particle = compact[length - unit - 1]
+            if (length - 2 * repeatLength - 1 >= 0) {
+                val particle = compact[length - repeatLength - 1]
                 if ((particle.code == 0x7684 || particle.code == 0x5730 || particle.code == 0x5F97) &&
-                    compact.regionMatches(length - 2 * unit - 1, tail, 0, unit)
+                    compact.regionMatches(length - 2 * repeatLength - 1, tail, 0, repeatLength)
                 ) {
-                    return compact.substring(0, length - unit - 1)
+                    return compact.substring(0, length - repeatLength - 1)
                 }
             }
         }
@@ -187,8 +184,6 @@ object ChineseText {
     }
 
     fun comparisonForm(text: String): String {
-        // Strip the echo on the raw text first: it needs the brackets as evidence, and the
-        // comparison form itself treats brackets as punctuation.
         var value = comparable(toSimplified(stripPerformanceRepeat(text)))
         // Some simplified characters have their own mapping (么 -> 幺), so a single pass is not a
         // fixed point: converting a line and a segment that was already simplified could land on
@@ -215,11 +210,6 @@ object ChineseText {
         return stripped
     }
 
-    /**
-     * Characters that OpenCC's tw2s tables do not fold but that lyric translators regularly swap.
-     * Folding is symmetric on both sides and comparison-only, so the displayed text keeps the
-     * exact characters the lyric shipped with.
-     */
     private fun foldComparisonVariant(character: Char): Char = when (character.code) {
         0x59B3 -> 0x4F60.toChar()
         0x7942 -> 0x4ED6.toChar()

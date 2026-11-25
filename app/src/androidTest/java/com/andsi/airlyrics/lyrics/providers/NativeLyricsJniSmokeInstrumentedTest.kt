@@ -101,8 +101,6 @@ class NativeLyricsJniSmokeInstrumentedTest {
 
     @Test
     fun spicyBindingsRejectMissingCredentialsOffline() {
-        // Empty credentials must be rejected before any network request, including
-        // the benchmark entry point and both app search modes.
         val lookupId = Long.MAX_VALUE - 106L
         try {
             val results = listOf(

@@ -105,8 +105,6 @@ fn contains_marker(lowered: &str, needle: &str) -> bool {
     false
 }
 
-/// True when the two metadata sets disagree about the recording version. A missing marker on
-/// either side is not a disagreement — absence of evidence is not evidence.
 pub(crate) fn version_conflict(left: &MatchMetadata<'_>, right: &MatchMetadata<'_>) -> bool {
     let left_text = format!("{} {}", left.title, left.album);
     let right_text = format!("{} {}", right.title, right.album);

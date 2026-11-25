@@ -89,12 +89,12 @@ internal class AboutVersionPicker(
     private val versions = ListView(host).apply {
         divider = null
         choiceMode = ListView.CHOICE_MODE_SINGLE
-        setSelector(RippleDrawable(
+        selector = RippleDrawable(
             ColorStateList.valueOf(ColorUtils.setAlphaComponent(host.colorAccent, 64)),
             null,
             surface(Color.WHITE)
-        ))
-        setDrawSelectorOnTop(true)
+        )
+        isDrawSelectorOnTop = true
     }
     private val menuSurface = FrameLayout(host).apply {
         background = surface(host.colorCard, host.colorStroke)

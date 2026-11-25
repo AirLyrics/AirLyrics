@@ -1,10 +1,5 @@
 package com.andsi.airlyrics.ui.model
 
-/**
- * About mascot state for this app process. This deliberately does not use SavedStateHandle or
- * preferences: leaving the page and configuration changes retain the cat, a fresh app launch
- * starts with the cat on its cloud.
- */
 internal class MascotSession {
     enum class Mode { CLOUD, FLOATING, ABSORBED }
 

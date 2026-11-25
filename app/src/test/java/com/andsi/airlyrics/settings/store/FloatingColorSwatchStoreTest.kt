@@ -46,7 +46,6 @@ class FloatingColorSwatchStoreTest {
                         return this
                     }
                     override fun commit(): Boolean {
-                        // Model SharedPreferences publishing its map before disk completion.
                         editor.apply()
                         memoryUpdated.countDown()
                         check(allowDiskResult.await(5, TimeUnit.SECONDS))

@@ -14,7 +14,6 @@ internal fun descendants(view: View): List<View> = listOf(view) +
     if (view is ViewGroup) (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) }
     else emptyList()
 
-/** Real I/O completes on worker threads; only UI waits are allowed to drain the main queue. */
 internal fun awaitUiCondition(message: String = "Timed out waiting for UI work", condition: () -> Boolean) {
     awaitCondition(message, drainMain = true, condition)
 }

@@ -674,8 +674,6 @@ internal class MainActivityUiHost(
         lastDarkTheme = dark
         val settingsHome = currentPage == Page.SETTINGS && settingsSubPage == SettingsSubPage.HOME
         appearance.transition(animate = settingsHome && contentContainer?.isAttachedToWindow == true)
-        // The theme control only exists on Settings home. Other routes still get fresh
-        // resource-dependent controls after an external system-night-mode change.
         if (!settingsHome) rebuildMainView()
     }
 

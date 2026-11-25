@@ -37,7 +37,6 @@ public class Benchmark {
         JSONArray cases = new JSONObject(Files.readString(Path.of(args[1]))).getJSONArray("cases");
         int startIndex = args.length > 3 ? Integer.parseInt(args[3]) : 0;
         if (startIndex < 0 || startIndex > cases.length()) throw new IllegalArgumentException("Invalid resume position");
-        // Native diagnostics are intentionally discarded: reports contain metadata only.
         try (PrintWriter out = new PrintWriter(Files.newBufferedWriter(Path.of(args[2]),
                 startIndex == 0 ? new StandardOpenOption[]{StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE}
                     : new StandardOpenOption[]{StandardOpenOption.APPEND, StandardOpenOption.WRITE}))) {

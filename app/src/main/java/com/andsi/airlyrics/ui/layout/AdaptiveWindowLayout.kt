@@ -47,11 +47,11 @@ internal class AdaptiveWindowLayout(private val host: MainUiHost, private val co
         updateTabs(host, animate = false)
     }
 
-    private fun updateWindowSpec(width: Float, height: Float) {
+    private fun updateWindowSpec(widthDp: Float, heightDp: Float) {
         val old = host.windowLayout
         val scale = resources.configuration.fontScale
-        if (old.width != width || old.height != height || old.fontScale != scale) {
-            host.windowLayout = WindowLayoutSpec(width, height, scale)
+        if (old.widthDp != widthDp || old.heightDp != heightDp || old.fontScale != scale) {
+            host.windowLayout = WindowLayoutSpec(widthDp, heightDp, scale)
         }
     }
 

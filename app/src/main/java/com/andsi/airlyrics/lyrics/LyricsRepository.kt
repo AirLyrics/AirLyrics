@@ -195,9 +195,6 @@ internal class LyricsRepositoryEngine(
             val local = if (!bypassLocal) localPlainLyricsProvider.fetch(request).getOrThrow()?.let {
                 attachLocalWordByWordLyricsIfAvailable(appContext, it, title, artist, durationMs, wordByWordLyricsEnabled)
             } else null
-            // Existing lyrics — imported, edited or downloaded earlier — are never touched by an
-            // automatic lookup: no online search, no word-timing upgrade and no cache correction.
-            // A wrong match is the user's call, so only an explicit search replaces them.
             if (local != null && searchOrigin == LyricsSearchOrigin.Automatic) return@runCatching local
             val onlineAllowed = ignoreAutoSearchSetting || settings.autoSearchOnline
             val wordSources = if (wordByWordLyricsEnabled) settings.plainLyricsSearchSources.distinct().filter {

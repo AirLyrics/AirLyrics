@@ -19,7 +19,6 @@ internal object BatchLyricsMatcher {
                 eligible.filter { target ->
                     val songTitle = normalize(target.song.title)
                     val songArtist = normalize(target.song.artist)
-                    // Metadata, when present, must agree; a filename cannot override a conflicting tag.
                     (title.isBlank() || title == songTitle) && (artist.isBlank() || artist == songArtist) &&
                         (title.isNotBlank() || stem == songTitle ||
                             (songArtist.isNotBlank() && stem in setOf("$songArtist - $songTitle", "$songTitle - $songArtist")))

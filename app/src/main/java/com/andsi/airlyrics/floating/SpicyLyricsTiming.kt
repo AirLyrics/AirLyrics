@@ -5,6 +5,8 @@ import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import java.util.Locale
 
+private const val EMPHASIS_END_LEAD_MS = 250L
+
 /** UTF-16 ranges; character splitting always follows ICU extended grapheme boundaries. */
 internal data class SpicyTiming(
     val start: Int, val end: Int, val startMs: Long, val endMs: Long,
@@ -22,11 +24,11 @@ internal fun spicyTimings(
     val iterator = BreakIterator.getCharacterInstance(Locale.ROOT).apply { setText(text) }
     val result = mutableListOf<SpicyTiming>()
     var cursor = 0
-    for (segment in displaySegments) {
-        val word = segment.text.trim()
+    for ((segmentText, startMs, endMs) in displaySegments) {
+        val word = segmentText.trim()
         if (word.isEmpty()) continue
         val start = text.indexOf(word, cursor)
-        if (start < 0 || segment.endMs <= segment.startMs) return emptyList()
+        if (start < 0 || endMs <= startMs) return emptyList()
         val end = start + word.length
         if (!iterator.isBoundary(start) || !iterator.isBoundary(end)) return emptyList()
         cursor = end
@@ -44,21 +46,21 @@ internal fun spicyTimings(
             boundaries += next
             next = iterator.next()
         }
-        val duration = segment.endMs - segment.startMs
+        val duration = endMs - startMs
         val emphasis = allowEmphasis && motion && duration >= 1000 && boundaries.size > 2
         if (emphasis) {
             val count = boundaries.lastIndex
-            // Spicy normal mode completes emphasized text 250ms before the sung word ends.
-            val emphasisDuration = duration - 250L
+            val emphasisEndMs = endMs - EMPHASIS_END_LEAD_MS
+            val emphasisDuration = emphasisEndMs - startMs
             for (i in 0 until count) {
                 result += SpicyTiming(boundaries[i], boundaries[i + 1],
-                    segment.startMs + emphasisDuration * i / count,
-                    segment.startMs + emphasisDuration * (i + 1) / count, emphasized = true, motion = true,
-                    groupStartMs = segment.startMs, groupEndMs = segment.endMs - 250L,
+                    startMs + emphasisDuration * i / count,
+                    startMs + emphasisDuration * (i + 1) / count, emphasized = true, motion = true,
+                    groupStartMs = startMs, groupEndMs = emphasisEndMs,
                     letterIndex = i, letterCount = count)
             }
         } else {
-            result += SpicyTiming(start, end, segment.startMs, segment.endMs, emphasized = false, motion = motion)
+            result += SpicyTiming(start, end, startMs, endMs, emphasized = false, motion = motion)
         }
     }
     return result

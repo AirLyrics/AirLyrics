@@ -106,8 +106,6 @@ pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LrclibLyricsNat
         .unwrap_or(std::ptr::null_mut())
 }
 
-/// Aliases confirmed by the user are pushed into the engine before a lookup so the same
-/// recording is resolved without asking again. Payload: JSON array of alias entries.
 #[no_mangle]
 pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_SongAliasNative_registerJson(
     mut env: JNIEnv,
@@ -1009,9 +1007,6 @@ async fn fetch_netease_from_backend<B: NeteaseBackend>(
         }
     }
 
-    // Keep one or more attempts for the best related results collected across all query rounds.
-    // The common scorer has already rejected titles below the minimum relation threshold, so a
-    // score below the early-accept threshold remains eligible here.
     while candidates.attempted_count() < NETEASE_MAX_LYRIC_CANDIDATES
         && request_budget.remaining > 0
     {

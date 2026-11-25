@@ -61,7 +61,6 @@ internal object BatchLyricsDocumentReader {
                 BatchLyricsDocument(name, lyrics.plainLrc, lyrics.wordByWordLines)
             }
             LyricsDocumentFormat.LRC -> {
-                // Do not silently downgrade malformed word timing to plain text.
                 val hasWordTags = WordByWordLrcParser.hasWordTiming(content)
                 if (hasWordTags) {
                     val words = (LyricsImportParsers.parseWordByWord(format, content) as? LyricsTextParseResult.Success)?.value

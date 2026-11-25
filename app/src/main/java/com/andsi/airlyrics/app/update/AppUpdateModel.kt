@@ -87,7 +87,7 @@ internal class AppUpdateModel(
         mutableState.value = AppUpdateDownloadState.Progress(0)
         operation = viewModelScope.launch {
             try {
-                channelFlow<Int> {
+                channelFlow {
                     prepareApk(release) { if (it < 100) trySend(it) }
                 }.conflate().collect { mutableState.value = AppUpdateDownloadState.Progress(it) }
                 ensureActive()

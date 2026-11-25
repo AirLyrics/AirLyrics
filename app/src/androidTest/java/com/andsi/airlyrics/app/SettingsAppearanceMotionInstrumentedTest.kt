@@ -39,7 +39,7 @@ class SettingsAppearanceMotionInstrumentedTest {
             scenario.onActivity {
                 original = it
                 it.graph.viewModel.selectPage(Page.SETTINGS)
-                it.graph.uiInvalidator.rebuildCurrentPage(false, false)
+                it.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
                 root = it.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
                 panel = it.findViewById(R.id.appearance_picker_panel)
             }
@@ -132,7 +132,7 @@ class SettingsAppearanceMotionInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.graph.viewModel.selectPage(Page.SETTINGS)
-                it.graph.uiInvalidator.rebuildCurrentPage(false, false)
+                it.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
             }
             pause(600)
             lateinit var animator: android.animation.ValueAnimator
@@ -140,7 +140,7 @@ class SettingsAppearanceMotionInstrumentedTest {
                 val panel = a.findViewById<View>(R.id.appearance_picker_panel)
                 if (panel.visibility == View.VISIBLE) {
                     a.graph.uiHost.interactions.remove("settings.home.appearanceMenu")
-                    a.graph.uiInvalidator.rebuildCurrentPage(false, false)
+                    a.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
                 }
             }
             scenario.onActivity { a ->

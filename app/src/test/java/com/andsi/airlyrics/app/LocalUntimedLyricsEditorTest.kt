@@ -36,7 +36,7 @@ class LocalUntimedLyricsEditorTest : LyricsStorageTestBase() {
     @After fun close() { controller.close(); ShadowDialog.reset() }
 
     @Test fun rawParagraphsAreEditableAndSurviveRecreationAndSave() {
-        val edited = original + "\n\nNew paragraph"
+        val edited = "$original\n\nNew paragraph"
         assertEquals(original, input().text.toString())
         input().setText(edited)
         assertEquals(edited, activity.graph.uiHost.editorSession.state.value!!.text)

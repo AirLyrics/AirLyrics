@@ -79,7 +79,7 @@ class FloatingPreviewCardTest {
         handle.updateText("Updated\nNew translation")
         measure()
         assertEquals(View.GONE, handle.bodyView.visibility)
-        host.windowLayout = host.windowLayout.copy(height = 700f)
+        host.windowLayout = host.windowLayout.copy(heightDp = 700f)
         measure()
         assertEquals(View.VISIBLE, handle.bodyView.visibility)
         assertEquals("Updated\nNew translation", handle.lyricTextView.text.toString())

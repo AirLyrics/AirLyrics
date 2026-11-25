@@ -71,13 +71,11 @@ internal class MainOperationConfirmations(
     }
 
     override fun cancel(id: String) {
-        if (interactions.read(KEY)?.getString("id") == id) interactions.remove(KEY)
+        consumeRequest(id)
     }
 
     override fun confirm(id: String) {
-        val request = interactions.read(KEY)?.takeIf { it.getString("id") == id } ?: return
-        // Consume before dispatch: repeated clicks and old dialogs cannot repeat an operation.
-        interactions.remove(KEY)
+        val request = consumeRequest(id) ?: return
         when (val action = request.action()) {
             is ConfirmationAction.DeleteCurrent -> deleteCurrent(action.target.toMedia(), action.mode.toStorageMode())
             ConfirmationAction.DeleteAll -> deleteAll(request)
@@ -85,6 +83,12 @@ internal class MainOperationConfirmations(
             is ConfirmationAction.DeleteEditor -> if (action.sessionId == editorSessionId()) deleteEditor()
             null -> Unit
         }
+    }
+
+    private fun consumeRequest(id: String): Bundle? {
+        val request = interactions.read(KEY)?.takeIf { it.getString("id") == id } ?: return null
+        interactions.remove(KEY)
+        return request
     }
 
     private fun Bundle.action(): ConfirmationAction? = when (getString("operation")) {

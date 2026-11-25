@@ -81,7 +81,6 @@ internal class SettingsPageTransition {
         this.incoming = incoming
         incomingBackground = incoming.background
         incomingClip = incoming.clipBounds?.let(::Rect)
-        // The foreground needs an opaque surface while the two pages overlap.
         incoming.setBackgroundColor(surfaceColor)
         reveal(0f)
         incoming.translationX = incomingStartX

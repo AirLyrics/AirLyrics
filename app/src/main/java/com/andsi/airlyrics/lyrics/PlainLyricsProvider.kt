@@ -8,7 +8,6 @@ interface LyricsProvider {
     @Suppress("SameReturnValue")
     val continueOnFailure: Boolean get() = false
 
-    /** Optional provider-owned cache. Never performs a network request. */
     fun cached(request: PlainLyricsSearchRequest): LyricsProviderResult? = null
 
     fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?>

@@ -54,7 +54,6 @@ internal class FloatingFontLanguagePreview(
     init {
         orientation = VERTICAL
         addView(FrameLayout(host).apply {
-            // Invisible specimens participate in measurement, so line wrapping never moves the controls.
             languages.forEach { language ->
                 addView(
                     language.sample,
@@ -163,7 +162,6 @@ internal class FloatingFontLanguagePreview(
         }
 
         val incoming = language.sample
-        // If a third language is picked mid-fade, retain the most visible outgoing specimen.
         val outgoing = languages.asSequence().map { it.sample }
             .filter { (it !== incoming) && (it.alpha > 0f) }
             .maxByOrNull { it.alpha }

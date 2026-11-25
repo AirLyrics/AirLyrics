@@ -143,7 +143,6 @@ private class AirAnimatedDialog(
     }
 }
 
-/** Replace a state-owned window without waiting for animations or reporting user cancellation. */
 internal fun Dialog.dismissAirDialogImmediately() {
     if (this is AirAnimatedDialog) dismissImmediately() else dismiss()
 }

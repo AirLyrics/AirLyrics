@@ -3,7 +3,6 @@ package com.andsi.airlyrics.ui.model
 import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 
-/** Immutable target captured with the displayed song, independent of live playback state. */
 internal data class LyricsOperationTarget(val sourcePackage: String, val song: SongIdentity)
 
 internal sealed interface ConfirmationAction {
@@ -20,7 +19,6 @@ internal data class ConfirmationPrompt(
     val positiveText: String
 )
 
-/** The application owns the saved request and consumes each confirmed operation at most once. */
 internal interface OperationConfirmations {
     val pending: ConfirmationPrompt?
     fun request(action: ConfirmationAction, title: String, message: String, positiveText: String)

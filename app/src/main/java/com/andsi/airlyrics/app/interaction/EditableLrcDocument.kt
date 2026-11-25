@@ -70,8 +70,8 @@ internal class EditableLrcDocument private constructor(
 
     fun removeAt(index: Int) {
         val removed = rows.removeAt(index)
-        // A final row without a line break owns the document's lack of a trailing break.
-        if (index == rows.size && removed.ending.isEmpty()) rows.lastOrNull()?.ending = ""
+        val removedLastRow = index == rows.size
+        if (removedLastRow && removed.ending.isEmpty()) rows.lastOrNull()?.ending = ""
     }
 
     companion object {
@@ -98,7 +98,6 @@ internal class EditableLrcDocument private constructor(
             }.toMutableList(), "\n", document)
         }
 
-        /** Keep the user's precision and separator; use the parser to check actual time bounds. */
         fun normalizedTimestamp(input: String): String? {
             val tag = timeTagInput(input)
             return tag.takeIf { LrcParser.validateTimeTag(it) == LrcParser.TimeTagValidation.VALID }
@@ -109,7 +108,6 @@ internal class EditableLrcDocument private constructor(
             return if (value.startsWith('[') || value.endsWith(']')) value else "[$value]"
         }
 
-        /** A multiline field maps to the inline translation form accepted by the existing parser. */
         fun normalizedLyric(input: String): String {
             val lines = input.replace("\r\n", "\n").replace('\r', '\n')
             if ('\n' !in lines) return input

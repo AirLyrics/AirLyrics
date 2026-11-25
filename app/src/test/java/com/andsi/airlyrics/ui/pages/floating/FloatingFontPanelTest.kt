@@ -154,29 +154,29 @@ class FloatingFontPanelTest {
 
     @Test fun importsAreAddOnlyAndDeletingOnePreservesTheOther() = runTest(mainDispatcherRule.dispatcher) {
         val f = fixture()
-        val first = import(f, "First handwritten font.ttf", R.font.font_preview_swei_gothic_sc)
-        val second = import(f, "Second handwritten font.ttf", R.font.font_preview_wenkai)
-        assertNotEquals(first.fontId, second.fontId)
+        val firstFontId = importFontId(f, "First handwritten font.ttf", R.font.font_preview_swei_gothic_sc)
+        val secondFontId = importFontId(f, "Second handwritten font.ttf", R.font.font_preview_wenkai)
+        assertNotEquals(firstFontId, secondFontId)
         assertEquals("system_default", f.host.floatingStyle().fontId)
         assertEquals(2, FloatingLyricsFontStore.fonts(f.host).count { it.source == FloatingFontSource.IMPORTED })
 
-        f.scope.pageRefs.refreshFonts!!.invoke(first.fontId)
+        f.scope.pageRefs.refreshFonts!!.invoke(firstFontId)
         f.settle()
         assertEquals(f.host.getString(R.string.ui_apply), f.text("floating.font.apply"))
         f.click("floating.font.apply")
-        assertEquals(first.fontId, f.host.floatingStyle().fontId)
-        f.click("floating.font.row.${first.fontId}")
+        assertEquals(firstFontId, f.host.floatingStyle().fontId)
+        f.click("floating.font.row.$firstFontId")
         confirmDelete(f)
-        await { FloatingLyricsFontStore.font(f.host, first.fontId) == null }
-        await { f.find("floating.font.row.${second.fontId}") != null }
+        await { FloatingLyricsFontStore.font(f.host, firstFontId) == null }
+        await { f.find("floating.font.row.$secondFontId") != null }
         assertEquals("system_default", f.host.floatingStyle().fontId)
-        assertNotNull(FloatingLyricsFontStore.font(f.host, second.fontId))
-        f.click("floating.font.row.${second.fontId}")
+        assertNotNull(FloatingLyricsFontStore.font(f.host, secondFontId))
+        f.click("floating.font.row.$secondFontId")
         f.click("floating.font.apply")
         f.closePanel()
         f.openFontTile()
-        assertTrue(f.tag("floating.font.row.${second.fontId}").isSelected)
-        assertNull(f.find("floating.font.row.${first.fontId}"))
+        assertTrue(f.tag("floating.font.row.$secondFontId").isSelected)
+        assertNull(f.find("floating.font.row.$firstFontId"))
     }
 
     @Test fun collectionImportOpensMemberChooserAndDeletionKeepsSelectionConsistent() =
@@ -421,23 +421,23 @@ class FloatingFontPanelTest {
                 if (case.scale == 1f) capture(f, "${case.name}-presets")
                 val firstName = "MyImportedFontWithoutAnyBreakOpportunitiesABCDEFGHIJKLMNOPQRSTUVWXYZ.ttf"
                 val secondName = "我自己匯入的字體 中文字幕與日本語 Mixed-language font.otf"
-                val first = import(f, firstName, R.font.font_preview_swei_gothic_sc)
-                val second = import(f, secondName, R.font.font_preview_wenkai)
+                val firstFontId = importFontId(f, firstName, R.font.font_preview_swei_gothic_sc)
+                val secondFontId = importFontId(f, secondName, R.font.font_preview_wenkai)
                 f.settle()
-                assertEquals(firstName, f.text("floating.font.name.${first.fontId}"))
-                assertEquals(secondName, f.text("floating.font.name.${second.fontId}"))
+                assertEquals(firstName, f.text("floating.font.name.$firstFontId"))
+                assertEquals(secondName, f.text("floating.font.name.$secondFontId"))
                 val firstSize = f.host.localizedFloatingFontSize(File(f.host.cacheDir, firstName).length())
                 val secondSize = f.host.localizedFloatingFontSize(File(f.host.cacheDir, secondName).length())
-                assertEquals(firstSize, f.text("floating.font.size.${first.fontId}"))
-                assertEquals(secondSize, f.text("floating.font.size.${second.fontId}"))
+                assertEquals(firstSize, f.text("floating.font.size.$firstFontId"))
+                assertEquals(secondSize, f.text("floating.font.size.$secondFontId"))
                 assertLayout(f)
 
-                f.click("floating.font.row.${first.fontId}")
+                f.click("floating.font.row.$firstFontId")
                 f.click("floating.font.apply")
                 f.closePanel()
                 f.openFontTile()
-                assertTrue(f.tag("floating.font.row.${first.fontId}").isSelected)
-                assertEquals("74.3 KB", f.text("floating.font.size.${first.fontId}"))
+                assertTrue(f.tag("floating.font.row.$firstFontId").isSelected)
+                assertEquals("74.3 KB", f.text("floating.font.size.$firstFontId"))
                 all(f.bubble).filterIsInstance<ScrollView>().single().fullScroll(View.FOCUS_DOWN)
                 f.settle()
                 assertLayout(f)
@@ -635,10 +635,10 @@ class FloatingFontPanelTest {
         }
     }
 
-    private fun import(f: Fixture, name: String, resource: Int): FloatingFontImportOutcome.Success {
+    private fun importFontId(f: Fixture, name: String, resource: Int): String {
         val outcome = FloatingFontImporter(f.host).import(Uri.fromFile(fontFixture(f, name, resource)))
         assertTrue("A real font resource must import", outcome is FloatingFontImportOutcome.Success)
-        return outcome as FloatingFontImportOutcome.Success
+        return (outcome as FloatingFontImportOutcome.Success).fontId
     }
 
     private fun fontFixture(f: Fixture, name: String, resource: Int): File =

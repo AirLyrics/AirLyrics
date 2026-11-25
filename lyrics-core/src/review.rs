@@ -67,9 +67,8 @@ pub(crate) fn take_json() -> String {
     }
 }
 
-/// Serializes tests that touch the process-wide parking slot.
 #[cfg(test)]
-pub(crate) fn test_lock() -> std::sync::MutexGuard<'static, ()> {
+pub(crate) fn lock_review_slot_for_tests() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
     LOCK.get_or_init(|| std::sync::Mutex::new(()))
         .lock()
@@ -130,7 +129,7 @@ mod tests {
 
     #[test]
     fn parked_candidates_are_returned_once_for_the_same_lookup() {
-        let _guard = test_lock();
+        let _guard = lock_review_slot_for_tests();
         clear();
         let key = query_key("Radio Love Song", "Karen Mok", Some(242_000));
         park(&key, candidate("电台情歌", "weak_evidence"));
@@ -150,7 +149,7 @@ mod tests {
 
     #[test]
     fn a_new_song_replaces_the_parked_set() {
-        let _guard = test_lock();
+        let _guard = lock_review_slot_for_tests();
         clear();
         park(
             &query_key("Song A", "Artist", Some(1_000)),

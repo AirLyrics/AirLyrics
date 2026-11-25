@@ -47,8 +47,7 @@ class LyricsGlowTest {
         return bitmap { halo.draw(it, "Halo", 0, 4, 0, 4, 70f, 90f, false, paint.measureText("Halo"), 1f, style) }
     }
 
-    /** Outside the entire glyph bounding box: fill/scale differences cannot make this pass. */
-    private fun outerEnergy(image: IntArray): Long {
+    private fun sumAlphaOutsideGlyphBounds(image: IntArray): Long {
         val bounds = Rect()
         TextPaint().apply { textSize = 32f }.getTextBounds("Halo", 0, 4, bounds)
         bounds.offset(70, 90)
@@ -59,24 +58,24 @@ class LyricsGlowTest {
     }
 
     @Test fun darkAccentProducesVisibleOuterGlow_andOffProducesNone() {
-        assertTrue(outerEnergy(halo(LyricsGlowStyle())) > 1000)
-        assertEquals(0L, outerEnergy(halo(LyricsGlowStyle(enabled = false))))
-        assertEquals(0L, outerEnergy(halo(LyricsGlowStyle(strengthPercent = 0))))
-        assertEquals(0L, outerEnergy(halo(LyricsGlowStyle(), Color.TRANSPARENT)))
+        assertTrue(sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle())) > 1000)
+        assertEquals(0L, sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(enabled = false))))
+        assertEquals(0L, sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(strengthPercent = 0))))
+        assertEquals(0L, sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(), Color.TRANSPARENT)))
     }
 
     @Test fun intensitySpreadAndTextOpacityControlOuterHalo() {
-        assertTrue(outerEnergy(halo(LyricsGlowStyle(strengthPercent = 150))) >
-            outerEnergy(halo(LyricsGlowStyle(strengthPercent = 50))) * 1.5)
-        assertTrue(outerEnergy(halo(LyricsGlowStyle(spreadPercent = 200))) >
-            outerEnergy(halo(LyricsGlowStyle(spreadPercent = 50))) * 1.5)
-        assertTrue(outerEnergy(halo(LyricsGlowStyle(), Color.argb(64, 92, 38, 130))) <
-            outerEnergy(halo(LyricsGlowStyle())))
+        assertTrue(sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(strengthPercent = 150))) >
+            sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(strengthPercent = 50))) * 1.5)
+        assertTrue(sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(spreadPercent = 200))) >
+            sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(spreadPercent = 50))) * 1.5)
+        assertTrue(sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle(), Color.argb(64, 92, 38, 130))) <
+            sumAlphaOutsideGlyphBounds(halo(LyricsGlowStyle())))
     }
 
     @Test fun disablingGlowDoesNotRemoveUserShadow() {
         val shadow = halo(LyricsGlowStyle(enabled = false), shadow = true)
-        assertTrue(outerEnergy(shadow) > 0)
+        assertTrue(sumAlphaOutsideGlyphBounds(shadow) > 0)
         assertTrue(shadow.any { Color.alpha(it) > 5 && Color.red(it) > Color.green(it) * 2 })
     }
 

@@ -131,7 +131,8 @@ class FloatingLyricsRotationTest {
     @Test fun landscapeStartupAndStyleChangesPreserveCenter() {
         rotate(true)
         show()
-        assertEquals(0.5f, requireNotNull(FloatingLyricsStyleStore.getRelativePosition(application)).horizontal)
+        val relativePosition = requireNotNull(FloatingLyricsStyleStore.getRelativePosition(application))
+        assertEquals(0.5f, relativePosition.horizontalTravelFraction)
         val view = requireNotNull(service.lyricsView)
         val params = view.rootView.layoutParams as WindowManager.LayoutParams
         val originalWidth = params.width
@@ -170,7 +171,7 @@ class FloatingLyricsRotationTest {
                 event.recycle()
             }
         val saved = requireNotNull(FloatingLyricsStyleStore.getRelativePosition(application))
-        assertEquals(1f, saved.horizontal)
+        assertEquals(1f, saved.horizontalTravelFraction)
         val x = (view.rootView.layoutParams as WindowManager.LayoutParams).x
         service.windowController.hide()
         show()

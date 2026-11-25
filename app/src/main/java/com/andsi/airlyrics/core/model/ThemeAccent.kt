@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.core.model
 
-/** Stable app-wide accent choices. Persist [preferenceValue], never enum names. */
 enum class ThemeAccent(val preferenceValue: String) {
     PINK("pink"),
     ORANGE("orange"),

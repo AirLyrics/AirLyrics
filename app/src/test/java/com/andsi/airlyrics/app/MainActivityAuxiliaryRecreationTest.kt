@@ -403,7 +403,7 @@ class MainActivityAuxiliaryRecreationTest {
     @Test
     @Config(qualifiers = "es-rES-w320dp-h700dp-mdpi")
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    fun SpanishStatusFitsOnANarrowScreen() {
+    fun spanishStatusFitsOnANarrowScreen() {
         assumeFalse(BuildConfig.APP_UPDATE_INSTALLER_ENABLED)
         Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { controller ->
             val host = controller.get().graph.uiHost

@@ -19,7 +19,6 @@ use crate::matching::{text_similarity, MatchMetadata};
 use crate::recording::{duration_close, version_conflict};
 
 const STOREFRONTS: [&str; 3] = ["tw", "hk", "sg"];
-/// The catalogue's own artist mapping is only trusted when a few of that artist's tracks agree.
 const MIN_ARTIST_TRACKS: usize = 3;
 /// Two entries of the *same master* differ by milliseconds across storefronts, while different
 /// songs of similar length differ by hundreds. Pairing across storefronts therefore needs an
@@ -62,8 +61,6 @@ pub(crate) trait CatalogueBackend {
     ) -> Result<Vec<CatalogueTrack>, String> {
         Err("artist-id lookup unsupported".to_owned())
     }
-    /// The player's own catalogue entry (title + artist), used to learn the recording's exact
-    /// running time before pairing storefronts.
     fn search_track(
         &self,
         title: &str,
@@ -827,8 +824,6 @@ mod tests {
 
     #[test]
     fn a_missing_player_duration_is_recovered_from_the_catalogue_entry() {
-        // The player did not report a duration, but the catalogue entry for title+artist gives
-        // the recording's exact length, which is enough to pair the storefronts.
         let no_duration = MatchMetadata {
             duration_ms: None,
             ..cyndi_query()

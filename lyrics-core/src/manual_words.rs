@@ -691,7 +691,6 @@ fn krc_translation(raw: &str, lines: &[Value]) -> Result<Option<String>, String>
             continue;
         }
         let rows = item["lyricContent"].as_array().ok_or("ParseError")?;
-        // Index-based translations are only safe when the complete line counts agree.
         if rows.len() != lines.len() {
             continue;
         }

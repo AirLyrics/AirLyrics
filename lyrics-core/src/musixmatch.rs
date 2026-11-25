@@ -729,8 +729,6 @@ async fn find_usable_lyrics_with_backend<B: MusixmatchBackend>(
         ),
     );
 
-    // Breadth-first request rounds give every selected track a primary subtitle request before
-    // any track consumes its no-duration or commontrack fallbacks.
     'candidate_rounds: for request_round in 0..3 {
         for candidate in &selected {
             let Some(request) = candidate_subtitle_requests(&candidate.track, duration_seconds)
@@ -1145,8 +1143,6 @@ fn select_matcher_subtitle_requests(
         return requests;
     }
 
-    // The final request is the broadest title-only variant. Keep it even when the budget can
-    // accommodate only part of the deduplicated list.
     let broadest = requests.pop().expect("non-empty matcher request list");
     if limit == 1 {
         return vec![broadest];

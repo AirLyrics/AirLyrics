@@ -17,17 +17,16 @@ internal object CachedMatchGuard {
         cachedMatchedTitle: String,
         aliasTitle: String?
     ): Boolean {
-        if (cachedMatchedTitle.isBlank()) return true
-        if (sameTitle(playedTitle, cachedMatchedTitle)) return true
-        if (!aliasTitle.isNullOrBlank() && sameTitle(aliasTitle, cachedMatchedTitle)) return true
-        return false
+        return cachedMatchedTitle.isBlank() ||
+            sameTitle(playedTitle, cachedMatchedTitle) ||
+            (!aliasTitle.isNullOrBlank() && sameTitle(aliasTitle, cachedMatchedTitle))
     }
 
     fun sameTitle(left: String, right: String): Boolean {
         val a = normalize(left)
         val b = normalize(right)
-        if (a.isEmpty() || b.isEmpty()) return false
-        return a == b || a.contains(b) || b.contains(a)
+        return a.isNotEmpty() && b.isNotEmpty() &&
+            (a == b || a.contains(b) || b.contains(a))
     }
 
     private fun normalize(raw: String): String {

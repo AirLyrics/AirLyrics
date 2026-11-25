@@ -364,10 +364,10 @@ object FloatingLyricsStyleStore {
     }
 
     internal fun saveRelativePosition(context: Context, position: FloatingPosition) {
-        require(position.horizontal.isFinite() && position.vertical.isFinite())
+        require(position.horizontalTravelFraction.isFinite() && position.verticalTravelFraction.isFinite())
         prefs(context).edit {
-            putFloat(KEY_POSITION_HORIZONTAL, position.horizontal.coerceIn(0f, 1f))
-            putFloat(KEY_POSITION_VERTICAL, position.vertical.coerceIn(0f, 1f))
+            putFloat(KEY_POSITION_HORIZONTAL, position.horizontalTravelFraction.coerceIn(0f, 1f))
+            putFloat(KEY_POSITION_VERTICAL, position.verticalTravelFraction.coerceIn(0f, 1f))
         }
     }
 

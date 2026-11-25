@@ -111,7 +111,6 @@ internal class InlineTextScrollController(
             stop()
             return
         }
-        // Reading speed is independent of decorative press animations and system duration scales.
         val progress = ((SystemClock.uptimeMillis() - startTime).toFloat() / duration).coerceIn(0f, 1f)
         currentLine?.setReadingProgress(progress, distance)
         if (progress < 1f) anchor.postOnAnimation(frame)

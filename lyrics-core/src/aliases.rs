@@ -128,10 +128,6 @@ pub(crate) fn metadata_parts(hit: &AliasHit) -> (String, String) {
     (hit.title.clone(), hit.artist.clone().unwrap_or_default())
 }
 
-/// Localized spellings of an artist name (romanized → localized), learned from a catalogue.
-///
-/// Only the artist *name* is mapped here; it never decides song identity on its own, it just
-/// lets a search reach the right performer instead of a cover act.
 fn artist_aliases() -> &'static RwLock<Vec<(String, String)>> {
     static ARTISTS: OnceLock<RwLock<Vec<(String, String)>>> = OnceLock::new();
     ARTISTS.get_or_init(|| RwLock::new(Vec::new()))
@@ -168,8 +164,6 @@ pub(crate) fn clear_artist_aliases() {
     }
 }
 
-/// Lookup terms derived from a confirmed alias, tried before any relaxed variant. Empty when no
-/// alias applies — a lookup is never a machine translation, so nothing is invented here.
 pub(crate) fn search_queries(title: &str, artist: &str) -> Vec<(String, Option<String>)> {
     let Some(hit) = lookup(title, artist) else {
         return Vec::new();

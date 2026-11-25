@@ -15,8 +15,6 @@ internal data class LyricsIndexEntry(
     val wordByWordProvider: String = "",
     val createdAt: Long,
     val updatedAt: Long,
-    // Provenance of the online match that produced this file: what the source actually returned.
-    // Empty on entries written by older versions (no provenance available).
     val matchedTitle: String = "",
     val matchedArtist: String = "",
     val matchedDurationMs: Long = 0L,

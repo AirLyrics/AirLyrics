@@ -492,7 +492,6 @@ internal class LyricsSearchSession(
         val detail=result.wordDetail
         return if(detail==null) {
             val seen=result.wordCatalogue.mapTo(HashSet()) { it.id }
-            // Rank only unseen songs. A later, better-scored page must not move already-read rows.
             val additions=ManualWordSource.entries.flatMap { result.wordResults[it]?.recordings.orEmpty() }
                 .filter { seen.add("recording:${it.key}") }
                 .sortedWith(compareByDescending<ManualWordRecording> { it.related }

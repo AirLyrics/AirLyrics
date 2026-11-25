@@ -118,7 +118,6 @@ internal class FloatingColorPanelContent(
                 val rgb = AirColorUtils.opaqueRgb(currentColor())
                 session.edit(rgb, rgb in favorites)
                 if (!session.complete(request, result.isSuccess)) return@runOnMainThread
-                // Do not mutate the hidden palette during an editor/window Fade.
                 if (!editingRgb) refreshSavedSwatches()
                 renderColor()
                 if (result.isFailure && host.interactions.panel == ownerPanel) {
@@ -287,7 +286,7 @@ internal class FloatingColorPanelContent(
     ).apply { setTag(R.id.interaction_anchor, anchor) }
 
     private fun centeredPalette(content: View): View = FrameLayout(host).apply {
-        val column = if (content is PaletteColumn) content else PaletteColumn(host).apply { addView(content) }
+        val column = content as? PaletteColumn ?: PaletteColumn(host).apply { addView(content) }
         addView(column, FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL))
         setPadding(0, 0, 0, host.dp(AirUiTokens.Space.Xl))
     }
@@ -597,7 +596,6 @@ private class FloatingColorSample(host: MainUiHost) : View(host) {
     }
 }
 
-/** Disappearing transition ghosts cannot receive another tap or accessibility focus. */
 @SuppressLint("ViewConstructor")
 private class ColorPanelPage(host: MainUiHost) : LinearLayout(host) {
     var acceptsInput: Boolean = true

@@ -63,10 +63,6 @@ pub(crate) fn resolve_alias(
     })
 }
 
-/// Accepts the candidate only when its artist credibly matches the player's artist, so a
-/// same-titled recording by another act cannot seed a wrong alias. The two sides are usually
-/// written in different scripts, so this is a conservative normalised containment check rather
-/// than an equality test; unresolvable pairs return `false` and no alias is registered.
 fn artist_matches(query_artist: &str, candidate_artists: &str) -> bool {
     fn normalise(value: &str) -> String {
         value

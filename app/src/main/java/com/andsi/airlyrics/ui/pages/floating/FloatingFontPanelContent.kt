@@ -498,7 +498,6 @@ internal class FloatingFontPanelContent(
         deleteButton?.setArmed(false)
         if (font != null) renderAction(font) else deleteButton?.isEnabled = false
         scope.launch {
-            // Finish a confirmed mutation and update the overlay even when the panel closes.
             withContext(NonCancellable) {
                 val removed = withContext(Dispatchers.IO) {
                     runCatching {

@@ -23,7 +23,6 @@ internal class FloatingColorSaveState(initialColor: Int, saved: Boolean) {
         this.color = color
         revision++
         edited = true
-        // An older write must not confirm a new draft, even if the user returns to its RGB.
         status = if (request == null && saved) ColorSaveStatus.SAVED else ColorSaveStatus.UNSAVED
     }
 

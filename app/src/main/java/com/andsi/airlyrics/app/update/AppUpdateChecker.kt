@@ -69,7 +69,9 @@ internal class AppUpdateChecker(
                 it,
                 preferences.getLong(SIZE, 0),
                 preferences.getString(SHA256, null).orEmpty(),
-                preferences.getString(PUBLISHED_ON, null)?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
+                preferences.getString(PUBLISHED_ON, null)?.let { publishedOn ->
+                    runCatching { LocalDate.parse(publishedOn) }.getOrNull()
+                },
                 preferences.getString(NOTES, null).orEmpty()
             )
         }

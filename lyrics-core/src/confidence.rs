@@ -165,11 +165,6 @@ pub(crate) struct Assessment {
     pub(crate) alias_used: bool,
 }
 
-/// Score a candidate and apply the confidence policy.
-///
-/// The player's own metadata is tried first; when that cannot corroborate the candidate, a
-/// confirmed alias is tried as a second, independent lookup path (romanized titles can only
-/// reach their localized catalogue entry that way). `None` means "do not use this candidate".
 pub(crate) fn assess(query: MatchMetadata<'_>, candidate: MatchMetadata<'_>) -> Option<Assessment> {
     let thresholds = Thresholds::from_env();
 

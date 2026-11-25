@@ -194,11 +194,11 @@ class LyricsSourcesMorphTest {
             val focusResults = LyricsSearchActivity::class.java.getDeclaredMethod("focusSourcesIfReady")
                 .apply { isAccessible = true }
             focusResults.invoke(activity)
-            assertTrue(ReflectionHelpers.getField<Boolean>(activity, "pendingSourceFocus"))
+            assertTrue(ReflectionHelpers.getField(activity, "pendingSourceFocus"))
             assertTrue(sheet.requireDialog().isShowing)
             sheet.requireDialog().cancel()
             settle()
-            assertFalse(ReflectionHelpers.getField<Boolean>(activity, "pendingSourceFocus"))
+            assertFalse(ReflectionHelpers.getField(activity, "pendingSourceFocus"))
             assertEquals(1f, activity.sourceCapsule()!!.alpha, 0.001f)
         }
     }

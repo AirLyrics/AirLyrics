@@ -7,7 +7,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 
-/** An editor draft keeps word timings and voice/translation data without a lossy LRC round trip. */
 internal data class WordLyricsDocument(
     val lines: List<WordByWordLine>,
     val metadata: List<String> = emptyList(),
@@ -58,7 +57,6 @@ internal data class WordLyricsDocument(
                         "Invalid word lyric tokens"
                     }
                 }
-                // Preserve editor text verbatim; the playback codec trims display-only edge whitespace.
                 val exactLines = ordered.zip(parsed.wordByWordLines).map { (raw, line) ->
                     line.copy(text = raw.getString("text"))
                 }

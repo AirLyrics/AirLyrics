@@ -111,8 +111,8 @@ internal class LyricsSourcesMorphView(
         }
         val panelRight = capsuleBounds.right.coerceIn(left.toFloat(), right.toFloat())
         val panelWidth = min(dp(420), (panelRight - left).roundToInt()).coerceAtLeast(0)
-        // On short landscape windows move the expanded top up to keep fixed controls usable.
-        val panelTop = min(capsuleBounds.top, (bottom - dp(260)).toFloat()).coerceAtLeast(top.toFloat())
+        val minimumPanelHeightPx = dp(260)
+        val panelTop = min(capsuleBounds.top, (bottom - minimumPanelHeightPx).toFloat()).coerceAtLeast(top.toFloat())
         content.measure(exact(panelWidth), atMost((bottom - panelTop).roundToInt().coerceAtLeast(0)))
         panelBounds.set(panelRight - panelWidth, panelTop, panelRight, panelTop + content.measuredHeight)
         capsule.measure(exact(capsuleBounds.width().roundToInt()), exact(capsuleBounds.height().roundToInt()))
@@ -215,7 +215,6 @@ internal class LyricsSourcesMorphView(
     }
 
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean {
-        // Transparent/clipped panel children must never receive invisible taps during the morph.
         return !targetOpen || progress < 0.99f || !panelBounds.contains(event.x, event.y)
     }
 

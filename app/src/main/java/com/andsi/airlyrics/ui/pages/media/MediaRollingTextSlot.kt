@@ -408,8 +408,6 @@ internal class MediaRollingTextSlot(
             ((fraction - 0.12f) / 0.88f).coerceIn(0f, 1f)
         }
         val eased = 1f - (1f - heightProgress).let { it * it * it }
-        // Layout follows the visible ink's actual motion, including delayed groups,
-        // rather than cutting it off with an independently shrinking clip.
         val nextHeight = maxOf(
             (fromHeight + (toHeight - fromHeight) * eased).roundToInt(),
             outgoing?.visibleBottom(incomingFrame = false) ?: 0,

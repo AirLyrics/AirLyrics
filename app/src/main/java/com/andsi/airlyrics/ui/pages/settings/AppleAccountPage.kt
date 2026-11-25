@@ -285,7 +285,6 @@ private fun createAppleLoginPanel(activity: MainUiHost, onSignedIn: () -> Unit):
         }
         CookieManager.getInstance().setAcceptCookie(true)
         CookieManager.getInstance().setAcceptThirdPartyCookies(this, true)
-        // Let Apple's form scroll independently of the surrounding lyrics settings.
         setOnTouchListener { view, event ->
             view.parent.requestDisallowInterceptTouchEvent(
                 event.actionMasked != MotionEvent.ACTION_UP && event.actionMasked != MotionEvent.ACTION_CANCEL

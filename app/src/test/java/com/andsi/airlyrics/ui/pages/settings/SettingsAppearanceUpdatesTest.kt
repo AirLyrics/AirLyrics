@@ -30,7 +30,7 @@ class SettingsAppearanceUpdatesTest {
                 val activity = controller.get()
                 val host = activity.graph.uiHost
                 activity.graph.viewModel.selectPage(Page.SETTINGS)
-                activity.graph.uiInvalidator.rebuildCurrentPage(false, false)
+                activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
                 val root = activity.findViewById<ViewGroup>(android.R.id.content).getChildAt(0)
                 val panel = root.findViewById<View>(R.id.appearance_picker_panel)
                 val trigger = root.nodes().single { it.contentDescription == host.getString(R.string.ui_choose_accent_color) }
@@ -86,7 +86,7 @@ class SettingsAppearanceUpdatesTest {
                 val activity = controller.get()
                 val host = activity.graph.uiHost
                 activity.graph.viewModel.selectPage(Page.SETTINGS)
-                activity.graph.uiInvalidator.rebuildCurrentPage(false, false)
+                activity.graph.uiInvalidator.rebuildCurrentPage(animateContent = false, animateTabs = false)
                 controller.visible()
                 fun frames(count: Int) {
                     repeat(count) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(16)) }

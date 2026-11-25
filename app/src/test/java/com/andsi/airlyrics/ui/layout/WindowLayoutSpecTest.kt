@@ -19,7 +19,8 @@ class WindowLayoutSpecTest {
     @Test fun compactHeightDoesNotChangeNavigation() {
         val tall = WindowLayoutSpec(800f, 600f, 1f)
         assertFalse(tall.compact)
-        assertTrue(tall.copy(height = 300f).compact)
-        assertEquals(tall.useRail, tall.copy(height = 300f).useRail)
+        val short = tall.copy(heightDp = 300f)
+        assertTrue(short.compact)
+        assertEquals(tall.useRail, short.useRail)
     }
 }

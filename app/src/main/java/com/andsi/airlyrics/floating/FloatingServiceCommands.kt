@@ -86,11 +86,8 @@ internal fun FloatingLyricsService.hideLyrics() {
     displayScopeBlockReason = null
     stopDisplayScopeObservation()
     QuickFloatingStore.setDesiredVisible(this, false)
-    val hidden = if (isWindowControllerReady()) {
+    val hidden = !isWindowControllerReady() ||
         runCatching { windowController.hide() }.getOrDefault(false)
-    } else {
-        true
-    }
     val stillVisible = isWindowControllerReady() && windowController.isVisible
     if (hidden || !stillVisible) {
         syncHandler.removeCallbacks(mediaRestoreRunnable)

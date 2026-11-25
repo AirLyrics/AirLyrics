@@ -2,7 +2,6 @@ package com.andsi.airlyrics.core.model
 
 import java.net.URI
 
-/** Accept track identities only, never episode, local-file or arbitrary-host links. */
 object SpotifyTrackId {
     const val PACKAGE_NAME = "com.spotify.music"
     private val idPattern = Regex("[A-Za-z0-9]{22}")

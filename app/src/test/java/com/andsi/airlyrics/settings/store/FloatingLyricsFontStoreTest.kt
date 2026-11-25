@@ -428,7 +428,6 @@ class FloatingLyricsFontStoreTest {
             FloatingLyricsFontFamily.SERIF to Typeface.SERIF
         )
         val families = FloatingLyricsFontFamily.entries.filter { it != FloatingLyricsFontFamily.CUSTOM }
-        // Independent boundary examples: do not call the production normalizer here.
         val weights = mapOf(-1 to 100, 149 to 100, 150 to 200, 555 to 600, 900 to 900, 1001 to 900)
         families.forEach { family ->
             weights.forEach { (raw, expectedWeight) ->

@@ -318,8 +318,6 @@ async fn discover(client: &Client, query: MatchMetadata<'_>) -> Result<Vec<Value
             .unwrap_or_else(|_| Err(err("NetworkError")));
         let data = match result {
             Ok(data) => data,
-            // Keep useful earlier candidates when an optional broader search fails.
-            // Authentication and rate-limit refusals must still stop this lookup.
             Err(e)
                 if !matches.is_empty() && matches!(e.as_str(), "NetworkError" | "ParseError") =>
             {

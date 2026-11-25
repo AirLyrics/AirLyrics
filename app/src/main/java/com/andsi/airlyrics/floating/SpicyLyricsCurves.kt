@@ -58,7 +58,6 @@ internal object SpicyLyricsCurves {
     }
 }
 
-/** Natural cubic spline, matching cubic-spline's zero endpoint second derivatives. */
 private class NaturalSpline(private val x: FloatArray, private val y: FloatArray) {
     private val second = FloatArray(x.size)
     init {

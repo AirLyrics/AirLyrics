@@ -14,18 +14,18 @@ internal data class FloatingWindowGeometry(
     val travelY = (availableHeight - height).coerceAtLeast(0)
 
     fun coordinates(position: FloatingPosition): Pair<Int, Int> =
-        (position.horizontal * travelX).roundToInt() to
-            (position.vertical * travelY).roundToInt()
+        (position.horizontalTravelFraction * travelX).roundToInt() to
+            (position.verticalTravelFraction * travelY).roundToInt()
 
     fun position(x: Int, y: Int, fallback: FloatingPosition): FloatingPosition =
         FloatingPosition(
-            if (travelX > 0) x.coerceIn(0, travelX).toFloat() / travelX else fallback.horizontal,
-            if (travelY > 0) y.coerceIn(0, travelY).toFloat() / travelY else fallback.vertical
+            if (travelX > 0) x.coerceIn(0, travelX).toFloat() / travelX else fallback.horizontalTravelFraction,
+            if (travelY > 0) y.coerceIn(0, travelY).toFloat() / travelY else fallback.verticalTravelFraction
         )
 
     fun migrate(x: Int, y: Int, tolerance: Int): FloatingPosition {
         val position = position(x, y, FloatingPosition(0.5f, 0f))
-        return if (abs(x - travelX / 2f) <= tolerance) position.copy(horizontal = 0.5f) else position
+        return if (abs(x - travelX / 2f) <= tolerance) position.copy(horizontalTravelFraction = 0.5f) else position
     }
 
     companion object {

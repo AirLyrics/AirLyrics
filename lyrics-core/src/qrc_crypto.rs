@@ -357,9 +357,6 @@ fn key_schedule(key: &[u8], schedule: &mut [[u8; 6]], mode: Mode) {
 
 type DesSchedule = [[u8; 6]; 16];
 
-/// 3DES-EDE 解密的子密钥：按 K3 解密 → K2 加密 → K1 解密的顺序排列。
-///
-/// QRC 只需要解密方向，因此不保留上游的加密分支。
 fn triple_des_decrypt_schedule(key: &[u8]) -> [DesSchedule; 3] {
     let mut schedule = [[[0u8; 6]; 16]; 3];
     key_schedule(&key[16..], &mut schedule[0], Mode::Decrypt);

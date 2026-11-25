@@ -27,10 +27,9 @@ internal fun fontCollectionFixture(
         collection.putInt(12 + index * 4, offset)
         val font = fonts.getValue(id)
         val tableCount = ByteBuffer.wrap(font).getShort(4).toInt() and 0xffff
-        val existingOffset = offsets[id]
-        if (existingOffset != null) {
-            // The directory still points to the tables of the first occurrence.
-            collection.put(collection.array(), existingOffset, 12 + tableCount * 16)
+        val existingMemberOffset = offsets[id]
+        if (existingMemberOffset != null) {
+            collection.put(collection.array(), existingMemberOffset, 12 + tableCount * 16)
         } else {
             offsets[id] = offset
             val member = ByteBuffer.wrap(font.copyOf())

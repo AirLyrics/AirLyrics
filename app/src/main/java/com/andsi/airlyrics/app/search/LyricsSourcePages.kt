@@ -33,7 +33,7 @@ import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.tabs.TabLayout
 import java.util.Locale
 
-@SuppressLint("ViewConstructor") // Created with session dependencies, never inflated from XML.
+@SuppressLint("ViewConstructor")
 internal class LyricsSourcePages(
     context: Context,
     private val palette: AirLyricsPalette,
@@ -350,7 +350,6 @@ internal class LyricsSourcePages(
             setOnClickListener { if (visual == SourceVisual.EMPTY || visual == SourceVisual.ERROR)
                 source?.let(session::retry) }
         }
-        // The clickable status row must pass vertical drags up to the AppBarLayout.
         private val status = NestedScrollView(context).apply {
             minimumHeight = dp(80)
             isVerticalScrollBarEnabled = false
@@ -481,8 +480,9 @@ internal class LyricsSourcePages(
                 return
             }
             rows.submit(key,result.candidates) {
-                // A recycled page or a superseded search must not reveal an older submission.
-                if(disposed || source!=key || generation!=pageGeneration || shownResult!==result || results[key]!==result) return@submit
+                val submissionIsCurrent = !disposed && source == key && generation == pageGeneration &&
+                    shownResult === result && results[key] === result
+                if (!submissionIsCurrent) return@submit
                 // Update the footer with the new rows. Removing it before the diff commits would
                 // temporarily shorten the old list and force a scroll correction at its bottom.
                 appendLoading=false

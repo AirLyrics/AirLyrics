@@ -111,7 +111,7 @@ class UntimedLyricsTest : LyricsStorageTestBase() {
             song.title, song.artist, song.durationMs) is LyricsStorage.ImportLyricsResult.Saved)
         var item = LyricsStorage.listAllLyrics(context).single()
         assertTrue(item.isUntimed)
-        val edited = text + "\n\nLast paragraph"
+        val edited = "$text\n\nLast paragraph"
         assertTrue(LyricsStorage.updatePlainLyricsItemTextWithResult(context, item, edited).saved)
         item = LyricsStorage.listAllLyrics(context).single()
         val destination = File(context.cacheDir, "export.zip")

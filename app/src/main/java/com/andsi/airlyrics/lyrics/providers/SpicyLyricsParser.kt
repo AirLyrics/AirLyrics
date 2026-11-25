@@ -56,8 +56,8 @@ internal object SpicyLyricsParser {
                         val text = s.getString("Text")
                         require(text.isNotBlank() && b > a && a >= start - 50 && b <= end + 50)
                         require(segments.lastOrNull()?.startMs?.let { a >= it } != false)
-                        // IsPartOfWord describes whether this syllable continues into the next.
-                        val suffix = if (j < syllables.length() - 1 && !s.optBoolean("IsPartOfWord")) " " else ""
+                        val endsWordBeforeNextSyllable = j < syllables.length() - 1 && !s.optBoolean("IsPartOfWord")
+                        val suffix = if (endsWordBeforeNextSyllable) " " else ""
                         segments += WordByWordSegment(text + suffix, a, b)
                     }
                     require(segments.isNotEmpty())

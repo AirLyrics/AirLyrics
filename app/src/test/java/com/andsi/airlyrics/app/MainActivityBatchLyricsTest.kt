@@ -408,7 +408,6 @@ class MainActivityBatchLyricsTest {
         session.filesSelected(listOf(Uri.fromFile(source)))
         awaitUiCondition { dialogTexts().any { it.text == activity.getString(R.string.ui_batch_replace) } }
         val preview = ShadowDialog.getLatestDialog()
-        // Dialog.cancel() is the platform path used by back and outside-touch cancellation.
         preview.cancel()
         awaitUiCondition { session.state.value == null }
         ShadowLooper.idleMainLooper()

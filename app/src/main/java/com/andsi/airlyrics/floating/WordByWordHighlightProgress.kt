@@ -36,8 +36,8 @@ internal fun wordByWordHighlightProgress(
     var completedEnd = 0
     var matchedSegment = false
 
-    for (segment in displaySegments) {
-        val segmentText = segment.text.trim()
+    for ((rawText, startMs, endMs) in displaySegments) {
+        val segmentText = rawText.trim()
         if (segmentText.isBlank()) continue
 
         val segmentStart = displayText.indexOf(segmentText, searchStart).takeIf { it >= 0 }
@@ -48,10 +48,10 @@ internal fun wordByWordHighlightProgress(
         matchedSegment = true
 
         when {
-            positionMs >= segment.endMs -> completedEnd = segmentEnd
-            positionMs >= segment.startMs -> {
-                val durationMs = (segment.endMs - segment.startMs).coerceAtLeast(1L)
-                val progress = ((positionMs - segment.startMs).toFloat() / durationMs.toFloat())
+            positionMs >= endMs -> completedEnd = segmentEnd
+            positionMs >= startMs -> {
+                val durationMs = (endMs - startMs).coerceAtLeast(1L)
+                val progress = ((positionMs - startMs).toFloat() / durationMs.toFloat())
                     .coerceIn(0f, 1f)
                 return progressWithinRange(
                     text = displayText,

@@ -373,8 +373,6 @@ internal fun View.enableSoftPressFeedback(pressedScale: Float = AirUiTokens.Moti
 }
 
 internal fun playTinyPulse(view: View) {
-    // Panel actions settle the touch feedback instead of starting a second, competing pulse.
-    // Disabled controls keep the alpha assigned by their new state (for example, a saved color).
     if (!view.isEnabled || !ValueAnimator.areAnimatorsEnabled() ||
         (view.hasFocus() && !view.isInTouchMode)) {
         view.animate().cancel()
