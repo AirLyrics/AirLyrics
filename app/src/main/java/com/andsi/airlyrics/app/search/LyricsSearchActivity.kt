@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.app.search
 
 import android.animation.ValueAnimator
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -36,6 +38,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.*
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.i18n.lyrics.localizedLyricsLookupMessage
 import com.andsi.airlyrics.i18n.lyrics.localizedPlainLyricsProviderName
 import com.andsi.airlyrics.lyrics.*
@@ -51,6 +54,7 @@ import com.andsi.airlyrics.ui.components.styleAirTextButton
 import com.andsi.airlyrics.ui.state.InteractionUiRegistry
 import com.andsi.airlyrics.ui.theme.AirLyricsTheme
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.delay
@@ -482,28 +486,32 @@ class LyricsSearchActivity : AppCompatActivity() {
             preview.translationY=0f
             preview.removeAllViews()
             state.preview?.takeIf { it.lyrics.hasUsableLyrics() }?.let { p ->
-                preview.addView(previewHeading(getString(when (p.lyrics.precision) {
+                val heading = getString(when (p.lyrics.precision) {
                     LyricsPrecision.TEXT -> R.string.ui_untimed_lyrics
                     LyricsPrecision.LINE -> R.string.search_line_lyrics
                     LyricsPrecision.WORD -> R.string.search_word_lyrics
-                })))
-                if (p.lyrics.isUntimed) preview.addView(text(getString(R.string.search_untimed_notice)).apply {
-                    setTextColor(palette.textMuted)
                 })
-                p.lyrics.access?.attribution?.let { attribution ->
-                    preview.addView(text("").apply { text=attribution.displayText();movementMethod=LinkMovementMethod.getInstance() })
-                }
                 val content = when (p.lyrics.precision) {
                     LyricsPrecision.TEXT -> p.lyrics.untimedLyrics!!.text
                     LyricsPrecision.LINE -> p.lyrics.plainLrc
                     LyricsPrecision.WORD -> com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
                         .wordByWordLinesToWordByWordLrc(p.lyrics.wordByWordLines)
                 }
-                preview.addView(text(content).apply { setTextIsSelectable(true) })
-                (p.lyrics.untimedLyrics?.translatedText ?: p.lyrics.translatedLrc)?.let { translation ->
-                    preview.addView(previewHeading(getString(R.string.search_translation)))
-                    preview.addView(text(translation).apply { setTextIsSelectable(true) })
+                preview.addView(previewHeading(heading, R.string.search_copy_lyrics, content))
+                if (p.lyrics.isUntimed) preview.addView(text(getString(R.string.search_untimed_notice)).apply {
+                    setTextColor(palette.textMuted)
+                })
+                p.lyrics.access?.attribution?.let { attribution ->
+                    preview.addView(text("").apply { text=attribution.displayText();movementMethod=LinkMovementMethod.getInstance() })
                 }
+                preview.addView(text(content).apply { setTextIsSelectable(true) })
+                (p.lyrics.untimedLyrics?.translatedText ?: p.lyrics.translatedLrc)
+                    ?.takeIf { it.isNotBlank() }?.let { translation ->
+                        preview.addView(previewHeading(
+                            getString(R.string.search_translation), R.string.search_copy_translation, translation
+                        ))
+                        preview.addView(text(translation).apply { setTextIsSelectable(true) })
+                    }
                 if(preview.isAttachedToWindow && ValueAnimator.areAnimatorsEnabled()) {
                     preview.alpha=0f
                     preview.translationY=dp(7).toFloat()
@@ -609,15 +617,39 @@ class LyricsSearchActivity : AppCompatActivity() {
     private fun text(value:String,size:Float=15f)=TextView(this).apply {
         text=value;textSize=size;setTextColor(palette.textStrong);setPadding(0,dp(8),0,dp(8))
     }
-    private fun previewHeading(value:String)=text(value,17f).apply {
-        setTypeface(typeface,Typeface.BOLD)
-        setTextColor(ColorUtils.blendARGB(palette.accent,palette.textStrong,0.45f))
-        setPadding(0,dp(6),0,dp(6))
-        layoutParams=LinearLayout.LayoutParams(-2,-2).apply {
-            topMargin=dp(8)
-            bottomMargin=dp(6)
+    private fun previewHeading(title: String, copyLabel: Int, lyrics: String) = LinearLayout(this).apply {
+        gravity = Gravity.CENTER_VERTICAL
+        layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) }
+        val headingColor = ColorUtils.blendARGB(palette.accent, palette.textStrong, 0.45f)
+        addView(text(title, 17f).apply {
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(headingColor)
+            setPaddingRelative(0, dp(6), dp(8), dp(6))
+            ViewCompat.setAccessibilityHeading(this, true)
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+
+        val size = dp(AirUiTokens.Layout.IconTouchSize)
+        val copy = LyricsPreviewCopyButton(this@LyricsSearchActivity, copyLabel, headingColor, palette.accent)
+        copy.setOnClickListener {
+            if (copyPreviewLyrics(title, lyrics)) copy.showCopied()
         }
-        ViewCompat.setAccessibilityHeading(this,true)
+        addView(copy, LinearLayout.LayoutParams(size, size))
+    }
+
+    private fun copyPreviewLyrics(title: String, lyrics: String): Boolean {
+        val copied = try {
+            val clipboard = getSystemService(ClipboardManager::class.java)
+            clipboard?.setPrimaryClip(ClipData.newPlainText(title, lyrics))
+            clipboard != null
+        } catch (_: RuntimeException) {
+            false
+        }
+        if (!copied) {
+            Snackbar.make(previewPanel, R.string.search_copy_failed, Snackbar.LENGTH_SHORT)
+                .setAnchorView(applyButton)
+                .show()
+        }
+        return copied
     }
     private fun input(label:Int,queryField:SearchQueryField,resetLabel:Int):Pair<TextInputEditText,TextInputLayout> {
         val edit=TextInputEditText(this).apply { setSingleLine();setTextColor(palette.textStrong);imeOptions=EditorInfo.IME_ACTION_SEARCH

@@ -523,6 +523,10 @@
     <string name="search_line_lyrics">逐行歌詞</string>
     <string name="search_word_lyrics">逐字歌詞</string>
     <string name="search_translation">翻譯</string>
+    <string name="search_copy_lyrics">複製歌詞</string>
+    <string name="search_copy_translation">複製翻譯</string>
+    <string name="search_copied">已複製</string>
+    <string name="search_copy_failed">複製失敗，請重試</string>
     <string name="search_no_content">暫無可用歌詞</string>
     <string name="search_sources_count">來源 · %1$d</string>
     <plurals name="search_sources_selection_count">

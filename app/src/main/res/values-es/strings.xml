@@ -527,6 +527,10 @@ TTML de tiempo por palabra:
     <string name="search_line_lyrics">Letra sincronizada por línea</string>
     <string name="search_word_lyrics">Letra sincronizada por palabra</string>
     <string name="search_translation">Traducción</string>
+    <string name="search_copy_lyrics">Copiar letra</string>
+    <string name="search_copy_translation">Copiar traducción</string>
+    <string name="search_copied">Copiado</string>
+    <string name="search_copy_failed">No se pudo copiar. Inténtalo de nuevo.</string>
     <string name="search_no_content">No hay letras disponibles</string>
     <string name="search_sources_count">Fuentes · %1$d</string>
     <plurals name="search_sources_selection_count">

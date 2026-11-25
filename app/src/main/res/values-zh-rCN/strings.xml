@@ -523,6 +523,10 @@
     <string name="search_line_lyrics">逐行歌词</string>
     <string name="search_word_lyrics">逐字歌词</string>
     <string name="search_translation">翻译</string>
+    <string name="search_copy_lyrics">复制歌词</string>
+    <string name="search_copy_translation">复制翻译</string>
+    <string name="search_copied">已复制</string>
+    <string name="search_copy_failed">复制失败，请重试</string>
     <string name="search_no_content">暂无可用歌词</string>
     <string name="search_sources_count">来源 · %1$d</string>
     <plurals name="search_sources_selection_count">

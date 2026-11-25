@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app.search
 
+import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -7,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
+import androidx.core.view.ViewCompat
 import androidx.core.widget.NestedScrollView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -192,6 +194,56 @@ class LyricsSearchLayoutTest {
                 .single { it.text.toString()==activity.getString(R.string.search_apply_current) }
             assertTrue(apply.isShown)
             assertTrue(apply.isEnabled)
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "en-rUS-w400dp-h900dp-mdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun previewCopiesDisplayedLyricsAndTranslation() = verifyPreviewCopy(400, "Copy lyrics")
+
+    @Test
+    @Config(qualifiers = "zh-rCN-w320dp-h900dp-mdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun narrowChinesePreviewCopiesDisplayedLyricsAndTranslation() = verifyPreviewCopy(320, "复制歌词")
+
+    private fun verifyPreviewCopy(width: Int, copyLabel: String) {
+        Robolectric.buildActivity(LyricsSearchActivity::class.java, intent()).setup().visible().use { controller ->
+            val activity = controller.get()
+            val content = activity.findViewById<ViewGroup>(android.R.id.content)
+            val clipboard = activity.getSystemService(ClipboardManager::class.java)!!
+            val state = session(activity).state.value
+            val song = state.target.copy(title = "あのね", durationMs = 199_000)
+            val candidate = LyricsCandidate(PlainLyricsSearchSource.NETEASE, "42", song, 1.0)
+            val original = "[00:00.64]ただ君を歌う\n[00:04.00]夜空を見上げる\n"
+            val translation = "[00:00.64]只想唱你的歌\n[00:04.00]抬头仰望夜空"
+            val lyrics = LyricsProviderResult("netease", "NetEase Lyrics", original, translatedLrc = translation)
+            render(activity, state.copy(preview = SearchPreview(candidate, lyrics), previewCandidate = candidate))
+            layout(content, 900, width)
+            ShadowLooper.idleMainLooper(500, TimeUnit.MILLISECONDS)
+            layout(content, 900, width)
+
+            val (copyLyrics, copyTranslation) = descendants(content).filterIsInstance<LyricsPreviewCopyButton>()
+                .filter { it.isShown }.toList()
+            assertEquals(copyLabel, copyLyrics.contentDescription)
+            assertEquals(activity.getString(R.string.search_copy_translation), copyTranslation.contentDescription)
+            for (button in listOf(copyLyrics, copyTranslation)) {
+                val row = button.parent as ViewGroup
+                assertEquals(row.width, button.right)
+                assertTrue(row.getChildAt(0).right <= button.left)
+                assertEquals(48, button.width)
+                assertEquals(48, button.height)
+            }
+            assertTrue(copyLyrics.performClick())
+            assertEquals(original, clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+            assertEquals(activity.getString(R.string.search_copied), ViewCompat.getStateDescription(copyLyrics))
+            assertNull(ViewCompat.getStateDescription(copyTranslation))
+
+            assertTrue(copyTranslation.performClick())
+            assertEquals(translation, clipboard.primaryClip?.getItemAt(0)?.text?.toString())
+            ShadowLooper.idleMainLooper(1200, TimeUnit.MILLISECONDS)
+            assertNull(ViewCompat.getStateDescription(copyLyrics))
+            assertNull(ViewCompat.getStateDescription(copyTranslation))
         }
     }
 
@@ -495,8 +547,7 @@ class LyricsSearchLayoutTest {
         LyricsSearchActivity::class.java.getDeclaredMethod("render",LyricsSearchState::class.java)
             .apply { isAccessible=true }.invoke(activity,state)
     }
-    private fun layout(view:View,height:Int) {
-        val width = 400
+    private fun layout(view:View,height:Int,width:Int=400) {
         view.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),
             View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY))
         view.layout(0,0,width,height)

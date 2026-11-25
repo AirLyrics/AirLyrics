@@ -529,6 +529,10 @@ Word-timed TTML:
     <string name="search_line_lyrics">Line-synced lyrics</string>
     <string name="search_word_lyrics">Word-synced lyrics</string>
     <string name="search_translation">Translation</string>
+    <string name="search_copy_lyrics">Copy lyrics</string>
+    <string name="search_copy_translation">Copy translation</string>
+    <string name="search_copied">Copied</string>
+    <string name="search_copy_failed">Couldn’t copy. Try again.</string>
     <string name="search_no_content">No usable lyrics</string>
     <string name="search_sources_count">Sources · %1$d</string>
     <plurals name="search_sources_selection_count">
