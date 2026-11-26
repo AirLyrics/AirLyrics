@@ -59,18 +59,22 @@ class FloatingPageTextTest {
     }
 
     @Test
-    fun `preview font mapping is bounded and reacts to the real size`() {
-        val expectedBounds = mapOf(
-            LyricsLineDisplayMode.CURRENT_ONLY to (16f to 30f),
-            LyricsLineDisplayMode.PREVIOUS_AND_CURRENT to (14f to 24f),
-            LyricsLineDisplayMode.CURRENT_AND_NEXT to (14f to 24f),
-            LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT to (12f to 20f)
+    fun `preview uses the actual minimum and preserves the legacy size curve`() {
+        val legacyPreviews = mapOf(
+            LyricsLineDisplayMode.CURRENT_ONLY to Triple(16f, 17.3333f, 30f),
+            LyricsLineDisplayMode.PREVIOUS_AND_CURRENT to Triple(14f, 14.9524f, 24f),
+            LyricsLineDisplayMode.CURRENT_AND_NEXT to Triple(14f, 14.9524f, 24f),
+            LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT to Triple(12f, 12.7619f, 20f),
         )
 
-        expectedBounds.forEach { (mode, bounds) ->
-            assertEquals(bounds.first, previewTextSizeSp(14f, mode), 0.001f)
-            assertEquals(bounds.second, previewTextSizeSp(56f, mode), 0.001f)
-            assertTrue(previewTextSizeSp(42f, mode) > previewTextSizeSp(28f, mode))
+        legacyPreviews.forEach { (mode, sizes) ->
+            val (at14, at18, at56) = sizes
+            assertEquals(4f, previewTextSizeSp(4f, mode), 0.001f)
+            assertEquals(at14, previewTextSizeSp(14f, mode), 0.001f)
+            assertEquals(at18, previewTextSizeSp(18f, mode), 0.001f)
+            assertEquals(at56, previewTextSizeSp(56f, mode), 0.001f)
+            assertTrue(previewTextSizeSp(10f, mode) in 4f..at14)
+            assertEquals(at14, previewTextSizeSp(13.99f, mode), 0.02f)
         }
     }
 

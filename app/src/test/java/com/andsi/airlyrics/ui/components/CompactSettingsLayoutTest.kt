@@ -11,6 +11,8 @@ import java.io.File
 import org.robolectric.Shadows.shadowOf
 import android.graphics.Rect
 import android.graphics.Color
+import android.util.TypedValue
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -339,6 +341,54 @@ class CompactSettingsLayoutTest {
             }
         } finally {
             app.getSharedPreferences("app_theme", Context.MODE_PRIVATE).edit().clear().commit()
+        }
+    }
+
+    @Test fun minimumFloatingSizeRendersAndPersistsOnRegularAndNarrowScreens() {
+        for ((locale, width) in listOf("en-rUS" to 390, "zh-rCN" to 320)) {
+            RuntimeEnvironment.setQualifiers("$locale-w${width}dp-h640dp-mdpi")
+            val host = host()
+            try {
+                FloatingLyricsStyleStore.setTextSize(host, 18f)
+                val scope = FloatingPageScope(host)
+                val page = scope.createView()
+                layoutPage(page, width, 640)
+                scope.restoringPanel = true
+                scope.panelOpeners.getValue(FloatingPanelId.TEXT_SIZE).invoke()
+                layoutPage(page, width, 640)
+                val panel = requireNotNull(scope.activeBubble)
+                val slider = descendants(panel).filterIsInstance<SettingsSliderRow>().single()
+                val seekBar = slider.seekBar
+                val touch = MotionEvent.obtain(
+                    0, 0, MotionEvent.ACTION_DOWN, seekBar.paddingLeft.toFloat(), seekBar.height / 2f, 0
+                )
+                try {
+                    assertTrue(seekBar.dispatchTouchEvent(touch))
+                    touch.action = MotionEvent.ACTION_UP
+                    assertTrue(seekBar.dispatchTouchEvent(touch))
+                } finally {
+                    touch.recycle()
+                }
+                layoutPage(page, width, 640)
+
+                assertEquals(0, seekBar.progress)
+                assertEquals(4f, FloatingLyricsStyleStore.getStyle(host).textSizeSp)
+                assertEquals("4 sp", slider.valueView.text.toString())
+                assertEquals(0, slider.valueView.layout.getEllipsisCount(0))
+                assertTrue(slider.seekBar.height >= host.dp(48))
+                assertTrue(panel.width <= width)
+
+                val preview = requireNotNull(scope.previewHandle)
+                val sizePx = TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_SP, 4f, host.resources.displayMetrics
+                )
+                assertEquals(View.VISIBLE, preview.bodyView.visibility)
+                assertEquals(sizePx, preview.lyricTextView.textSize, 0.01f)
+                capturePanel(page, "$locale-font-size-minimum")
+            } finally {
+                controller?.close()
+                controller = null
+            }
         }
     }
 

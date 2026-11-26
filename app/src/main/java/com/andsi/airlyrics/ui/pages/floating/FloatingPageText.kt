@@ -10,6 +10,7 @@ import android.text.style.StyleSpan
 import android.widget.TextView
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.core.model.FloatingLyricsTextSize
 import com.andsi.airlyrics.core.model.LyricsContentDisplayMode
 import com.andsi.airlyrics.core.model.LyricsScriptPreference
 import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
@@ -43,13 +44,20 @@ internal fun previewTextSizeSp(
     textSizeSp: Float,
     lineMode: LyricsLineDisplayMode
 ): Float {
-    val progress = ((textSizeSp.coerceIn(14f, 56f) - 14f) / (56f - 14f))
+    val size = FloatingLyricsTextSize.normalize(textSizeSp)
+    val legacyMinSp = 14f
     val (previewMin, previewMax) = when (lineMode) {
         LyricsLineDisplayMode.CURRENT_ONLY -> 16f to 30f
         LyricsLineDisplayMode.PREVIOUS_AND_CURRENT,
         LyricsLineDisplayMode.CURRENT_AND_NEXT -> 14f to 24f
         LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT -> 12f to 20f
     }
+    if (size < legacyMinSp) {
+        val minSp = FloatingLyricsTextSize.MIN_SP.toFloat()
+        val progress = (size - minSp) / (legacyMinSp - minSp)
+        return minSp + (previewMin - minSp) * progress
+    }
+    val progress = (size - legacyMinSp) / (FloatingLyricsTextSize.MAX_SP - legacyMinSp)
     return previewMin + (previewMax - previewMin) * progress
 }
 

@@ -7,6 +7,7 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.FloatingLyricsTextSize
 import com.andsi.airlyrics.ui.model.KeyedOptionItem
 import com.andsi.airlyrics.ui.pages.floating.FloatingPageScope
 import com.andsi.airlyrics.ui.pages.floating.FloatingPanelNavigation
@@ -152,7 +153,9 @@ internal fun FloatingPageScope.addAppearanceSection(list: LinearLayout) = with(h
                         addView(edits.slider(
                             title = getString(R.string.ui_size),
                             read = { it.textSizeSp.toInt() },
-                            min = 14, max = 56, suffix = " sp",
+                            min = FloatingLyricsTextSize.MIN_SP,
+                            max = FloatingLyricsTextSize.MAX_SP,
+                            suffix = " sp",
                             write = { applyFloatingTextSize(it.textSizeSp, refreshPage = false) }
                         ) { style, value -> style.copy(textSizeSp = value.toFloat()) })
                     }

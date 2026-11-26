@@ -27,6 +27,15 @@ data class FloatingLyricsStyle(
         } else fontFamily.key
 }
 
+internal object FloatingLyricsTextSize {
+    const val MIN_SP = 4
+    const val MAX_SP = 56
+    const val DEFAULT_SP = 18f
+
+    fun normalize(sizeSp: Float): Float =
+        if (sizeSp.isNaN()) DEFAULT_SP else sizeSp.coerceIn(MIN_SP.toFloat(), MAX_SP.toFloat())
+}
+
 enum class FloatingLyricsFontFamily(val key: String) {
     SYSTEM_DEFAULT("system_default"),
     SERIF("serif"),

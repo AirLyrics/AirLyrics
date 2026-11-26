@@ -8,6 +8,7 @@ import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
 import com.andsi.airlyrics.core.model.FloatingLyricsFontWeight
 import com.andsi.airlyrics.core.model.FloatingLyricsPreset
 import com.andsi.airlyrics.core.model.FloatingLyricsStyle
+import com.andsi.airlyrics.core.model.FloatingLyricsTextSize
 import com.andsi.airlyrics.core.model.LyricsGlowStyle
 import com.andsi.airlyrics.core.prefs.PreferenceStore
 import com.andsi.airlyrics.core.prefs.prefs as preferenceStore
@@ -44,6 +45,7 @@ object FloatingLyricsStyleStore {
     private const val KEY_POS_Y = "pos_y"
     private const val KEY_POSITION_HORIZONTAL = "position_horizontal_fraction"
     private const val KEY_POSITION_VERTICAL = "position_vertical_fraction"
+    private const val KEY_POSITION_VERTICAL_VERSION = "position_vertical_version"
     private const val KEY_PREVIEW_EXPANDED = "preview_expanded"
     private const val KEY_AUTO_HIDE_WHEN_PAUSED = "auto_hide_when_paused"
     private const val KEY_AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE =
@@ -51,6 +53,7 @@ object FloatingLyricsStyleStore {
 
     private const val DEFAULT_X = 100
     private const val DEFAULT_Y = 300
+    private const val CURRENT_VERTICAL_POSITION_VERSION = 1
 
     const val PRESET_SUBTITLE = "subtitle"
     const val PRESET_BUBBLE = "bubble"
@@ -126,7 +129,9 @@ object FloatingLyricsStyleStore {
         val prefs = prefs(context)
         val style = FloatingLyricsStyle(
             presetName = normalizePreset(prefs.getString(KEY_PRESET, DEFAULT_PRESET)),
-            textSizeSp = prefs.getFloat(KEY_TEXT_SIZE, 18f),
+            textSizeSp = FloatingLyricsTextSize.normalize(
+                prefs.getFloat(KEY_TEXT_SIZE, FloatingLyricsTextSize.DEFAULT_SP)
+            ),
             textColor = prefs.getInt(KEY_TEXT_COLOR, Color.WHITE),
             wordByWordHighlightColor = prefs.getInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, Color.rgb(120, 220, 255)),
             shadowColor = prefs.getInt(KEY_SHADOW_COLOR, Color.BLACK),
@@ -164,7 +169,7 @@ object FloatingLyricsStyleStore {
         val values = presetValues[normalizePreset(preset)] ?: bubblePresetValues
         return FloatingLyricsStyle(
             presetName = values.key,
-            textSizeSp = 18f,
+            textSizeSp = FloatingLyricsTextSize.DEFAULT_SP,
             textColor = values.textColor,
             wordByWordHighlightColor = values.wordByWordHighlightColor,
             shadowColor = values.shadowColor,
@@ -186,7 +191,7 @@ object FloatingLyricsStyleStore {
         val available = FloatingLyricsFontStore.normalizeStyle(context, style)
         prefs(context).edit {
             putString(KEY_PRESET, normalizePreset(style.presetName))
-            putFloat(KEY_TEXT_SIZE, style.textSizeSp)
+            putFloat(KEY_TEXT_SIZE, FloatingLyricsTextSize.normalize(style.textSizeSp))
             putInt(KEY_TEXT_COLOR, style.textColor)
             putInt(KEY_WORD_BY_WORD_HIGHLIGHT_COLOR, style.wordByWordHighlightColor)
             val glow = style.glow.normalized()
@@ -236,7 +241,7 @@ object FloatingLyricsStyleStore {
     }
 
     fun setTextSize(context: Context, textSizeSp: Float) {
-        prefs(context).setFloat(KEY_TEXT_SIZE, textSizeSp.coerceIn(14f, 56f))
+        prefs(context).setFloat(KEY_TEXT_SIZE, FloatingLyricsTextSize.normalize(textSizeSp))
     }
 
     fun setTextColor(context: Context, color: Int) {
@@ -363,11 +368,19 @@ object FloatingLyricsStyleStore {
         return FloatingPosition(horizontal.coerceIn(0f, 1f), vertical.coerceIn(0f, 1f))
     }
 
-    internal fun saveRelativePosition(context: Context, position: FloatingPosition) {
+    internal fun usesLegacyVerticalPosition(context: Context): Boolean =
+        prefs(context).getInt(KEY_POSITION_VERTICAL_VERSION, 0) < CURRENT_VERTICAL_POSITION_VERSION
+
+    internal fun saveRelativePosition(
+        context: Context,
+        position: FloatingPosition,
+        usesLegacyVerticalPosition: Boolean = false,
+    ) {
         require(position.horizontalTravelFraction.isFinite() && position.verticalTravelFraction.isFinite())
         prefs(context).edit {
             putFloat(KEY_POSITION_HORIZONTAL, position.horizontalTravelFraction.coerceIn(0f, 1f))
             putFloat(KEY_POSITION_VERTICAL, position.verticalTravelFraction.coerceIn(0f, 1f))
+            putInt(KEY_POSITION_VERTICAL_VERSION, if (usesLegacyVerticalPosition) 0 else CURRENT_VERTICAL_POSITION_VERSION)
         }
     }
 

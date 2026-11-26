@@ -15,7 +15,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.ViewGroup
-import android.view.WindowInsets
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.core.graphics.drawable.toDrawable
@@ -27,10 +26,14 @@ import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-class FloatingLyricsWindow(
+class FloatingLyricsWindow internal constructor(
     private val context: Context,
-    private val onVisibilityChanged: (Boolean) -> Unit
+    private val windowAreaProvider: (() -> FloatingWindowArea)?,
+    private val onVisibilityChanged: (Boolean) -> Unit,
 ) {
+    constructor(context: Context, onVisibilityChanged: (Boolean) -> Unit) :
+        this(context, null, onVisibilityChanged)
+
     private val windowContext = if (Build.VERSION.SDK_INT >= 30) {
         val manager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         @Suppress("DEPRECATION")
@@ -44,29 +47,67 @@ class FloatingLyricsWindow(
     private var overlayDialog: Dialog? = null
     private var params: WindowManager.LayoutParams? = null
     private var position: FloatingPosition? = null
+    private var positionUsesLegacyBasis = false
     private var geometry: FloatingWindowGeometry? = null
     private var gestureActive = false
     private var dragging = false
+    private var layoutRefreshPosted = false
     private var remapPending = false
+    private var areaRefreshPending = false
+    private var remeasurePending = false
+    private var dragRelayoutPending = false
+    private var dragInsetsRefreshPosted = false
     private val refreshLayout = Runnable {
         val remap = remapPending
+        val refreshArea = areaRefreshPending
+        val remeasure = remeasurePending
+        layoutRefreshPosted = false
         remapPending = false
-        updateLayout(remap)
+        areaRefreshPending = false
+        remeasurePending = false
+        updateLayout(remap, refreshArea, remeasure)
     }
-    private val layoutListener = View.OnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-        scheduleLayout()
+    private val refreshDragInsets = Runnable {
+        dragInsetsRefreshPosted = false
+        scheduleLayout(refreshArea = true)
+    }
+    private val layoutListener = View.OnLayoutChangeListener { _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+        if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+            scheduleLayout(refreshArea = Build.VERSION.SDK_INT < 30, remeasure = true)
+        }
     }
 
     fun onConfigurationChanged() {
         gestureActive = false
-        scheduleLayout(remap = true)
+        dragRelayoutPending = false
+        scheduleLayout(remap = true, refreshArea = true)
     }
 
-    private fun scheduleLayout(remap: Boolean = false) {
+    private fun onInsetsApplied() {
+        val mayBeFromDrag = gestureActive && (dragRelayoutPending || dragInsetsRefreshPosted)
+        dragRelayoutPending = false
+        if (!mayBeFromDrag) {
+            scheduleLayout(refreshArea = true)
+        } else if (!areaRefreshPending && !dragInsetsRefreshPosted) {
+            // A move and a display inset change can share one dispatch, and local insets can clip the change.
+            dragInsetsRefreshPosted = lyricsView?.postDelayed(refreshDragInsets, DRAG_INSETS_REFRESH_DELAY_MS) == true
+        }
+    }
+
+    private fun scheduleLayout(
+        remap: Boolean = false,
+        refreshArea: Boolean = false,
+        remeasure: Boolean = false,
+    ) {
         val view = lyricsView ?: return
         remapPending = remapPending || remap
-        view.removeCallbacks(refreshLayout)
-        view.post(refreshLayout)
+        areaRefreshPending = areaRefreshPending || refreshArea
+        remeasurePending = remeasurePending || remeasure
+        if (refreshArea && dragInsetsRefreshPosted) {
+            view.removeCallbacks(refreshDragInsets)
+            dragInsetsRefreshPosted = false
+        }
+        if (!layoutRefreshPosted) layoutRefreshPosted = view.post(refreshLayout)
     }
 
     private var startX = 0
@@ -114,7 +155,6 @@ class FloatingLyricsWindow(
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             if (Build.VERSION.SDK_INT >= 30) {
-                setFitInsetsTypes(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
                 setFitInsetsIgnoringVisibility(true)
             }
         }
@@ -125,6 +165,7 @@ class FloatingLyricsWindow(
             lyricsView = view
             overlayDialog = dialog
             position = FloatingLyricsStyleStore.getRelativePosition(context)
+            positionUsesLegacyBasis = position != null && FloatingLyricsStyleStore.usesLegacyVerticalPosition(context)
             if (dialog != null) {
                 val window = requireNotNull(dialog.window)
                 window.attributes = layoutParams
@@ -149,11 +190,12 @@ class FloatingLyricsWindow(
             }
             view.onWindowConfigurationChanged = ::onConfigurationChanged
             view.addOnLayoutChangeListener(layoutListener)
-            view.setOnApplyWindowInsetsListener { _, insets ->
-                scheduleLayout()
-                insets
+            val root = view.rootView
+            root.setOnApplyWindowInsetsListener { windowView, insets ->
+                onInsetsApplied()
+                windowView.onApplyWindowInsets(insets)
             }
-            view.requestApplyInsets()
+            root.requestApplyInsets()
             onVisibilityChanged(true)
             true
         }.getOrElse {
@@ -165,13 +207,20 @@ class FloatingLyricsWindow(
     fun hide(notifyVisibilityChanged: Boolean = true): Boolean {
         val view = lyricsView
         view?.removeCallbacks(refreshLayout)
+        view?.removeCallbacks(refreshDragInsets)
         view?.removeOnLayoutChangeListener(layoutListener)
-        view?.setOnApplyWindowInsetsListener(null)
+        view?.rootView?.setOnApplyWindowInsetsListener(null)
         (view as? FloatingLyricsTextView)?.onWindowConfigurationChanged = null
         gestureActive = false
+        dragRelayoutPending = false
+        dragInsetsRefreshPosted = false
+        layoutRefreshPosted = false
         remapPending = false
+        areaRefreshPending = false
+        remeasurePending = false
         geometry = null
         position = null
+        positionUsesLegacyBasis = false
         val removed = runCatching {
             val dialog = overlayDialog
             if (dialog != null) dialog.dismiss()
@@ -224,6 +273,7 @@ class FloatingLyricsWindow(
             MotionEvent.ACTION_DOWN -> {
                 gestureActive = true
                 dragging = false
+                dragRelayoutPending = false
                 startX = p.x
                 startY = p.y
                 touchStartX = event.rawX
@@ -240,8 +290,12 @@ class FloatingLyricsWindow(
                     val bounds = geometry ?: return true
                     val dx = (event.rawX - touchStartX).toInt() *
                         if (view.layoutDirection == View.LAYOUT_DIRECTION_RTL) -1 else 1
-                    p.x = (startX + dx).coerceIn(0, bounds.travelX)
-                    p.y = (startY + (event.rawY - touchStartY).toInt()).coerceIn(0, bounds.travelY)
+                    val x = bounds.clampX(startX + dx)
+                    val y = bounds.clampY(startY + (event.rawY - touchStartY).toInt())
+                    if (p.x == x && p.y == y) return true
+                    p.x = x
+                    p.y = y
+                    dragRelayoutPending = true
                     runCatching { windowManager.updateViewLayout(view.rootView, p) }
                         .onFailure { hideAfterFailure() }
                         .isSuccess
@@ -269,11 +323,12 @@ class FloatingLyricsWindow(
                 }
                 if (!isLocked && dragging) saveDraggedPosition(p)
                 gestureActive = false
+                if (dragInsetsRefreshPosted) scheduleLayout(refreshArea = true)
                 true
             }
 
             MotionEvent.ACTION_CANCEL -> {
-                if (gestureActive) scheduleLayout(remap = true)
+                if (gestureActive) scheduleLayout(remap = true, refreshArea = true)
                 gestureActive = false
                 true
             }
@@ -343,17 +398,26 @@ class FloatingLyricsWindow(
     private fun saveDraggedPosition(p: WindowManager.LayoutParams) {
         val bounds = geometry ?: return
         val previous = position ?: return
-        position = bounds.position(p.x, p.y, previous).also {
-            FloatingLyricsStyleStore.saveRelativePosition(context, it)
-        }
+        saveRelativePosition(
+            bounds.position(p.x, p.y, previous),
+            usesLegacyBasis = positionUsesLegacyBasis && !bounds.hasVerticalTravel,
+        )
     }
 
-    private fun updateLayout(remap: Boolean) {
+    private fun saveRelativePosition(relative: FloatingPosition, usesLegacyBasis: Boolean = false) {
+        FloatingLyricsStyleStore.saveRelativePosition(context, relative, usesLegacyBasis)
+        position = relative
+        positionUsesLegacyBasis = usesLegacyBasis
+    }
+
+    private fun updateLayout(remap: Boolean, refreshArea: Boolean, remeasure: Boolean) {
         val view = lyricsView ?: return
         val p = params ?: return
         runCatching {
             if (remap) applyStyle(view)
-            if (calculateLayout(view, p, remap)) windowManager.updateViewLayout(view.rootView, p)
+            if (calculateLayout(view, p, remap, refreshArea, remeasure || remap)) {
+                windowManager.updateViewLayout(view.rootView, p)
+            }
         }.onFailure {
             Log.w("FloatingLyricsWindow", "Unable to update overlay geometry", it)
             hideAfterFailure()
@@ -361,61 +425,80 @@ class FloatingLyricsWindow(
     }
 
     @Suppress("DEPRECATION")
-    private fun availableWindowSize(view: View): Pair<Int, Int> {
+    private fun availableWindowArea(view: View): FloatingWindowArea {
+        windowAreaProvider?.let { return it() }
         if (Build.VERSION.SDK_INT >= 30) {
             val metrics = windowManager.currentWindowMetrics
-            val insets = metrics.windowInsets.getInsetsIgnoringVisibility(
-                WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout()
+            return FloatingWindowArea.fromInsets(
+                metrics.bounds.width(), metrics.bounds.height(), metrics.windowInsets
             )
-            return (metrics.bounds.width() - insets.left - insets.right).coerceAtLeast(1) to
-                (metrics.bounds.height() - insets.top - insets.bottom).coerceAtLeast(1)
         }
         // Before WindowMetrics, the attached view exposes the display frame fitted by WM.
         // Subtracting rootWindowInsets again would double-count already fitted system bars.
         if (view.isAttachedToWindow) {
             val frame = Rect()
             view.getWindowVisibleDisplayFrame(frame)
-            if (!frame.isEmpty) return frame.width() to frame.height()
+            if (!frame.isEmpty) return FloatingWindowArea(frame.width(), frame.height())
         }
         val size = Point()
         windowManager.defaultDisplay.getSize(size)
-        return size.x.coerceAtLeast(1) to size.y.coerceAtLeast(1)
+        return FloatingWindowArea(size.x.coerceAtLeast(1), size.y.coerceAtLeast(1))
     }
 
-    private fun calculateLayout(view: TextView, p: WindowManager.LayoutParams, remap: Boolean): Boolean {
-        val (availableWidth, availableHeight) = availableWindowSize(view)
+    private fun measureGeometry(view: TextView, area: FloatingWindowArea): FloatingWindowGeometry {
         val width = FloatingWindowGeometry.width(
-            availableWidth, FloatingLyricsStyleStore.getStyle(context).maxWidthPercent
+            area.width, FloatingLyricsStyleStore.getStyle(context).maxWidthPercent
         )
         if (view.minWidth != width) view.minWidth = width
         if (view.maxWidth != width) view.maxWidth = width
-        if (view.maxHeight != availableHeight) view.maxHeight = availableHeight
+        if (view.maxHeight != area.height) view.maxHeight = area.height
         view.measure(
             View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
-            View.MeasureSpec.makeMeasureSpec(availableHeight, View.MeasureSpec.AT_MOST)
+            View.MeasureSpec.makeMeasureSpec(area.height, View.MeasureSpec.AT_MOST)
         )
-        val next = FloatingWindowGeometry(availableWidth, availableHeight, width, view.measuredHeight)
-        val previous = geometry
-        val areaChanged = previous == null || previous.availableWidth != availableWidth ||
-            previous.availableHeight != availableHeight
-        if (areaChanged) gestureActive = false
-        val relative = position ?: run {
-            val (x, y) = FloatingLyricsStyleStore.getPosition(context)
-            val initial = if (FloatingLyricsStyleStore.hasLegacyPosition(context)) {
-                next.migrate(x, y, touchSlop)
-            } else next.position(0, y, FloatingPosition(0.5f, 0f)).copy(horizontalTravelFraction = 0.5f)
-            // Pre-30 must wait for the fitted frame before migrating pixels permanently.
-            if (Build.VERSION.SDK_INT >= 30 || view.isAttachedToWindow) {
-                position = initial
-                FloatingLyricsStyleStore.saveRelativePosition(context, initial)
-            }
-            initial
+        return FloatingWindowGeometry(area, width, view.measuredHeight)
+    }
+
+    private fun initialPosition(view: TextView, geometry: FloatingWindowGeometry): FloatingPosition {
+        val area = geometry.area
+        val (x, y) = FloatingLyricsStyleStore.getPosition(context)
+        val initialY = y.coerceIn(0, area.height) + area.legacyTopOffset
+        val initial = if (FloatingLyricsStyleStore.hasLegacyPosition(context)) {
+            geometry.migrate(x, initialY, touchSlop)
+        } else {
+            geometry.position(0, initialY, FloatingPosition(0.5f, 0f)).copy(horizontalTravelFraction = 0.5f)
         }
-        val (x, y) = if (remap || areaChanged || previous.width != width) {
+        // Pre-30 must wait for the fitted frame before migrating pixels permanently.
+        if (Build.VERSION.SDK_INT >= 30 || view.isAttachedToWindow) saveRelativePosition(initial)
+        return initial
+    }
+
+    private fun calculateLayout(
+        view: TextView,
+        p: WindowManager.LayoutParams,
+        remap: Boolean,
+        refreshArea: Boolean = false,
+        remeasure: Boolean = true,
+    ): Boolean {
+        val previous = geometry
+        val area = if (refreshArea || previous == null) availableWindowArea(view) else previous.area
+        val areaChanged = previous?.area != area
+        val next = if (remeasure || areaChanged) measureGeometry(view, area) else previous
+        if (areaChanged) gestureActive = false
+
+        val saved = position
+        val migrated = if (positionUsesLegacyBasis && saved != null) next.rebaseLegacyPosition(saved) else null
+        if (migrated != null && view.isAttachedToWindow) saveRelativePosition(migrated)
+        val relative = migrated ?: saved ?: initialPosition(view, next)
+        val (x, y) = if (remap || areaChanged || previous.width != next.width || migrated != null) {
             next.coordinates(relative)
-        } else p.x.coerceIn(0, next.travelX) to p.y.coerceIn(0, next.travelY)
-        val changed = p.width != width || p.x != x || p.y != y
-        p.width = width
+        } else next.clampX(p.x) to next.clampY(p.y)
+        val fitChanged = if (Build.VERSION.SDK_INT >= 30 && p.fitInsetsTypes != area.fitInsetsTypes) {
+            p.fitInsetsTypes = area.fitInsetsTypes
+            true
+        } else false
+        val changed = fitChanged || p.width != next.width || p.x != x || p.y != y
+        p.width = next.width
         p.x = x
         p.y = y
         geometry = next
@@ -455,4 +538,7 @@ class FloatingLyricsWindow(
         return (value * windowContext.resources.displayMetrics.density).toInt()
     }
 
+    private companion object {
+        const val DRAG_INSETS_REFRESH_DELAY_MS = 80L
+    }
 }
