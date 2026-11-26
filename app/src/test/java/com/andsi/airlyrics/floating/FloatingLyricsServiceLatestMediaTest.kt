@@ -4,6 +4,8 @@ import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSession
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
@@ -20,6 +22,9 @@ import com.andsi.airlyrics.testutil.QueuedCallbackDispatcher
 import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.LyricsRepository
+import com.andsi.airlyrics.lyrics.PlainLyricsProvider
+import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 import com.andsi.airlyrics.lyrics.createLyricsLookupExecutor
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -27,7 +32,10 @@ import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
+import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
+import com.andsi.airlyrics.settings.store.LyricsOffsetStore
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
+import com.andsi.airlyrics.settings.store.QuickFloatingStore
 import java.io.File
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -61,6 +69,7 @@ class FloatingLyricsServiceLatestMediaTest {
         resetState()
         ShadowSettings.setCanDrawOverlays(true)
         MediaSourceStore.saveSelectedPackage(context, SOURCE_PACKAGE)
+        QuickFloatingStore.setDesiredVisible(context, true)
     }
 
     @After
@@ -108,7 +117,7 @@ class FloatingLyricsServiceLatestMediaTest {
             return requireNotNull(CurrentMediaReader.currentMediaFromController(mediaController))
         }
         try {
-            assertTrue(service.showLyrics())
+            assertTrue(service.showLyrics(manual = true))
             assertTrue(service.applyCurrentMediaInfo(read("说再见太难")))
             service.callbackDispatcher.takeDelivery()()
             val view = requireNotNull(service.lyricsView)
@@ -136,7 +145,7 @@ class FloatingLyricsServiceLatestMediaTest {
         val service = controller.get()
         val callbackDispatcher = service.callbackDispatcher
 
-        assertTrue("Robolectric must expose a real floating TextView", service.showLyrics())
+        assertTrue("Robolectric must expose a real floating TextView", service.showLyrics(manual = true))
         val lyricsView = requireNotNull(service.lyricsView)
 
         assertTrue(service.applyCurrentMediaInfo(media(OLD_TITLE, sequence = 1L)))
@@ -172,7 +181,7 @@ class FloatingLyricsServiceLatestMediaTest {
             .also { serviceController = it }
         val service = controller.get()
 
-        assertTrue(service.showLyrics())
+        assertTrue(service.showLyrics(manual = true))
         val lyricsView = requireNotNull(service.lyricsView)
         assertTrue(
             service.applyCurrentMediaInfo(
@@ -219,37 +228,94 @@ class FloatingLyricsServiceLatestMediaTest {
 
     @Test
     fun selectedSessionDisappears_pollingPausesRendererAtLastEstimatedPosition() {
-        val controller = Robolectric.buildService(FloatingLyricsService::class.java)
+        assertPositionFrozenOnSourceLoss(offsetMs = 0L)
+    }
+
+    @Test
+    fun selectedSessionDisappears_appliesPositiveOffsetOnce() {
+        assertPositionFrozenOnSourceLoss(offsetMs = 450L)
+    }
+
+    @Test
+    fun selectedSessionDisappears_keepsRawPositionWhenNegativeOffsetClampsToZero() {
+        assertPositionFrozenOnSourceLoss(offsetMs = -2_500L)
+    }
+
+    private fun assertPositionFrozenOnSourceLoss(offsetMs: Long) {
+        val controller = Robolectric.buildService(QueuedLookupFloatingLyricsService::class.java)
             .create()
             .also { serviceController = it }
         val service = controller.get()
-
-        assertTrue(service.showLyrics())
-        ShadowSystemClock.advanceBy(Duration.ofSeconds(10))
         val playingMedia = media(OLD_TITLE, sequence = 1L, isPlaying = true)
-        service.currentMedia = playingMedia
-        service.renderer.updatePlayback(
-            positionMs = playingMedia.positionMs,
-            isPlaying = true
+        LyricsOffsetStore.setOffsetMs(context, song(OLD_TITLE), offsetMs)
+        try {
+            ShadowSystemClock.advanceBy(Duration.ofSeconds(10))
+            assertTrue(service.showLyrics(manual = true))
+            assertTrue(service.applyCurrentMediaInfo(playingMedia))
+            assertNull(service.readSelectedCurrentMediaInfo())
+
+            val refreshInterval = FloatingLyricsService.CURRENT_MEDIA_REFRESH_INTERVAL_MS
+            ShadowLooper.idleMainLooper(refreshInterval, TimeUnit.MILLISECONDS)
+
+            val rawPosition = playingMedia.positionMs + refreshInterval
+            val renderedPosition = (rawPosition + offsetMs).coerceAtLeast(0L)
+            assertFalse(service.currentMedia.isPlaying)
+            assertEquals("raw position at offset $offsetMs", rawPosition, service.currentMedia.positionMs)
+            assertEquals("rendered position at offset $offsetMs", renderedPosition, service.renderer.getEstimatedPositionMs())
+
+            ShadowSystemClock.advanceBy(Duration.ofSeconds(2))
+            assertEquals(rawPosition, service.currentMedia.positionMs)
+            assertEquals(renderedPosition, service.renderer.getEstimatedPositionMs())
+        } finally {
+            LyricsOffsetStore.resetOffset(context, song(OLD_TITLE))
+        }
+    }
+
+    @Suppress("UsePropertyAccessSyntax")
+    @Test
+    fun pausedAutoHideKeepsPollingAndRestoresWhenPlaybackResumes() {
+        FloatingLyricsStyleStore.setAutoHideWhenPaused(context, true)
+        val manager = shadowOf(context.getSystemService(MediaSessionManager::class.java))
+        val session = MediaSession(context, "paused-autohide")
+        val mediaController = MediaController(context, session.sessionToken)
+        val mediaShadow = shadowOf(mediaController)
+        mediaShadow.setPackageName(SOURCE_PACKAGE)
+        mediaShadow.setMetadata(
+            MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, OLD_TITLE)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, ARTIST)
+                .putLong(MediaMetadata.METADATA_KEY_DURATION, DURATION_MS)
+                .build()
         )
-        ShadowSystemClock.advanceBy(Duration.ofMillis(750))
-        val positionBeforePolling = service.renderer.getEstimatedPositionMs()
-
-        assertTrue(positionBeforePolling > playingMedia.positionMs)
-        assertNull(service.readSelectedCurrentMediaInfo())
-
-        ShadowLooper.idleMainLooper(
-            FloatingLyricsService.CURRENT_MEDIA_REFRESH_INTERVAL_MS,
-            TimeUnit.MILLISECONDS
+        mediaShadow.setPlaybackState(
+            PlaybackState.Builder().setState(PlaybackState.STATE_PAUSED, 1_000L, 0f).build()
         )
+        manager.addController(mediaController)
+        try {
+            val service = Robolectric.buildService(QueuedLookupFloatingLyricsService::class.java)
+                .create()
+                .also { serviceController = it }
+                .get()
+            assertTrue(service.showLyrics(manual = true))
+            ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_PAUSED_DELAY_MS, TimeUnit.MILLISECONDS)
 
-        assertFalse(service.currentMedia.isPlaying)
-        val pausedPosition = service.currentMedia.positionMs
-        assertTrue(pausedPosition >= positionBeforePolling)
-        assertEquals(pausedPosition, service.renderer.getEstimatedPositionMs())
+            assertFalse(service.windowController.isVisible)
+            assertTrue(QuickFloatingStore.isDesiredVisible(context))
 
-        ShadowSystemClock.advanceBy(Duration.ofSeconds(2))
-        assertEquals(pausedPosition, service.renderer.getEstimatedPositionMs())
+            mediaShadow.setPlaybackState(
+                PlaybackState.Builder().setState(PlaybackState.STATE_PLAYING, 1_000L, 1f).build()
+            )
+            ShadowLooper.idleMainLooper(
+                FloatingLyricsService.CURRENT_MEDIA_REFRESH_INTERVAL_MS,
+                TimeUnit.MILLISECONDS
+            )
+
+            assertTrue(service.currentMedia.isPlaying)
+            assertTrue(service.windowController.isVisible)
+        } finally {
+            manager.clearControllers()
+            session.release()
+        }
     }
 
     @Test
@@ -260,7 +326,7 @@ class FloatingLyricsServiceLatestMediaTest {
             .also { serviceController = it }
         val service = controller.get()
         val callbackDispatcher = service.callbackDispatcher
-        assertTrue(service.showLyrics())
+        assertTrue(service.showLyrics(manual = true))
         val lyricsView = requireNotNull(service.lyricsView)
         assertTrue(service.applyCurrentMediaInfo(media(OLD_TITLE, sequence = 1L)))
         callbackDispatcher.takeDelivery().invoke()
@@ -297,6 +363,38 @@ class FloatingLyricsServiceLatestMediaTest {
     }
 
     @Test
+    fun automaticSaveDoesNotRestartItsOwnFloatingLyricsLookup() {
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, listOf(PlainLyricsSearchSource.NETEASE))
+        LyricsSettingsStore.setAutoSearchOnlineEnabled(context, true)
+        LyricsSettingsStore.setAutoSaveLocalEnabled(context, true)
+        val controller = Robolectric.buildService(QueuedLookupFloatingLyricsService::class.java)
+            .create()
+            .also { serviceController = it }
+        val service = controller.get()
+        val plainLrc = "[00:01.00]automatically saved lyrics"
+        service.onlineProvider = object : PlainLyricsProvider {
+            override val id = "netease"
+            override val name = "NetEase"
+
+            override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
+                return Result.success(LyricsProviderResult(id, name, plainLrc))
+            }
+        }
+
+        assertTrue(service.showLyrics(manual = true))
+        assertTrue(service.applyCurrentMediaInfo(media(OLD_TITLE, sequence = 1L)))
+        service.callbackDispatcher.takeDelivery().invoke()
+        assertEquals("automatically saved lyrics", service.lyricsView?.text.toString())
+        assertEquals(plainLrc, LyricsStorage.readPlainLyrics(context, OLD_TITLE, ARTIST, DURATION_MS))
+
+        ShadowLooper.idleMainLooper()
+        service.awaitLookupIdle()
+        assertNull(service.activeLyricsLookupRequestKey)
+        assertEquals(0, service.callbackDispatcher.pendingDeliveryCount())
+        assertEquals("automatically saved lyrics", service.lyricsView?.text.toString())
+    }
+
+    @Test
     fun deletedLyrics_pauseAutomaticLookupUntilManualUpdateOrTrackChange() {
         LyricsSettingsStore.setAutoSearchOnlineEnabled(context, true)
         val controller = Robolectric.buildService(RecordingLookupFloatingLyricsService::class.java)
@@ -304,7 +402,7 @@ class FloatingLyricsServiceLatestMediaTest {
             .also { serviceController = it }
         val service = controller.get()
         val firstMedia = media(OLD_TITLE, sequence = 1L, isPlaying = true)
-        assertTrue(service.showLyrics())
+        assertTrue(service.showLyrics(manual = true))
         val lyricsView = requireNotNull(service.lyricsView)
         service.currentMedia = firstMedia
         service.lastPlaybackLyricsKey = firstMedia.playbackLyricsKey()
@@ -374,7 +472,7 @@ class FloatingLyricsServiceLatestMediaTest {
         val controller = Robolectric.buildService(RecordingLookupFloatingLyricsService::class.java)
             .create().also { serviceController = it }
         val service = controller.get()
-        service.showLyrics()
+        service.showLyrics(manual = true)
         service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=1))
         service.takeLookupSettings()
         val oldDelivery = service.callbackDispatcher.takeDelivery()
@@ -398,7 +496,7 @@ class FloatingLyricsServiceLatestMediaTest {
             .create().also { serviceController = it }
         val service = controller.get()
         service.lookupResult = Result.success(LyricsProviderResult("local","Local","[00:00.00]saved"))
-        service.showLyrics()
+        service.showLyrics(manual = true)
         service.applyCurrentMediaInfo(media(OLD_TITLE, sequence=1))
         service.takeLookupSettings()
         service.callbackDispatcher.takeDelivery().invoke()
@@ -484,6 +582,25 @@ class FloatingLyricsServiceLatestMediaTest {
     class QueuedLookupFloatingLyricsService : FloatingLyricsService() {
         val callbackDispatcher = QueuedCallbackDispatcher()
         private val lookupExecutor = Executors.newSingleThreadExecutor()
+        var onlineProvider: PlainLyricsProvider? = null
+
+        override fun lookupLyricsForMedia(
+            media: CurrentMediaInfo,
+            settings: LyricsSettings,
+            cancellationToken: LyricsLookupCancellationToken
+        ): Result<LyricsProviderResult?> {
+            val provider = onlineProvider ?: return super.lookupLyricsForMedia(media, settings, cancellationToken)
+            return LyricsRepository.findLyricsWithProviders(
+                context = this,
+                onlinePlainLyricsProviders = mapOf(PlainLyricsSearchSource.NETEASE to provider),
+                settings = settings,
+                title = media.title,
+                artist = media.artist,
+                album = media.album,
+                durationMs = media.durationMs,
+                cancellationToken = cancellationToken
+            )
+        }
 
         override fun createLyricsLookupRunner(): LyricsLookupRunner {
             return LyricsLookupRunner(

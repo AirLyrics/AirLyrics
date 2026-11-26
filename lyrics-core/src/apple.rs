@@ -1110,6 +1110,37 @@ mod tests {
         assert!(translated.contains("[00:22.18]拦路雨偏似雪花"));
     }
 
+    #[test]
+    fn native_payload_keeps_first_nested_background_word_and_its_translation() {
+        let (native, _) = parse_native(include_str!(
+            "../../app/src/test/resources/apple/rainbow-tr-zh-Hans.ttml"
+        ));
+        let echo = native["word_by_word"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|line| line["start_ms"] == 141_705)
+            .unwrap();
+        assert_eq!(echo["text"], "看不見妳的笑 我怎麼睡得著 (睡得著)");
+        assert_eq!(
+            echo["segments"][7],
+            json!({"text": "(睡得", "start_ms": 146_208, "end_ms": 147_935})
+        );
+        assert_eq!(
+            echo["segments"][8],
+            json!({"text": "著)", "start_ms": 147_935, "end_ms": 148_824})
+        );
+        assert_eq!(
+            echo["translated_text"],
+            "看不见你的笑 我怎么睡得著 (睡得著)"
+        );
+        assert!(native["translated_lrc"]
+            .as_str()
+            .unwrap()
+            .lines()
+            .any(|line| line == "[02:21.70]看不见你的笑 我怎么睡得著 (睡得著)"));
+    }
+
     const PARTIAL_TRANSLATIONS: &str = r#"<tt><body><div>
 <p begin="1.009" end="2" itunes:key="L1"><span begin="1.009" end="2">one</span></p>
 <p begin="2.019" end="3" itunes:key="L2"><span begin="2.019" end="3">two</span></p>

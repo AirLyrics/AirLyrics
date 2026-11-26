@@ -17,6 +17,8 @@ import android.widget.TextView
 import androidx.core.view.doOnPreDraw
 import androidx.core.view.isVisible
 import androidx.core.widget.NestedScrollView
+import androidx.recyclerview.widget.AdapterListUpdateCallback
+import androidx.recyclerview.widget.AsyncDifferConfig
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.DiffUtil
@@ -32,6 +34,7 @@ import com.andsi.airlyrics.ui.components.styleAirTextButton
 import com.andsi.airlyrics.ui.theme.AirLyricsPalette
 import com.google.android.material.tabs.TabLayout
 import java.util.Locale
+import java.util.concurrent.Executor
 
 @SuppressLint("ViewConstructor")
 internal class LyricsSourcePages(
@@ -40,7 +43,8 @@ internal class LyricsSourcePages(
     private val session: LyricsSearchSession,
     private val errorText: (Throwable) -> String,
     private val onSpotifyIdSearch: () -> Unit,
-    private val onWordLyricsSearch: () -> Unit = {}
+    private val onWordLyricsSearch: () -> Unit = {},
+    private val diffExecutor: Executor? = null
 ) : LinearLayout(context) {
     private val tabs = object : TabLayout(context) {
         override fun selectTab(tab: Tab?, updateIndicator: Boolean) {
@@ -716,11 +720,15 @@ internal class LyricsSourcePages(
     }
 
     private inner class Rows : RecyclerView.Adapter<Row>() {
-        private val differ=AsyncListDiffer(this,object:DiffUtil.ItemCallback<LyricsCandidate>() {
-            override fun areItemsTheSame(oldItem:LyricsCandidate,newItem:LyricsCandidate)=
-                oldItem.source==newItem.source && oldItem.id==newItem.id
-            override fun areContentsTheSame(oldItem:LyricsCandidate,newItem:LyricsCandidate)=oldItem==newItem
-        })
+        private val differ = AsyncListDiffer(
+            AdapterListUpdateCallback(this),
+            AsyncDifferConfig.Builder(object : DiffUtil.ItemCallback<LyricsCandidate>() {
+                override fun areItemsTheSame(oldItem: LyricsCandidate, newItem: LyricsCandidate) =
+                    oldItem.source == newItem.source && oldItem.id == newItem.id
+                override fun areContentsTheSame(oldItem: LyricsCandidate, newItem: LyricsCandidate) =
+                    oldItem == newItem
+            }).apply { diffExecutor?.let(::setBackgroundThreadExecutor) }.build()
+        )
         private var committedSource:PlainLyricsSearchSource?=null
         private var committedList:List<LyricsCandidate>?=null
         var canOpen = false

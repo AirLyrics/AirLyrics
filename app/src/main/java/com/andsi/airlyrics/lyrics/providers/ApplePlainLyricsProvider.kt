@@ -11,6 +11,7 @@ import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
+import com.andsi.airlyrics.lyrics.display.conversionSegments
 import com.andsi.airlyrics.lyrics.parser.LrcParser
 
 import kotlinx.coroutines.runBlocking
@@ -213,106 +214,13 @@ object ApplePlainLyricsProvider : LyricsProvider {
                 text = raw.text,
                 segments = raw.segments,
                 translatedText = translatedText,
-                translatedSegments = buildTranslatedSegments(
-                    translatedText, raw.segments, raw.startMs, raw.endMs
-                )
+                translatedSegments = if (translatedText.isNotBlank() && raw.endMs > raw.startMs) {
+                    conversionSegments(translatedText, raw.segments).orEmpty()
+                } else {
+                    emptyList()
+                }
             )
         }
-    }
-
-    /**
-     * Builds the timing used when AUTO mode shows the simplified translation.
-     *
-     * When the "translation" is only a traditional→simplified conversion (the common case for
-     * Mandarin songs), the original word timing is reused verbatim: character counts are equal,
-     * so re-deriving times would only introduce drift. For real translations (Cantonese, foreign
-     * lyrics) the counts differ, and the line's own range is distributed evenly as a fallback.
-     */
-    private fun buildTranslatedSegments(
-        translatedText: String,
-        segments: List<WordByWordSegment>,
-        startMs: Long,
-        endMs: Long
-    ): List<WordByWordSegment> {
-        if (translatedText.isBlank() || endMs <= startMs) return emptyList()
-        return conversionSegments(translatedText, segments).orEmpty()
-    }
-
-    internal fun conversionSegments(
-        translatedText: String,
-        segments: List<WordByWordSegment>
-    ): List<WordByWordSegment>? {
-        if (segments.isEmpty()) return null
-        val source = segments.joinToString("") { it.text }
-        if (!ChineseText.isScriptConversion(source, translatedText)) {
-            return null
-        }
-        // When the translation carries the echo too (it is sung, not an annotation), every timed
-        // segment takes part. When only the original has it, the echo must not consume characters.
-        val spokenTranslation = ChineseText.stripPerformanceRepeat(translatedText)
-        // The echo can sit on only one side: Apple may keep it in the translation while the timed
-        // tokens carry just a stray bracket, or the other way round. Decide from what the tokens
-        // actually contain instead of comparing raw lengths.
-        val sourceForm = ChineseText.normalizedForm(source)
-        val tokensCarryEcho = sourceForm != ChineseText.normalizedForm(spokenTranslation) &&
-            sourceForm == ChineseText.normalizedForm(translatedText)
-        val spoken = ChineseText.stripPerformanceRepeat(source)
-        val timed = when {
-            tokensCarryEcho -> segments
-            spoken.length == source.length -> segments
-            else -> prefixSegments(segments, spoken.length)
-        }
-        if (timed.isEmpty()) return null
-        val targetText = if (tokensCarryEcho) translatedText else spokenTranslation
-        // Convert the whole line once and slice by boundaries: a phrase such as 甦醒 or 瞭解 can
-        // be split across tokens, and converting each token alone would leave it untranslated.
-        val (convertedSource, boundaries) = ChineseText.simplifiedBoundaries(source)
-        var sourceOffset = 0
-        val mapped = mutableListOf<WordByWordSegment>()
-        var cursor = 0
-        for (segment in timed) {
-            val segmentStart = sourceOffset
-            val segmentEnd = segmentStart + segment.text.length
-            sourceOffset = segmentEnd
-            val boundaryStart = boundaries.getOrNull(segmentStart) ?: -1
-            val boundaryEnd = boundaries.getOrNull(segmentEnd) ?: -1
-            val target = when {
-                boundaryStart >= 0 && boundaryEnd in boundaryStart..convertedSource.length ->
-                    ChineseText.normalizedForm(convertedSource.substring(boundaryStart, boundaryEnd))
-                // A phrase split across tokens (甦|醒) has no interior boundary; when the
-                // conversion keeps the character count, slice by length instead of giving up.
-                boundaryStart >= 0 && convertedSource.length == source.length ->
-                    ChineseText.normalizedForm(
-                        convertedSource.substring(
-                            boundaryStart,
-                            minOf(boundaryStart + segment.text.length, convertedSource.length)
-                        )
-                    )
-                else -> ChineseText.normalizedForm(segment.text)
-            }
-            if (target.isEmpty()) continue
-            val consumed = StringBuilder()
-            var matched = 0
-            // Punctuation and spaces may be present on either side; they never consume a token
-            // character, so a translation with an extra space still maps onto the original timing.
-            while (matched < target.length && cursor < targetText.length) {
-                val character = targetText[cursor]
-                consumed.append(character)
-                cursor++
-                if (!isIgnorable(character)) matched++
-            }
-            if (matched != target.length ||
-                ChineseText.normalizedForm(consumed.toString()) != target
-            ) return null
-            mapped += segment.copy(text = consumed.toString())
-        }
-        while (cursor < targetText.length && isIgnorable(targetText[cursor])) {
-            if (mapped.isEmpty()) return null
-            val last = mapped.removeAt(mapped.lastIndex)
-            mapped += last.copy(text = last.text + targetText[cursor])
-            cursor++
-        }
-        return if (cursor == targetText.length) mapped else null
     }
 
     private fun translatedLrc(json: JSONObject): String? =
@@ -334,30 +242,6 @@ object ApplePlainLyricsProvider : LyricsProvider {
 
     private fun isHan(character: Char): Boolean =
         character.code in 0x3400..0x9FFF || character.code in 0xF900..0xFAFF
-
-    private fun isIgnorable(character: Char): Boolean =
-        character.isWhitespace() ||
-        character in "\uFF0C\u3002\uFF01\uFF1F\u3001\uFF1B\uFF1A,.!?;:\u00B7\u2026\u2014\uFF08\uFF09()\u3010\u3011[]"
-
-    private fun prefixSegments(
-        segments: List<WordByWordSegment>,
-        limit: Int
-    ): List<WordByWordSegment> {
-        val out = mutableListOf<WordByWordSegment>()
-        var count = 0
-        for (segment in segments) {
-            if (count >= limit) break
-            val remaining = limit - count
-            if (segment.text.length <= remaining) {
-                out += segment
-                count += segment.text.length
-            } else {
-                out += segment.copy(text = segment.text.substring(0, remaining))
-                break
-            }
-        }
-        return out
-    }
 
     private fun key(title: String, artist: String, durationMs: Long) =
         "$title\u0000$artist\u0000$durationMs"

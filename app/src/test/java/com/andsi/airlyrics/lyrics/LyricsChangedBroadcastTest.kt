@@ -54,6 +54,18 @@ class LyricsChangedBroadcastTest {
     }
 
     @Test
+    fun libraryChange_roundTripsWithoutTargetAndRejectsTargetedPayload() {
+        val change = LyricsChange.libraryChanged()
+        val intent = LyricsChangedBroadcast.lyricsChangedIntent(context, change)
+        val target = SongIdentity("A song", "An artist", durationMs = 120_000L)
+        val targetedIntent = requireNotNull(LyricsChangedBroadcast.lyricsChangedIntent(context, target))
+            .putExtra("changeKind", change.kind.name)
+
+        assertEquals(change, LyricsChangedBroadcast.readChange(intent))
+        assertNull(LyricsChangedBroadcast.readChange(targetedIntent))
+    }
+
+    @Test
     fun readChange_rejectsWrongActionMalformedPayloadAndEmptyTarget() {
         val validTarget = SongIdentity(
             title = "Valid Song",

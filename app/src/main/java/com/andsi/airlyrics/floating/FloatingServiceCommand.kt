@@ -22,7 +22,7 @@ internal sealed class FloatingServiceCommand {
     object RefreshText : FloatingServiceCommand()
     object ReloadLyrics : FloatingServiceCommand()
     data class ApplyLyricsOffset(val offsetMs: Long) : FloatingServiceCommand()
-    data class SelectMediaSource(val packageName: String?) : FloatingServiceCommand()
+    object SyncMediaSource : FloatingServiceCommand()
     data class ImportPlainLyrics(val uri: Uri, val overwrite: Boolean = true) : FloatingServiceCommand()
 
     fun toIntent(context: Context): Intent {
@@ -30,7 +30,6 @@ internal sealed class FloatingServiceCommand {
             actionName()?.let { action = it }
             when (val command = this@FloatingServiceCommand) {
                 is ApplyLyricsOffset -> putExtra(EXTRA_LYRICS_OFFSET_MS, command.offsetMs)
-                is SelectMediaSource -> putExtra(EXTRA_SOURCE_PACKAGE, command.packageName)
                 is ImportPlainLyrics -> {
                     data = command.uri
                     putExtra(EXTRA_OVERWRITE_PLAIN_LYRICS, command.overwrite)
@@ -59,7 +58,7 @@ internal sealed class FloatingServiceCommand {
             RefreshText -> ACTION_REFRESH_TEXT
             ReloadLyrics -> ACTION_RELOAD_LYRICS
             is ApplyLyricsOffset -> ACTION_APPLY_LYRICS_OFFSET
-            is SelectMediaSource -> ACTION_SELECT_MEDIA_SOURCE
+            SyncMediaSource -> ACTION_SELECT_MEDIA_SOURCE
             is ImportPlainLyrics -> ACTION_IMPORT_PLAIN_LYRICS
         }
     }
@@ -90,7 +89,6 @@ internal sealed class FloatingServiceCommand {
         private const val ACTION_SELECT_MEDIA_SOURCE = "com.andsi.airlyrics.SELECT_MEDIA_SOURCE"
         private const val ACTION_IMPORT_PLAIN_LYRICS = "com.andsi.airlyrics.IMPORT_LYRICS"
 
-        private const val EXTRA_SOURCE_PACKAGE = "sourcePackage"
         private const val EXTRA_OVERWRITE_PLAIN_LYRICS = "overwriteLyrics"
         private const val EXTRA_LYRICS_OFFSET_MS = "lyricsOffsetMs"
 
@@ -115,9 +113,7 @@ internal sealed class FloatingServiceCommand {
                 ACTION_APPLY_LYRICS_OFFSET -> ApplyLyricsOffset(
                     intent.getLongExtra(EXTRA_LYRICS_OFFSET_MS, 0L)
                 )
-                ACTION_SELECT_MEDIA_SOURCE -> SelectMediaSource(
-                    intent.getStringExtra(EXTRA_SOURCE_PACKAGE)
-                )
+                ACTION_SELECT_MEDIA_SOURCE -> SyncMediaSource
                 ACTION_IMPORT_PLAIN_LYRICS -> intent.data?.let { uri ->
                     ImportPlainLyrics(
                         uri = uri,

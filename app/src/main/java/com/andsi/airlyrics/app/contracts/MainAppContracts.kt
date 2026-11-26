@@ -8,7 +8,7 @@ internal fun interface MainServiceStarter {
 }
 
 internal fun interface FloatingSourceNotifier {
-    fun notifySourceChangedIfVisible(packageName: String?)
+    fun notifySourceChangedIfVisible()
 }
 
 internal interface MediaControllerProvider {

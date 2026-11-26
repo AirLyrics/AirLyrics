@@ -72,7 +72,8 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
         }.getOrNull()
     }
     fun save(key: String, title: String, artist: String, album: String, duration: Long, raw: String, searchKey: String = key, fetchedAtMs: Long = clock()): LyricsProviderResult? = synchronized(lock) {
-        val parsed = SpicyLyricsParser.parse(raw, key, fetchedAtMs) ?: return null
+        val parsed = SpicyLyricsParser.parse(raw, key, fetchedAtMs)
+            ?.takeIf { it.access?.isExpired(clock()) == false } ?: return null
         val doc = JSONObject().put("raw", raw).put("fetchedAt", fetchedAtMs).put("updatedAt", fetchedAtMs)
             .put("title", title).put("artist", artist).put("album", album).put("duration", duration).put("searchKey", searchKey)
         write(key, doc)
@@ -83,24 +84,42 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
     }
 
     internal fun restore(key: String, bytes: ByteArray?) = synchronized(lock) {
-        if (bytes == null) AtomicFile(file(key)).delete()
-        else write(key, JSONObject(String(bytes, Charsets.UTF_8)))
+        val atomic = AtomicFile(file(key))
+        if (bytes == null) {
+            atomic.delete()
+            check(!atomic.baseFile.exists() && !File(atomic.baseFile.path + ".bak").exists()) { "Cache delete failed" }
+        } else write(key, bytes)
     }
 
     private fun write(key: String, document: JSONObject) {
+        write(key, document.toString().toByteArray(Charsets.UTF_8))
+    }
+
+    private fun write(key: String, bytes: ByteArray) {
         check(directory.isDirectory || directory.mkdirs())
         val atomic = AtomicFile(file(key))
         val stream = atomic.startWrite()
-        try { stream.write(document.toString().toByteArray()); atomic.finishWrite(stream) }
-        catch (e: Exception) { atomic.failWrite(stream); throw e }
+        try {
+            stream.write(bytes)
+            atomic.finishWrite(stream)
+        } catch (error: Exception) {
+            atomic.failWrite(stream)
+            throw error
+        }
+        check(atomic.readFully().contentEquals(bytes)) { "Cache write failed" }
+    }
+
+    private fun writeEdit(key: String, document: JSONObject) {
+        write(key, document)
         LyricsStorage.markContentChanged()
     }
+
     fun edit(key: String, text: String, word: Boolean): LyricsStorage.LocalLyricsUpdateResult = synchronized(lock) {
         val doc = document(key) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
         val payload = result(key, doc) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
         if (payload.isUntimed) {
             if (word || (text.isBlank() && payload.untimedLyrics?.translatedText.isNullOrBlank())) return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
-            if (text != payload.untimedLyrics!!.text) write(key, doc.put("textEdit", text).put("updatedAt", clock()))
+            if (text != payload.untimedLyrics!!.text) writeEdit(key, doc.put("textEdit", text).put("updatedAt", clock()))
             return@synchronized LyricsStorage.LocalLyricsUpdateResult(true)
         }
         if (word != payload.wordByWordLines.isNotEmpty()) return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
@@ -132,7 +151,7 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
             doc.put("wordEdit", WordByWordLyricsJsonCodec.wordByWordLinesToJson(edited))
         }
         // fetchedAt is immutable, even for edits. The original response (including marks) survives intact.
-        write(key, doc.put("edit", text).put("updatedAt", clock()))
+        writeEdit(key, doc.put("edit", text).put("updatedAt", clock()))
         validation
     }
     fun editWords(key: String, edited: WordLyricsDocument): LyricsStorage.LocalLyricsUpdateResult = synchronized(lock) {
@@ -142,7 +161,7 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
             return@synchronized LyricsStorage.LocalLyricsUpdateResult(false, edited.invalidLines())
         if (original.wordByWordLines == edited.lines && original.translatedLrc == edited.translatedLrc)
             return@synchronized LyricsStorage.LocalLyricsUpdateResult(true)
-        write(key, doc.put("wordEdit", edited.serialize()).put("edit", edited.originalLrc)
+        writeEdit(key, doc.put("wordEdit", edited.serialize()).put("edit", edited.originalLrc)
             .put("translatedEdit", edited.translatedLrc.orEmpty()).put("updatedAt", clock()))
         LyricsStorage.LocalLyricsUpdateResult(true)
     }

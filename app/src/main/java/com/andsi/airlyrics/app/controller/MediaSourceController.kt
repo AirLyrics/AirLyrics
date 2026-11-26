@@ -32,16 +32,16 @@ internal class MediaSourceController(
             it.playbackState?.state == PlaybackState.STATE_PLAYING
         } ?: controllers.firstOrNull() ?: return
 
-        MediaSourceStore.saveSelectedPackage(context, controller.packageName)
+        selectSource(controller.packageName)
     }
 
     override fun getActiveControllers(): List<MediaController> {
         return CurrentMediaReader.getActiveControllers(context)
     }
 
-    fun selectSource(packageName: String) {
+    fun selectSource(packageName: String?) {
         MediaSourceStore.saveSelectedPackage(context, packageName)
-        floatingSourceNotifier.notifySourceChangedIfVisible(packageName)
+        floatingSourceNotifier.notifySourceChangedIfVisible()
     }
 
     fun getAppName(packageName: String): String {

@@ -10,8 +10,9 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.floating.FloatingLyricsService
 import com.andsi.airlyrics.floating.FloatingServiceNotification
-import com.andsi.airlyrics.floating.selectMediaSource
+import com.andsi.airlyrics.floating.FloatingServiceCommand
 import com.andsi.airlyrics.media.MediaNotificationListenerService
+import com.andsi.airlyrics.media.MediaSourceStore
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
@@ -94,13 +95,15 @@ class ServiceLocaleTest {
     @Test
     fun visibleOverlay_refreshesExistingStatusAndEmptyLyrics_afterLanguageSwitch() {
         ShadowSettings.setCanDrawOverlays(true)
+        MediaSourceStore.saveSelectedPackage(application, "player.locale")
         LanguageSettingsStore.setMode(application, "zh-TW")
         val controller = Robolectric.buildService(FloatingLyricsService::class.java).create()
         val service = controller.get()
         try {
             assertTrue(service.windowController.show())
             assertEquals(service.getString(R.string.ui_waiting_for_media_message), service.lyricsView?.text.toString())
-            service.selectMediaSource(null)
+            MediaSourceStore.saveSelectedPackage(application, null)
+            service.onStartCommand(FloatingServiceCommand.SyncMediaSource.toIntent(service), 0, 1)
             val traditionalStatus = service.lyricsView?.text.toString()
             LanguageSettingsStore.setMode(application, "en")
             shadowOf(Looper.getMainLooper()).idle()

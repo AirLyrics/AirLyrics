@@ -11,6 +11,7 @@ import android.graphics.Color
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
@@ -28,6 +29,7 @@ import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.MediaSourceStore
+import com.andsi.airlyrics.media.PlaybackClock
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.AppSettingsStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
@@ -48,8 +50,10 @@ open class FloatingLyricsService : Service() {
 
     internal fun isWindowControllerReady(): Boolean = ::windowController.isInitialized
 
+    internal val playbackClock = PlaybackClock(SystemClock::uptimeMillis)
     internal val renderer = FloatingLyricsRenderer(
         textViewProvider = { lyricsView },
+        playbackClock = playbackClock,
         contentModeProvider = { LyricsSettingsStore.getContentDisplayMode(this) },
         scriptPreferenceProvider = { LyricsSettingsStore.getScriptPreference(this) },
         lineModeProvider = { LyricsSettingsStore.getLineDisplayMode(this) },
@@ -107,9 +111,7 @@ open class FloatingLyricsService : Service() {
     internal var automaticOnlineLookupSuppressedSong: SongIdentity? = null
     internal var activeLyricsLookupRequestKey: LyricsLookupRequestKey? = null
     internal var selectedSourcePackage: String? = null
-    internal val activeAutoHideReasons: MutableSet<AutoHideReason> = mutableSetOf()
-    internal var lyricsAvailability = LyricsAvailability.UNKNOWN
-    internal var lyricsAvailabilityKey: PlaybackLyricsKey? = null
+    internal val autoHideState = FloatingAutoHideState(SystemClock::uptimeMillis)
     internal var autoHiddenForDisplayScope = false
     internal var displayScopeBlockReason: DisplayScopeBlockReason? = null
     internal var displayScopeVisiblePackages: Set<String> = emptySet()
@@ -117,10 +119,6 @@ open class FloatingLyricsService : Service() {
     internal var displayScopeVisibilitySnapshotAvailable = false
     internal var displayScopeObservationActive = false
     internal var displayScopeMonitor: DisplayScopeMonitor? = null
-    internal var pauseAutoHideSuppressedByUser = false
-    internal var lyricsUnavailableAutoHideSuppressedKey: PlaybackLyricsKey? = null
-    internal var pauseAutoHidePending = false
-    internal var unavailableLyricsAutoHidePending = false
     internal var mediaRestoreAttempt = 0
     internal val mediaSnapshotGate = MediaSnapshotGate()
 
@@ -137,21 +135,13 @@ open class FloatingLyricsService : Service() {
         restoreCurrentMediaOrRetry()
     }
 
-    internal val pauseAutoHideRunnable = Runnable {
-        applyScheduledPauseAutoHide()
+    internal val autoHideRunnable = Runnable {
+        reevaluateAutoHide()
     }
 
-    internal val unavailableLyricsAutoHideRunnable = Runnable {
-        applyScheduledUnavailableLyricsAutoHide()
-    }
-
-    internal val currentMediaRefreshRunnable = object : Runnable {
-        override fun run() {
-            refreshSelectedCurrentMediaInfo()
-            if (shouldObserveSelectedMedia()) {
-                syncHandler.postDelayed(this, CURRENT_MEDIA_REFRESH_INTERVAL_MS)
-            }
-        }
+    internal val currentMediaRefreshRunnable = Runnable {
+        refreshSelectedCurrentMediaInfo()
+        scheduleSelectedCurrentMediaInfoRefresh()
     }
 
     private val mediaReceiver = object : BroadcastReceiver() {
@@ -273,7 +263,7 @@ open class FloatingLyricsService : Service() {
         if (feedbackDelegate.isInitialized()) feedback.dismiss()
         stopLyricsSync()
         renderer.clear()
-        cancelPendingAutoHide()
+        clearAutoHideVisibilityState()
         syncHandler.removeCallbacks(mediaRestoreRunnable)
         stopSelectedMediaObservation()
         displayScopeMonitor?.close()

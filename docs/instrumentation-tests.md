@@ -4,15 +4,17 @@ PR and push checks build the APK, run lint, JVM tests, and static checks without
 starting an emulator. The instrumentation workflow runs `--full` weekly and by
 default on manual dispatch. Manual dispatch also offers
 `fast`, `stress`, and `hardware` so the two extended groups can be diagnosed on their
-own. Every selected suite is blocking for its run, and the report check requires a
-minimum number of executed cases with no failures, errors, or skipped cases.
+own. Every selected suite is blocking for its run. The report check requires
+the minimum case count, at least one completed case, and zero failures or errors.
+The named checks for settings row layout, JNI loading, SAF round-tripping, system
+stress, and hardware frames must run and pass in their selected suite.
 
 | Suite | Selection | Current cases |
 | --- | --- | ---: |
-| `--fast` | Core UI navigation, search, storage, JNI, and layout tests | 25 |
+| `--fast` | Core UI navigation, search, storage, JNI, and layout tests | 24 |
 | `--stress` | Repeated real rotation; resolution, density, font, RTL, and IME changes | 2 |
 | `--hardware` | SpicyLyrics committed hardware frame comparisons | 1 |
-| `--full` | All offline tests above | 28 |
+| `--full` | All offline tests above | 27 |
 
 On a connected emulator or disposable test device, run:
 

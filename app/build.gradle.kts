@@ -61,6 +61,7 @@ if (spicyClientKey.isNotEmpty() && !Regex("sl_pk_[A-Za-z0-9_-]+").matches(spicyC
 val buildX8664 = providers.gradleProperty("airlyrics.buildX86_64").orNull == "true"
 // Keep the updater independent of signing so F-Droid can reproduce the GitHub APK.
 val appUpdateInstallerOverride = providers.gradleProperty("airlyrics.enableAppUpdateInstaller").orNull?.let { it == "true" }
+val appleLyricsAuditEnabled = providers.gradleProperty("airlyrics.enableAppleLyricsAudit").orNull == "true"
 fun appUpdateInstallerEnabled(buildType: String?) =
     appUpdateInstallerOverride ?: (buildType == "release")
 
@@ -177,6 +178,18 @@ android {
     testOptions {
         unitTests {
             isIncludeAndroidResources = true
+            all { test ->
+                val reportSuffix = when {
+                    appleLyricsAuditEnabled -> "-apple-audit"
+                    appUpdateInstallerOverride == true -> "-updater-enabled"
+                    else -> null
+                }
+                if (reportSuffix != null) {
+                    val reportName = test.name + reportSuffix
+                    test.reports.html.outputLocation.set(layout.buildDirectory.dir("reports/tests/$reportName"))
+                    test.reports.junitXml.outputLocation.set(layout.buildDirectory.dir("test-results/$reportName"))
+                }
+            }
         }
     }
 
@@ -197,6 +210,9 @@ androidComponents {
 
 tasks.withType<Test>().configureEach {
     maxHeapSize = "1g"
+    if (!appleLyricsAuditEnabled) {
+        exclude("com/andsi/airlyrics/lyrics/providers/AppleLyricsAuditTest.class")
+    }
 }
 
 kotlin {

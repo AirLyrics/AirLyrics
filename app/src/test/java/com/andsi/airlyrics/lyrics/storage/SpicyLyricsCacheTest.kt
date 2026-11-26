@@ -61,8 +61,12 @@ class SpicyLyricsCacheTest {
         assertEquals(original.wordByWordLines.single().segments.first(), edited.wordByWordLines.single().segments.first())
         assertTrue(edited.plainLrc.contains("earth"))
         assertEquals(spicyFixture(), JSONObject(folder.root.resolve("$key.json").readText()).getString("raw"))
-        now = original.access!!.expiresAtMs
+        val access = requireNotNull(original.access)
+        val revision = LyricsStorage.currentRevision()
+        now = access.expiresAtMs
         assertNull(cache.read(key))
+        assertEquals(1L, LyricsStorage.currentRevision() - revision)
+        assertNull(cache.save(key, "Test", "Artist", "", 10000, spicyFixture(), fetchedAtMs = access.fetchedAtMs))
         assertTrue(folder.root.listFiles()!!.isEmpty())
     }
     @Test fun editedLineAlsoExpiresAndCannotBeResaved() {

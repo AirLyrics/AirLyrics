@@ -9,9 +9,11 @@ import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.displayscope.DisplayScopeBlockReason
 import com.andsi.airlyrics.displayscope.DisplayScopeVisibilitySnapshot
+import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.settings.store.DisplayScopeStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -24,6 +26,7 @@ import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.android.controller.ServiceController
+import org.robolectric.shadows.ShadowLooper
 import org.robolectric.shadows.ShadowSettings
 
 @RunWith(RobolectricTestRunner::class)
@@ -59,6 +62,7 @@ class FloatingLyricsServiceDisplayScopeTest {
         service.displayScopeMonitor?.close()
         service.displayScopeMonitor = null
 
+        QuickFloatingStore.setDesiredVisible(application, true)
         service.onStartCommand(FloatingServiceCommand.Show.toIntent(service), 0, 1)
 
         assertFalse(service.windowController.isVisible)
@@ -67,9 +71,14 @@ class FloatingLyricsServiceDisplayScopeTest {
         assertLatestNotificationStartsWith(service, R.string.ui_display_blocked)
 
         FloatingLyricsStyleStore.setAutoHideWhenPaused(service, true)
-        service.activeAutoHideReasons += AutoHideReason.PAUSED
-        service.showLyrics()
-        assertTrue(service.pauseAutoHideSuppressedByUser)
+        service.currentMedia = CurrentMediaInfo.Empty.copy(
+            sourcePackage = "player.app",
+            title = "Paused song"
+        )
+        service.reevaluateAutoHide()
+        ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_PAUSED_DELAY_MS, TimeUnit.MILLISECONDS)
+        assertTrue(service.autoHideState.shouldHide)
+        service.showLyrics(manual = true)
 
         setUsageAccess(granted = true)
         service.applyDisplayScopeSnapshot(
@@ -79,7 +88,7 @@ class FloatingLyricsServiceDisplayScopeTest {
             )
         )
         assertTrue(service.windowController.isVisible)
-        assertFalse(AutoHideReason.PAUSED in service.activeAutoHideReasons)
+        assertFalse(service.autoHideState.shouldHide)
 
         service.applyDisplayScopeSnapshot(
             DisplayScopeVisibilitySnapshot(

@@ -3,9 +3,18 @@ package com.andsi.airlyrics.app
 import com.andsi.airlyrics.testutil.resetLyricsStorage
 import com.andsi.airlyrics.testutil.QueuedCallbackDispatcher
 import com.andsi.airlyrics.testutil.awaitUiCondition as awaitCondition
+import android.app.Application
 import android.content.Context
 import android.media.session.MediaSessionManager
 import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.core.model.LyricsSettings
+import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
+import com.andsi.airlyrics.lyrics.LyricsChange
+import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.LyricsRepository
+import com.andsi.airlyrics.lyrics.PlainLyricsProvider
+import com.andsi.airlyrics.lyrics.PlainLyricsSearchRequest
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.ui.navigation.Page
@@ -92,6 +101,63 @@ class MainActivitySavedLyricsUiTest {
         ShadowLooper.idleMainLooper()
         assertEquals(listOf(true), results)
         assertTrue(LyricsStorage.listAllLyrics(context).isEmpty())
+    }
+
+    @Test
+    fun autoSaveRefreshesSavedLyricsWithoutMediaOrWindowEvents() {
+        val activity = launchActivity().get()
+        showSavedLyricsSettings(activity)
+        ShadowLooper.idleMainLooper()
+        val before = activity.graph.state
+        val application = ApplicationProvider.getApplicationContext<Application>()
+        fun announcedChanges() =
+            shadowOf(application).broadcastIntents.mapNotNull(LyricsChangedBroadcast::readChange)
+        val previousChanges = announcedChanges()
+        val lyrics = LyricsProviderResult("netease", "NetEase", "[00:01.00]auto saved")
+        val title = "Automatically found song"
+        var providerCalls = 0
+        val provider = object : PlainLyricsProvider {
+            override val id = "netease"
+            override val name = "NetEase"
+
+            override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> {
+                providerCalls++
+                return Result.success(lyrics)
+            }
+        }
+        fun lookup(save: Boolean) = LyricsRepository.findLyricsWithProviders(
+            context = context,
+            onlinePlainLyricsProviders = mapOf(PlainLyricsSearchSource.NETEASE to provider),
+            settings = LyricsSettings(listOf(PlainLyricsSearchSource.NETEASE), autoSearchOnline = true, autoSaveLocal = save),
+            title = title,
+            artist = "Saved artist",
+            durationMs = 180_000L
+        ).getOrThrow()
+
+        assertEquals(lyrics.plainLrc, lookup(save = false)?.plainLrc)
+        ShadowLooper.idleMainLooper()
+        assertTrue(LyricsStorage.listAllLyrics(context).isEmpty())
+        assertEquals(before.foreground.lyricsRevision, activity.graph.state.foreground.lyricsRevision)
+        assertEquals(before.lyricsChangeSequence, activity.graph.state.lyricsChangeSequence)
+        assertEquals(previousChanges, announcedChanges())
+
+        assertEquals(lyrics.plainLrc, lookup(save = true)?.plainLrc)
+        ShadowLooper.idleMainLooper()
+        assertEquals(title, LyricsStorage.listAllLyrics(context).single().title)
+        assertEquals(
+            "The saved-lyrics page must receive the committed revision without a media or window event",
+            LyricsStorage.currentRevision(),
+            activity.graph.state.foreground.lyricsRevision
+        )
+        assertEquals(before.lyricsChangeSequence + 1L, activity.graph.state.lyricsChangeSequence)
+        val savedChanges = previousChanges + LyricsChange.libraryChanged()
+        assertEquals(savedChanges, announcedChanges())
+
+        assertEquals(lyrics.plainLrc, lookup(save = true)?.plainLrc)
+        ShadowLooper.idleMainLooper()
+        assertEquals(2, providerCalls)
+        assertEquals(before.lyricsChangeSequence + 1L, activity.graph.state.lyricsChangeSequence)
+        assertEquals(savedChanges, announcedChanges())
     }
 
     private fun launchActivity(): ActivityController<MainActivity> {

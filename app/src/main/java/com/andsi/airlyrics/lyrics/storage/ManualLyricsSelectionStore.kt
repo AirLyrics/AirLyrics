@@ -17,6 +17,8 @@ internal object ManualLyricsSelectionStore {
 
     data class Selection(val result: LyricsProviderResult, val info: LyricsStorage.LocalPlainLyricsInfo)
 
+    data class CommitResult(val lyrics: LyricsProviderResult, val saved: Boolean)
+
     private fun file(context: Context, song: SongIdentity) = AtomicFile(
         File(File(context.noBackupFilesDir, "lyrics-selections"), song.copy(durationMs = 0L).storageKey() + ".json")
     )
@@ -93,17 +95,29 @@ internal object ManualLyricsSelectionStore {
     }
 
     /** Called only while the coordinator holds the winning request's commit lease. */
-    fun commit(context: Context, song: SongIdentity, mode: LyricsSearchMode,
-        result: LyricsProviderResult, manual: Boolean, savePlain: Boolean): LyricsProviderResult = LyricsStorage.withStorageLock {
-        if (result.access == null && !savePlain && !manual) return@withStorageLock result
-        if (!manual && result.access == null && LyricsStorage.hasWordByWordLyrics(context, song.title, song.artist, song.durationMs)) return@withStorageLock result
+    fun commit(
+        context: Context,
+        song: SongIdentity,
+        mode: LyricsSearchMode,
+        result: LyricsProviderResult,
+        manual: Boolean,
+        savePlain: Boolean
+    ): CommitResult = LyricsStorage.withStorageLock {
+        val cacheKey = result.access?.cacheKey
+        if (!manual && cacheKey == null && (!savePlain ||
+                LyricsStorage.hasWordByWordLyrics(context, song.title, song.artist, song.durationMs))) {
+            return@withStorageLock CommitResult(result, saved = false)
+        }
+        val pending = result.pendingSpicyLyrics
+        val cache = SpicyLyricsCache.forContext(context)
+        if (!manual && cacheKey != null && pending == null) {
+            val cached = checkNotNull(cache.read(cacheKey)) { "Cached lyrics expired before save" }
+            return@withStorageLock CommitResult(cached, saved = false)
+        }
         val selectionFile = file(context, song)
         val previousSelection = if (manual) snapshot(selectionFile) else null
         val doc = JSONObject().put("directory", LyricsStoragePaths.getLyricsDirRawPath(context))
             .put("mode", mode.name).put("selectedAt", System.currentTimeMillis())
-        val cache = SpicyLyricsCache.forContext(context)
-        val cacheKey = result.access?.cacheKey
-        val pending = result.pendingSpicyLyrics
         val previousCache = if (cacheKey != null && pending != null) cache.snapshot(cacheKey) else null
         val fileName = LyricsFileNaming.managedPlainFileName(song, result.isUntimed)
         val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
@@ -156,9 +170,14 @@ internal object ManualLyricsSelectionStore {
                 write(selectionFile, doc.toString().toByteArray(Charsets.UTF_8))
             }
             LyricsStorage.markContentChanged()
-            saved.copy(pendingSpicyLyrics = null, manualLocal = manual || saved.manualLocal, selectedManually = manual)
+            CommitResult(
+                saved.copy(pendingSpicyLyrics = null, manualLocal = manual || saved.manualLocal, selectedManually = manual),
+                saved = true
+            )
         } catch (error: Exception) {
-            fun restore(block: () -> Unit) { runCatching(block).exceptionOrNull()?.let(error::addSuppressed) }
+            fun restore(block: () -> Unit) {
+                runCatching(block).exceptionOrNull()?.let(error::addSuppressed)
+            }
             if (cacheKey != null && pending != null) restore { cache.restore(cacheKey, previousCache) }
             if (index != null) {
                 restore {
@@ -179,6 +198,7 @@ internal object ManualLyricsSelectionStore {
                 restore { check(LyricsIndexStore.restoreRaw(context, index)) }
             }
             if (manual) restore { write(selectionFile, previousSelection) }
+            if (error.suppressed.isNotEmpty()) LyricsStorage.markContentChanged()
             throw error
         }
     }

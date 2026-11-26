@@ -10,6 +10,7 @@ import android.view.View
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.media.PlaybackClock
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
 import org.junit.Assert.*
@@ -68,27 +69,31 @@ class SpicyLyricsTest {
             layoutParams = android.view.ViewGroup.LayoutParams(400, 150)
             textSize = 24f; setTextColor(Color.WHITE)
         }
-        var clock = 1L
-        val renderer = FloatingLyricsRenderer(textViewProvider = { view },
+        var now = 1L
+        val playbackClock = PlaybackClock { now }
+        val renderer = FloatingLyricsRenderer(textViewProvider = { view }, playbackClock = playbackClock,
             wordByWordLyricsEnabledProvider = { true },
-            wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY }, uptimeMillisProvider = { clock })
-        renderer.updatePlayback(0, true)
+            wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY })
+        playbackClock.update(0, true)
+        renderer.updateSpicyPlayback()
         renderer.parseAndShow("", wordByWordLines = listOf(line("Hello world")), emptyText = "")
         view.measure(exact(200), exact(150)); view.layout(0, 0, 200, 150)
         val originalText = view.text
         val originalLayout = view.layout
         val start = pixels(view)
-        clock = 751
+        now = 751
         val mid = pixels(view)
         assertFalse(start.contentEquals(mid))
         renderer.tick()
         assertSame(originalText, view.text)
         assertSame(originalLayout, view.layout)
-        renderer.updatePlayback(750, false)
+        playbackClock.update(750, false)
+        renderer.updateSpicyPlayback()
         val paused = pixels(view)
-        clock = 1001
+        now = 1001
         assertArrayEquals(paused, pixels(view))
-        renderer.updatePlayback(0, false)
+        playbackClock.update(0, false)
+        renderer.updateSpicyPlayback()
         assertFalse(paused.contentEquals(pixels(view)))
     }
 
@@ -138,11 +143,13 @@ class SpicyLyricsTest {
             textSize = 24f; setTextColor(Color.WHITE)
         }
         var mode = WordByWordAnimationMode.CLASSIC
-        var clock = 10000L
-        val renderer = FloatingLyricsRenderer(textViewProvider = { view },
+        var now = 10_000L
+        val playbackClock = PlaybackClock { now }
+        val renderer = FloatingLyricsRenderer(textViewProvider = { view }, playbackClock = playbackClock,
             wordByWordLyricsEnabledProvider = { true },
-            wordByWordAnimationModeProvider = { mode }, uptimeMillisProvider = { clock })
-        renderer.updatePlayback(500, true)
+            wordByWordAnimationModeProvider = { mode })
+        playbackClock.update(500, true)
+        renderer.updateSpicyPlayback()
         renderer.parseAndShow("", wordByWordLines = listOf(line("Hello world", 5000)), emptyText = "")
         fun layout() { view.measure(exact(400), exact(150)); view.layout(0, 0, 400, 150) }
         layout()
@@ -151,14 +158,15 @@ class SpicyLyricsTest {
         renderer.refresh()
         layout()
         val spicy = pixels(view)
-        clock += 500
+        now += 500
         assertFalse(spicy.contentEquals(pixels(view)))
         mode = WordByWordAnimationMode.CLASSIC
         renderer.refresh()
         layout()
         val restored = pixels(view)
         assertFalse(classic.contentEquals(restored))
-        renderer.updatePlayback(500, false)
+        playbackClock.update(500, false)
+        renderer.updateSpicyPlayback()
         renderer.tick()
         layout()
         assertArrayEquals(classic, pixels(view))

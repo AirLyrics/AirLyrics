@@ -1,5 +1,9 @@
 package com.andsi.airlyrics.lyrics.search
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import com.andsi.airlyrics.core.model.*
 import com.andsi.airlyrics.lyrics.*
 import com.andsi.airlyrics.lyrics.providers.LocalPlainLyricsProvider
@@ -10,6 +14,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.shadows.ShadowLooper
 
 @RunWith(RobolectricTestRunner::class)
 class ManualLyricsSearchTest: LyricsStorageTestBase() {
@@ -85,13 +90,18 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
         assertTrue(runCatching { service.fetch(candidate,target,token()) }.isFailure)
         assertTrue(LyricsStorage.readPlainLyrics(context,target.title,target.artist,target.durationMs)!!.contains("Existing lyrics"))
     }
-    @Test fun protectedFileRequiresApprovalAndSelectionSurvivesNewReader() {
+    @Test fun protectedFileRequiresApprovalAndSelectionSurvivesNewReader() = observeCommits { changes ->
         saveLocal()
         val service=ManualLyricsSearch(context)
         assertFalse(service.apply(target,lyrics(),token(),null))
+        ShadowLooper.idleMainLooper()
+        assertTrue(changes.isEmpty())
+
         val revision=service.protectedRevision(target)
         assertNotNull(revision)
         assertTrue(service.apply(target,lyrics(),token(),revision))
+        ShadowLooper.idleMainLooper()
+        assertEquals(listOf(LyricsChange.updated(target) to lyrics().plainLrc), changes)
         val selected=ManualLyricsSelectionStore.read(context,target)
         assertNotNull(selected)
         assertTrue(selected!!.result.selectedManually)
@@ -111,20 +121,24 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
         assertTrue(selected.selectedManually)
         assertTrue(selected.wordByWordLines.isEmpty())
     }
-    @Test fun cancelledApplyLeavesExistingFileAndSelectionUntouched() {
+    @Test fun cancelledApplyLeavesExistingFileAndSelectionUntouched() = observeCommits { changes ->
         saveLocal(LyricsStorage.SOURCE_DOWNLOADED)
         val service=ManualLyricsSearch(context)
         assertTrue(service.apply(target,lyrics(),token(),null))
+        ShadowLooper.idleMainLooper()
         val previous=LyricsStorage.readPlainLyrics(context,target.title,target.artist,target.durationMs)
         val cancelled=token().apply { cancel() }
         assertTrue(runCatching { service.apply(target,lyrics().copy(plainLrc="[00:01.00]New"),cancelled,null) }.isFailure)
+        ShadowLooper.idleMainLooper()
+        assertEquals(listOf(LyricsChange.updated(target) to lyrics().plainLrc), changes)
         assertEquals(previous,LyricsStorage.readPlainLyrics(context,target.title,target.artist,target.durationMs))
         assertNotNull(ManualLyricsSelectionStore.read(context,target))
     }
-    @Test fun failedSelectionCommitRollsBackPreviouslyWrittenLyrics() {
+    @Test fun failedSelectionCommitRollsBackPreviouslyWrittenLyrics() = observeCommits { changes ->
         saveLocal(LyricsStorage.SOURCE_DOWNLOADED)
         val service = ManualLyricsSearch(context)
         assertTrue(service.apply(target, lyrics(), token(), null))
+        ShadowLooper.idleMainLooper()
         val previous = LyricsStorage.readPlainLyrics(context, target.title, target.artist, target.durationMs)
         val blocker = java.io.File(context.noBackupFilesDir,
             "lyrics-selections/" + target.copy(durationMs = 0).storageKey() + ".json.new")
@@ -135,6 +149,8 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
                 service.apply(target, lyrics().copy(plainLrc = "[00:01.00]Replacement"), token(), null)
             }
             assertTrue(result.isFailure)
+            ShadowLooper.idleMainLooper()
+            assertEquals(listOf(LyricsChange.updated(target) to lyrics().plainLrc), changes)
             assertEquals(previous, LyricsStorage.readPlainLyrics(context, target.title, target.artist, target.durationMs))
             assertTrue(ManualLyricsSelectionStore.read(context, target)!!.result.plainLrc.contains("Chosen lyrics"))
         } finally {
@@ -326,13 +342,52 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
         }
     }
 
+    private fun observeCommits(block: (List<Pair<LyricsChange, String?>>) -> Unit) {
+        val changes = mutableListOf<Pair<LyricsChange, String?>>()
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                val change = LyricsChangedBroadcast.readChange(intent) ?: return
+                val committedLyrics = ManualLyricsSelectionStore.read(context, target)?.result?.plainLrc
+                changes += change to committedLyrics
+            }
+        }
+        ContextCompat.registerReceiver(
+            context, receiver, LyricsChangedBroadcast.lyricsChangedFilter(), ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+        try {
+            block(changes)
+        } finally {
+            context.unregisterReceiver(receiver)
+        }
+    }
+
     @Test fun normalSpicyLyricsStillApply() {
         val spicy = candidate.copy(source = PlainLyricsSearchSource.SPICY)
         val service = ManualLyricsSearch(context) { _, _ -> spicyFixture().replace("synthetic", spicy.id) }
         val preview = (service.fetch(spicy, target, token()) as ManualLyricsFetchResult.Available).lyrics
         assertEquals("[00:01.001]Hello world", preview.plainLrc)
+        val revision = LyricsStorage.currentRevision()
         assertTrue(service.apply(target, preview, token(), null))
+        assertEquals(1L, LyricsStorage.currentRevision() - revision)
         assertEquals(preview.plainLrc, ManualLyricsSelectionStore.read(context, target)!!.result.plainLrc)
+    }
+
+    @Test fun failedSpicySelectionDoesNotAdvanceTheCommittedRevision() = observeCommits { changes ->
+        val spicy = candidate.copy(source = PlainLyricsSearchSource.SPICY)
+        val service = ManualLyricsSearch(context) { _, _ -> spicyFixture().replace("synthetic", spicy.id) }
+        val preview = (service.fetch(spicy, target, token()) as ManualLyricsFetchResult.Available).lyrics
+        val revision = LyricsStorage.currentRevision()
+        ManualLyricsSelectionStore.beforeCommitStep = { if (it == "selection") error("Selection write failed") }
+        try {
+            assertTrue(runCatching { service.apply(target, preview, token(), null) }.isFailure)
+            ShadowLooper.idleMainLooper()
+            assertTrue(changes.isEmpty())
+            assertEquals(revision, LyricsStorage.currentRevision())
+            assertNull(ManualLyricsSelectionStore.read(context, target))
+            assertTrue(SpicyLyricsCache.forContext(context).list().isEmpty())
+        } finally {
+            ManualLyricsSelectionStore.beforeCommitStep = null
+        }
     }
 
 }

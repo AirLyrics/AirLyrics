@@ -1,11 +1,52 @@
 package com.andsi.airlyrics.lyrics.providers
 
 import com.andsi.airlyrics.core.text.ChineseText
+import com.andsi.airlyrics.lyrics.WordByWordSegment
+import java.io.File
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ApplePlainLyricsProviderTest {
+    @After
+    fun resetDictionaries() = ChineseText.resetForTest()
+
+    @Test
+    fun nativePayloadDecodesAllTimedTranslationsAndTheFirstBackgroundWord() {
+        ChineseText.resetForTest()
+        ChineseText.loadFromDirectory(File("src/main/assets/opencc"))
+        val json = requireNotNull(javaClass.getResource("/apple/rainbow-native.json")).readText()
+        val lines = requireNotNull(ApplePlainLyricsProvider.parse(json, "", "", "", 0L)).wordByWordLines
+
+        assertEquals(39, lines.size)
+        for ((startMs, _, _, _, _, translatedText, translatedSegments) in lines) {
+            assertTrue("Missing translation at $startMs", translatedText.isNotBlank())
+            assertEquals(
+                "Translated tokens at $startMs",
+                translatedText,
+                translatedSegments.joinToString("", transform = WordByWordSegment::text),
+            )
+        }
+        val echo = lines.single { it.startMs == 141_705L }
+        assertEquals("看不見妳的笑 我怎麼睡得著 (睡得著)", echo.text)
+        assertEquals("看不见你的笑我怎么睡得著 (睡得著)", echo.translatedText)
+        assertEquals(
+            listOf(
+                WordByWordSegment("(睡得", 146_208, 147_935),
+                WordByWordSegment("著)", 147_935, 148_824),
+            ),
+            echo.segments.takeLast(2),
+        )
+        assertEquals(
+            listOf(
+                WordByWordSegment(" (睡得", 146_208, 147_935),
+                WordByWordSegment("著)", 147_935, 148_824),
+            ),
+            echo.translatedSegments.takeLast(2),
+        )
+    }
+
     private fun translationsFor(
         starts: List<Long>,
         translatedLrc: String,
@@ -156,92 +197,6 @@ class ApplePlainLyricsProviderTest {
         assertEquals(70060L, line?.translatedSegments?.first()?.startMs)
         assertEquals(72340L, line?.translatedSegments?.last()?.endMs)
     }
-
-    @Test
-    fun pureScriptConversion_reusesOriginalWordTiming() {
-        ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说', '臺' to '台'))
-        val json = """
-            {
-              "ok": true, "title": "測試", "artist": "測試", "duration_ms": 60000,
-              "lrc": "[00:10.00]蘇三說\n",
-              "translated_lrc": "[00:10.00]苏三说\n",
-              "word_by_word": [
-                {"start_ms": 10000, "end_ms": 15000, "text": "蘇三說",
-                 "segments": [{"text": "蘇", "start_ms": 10000, "end_ms": 11000},
-                              {"text": "三", "start_ms": 11000, "end_ms": 13000},
-                              {"text": "說", "start_ms": 13000, "end_ms": 15000}]}
-              ]
-            }
-        """.trimIndent()
-
-        val line = ApplePlainLyricsProvider.parse(json, "測試", "測試", "", 60000)?.wordByWordLines?.single()
-        val translated = line?.translatedSegments.orEmpty()
-
-        assertEquals(listOf("苏", "三", "说"), translated.map { it.text })
-        assertEquals(listOf(10000L, 11000L, 13000L), translated.map { it.startMs })
-        assertEquals(listOf(11000L, 13000L, 15000L), translated.map { it.endMs })
-    }
-
-    @Test
-    fun realTranslation_hasNoFakeWordTiming() {
-        ChineseText.installTableForTest(mapOf('蘇' to '苏', '說' to '说'))
-        val json = """
-            {
-              "ok": true, "title": "測試", "artist": "測試", "duration_ms": 60000,
-              "lrc": "[00:10.00]蘇三說\n",
-              "translated_lrc": "[00:10.00]苏三他这样说\n",
-              "word_by_word": [
-                {"start_ms": 10000, "end_ms": 15000, "text": "蘇三說",
-                 "segments": [{"text": "蘇", "start_ms": 10000, "end_ms": 11000},
-                              {"text": "三說", "start_ms": 11000, "end_ms": 15000}]}
-              ]
-            }
-        """.trimIndent()
-
-        val translated = ApplePlainLyricsProvider.parse(json, "測試", "測試", "", 60000)
-            ?.wordByWordLines?.single()?.translatedSegments.orEmpty()
-
-        assertTrue(translated.isEmpty())
-    }
-    @Test
-    fun singleCharacterRewrites_haveNoWordTiming() {
-        ChineseText.installTableForTest(emptyMap())
-        for (translation in listOf("我今天真的很想他", "我今天真的不想你")) {
-            assertTrue(translatedSegmentsFor("我今天真的很想你", translation).isEmpty())
-        }
-    }
-
-    @Test
-    fun phraseAcrossTokens_reusesTimingWhenTheConversionKeepsLength() {
-        ChineseText.installTableForTest(emptyMap(), phrases = mapOf("甲乙" to "丙丁"))
-        assertEquals(listOf("丙", "丁"), translatedSegmentsFor("甲乙", "丙丁").map { it.text })
-    }
-
-    @Test
-    fun phraseAcrossTokens_doesNotReuseTimingWhenTheLengthChanges() {
-        ChineseText.installTableForTest(emptyMap(), phrases = mapOf("甲乙" to "丙丁戊"))
-        assertTrue(translatedSegmentsFor("甲乙", "丙丁戊").isEmpty())
-    }
-
-    private fun translatedSegmentsFor(original: String, translation: String) =
-        ApplePlainLyricsProvider.parse(
-            org.json.JSONObject()
-                .put("ok", true)
-                .put("lrc", "[00:01.00]$original")
-                .put("translated_lrc", "[00:01.00]$translation")
-                .put("word_by_word", org.json.JSONArray().put(
-                    org.json.JSONObject()
-                        .put("start_ms", 1000).put("end_ms", 2000).put("text", original)
-                        .put("segments", org.json.JSONArray().apply {
-                            original.forEachIndexed { index, character ->
-                                put(org.json.JSONObject().put("text", character.toString())
-                                    .put("start_ms", 1000 + index * 100)
-                                    .put("end_ms", 1100 + index * 100))
-                            }
-                        })
-                )).toString(), "", "", "", 0
-        )!!.wordByWordLines.single().translatedSegments
-
 
     @Test
     fun repeatedLineReusesTheTranslationCarriedByItsOtherOccurrence() {

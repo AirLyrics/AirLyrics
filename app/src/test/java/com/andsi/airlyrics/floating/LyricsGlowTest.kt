@@ -15,6 +15,7 @@ import com.andsi.airlyrics.core.model.LyricsGlowStyle
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.media.PlaybackClock
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import org.junit.Assert.*
@@ -27,6 +28,7 @@ import org.robolectric.util.ReflectionHelpers
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LyricsGlowTest {
+    private val playbackClock = PlaybackClock { 0L }
     private val context: Context get() = ApplicationProvider.getApplicationContext()
     private val purple = Color.rgb(92, 38, 130)
 
@@ -94,9 +96,9 @@ class LyricsGlowTest {
     @Test fun everyLineAnimationReceivesHaloWithoutForcingSpicyFillOrTransform() {
         for (mode in LyricsSwitchAnimationMode.entries) {
             val view = view()
-            val renderer = FloatingLyricsRenderer({ view }, switchAnimationModeProvider = { mode },
+            val renderer = FloatingLyricsRenderer({ view }, playbackClock, switchAnimationModeProvider = { mode },
                 wordByWordHighlightColorProvider = { purple })
-            renderer.updatePlayback(2000, false)
+            playbackClock.update(2000, false)
             renderer.parseAndShow("[00:00.00]Halo\n[00:04.00]Next", emptyText = "")
             val text = view.text as Spanned
             val span = text.getSpans(0, text.length, SpicyLineSpan::class.java).single()
@@ -111,11 +113,11 @@ class LyricsGlowTest {
 
     @Test fun classicWordModeRetainsNativeColorsAndAddsOnlyHalo() {
         val view = view()
-        val renderer = FloatingLyricsRenderer({ view },
+        val renderer = FloatingLyricsRenderer({ view }, playbackClock,
             wordByWordLyricsEnabledProvider = { true },
             wordByWordAnimationModeProvider = { WordByWordAnimationMode.CLASSIC },
             wordByWordHighlightColorProvider = { purple })
-        renderer.updatePlayback(500, false)
+        playbackClock.update(500, false)
         renderer.parseAndShow("[00:00.00]Hello", wordByWordLines = listOf(
             WordByWordLine(0, 2000, "Hello", listOf(WordByWordSegment("Hello", 0, 2000)))
         ), emptyText = "")
@@ -135,9 +137,9 @@ class LyricsGlowTest {
         for (mode in listOf(LyricsSwitchAnimationMode.SPICY, LyricsSwitchAnimationMode.FADE)) {
             val view = view()
             var settings = LyricsGlowStyle()
-            val renderer = FloatingLyricsRenderer({ view }, switchAnimationModeProvider = { mode },
+            val renderer = FloatingLyricsRenderer({ view }, playbackClock, switchAnimationModeProvider = { mode },
                 glowStyleProvider = { settings })
-            renderer.updatePlayback(2000, false)
+            playbackClock.update(2000, false)
             renderer.parseAndShow("[00:00.00]Hello\n[00:04.00]Next", emptyText = "")
             measure(view)
             bitmap(view::draw)
@@ -157,9 +159,9 @@ class LyricsGlowTest {
             ReflectionHelpers.callStaticMethod<Unit>(ValueAnimator::class.java, "setDurationScale",
                 ReflectionHelpers.ClassParameter.from(Float::class.javaPrimitiveType, 0f))
             val view = view()
-            val renderer = FloatingLyricsRenderer({ view },
+            val renderer = FloatingLyricsRenderer({ view }, playbackClock,
                 switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY })
-            renderer.updatePlayback(2000, false)
+            playbackClock.update(2000, false)
             renderer.parseAndShow("[00:00.00]Hello\n[00:04.00]Next", emptyText = "")
             measure(view)
             val first = bitmap(view::draw)

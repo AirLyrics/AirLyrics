@@ -4,219 +4,68 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
-internal enum class AutoHideReason {
-    PAUSED,
-    LYRICS_UNAVAILABLE
-}
-
-internal enum class LyricsAvailability {
-    UNKNOWN,
-    LOADING,
-    AVAILABLE,
-    UNAVAILABLE
-}
-
 internal fun FloatingLyricsService.applyAutoHideSettings() {
-    if (!QuickFloatingStore.isDesiredVisible(this)) {
-        clearAutoHideVisibilityState()
-        refreshQuickControls()
-        return
-    }
-
     reevaluateAutoHide()
+    if (!QuickFloatingStore.isDesiredVisible(this)) refreshQuickControls()
 }
 
 internal fun FloatingLyricsService.reevaluateAutoHide() {
-    reevaluatePausedAutoHide()
-    reevaluateUnavailableLyricsAutoHide()
-    reconcileAutoHideVisibility()
+    val conditions = autoHideConditions()
+    autoHideState.evaluate(conditions)
+    scheduleAutoHideEvaluation()
+    if (!conditions.desiredVisible) return
+
+    if (autoHideState.shouldHide) {
+        hideLyricsForAutoHide()
+    } else {
+        restoreVisibleLyricsIfDesired()
+    }
 }
 
 internal fun FloatingLyricsService.markLyricsLoading(playbackKey: PlaybackLyricsKey) {
-    val songChanged = lyricsAvailabilityKey != playbackKey
-    lyricsAvailabilityKey = playbackKey
-    lyricsAvailability = LyricsAvailability.LOADING
-    cancelPendingUnavailableLyricsAutoHide()
-    if (songChanged) {
-        lyricsUnavailableAutoHideSuppressedKey = null
-    }
-    // Keep an already-active unavailable-lyrics reason while the replacement lookup runs.
-    // This avoids flashing the window between two songs that both have no usable lyrics.
+    autoHideState.setLyricsAvailability(LyricsAvailability.LOADING, playbackKey)
     reevaluateAutoHide()
 }
 
 internal fun FloatingLyricsService.markLyricsAvailable(playbackKey: PlaybackLyricsKey) {
-    lyricsAvailabilityKey = playbackKey
-    lyricsAvailability = LyricsAvailability.AVAILABLE
-    lyricsUnavailableAutoHideSuppressedKey = null
-    cancelPendingUnavailableLyricsAutoHide()
-    activeAutoHideReasons.remove(AutoHideReason.LYRICS_UNAVAILABLE)
+    autoHideState.setLyricsAvailability(LyricsAvailability.AVAILABLE, playbackKey)
     reevaluateAutoHide()
 }
 
 internal fun FloatingLyricsService.markLyricsUnavailable(playbackKey: PlaybackLyricsKey) {
-    lyricsAvailabilityKey = playbackKey
-    lyricsAvailability = LyricsAvailability.UNAVAILABLE
+    autoHideState.setLyricsAvailability(LyricsAvailability.UNAVAILABLE, playbackKey)
     reevaluateAutoHide()
 }
 
 internal fun FloatingLyricsService.resetLyricsAvailability() {
-    lyricsAvailabilityKey = null
-    lyricsAvailability = LyricsAvailability.UNKNOWN
-    lyricsUnavailableAutoHideSuppressedKey = null
-    cancelPendingUnavailableLyricsAutoHide()
-    activeAutoHideReasons.remove(AutoHideReason.LYRICS_UNAVAILABLE)
+    autoHideState.setLyricsAvailability(LyricsAvailability.UNKNOWN)
     reevaluateAutoHide()
 }
 
 internal fun FloatingLyricsService.suppressAutoHideForManualShow() {
-    val pausedReasonApplies = AutoHideReason.PAUSED in activeAutoHideReasons ||
-        (!currentMedia.isEmpty && !currentMedia.isPlaying)
-    if (FloatingLyricsStyleStore.isAutoHideWhenPaused(this) && pausedReasonApplies) {
-        pauseAutoHideSuppressedByUser = true
-        cancelPendingPauseAutoHide()
-        activeAutoHideReasons.remove(AutoHideReason.PAUSED)
-    }
-
-    val playbackKey = currentMedia.takeUnless { it.isEmpty }?.playbackLyricsKey()
-    val unavailableReasonApplies = lyricsAvailability == LyricsAvailability.UNAVAILABLE ||
-        AutoHideReason.LYRICS_UNAVAILABLE in activeAutoHideReasons
-    if (FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(this) &&
-        playbackKey != null &&
-        unavailableReasonApplies
-    ) {
-        lyricsUnavailableAutoHideSuppressedKey = playbackKey
-        cancelPendingUnavailableLyricsAutoHide()
-        activeAutoHideReasons.remove(AutoHideReason.LYRICS_UNAVAILABLE)
-    }
-}
-
-internal fun FloatingLyricsService.applyScheduledPauseAutoHide() {
-    pauseAutoHidePending = false
-    if (!shouldAutoHidePausedPlayback()) {
-        reevaluateAutoHide()
-        return
-    }
-
-    activeAutoHideReasons += AutoHideReason.PAUSED
-    reconcileAutoHideVisibility()
-}
-
-internal fun FloatingLyricsService.applyScheduledUnavailableLyricsAutoHide() {
-    unavailableLyricsAutoHidePending = false
-    if (!shouldAutoHideUnavailableLyrics()) {
-        reevaluateAutoHide()
-        return
-    }
-
-    activeAutoHideReasons += AutoHideReason.LYRICS_UNAVAILABLE
-    reconcileAutoHideVisibility()
-}
-
-private fun FloatingLyricsService.reevaluatePausedAutoHide() {
-    if (!FloatingLyricsStyleStore.isAutoHideWhenPaused(this) ||
-        !QuickFloatingStore.isDesiredVisible(this) ||
-        currentMedia.isEmpty
-    ) {
-        cancelPendingPauseAutoHide()
-        activeAutoHideReasons.remove(AutoHideReason.PAUSED)
-        pauseAutoHideSuppressedByUser = false
-        return
-    }
-
-    if (currentMedia.isPlaying) {
-        cancelPendingPauseAutoHide()
-        activeAutoHideReasons.remove(AutoHideReason.PAUSED)
-        pauseAutoHideSuppressedByUser = false
-        return
-    }
-
-    if (pauseAutoHideSuppressedByUser) {
-        cancelPendingPauseAutoHide()
-        activeAutoHideReasons.remove(AutoHideReason.PAUSED)
-        return
-    }
-
-    if (AutoHideReason.PAUSED !in activeAutoHideReasons) {
-        schedulePauseAutoHide()
-    }
-}
-
-private fun FloatingLyricsService.reevaluateUnavailableLyricsAutoHide() {
-    if (!FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(this) ||
-        !QuickFloatingStore.isDesiredVisible(this) ||
-        currentMedia.isEmpty
-    ) {
-        cancelPendingUnavailableLyricsAutoHide()
-        activeAutoHideReasons.remove(AutoHideReason.LYRICS_UNAVAILABLE)
-        lyricsUnavailableAutoHideSuppressedKey = null
-        return
-    }
-
-    when (lyricsAvailability) {
-        LyricsAvailability.UNKNOWN,
-        LyricsAvailability.AVAILABLE -> {
-            cancelPendingUnavailableLyricsAutoHide()
-            activeAutoHideReasons.remove(AutoHideReason.LYRICS_UNAVAILABLE)
-            lyricsUnavailableAutoHideSuppressedKey = null
-        }
-
-        LyricsAvailability.LOADING -> {
-            cancelPendingUnavailableLyricsAutoHide()
-        }
-
-        LyricsAvailability.UNAVAILABLE -> {
-            if (lyricsUnavailableAutoHideSuppressedKey == lyricsAvailabilityKey) {
-                cancelPendingUnavailableLyricsAutoHide()
-                activeAutoHideReasons.remove(AutoHideReason.LYRICS_UNAVAILABLE)
-            } else if (AutoHideReason.LYRICS_UNAVAILABLE !in activeAutoHideReasons) {
-                scheduleUnavailableLyricsAutoHide()
-            }
-        }
-    }
-}
-
-private fun FloatingLyricsService.shouldAutoHidePausedPlayback(): Boolean {
-    return FloatingLyricsStyleStore.isAutoHideWhenPaused(this) &&
-        QuickFloatingStore.isDesiredVisible(this) &&
-        !currentMedia.isEmpty &&
-        !currentMedia.isPlaying &&
-        !pauseAutoHideSuppressedByUser
-}
-
-private fun FloatingLyricsService.shouldAutoHideUnavailableLyrics(): Boolean {
-    return FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(this) &&
-        QuickFloatingStore.isDesiredVisible(this) &&
-        !currentMedia.isEmpty &&
-        lyricsAvailability == LyricsAvailability.UNAVAILABLE &&
-        lyricsAvailabilityKey != null &&
-        lyricsUnavailableAutoHideSuppressedKey != lyricsAvailabilityKey
-}
-
-private fun FloatingLyricsService.schedulePauseAutoHide() {
-    if (pauseAutoHidePending) return
-    pauseAutoHidePending = true
-    syncHandler.postDelayed(pauseAutoHideRunnable, AUTO_HIDE_WHEN_PAUSED_DELAY_MS)
-}
-
-private fun FloatingLyricsService.scheduleUnavailableLyricsAutoHide() {
-    if (unavailableLyricsAutoHidePending) return
-    unavailableLyricsAutoHidePending = true
-    syncHandler.postDelayed(
-        unavailableLyricsAutoHideRunnable,
-        AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS
+    autoHideState.suppressForManualShow(
+        autoHideConditions(),
+        currentMedia.takeUnless { it.isEmpty }?.playbackLyricsKey()
     )
+    scheduleAutoHideEvaluation()
 }
 
-private fun FloatingLyricsService.reconcileAutoHideVisibility() {
-    if (!QuickFloatingStore.isDesiredVisible(this)) return
-
-    if (activeAutoHideReasons.isEmpty()) {
-        restoreVisibleLyricsIfDesired()
-    } else {
-        hideLyricsForAutoHide()
-    }
+private fun FloatingLyricsService.scheduleAutoHideEvaluation() {
+    syncHandler.removeCallbacks(autoHideRunnable)
+    autoHideState.nextDeadlineUptimeMs?.let { syncHandler.postAtTime(autoHideRunnable, it) }
 }
+
+internal fun FloatingLyricsService.clearAutoHideVisibilityState() {
+    autoHideState.resetVisibility()
+    syncHandler.removeCallbacks(autoHideRunnable)
+}
+
+private fun FloatingLyricsService.autoHideConditions() = AutoHideConditions(
+    desiredVisible = QuickFloatingStore.isDesiredVisible(this),
+    isPlaying = currentMedia.takeUnless { it.isEmpty }?.isPlaying,
+    hideWhenPaused = FloatingLyricsStyleStore.isAutoHideWhenPaused(this),
+    hideWhenLyricsUnavailable = FloatingLyricsStyleStore.isAutoHideWhenLyricsUnavailable(this)
+)
 
 private fun FloatingLyricsService.hideLyricsForAutoHide() {
     if (!isWindowControllerReady()) return
@@ -241,7 +90,7 @@ internal fun FloatingLyricsService.restoreVisibleLyricsIfDesired() {
         return
     }
 
-    if (activeAutoHideReasons.isNotEmpty()) {
+    if (autoHideState.shouldHide) {
         scheduleSelectedCurrentMediaInfoRefresh()
         refreshQuickControls()
         return
@@ -257,30 +106,5 @@ internal fun FloatingLyricsService.restoreVisibleLyricsIfDesired() {
         return
     }
 
-    showLyrics(updateDesiredVisible = false)
+    showLyrics(manual = false)
 }
-
-internal fun FloatingLyricsService.cancelPendingPauseAutoHide() {
-    pauseAutoHidePending = false
-    syncHandler.removeCallbacks(pauseAutoHideRunnable)
-}
-
-internal fun FloatingLyricsService.cancelPendingUnavailableLyricsAutoHide() {
-    unavailableLyricsAutoHidePending = false
-    syncHandler.removeCallbacks(unavailableLyricsAutoHideRunnable)
-}
-
-internal fun FloatingLyricsService.cancelPendingAutoHide() {
-    cancelPendingPauseAutoHide()
-    cancelPendingUnavailableLyricsAutoHide()
-}
-
-internal fun FloatingLyricsService.clearAutoHideVisibilityState() {
-    cancelPendingAutoHide()
-    activeAutoHideReasons.clear()
-    pauseAutoHideSuppressedByUser = false
-    lyricsUnavailableAutoHideSuppressedKey = null
-}
-
-internal const val AUTO_HIDE_WHEN_PAUSED_DELAY_MS = 400L
-internal const val AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS = 3_000L

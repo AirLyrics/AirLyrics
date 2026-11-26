@@ -14,9 +14,8 @@ import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
 internal fun FloatingLyricsService.shouldObserveSelectedMedia(): Boolean {
     return isWindowControllerReady() &&
-        (windowController.isVisible ||
-            ((activeAutoHideReasons.isNotEmpty() || autoHiddenForDisplayScope) &&
-                QuickFloatingStore.isDesiredVisible(this))) &&
+        QuickFloatingStore.isDesiredVisible(this) &&
+        (windowController.isVisible || autoHideState.shouldHide || autoHiddenForDisplayScope) &&
         !selectedSourcePackage.isNullOrBlank()
 }
 
@@ -60,16 +59,18 @@ internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo
     if (!shouldAcceptMediaUpdate(media.sourcePackage)) return false
     if (!mediaSnapshotGate.markAcceptedIfFresh(media)) return false
 
+    val song = media.toSongIdentity()
+    if (currentMedia.isEmpty || !currentMedia.toSongIdentity().isSameSong(song)) {
+        playbackClock.reset()
+    }
     currentMedia = media
+    playbackClock.update(media.positionMs, media.isPlaying)
 
     syncHandler.removeCallbacks(mediaRestoreRunnable)
     mediaRestoreAttempt = 0
 
-    renderer.updatePlayback(
-        positionMs = media.positionMs,
-        isPlaying = media.isPlaying
-    )
-    renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
+    renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, song))
+    renderer.updateSpicyPlayback()
     reevaluateAutoHide()
 
     val playbackLyricsKey = media.playbackLyricsKey()
@@ -81,7 +82,7 @@ internal fun FloatingLyricsService.applyCurrentMediaInfo(media: CurrentMediaInfo
     val samePlayback = playbackLyricsKey == lastPlaybackLyricsKey
     val idArrived = media.spotifyTrackId != null && media.spotifyTrackId != lastLookupSpotifyTrackId
     val retryWithId = samePlayback && idArrived &&
-        lyricsAvailability != LyricsAvailability.AVAILABLE &&
+        autoHideState.lyricsAvailability != LyricsAvailability.AVAILABLE &&
         !isAutomaticOnlineLookupSuppressed(media) &&
         com.andsi.airlyrics.settings.store.LyricsSettingsStore.isAutoSearchOnlineEnabled(this)
     if (samePlayback && !retryWithId) {
@@ -164,21 +165,24 @@ internal fun FloatingLyricsService.handleMediaSourceLost(sourcePackage: String) 
     if (sourcePackage != selectedSourcePackage) return
     if (currentMedia.isEmpty || currentMedia.sourcePackage != sourcePackage) return
 
-    val pausedPosition = renderer.getEstimatedPositionMs()
     currentMedia = currentMedia.copy(
         isPlaying = false,
-        positionMs = pausedPosition
+        positionMs = playbackClock.pause()
     )
-    renderer.updatePlayback(positionMs = pausedPosition, isPlaying = false)
     renderer.refresh()
     reevaluateAutoHide()
 }
 
-internal fun FloatingLyricsService.selectMediaSource(packageName: String?) {
+internal fun FloatingLyricsService.syncSelectedMediaSource() {
+    val packageName = MediaSourceStore.getSelectedPackage(this)
+    if (selectedSourcePackage == packageName) return
+
     selectedSourcePackage = packageName
-    MediaSourceStore.saveSelectedPackage(this, packageName)
     syncHandler.removeCallbacks(mediaRestoreRunnable)
     mediaRestoreAttempt = 0
+    currentMedia = CurrentMediaInfo.Empty
+    playbackClock.reset()
+    renderer.setLyricsOffset(0L)
 
     clearLyricsState {
         getString(
@@ -190,16 +194,11 @@ internal fun FloatingLyricsService.selectMediaSource(packageName: String?) {
         )
     }
 
-    if (packageName == null) {
-        stopSelectedMediaObservation()
-        return
-    }
-
-    if (isWindowControllerReady() && windowController.isVisible) {
-        startSelectedMediaObservation()
-        if (currentMedia.isEmpty) {
-            scheduleCurrentMediaRestore()
-        }
+    startSelectedMediaObservation()
+    if (packageName != null && isWindowControllerReady() &&
+        windowController.isVisible && currentMedia.isEmpty
+    ) {
+        scheduleCurrentMediaRestore()
     }
 }
 

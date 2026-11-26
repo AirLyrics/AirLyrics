@@ -20,6 +20,7 @@ import com.andsi.airlyrics.test.InstrumentationFailureDiagnostics
 import com.andsi.airlyrics.app.MainActivity
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.lyrics.WordByWordLine
+import com.andsi.airlyrics.media.PlaybackClock
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import org.junit.Assert.*
 import org.junit.Test
@@ -40,6 +41,7 @@ class SpicyLyricsInstrumentedTest {
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var view: FloatingLyricsTextView
             lateinit var renderer: FloatingLyricsRenderer
+        val playbackClock = PlaybackClock(SystemClock::uptimeMillis)
             scenario.onActivity { activity ->
                 view = FloatingLyricsTextView(activity).apply {
                     textSize = 28f
@@ -51,10 +53,9 @@ class SpicyLyricsInstrumentedTest {
                     setBackgroundColor(Color.rgb(25, 30, 40))
                 }
                 activity.setContentView(view)
-                renderer = FloatingLyricsRenderer(textViewProvider = { view },
+                renderer = FloatingLyricsRenderer(textViewProvider = { view }, playbackClock = playbackClock,
                     wordByWordLyricsEnabledProvider = { true },
                     wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY })
-                renderer.updatePlayback(0, false)
                 renderer.parseAndShow("", wordByWordLines = listOf(WordByWordLine(0, 6000,
                     "Hello 星光 e\u0301 🎵 A longer held note", listOf(
                         WordByWordSegment("Hello", 0, 450), WordByWordSegment("星光", 450, 1600),
@@ -65,7 +66,12 @@ class SpicyLyricsInstrumentedTest {
             val initial = screenshot(view, "spicy-start.png")
             lateinit var layout: android.text.Layout
             lateinit var text: CharSequence
-            scenario.onActivity { layout = view.layout; text = view.text; renderer.updatePlayback(900, false) }
+            scenario.onActivity {
+                layout = view.layout
+                text = view.text
+                playbackClock.update(900, false)
+                renderer.updateSpicyPlayback()
+            }
             instrumentation.waitForIdleSync()
             val middle = screenshot(view, "spicy-middle.png")
             assertFalse("Paused Spicy position must change the committed frame", initial.sameAs(middle))
@@ -82,7 +88,10 @@ class SpicyLyricsInstrumentedTest {
                 renderer.tick()
                 assertFalse("Paused media polling must not invalidate text", view.isDirty)
             }
-            scenario.onActivity { renderer.updatePlayback(2900, true) }
+            scenario.onActivity {
+                playbackClock.update(2900, true)
+                renderer.updateSpicyPlayback()
+            }
             instrumentation.waitForIdleSync()
             val playing = screenshot(view, "spicy-playing.png")
             val latch = CountDownLatch(1)

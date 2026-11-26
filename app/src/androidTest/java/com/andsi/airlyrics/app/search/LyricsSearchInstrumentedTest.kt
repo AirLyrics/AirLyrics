@@ -1,81 +1,122 @@
 package com.andsi.airlyrics.app.search
 
+import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.os.SystemClock
-import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Rect
+import android.os.SystemClock
+import android.view.Choreographer
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.EditText
+import android.widget.HorizontalScrollView
+import android.widget.ImageButton
 import android.widget.TextView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.platform.io.PlatformTestStorageRegistry
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import com.andsi.airlyrics.test.InstrumentationFailureDiagnostics
+import androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry
+import androidx.test.runner.lifecycle.Stage
+import androidx.viewpager2.widget.ViewPager2
+import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.i18n.lyrics.localizedPlainLyricsProviderName
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.providers.ManualLyricsNative
 import com.andsi.airlyrics.lyrics.search.LyricsCandidate
 import com.andsi.airlyrics.lyrics.search.LyricsUnavailableReason
-import kotlinx.coroutines.flow.MutableStateFlow
-import androidx.viewpager2.widget.ViewPager2
-import com.andsi.airlyrics.i18n.lyrics.localizedPlainLyricsProviderName
+import com.andsi.airlyrics.lyrics.search.ManualLyricsFetchResult
+import com.andsi.airlyrics.lyrics.search.ManualLyricsSearch
+import com.andsi.airlyrics.lyrics.search.ManualWordDetails
+import com.andsi.airlyrics.lyrics.search.ManualWordOption
+import com.andsi.airlyrics.lyrics.search.ManualWordPage
+import com.andsi.airlyrics.lyrics.search.ManualWordRecording
+import com.andsi.airlyrics.lyrics.search.ManualWordSource
 import com.andsi.airlyrics.settings.store.LyricsSettingsStore
-import com.andsi.airlyrics.R
-import com.andsi.airlyrics.lyrics.providers.ManualLyricsNative
+import com.andsi.airlyrics.test.InstrumentationFailureDiagnostics
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.tabs.TabLayout
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.asCoroutineDispatcher
 import org.json.JSONObject
-import org.junit.Assert.*
-import org.junit.Before
 import org.junit.After
-import org.junit.Test
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Rule
+import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class LyricsSearchInstrumentedTest {
     @get:Rule val diagnostics = InstrumentationFailureDiagnostics()
+
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context get() = instrumentation.targetContext
+    private val access = DeviceSearchAccess()
+    private val requests = ConcurrentLinkedQueue<Runnable>()
     private lateinit var originalSources: List<PlainLyricsSearchSource>
 
-    @Before fun configureSearchSources() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
+    @Before
+    fun configureSearch() {
         originalSources = LyricsSettingsStore.getPlainLyricsSearchSources(context)
-        LyricsSettingsStore.setPlainLyricsSearchSources(context, listOf(PlainLyricsSearchSource.NETEASE))
-    }
-
-    @After fun restoreSearchSources() {
-        if (::originalSources.isInitialized) {
-            LyricsSettingsStore.setPlainLyricsSearchSources(
-                InstrumentationRegistry.getInstrumentation().targetContext, originalSources
-            )
+        setSources(PlainLyricsSearchSource.NETEASE)
+        val dispatcher = Executor { requests.add(it) }.asCoroutineDispatcher()
+        LyricsSearchActivity.dependenciesFactory = {
+            LyricsSearchDependencies(access, io = dispatcher, diffExecutor = Executor { it.run() })
         }
     }
 
-    @Test fun searchShowsMissingSourcesDialogAcrossRecreation() {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        LyricsSettingsStore.setPlainLyricsSearchSources(context, emptyList())
-        val intent = Intent(context, LyricsSearchActivity::class.java)
-            .putExtra("search.title", "Song").putExtra("search.artist", "Artist")
-        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-            fun assertDialog() = scenario.onActivity { activity ->
-                val button = descendants(activity.findViewById(android.R.id.content))
-                    .filterIsInstance<com.google.android.material.button.MaterialButton>()
-                    .single { it.text.toString() == activity.getString(R.string.search_regular_search) }
-                assertTrue("Search must explain the missing source", button.isEnabled)
-                button.performClick()
-                val dialog = LyricsSearchActivity::class.java.getDeclaredField("missingSourcesDialog").run {
-                    isAccessible = true
-                    get(activity) as android.app.Dialog
+    @After
+    fun restoreSearch() {
+        LyricsSearchActivity.dependenciesFactory = null
+        if (::originalSources.isInitialized) {
+            LyricsSettingsStore.setPlainLyricsSearchSources(context, originalSources)
+        }
+    }
+
+    @Test
+    fun searchShowsMissingSourcesDialogAcrossRecreation() {
+        setSources()
+        launchSearch().use { scenario ->
+            fun assertDialog() {
+                awaitUi("Search window did not gain focus") { it.window.decorView.hasWindowFocus() }
+                lateinit var message: String
+                lateinit var ok: String
+                scenario.onActivity {
+                    message = it.getString(R.string.search_no_sources_selected)
+                    ok = it.getString(R.string.ui_ok)
                 }
-                assertTrue(dialog.isShowing)
-                assertEquals(activity.getString(R.string.search_no_sources_selected),
-                    dialog.findViewById<TextView>(android.R.id.message)?.text)
-                assertTrue(session(activity).state.value.results.isEmpty())
-                dialog.dismiss()
+                val automation = instrumentation.uiAutomation
+                automation.executeAndWaitForEvent(
+                    { submitSearch(scenario) },
+                    { event ->
+                        val appWindow = event.packageName?.toString() == context.packageName
+                        appWindow && (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED)
+                    },
+                    5_000L,
+                )
+                val dialog = requireNotNull(automation.rootInActiveWindow)
+                assertTrue(dialog.findAccessibilityNodeInfosByText(message).any { it.text.toString() == message })
+                val button = dialog.findAccessibilityNodeInfosByText(ok)
+                    .single { it.isClickable && it.text.toString() == ok }
+                assertTrue(button.performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                completeRequests()
+                assertTrue(access.searchedQueries.isEmpty())
             }
             assertDialog()
             scenario.recreate()
@@ -83,684 +124,704 @@ class LyricsSearchInstrumentedTest {
         }
     }
 
-    @Test fun manualJniRejectsUnknownProviderAndMissingCredentialsWithoutNetwork() {
-        val request=JSONObject().put("operation","search").put("provider","unknown")
-            .put("track",JSONObject().put("id","").put("title","Song").put("artist","Artist").put("album","").put("duration_ms",200000))
-        val unknown=JSONObject(ManualLyricsNative.requestJson(request.toString(),"",0))
+    @Test
+    fun manualJniRejectsUnknownProviderAndMissingCredentialsWithoutNetwork() {
+        val track = JSONObject().put("id", "").put("title", "Song").put("artist", "Artist")
+            .put("album", "").put("duration_ms", 200_000)
+        val request = JSONObject().put("operation", "search").put("provider", "unknown").put("track", track)
+        val unknown = JSONObject(ManualLyricsNative.requestJson(request.toString(), "", 0))
         assertFalse(unknown.getBoolean("ok"))
-        assertEquals("ParseError",unknown.getString("error_type"))
-        request.put("provider","spicy")
-        val credentials=JSONObject(ManualLyricsNative.requestJson(request.toString(),"",0))
-        assertEquals("NeedCredential",credentials.getString("error_type"))
+        assertEquals("ParseError", unknown.getString("error_type"))
+        request.put("provider", "spicy")
+        val credentials = JSONObject(ManualLyricsNative.requestJson(request.toString(), "", 0))
+        assertFalse(credentials.getBoolean("ok"))
+        assertEquals("NeedCredential", credentials.getString("error_type"))
     }
-    @Test fun searchWindowRetainsEditedQueryAcrossRecreation() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val intent=Intent(context,LyricsSearchActivity::class.java)
-            .putExtra("search.title","Original song").putExtra("search.artist","Original artist")
-            .putExtra("search.album","Album").putExtra("search.duration",200000L)
-        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-            instrumentation.waitForIdleSync()
+
+    @Test
+    fun searchWindowRetainsEditedQueryAcrossRecreation() {
+        launchSearch("Original song", "Original artist", "Album", 200_000L).use { scenario ->
             scenario.onActivity { activity ->
-                val views=descendants(activity.findViewById(android.R.id.content))
-                val fields=views.filterIsInstance<EditText>()
-                assertEquals("Original song",fields[0].text.toString())
+                val fields = views(activity).filterIsInstance<EditText>()
+                assertEquals("Original song", fields[0].text.toString())
                 fields[0].setText("Edited query")
                 fields[1].setText("Edited artist")
             }
             scenario.recreate()
-            instrumentation.waitForIdleSync()
             scenario.onActivity { activity ->
-                val views=descendants(activity.findViewById(android.R.id.content))
-                val fields=views.filterIsInstance<EditText>()
-                assertEquals("Edited query",fields[0].text.toString())
-                assertEquals("Edited artist",fields[1].text.toString())
-                assertTrue(views.filterIsInstance<TextView>().any { it.text.toString().contains("Original song") })
-                assertTrue("Search must remain enabled with an edited query and a configured source",
-                    views.filterIsInstance<TextView>().any { it.text.toString()==activity.getString(R.string.search_regular_search) && it.isEnabled })
+                val fields = views(activity).filterIsInstance<EditText>()
+                assertEquals("Edited query", fields[0].text.toString())
+                assertEquals("Edited artist", fields[1].text.toString())
+                assertTrue(texts(activity).any { it.text.toString().contains("Original song") })
+                assertTrue(texts(activity).any {
+                    it.text == activity.getString(R.string.search_regular_search) && it.isEnabled
+                })
             }
-            for (orientation in listOf(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE, ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)) {
+            for ((orientation, expected) in listOf(
+                ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE to Configuration.ORIENTATION_LANDSCAPE,
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT to Configuration.ORIENTATION_PORTRAIT,
+            )) {
                 scenario.onActivity { it.requestedOrientation = orientation }
-                val expected = if (orientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE)
-                    Configuration.ORIENTATION_LANDSCAPE else Configuration.ORIENTATION_PORTRAIT
-                var ready = false
-                val deadline = SystemClock.uptimeMillis() + 5000
-                while (!ready && SystemClock.uptimeMillis() < deadline) {
-                    instrumentation.waitForIdleSync()
-                    scenario.onActivity { ready = it.resources.configuration.orientation == expected }
-                    if (!ready) SystemClock.sleep(100)
+                awaitUi("Orientation did not settle") {
+                    it.resources.configuration.orientation == expected && it.window.decorView.hasWindowFocus()
                 }
-                assertTrue("Orientation did not settle", ready)
                 scenario.onActivity { activity ->
-                    val fields = descendants(activity.findViewById(android.R.id.content)).filterIsInstance<EditText>()
+                    val fields = views(activity).filterIsInstance<EditText>()
                     assertEquals("Edited query", fields[0].text.toString())
+                    assertEquals("Edited artist", fields[1].text.toString())
                 }
             }
-            // Surface rotation animations finish after the Activity reports its new configuration.
-            SystemClock.sleep(700)
-            instrumentation.waitForIdleSync()
-            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-                PlatformTestStorageRegistry.getInstance().openOutputFile("manual-search.png").use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG,100,it)
-                }
-                bitmap.recycle()
-            }
+            saveScreenshot("manual-search.png")
         }
     }
-    @Test fun appleCandidateAndWordTranslationPreviewSurviveRecreation() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
-        LyricsSettingsStore.setPlainLyricsSearchSources(context, listOf(PlainLyricsSearchSource.APPLE))
-        val song = SongIdentity("Apple manual preview", "Artist", "Album", 200000)
-        val candidate = LyricsCandidate(PlainLyricsSearchSource.APPLE, "42", song, 0.9, "tr")
+
+    @Test
+    fun appleCandidateAndWordTranslationPreviewSurviveRecreation() {
+        val source = PlainLyricsSearchSource.APPLE
+        setSources(source)
+        val song = SongIdentity("Apple manual preview", "Artist", "Album", 200_000)
+        val candidate = LyricsCandidate(source, "42", song, 0.9, "tr")
         val raw = """{"ok":true,"id":"42","lrc":"[00:01.00]Hello","translated_lrc":"[00:01.00]你好",
             "word_by_word":[{"start_ms":1000,"end_ms":2000,"text":"Hello","translated_text":"你好",
             "segments":[{"text":"Hello","start_ms":1000,"end_ms":2000}]}]}"""
-        val search = com.andsi.airlyrics.lyrics.search.ManualLyricsSearch(context) { _, _ -> raw }
-        val result = search.fetch(candidate, song, com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken(song.storageKey(), 1))
-            as com.andsi.airlyrics.lyrics.search.ManualLyricsFetchResult.Available
-        val intent = Intent(context, LyricsSearchActivity::class.java)
-            .putExtra("search.title", song.title).putExtra("search.artist", song.artist)
-        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val session = session(activity)
-                assertTrue(session.sourceOrder.contains(PlainLyricsSearchSource.APPLE))
-                state(session).value = session.state.value.copy(
-                    results = mapOf(PlainLyricsSearchSource.APPLE to SourceResults(candidates = listOf(candidate))),
-                    previewCandidate = candidate, preview = SearchPreview(candidate, result.lyrics)
-                )
+        access.candidates = mapOf(source to listOf(candidate))
+        val search = ManualLyricsSearch(context) { _, _ -> raw }
+        access.preview = search::fetch
+
+        launchSearch(song.title, song.artist).use { scenario ->
+            submitSearch(scenario)
+            completeRequests()
+            selectCandidate(scenario, song.title)
+            completeRequests()
+            awaitUi("Apple word-timed preview did not appear") {
+                hasText(it, R.string.search_word_lyrics)
             }
-            instrumentation.waitForIdleSync()
             scenario.recreate()
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                assertEquals("tr", session(activity).state.value.previewCandidate?.storefront)
-                val texts = descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
-                assertTrue(texts.any { it.text == activity.getString(R.string.search_word_lyrics) })
-                assertTrue(texts.any { it.text.toString().contains("你好") })
-                assertTrue(texts.any { it.text == activity.getString(R.string.search_apply_current) && it.isEnabled })
+            awaitUi("Apple translation did not survive recreation") { activity ->
+                texts(activity).any { it.isShown && it.text.toString().contains("你好") } &&
+                    hasText(activity, R.string.search_word_lyrics)
             }
+            assertEquals(listOf(candidate), access.fetchedCandidates)
+            clickAction(scenario, R.string.search_apply_current)
+            completeRequests()
+            val applied = access.appliedLyrics.single()
+            assertEquals("Hello", applied.wordByWordLines.single().text)
+            assertTrue(applied.translatedLrc.orEmpty().contains("你好"))
         }
     }
 
-    @Test fun resultStatusesAllowSwipeToExpandSearchControls() {
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
-        val source = PlainLyricsSearchSource.NETEASE
-        val states = listOf(
-            "loading" to SourceResults(loading = true),
-            "empty" to SourceResults(),
-            "error" to SourceResults(error = IllegalStateException("offline"))
-        )
-        ActivityScenario.launch<LyricsSearchActivity>(
-            Intent(context, LyricsSearchActivity::class.java).putExtra("search.title", "Song")
-        ).use { scenario ->
+    @Test
+    fun resultStatusesAllowSwipeToExpandSearchControls() {
+        launchSearch().use { scenario ->
             scenario.onActivity { activity ->
                 WindowCompat.getInsetsController(activity.window, activity.window.decorView)
                     .hide(WindowInsetsCompat.Type.ime())
             }
-            for ((name, result) in states) {
-                scenario.onActivity { activity ->
-                    val session = session(activity)
-                    state(session).value = session.state.value.copy(results = mapOf(source to result))
+            for (status in listOf("loading", "empty", "error")) {
+                access.searchFailure = IllegalStateException("offline").takeIf { status == "error" }
+                submitSearch(scenario)
+                if (status != "loading") completeRequests()
+                awaitUi("The $status results page did not appear") { activity ->
+                    appBar(activity).bottom == 0 && when (status) {
+                        "loading" -> shownLoadingViews(activity) > 0
+                        "empty" -> hasText(activity, R.string.search_empty)
+                        else -> hasText(activity, R.string.search_failed)
+                    }
                 }
-                instrumentation.waitForIdleSync()
-                SystemClock.sleep(250)
                 for (startFraction in listOf(.25f, .05f)) {
-                    scenario.onActivity { activity ->
-                        val views = descendants(activity.findViewById(android.R.id.content))
-                        views.filterIsInstance<com.google.android.material.appbar.AppBarLayout>()
-                            .single().setExpanded(false, false)
-                    }
-                    instrumentation.waitForIdleSync()
-                    var swipe: Triple<Float, Float, Float>? = null
-                    scenario.onActivity { activity ->
-                        val views = descendants(activity.findViewById(android.R.id.content))
-                        val pager = views.filterIsInstance<ViewPager2>().single()
-                        val bounds = Rect()
-                        assertTrue("$name pager is not visible", pager.getGlobalVisibleRect(bounds))
-                        swipe = Triple(bounds.exactCenterX(), bounds.top + bounds.height() * startFraction,
-                            bounds.top + bounds.height() * .85f)
-                    }
-                    val (x, startY, endY) = requireNotNull(swipe)
-                    val downTime = SystemClock.uptimeMillis()
-                    for (step in 0..20) {
-                        val event = android.view.MotionEvent.obtain(downTime, SystemClock.uptimeMillis(),
-                            when (step) {
-                                0 -> android.view.MotionEvent.ACTION_DOWN
-                                20 -> android.view.MotionEvent.ACTION_UP
-                                else -> android.view.MotionEvent.ACTION_MOVE
-                            }, x, startY + (endY - startY) * step / 20, 0)
-                        instrumentation.sendPointerSync(event)
-                        event.recycle()
-                        SystemClock.sleep(20)
-                    }
-                    instrumentation.waitForIdleSync()
-                    scenario.onActivity { activity ->
-                        val appBar = descendants(activity.findViewById(android.R.id.content))
-                            .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
-                        assertEquals("$name swipe from $startFraction did not expand the search controls", 0, appBar.top)
+                    scenario.onActivity { appBar(it).setExpanded(false, false) }
+                    awaitUi("Search controls did not collapse") { appBar(it).bottom == 0 }
+                    swipeDownInPager(startFraction, .85f)
+                    awaitUi("$status swipe from $startFraction did not expand the search controls") {
+                        appBar(it).top == 0
                     }
                 }
             }
         }
     }
 
-    @Test fun sourcePagesAndEmptyPreviewSurviveRecreation() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val intent=Intent(context,LyricsSearchActivity::class.java)
-            .putExtra("search.title","Original song").putExtra("search.artist","Artist")
-        val first=PlainLyricsSearchSource.NETEASE
-        val second=PlainLyricsSearchSource.LRCLIB
-        val a=LyricsCandidate(first,"42",SongIdentity("NetEase candidate","Artist","",200000),1.0)
-        val previewSong=SongIdentity("LRCLIB candidate ".repeat(8).trim(),"Artist","",200000)
-        val b=LyricsCandidate(second,"42",previewSong.copy(album=previewSong.title),1.0)
-        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val session=session(activity)
-                LyricsSearchActivity::class.java.getDeclaredField("pendingSourceFocus").apply {
-                    isAccessible=true
-                }.setBoolean(activity,true)
-                state(session).value=session.state.value.copy(results=linkedMapOf(
-                    first to SourceResults(candidates=listOf(a)),
-                    second to SourceResults(candidates=listOf(b))
-                ))
+    @Test
+    fun sourcePagesAndEmptyPreviewSurviveRecreation() {
+        val first = PlainLyricsSearchSource.NETEASE
+        val second = PlainLyricsSearchSource.LRCLIB
+        setSources(first, second)
+        val previewTitle = "LRCLIB candidate ".repeat(8).trim()
+        val previewSong = SongIdentity(previewTitle, "Artist", previewTitle, 200_000)
+        access.candidates = mapOf(
+            first to listOf(candidate(first, "NetEase candidate")),
+            second to listOf(LyricsCandidate(second, "42", previewSong, 1.0)),
+        )
+        launchSearch("Original song", "Artist").use { scenario ->
+            submitSearch(scenario)
+            completeRequests()
+            awaitUi("Source navigation must reach the top") { activity ->
+                appBar(activity).bottom == 0 && pager(activity).adapter?.itemCount == 2
             }
-            instrumentation.waitForIdleSync()
-            SystemClock.sleep(700)
-            scenario.onActivity { activity ->
-                val appBar=descendants(activity.findViewById(android.R.id.content))
-                    .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
-                assertEquals("Source navigation must reach the top",0,appBar.bottom)
-                val pager=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<ViewPager2>().single()
-                assertEquals(2,pager.adapter!!.itemCount)
-                pager.setCurrentItem(1,false)
-            }
-            instrumentation.waitForIdleSync()
+            scenario.onActivity { activity -> requireNotNull(tabs(activity).getTabAt(1)).select() }
+            awaitUi("Second source did not settle") { secondSourceIsSelected(it) }
             scenario.recreate()
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                val pager=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<ViewPager2>().single()
-                assertEquals(1,pager.currentItem)
-                val session=session(activity)
-                state(session).value=session.state.value.copy(previewCandidate=b)
-            }
-            instrumentation.waitForIdleSync()
+            awaitUi("Second source did not survive recreation") { secondSourceIsSelected(it) }
+            selectCandidate(scenario, previewTitle)
+            completeRequests()
+            awaitUi("Empty preview did not appear") { hasText(it, R.string.search_no_content) }
+
             scenario.recreate()
-            instrumentation.waitForIdleSync()
+            awaitUi("Empty preview did not survive recreation") { hasText(it, R.string.search_no_content) }
             scenario.onActivity { activity ->
-                val texts=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
-                val title=texts.single { it.isShown && it.text.toString()==b.song.title }
-                assertFalse(texts.any { it!==title && it.isShown && it.text.toString().contains(b.song.title) })
-                assertFalse(texts.any { it.isShown && it.text==activity.getString(R.string.search_lyrics) })
+                val texts = texts(activity)
+                val title = texts.single { it.isShown && it.text.toString() == previewTitle }
+                assertFalse(texts.any { it !== title && it.isShown && it.text.toString().contains(previewTitle) })
+                assertFalse(hasText(activity, R.string.search_lyrics))
                 assertFalse(texts.any { it.isShown && it.text.toString().contains("Original song") })
-                val titleScroll=title.parent as android.widget.HorizontalScrollView
+                val titleScroll = title.parent as HorizontalScrollView
                 assertTrue(titleScroll.canScrollHorizontally(1))
-                titleScroll.scrollTo(title.width,0)
-                assertTrue(titleScroll.scrollX>0)
-                assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_no_content) })
-                assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_apply_current) && !it.isEnabled })
-                val back=descendants(activity.findViewById(android.R.id.content))
-                    .single { it.contentDescription==activity.getString(R.string.search_back) }
-                assertTrue(back is android.widget.ImageButton)
-                back.performClick()
+                titleScroll.scrollTo(title.width, 0)
+                assertTrue(titleScroll.scrollX > 0)
+                assertTrue(texts.any { it.isShown && it.text == activity.getString(R.string.search_apply_current) && !it.isEnabled })
+                val back = backButton(activity)
+                assertTrue(back is ImageButton)
+                assertTrue(back.performClick())
                 assertFalse(activity.isFinishing)
             }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                val pager=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<ViewPager2>().single()
-                assertTrue(pager.isShown)
-                assertEquals(1,pager.currentItem)
-                assertTrue(descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>().any {
-                    it.text==activity.getString(R.string.search_lyrics)
-                })
-                val appBar=descendants(activity.findViewById(android.R.id.content))
-                    .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
-                assertEquals(0,appBar.bottom)
+            awaitUi("Back did not restore the previously selected source and collapsed search controls") {
+                secondSourceIsSelected(it) && hasText(it, R.string.search_lyrics) && appBar(it).bottom == 0
             }
-            // Input events are targeted at this app's UID. The injection point must
-            // remain inside the visible pager, clear of the IME and system bars.
             scenario.onActivity { activity ->
                 WindowCompat.getInsetsController(activity.window, activity.window.decorView)
                     .hide(WindowInsetsCompat.Type.ime())
             }
-            var swipe: Triple<Float, Float, Float>? = null
-            val focusDeadline = SystemClock.uptimeMillis() + 10_000L
-            while (swipe == null && SystemClock.uptimeMillis() < focusDeadline) {
-                scenario.onActivity { activity ->
-                    val decor = activity.window.decorView
-                    val insets = ViewCompat.getRootWindowInsets(decor)
-                    val pager = descendants(activity.findViewById(android.R.id.content))
-                        .filterIsInstance<ViewPager2>().single()
-                    val pagerBounds = Rect()
-                    val windowBounds = Rect()
-                    if (decor.hasWindowFocus() && pager.isShown && !pager.isLayoutRequested &&
-                        insets?.isVisible(WindowInsetsCompat.Type.ime()) != true &&
-                        pager.getGlobalVisibleRect(pagerBounds) && decor.getGlobalVisibleRect(windowBounds)) {
-                        val bars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
-                        val top = maxOf(pagerBounds.top, windowBounds.top + (bars?.top ?: 0))
-                        val bottom = minOf(pagerBounds.bottom, windowBounds.bottom - (bars?.bottom ?: 0))
-                        if (bottom - top >= 120) {
-                            swipe = Triple(pagerBounds.exactCenterX(),
-                                top + (bottom - top) * .30f, top + (bottom - top) * .80f)
-                        }
-                    }
-                }
-                if (swipe == null) SystemClock.sleep(50)
+            swipeDownInPager(.30f, .80f)
+            awaitUi("Source pager swipe did not expand the search controls") { activity ->
+                appBar(activity).top == 0 &&
+                    descendants(appBar(activity)).filterIsInstance<EditText>().take(2).all { it.isShown }
             }
-            val (x, startY, endY) = requireNotNull(swipe) {
-                "LyricsSearch pager did not gain a focused, unobscured touch region"
-            }
-            val downTime=SystemClock.uptimeMillis()
-            for(step in 0..20) {
-                val action=when(step) {
-                    0 -> android.view.MotionEvent.ACTION_DOWN
-                    20 -> android.view.MotionEvent.ACTION_UP
-                    else -> android.view.MotionEvent.ACTION_MOVE
-                }
-                val event=android.view.MotionEvent.obtain(downTime,SystemClock.uptimeMillis(),action,
-                    x,startY+(endY-startY)*step/20,0)
-                try {
-                    instrumentation.sendPointerSync(event)
-                } catch (failure: Throwable) {
-                    diagnostics.captureNow(failure)
-                    throw failure
-                } finally {
-                    event.recycle()
-                }
-                SystemClock.sleep(20)
-            }
-            instrumentation.waitForIdleSync()
-            var expanded = false
-            val expansionDeadline = SystemClock.uptimeMillis() + 5_000L
-            while (!expanded && SystemClock.uptimeMillis() < expansionDeadline) {
-                scenario.onActivity { activity ->
-                    val appBar=descendants(activity.findViewById(android.R.id.content))
-                        .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
-                    expanded = appBar.top == 0 &&
-                        descendants(appBar).filterIsInstance<EditText>().take(2).all { it.isShown }
-                }
-                if (!expanded) SystemClock.sleep(50)
-            }
-            assertTrue("Source pager swipe did not expand the search controls", expanded)
-            scenario.onActivity { activity ->
-                val appBar=descendants(activity.findViewById(android.R.id.content))
-                    .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
-                assertEquals(0,appBar.top)
-                assertTrue(descendants(appBar).filterIsInstance<EditText>().take(2).all { it.isShown })
-                appBar.setExpanded(false,false)
-            }
-            instrumentation.waitForIdleSync()
-            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-                PlatformTestStorageRegistry.getInstance().openOutputFile("manual-source-pages.png").use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG,100,it)
-                }
-                bitmap.recycle()
-            }
+            scenario.onActivity { appBar(it).setExpanded(false, false) }
+            awaitUi("Search controls did not collapse") { appBar(it).bottom == 0 }
+            saveScreenshot("manual-source-pages.png")
         }
     }
-    @Test fun unavailableReasonsAreDistinctAndSurviveRecreation() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val candidate=LyricsCandidate(PlainLyricsSearchSource.NETEASE,"42",SongIdentity("Song","Artist","",200000),1.0)
-        val messages=mapOf(
+
+    @Test
+    fun unavailableReasonsAreDistinctAndSurviveRecreation() {
+        val source = PlainLyricsSearchSource.NETEASE
+        val candidate = candidate(source, "Candidate")
+        access.candidates = mapOf(source to listOf(candidate))
+        val messages = linkedMapOf(
             LyricsUnavailableReason.SOURCE_EMPTY to R.string.search_source_empty,
             LyricsUnavailableReason.INSTRUMENTAL to R.string.search_no_content,
-            LyricsUnavailableReason.NO_TIMELINE to R.string.search_no_timeline,
             LyricsUnavailableReason.UNSUPPORTED_FORMAT to R.string.search_unsupported_format,
             LyricsUnavailableReason.NO_USABLE_LINES to R.string.search_no_usable_lines,
-            LyricsUnavailableReason.UNKNOWN to R.string.search_no_content
+            LyricsUnavailableReason.UNKNOWN to R.string.search_no_content,
+            LyricsUnavailableReason.NO_TIMELINE to R.string.search_no_timeline,
         )
-        ActivityScenario.launch<LyricsSearchActivity>(Intent(context,LyricsSearchActivity::class.java).putExtra("search.title","Song")).use { scenario ->
-            for ((reason,message) in messages) {
+        launchSearch().use { scenario ->
+            submitSearch(scenario)
+            completeRequests()
+            for ((index, entry) in messages.entries.withIndex()) {
+                val (reason, message) = entry
+                access.preview = { _, _, _ -> ManualLyricsFetchResult.Unavailable(reason) }
+                if (index == 0) selectCandidate(scenario, candidate.song.title)
+                else clickAction(scenario, R.string.search_retry)
+                completeRequests()
+                awaitUi("Unavailable message did not appear for $reason") { hasText(it, message) }
                 scenario.onActivity { activity ->
-                    val session=session(activity)
-                    state(session).value=session.state.value.copy(previewCandidate=candidate,previewUnavailableReason=reason)
+                    assertFalse(messages.values.filter { it != message }.any { hasText(activity, it) })
+                    assertTrue(texts(activity).any {
+                        it.isShown && it.text == activity.getString(R.string.search_apply_current) && !it.isEnabled
+                    })
                 }
-                instrumentation.waitForIdleSync()
-                scenario.onActivity { activity ->
-                    val texts=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
-                    assertTrue(texts.any { it.isShown && it.text==activity.getString(message) })
-                    assertFalse(messages.values.filter { it!=message }.any { other -> texts.any { it.isShown && it.text==activity.getString(other) } })
-                    assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_apply_current) && !it.isEnabled })
-                }
-            }
-            scenario.onActivity { activity ->
-                val session=session(activity)
-                state(session).value=session.state.value.copy(previewUnavailableReason=LyricsUnavailableReason.NO_TIMELINE)
             }
             scenario.recreate()
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                val texts=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<TextView>()
-                assertTrue(texts.any { it.isShown && it.text==activity.getString(R.string.search_no_timeline) })
-                session(activity).backToResults()
-            }
-            instrumentation.waitForIdleSync()
-            var unavailableVisible=true
-            val exitDeadline=SystemClock.uptimeMillis()+2_000L
-            while(unavailableVisible && SystemClock.uptimeMillis()<exitDeadline) {
-                scenario.onActivity { activity ->
-                    assertNull(session(activity).state.value.previewUnavailableReason)
-                    unavailableVisible=descendants(activity.findViewById(android.R.id.content))
-                        .filterIsInstance<TextView>().any {
-                            it.isShown && it.text==activity.getString(R.string.search_no_timeline)
-                        }
-                }
-                if(unavailableVisible) SystemClock.sleep(25)
-            }
-            assertFalse(unavailableVisible)
-        }
-    }
-
-    @Test fun loadingMotionReplacesTextAndClearsWhenPreviewFails() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val intent=Intent(context,LyricsSearchActivity::class.java).putExtra("search.title","Song")
-        val source=PlainLyricsSearchSource.NETEASE
-        val candidate=LyricsCandidate(source,"42",SongIdentity("Song","Artist","Song",200000),1.0)
-        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val session=session(activity)
-                state(session).value=session.state.value.copy(results=mapOf(source to SourceResults(loading=true)))
-            }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                val views=descendants(activity.findViewById(android.R.id.content))
-                assertTrue(views.filterIsInstance<LyricsLoadingView>().any { it.isShown })
-                assertFalse(views.filterIsInstance<TextView>().any { it.isShown && it.text==activity.getString(R.string.ui_loading) })
-                val session=session(activity)
-                state(session).value=session.state.value.copy(
-                    results=mapOf(source to SourceResults(candidates=listOf(candidate))),
-                    previewCandidate=candidate,previewLoading=true
-                )
-            }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                val views=descendants(activity.findViewById(android.R.id.content))
-                assertEquals(1,views.filterIsInstance<LyricsLoadingView>().count { it.isShown })
-            }
-            SystemClock.sleep(450)
-            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-                PlatformTestStorageRegistry.getInstance().openOutputFile("manual-lyrics-loading.png").use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG,100,it)
-                }
-                bitmap.recycle()
-            }
-            scenario.onActivity { activity ->
-                val session=session(activity)
-                state(session).value=session.state.value.copy(previewLoading=false,error=IllegalStateException("offline"))
-            }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                val views=descendants(activity.findViewById(android.R.id.content))
-                assertFalse(views.filterIsInstance<LyricsLoadingView>().any { it.isShown })
-                assertTrue(views.filterIsInstance<TextView>().any { it.isShown && it.text==activity.getString(R.string.search_failed) })
-                assertFalse(activity.isFinishing)
+            awaitUi("Unavailable reason did not survive recreation") { hasText(it, R.string.search_no_timeline) }
+            scenario.onActivity { assertTrue(backButton(it).performClick()) }
+            awaitUi("Leaving preview did not clear the unavailable message") {
+                !hasText(it, R.string.search_no_timeline) && hasText(it, R.string.search_lyrics)
             }
         }
     }
 
-    @Test fun backFromResultsExpandsQueryBeforeLeavingSearch() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val intent=Intent(context,LyricsSearchActivity::class.java).putExtra("search.title","Original")
-        val source=PlainLyricsSearchSource.LRCLIB
-        val candidate=LyricsCandidate(source,"42",SongIdentity("Candidate","Artist","",200000),1.0)
-        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-            scenario.onActivity { activity ->
-                val session=session(activity)
-                session.editQuery("Edited query","Artist","")
-                state(session).value=session.state.value.copy(
-                    results=mapOf(source to SourceResults(candidates=listOf(candidate))),
-                    submittedQuery=session.state.value.query
-                )
+    @Test
+    fun loadingMotionReplacesTextAndClearsWhenPreviewFails() {
+        val source = PlainLyricsSearchSource.NETEASE
+        val candidate = candidate(source, "Candidate")
+        access.candidates = mapOf(source to listOf(candidate))
+        access.preview = { _, _, _ -> error("offline") }
+        launchSearch().use { scenario ->
+            submitSearch(scenario)
+            awaitUi("Search loading indicator did not appear") {
+                shownLoadingViews(it) > 0
             }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                descendants(activity.findViewById(android.R.id.content))
-                    .filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single().setExpanded(false,false)
+            scenario.onActivity { assertFalse(hasText(it, R.string.ui_loading)) }
+            completeRequests()
+            selectCandidate(scenario, candidate.song.title)
+            awaitUi("Preview did not show a single loading indicator") {
+                shownLoadingViews(it) == 1
             }
-            instrumentation.waitForIdleSync()
+            saveScreenshot("manual-lyrics-loading.png")
+            completeRequests()
+            awaitUi("Preview failure did not replace its loading indicator") {
+                shownLoadingViews(it) == 0 && hasText(it, R.string.search_failed)
+            }
+            scenario.onActivity { assertFalse(it.isFinishing) }
+        }
+    }
+
+    @Test
+    fun backFromResultsExpandsQueryBeforeLeavingSearch() {
+        val source = PlainLyricsSearchSource.LRCLIB
+        setSources(source)
+        val candidate = candidate(source, "Candidate")
+        access.candidates = mapOf(source to listOf(candidate))
+        launchSearch("Original", "Artist").use { scenario ->
             scenario.onActivity { activity ->
-                assertTrue(session(activity).resultsScroll>0)
+                views(activity).filterIsInstance<EditText>().first().setText("Edited query")
+            }
+            submitSearch(scenario)
+            completeRequests()
+            awaitUi("Search did not show collapsed results") {
+                appBar(it).bottom == 0 && texts(it).any { view -> view.isShown && view.text == candidate.song.title }
+            }
+            assertEquals(listOf(source to "Edited query"), access.searchedQueries)
+            scenario.onActivity { activity ->
                 activity.onBackPressedDispatcher.onBackPressed()
                 assertFalse(activity.isFinishing)
-                activity.onBackPressedDispatcher.onBackPressed()
-                assertFalse(activity.isFinishing)
             }
-            SystemClock.sleep(700)
-            instrumentation.waitForIdleSync()
+            awaitUi("Back did not expand the search controls") { appBar(it).top == 0 }
             scenario.onActivity { activity ->
-                val views=descendants(activity.findViewById(android.R.id.content))
-                val appBar=views.filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single()
-                assertEquals(0,appBar.top)
-                assertEquals("Edited query",views.filterIsInstance<EditText>().first().text.toString())
-                assertEquals(source,session(activity).activeSource)
-                assertEquals(listOf(candidate),session(activity).state.value.results[source]!!.candidates)
+                assertEquals("Edited query", views(activity).filterIsInstance<EditText>().first().text.toString())
+                assertTrue(texts(activity).any { it.isShown && it.text == candidate.song.title })
             }
             scenario.recreate()
-            instrumentation.waitForIdleSync()
+            awaitUi("Expanded search controls did not survive recreation") { appBar(it).top == 0 }
             scenario.onActivity { activity ->
-                val views=descendants(activity.findViewById(android.R.id.content))
-                assertEquals(0,views.filterIsInstance<com.google.android.material.appbar.AppBarLayout>().single().top)
-                views.single { it.contentDescription==activity.getString(R.string.search_back) }.performClick()
+                assertTrue(backButton(activity).performClick())
                 assertTrue(activity.isFinishing)
             }
         }
     }
 
-    @Test fun sourceSheetKeepsDraftAcrossRotationAndOnlyCommitsOnConfirm() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val original=LyricsSettingsStore.getPlainLyricsSearchSources(context)
-        val initial=setOf(PlainLyricsSearchSource.NETEASE)
-        val added=PlainLyricsSearchSource.LRCLIB
-        val intent=Intent(context,LyricsSearchActivity::class.java).putExtra("search.title","Song")
-        try {
-            LyricsSettingsStore.setPlainLyricsSearchSources(context,initial.toList())
-            ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-                scenario.onActivity { activity ->
-                    assertEquals(initial,session(activity).state.value.sources)
-                    LyricsSourcesSheet.create(initial).showNow(activity.supportFragmentManager,LyricsSourcesSheet.TAG)
-                    val sheet=activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as LyricsSourcesSheet
-                    descendants(sheet.requireDialog().window!!.decorView).single {
-                        it.contentDescription==activity.localizedPlainLyricsProviderName(added.key)
-                    }.performClick()
-                    assertEquals(initial,session(activity).state.value.sources)
-                }
-                scenario.recreate()
-                instrumentation.waitForIdleSync()
-                scenario.onActivity { activity ->
-                    val sheet=activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as LyricsSourcesSheet
-                    val morph=descendants(sheet.requireDialog().window!!.decorView)
-                        .filterIsInstance<LyricsSourcesMorphView>().single()
-                    assertTrue(morph.panelBounds.width()>morph.capsuleBounds.width())
-                    assertEquals(morph.capsuleBounds.right,morph.panelBounds.right,0.01f)
-                    val views=descendants(sheet.requireDialog().window!!.decorView)
-                    assertTrue(views.single { it.contentDescription==activity.localizedPlainLyricsProviderName(added.key) }.isSelected)
-                    assertEquals(initial,session(activity).state.value.sources)
-                }
-                SystemClock.sleep(500)
-                instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-                    PlatformTestStorageRegistry.getInstance().openOutputFile("manual-source-picker.png").use {
-                        bitmap.compress(Bitmap.CompressFormat.PNG,100,it)
-                    }
-                    bitmap.recycle()
-                }
-                scenario.onActivity { activity ->
-                    val sheet=activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as LyricsSourcesSheet
-                    descendants(sheet.requireDialog().window!!.decorView).filterIsInstance<TextView>().single {
-                        it.text==activity.getString(R.string.search_sources_use,2)
-                    }.performClick()
-                    assertEquals(initial+added,session(activity).state.value.sources)
-                }
-                instrumentation.waitForIdleSync()
-                SystemClock.sleep(400)
-                scenario.onActivity { activity ->
-                    LyricsSourcesSheet.create(initial+added).showNow(activity.supportFragmentManager,LyricsSourcesSheet.TAG)
-                    val sheet=activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as LyricsSourcesSheet
-                    val views=descendants(sheet.requireDialog().window!!.decorView)
-                    for(source in initial+added) {
-                        views.single { it.contentDescription==activity.localizedPlainLyricsProviderName(source.key) }.performClick()
-                    }
-                    assertFalse(views.filterIsInstance<TextView>().single {
-                        it.text==activity.getString(R.string.search_sources_use,0)
-                    }.isEnabled)
-                    sheet.dismissNow()
-                    assertEquals(initial+added,session(activity).state.value.sources)
-                }
+    @Test
+    fun sourceSheetKeepsDraftAcrossRotationAndOnlyCommitsOnConfirm() {
+        val initial = PlainLyricsSearchSource.NETEASE
+        val added = PlainLyricsSearchSource.LRCLIB
+        launchSearch().use { scenario ->
+            scenario.onActivity { activity ->
+                assertSourceCount(activity, 1)
+                openSourceSheet(activity)
+                val row = sourceRow(activity, added)
+                assertFalse(row.isSelected)
+                assertTrue(row.performClick())
+                assertSourceCount(activity, 1)
             }
-            ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-                scenario.onActivity { activity -> assertEquals(initial,session(activity).state.value.sources) }
+            scenario.recreate()
+            awaitUi("Source sheet did not restore its draft and bounds") { activity ->
+                val dialog = sourceSheet(activity)?.dialog
+                val morph = dialog?.window?.decorView?.let(::descendants)
+                    ?.filterIsInstance<LyricsSourcesMorphView>()?.singleOrNull()
+                morph != null && morph.panelBounds.width() > morph.capsuleBounds.width()
             }
-            LyricsSettingsStore.setPlainLyricsSearchSources(context,listOf(PlainLyricsSearchSource.SPICY))
-            ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
-                scenario.onActivity { activity ->
-                    assertEquals(setOf(PlainLyricsSearchSource.SPICY),session(activity).state.value.sources)
+            scenario.onActivity { activity ->
+                val morph = sheetViews(activity).filterIsInstance<LyricsSourcesMorphView>().single()
+                assertTrue(morph.panelBounds.width() > morph.capsuleBounds.width())
+                assertEquals(morph.capsuleBounds.right, morph.panelBounds.right, 0.01f)
+                assertTrue(sourceRow(activity, added).isSelected)
+                assertSourceCount(activity, 1)
+            }
+            saveScreenshot("manual-source-picker.png")
+            scenario.onActivity { activity ->
+                assertTrue(confirmSourcesButton(activity, 2).performClick())
+            }
+            awaitUi("Confirmed source selection did not close the sheet") { activity ->
+                sourceSheet(activity) == null &&
+                    activity.sourceCapsule()?.text.toString() == activity.getString(R.string.search_sources_count, 2)
+            }
+            scenario.onActivity { activity ->
+                openSourceSheet(activity)
+                for (source in listOf(initial, added)) {
+                    val row = sourceRow(activity, source)
+                    assertTrue(row.isSelected)
+                    assertTrue(row.performClick())
                 }
+                assertFalse(confirmSourcesButton(activity, 0).isEnabled)
+                val cancel = sheetViews(activity).single {
+                    it.contentDescription == activity.getString(R.string.ui_cancel)
+                }
+                assertTrue(cancel.performClick())
             }
-        } finally { LyricsSettingsStore.setPlainLyricsSearchSources(context,original) }
+            awaitUi("Source sheet did not close after cancel") { sourceSheet(it) == null }
+            scenario.onActivity { assertSourceCount(it, 2) }
+        }
+        launchSearch().use { scenario ->
+            scenario.onActivity { assertSourceCount(it, 1) }
+        }
+        setSources(PlainLyricsSearchSource.SPICY)
+        launchSearch().use { scenario ->
+            scenario.onActivity { activity ->
+                openSourceSheet(activity)
+                assertTrue(sourceRow(activity, PlainLyricsSearchSource.SPICY).isSelected)
+                assertFalse(sourceRow(activity, initial).isSelected)
+            }
+        }
     }
 
-    @Test fun fieldResetIconsOnlyShowForChangedFieldsAndRestoreIndependently() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val intent=Intent(context,LyricsSearchActivity::class.java)
-            .putExtra("search.title","Song").putExtra("search.artist","Artist")
-        val descriptions=listOf(R.string.search_restore_title,R.string.search_restore_artist,R.string.search_restore_album)
-        fun icons(activity:LyricsSearchActivity)=descriptions.map { description ->
-            descendants(activity.findViewById(android.R.id.content)).single { it.contentDescription==activity.getString(description) }
+    @Test
+    fun fieldResetIconsOnlyShowForChangedFieldsAndRestoreIndependently() {
+        val descriptions = listOf(R.string.search_restore_title, R.string.search_restore_artist, R.string.search_restore_album)
+        fun icons(activity: LyricsSearchActivity) = descriptions.map { description ->
+            views(activity).single { it.contentDescription == activity.getString(description) }
         }
-        ActivityScenario.launch<LyricsSearchActivity>(intent).use { scenario ->
+        launchSearch("Song", "Artist").use { scenario ->
+            scenario.onActivity { activity -> assertTrue(icons(activity).none { it.isShown }) }
+            clickAction(scenario, R.string.search_more)
+            awaitUi("More search conditions did not reveal the album field") {
+                views(it).filterIsInstance<EditText>().getOrNull(2)?.isShown == true
+            }
             scenario.onActivity { activity ->
-                assertTrue(icons(activity).none { it.isShown })
-                session(activity).toggleMore()
-                val fields=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<EditText>()
+                val fields = views(activity).filterIsInstance<EditText>()
                 fields[0].setText("Edited title")
                 fields[1].setText("Edited artist")
                 fields[2].setText("Edited album")
             }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity -> assertTrue(icons(activity).all { it.isShown && it.isEnabled }) }
-            SystemClock.sleep(400)
-            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
-                PlatformTestStorageRegistry.getInstance().openOutputFile("manual-field-resets.png").use {
-                    bitmap.compress(Bitmap.CompressFormat.PNG,100,it)
-                }
-                bitmap.recycle()
+            awaitUi("Edited fields did not show settled reset icons") {
+                icons(it).all { icon -> icon.isShown && icon.isEnabled && icon.alpha == 1f }
             }
-            scenario.onActivity { activity -> icons(activity)[1].performClick() }
-            instrumentation.waitForIdleSync()
+            saveScreenshot("manual-field-resets.png")
+            scenario.onActivity { assertTrue(icons(it)[1].performClick()) }
+            awaitUi("Artist reset did not update the field") { !icons(it)[1].isEnabled }
             scenario.onActivity { activity ->
-                val fields=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<EditText>()
-                assertEquals(listOf("Edited title","Artist","Edited album"),fields.map { it.text.toString() })
-                assertFalse(icons(activity)[1].isEnabled)
-                assertEquals(fields[1].length(),fields[1].selectionStart)
-                assertEquals(fields[1].length(),fields[1].selectionEnd)
+                val fields = views(activity).filterIsInstance<EditText>()
+                assertEquals(listOf("Edited title", "Artist", "Edited album"), fields.map { it.text.toString() })
+                assertEquals(fields[1].length(), fields[1].selectionStart)
+                assertEquals(fields[1].length(), fields[1].selectionEnd)
                 fields[0].setText("Song")
             }
-            instrumentation.waitForIdleSync()
-            SystemClock.sleep(350)
             scenario.recreate()
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                assertEquals(listOf(false,false,true),icons(activity).map { it.isShown })
-                icons(activity)[2].performClick()
+            awaitUi("Independent reset icons did not survive recreation") {
+                icons(it).map { icon -> icon.isShown } == listOf(false, false, true)
             }
-            instrumentation.waitForIdleSync()
+            scenario.onActivity { assertTrue(icons(it)[2].performClick()) }
+            awaitUi("Last reset icon did not disappear") { icons(it).none { icon -> icon.isShown } }
             scenario.onActivity { activity ->
-                val fields=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<EditText>()
-                assertEquals(listOf("Song","Artist",""),fields.map { it.text.toString() })
-                assertEquals(0,fields[2].selectionStart)
+                val fields = views(activity).filterIsInstance<EditText>()
+                assertEquals(listOf("Song", "Artist", ""), fields.map { it.text.toString() })
+                assertEquals(0, fields[2].selectionStart)
                 assertFalse(icons(activity)[2].isEnabled)
-                assertTrue(session(activity).state.value.results.isEmpty())
+                fields[0].setText("Another title")
             }
-            SystemClock.sleep(350)
+            awaitUi("Title edit did not show its reset icon") { icons(it)[0].isEnabled }
+            scenario.onActivity { assertTrue(icons(it)[0].performClick()) }
             scenario.onActivity { activity ->
-                assertTrue(icons(activity).none { it.isShown })
-                val field=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<EditText>()[0]
-                field.setText("Another title")
-            }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity -> icons(activity)[0].performClick() }
-            instrumentation.waitForIdleSync()
-            scenario.onActivity { activity ->
-                val field=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<EditText>()[0]
-                assertEquals(field.length(),field.selectionStart)
+                val field = views(activity).filterIsInstance<EditText>().first()
+                assertEquals(field.length(), field.selectionStart)
                 field.setText("Edited during dismissal")
             }
-            instrumentation.waitForIdleSync()
-            SystemClock.sleep(450)
+            awaitUi("Title reset icon did not recover from the interrupted dismissal") { activity ->
+                icons(activity)[0].run { isShown && isEnabled && alpha == 1f && scaleX == 1f }
+            }
+            assertTrue(access.searchedQueries.isEmpty())
+        }
+    }
+
+    @Test
+    fun configuredOrderIsSharedBySourceSheetAndResultPages() {
+        val order = listOf(PlainLyricsSearchSource.SPICY, PlainLyricsSearchSource.LRCLIB, PlainLyricsSearchSource.NETEASE)
+        val all = order + PlainLyricsSearchSource.MUSIXMATCH
+        setSources(*order.toTypedArray())
+        launchSearch().use { scenario ->
             scenario.onActivity { activity ->
-                assertTrue(icons(activity)[0].isShown)
-                assertTrue(icons(activity)[0].isEnabled)
-                assertEquals(1f,icons(activity)[0].alpha)
-                assertEquals(1f,icons(activity)[0].scaleX)
+                assertSourceCount(activity, 3)
+                openSourceSheet(activity)
+            }
+            scenario.recreate()
+            awaitUi("Source sheet did not restore") { sourceSheet(it)?.dialog?.isShowing == true }
+            scenario.onActivity { activity ->
+                val names = all.map { activity.localizedPlainLyricsProviderName(it.key) }
+                val views = sheetViews(activity)
+                val shownNames = views.mapNotNull { it.contentDescription?.toString()?.takeIf { name -> name in names } }
+                assertEquals(names, shownNames)
+                val first = sourceRow(activity, order.first())
+                assertTrue(first.performClick())
+                assertTrue(first.performClick())
+                assertTrue(confirmSourcesButton(activity, 3).performClick())
+            }
+            awaitUi("Source sheet did not close") { sourceSheet(it) == null }
+            submitSearch(scenario)
+            awaitUi("Result pages did not appear in configured order") { tabs(it).tabCount == order.size }
+            scenario.onActivity { assertTabOrder(it, order) }
+            completeRequests()
+            scenario.recreate()
+            awaitUi("Result pages did not survive recreation") { tabs(it).tabCount == order.size }
+            scenario.onActivity { assertTabOrder(it, order) }
+        }
+    }
+
+    private fun launchSearch(
+        title: String = "Song",
+        artist: String = "",
+        album: String = "",
+        durationMs: Long = 0L,
+    ): ActivityScenario<LyricsSearchActivity> = ActivityScenario.launch(
+        Intent(context, LyricsSearchActivity::class.java)
+            .putExtra("search.title", title)
+            .putExtra("search.artist", artist)
+            .putExtra("search.album", album)
+            .putExtra("search.duration", durationMs),
+    )
+
+    private fun submitSearch(scenario: ActivityScenario<LyricsSearchActivity>) =
+        clickAction(scenario, R.string.search_regular_search)
+
+    private fun clickAction(scenario: ActivityScenario<LyricsSearchActivity>, label: Int) {
+        scenario.onActivity { activity ->
+            val button = texts(activity).single {
+                it.isShown && it.isClickable && it.isEnabled && it.text == activity.getString(label)
+            }
+            assertTrue(button.performClick())
+        }
+    }
+
+    private fun selectCandidate(scenario: ActivityScenario<LyricsSearchActivity>, title: String) {
+        awaitUi("Candidate $title did not appear") { candidateLabel(it, title) != null }
+        scenario.onActivity { activity ->
+            val label = requireNotNull(candidateLabel(activity, title))
+            val row = generateSequence<View>(label) { it.parent as? View }.first { it.isClickable }
+            assertTrue(row.performClick())
+        }
+    }
+
+    private fun candidateLabel(activity: LyricsSearchActivity, title: String): TextView? =
+        texts(activity).firstOrNull { label ->
+            label.text == title && label.isShown && label.getGlobalVisibleRect(Rect()) &&
+                generateSequence<View>(label) { it.parent as? View }.any { it.isClickable }
+        }
+
+    private fun completeRequests() {
+        instrumentation.waitForIdleSync()
+        while (true) {
+            val request = requests.poll() ?: break
+            request.run()
+        }
+        instrumentation.waitForIdleSync()
+    }
+
+    private fun awaitUi(message: String, ready: (LyricsSearchActivity) -> Boolean) {
+        val finished = CountDownLatch(1)
+        lateinit var callback: Choreographer.FrameCallback
+        var failure: Throwable? = null
+        instrumentation.runOnMainSync {
+            val monitor = ActivityLifecycleMonitorRegistry.getInstance()
+            val choreographer = Choreographer.getInstance()
+            callback = Choreographer.FrameCallback {
+                try {
+                    val activity = monitor.getActivitiesInStage(Stage.RESUMED)
+                        .filterIsInstance<LyricsSearchActivity>().singleOrNull()
+                    if (activity != null && ready(activity)) finished.countDown()
+                    else choreographer.postFrameCallback(callback)
+                } catch (error: Throwable) {
+                    failure = error
+                    finished.countDown()
+                }
+            }
+            choreographer.postFrameCallback(callback)
+        }
+        try {
+            assertTrue(message, finished.await(5L, TimeUnit.SECONDS))
+            failure?.let { throw it }
+        } finally {
+            instrumentation.runOnMainSync { Choreographer.getInstance().removeFrameCallback(callback) }
+        }
+    }
+
+    private fun swipeDownInPager(startFraction: Float, endFraction: Float) {
+        var swipe: Triple<Float, Float, Float>? = null
+        awaitUi("Lyrics search pager did not gain an unobscured touch region") { activity ->
+            val decor = activity.window.decorView
+            val insets = ViewCompat.getRootWindowInsets(decor)
+            val pager = pager(activity)
+            val pagerBounds = Rect()
+            val windowBounds = Rect()
+            if (decor.hasWindowFocus() && pager.isShown && !pager.isLayoutRequested &&
+                insets?.isVisible(WindowInsetsCompat.Type.ime()) != true &&
+                pager.getGlobalVisibleRect(pagerBounds) && decor.getGlobalVisibleRect(windowBounds)
+            ) {
+                val bars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+                val top = maxOf(pagerBounds.top, windowBounds.top + (bars?.top ?: 0))
+                val bottom = minOf(pagerBounds.bottom, windowBounds.bottom - (bars?.bottom ?: 0))
+                if (bottom - top >= 120) {
+                    swipe = Triple(
+                        pagerBounds.exactCenterX(),
+                        top + (bottom - top) * startFraction,
+                        top + (bottom - top) * endFraction,
+                    )
+                }
+            }
+            swipe != null
+        }
+        val (x, startY, endY) = requireNotNull(swipe)
+        val downTime = SystemClock.uptimeMillis()
+        for (step in 0..20) {
+            val action = when (step) {
+                0 -> MotionEvent.ACTION_DOWN
+                20 -> MotionEvent.ACTION_UP
+                else -> MotionEvent.ACTION_MOVE
+            }
+            val event = MotionEvent.obtain(
+                downTime, SystemClock.uptimeMillis(), action, x, startY + (endY - startY) * step / 20, 0,
+            )
+            try {
+                instrumentation.sendPointerSync(event)
+            } catch (failure: Throwable) {
+                diagnostics.captureNow(failure)
+                throw failure
+            } finally {
+                event.recycle()
+            }
+            SystemClock.sleep(20)
+        }
+    }
+
+    private fun saveScreenshot(filename: String) {
+        instrumentation.waitForIdleSync()
+        instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+            try {
+                PlatformTestStorageRegistry.getInstance().openOutputFile(filename).use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+            } finally {
+                bitmap.recycle()
             }
         }
     }
 
-    @Test fun configuredOrderIsSharedBySourceSheetAndResultPages() {
-        val instrumentation=InstrumentationRegistry.getInstrumentation()
-        val context=instrumentation.targetContext
-        val original=LyricsSettingsStore.getPlainLyricsSearchSources(context)
-        val order=listOf(PlainLyricsSearchSource.SPICY,PlainLyricsSearchSource.LRCLIB,PlainLyricsSearchSource.NETEASE)
-        val all=order+PlainLyricsSearchSource.MUSIXMATCH
-        try {
-            LyricsSettingsStore.setPlainLyricsSearchSources(context,order)
-            ActivityScenario.launch<LyricsSearchActivity>(Intent(context,LyricsSearchActivity::class.java).putExtra("search.title","Song")).use { scenario ->
-                scenario.onActivity { activity ->
-                    val session=session(activity)
-                    assertEquals(order,session.state.value.sources.toList())
-                    LyricsSourcesSheet.create(session.state.value.sources,session.sourceOrder).showNow(activity.supportFragmentManager,LyricsSourcesSheet.TAG)
-                }
-                scenario.recreate()
-                instrumentation.waitForIdleSync()
-                scenario.onActivity { activity ->
-                    val sheet=activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as LyricsSourcesSheet
-                    val names=all.map { activity.localizedPlainLyricsProviderName(it.key) }
-                    val views=descendants(sheet.requireDialog().window!!.decorView)
-                    assertEquals(names,views.mapNotNull { it.contentDescription?.toString()?.takeIf { name -> name in names } })
-                    val first=views.single { it.contentDescription==names.first() }
-                    first.performClick()
-                    first.performClick()
-                    views.filterIsInstance<TextView>().single { it.text==activity.getString(R.string.search_sources_use,3) }.performClick()
-                    val session=session(activity)
-                    assertEquals(order,session.state.value.sources.toList())
-                    state(session).value=session.state.value.copy(results=order.associateWith { SourceResults(loading=true) })
-                }
-                instrumentation.waitForIdleSync()
-                fun assertTabs(activity:LyricsSearchActivity) {
-                    val tabs=descendants(activity.findViewById(android.R.id.content)).filterIsInstance<com.google.android.material.tabs.TabLayout>().single()
-                    assertEquals(order.size,tabs.tabCount)
-                    for ((index,source) in order.withIndex()) {
-                        val label=descendants(tabs.getTabAt(index)!!.customView!!).filterIsInstance<TextView>().single().text.toString()
-                        assertTrue(label.startsWith(activity.localizedPlainLyricsProviderName(source.key)))
-                    }
-                }
-                scenario.onActivity { activity ->
-                    assertTabs(activity)
-                    val session=session(activity)
-                    state(session).value=session.state.value.copy(results=session.state.value.results+(order.last() to SourceResults()))
-                }
-                instrumentation.waitForIdleSync()
-                scenario.recreate()
-                instrumentation.waitForIdleSync()
-                scenario.onActivity { activity -> assertTabs(activity) }
-            }
-        } finally { LyricsSettingsStore.setPlainLyricsSearchSources(context,original) }
+    private fun setSources(vararg sources: PlainLyricsSearchSource) =
+        LyricsSettingsStore.setPlainLyricsSearchSources(context, sources.toList())
+
+    private fun candidate(source: PlainLyricsSearchSource, title: String) =
+        LyricsCandidate(source, "42", SongIdentity(title, "Artist", "", 200_000), 1.0)
+
+    private fun secondSourceIsSelected(activity: LyricsSearchActivity) =
+        pager(activity).run { isShown && currentItem == 1 && scrollState == ViewPager2.SCROLL_STATE_IDLE }
+
+    private fun assertTabOrder(activity: LyricsSearchActivity, order: List<PlainLyricsSearchSource>) {
+        val tabs = tabs(activity)
+        assertEquals(order.size, tabs.tabCount)
+        for ((index, source) in order.withIndex()) {
+            val label = descendants(requireNotNull(tabs.getTabAt(index)?.customView))
+                .filterIsInstance<TextView>().single().text.toString()
+            assertTrue(label.startsWith(activity.localizedPlainLyricsProviderName(source.key)))
+        }
     }
 
-    private fun session(activity:LyricsSearchActivity):LyricsSearchSession =
-        LyricsSearchActivity::class.java.getDeclaredField("session").apply { isAccessible=true }
-            .get(activity) as LyricsSearchSession
-    @Suppress("UNCHECKED_CAST")
-    private fun state(session:LyricsSearchSession):MutableStateFlow<LyricsSearchState> =
-        LyricsSearchSession::class.java.getDeclaredField("mutable").apply { isAccessible=true }
-            .get(session) as MutableStateFlow<LyricsSearchState>
+    private fun openSourceSheet(activity: LyricsSearchActivity) {
+        assertTrue(requireNotNull(activity.sourceCapsule()).performClick())
+    }
 
-    private fun descendants(view:View):List<View> = listOf(view)+(if(view is ViewGroup)
-        (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) } else emptyList())
+    private fun sourceSheet(activity: LyricsSearchActivity): LyricsSourcesSheet? =
+        activity.supportFragmentManager.findFragmentByTag(LyricsSourcesSheet.TAG) as? LyricsSourcesSheet
+
+    private fun sheetViews(activity: LyricsSearchActivity): List<View> {
+        val dialog = requireNotNull(sourceSheet(activity)).requireDialog()
+        return descendants(requireNotNull(dialog.window).decorView)
+    }
+
+    private fun sourceRow(activity: LyricsSearchActivity, source: PlainLyricsSearchSource): View =
+        sheetViews(activity).single { it.contentDescription == activity.localizedPlainLyricsProviderName(source.key) }
+
+    private fun confirmSourcesButton(activity: LyricsSearchActivity, count: Int): TextView =
+        sheetViews(activity).filterIsInstance<TextView>().single {
+            it.text == activity.getString(R.string.search_sources_use, count)
+        }
+
+    private fun assertSourceCount(activity: LyricsSearchActivity, count: Int) {
+        assertEquals(activity.getString(R.string.search_sources_count, count), activity.sourceCapsule()?.text.toString())
+    }
+
+    private fun appBar(activity: LyricsSearchActivity) = views(activity).filterIsInstance<AppBarLayout>().single()
+    private fun pager(activity: LyricsSearchActivity) = views(activity).filterIsInstance<ViewPager2>().single()
+    private fun tabs(activity: LyricsSearchActivity) = views(activity).filterIsInstance<TabLayout>().single()
+    private fun backButton(activity: LyricsSearchActivity) =
+        views(activity).single { it.contentDescription == activity.getString(R.string.search_back) }
+
+    private fun shownLoadingViews(activity: LyricsSearchActivity) =
+        views(activity).count { it is LyricsLoadingView && it.isShown }
+
+    private fun texts(activity: LyricsSearchActivity) = views(activity).filterIsInstance<TextView>()
+    private fun hasText(activity: LyricsSearchActivity, label: Int) =
+        texts(activity).any { it.isShown && it.text == activity.getString(label) }
+
+    private fun views(activity: LyricsSearchActivity) =
+        descendants(activity.findViewById(android.R.id.content))
+
+    private fun descendants(view: View): List<View> = listOf(view) + if (view is ViewGroup) {
+        (0 until view.childCount).flatMap { descendants(view.getChildAt(it)) }
+    } else {
+        emptyList()
+    }
+
+    private class DeviceSearchAccess : LyricsSearchAccess {
+        var candidates: Map<PlainLyricsSearchSource, List<LyricsCandidate>> = emptyMap()
+        var searchFailure: Exception? = null
+        var preview: (LyricsCandidate, SongIdentity, LyricsLookupCancellationToken) -> ManualLyricsFetchResult =
+            { _, _, _ -> ManualLyricsFetchResult.Unavailable(LyricsUnavailableReason.UNKNOWN) }
+        val searchedQueries = mutableListOf<Pair<PlainLyricsSearchSource, String>>()
+        val fetchedCandidates = mutableListOf<LyricsCandidate>()
+        val appliedLyrics = mutableListOf<LyricsProviderResult>()
+
+        override fun search(
+            source: PlainLyricsSearchSource,
+            query: SongIdentity,
+            token: LyricsLookupCancellationToken,
+        ): List<LyricsCandidate> {
+            searchedQueries += source to query.title
+            searchFailure?.let { throw it }
+            return candidates[source].orEmpty()
+        }
+
+        override fun fetch(
+            candidate: LyricsCandidate,
+            target: SongIdentity,
+            token: LyricsLookupCancellationToken,
+        ): ManualLyricsFetchResult {
+            fetchedCandidates += candidate
+            return preview(candidate, target, token)
+        }
+
+        override fun apply(
+            target: SongIdentity,
+            result: LyricsProviderResult,
+            token: LyricsLookupCancellationToken,
+            approvedRevision: String?,
+        ): Boolean {
+            appliedLyrics += result
+            return true
+        }
+
+        override fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken) = null
+        override fun findBySpotifyId(
+            id: String,
+            mediaSong: SongIdentity?,
+            target: SongIdentity,
+            token: LyricsLookupCancellationToken,
+        ) = error("Unexpected Spotify lookup")
+
+        override fun searchWordRecordings(
+            source: ManualWordSource,
+            query: SongIdentity,
+            page: Int,
+            keyword: String,
+            token: LyricsLookupCancellationToken,
+        ): ManualWordPage = error("Unexpected word search")
+
+        override fun loadWordRecording(
+            recording: ManualWordRecording,
+            token: LyricsLookupCancellationToken,
+        ): ManualWordDetails = error("Unexpected word recording")
+
+        override fun loadWordOption(
+            option: ManualWordOption,
+            token: LyricsLookupCancellationToken,
+        ): ManualWordDetails = error("Unexpected word option")
+
+        override fun protectedRevision(target: SongIdentity) = null
+    }
 }

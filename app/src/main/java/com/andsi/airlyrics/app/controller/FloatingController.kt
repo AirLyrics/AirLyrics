@@ -52,7 +52,6 @@ internal class FloatingController(
         if (!sendFloatingCommand(FloatingServiceCommand.Hide)) {
             return FloatingVisibilityOutcome.COMMAND_FAILED
         }
-        updateQuickFloatingActualVisible(false)
         return FloatingVisibilityOutcome.SUCCESS
     }
 
@@ -63,18 +62,7 @@ internal class FloatingController(
     }
 
     fun toggleLyrics(): FloatingVisibilityOutcome {
-        if (state.quickFloatingDesiredVisible) {
-            return hideLyrics()
-        }
-        if (!updateOverlayPermissionGranted()) {
-            setDesiredVisible(true)
-            return FloatingVisibilityOutcome.PERMISSION_REQUIRED
-        }
-        return showLyrics()
-    }
-
-    fun updateQuickFloatingActualVisible(visible: Boolean) {
-        state.updateFloatingState(visible = visible)
+        return if (QuickFloatingStore.isDesiredVisible(appContext)) hideLyrics() else showLyrics()
     }
 
     private fun updateOverlayPermissionGranted(): Boolean {
@@ -257,9 +245,9 @@ internal class FloatingController(
         }
     }
 
-    fun notifySourceChangedIfVisible(packageName: String?) {
-        if (state.quickFloatingDesiredVisible) {
-            sendFloatingCommand(FloatingServiceCommand.SelectMediaSource(packageName))
+    fun notifySourceChangedIfVisible() {
+        if (QuickFloatingStore.isDesiredVisible(appContext)) {
+            sendFloatingCommand(FloatingServiceCommand.SyncMediaSource)
         }
     }
 

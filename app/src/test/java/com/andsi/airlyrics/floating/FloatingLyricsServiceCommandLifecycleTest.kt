@@ -254,8 +254,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertTrue(windowManager.views.any { it === windowView })
         assertNotNull(service.activeLyricsLookupRequestKey)
         assertTrue(service.syncHandler.hasCallbacks(service.syncRunnable))
-        assertTrue(service.syncHandler.hasCallbacks(service.pauseAutoHideRunnable))
-        assertTrue(service.syncHandler.hasCallbacks(service.unavailableLyricsAutoHideRunnable))
+        assertTrue(service.syncHandler.hasCallbacks(service.autoHideRunnable))
         assertTrue(service.syncHandler.hasCallbacks(service.currentMediaRefreshRunnable))
 
         controller.destroy()
@@ -266,8 +265,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
         assertFalse(windowManager.views.any { it === windowView })
         assertNull(service.activeLyricsLookupRequestKey)
         assertFalse(service.syncHandler.hasCallbacks(service.syncRunnable))
-        assertFalse(service.syncHandler.hasCallbacks(service.pauseAutoHideRunnable))
-        assertFalse(service.syncHandler.hasCallbacks(service.unavailableLyricsAutoHideRunnable))
+        assertFalse(service.syncHandler.hasCallbacks(service.autoHideRunnable))
         assertFalse(service.syncHandler.hasCallbacks(service.mediaRestoreRunnable))
         assertFalse(service.syncHandler.hasCallbacks(service.currentMediaRefreshRunnable))
         assertEquals(mediaReceiverCountBefore, receiverCount(mediaIntent.action))
@@ -297,6 +295,11 @@ class FloatingLyricsServiceCommandLifecycleTest {
         command: FloatingServiceCommand,
         startId: Int = 1
     ): Int {
+        when (command) {
+            FloatingServiceCommand.Show -> QuickFloatingStore.setDesiredVisible(application, true)
+            FloatingServiceCommand.Hide -> QuickFloatingStore.setDesiredVisible(application, false)
+            else -> Unit
+        }
         return service.onStartCommand(command.toIntent(application), 0, startId)
     }
 

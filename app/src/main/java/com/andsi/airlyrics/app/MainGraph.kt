@@ -34,7 +34,6 @@ import com.andsi.airlyrics.app.workflow.MainLyricsWorkflow
 import com.andsi.airlyrics.app.workflow.MainDisplayScopeWorkflow
 import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.feedback.ToastAirFeedback
-import com.andsi.airlyrics.floating.FloatingWindowRuntimeState
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.i18n.lyrics.localizedLyricsLookupMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsImportFormatErrorMessage
@@ -130,9 +129,7 @@ internal class MainGraph(
     val mediaSourceController: MediaSourceController by lazy {
         MediaSourceController(
             context = activity,
-            floatingSourceNotifier = { packageName ->
-                floatingController.notifySourceChangedIfVisible(packageName)
-            }
+            floatingSourceNotifier = { floatingController.notifySourceChangedIfVisible() }
         )
     }
     val uiActions: MainUiActions by lazy { createMainUiActions() }
@@ -282,8 +279,7 @@ internal class MainGraph(
 
     private fun handleFloatingStateChanged(intent: Intent) {
         if (!canRenderUi()) return
-        val windowState = FloatingWindowStateBroadcast.readState(intent) ?: return
-        FloatingWindowRuntimeState.update(windowState)
+        if (FloatingWindowStateBroadcast.readState(intent) == null) return
         syncForegroundState()
     }
 
@@ -313,7 +309,7 @@ internal class MainGraph(
     }
 
     fun toggleFloatingFromNav() {
-        pendingQuickFloatingTarget = !state.quickFloatingDesiredVisible
+        pendingQuickFloatingTarget = !QuickFloatingStore.isDesiredVisible(activity)
         val outcome = floatingController.toggleLyrics()
         if (outcome != FloatingVisibilityOutcome.SUCCESS) pendingQuickFloatingTarget = null
         handleFloatingVisibilityOutcome(outcome)

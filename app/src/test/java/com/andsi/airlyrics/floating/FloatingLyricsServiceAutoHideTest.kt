@@ -53,8 +53,8 @@ class FloatingLyricsServiceAutoHideTest {
 
         service.applyLyricsResult(Result.success(null), media)
 
-        assertEquals(LyricsAvailability.UNAVAILABLE, service.lyricsAvailability)
-        assertTrue(service.unavailableLyricsAutoHidePending)
+        assertEquals(LyricsAvailability.UNAVAILABLE, service.autoHideState.lyricsAvailability)
+        assertTrue(service.autoHideState.nextDeadlineUptimeMs != null)
         assertTrue(service.windowController.isVisible)
         assertEquals(expectedFailureText, requireNotNull(service.lyricsView).text.toString())
 
@@ -67,7 +67,7 @@ class FloatingLyricsServiceAutoHideTest {
         ShadowLooper.idleMainLooper(1L, TimeUnit.MILLISECONDS)
         assertFalse(service.windowController.isVisible)
         assertTrue(QuickFloatingStore.isDesiredVisible(service))
-        assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.activeAutoHideReasons)
+        assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.autoHideState.activeReasons)
 
         service.applyLyricsResult(
             Result.success(
@@ -80,7 +80,7 @@ class FloatingLyricsServiceAutoHideTest {
             media
         )
 
-        assertEquals(LyricsAvailability.AVAILABLE, service.lyricsAvailability)
+        assertEquals(LyricsAvailability.AVAILABLE, service.autoHideState.lyricsAvailability)
         assertTrue(service.windowController.isVisible)
         assertEquals("available lyrics", requireNotNull(service.lyricsView).text.toString())
     }
@@ -96,15 +96,15 @@ class FloatingLyricsServiceAutoHideTest {
             service.applyLyricsResult(Result.success(LyricsProviderResult("test", "Test", "[00:01.00]Timed")), media)
             service.applyLyricsResult(Result.success(LyricsProviderResult("test", "Test", "",
                 untimedLyrics = com.andsi.airlyrics.lyrics.UntimedLyrics("Text that must not be rendered"))), media)
-            assertEquals(LyricsAvailability.UNAVAILABLE, service.lyricsAvailability)
+            assertEquals(LyricsAvailability.UNAVAILABLE, service.autoHideState.lyricsAvailability)
             assertTrue(requireNotNull(service.lyricsView).text.toString()
                 .contains(service.getString(com.andsi.airlyrics.R.string.ui_untimed_lyrics_unavailable)))
             assertFalse(requireNotNull(service.lyricsView).text.toString().contains("Text that must not be rendered"))
-            assertEquals(hide, service.unavailableLyricsAutoHidePending)
+            assertEquals(hide, service.autoHideState.nextDeadlineUptimeMs != null)
             ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS, TimeUnit.MILLISECONDS)
             assertEquals(!hide, service.windowController.isVisible)
             if (hide) {
-                assertTrue(service.showLyrics())
+                assertTrue(service.showLyrics(manual = true))
                 ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS, TimeUnit.MILLISECONDS)
                 assertTrue(service.windowController.isVisible)
             }
@@ -129,12 +129,12 @@ class FloatingLyricsServiceAutoHideTest {
                     selectedManually = true
                 )), media
             )
-            assertEquals(LyricsAvailability.UNAVAILABLE, service.lyricsAvailability)
-            assertTrue(service.unavailableLyricsAutoHidePending)
+            assertEquals(LyricsAvailability.UNAVAILABLE, service.autoHideState.lyricsAvailability)
+            assertTrue(service.autoHideState.nextDeadlineUptimeMs != null)
             assertTrue(service.windowController.isVisible)
             ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS, TimeUnit.MILLISECONDS)
             assertFalse(service.windowController.isVisible)
-            assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.activeAutoHideReasons)
+            assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.autoHideState.activeReasons)
         }
     }
 
@@ -152,9 +152,8 @@ class FloatingLyricsServiceAutoHideTest {
         )
         assertFalse(service.windowController.isVisible)
 
-        assertTrue(service.showLyrics())
+        assertTrue(service.showLyrics(manual = true))
         assertTrue(service.windowController.isVisible)
-        assertEquals(firstMedia.playbackLyricsKey(), service.lyricsUnavailableAutoHideSuppressedKey)
         assertEquals(expectedFailureText, requireNotNull(service.lyricsView).text.toString())
 
         service.applyLyricsResult(Result.success(null), firstMedia)
@@ -174,7 +173,6 @@ class FloatingLyricsServiceAutoHideTest {
         )
 
         assertFalse(service.windowController.isVisible)
-        assertEquals(null, service.lyricsUnavailableAutoHideSuppressedKey)
     }
 
     @Test
@@ -189,24 +187,24 @@ class FloatingLyricsServiceAutoHideTest {
         ShadowLooper.idleMainLooper(AUTO_HIDE_WHEN_PAUSED_DELAY_MS, TimeUnit.MILLISECONDS)
 
         assertFalse(service.windowController.isVisible)
-        assertTrue(AutoHideReason.PAUSED in service.activeAutoHideReasons)
+        assertTrue(AutoHideReason.PAUSED in service.autoHideState.activeReasons)
 
         ShadowLooper.idleMainLooper(
             AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS - AUTO_HIDE_WHEN_PAUSED_DELAY_MS,
             TimeUnit.MILLISECONDS
         )
-        assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.activeAutoHideReasons)
+        assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.autoHideState.activeReasons)
 
         service.currentMedia = media.copy(isPlaying = true, snapshotSequence = 2L)
         service.reevaluateAutoHide()
 
-        assertFalse(AutoHideReason.PAUSED in service.activeAutoHideReasons)
-        assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.activeAutoHideReasons)
+        assertFalse(AutoHideReason.PAUSED in service.autoHideState.activeReasons)
+        assertTrue(AutoHideReason.LYRICS_UNAVAILABLE in service.autoHideState.activeReasons)
         assertFalse(service.windowController.isVisible)
 
         service.markLyricsAvailable(service.currentMedia.playbackLyricsKey())
 
-        assertTrue(service.activeAutoHideReasons.isEmpty())
+        assertTrue(service.autoHideState.activeReasons.isEmpty())
         assertTrue(service.windowController.isVisible)
     }
 
@@ -217,12 +215,12 @@ class FloatingLyricsServiceAutoHideTest {
         service.currentMedia = media
         service.applyLyricsResult(Result.success(null), media)
 
-        assertFalse(service.unavailableLyricsAutoHidePending)
+        assertEquals(null, service.autoHideState.nextDeadlineUptimeMs)
         assertTrue(service.windowController.isVisible)
 
         FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(service, true)
         service.applyAutoHideSettings()
-        assertTrue(service.unavailableLyricsAutoHidePending)
+        assertTrue(service.autoHideState.nextDeadlineUptimeMs != null)
 
         ShadowLooper.idleMainLooper(
             AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE_DELAY_MS,
@@ -233,7 +231,7 @@ class FloatingLyricsServiceAutoHideTest {
         FloatingLyricsStyleStore.setAutoHideWhenLyricsUnavailable(service, false)
         service.applyAutoHideSettings()
 
-        assertTrue(service.activeAutoHideReasons.isEmpty())
+        assertTrue(service.autoHideState.activeReasons.isEmpty())
         assertTrue(service.windowController.isVisible)
     }
 
@@ -246,8 +244,8 @@ class FloatingLyricsServiceAutoHideTest {
 
         service.applyLyricsResult(Result.failure(IllegalStateException("lookup failed")), media)
 
-        assertEquals(LyricsAvailability.UNAVAILABLE, service.lyricsAvailability)
-        assertTrue(service.syncHandler.hasCallbacks(service.unavailableLyricsAutoHideRunnable))
+        assertEquals(LyricsAvailability.UNAVAILABLE, service.autoHideState.lyricsAvailability)
+        assertTrue(service.syncHandler.hasCallbacks(service.autoHideRunnable))
 
         service.resetLyricsAvailability()
 
@@ -262,21 +260,22 @@ class FloatingLyricsServiceAutoHideTest {
             media
         )
 
-        assertEquals(LyricsAvailability.UNAVAILABLE, service.lyricsAvailability)
-        assertTrue(service.syncHandler.hasCallbacks(service.unavailableLyricsAutoHideRunnable))
+        assertEquals(LyricsAvailability.UNAVAILABLE, service.autoHideState.lyricsAvailability)
+        assertTrue(service.syncHandler.hasCallbacks(service.autoHideRunnable))
 
         controller?.destroy()
         controller = null
 
-        assertFalse(service.syncHandler.hasCallbacks(service.unavailableLyricsAutoHideRunnable))
+        assertFalse(service.syncHandler.hasCallbacks(service.autoHideRunnable))
     }
 
     private fun createVisibleService(): FloatingLyricsService {
+        QuickFloatingStore.setDesiredVisible(application, true)
         return Robolectric.buildService(FloatingLyricsService::class.java)
             .create()
             .also { controller = it }
             .get()
-            .also { service -> assertTrue(service.showLyrics()) }
+            .also { service -> assertTrue(service.showLyrics(manual = true)) }
     }
 
     private fun media(

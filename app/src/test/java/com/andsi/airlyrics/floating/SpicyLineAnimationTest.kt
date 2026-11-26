@@ -16,6 +16,7 @@ import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.lyrics.LyricsAccess
+import com.andsi.airlyrics.media.PlaybackClock
 import com.andsi.airlyrics.core.model.LyricsAttribution
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
@@ -30,6 +31,8 @@ import org.robolectric.util.ReflectionHelpers
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class SpicyLineAnimationTest {
+    private var now = 1L
+    private val playbackClock = PlaybackClock { now }
     private val context: Context get() = ApplicationProvider.getApplicationContext()
 
     private fun view() = FloatingLyricsTextView(context).apply {
@@ -60,17 +63,16 @@ class SpicyLineAnimationTest {
 
     @Test fun framesUsePlaybackTimeWithoutReplacingLayout_andPauseFreezes() {
         val view = view().apply { setBackgroundColor(Color.BLUE) }
-        var clock = 1L
-        val renderer = FloatingLyricsRenderer({ view },
-            switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY },
-            uptimeMillisProvider = { clock })
-        renderer.updatePlayback(0, true)
+        val renderer = FloatingLyricsRenderer({ view }, playbackClock,
+            switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY })
+        playbackClock.update(0, true)
+        renderer.updateSpicyPlayback()
         renderer.parseAndShow("[00:00.00]Hello world\n[00:04.00]Next", emptyText = "")
         measure(view)
         val text = view.text
         val layout = view.layout
         val initial = pixels(view)
-        clock = 1501
+        now = 1501
         val middle = pixels(view)
         assertFalse(initial.contentEquals(middle))
         renderer.tick()
@@ -81,11 +83,13 @@ class SpicyLineAnimationTest {
         assertEquals(1f, view.scaleX)
         assertEquals(0f, view.translationY)
 
-        renderer.updatePlayback(1500, false)
+        playbackClock.update(1500, false)
+        renderer.updateSpicyPlayback()
         val paused = pixels(view)
-        clock += 1000
+        now += 1000
         assertArrayEquals(paused, pixels(view))
-        renderer.updatePlayback(0, false)
+        playbackClock.update(0, false)
+        renderer.updateSpicyPlayback()
         assertFalse(paused.contentEquals(pixels(view)))
     }
 
@@ -120,33 +124,38 @@ class SpicyLineAnimationTest {
 
     @Test fun identicalConsecutiveTextGetsNewTiming_andBlankTimestampClearsInk() {
         val view = view()
-        val renderer = FloatingLyricsRenderer({ view },
+        val renderer = FloatingLyricsRenderer({ view }, playbackClock,
             switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY },
             durationMsProvider = { 10_000 })
-        renderer.updatePlayback(1000, false)
+        playbackClock.update(1000, false)
+        renderer.updateSpicyPlayback()
         renderer.parseAndShow("[00:01.00]Again\n[00:02.00]Again\n[00:03.00]\n[00:04.00]Last", emptyText = "")
         val first = spans(view).single().timing
-        renderer.updatePlayback(2100, false)
+        playbackClock.update(2100, false)
+        renderer.updateSpicyPlayback()
         renderer.tick()
         assertEquals("Again", view.text.toString())
         assertNotEquals(first, spans(view).single().timing)
         assertEquals(2000L, spans(view).single().timing.startMs)
         assertEquals(3000L, spans(view).single().timing.endMs)
-        renderer.updatePlayback(3100, false)
+        playbackClock.update(3100, false)
+        renderer.updateSpicyPlayback()
         renderer.tick()
         assertEquals("", view.text.toString())
-        renderer.updatePlayback(4100, false)
+        playbackClock.update(4100, false)
+        renderer.updateSpicyPlayback()
         renderer.tick()
         assertEquals(10_000L, spans(view).single().timing.endMs)
     }
 
     @Test fun neighborsTranslationsAndAttributionHaveSeparateRanges() {
         val view = view()
-        val renderer = FloatingLyricsRenderer({ view },
+        val renderer = FloatingLyricsRenderer({ view }, playbackClock,
             contentModeProvider = { LyricsContentDisplayMode.ORIGINAL_WITH_TRANSLATION },
             lineModeProvider = { LyricsLineDisplayMode.PREVIOUS_CURRENT_NEXT },
             switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY })
-        renderer.updatePlayback(2500, false)
+        playbackClock.update(2500, false)
+        renderer.updateSpicyPlayback()
         renderer.setLyricsAccess(LyricsAccess(0, Long.MAX_VALUE, "key", LyricsAttribution("Spicy Lyrics", emptyList())))
         renderer.parseAndShow("[00:01.00]First\n[00:02.00]Current\n[00:04.00]Next",
             translatedLrc = "[00:02.00]当前歌词", emptyText = "")
@@ -168,11 +177,12 @@ class SpicyLineAnimationTest {
 
     @Test fun wordTimingWins_butEnabledWordsWithoutTimingStillUseLineAnimation() {
         val view = view()
-        val renderer = FloatingLyricsRenderer({ view },
+        val renderer = FloatingLyricsRenderer({ view }, playbackClock,
             switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY },
             wordByWordLyricsEnabledProvider = { true },
             wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY })
-        renderer.updatePlayback(500, false)
+        playbackClock.update(500, false)
+        renderer.updateSpicyPlayback()
         renderer.parseAndShow("[00:00.00]Hello", wordByWordLines = listOf(
             WordByWordLine(0, 2000, "Hello", listOf(WordByWordSegment("Hello", 0, 2000)))
         ), emptyText = "")
@@ -188,17 +198,18 @@ class SpicyLineAnimationTest {
     }
 
     @Test fun boundarySchedulingUsesEstimatedPositionAndOffset() {
-        var clock = 1L
         val view = view()
-        val renderer = FloatingLyricsRenderer({ view }, uptimeMillisProvider = { clock })
-        renderer.updatePlayback(1700, true)
+        val renderer = FloatingLyricsRenderer({ view }, playbackClock)
+        playbackClock.update(1700, true)
+        renderer.updateSpicyPlayback()
         renderer.parseAndShow("[00:01.00]First\n[00:02.00]Next", emptyText = "")
         assertEquals(300L, renderer.nextSyncDelayMs(300))
-        clock += 250
+        now += 250
         assertEquals(50L, renderer.nextSyncDelayMs(300))
         renderer.setLyricsOffset(25)
         assertEquals(25L, renderer.nextSyncDelayMs(300))
-        renderer.updatePlayback(1950, false)
+        playbackClock.update(1950, false)
+        renderer.updateSpicyPlayback()
         assertEquals(300L, renderer.nextSyncDelayMs(300))
     }
 
@@ -206,9 +217,10 @@ class SpicyLineAnimationTest {
         for ((text, ellipsis) in listOf("مرحبا بالعالم" to false, "Hello 世界 👨‍👩‍👧‍👦" to false,
             "A long lyric that must truncate" to true)) {
             val view = view()
-            val renderer = FloatingLyricsRenderer({ view },
+            val renderer = FloatingLyricsRenderer({ view }, playbackClock,
                 switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY })
-            renderer.updatePlayback(1000, false)
+            playbackClock.update(1000, false)
+            renderer.updateSpicyPlayback()
             renderer.parseAndShow("[00:00.00]$text\n[00:04.00]Next", emptyText = "")
             if (ellipsis) { view.maxLines = 1; view.ellipsize = TextUtils.TruncateAt.END }
             measure(view, 150)
@@ -245,11 +257,12 @@ class SpicyLineAnimationTest {
                 ReflectionHelpers.ClassParameter.from(Float::class.javaPrimitiveType, 0f))
             for (text in listOf("مرحبا world 123 عالم", "Hello مرحبا 123 world", "世界 Hello")) {
                 val animated = view()
-                val renderer = FloatingLyricsRenderer({ animated },
+                val renderer = FloatingLyricsRenderer({ animated }, playbackClock,
                     switchAnimationModeProvider = { LyricsSwitchAnimationMode.SPICY },
                     wordByWordHighlightColorProvider = { Color.WHITE },
                     glowStyleProvider = { com.andsi.airlyrics.core.model.LyricsGlowStyle(enabled = false) })
-                renderer.updatePlayback(3999, false)
+                playbackClock.update(3999, false)
+                renderer.updateSpicyPlayback()
                 renderer.parseAndShow("[00:00.00]$text\n[00:04.00]Next", emptyText = "")
                 measure(animated)
                 val native = androidx.appcompat.widget.AppCompatTextView(context).apply {

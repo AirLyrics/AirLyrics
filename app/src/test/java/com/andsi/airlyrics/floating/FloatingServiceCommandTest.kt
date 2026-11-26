@@ -41,7 +41,8 @@ class FloatingServiceCommandTest {
             FloatingServiceCommand.ApplyAutoHideSettings,
             FloatingServiceCommand.ApplyDisplayScope,
             FloatingServiceCommand.ApplyStyle,
-            FloatingServiceCommand.ReloadLyrics
+            FloatingServiceCommand.ReloadLyrics,
+            FloatingServiceCommand.SyncMediaSource
         )
 
         commands.forEach { command ->
@@ -54,8 +55,6 @@ class FloatingServiceCommandTest {
         val uri = Uri.parse("content://com.example.lyrics/song.lrc")
         val commands = listOf(
             FloatingServiceCommand.ApplyLyricsOffset(1_250L),
-            FloatingServiceCommand.SelectMediaSource("com.example.player"),
-            FloatingServiceCommand.SelectMediaSource(null),
             FloatingServiceCommand.ImportPlainLyrics(uri = uri, overwrite = false)
         )
 

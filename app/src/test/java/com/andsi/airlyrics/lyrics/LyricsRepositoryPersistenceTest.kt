@@ -8,9 +8,16 @@ import com.andsi.airlyrics.core.model.LyricsLineDisplayMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
+import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.search.ManualLyricsSearch
 import com.andsi.airlyrics.lyrics.storage.LyricsFileStore
 import com.andsi.airlyrics.lyrics.storage.LyricsIndexStore
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -203,9 +210,9 @@ class LyricsRepositoryPersistenceTest {
             resetLyricsStorage(context)
             if (existing) lookupApple(manual = true).getOrThrow()
             val before = durableState()
-            com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore.beforeCommitStep = {
+            ManualLyricsSelectionStore.beforeCommitStep = {
                 if (it == step) {
-                    val song = com.andsi.airlyrics.core.model.SongIdentity(STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS)
+                    val song = SongIdentity(STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS)
                     when (step) {
                         "wordFile" -> assertTrue(LyricsFileStore.writeManagedLyrics(context,
                             com.andsi.airlyrics.lyrics.storage.LyricsFileNaming.managedWordByWordFileName(song), "partial"))
@@ -224,7 +231,7 @@ class LyricsRepositoryPersistenceTest {
                 assertTrue(lookupApple(appleResult("replacement"), manual = true).isFailure)
                 assertEquals(before, durableState())
             } finally {
-                com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore.beforeCommitStep = null
+                ManualLyricsSelectionStore.beforeCommitStep = null
             }
         }
     }
@@ -264,13 +271,55 @@ class LyricsRepositoryPersistenceTest {
 
     @Test
     fun supersededAutomaticRequestCannotOverwriteManualSelection() {
-        var expected: Map<String, List<Byte>>? = null
-        val late = lookupApple(auto = true, beforeFetch = {
-            lookupApple(appleResult("manual winner"), manual = true).getOrThrow()
-            expected = durableState()
-        })
-        assertTrue(late.isFailure)
-        assertEquals(expected, durableState())
+        val song = SongIdentity(STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS)
+        val chosen = appleResult("manual winner").copy(
+            wordByWordLines = listOf(WordByWordLine(
+                1000L, 2000L, "manual winner", listOf(WordByWordSegment("manual winner", 1000L, 2000L))
+            ))
+        )
+        val fetchStarted = CountDownLatch(1)
+        val completeFetch = CountDownLatch(1)
+        val lookup = FutureTask {
+            lookupApple(auto = true, beforeFetch = {
+                fetchStarted.countDown()
+                assertTrue("Timed out waiting to complete the automatic request", completeFetch.await(5, TimeUnit.SECONDS))
+            })
+        }
+        val worker = Thread(lookup, "automatic-lyrics-lookup").apply { start() }
+        try {
+            assertTrue("Automatic provider did not start", fetchStarted.await(5, TimeUnit.SECONDS))
+            assertTrue(ManualLyricsSearch(context).apply(
+                song, chosen, LyricsLookupCancellationToken(song.storageKey(), 1L), approvedRevision = null
+            ))
+            val committedFiles = durableState()
+
+            completeFetch.countDown()
+            val late = lookup.get(5, TimeUnit.SECONDS)
+            assertTrue(late.exceptionOrNull() is CancellationException)
+            assertEquals(committedFiles, durableState())
+
+            val entry = requireNotNull(LyricsIndexStore.find(context, song.title, song.artist, song.durationMs))
+            assertEquals("apple", entry.plainProvider)
+            assertEquals("apple", entry.wordByWordProvider)
+            assertEquals("[00:01.00]manual winner / 你好", LyricsFileStore.readManagedLyrics(context, entry.plainFile))
+            val selected = requireNotNull(ManualLyricsSelectionStore.read(context, song)).result
+            assertTrue(selected.selectedManually)
+            assertEquals(chosen.plainLrc, selected.plainLrc)
+            assertEquals(chosen.wordByWordLines, selected.wordByWordLines)
+            assertEquals(selected, LyricsRepository.findLyricsWithProviders(
+                context = context,
+                onlinePlainLyricsProviders = emptyMap(),
+                settings = onlineAutoSaveSettings().copy(autoSearchOnline = false, wordByWordLyricsEnabled = true),
+                title = song.title,
+                artist = song.artist,
+                album = song.album,
+                durationMs = song.durationMs
+            ).getOrThrow())
+        } finally {
+            completeFetch.countDown()
+            lookup.cancel(true)
+            worker.join(TimeUnit.SECONDS.toMillis(5))
+        }
     }
 
     private fun onlineAutoSaveSettings(): LyricsSettings {

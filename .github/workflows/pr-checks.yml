@@ -18,6 +18,9 @@ jobs:
   android-quality:
     name: Android lint, tests, and localization
     runs-on: ubuntu-latest
+    env:
+      UPDATER_TEST_CLASS: com.andsi.airlyrics.app.MainActivityAuxiliaryRecreationTest
+      UPDATER_TEST_METHOD: narrowChineseUpdaterChecksDownloadsAndInstalls
 
     steps:
       - name: Checkout
@@ -84,7 +87,12 @@ jobs:
 
       - name: Summarize JVM results
         if: always()
-        run: python3 -B scripts/test_reports/summary.py app/build/test-results/testDebugUnitTest
+        run: >-
+          python3 -B scripts/test_reports/summary.py app/build/test-results/testDebugUnitTest
+          --strict
+          --allow-skipped-test "$UPDATER_TEST_CLASS#$UPDATER_TEST_METHOD"
+          --require-test "$UPDATER_TEST_CLASS#versionEntryShowsOneReleaseAndRestoresSelection"
+          --require-test "$UPDATER_TEST_CLASS#spanishStatusFitsOnANarrowScreen"
 
       - name: Upload JVM test reports
         if: always()
@@ -92,8 +100,30 @@ jobs:
         with:
           name: android-unit-test-reports
           path: |
-            app/build/reports/tests/
-            app/build/test-results/
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          if-no-files-found: ignore
+
+      - name: Run updater-enabled JVM test
+        run: >-
+          ./gradlew :app:testDebugUnitTest -Pairlyrics.skipRustBuild=true
+          -Pairlyrics.enableAppUpdateInstaller=true
+          --tests "$UPDATER_TEST_CLASS.$UPDATER_TEST_METHOD" --stacktrace
+
+      - name: Summarize updater-enabled JVM result
+        if: always()
+        run: >-
+          python3 -B scripts/test_reports/summary.py app/build/test-results/testDebugUnitTest-updater-enabled
+          --strict --min-tests 1 --require-test "$UPDATER_TEST_CLASS#$UPDATER_TEST_METHOD"
+
+      - name: Upload updater-enabled JVM test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: android-updater-enabled-unit-test-reports
+          path: |
+            app/build/reports/tests/testDebugUnitTest-updater-enabled/
+            app/build/test-results/testDebugUnitTest-updater-enabled/
           if-no-files-found: ignore
 
   android-debug-build:

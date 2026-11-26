@@ -115,13 +115,38 @@ jobs:
         env:
           INSTRUMENTATION_SUITE: ${{ matrix.suite }}
         run: |
+          fast_required=(
+            --require-test 'com.andsi.airlyrics.ui.components.AdaptiveLabelValueLayoutInstrumentedTest#productionSettingRowsAdaptToNarrowWidthAtRealDeviceTextMetrics'
+            --require-test 'com.andsi.airlyrics.lyrics.providers.NativeLyricsJniSmokeInstrumentedTest#nativeLibrary_loadsAndOfflineBindingsRoundTrip'
+            --require-test 'com.andsi.airlyrics.lyrics.storage.LyricsStorageSafInstrumentedTest#customDocumentTree_saveReadIndexDelete_roundTrips'
+          )
+          stress_required=(
+            --require-test 'com.andsi.airlyrics.app.MainActivityRotationInstrumentedTest#repeatedRealRotationKeepsNavigationReachable'
+            --require-test 'com.andsi.airlyrics.app.MainActivityRotationInstrumentedTest#windowSizesLargeTextRtlAndKeyboardKeepControlsWithinTheWindow'
+          )
+          hardware_required=(
+            --require-test 'com.andsi.airlyrics.floating.SpicyLyricsInstrumentedTest#hardwareFramesAnimateAndPauseWithoutRelayout'
+          )
           case "$INSTRUMENTATION_SUITE" in
-            fast) minimum=25 ;;
-            stress) minimum=2 ;;
-            hardware) minimum=1 ;;
-            full) minimum=28 ;;
+            fast)
+              minimum=24
+              required=("${fast_required[@]}")
+              ;;
+            stress)
+              minimum=2
+              required=("${stress_required[@]}")
+              ;;
+            hardware)
+              minimum=1
+              required=("${hardware_required[@]}")
+              ;;
+            full)
+              minimum=27
+              required=("${fast_required[@]}" "${stress_required[@]}" "${hardware_required[@]}")
+              ;;
           esac
-          python3 -B scripts/test_reports/summary.py app/build/outputs/androidTest-results/connected --strict --min-tests "$minimum"
+          python3 -B scripts/test_reports/summary.py app/build/outputs/androidTest-results/connected \
+            --strict --min-tests "$minimum" "${required[@]}"
 
       - name: Upload instrumentation test reports
         if: always()

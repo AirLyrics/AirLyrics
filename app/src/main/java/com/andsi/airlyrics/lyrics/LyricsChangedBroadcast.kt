@@ -7,7 +7,8 @@ import com.andsi.airlyrics.core.model.SongIdentity
 
 internal enum class LyricsChangeKind {
     UPDATED,
-    DELETED
+    DELETED,
+    LIBRARY_CHANGED
 }
 
 internal data class LyricsChange(
@@ -15,7 +16,11 @@ internal data class LyricsChange(
     val kind: LyricsChangeKind
 ) {
     init {
-        require(target != null || kind == LyricsChangeKind.DELETED)
+        when (kind) {
+            LyricsChangeKind.UPDATED -> require(target != null)
+            LyricsChangeKind.DELETED -> Unit
+            LyricsChangeKind.LIBRARY_CHANGED -> require(target == null)
+        }
     }
 
     companion object {
@@ -25,6 +30,10 @@ internal data class LyricsChange(
 
         fun deleted(target: SongIdentity? = null): LyricsChange {
             return LyricsChange(target = target, kind = LyricsChangeKind.DELETED)
+        }
+
+        fun libraryChanged(): LyricsChange {
+            return LyricsChange(target = null, kind = LyricsChangeKind.LIBRARY_CHANGED)
         }
     }
 }
@@ -87,9 +96,13 @@ internal object LyricsChangedBroadcast {
         )
         val presentIdentityExtras = identityExtras.count(intent::hasExtra)
         if (presentIdentityExtras == 0) {
-            return if (kind == LyricsChangeKind.DELETED) LyricsChange.deleted() else null
+            return when (kind) {
+                LyricsChangeKind.UPDATED -> null
+                LyricsChangeKind.DELETED -> LyricsChange.deleted()
+                LyricsChangeKind.LIBRARY_CHANGED -> LyricsChange.libraryChanged()
+            }
         }
-        if (presentIdentityExtras != identityExtras.size) return null
+        if (kind == LyricsChangeKind.LIBRARY_CHANGED || presentIdentityExtras != identityExtras.size) return null
 
         val target = runCatching {
             SongIdentity(

@@ -6,6 +6,7 @@ import android.text.style.URLSpan
 import com.andsi.airlyrics.core.model.LyricsAttribution
 import com.andsi.airlyrics.core.model.LyricsCredit
 import com.andsi.airlyrics.lyrics.LyricsAccess
+import com.andsi.airlyrics.media.PlaybackClock
 import android.graphics.Color
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -29,6 +30,7 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class FloatingLyricsRendererTest {
+    private val playbackClock = PlaybackClock { 10_000L }
     private lateinit var context: Context
 
     @Before
@@ -49,12 +51,12 @@ class FloatingLyricsRendererTest {
             ))), emptyText = "empty"
         )
         for (position in listOf(3_000L, 7_999L, 8_000L, 12_001L)) {
-            renderer.updatePlayback(position, false)
+            playbackClock.update(position, false)
             renderer.tick()
             assertEquals("爱说", view.text.toString())
             assertTrue("position=$position", view.text.highlightSpans().isEmpty())
         }
-        renderer.updatePlayback(8_500L, false)
+        playbackClock.update(8_500L, false)
         renderer.tick()
         val span = view.text.highlightSpans().single()
         assertEquals(0, (view.text as Spanned).getSpanStart(span))
@@ -78,7 +80,7 @@ class FloatingLyricsRendererTest {
         for ((display, tokens, reliable) in cases) {
             val view = TextView(context)
             val renderer = renderer(textView = view, wordByWordEnabled = true)
-            renderer.updatePlayback(1_500L, false)
+            playbackClock.update(1_500L, false)
             renderer.parseAndShow(
                 plainLrc = "[00:01.00]$display",
                 wordByWordLines = listOf(WordByWordLine(1_000L, 5_000L,
@@ -98,10 +100,11 @@ class FloatingLyricsRendererTest {
             val view = FloatingLyricsTextView(context)
             val renderer = FloatingLyricsRenderer(
                 textViewProvider = { view },
+                playbackClock = playbackClock,
                 wordByWordLyricsEnabledProvider = { true },
                 wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY }
             )
-            renderer.updatePlayback(8_500L, false)
+            playbackClock.update(8_500L, false)
             renderer.parseAndShow("[00:01.00]爱说", wordByWordLines = listOf(
                 WordByWordLine(1_000L, 12_000L, "愛說", listOf(
                     WordByWordSegment("愛", 8_000L, 9_000L),
@@ -123,11 +126,12 @@ class FloatingLyricsRendererTest {
         val view = FloatingLyricsTextView(context)
         val renderer = FloatingLyricsRenderer(
             textViewProvider = { view },
+            playbackClock = playbackClock,
             contentModeProvider = { LyricsContentDisplayMode.TRANSLATION_ONLY },
             wordByWordLyricsEnabledProvider = { true },
             wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY }
         )
-        renderer.updatePlayback(1_500L, false)
+        playbackClock.update(1_500L, false)
         renderer.parseAndShow("[00:01.00]Hello", translatedLrc = "[00:01.00]你好",
             wordByWordLines = listOf(WordByWordLine(1_000L, 5_000L, "Hello",
                 listOf(WordByWordSegment("Hello", 1_000L, 1_800L)),
@@ -146,6 +150,7 @@ class FloatingLyricsRendererTest {
         val view = FloatingLyricsTextView(context)
         val renderer = FloatingLyricsRenderer(
             textViewProvider = { view },
+            playbackClock = playbackClock,
             wordByWordLyricsEnabledProvider = { true },
             wordByWordAnimationModeProvider = { WordByWordAnimationMode.SPICY }
         )
@@ -153,7 +158,7 @@ class FloatingLyricsRendererTest {
             listOf(WordByWordSegment("Hello", 1_000L, 1_800L)),
             translatedText = "Hello",
             translatedSegments = listOf(WordByWordSegment("Hello", 3_000L, 3_800L)))
-        renderer.updatePlayback(1_500L, false)
+        playbackClock.update(1_500L, false)
         renderer.parseAndShow("[00:01.00]Hello", wordByWordLines = listOf(line), emptyText = "")
         // Exercise the render cache directly: the LRC parser deduplicates identical translations.
         val render = FloatingLyricsRenderer::class.java.getDeclaredMethod(
@@ -170,42 +175,9 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
-    fun updatePlayback_ignoresSmallStaleBacktrackWhilePlaying() {
-        var now = 10_000L
-        val renderer = renderer(uptimeMillisProvider = { now })
-
-        renderer.updatePlayback(positionMs = 1_000L, isPlaying = true)
-        now += 700L
-        assertEquals(1_700L, renderer.getEstimatedPositionMs())
-
-        renderer.updatePlayback(positionMs = 1_200L, isPlaying = true)
-        assertEquals(1_700L, renderer.getEstimatedPositionMs())
-
-        now += 100L
-        assertEquals(1_800L, renderer.getEstimatedPositionMs())
-    }
-
-    @Test
-    fun updatePlayback_acceptsLargeSeekAndPausedPosition() {
-        var now = 10_000L
-        val renderer = renderer(uptimeMillisProvider = { now })
-
-        renderer.updatePlayback(positionMs = 10_000L, isPlaying = true)
-        now += 3_000L
-        assertEquals(13_000L, renderer.getEstimatedPositionMs())
-
-        renderer.updatePlayback(positionMs = 8_000L, isPlaying = true)
-        assertEquals(8_000L, renderer.getEstimatedPositionMs())
-
-        now += 700L
-        renderer.updatePlayback(positionMs = 8_200L, isPlaying = false)
-        assertEquals(8_200L, renderer.getEstimatedPositionMs())
-    }
-
-    @Test
     fun setLyricsOffset_reportsChangesAndNeverReturnsANegativePosition() {
         val renderer = renderer()
-        renderer.updatePlayback(positionMs = 1_000L, isPlaying = false)
+        playbackClock.update(positionMs = 1_000L, isPlaying = false)
 
         assertTrue(renderer.setLyricsOffset(500L))
         assertEquals(1_500L, renderer.getEstimatedPositionMs())
@@ -229,7 +201,7 @@ class FloatingLyricsRendererTest {
             emptyText = "empty"
         )
 
-        renderer.updatePlayback(positionMs = 2_100L, isPlaying = false)
+        playbackClock.update(positionMs = 2_100L, isPlaying = false)
         renderer.tick()
 
         assertEquals("first\n第一句\nsecond\n第二句\nthird\n第三句", textView.text.toString())
@@ -243,7 +215,7 @@ class FloatingLyricsRendererTest {
             contentMode = LyricsContentDisplayMode.TRANSLATION_ONLY,
             wordByWordEnabled = true
         )
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
 
         renderer.parseAndShow(
             plainLrc = "[00:01.00]Hello",
@@ -266,7 +238,7 @@ class FloatingLyricsRendererTest {
             wordByWordEnabled = true,
             highlightColor = Color.MAGENTA
         )
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
 
         renderer.parseAndShow(
             plainLrc = "[00:01.00]Hello",
@@ -294,7 +266,7 @@ class FloatingLyricsRendererTest {
             wordByWordEnabled = true,
             highlightColor = Color.MAGENTA
         )
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
 
         val translated = "苏三说"
         val line = WordByWordLine(
@@ -334,7 +306,7 @@ class FloatingLyricsRendererTest {
             highlightColor = Color.MAGENTA,
             scriptPreference = LyricsScriptPreference.NONE
         )
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
 
         val translated = "苏三说"
         val line = WordByWordLine(
@@ -372,7 +344,7 @@ class FloatingLyricsRendererTest {
             wordByWordEnabled = true,
             highlightColor = Color.MAGENTA
         )
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
 
         val line = WordByWordLine(
             startMs = 1_000L,
@@ -399,7 +371,7 @@ class FloatingLyricsRendererTest {
     fun mismatchedWordByWordLine_fallsBackToUnhighlightedPlainLyrics() {
         val textView = TextView(context)
         val renderer = renderer(textView = textView, wordByWordEnabled = true)
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
 
         renderer.parseAndShow(
             plainLrc = "[00:01.00]Hello",
@@ -415,7 +387,7 @@ class FloatingLyricsRendererTest {
     fun wordByWordOnlyPayload_stillRendersWhenPlainLrcHasNoTimedLines() {
         val textView = TextView(context)
         val renderer = renderer(textView = textView, wordByWordEnabled = true)
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
 
         renderer.parseAndShow(
             plainLrc = "not a timed lyric",
@@ -456,7 +428,7 @@ class FloatingLyricsRendererTest {
     @Test
     fun statusMessage_survivesTextViewReplacementUntilClear() {
         var currentView: TextView? = TextView(context)
-        val renderer = FloatingLyricsRenderer(textViewProvider = { currentView })
+        val renderer = FloatingLyricsRenderer(textViewProvider = { currentView }, playbackClock = playbackClock)
 
         renderer.show("lyrics unavailable")
         val restoredMessageView = TextView(context)
@@ -474,10 +446,10 @@ class FloatingLyricsRendererTest {
     }
 
     @Test
-    fun refreshAndClear_resetTextWithoutKeepingPreviousTimingState() {
+    fun refreshAndClear_preservePlaybackPositionAndOffsetForReplacementLyrics() {
         val textView = TextView(context)
         val renderer = renderer(textView = textView)
-        renderer.updatePlayback(positionMs = 1_500L, isPlaying = false)
+        playbackClock.update(positionMs = 1_500L, isPlaying = false)
         renderer.parseAndShow("[00:01.00]line", emptyText = "empty")
         assertEquals("line", textView.text.toString())
 
@@ -485,13 +457,17 @@ class FloatingLyricsRendererTest {
         renderer.refresh()
         assertEquals("manual", textView.text.toString())
 
+        renderer.setLyricsOffset(500L)
         renderer.clear()
-        assertEquals(0L, renderer.getEstimatedPositionMs())
+        assertEquals(2_000L, renderer.getEstimatedPositionMs())
         assertFalse(renderer.isWordByWordActive())
         assertEquals(1f, textView.alpha)
         assertEquals(0f, textView.translationY)
         assertEquals(1f, textView.scaleX)
         assertEquals(1f, textView.scaleY)
+
+        renderer.parseAndShow("[00:01.00]early\n[00:02.00]replacement", emptyText = "empty")
+        assertEquals("replacement", textView.text.toString())
     }
 
     @Test
@@ -501,13 +477,13 @@ class FloatingLyricsRendererTest {
             textView = textView,
             switchAnimationMode = LyricsSwitchAnimationMode.FADE
         )
-        renderer.updatePlayback(positionMs = 1_100L, isPlaying = false)
+        playbackClock.update(positionMs = 1_100L, isPlaying = false)
         renderer.parseAndShow(
             plainLrc = "[00:01.00]first\n[00:02.00]second",
             emptyText = "empty"
         )
 
-        renderer.updatePlayback(positionMs = 2_100L, isPlaying = false)
+        playbackClock.update(positionMs = 2_100L, isPlaying = false)
         renderer.tick()
 
         assertEquals("second", textView.text.toString())
@@ -539,14 +515,14 @@ class FloatingLyricsRendererTest {
     @Test fun backgroundDoesNotReplaceLeadOrBecomeTranslation() {
         val view = TextView(context)
         val renderer = renderer(textView = view, wordByWordEnabled = true)
-        renderer.updatePlayback(1500, false)
+        playbackClock.update(1500, false)
         renderer.parseAndShow("[00:01.00]Lead", wordByWordLines = listOf(
             WordByWordLine(1000, 3000, "Lead", listOf(WordByWordSegment("Lead", 1000, 3000))),
             WordByWordLine(1200, 2000, "Background", listOf(WordByWordSegment("Background", 1200, 2000)), true)
         ), emptyText = "empty")
         assertTrue(view.text.contains("Lead"))
         assertTrue(view.text.contains("Background"))
-        renderer.updatePlayback(2200, false)
+        playbackClock.update(2200, false)
         renderer.tick()
         assertTrue(view.text.contains("Lead"))
         assertFalse(view.text.contains("Background"))
@@ -572,19 +548,18 @@ class FloatingLyricsRendererTest {
         switchAnimationMode: LyricsSwitchAnimationMode = LyricsSwitchAnimationMode.NONE,
         wordByWordEnabled: Boolean = false,
         highlightColor: Int = Color.MAGENTA,
-        scriptPreference: LyricsScriptPreference = LyricsScriptPreference.SIMPLIFIED,
-        uptimeMillisProvider: () -> Long = { 10_000L }
+        scriptPreference: LyricsScriptPreference = LyricsScriptPreference.SIMPLIFIED
     ): FloatingLyricsRenderer {
         return FloatingLyricsRenderer(
             textViewProvider = { textView },
+            playbackClock = playbackClock,
             contentModeProvider = { contentMode },
             lineModeProvider = { lineMode },
             switchAnimationModeProvider = { switchAnimationMode },
             wordByWordLyricsEnabledProvider = { wordByWordEnabled },
             wordByWordHighlightColorProvider = { highlightColor },
             scriptPreferenceProvider = { scriptPreference },
-            noTranslationTextProvider = { "no translation" },
-            uptimeMillisProvider = uptimeMillisProvider
+            noTranslationTextProvider = { "no translation" }
         )
     }
 

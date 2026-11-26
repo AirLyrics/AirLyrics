@@ -3,7 +3,6 @@ package com.andsi.airlyrics.floating
 import android.content.Intent
 import android.provider.Settings
 import com.andsi.airlyrics.R
-import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.settings.store.FloatingLyricsStyleStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
 
@@ -11,10 +10,17 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
     when (val command = FloatingServiceCommand.fromIntent(intent)) {
         null -> Unit
         FloatingServiceCommand.Restore -> restoreFromDesiredState()
-        FloatingServiceCommand.Show -> showLyrics()
+        FloatingServiceCommand.Show -> {
+            if (QuickFloatingStore.isDesiredVisible(this)) {
+                syncSelectedMediaSource()
+                showLyrics(manual = true)
+            }
+        }
         FloatingServiceCommand.Hide -> {
-            hideLyrics()
-            stopSelf(startId)
+            if (!QuickFloatingStore.isDesiredVisible(this)) {
+                hideLyrics()
+                stopSelf(startId)
+            }
         }
         FloatingServiceCommand.Lock -> setLocked(locked = true)
         FloatingServiceCommand.Unlock -> setLocked(locked = false)
@@ -34,29 +40,25 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
         }
         FloatingServiceCommand.ReloadLyrics -> reloadCurrentLyrics()
         is FloatingServiceCommand.ApplyLyricsOffset -> applyLyricsOffset(command.offsetMs)
-        is FloatingServiceCommand.SelectMediaSource -> selectMediaSource(command.packageName)
+        FloatingServiceCommand.SyncMediaSource -> syncSelectedMediaSource()
         is FloatingServiceCommand.ImportPlainLyrics -> importPlainLyrics(uri = command.uri, overwrite = command.overwrite)
     }
 }
 
 internal fun FloatingLyricsService.restoreFromDesiredState() {
-    selectedSourcePackage = MediaSourceStore.getSelectedPackage(this)
-    if (QuickFloatingStore.isDesiredVisible(this)) {
-        showLyrics(updateDesiredVisible = false)
-    } else {
-        stopDisplayScopeObservation()
-        stopLyricsSync()
-        stopSelectedMediaObservation()
-        broadcastWindowVisibility(false)
+    syncSelectedMediaSource()
+    if (!QuickFloatingStore.isDesiredVisible(this)) {
+        hideLyrics()
+    } else if (windowController.isVisible && !Settings.canDrawOverlays(this)) {
+        windowController.hide()
         refreshQuickControls()
+    } else {
+        reevaluateAutoHide()
     }
 }
 
-internal fun FloatingLyricsService.showLyrics(updateDesiredVisible: Boolean = true): Boolean {
-    if (updateDesiredVisible) {
-        QuickFloatingStore.setDesiredVisible(this, true)
-        suppressAutoHideForManualShow()
-    }
+internal fun FloatingLyricsService.showLyrics(manual: Boolean): Boolean {
+    if (manual) suppressAutoHideForManualShow()
     startDisplayScopeObservation()
     if (isDisplayScopeBlockingWindow()) {
         hideLyricsForDisplayScope()
@@ -85,9 +87,8 @@ internal fun FloatingLyricsService.hideLyrics() {
     autoHiddenForDisplayScope = false
     displayScopeBlockReason = null
     stopDisplayScopeObservation()
-    QuickFloatingStore.setDesiredVisible(this, false)
     val hidden = !isWindowControllerReady() ||
-        runCatching { windowController.hide() }.getOrDefault(false)
+        runCatching { windowController.hide(notifyVisibilityChanged = false) }.getOrDefault(false)
     val stillVisible = isWindowControllerReady() && windowController.isVisible
     if (hidden || !stillVisible) {
         syncHandler.removeCallbacks(mediaRestoreRunnable)
@@ -112,14 +113,16 @@ internal fun FloatingLyricsService.setClickThrough(clickThrough: Boolean): Boole
 }
 
 internal fun FloatingLyricsService.toggleVisibleFromNotification() {
-    val desiredVisible = QuickFloatingStore.isDesiredVisible(this)
-    if (!desiredVisible) {
+    val desiredVisible = !QuickFloatingStore.isDesiredVisible(this)
+    QuickFloatingStore.setDesiredVisible(this, desiredVisible)
+    if (desiredVisible) {
         if (!Settings.canDrawOverlays(this)) {
             refreshQuickControls(getString(R.string.ui_overlay_permission_required))
             showQuickFeedback(R.string.ui_enable_overlay_permission_first)
             return
         }
-        showLyrics()
+        syncSelectedMediaSource()
+        showLyrics(manual = true)
     } else {
         hideLyrics()
     }

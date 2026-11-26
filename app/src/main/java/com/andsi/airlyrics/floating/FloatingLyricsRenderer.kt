@@ -1,7 +1,6 @@
 package com.andsi.airlyrics.floating
 
 import android.graphics.Color
-import android.os.SystemClock
 import android.text.SpannableString
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -15,6 +14,8 @@ import androidx.core.graphics.ColorUtils
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import com.andsi.airlyrics.lyrics.display.PlainLyricsDisplayFormatter
+import com.andsi.airlyrics.lyrics.display.conversionSegments
+import com.andsi.airlyrics.lyrics.display.mapDisplaySegments
 import com.andsi.airlyrics.lyrics.parser.LrcLine
 import com.andsi.airlyrics.core.text.ChineseText
 import com.andsi.airlyrics.core.text.LyricsDisplayPolicy
@@ -26,6 +27,7 @@ import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.WordByWordAnimationMode
 import com.andsi.airlyrics.core.model.LyricsGlowStyle
 import com.andsi.airlyrics.design.tokens.AirUiTokens
+import com.andsi.airlyrics.media.PlaybackClock
 import kotlin.math.roundToInt
 
 internal enum class ParsedLyricsAvailability {
@@ -33,8 +35,9 @@ internal enum class ParsedLyricsAvailability {
     EMPTY
 }
 
-class FloatingLyricsRenderer(
+internal class FloatingLyricsRenderer(
     private val textViewProvider: () -> TextView?,
+    private val playbackClock: PlaybackClock,
     private val contentModeProvider: () -> LyricsContentDisplayMode = { LyricsContentDisplayMode.default },
     private val scriptPreferenceProvider: () -> LyricsScriptPreference = { LyricsScriptPreference.default },
     private val lineModeProvider: () -> LyricsLineDisplayMode = { LyricsLineDisplayMode.default },
@@ -42,7 +45,6 @@ class FloatingLyricsRenderer(
     private val wordByWordLyricsEnabledProvider: () -> Boolean = { false },
     private val wordByWordHighlightColorProvider: () -> Int = { Color.rgb(120, 220, 255) },
     private val noTranslationTextProvider: () -> String = { "No translation for this lyric" },
-    private val uptimeMillisProvider: () -> Long = { SystemClock.uptimeMillis() },
     private val wordByWordAnimationModeProvider: () -> WordByWordAnimationMode = { WordByWordAnimationMode.CLASSIC },
     private val durationMsProvider: () -> Long = { 0L },
     private val glowStyleProvider: () -> LyricsGlowStyle = { LyricsGlowStyle() }
@@ -81,26 +83,9 @@ class FloatingLyricsRenderer(
     private var currentPlainLines: List<LrcLine> = emptyList()
     private var backgroundLines: List<WordByWordLine> = emptyList()
     private var currentWordByWordLines: List<WordByWordLine> = emptyList()
-    private var currentPositionMs: Long = 0L
-    private var lastPositionUpdateUptimeMs: Long = 0L
-    private var currentIsPlaying: Boolean = false
     private var lyricsOffsetMs: Long = 0L
     private var currentMessage: (() -> String)? = null
     private var lastRenderedText: String? = null
-
-    fun updatePlayback(positionMs: Long, isPlaying: Boolean) {
-        val nowUptimeMs = uptimeMillisProvider()
-        val incomingPositionMs = positionMs.coerceAtLeast(0L)
-        val estimatedBeforeUpdateMs = getEstimatedPlaybackPositionMs(nowUptimeMs)
-        currentPositionMs = if (isStalePlayingBacktrack(incomingPositionMs, isPlaying, estimatedBeforeUpdateMs)) {
-            estimatedBeforeUpdateMs
-        } else {
-            incomingPositionMs
-        }
-        currentIsPlaying = isPlaying
-        lastPositionUpdateUptimeMs = nowUptimeMs
-        updateSpicyPlayback()
-    }
 
     private data class SpicyCacheKey(
         val line: WordByWordLine,
@@ -120,7 +105,7 @@ class FloatingLyricsRenderer(
     private fun usesLineEffects() = !isWordByWordActive() && textViewProvider() is FloatingLyricsTextView &&
         (switchAnimationModeProvider() == LyricsSwitchAnimationMode.SPICY || glowStyleProvider().enabled)
 
-    private fun updateSpicyPlayback() {
+    fun updateSpicyPlayback() {
         val view = textViewProvider() as? FloatingLyricsTextView ?: return
         view.updateLyricsGlow(glowStyleProvider())
         val text = view.text as? Spanned
@@ -128,11 +113,11 @@ class FloatingLyricsRenderer(
             text.getSpans(0, text.length, SpicyLyricsSpan::class.java).isNotEmpty() ||
                 text.getSpans(0, text.length, SpicyLineSpan::class.java).isNotEmpty()
             )
-        view.updateSpicyPlayback(if (active) spicyClock else null, currentIsPlaying)
+        view.updateSpicyPlayback(if (active) spicyClock else null, playbackClock.isPlaying)
     }
 
     internal fun nextSyncDelayMs(maxDelayMs: Long): Long {
-        if (!currentIsPlaying) return maxDelayMs
+        if (!playbackClock.isPlaying) return maxDelayMs
         val position = getEstimatedPositionMs()
         val index = LrcParser.findCurrentIndex(currentPlainLines, position) ?: -1
         val next = currentPlainLines.getOrNull(index + 1)?.timeMs ?: return maxDelayMs
@@ -146,10 +131,6 @@ class FloatingLyricsRenderer(
         currentPlainLines = emptyList()
         currentWordByWordLines = emptyList()
         backgroundLines = emptyList()
-        currentPositionMs = 0L
-        lastPositionUpdateUptimeMs = 0L
-        currentIsPlaying = false
-        lyricsOffsetMs = 0L
         currentMessage = null
         lastRenderedText = null
         resetTextAnimationState()
@@ -476,8 +457,7 @@ class FloatingLyricsRenderer(
             if (displaySegments === wordByWordLine.segments &&
                 sourceText != wordByWordOriginalText(wordByWordLine)) return text
             val mapped = if (displaySegments === wordByWordLine.translatedSegments) {
-                com.andsi.airlyrics.lyrics.providers.ApplePlainLyricsProvider
-                    .conversionSegments(text, displaySegments)
+                conversionSegments(text, displaySegments)
             } else {
                 mapDisplaySegments(sourceText, text, displaySegments)
             }
@@ -532,50 +512,6 @@ class FloatingLyricsRenderer(
             }
         }
         return span
-    }
-
-    private fun mapDisplaySegments(
-        source: String,
-        display: String,
-        segments: List<WordByWordSegment>
-    ): List<WordByWordSegment>? {
-        if (segments.joinToString("") { it.text } != source) return null
-        // Apple can omit spaces at token boundaries (especially before a sung echo).
-        // Slice the complete display string, retaining every token's original time range.
-        if (source.filterNot { it.isWhitespace() } == display.filterNot { it.isWhitespace() }) {
-            var cursor = 0
-            val mapped = segments.map { segment ->
-                val start = cursor
-                for (character in segment.text.filterNot { it.isWhitespace() }) {
-                    while (cursor < display.length && display[cursor].isWhitespace()) cursor++
-                    if (cursor >= display.length || display[cursor] != character) return null
-                    cursor++
-                }
-                segment.copy(text = display.substring(start, cursor))
-            }.toMutableList()
-            if (mapped.isEmpty()) return null
-            val last = mapped.last()
-            mapped[mapped.lastIndex] = last.copy(text = last.text + display.substring(cursor))
-            return mapped
-        }
-        val (converted, sourceBoundaries) = ChineseText.simplifiedBoundaries(source)
-        val (convertedDisplay, displayBoundaries) = ChineseText.simplifiedBoundaries(display)
-        if (converted != convertedDisplay) return null
-        val reverse = displayBoundaries.withIndex().filter { it.value >= 0 }
-            .groupBy({ it.value }, { it.index })
-        var offset = 0
-        var previousEndMs = Long.MIN_VALUE
-        return segments.map { segment ->
-            if (segment.startMs < previousEndMs || segment.endMs <= segment.startMs) return null
-            previousEndMs = segment.endMs
-            val start = sourceBoundaries[offset]
-            offset += segment.text.length
-            val end = sourceBoundaries[offset]
-            val displayStart = reverse[start]?.singleOrNull() ?: return null
-            val displayEnd = reverse[end]?.singleOrNull() ?: return null
-            if (start !in 0 until end || displayEnd <= displayStart) return null
-            segment.copy(text = display.substring(displayStart, displayEnd))
-        }
     }
 
     private fun wordByWordOriginalText(wordByWordLine: WordByWordLine): String {
@@ -746,32 +682,11 @@ class FloatingLyricsRenderer(
     private fun CharSequence.isNotBlankText(): Boolean = toString().isNotBlank()
 
     fun getEstimatedPositionMs(): Long {
-        return (getEstimatedPlaybackPositionMs() + lyricsOffsetMs).coerceAtLeast(0L)
-    }
-
-    private fun getEstimatedPlaybackPositionMs(nowUptimeMs: Long = uptimeMillisProvider()): Long {
-        if (!currentIsPlaying || lastPositionUpdateUptimeMs == 0L) {
-            return currentPositionMs.coerceAtLeast(0L)
+        val positionMs = playbackClock.estimatedPositionMs()
+        return if (lyricsOffsetMs > 0L) {
+            positionMs.coerceAtMost(Long.MAX_VALUE - lyricsOffsetMs) + lyricsOffsetMs
+        } else {
+            (positionMs + lyricsOffsetMs).coerceAtLeast(0L)
         }
-
-        val elapsedMs = nowUptimeMs - lastPositionUpdateUptimeMs
-        return (currentPositionMs + elapsedMs.coerceAtLeast(0L)).coerceAtLeast(0L)
-    }
-
-    private fun isStalePlayingBacktrack(
-        positionMs: Long,
-        incomingIsPlaying: Boolean,
-        estimatedBeforeUpdateMs: Long
-    ): Boolean {
-        if (!currentIsPlaying || !incomingIsPlaying || lastPositionUpdateUptimeMs == 0L) {
-            return false
-        }
-
-        val backtrackMs = estimatedBeforeUpdateMs - positionMs
-        return backtrackMs in 1L..STALE_PLAYING_BACKTRACK_MS
-    }
-
-    companion object {
-        private const val STALE_PLAYING_BACKTRACK_MS = 1_500L
     }
 }

@@ -2,12 +2,11 @@ package com.andsi.airlyrics.lyrics.search
 
 import android.content.Context
 import com.andsi.airlyrics.BuildConfig
-import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.*
 import com.andsi.airlyrics.lyrics.providers.*
-import com.andsi.airlyrics.lyrics.storage.*
+import com.andsi.airlyrics.lyrics.storage.SpicyLyricsCache
 import org.json.JSONObject
 import org.json.JSONException
 
@@ -32,6 +31,8 @@ internal class ManualLyricsSearch(
         }
     }
 ) {
+    private val committer = LyricsResultCommitter(context)
+
     fun search(source: PlainLyricsSearchSource, query: SongIdentity, token: LyricsLookupCancellationToken): List<LyricsCandidate> {
         val json = request(source, "search", "", query, token)
         val array = json.getJSONArray("candidates")
@@ -154,30 +155,18 @@ internal class ManualLyricsSearch(
             matchedAlbum = candidate.song.album, matchedDurationMs = candidate.song.durationMs)
     )
 
-    fun apply(target: SongIdentity, result: LyricsProviderResult, token: LyricsLookupCancellationToken,
-        approvedRevision: String?): Boolean {
+    fun apply(
+        target: SongIdentity,
+        result: LyricsProviderResult,
+        token: LyricsLookupCancellationToken,
+        approvedRevision: String?
+    ): Boolean {
         require(result.manualUnavailableReason() == null) { "Invalid lyrics cannot be applied" }
         require(result.access?.isExpired() != true) { "Preview expired" }
-        val lease = LyricsSearchCoordinator.begin(target,token,LyricsSearchOrigin.Manual,LyricsSearchMode.Original)
-        return lease.use {
-            lease.commit {
-                LyricsStorage.withStorageLock {
-                    val revision = protectedRevision(target)
-                    if (revision != null && revision != approvedRevision) return@withStorageLock false
-                    ManualLyricsSelectionStore.commit(context,target,LyricsSearchMode.Original,result,manual = true,savePlain = true)
-                    true
-                }
-            }.also { saved -> if (saved) BroadcastLyricsChangedPublisher(context).publish(target) }
-        }
+        return committer.applySelection(target, result, token, approvedRevision)
     }
 
-    fun protectedRevision(target: SongIdentity): String? {
-        val info = LyricsStorage.withStorageLock {
-            PlainLyricsStorageOps.getLocalPlainLyricsInfo(context,target.title,target.artist,target.durationMs)
-        } ?: return null
-        return if (info.plainSource in setOf(LyricsStorage.SOURCE_MANUAL_IMPORT,LyricsStorage.SOURCE_MANUAL_EDIT,LyricsStorage.SOURCE_LEGACY,LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK))
-            "${info.indexKey}:${info.updatedAt}:${info.plainSource}" else null
-    }
+    fun protectedRevision(target: SongIdentity): String? = committer.protectedRevision(target)
 
     private fun request(source: PlainLyricsSearchSource, operation: String, id: String, song: SongIdentity,
         token: LyricsLookupCancellationToken, storefront: String? = null, provider: String = source.key, extra: JSONObject? = null): JSONObject {

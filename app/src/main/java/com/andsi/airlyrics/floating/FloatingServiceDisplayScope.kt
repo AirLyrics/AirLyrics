@@ -18,12 +18,12 @@ internal fun FloatingLyricsService.applyDisplayScopeSetting() {
 
     if (!displayScopeFilterEnabled()) {
         val needsRestore = autoHiddenForDisplayScope ||
-            (activeAutoHideReasons.isEmpty() &&
+            (!autoHideState.shouldHide &&
                 (!isWindowControllerReady() || !windowController.isVisible))
         stopDisplayScopeObservation()
         autoHiddenForDisplayScope = false
         displayScopeBlockReason = null
-        if (needsRestore && activeAutoHideReasons.isEmpty()) {
+        if (needsRestore && !autoHideState.shouldHide) {
             restoreVisibleLyricsIfDesired()
         } else {
             refreshQuickControls()

@@ -57,10 +57,54 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.util.concurrent.Executor
 import kotlin.time.Duration.Companion.seconds
+
+internal class LyricsSearchDependencies(
+    val access: LyricsSearchAccess,
+    val io: CoroutineDispatcher = Dispatchers.IO,
+    val computation: CoroutineDispatcher = Dispatchers.Default,
+    val diffExecutor: Executor? = null
+)
+
+private fun manualSearchAccess(context: Context): LyricsSearchAccess {
+    val service = ManualLyricsSearch(context)
+    return object : LyricsSearchAccess {
+        override fun search(source: PlainLyricsSearchSource, query: SongIdentity, token: LyricsLookupCancellationToken) =
+            service.search(source, query, token)
+
+        override fun resolveInternationalTitle(query: SongIdentity, token: LyricsLookupCancellationToken) =
+            service.resolveInternationalTitle(query, token)
+
+        override fun fetch(candidate: LyricsCandidate, target: SongIdentity, token: LyricsLookupCancellationToken) =
+            service.fetch(candidate, target, token)
+
+        override fun findBySpotifyId(
+            id: String, mediaSong: SongIdentity?, target: SongIdentity, token: LyricsLookupCancellationToken
+        ) = service.findBySpotifyId(id, mediaSong, target, token)
+
+        override fun searchWordRecordings(
+            source: ManualWordSource, query: SongIdentity, page: Int, keyword: String, token: LyricsLookupCancellationToken
+        ) = service.searchWordRecordings(source, query, page, keyword, token)
+
+        override fun loadWordRecording(recording: ManualWordRecording, token: LyricsLookupCancellationToken) =
+            service.loadWordRecording(recording, token)
+
+        override fun loadWordOption(option: ManualWordOption, token: LyricsLookupCancellationToken) =
+            service.loadWordOption(option, token)
+
+        override fun protectedRevision(target: SongIdentity) = service.protectedRevision(target)
+
+        override fun apply(
+            target: SongIdentity, result: LyricsProviderResult, token: LyricsLookupCancellationToken, approvedRevision: String?
+        ) = service.apply(target, result, token, approvedRevision)
+    }
+}
 
 class LyricsSearchActivity : AppCompatActivity() {
     internal val interactionUi = InteractionUiRegistry()
@@ -113,24 +157,19 @@ class LyricsSearchActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val initial=readTarget(savedInstanceState ?: intent.extras) ?: run { finish(); return }
-        val app=applicationContext
-        session=ViewModelProvider(this,object: ViewModelProvider.Factory {
-            override fun <T: ViewModel> create(modelClass: Class<T>): T {
-                val service=ManualLyricsSearch(app)
-                val access=object: LyricsSearchAccess {
-                    override fun search(source:PlainLyricsSearchSource,query:SongIdentity,token:LyricsLookupCancellationToken)=service.search(source,query,token)
-                    override fun resolveInternationalTitle(query:SongIdentity,token:LyricsLookupCancellationToken)=service.resolveInternationalTitle(query,token)
-                    override fun fetch(candidate:LyricsCandidate,target:SongIdentity,token:LyricsLookupCancellationToken)=service.fetch(candidate,target,token)
-                    override fun findBySpotifyId(id:String,mediaSong:SongIdentity?,target:SongIdentity,token:LyricsLookupCancellationToken)=service.findBySpotifyId(id,mediaSong,target,token)
-                    override fun searchWordRecordings(source:ManualWordSource,query:SongIdentity,page:Int,keyword:String,token:LyricsLookupCancellationToken)=service.searchWordRecordings(source,query,page,keyword,token)
-                    override fun loadWordRecording(recording:ManualWordRecording,token:LyricsLookupCancellationToken)=service.loadWordRecording(recording,token)
-                    override fun loadWordOption(option:ManualWordOption,token:LyricsLookupCancellationToken)=service.loadWordOption(option,token)
-                    override fun protectedRevision(target:SongIdentity)=service.protectedRevision(target)
-                    override fun apply(target:SongIdentity,result:LyricsProviderResult,token:LyricsLookupCancellationToken,approvedRevision:String?)=service.apply(target,result,token,approvedRevision)
-                }
+        val app = applicationContext
+        val dependencies = dependenciesFactory?.invoke(app)
+        session = ViewModelProvider(this, object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 @Suppress("UNCHECKED_CAST")
-                return LyricsSearchSession(initial,LyricsSettingsStore.getPlainLyricsSearchSources(app).toSet(),access,
-                    initialSpotifyTrackId=(savedInstanceState ?: intent.extras)?.getString("search.spotifyId")) as T
+                return LyricsSearchSession(
+                    target = initial,
+                    sources = LyricsSettingsStore.getPlainLyricsSearchSources(app).toSet(),
+                    access = dependencies?.access ?: manualSearchAccess(app),
+                    io = dependencies?.io ?: Dispatchers.IO,
+                    initialSpotifyTrackId = (savedInstanceState ?: intent.extras)?.getString("search.spotifyId"),
+                    computation = dependencies?.computation ?: Dispatchers.Default
+                ) as T
             }
         })[LyricsSearchSession::class.java]
         supportFragmentManager.setFragmentResultListener(LyricsSourcesSheet.RESULT,this) { _,result ->
@@ -159,7 +198,7 @@ class LyricsSearchActivity : AppCompatActivity() {
             }
         }
         val initialScroll = if (session.state.value.previewCandidate != null) session.previewScroll else session.resultsScroll
-        buildUi()
+        buildUi(dependencies?.diffExecutor)
         render(session.state.value)
         scroll.post {
             if (session.state.value.previewCandidate != null) scroll.scrollTo(0, initialScroll)
@@ -217,7 +256,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildUi() {
+    private fun buildUi(diffExecutor: Executor?) {
         WindowCompat.setDecorFitsSystemWindows(window,false)
         WindowCompat.getInsetsController(window,window.decorView).apply {
             isAppearanceLightStatusBars=!ThemeSettingsStore.isDark(this@LyricsSearchActivity)
@@ -346,7 +385,9 @@ class LyricsSearchActivity : AppCompatActivity() {
         val loadingSlot=FrameLayout(this).apply { addView(loading,FrameLayout.LayoutParams(-1,-2)) }
         header.addView(loadingSlot,LinearLayout.LayoutParams(-1,0))
         loadingReveal=LyricsSearchReveal(loadingSlot,loading,0,150,dp(4).toFloat(),0f)
-        results=LyricsSourcePages(this,palette,session,::errorText,::showSpotifyIdSearch,::showWordLyricsSearch)
+        results = LyricsSourcePages(
+            this, palette, session, ::errorText, ::showSpotifyIdSearch, ::showWordLyricsSearch, diffExecutor
+        )
         panel.addView(results,CoordinatorLayout.LayoutParams(-1,-1).apply {
             behavior=AppBarLayout.ScrollingViewBehavior()
         })
@@ -748,6 +789,9 @@ class LyricsSearchActivity : AppCompatActivity() {
     }
 
     companion object {
+        @Volatile
+        internal var dependenciesFactory: ((Context) -> LyricsSearchDependencies)? = null
+
         internal fun open(context:Context,target:SongIdentity,spotifyTrackId:String? = null) {
             if(target.title.isBlank()) return
             context.startActivity(Intent(context,LyricsSearchActivity::class.java).putExtras(Bundle().apply { writeTarget(this,target); putString("search.spotifyId",spotifyTrackId) }))

@@ -75,6 +75,7 @@ internal fun FloatingLyricsService.handleLyricsChanged(change: LyricsChange) {
 
     val currentSong = currentMedia.toSongIdentity()
     automaticOnlineLookupSuppressedSong = when (change.kind) {
+        LyricsChangeKind.LIBRARY_CHANGED -> return
         LyricsChangeKind.DELETED -> currentSong
         LyricsChangeKind.UPDATED -> automaticOnlineLookupSuppressedSong
             ?.takeUnless(currentSong::isSameSong)
@@ -88,8 +89,6 @@ internal fun FloatingLyricsService.clearLyricsState(message: () -> String) {
     automaticOnlineLookupSuppressedSong = null
     activeLyricsLookupRequestKey = null
     lyricsLookupRunner.cancelActive()
-    currentMedia = CurrentMediaInfo.Empty
-    renderer.setLyricsOffset(0L)
     renderer.clear()
     renderer.show(message)
     resetLyricsAvailability()

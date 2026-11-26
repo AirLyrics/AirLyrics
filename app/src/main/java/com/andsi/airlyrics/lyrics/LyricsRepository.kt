@@ -14,7 +14,6 @@ import com.andsi.airlyrics.lyrics.providers.MusixmatchPlainLyricsProvider
 import com.andsi.airlyrics.lyrics.providers.NeteasePlainLyricsProvider
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.SongAliasStore
-import com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
@@ -73,6 +72,7 @@ object LyricsRepository {
         val existing = LyricsSearchCoordinator.current(token)
         return runCatching {
             val lease = existing ?: LyricsSearchCoordinator.begin(song, token, searchOrigin, searchMode)
+            val committer = LyricsResultCommitter(context)
             try {
                 LyricsRepositoryEngine(
                     localPlainLyricsProvider = LocalPlainLyricsProvider,
@@ -82,34 +82,14 @@ object LyricsRepository {
                     wordByWordLyricsReader = AndroidWordByWordLyricsReader,
                     lookupLogger = AndroidLyricsLookupLogger,
                     commitOnlineResult = { request, result ->
-                        lease.commit {
-                            LyricsStorage.withStorageLock storage@ {
-                                if (searchOrigin == LyricsSearchOrigin.Automatic) {
-                                    // The network request may have outlived the lookup that started it:
-                                    // re-check inside the storage lock so lyrics imported (or otherwise
-                                    // written) while the request was in flight are never overwritten.
-                                    val appeared = LocalPlainLyricsProvider.fetch(request).getOrNull()
-                                    if (appeared != null) {
-                                        val cachedWords = if (settings.wordByWordLyricsEnabled) {
-                                            LyricsStorage.readWordByWordLyrics(
-                                                context = context.applicationContext,
-                                                title = title,
-                                                artist = artist,
-                                                duration = durationMs
-                                            )
-                                        } else emptyList()
-                                        return@storage if (cachedWords.isEmpty()) appeared
-                                        else appeared.copy(wordByWordLines = cachedWords)
-                                    }
-                                }
-                                val committed = ManualLyricsSelectionStore.commit(
-                                    context.applicationContext, song, request.searchMode, result,
-                                    manual = searchOrigin == LyricsSearchOrigin.Manual,
-                                    savePlain = settings.autoSaveLocal || forceSaveOnline
-                                )
-                                committed
-                            }
-                        }
+                        committer.commitLookup(
+                            lease = lease,
+                            target = song,
+                            request = request,
+                            result = result,
+                            savePlain = settings.autoSaveLocal || forceSaveOnline,
+                            wordByWordEnabled = settings.wordByWordLyricsEnabled
+                        )
                     }
                 ).findLyrics(
                     context = context,
