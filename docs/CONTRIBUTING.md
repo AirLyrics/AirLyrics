@@ -19,6 +19,9 @@ If available, images or videos can make the explanation easier to understand.
 
 ## Before submitting a PR
 
+Review the full diff yourself, including any AI-generated code, and verify that the changes work as
+intended. See Simon Willison's [Anti-patterns](https://simonwillison.net/guides/agentic-engineering-patterns/anti-patterns/).
+
 With AGP 9.3.x, run Android lint with JDK 21. The project bytecode target remains JVM 17.
 
 ```bash

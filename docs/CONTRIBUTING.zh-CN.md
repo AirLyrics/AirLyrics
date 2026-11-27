@@ -16,6 +16,9 @@ AirLyrics 目前处于稳定且积极维护状态，后续更新以维护为主�
 
 ## 提交 PR 前
 
+请亲自审查所有改动，包括 AI 生成的代码，并确认改动符合预期。
+参见 Simon Willison 的[反模式（Anti-patterns）](https://simonwillison.net/guides/agentic-engineering-patterns/anti-patterns/)。
+
 AGP 9.3.x 下，请使用 JDK 21 运行 Android lint。项目字节码目标仍为 JVM 17。
 
 ```bash
