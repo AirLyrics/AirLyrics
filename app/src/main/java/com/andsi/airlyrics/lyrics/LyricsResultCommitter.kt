@@ -20,16 +20,12 @@ internal class LyricsResultCommitter(context: Context) {
         savePlain: Boolean,
         wordByWordEnabled: Boolean,
     ): LyricsProviderResult {
-        val automatic = lease.origin == LyricsSearchOrigin.Automatic
-        val change = if (automatic) LyricsChange.libraryChanged() else null
-        val committed = commit(lease, change) {
-            if (automatic) {
-                localResultAfterFetch(request, target, wordByWordEnabled)?.let {
-                    return@commit ManualLyricsSelectionStore.CommitResult(it, saved = false)
-                }
+        val committed = commit(lease, LyricsChange.libraryChanged()) {
+            localResultAfterFetch(request, target, wordByWordEnabled)?.let {
+                return@commit ManualLyricsSelectionStore.CommitResult(it, saved = false)
             }
             ManualLyricsSelectionStore.commit(
-                context, target, request.searchMode, result, manual = !automatic, savePlain = savePlain
+                context, target, request.searchMode, result, manual = false, savePlain = savePlain,
             )
         }
         return checkNotNull(committed).lyrics
@@ -73,7 +69,7 @@ internal class LyricsResultCommitter(context: Context) {
 
     private fun commit(
         lease: LyricsSearchCoordinator.Lease,
-        change: LyricsChange?,
+        change: LyricsChange,
         write: () -> ManualLyricsSelectionStore.CommitResult?,
     ): ManualLyricsSelectionStore.CommitResult? {
         val committed = lease.commit {
@@ -82,7 +78,7 @@ internal class LyricsResultCommitter(context: Context) {
                 write()
             }
         }
-        if (change != null && committed?.saved == true) publisher.publish(change)
+        if (committed?.saved == true) publisher.publish(change)
         return committed
     }
 

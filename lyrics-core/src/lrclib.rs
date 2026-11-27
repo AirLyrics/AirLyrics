@@ -1083,26 +1083,13 @@ fn score_track_with_reason(
     };
     let Some(assessment) = crate::confidence::assess(query.match_metadata(), candidate_metadata)
     else {
-        let Some(title_score) = score_candidate(query.match_metadata(), candidate_metadata) else {
-            return Err(SearchCandidateRejection::Title);
-        };
-        crate::review::park(
-            &crate::review::query_key(&query.title, &query.artist, query.duration_ms),
-            crate::review::ParkedCandidate {
-                title: candidate_metadata.title.to_owned(),
-                artist: candidate_metadata.artist.to_owned(),
-                album: candidate_metadata.album.to_owned(),
-                duration_ms: candidate_duration_ms,
-                provider: "lrclib",
-                score: title_score.total,
-                reason: crate::confidence::rejection_reason(
-                    query.match_metadata(),
-                    candidate_metadata,
-                ),
-                alias_hit: crate::aliases::lookup(&query.title, &query.artist).is_some(),
+        return Err(
+            if score_candidate(query.match_metadata(), candidate_metadata).is_some() {
+                SearchCandidateRejection::LowConfidence
+            } else {
+                SearchCandidateRejection::Title
             },
         );
-        return Err(SearchCandidateRejection::LowConfidence);
     };
     let match_score = assessment.score;
     let confident_early_match = lrc.is_some() && is_confident_early_match(&match_score);
@@ -1667,43 +1654,23 @@ mod tests {
     }
 
     #[test]
-    fn review_candidates_are_parked_and_not_used_as_lyrics() {
-        let _guard = crate::review::lock_review_slot_for_tests();
-        crate::review::clear();
-        let query = query();
+    fn a_title_only_match_with_wrong_recording_details_is_rejected() {
         let track = usable_search_track(50, "Contract Song", "Unrelated Performer", "", 500.0);
 
-        assert!(
-            score_search_track(track, &query).is_none(),
-            "a title-only candidate must not be used as lyrics"
-        );
-
-        let parsed: serde_json::Value =
-            serde_json::from_str(&crate::review::take_json()).expect("parked payload");
-        let candidates = parsed["candidates"].as_array().expect("candidates");
-        assert_eq!(candidates.len(), 1);
-        assert_eq!(candidates[0]["title"], serde_json::json!("Contract Song"));
-        assert_eq!(candidates[0]["provider"], serde_json::json!("lrclib"));
-        assert_eq!(candidates[0]["reason"], serde_json::json!("weak_evidence"));
+        assert!(matches!(
+            score_track_with_reason(track, &query()),
+            Err(SearchCandidateRejection::LowConfidence)
+        ));
     }
 
     #[test]
-    fn a_live_variant_is_parked_with_a_version_conflict_reason() {
-        let _guard = crate::review::lock_review_slot_for_tests();
-        crate::review::clear();
-        let query = query();
+    fn a_live_variant_is_rejected_for_the_studio_recording() {
         let track = usable_search_track(51, "Contract Song (Live)", "Contract Artist", "", 123.5);
 
-        assert!(score_search_track(track, &query).is_none());
-
-        let parsed: serde_json::Value =
-            serde_json::from_str(&crate::review::take_json()).expect("parked payload");
-        let candidates = parsed["candidates"].as_array().expect("candidates");
-        assert_eq!(candidates.len(), 1);
-        assert_eq!(
-            candidates[0]["reason"],
-            serde_json::json!("version_conflict")
-        );
+        assert!(matches!(
+            score_track_with_reason(track, &query()),
+            Err(SearchCandidateRejection::LowConfidence)
+        ));
     }
 
     #[tokio::test]

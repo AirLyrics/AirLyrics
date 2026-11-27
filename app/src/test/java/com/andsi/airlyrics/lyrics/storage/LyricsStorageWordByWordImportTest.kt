@@ -193,24 +193,17 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
             .single { it.title == "Karaoke Spaces" }
 
         assertTrue(result is LyricsStorage.ImportLyricsResult.Saved)
-        val editorText = requireNotNull(
-            LyricsStorage.readLocalLyricsItemText(
-                context = context,
-                item = item,
-                target = LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
-            )
-        )
-        assertEquals("$originalLyrics<00:11.00>", editorText)
-
-        val update = LyricsStorage.updateWordByWordLyricsItemTextWithResult(
+        val exportedText = LyricsStorage.readLocalLyricsItemText(
             context = context,
             item = item,
-            wordByWordLrc = editorText
+            target = LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD
         )
+        assertEquals("$originalLyrics<00:11.00>", exportedText)
 
-        assertTrue(update.saved)
+        replaceWordInEditor(item, original = "love ", replacement = "like ")
+
         assertEquals(
-            "$originalLyrics<00:11.00>",
+            "${originalLyrics.replace("love", "like")}<00:11.00>",
             LyricsStorage.readLocalLyricsItemText(
                 context = context,
                 item = item,
@@ -218,7 +211,7 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
             )
         )
         assertEquals(
-            "[00:10.00]I love you",
+            "[00:10.00]I like you",
             LyricsStorage.readPlainLyrics(context, "Karaoke Spaces", "AndSi", 11_000L)
         )
     }
@@ -232,9 +225,15 @@ class LyricsStorageWordByWordImportTest : LyricsStorageTestBase() {
         assertEquals(1301L, before.single().segments.first().endMs)
         assertEquals(2003L, before.single().endMs)
         val item = LyricsStorage.listRecentLyrics(context).single { it.title == "LDDC" }
-        val editor = LyricsStorage.readLocalLyricsItemText(context, item, LyricsStorage.LocalLyricsEditTarget.WORD_BY_WORD)!!
-        assertTrue(LyricsStorage.updateWordByWordLyricsItemTextWithResult(context, item, editor).saved)
-        assertEquals(before, LyricsStorage.readWordByWordLyrics(context, "LDDC", "Artist", 5000L))
+        replaceWordInEditor(item, original = "好", replacement = "呀")
+
+        val edited = LyricsStorage.readWordByWordLyrics(context, "LDDC", "Artist", 5000L).single()
+        assertEquals("你呀", edited.text)
+        assertEquals(2003L, edited.endMs)
+        assertEquals(
+            listOf(WordByWordSegment("你", 1000L, 1301L), WordByWordSegment("呀", 1500L, 2003L)),
+            edited.segments
+        )
     }
 
 }

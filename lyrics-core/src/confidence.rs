@@ -194,24 +194,6 @@ pub(crate) fn assess(query: MatchMetadata<'_>, candidate: MatchMetadata<'_>) -> 
     })
 }
 
-pub(crate) fn rejection_reason(
-    query: MatchMetadata<'_>,
-    candidate: MatchMetadata<'_>,
-) -> &'static str {
-    let thresholds = Thresholds::from_env();
-    let evaluation = evaluate_with(query, candidate, None, &thresholds);
-    if evaluation.evidence.version_conflict {
-        return "version_conflict";
-    }
-    if evaluation.score.is_none() {
-        return "title_only";
-    }
-    if evaluation.evidence.cross_script {
-        return "cross_script";
-    }
-    "weak_evidence"
-}
-
 pub(crate) fn decide(
     score: Option<MatchScore>,
     evidence: &Evidence,

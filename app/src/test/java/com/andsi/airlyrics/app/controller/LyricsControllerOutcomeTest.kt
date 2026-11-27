@@ -1,10 +1,9 @@
 package com.andsi.airlyrics.app.controller
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
-import android.media.MediaMetadata
 import android.media.session.MediaController
-import android.media.session.MediaSession
 import android.net.Uri
 import android.util.Log
 import androidx.test.core.app.ApplicationProvider
@@ -13,27 +12,18 @@ import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.LyricsChange
 import com.andsi.airlyrics.lyrics.LyricsChangedPublisher
-import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
-import com.andsi.airlyrics.lyrics.LyricsLookupErrorType
-import com.andsi.airlyrics.lyrics.LyricsLookupException
-import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
-import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.toSongIdentity
 import java.io.File
-import java.util.concurrent.CancellationException
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertSame
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowLog
 
 @RunWith(RobolectricTestRunner::class)
@@ -44,13 +34,11 @@ class LyricsControllerOutcomeTest {
     fun setUp() {
         context = ApplicationProvider.getApplicationContext()
         resetLyricsStorage(context)
-        MediaSourceStore.saveSelectedPackage(context, null)
         ShadowLog.clear()
     }
 
     @After
     fun tearDown() {
-        MediaSourceStore.saveSelectedPackage(context, null)
         ShadowLog.clear()
         resetLyricsStorage(context)
     }
@@ -113,7 +101,7 @@ class LyricsControllerOutcomeTest {
     fun existingLyrics_returnsTypedOverwriteRequestWithoutReadingNewFile() {
         val target = target("Existing lyrics")
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = target.title,
                 artist = target.artist,
@@ -170,132 +158,10 @@ class LyricsControllerOutcomeTest {
     }
 
     @Test
-    fun onlineLookup_mapsSavedNotFoundAndFailures() {
-        val media = media("Manual lookup")
-        val lookupError = LyricsLookupException(
-            providerId = "provider",
-            providerName = "Provider",
-            errorType = LyricsLookupErrorType.NetworkError,
-            detailMessage = "offline"
-        )
-        val cases = listOf(
-            OnlineCase(
-                result = Result.success(
-                    LyricsProviderResult(
-                        plainProviderId = "provider",
-                        plainProviderName = "Provider",
-                        plainLrc = "[00:01.00]online"
-                    )
-                ),
-                expected = OnlineLyricsSearchOutcome.Saved,
-                publishes = true
-            ),
-            OnlineCase(
-                result = Result.success(
-                    LyricsProviderResult(
-                        plainProviderId = "provider",
-                        plainProviderName = "Provider",
-                        plainLrc = "",
-                        translatedLrc = "[00:01.00]翻译"
-                    )
-                ),
-                expected = OnlineLyricsSearchOutcome.Saved,
-                publishes = true
-            ),
-            OnlineCase(
-                result = Result.success(null),
-                expected = OnlineLyricsSearchOutcome.NotFound
-            ),
-            OnlineCase(
-                result = Result.failure(lookupError),
-                expected = OnlineLyricsSearchOutcome.LookupFailed(lookupError)
-            ),
-            OnlineCase(
-                result = Result.failure(IllegalStateException("broken")),
-                expected = OnlineLyricsSearchOutcome.Failed
-            )
-        )
-
-        cases.forEach { case ->
-            val publisher = RecordingLyricsChangedPublisher()
-            val gateway = RecordingOnlineLyricsLookupGateway(case.result)
-            val cancellationToken = LyricsLookupCancellationToken(
-                requestKey = "controller-test",
-                generation = 1L
-            )
-            val outcome = controller(
-                publisher = publisher,
-                onlineGateway = gateway
-            ).searchOnlineLyricsForCurrentMedia(media, cancellationToken)
-
-            assertEquals(case.expected, outcome)
-            assertEquals(listOf(context), gateway.contextRequests)
-            assertEquals(listOf(media), gateway.mediaRequests)
-            assertEquals(listOf(cancellationToken), gateway.cancellationTokens)
-            val expectedChanges = if (case.publishes) {
-                listOf(LyricsChange.updated(media.toSongIdentity()))
-            } else {
-                emptyList()
-            }
-            assertEquals(expectedChanges, publisher.changes)
-        }
-    }
-
-    @Test
-    fun onlineSearch_rethrowsCancellationWithoutPublishingChange() {
-        val cancellation = CancellationException("lookup canceled")
-        val gateway = RecordingOnlineLyricsLookupGateway(Result.failure(cancellation))
-        val publisher = RecordingLyricsChangedPublisher()
-        val cancellationToken = LyricsLookupCancellationToken(
-            requestKey = "controller-test",
-            generation = 1L
-        )
-
-        val thrown = assertThrows(CancellationException::class.java) {
-            controller(
-                publisher = publisher,
-                onlineGateway = gateway
-            ).searchOnlineLyricsForCurrentMedia(media("Canceled lookup"), cancellationToken)
-        }
-
-        assertSame(cancellation, thrown)
-        assertTrue(publisher.changes.isEmpty())
-    }
-
-    @Test
-    fun onlineSearch_canceledTokenDoesNotPublishSuccessfulLookup() {
-        val publisher = RecordingLyricsChangedPublisher()
-        val cancellationToken = LyricsLookupCancellationToken(
-            requestKey = "controller-test",
-            generation = 1L
-        )
-        val gateway = OnlineLyricsLookupGateway { _, _, receivedToken ->
-            assertSame(cancellationToken, receivedToken)
-            receivedToken.cancel()
-            Result.success(
-                LyricsProviderResult(
-                    plainProviderId = "provider",
-                    plainProviderName = "Provider",
-                    plainLrc = "[00:01.00]canceled"
-                )
-            )
-        }
-
-        assertThrows(CancellationException::class.java) {
-            controller(
-                publisher = publisher,
-                onlineGateway = gateway
-            ).searchOnlineLyricsForCurrentMedia(media("Canceled result"), cancellationToken)
-        }
-
-        assertTrue(publisher.changes.isEmpty())
-    }
-
-    @Test
     fun deleteCurrentLyrics_returnsOutcomeAndPublishesTargetedDeletion() {
         val media = media("Delete current")
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = media.title,
                 artist = media.artist,
@@ -325,7 +191,7 @@ class LyricsControllerOutcomeTest {
     fun deleteAllLyrics_returnsStorageOutcomeAndPublishesGlobalDeletion() {
         val media = media("Delete all")
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = media.title,
                 artist = media.artist,
@@ -342,76 +208,9 @@ class LyricsControllerOutcomeTest {
         assertEquals(listOf(LyricsChange.deleted()), publisher.changes)
     }
 
-    @Test
-    fun deleteSavedLyricsItem_deletesExactNonCurrentItemWithoutGlobalChange() {
-        val song = target("Delete saved item")
-        savePlainLyrics(song)
-        val item = LyricsStorage.listAllLyrics(context).single()
-        val publisher = RecordingLyricsChangedPublisher()
-
-        val outcome = controller(publisher = publisher).deleteSavedLyricsItem(item)
-
-        assertTrue(outcome is LyricsStorage.DeleteLocalLyricsItemResult.Deleted)
-        assertTrue(LyricsStorage.listAllLyrics(context).isEmpty())
-        assertTrue(publisher.changes.isEmpty())
-    }
-
-    @Suppress("UsePropertyAccessSyntax")
-    @Test
-    fun deleteSavedLyricsItem_publishesDeletionWhenItMatchesCurrentMedia() {
-        val song = target("Delete current saved item")
-        savePlainLyrics(song)
-        val item = LyricsStorage.listAllLyrics(context).single()
-        val session = MediaSession(context, "delete-current-saved-item")
-        val mediaController = MediaController(context, session.sessionToken)
-        shadowOf(mediaController).apply {
-            setPackageName(CURRENT_MEDIA_PACKAGE)
-            setMetadata(
-                MediaMetadata.Builder()
-                    .putString(MediaMetadata.METADATA_KEY_TITLE, song.title)
-                    .putString(MediaMetadata.METADATA_KEY_ARTIST, song.artist)
-                    .putString(MediaMetadata.METADATA_KEY_ALBUM, song.album)
-                    .putLong(MediaMetadata.METADATA_KEY_DURATION, song.durationMs)
-                    .build()
-            )
-        }
-        MediaSourceStore.saveSelectedPackage(context, CURRENT_MEDIA_PACKAGE)
-        val publisher = RecordingLyricsChangedPublisher()
-
-        try {
-            val outcome = controller(
-                publisher = publisher,
-                mediaControllerProvider = FixedMediaControllerProvider(listOf(mediaController))
-            ).deleteSavedLyricsItem(item)
-
-            assertTrue(outcome is LyricsStorage.DeleteLocalLyricsItemResult.Deleted)
-            assertEquals(listOf(LyricsChange.deleted(song)), publisher.changes)
-        } finally {
-            session.release()
-        }
-    }
-
-    @Test
-    fun deleteSavedLyricsItem_staleKeyDoesNotFallBackToFilename() {
-        val song = target("Stale saved item")
-        savePlainLyrics(song)
-        val staleItem = LyricsStorage.listAllLyrics(context)
-            .single()
-            .copy(indexKey = "missing-key")
-        val publisher = RecordingLyricsChangedPublisher()
-
-        val outcome = controller(publisher = publisher).deleteSavedLyricsItem(staleItem)
-
-        assertSame(LyricsStorage.DeleteLocalLyricsItemResult.NotFound, outcome)
-        assertEquals(1, LyricsStorage.listAllLyrics(context).size)
-        assertTrue(publisher.changes.isEmpty())
-    }
-
     private fun controller(
         publisher: LyricsChangedPublisher = RecordingLyricsChangedPublisher(),
         importGateway: LyricsImportGateway = StorageLyricsImportGateway(),
-        onlineGateway: OnlineLyricsLookupGateway =
-            RecordingOnlineLyricsLookupGateway(Result.success(null)),
         mediaControllerProvider: MediaControllerProvider = EmptyMediaControllerProvider
     ): LyricsController {
         return LyricsController(
@@ -419,20 +218,6 @@ class LyricsControllerOutcomeTest {
             mediaControllerProvider = mediaControllerProvider,
             lyricsChangedPublisher = publisher,
             lyricsImportGateway = importGateway,
-            onlineLyricsLookupGateway = onlineGateway
-        )
-    }
-
-    private fun savePlainLyrics(song: SongIdentity) {
-        assertTrue(
-            LyricsStorage.savePlainLyrics(
-                context = context,
-                title = song.title,
-                artist = song.artist,
-                album = song.album,
-                duration = song.durationMs,
-                plainLrc = "[00:01.00]saved"
-            )
         )
     }
 
@@ -489,12 +274,6 @@ class LyricsControllerOutcomeTest {
         val source: String
     )
 
-    private data class OnlineCase(
-        val result: Result<LyricsProviderResult?>,
-        val expected: OnlineLyricsSearchOutcome,
-        val publishes: Boolean = false
-    )
-
     private class FixedResultLyricsImportGateway(
         private val result: LyricsStorage.ImportLyricsResult
     ) : LyricsImportGateway {
@@ -513,25 +292,6 @@ class LyricsControllerOutcomeTest {
         ): LyricsStorage.ImportLyricsResult = result
     }
 
-    private class RecordingOnlineLyricsLookupGateway(
-        private val result: Result<LyricsProviderResult?>
-    ) : OnlineLyricsLookupGateway {
-        val contextRequests = mutableListOf<Context>()
-        val mediaRequests = mutableListOf<CurrentMediaInfo>()
-        val cancellationTokens = mutableListOf<LyricsLookupCancellationToken>()
-
-        override fun findAndSave(
-            context: Context,
-            media: CurrentMediaInfo,
-            cancellationToken: LyricsLookupCancellationToken
-        ): Result<LyricsProviderResult?> {
-            contextRequests += context
-            mediaRequests += media
-            cancellationTokens += cancellationToken
-            return result
-        }
-    }
-
     private class RecordingLyricsChangedPublisher : LyricsChangedPublisher {
         val changes = mutableListOf<LyricsChange>()
 
@@ -544,13 +304,4 @@ class LyricsControllerOutcomeTest {
         override fun getActiveControllers(): List<MediaController> = emptyList()
     }
 
-    private class FixedMediaControllerProvider(
-        private val controllers: List<MediaController>
-    ) : MediaControllerProvider {
-        override fun getActiveControllers(): List<MediaController> = controllers
-    }
-
-    private companion object {
-        const val CURRENT_MEDIA_PACKAGE = "com.example.current"
-    }
 }

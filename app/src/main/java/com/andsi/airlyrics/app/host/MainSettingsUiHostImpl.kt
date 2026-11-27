@@ -195,26 +195,6 @@ internal fun MainUiHost.settingsCategoryCardImpl(
     }
 }
 
-internal fun MainUiHost.changelogItemImpl(title: String, body: String): View {
-    val activity = this
-    return LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, dp(AirUiTokens.Space.Xxs))
-        addView(TextView(activity).apply {
-            text = title
-            textSize = AirUiTokens.TextSize.Button
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(colorTextStrong)
-        })
-        addView(TextView(activity).apply {
-            text = body
-            textSize = AirUiTokens.TextSize.BodySmall
-            setTextColor(colorTextMuted)
-            setPadding(0, dp(AirUiTokens.Space.Xs), 0, 0)
-        })
-    }
-}
-
 internal fun MainUiHost.permissionSummaryImpl(): String {
     return getString(
         if (overlayPermissionGranted && hasNotificationListenerAccess()) {

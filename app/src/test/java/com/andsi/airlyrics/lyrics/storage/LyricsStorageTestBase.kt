@@ -1,11 +1,14 @@
 package com.andsi.airlyrics.lyrics.storage
 
-import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.lyrics.WordLyricsDocument
+import com.andsi.airlyrics.lyrics.WordLyricsTextEditor
+import com.andsi.airlyrics.testutil.resetLyricsStorage
 import java.io.File
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 
 abstract class LyricsStorageTestBase {
@@ -32,6 +35,17 @@ abstract class LyricsStorageTestBase {
         val file = File(context.cacheDir, name)
         file.writeBytes(bytes)
         return Uri.fromFile(file)
+    }
+
+    protected fun replaceWordInEditor(item: LyricsStorage.LocalLyricsItem, original: String, replacement: String) {
+        val draft = WordLyricsDocument.parse(requireNotNull(WordLyricsEditorStorage.read(context, item)))
+        val line = draft.lines.single()
+        val segments = line.segments.map { segment ->
+            if (segment.text == original) segment.copy(text = replacement) else segment
+        }
+        val edited = draft.copy(lines = listOf(WordLyricsTextEditor.withSegments(line, segments)))
+
+        assertTrue(WordLyricsEditorStorage.save(context, item, edited.serialize()).saved)
     }
 
     protected val lineTimedTtml =

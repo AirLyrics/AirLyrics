@@ -35,7 +35,6 @@ import com.andsi.airlyrics.app.workflow.MainDisplayScopeWorkflow
 import com.andsi.airlyrics.feedback.AirFeedback
 import com.andsi.airlyrics.feedback.ToastAirFeedback
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
-import com.andsi.airlyrics.i18n.lyrics.localizedLyricsLookupMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsImportFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsImportFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
@@ -386,22 +385,12 @@ internal class MainGraph(
     fun copyLyricsDirectory() {
         val path = viewModel.lyricsDirectoryPath()
         val clipboard = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        // The nullable getter and non-null setter make primaryClip read-only in Kotlin.
+        @Suppress("UsePropertyAccessSyntax")
         clipboard.setPrimaryClip(
             ClipData.newPlainText(activity.getString(R.string.ui_lyrics_save_folder), path)
         )
         feedback.showMessage(R.string.ui_lyrics_save_folder_copied)
-    }
-
-    fun deleteSavedLyrics(
-        item: LyricsStorage.LocalLyricsItem,
-        onCompleted: (Boolean) -> Unit,
-        dispatchCompletion: (() -> Unit) -> Unit = { it() }
-    ) {
-        val deletion = viewModel.deleteSavedLyricsItem(item)
-        activity.lifecycleScope.launch {
-            val deleted = deletion.await()
-            dispatchCompletion { if (canRenderUi()) onCompleted(deleted) }
-        }
     }
 
     fun scheduleMediaPageRefresh() {
@@ -567,8 +556,6 @@ internal class MainGraph(
                     message = message
                 )
             }
-            is MainUiEffect.ShowLyricsLookupError ->
-                feedback.showError(activity.localizedLyricsLookupMessage(effect.error))
             is MainUiEffect.ShowLyricsImportChoices ->
                 lyricsWorkflow.showImportLyricsDialog(
                     target = effect.target,

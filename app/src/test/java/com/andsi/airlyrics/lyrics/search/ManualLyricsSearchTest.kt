@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.search
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -23,7 +24,7 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
     private fun token()=LyricsLookupCancellationToken(target.storageKey(),1)
     private fun lyrics()=LyricsProviderResult("netease","NetEase","[00:01.00]Chosen lyrics",matchedTitle="Alias")
     private fun saveLocal(source:String=LyricsStorage.SOURCE_MANUAL_IMPORT) {
-        assertTrue(LyricsStorage.savePlainLyrics(context,target.title,target.artist,target.durationMs,
+        assertTrue(seedPlainLyrics(context,target.title,target.artist,target.durationMs,
             "[00:01.00]Existing lyrics",target.album,source,"local"))
     }
     @Test fun pastedSpotifyIdFetchesOnlyLyricsWithoutInventingMetadataOrWriting() {
@@ -285,7 +286,7 @@ class ManualLyricsSearchTest: LyricsStorageTestBase() {
         val blossom = SongIdentity("Blossom", "PIKASONIC", "Blossom", 180000)
         val songToken = LyricsLookupCancellationToken(blossom.storageKey(), 1)
         val trackId = "2OgQsOSI0UJKhAktzQ95MP"
-        assertTrue(LyricsStorage.savePlainLyrics(context, blossom.title, blossom.artist, blossom.durationMs,
+        assertTrue(seedPlainLyrics(context, blossom.title, blossom.artist, blossom.durationMs,
             "[00:01.00]Old lyrics", blossom.album, LyricsStorage.SOURCE_DOWNLOADED, "old"))
         val service = ManualLyricsSearch(context) { raw, _ ->
             val request = JSONObject(raw)

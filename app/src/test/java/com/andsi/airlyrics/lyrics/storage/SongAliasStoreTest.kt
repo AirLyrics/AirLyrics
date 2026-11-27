@@ -4,9 +4,7 @@ import com.andsi.airlyrics.core.model.SongIdentity
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -20,12 +18,26 @@ class SongAliasStoreTest : LyricsStorageTestBase() {
         durationMs = 242_000L
     )
 
-    private fun alias(title: String = "电台情歌", artist: String = "莫文蔚") = SongAliasStore.Alias(
+    private val aliasFile: java.io.File
+        get() = java.io.File(context.noBackupFilesDir, "song-aliases/${song.storageKey()}.json")
+
+    @org.junit.After
+    fun clearAliasFixture() {
+        aliasFile.delete()
+    }
+
+    private fun seedSavedAlias() {
+        val file = aliasFile
+        file.parentFile?.mkdirs()
+        file.writeText(alias().toJson().toString())
+    }
+
+    private fun alias() = SongAliasStore.Alias(
         originalTitle = song.title,
         originalArtist = song.artist,
         originalArtistAliases = listOf("Karen Mok", "莫文蔚"),
-        aliasTitle = title,
-        aliasArtist = artist,
+        aliasTitle = "电台情歌",
+        aliasArtist = "莫文蔚",
         source = SongAliasStore.SOURCE_USER,
         confidence = 0.95,
         confirmedAt = 1_700_000_000_000L
@@ -35,7 +47,7 @@ class SongAliasStoreTest : LyricsStorageTestBase() {
     fun confirmedMappingIsReusedForTheSameRecording() {
         assertNull(SongAliasStore.read(context, song))
 
-        SongAliasStore.save(context, song, alias())
+        seedSavedAlias()
 
         val restored = SongAliasStore.read(context, song)
         assertEquals("电台情歌", restored?.aliasTitle)
@@ -45,29 +57,10 @@ class SongAliasStoreTest : LyricsStorageTestBase() {
 
     @Test
     fun aDifferentRecordingDoesNotReuseTheMapping() {
-        SongAliasStore.save(context, song, alias())
+        seedSavedAlias()
 
         val live = song.copy(durationMs = 260_000L)
         assertNull(SongAliasStore.read(context, live))
-    }
-
-    @Test
-    fun mappingCanBeOverwritten() {
-        SongAliasStore.save(context, song, alias())
-        SongAliasStore.save(context, song, alias(title = "电台情歌 (Live)", artist = "莫文蔚"))
-
-        val restored = SongAliasStore.read(context, song)
-        assertEquals("电台情歌 (Live)", restored?.aliasTitle)
-        assertEquals(1, SongAliasStore.all(context).size)
-    }
-
-    @Test
-    fun mappingCanBeCleared() {
-        SongAliasStore.save(context, song, alias())
-
-        assertTrue(SongAliasStore.forget(context, song))
-        assertNull(SongAliasStore.read(context, song))
-        assertFalse(SongAliasStore.forget(context, song))
     }
 
     @Test

@@ -26,7 +26,6 @@ internal data class MainUiActions(
     val toggleDisplayScope: () -> Boolean,
     val chooseDisplayScopeApps: () -> Unit,
     val reloadFloatingLyrics: () -> Unit,
-    val searchOnlineLyricsForCurrentMedia: () -> Unit,
     val currentLyricsOffsetSummary: () -> String,
     val adjustLyricsOffsetForCurrentMedia: (Long) -> Long?,
     val resetLyricsOffsetForCurrentMedia: () -> Boolean,
@@ -37,13 +36,9 @@ internal data class MainUiActions(
     val selectLyricsDirectory: () -> Unit,
     val copyLyricsDirectory: () -> Unit,
     val importLyricsForCurrentMedia: () -> Unit,
-    val deleteLyricsForCurrentMedia: (LyricsDeleteMode) -> Unit,
-    val deleteSavedLyrics: (LocalLyricsUiItem, (Boolean) -> Unit) -> Unit,
-    val deleteAllSavedLyrics: () -> Unit,
     val toggleLyricsAutoSearch: () -> Boolean,
     val toggleLyricsAutoSave: () -> Boolean,
     val setPlainLyricsSources: (List<PlainLyricsSearchSource>) -> Unit,
-    val openUrl: (String) -> Unit,
     val selectMediaSource: (String, View) -> Unit,
     val openLyricsSearch: () -> Unit = {}
 )

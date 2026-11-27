@@ -20,17 +20,6 @@ import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.model.OptionItem
 import com.andsi.airlyrics.design.tokens.AirUiTokens
 
-internal fun MainUiHost.optionGridImpl(items: List<OptionItem>): LinearLayout {
-    return optionButtonGridImpl(items.map { item -> optionButton(item) })
-}
-
-internal fun MainUiHost.optionButtonGridImpl(buttons: List<TextView>): LinearLayout {
-    return AdaptiveGridLayout(this, AirUiTokens.Layout.OptionColumns, dp(AirUiTokens.Space.Lg * 2), dp(AirUiTokens.Space.Xxl)).apply {
-        setPadding(0, dp(AirUiTokens.Space.Xxl), 0, 0)
-        buttons.forEach { addView(it) }
-    }
-}
-
 internal fun MainUiHost.liveOptionGridImpl(items: List<KeyedOptionItem>): LinearLayout {
     val buttons = mutableListOf<Pair<KeyedOptionItem, OptionSelectionMotion>>()
     items.forEach { item ->

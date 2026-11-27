@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
@@ -17,7 +19,7 @@ class LyricsStorageListingTest : LyricsStorageTestBase() {
     fun listAllLyrics_returnsEveryItem_whileRecentLyricsKeepsEightAndExposesIdentity() {
         repeat(10) { index ->
             assertTrue(
-                LyricsStorage.savePlainLyrics(
+                seedPlainLyrics(
                     context = context,
                     title = "Song $index",
                     artist = "Artist $index",
@@ -122,7 +124,7 @@ class LyricsStorageListingTest : LyricsStorageTestBase() {
     fun localLyricsFileSize_reportsStoredPlainLyricsSize() {
         val plainLyrics = "[00:01.00]歌詞 size"
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = "Sized Plain Lyrics",
                 artist = "AndSi",
@@ -157,7 +159,7 @@ class LyricsStorageListingTest : LyricsStorageTestBase() {
             )
         )
         assertTrue(
-            LyricsStorage.saveWordByWordLyrics(
+            seedLegacyWordLyrics(
                 context = context,
                 title = "Sized Word By Word Lyrics",
                 artist = "AndSi",

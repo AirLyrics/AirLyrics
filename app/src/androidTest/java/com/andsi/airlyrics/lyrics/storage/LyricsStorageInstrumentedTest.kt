@@ -1,5 +1,9 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.LyricsResultCommitter
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -42,7 +46,7 @@ class LyricsStorageInstrumentedTest {
         val plainLrc = "[00:01.00]hello\n[00:02.00]world"
 
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            writePlainLyricsForStorageTest(
                 context = context,
                 title = title,
                 artist = artist,
@@ -93,8 +97,10 @@ class LyricsStorageInstrumentedTest {
             )
         )
 
-        assertTrue(LyricsStorage.savePlainLyrics(context, title, artist, duration, plainLrc))
-        assertTrue(LyricsStorage.saveWordByWordLyrics(context, title, artist, duration, wordByWordLines))
+        val song = SongIdentity(title, artist, durationMs = duration)
+        val result = LyricsProviderResult("local", "Local", plainLrc, wordByWordLines = wordByWordLines)
+        val token = LyricsLookupCancellationToken(song.storageKey(), 1L)
+        assertTrue(LyricsResultCommitter(context).applySelection(song, result, token, approvedRevision = null))
         assertTrue(LyricsStorage.hasWordByWordLyrics(context, title, artist, duration))
         assertEquals(wordByWordLines, LyricsStorage.readWordByWordLyrics(context, title, artist, duration))
 
@@ -120,8 +126,8 @@ class LyricsStorageInstrumentedTest {
         val first = "[00:01.00]first"
         val second = "[00:01.00]second"
 
-        assertTrue(LyricsStorage.savePlainLyrics(context, title, artist, duration, first, overwrite = true))
-        assertFalse(LyricsStorage.savePlainLyrics(context, title, artist, duration, second, overwrite = false))
+        assertTrue(writePlainLyricsForStorageTest(context, title, artist, duration, first, overwrite = true))
+        assertFalse(writePlainLyricsForStorageTest(context, title, artist, duration, second, overwrite = false))
         assertEquals(first, LyricsStorage.readPlainLyrics(context, title, artist, duration))
     }
 
@@ -133,7 +139,7 @@ class LyricsStorageInstrumentedTest {
         val futures = (0 until count).map { index ->
             executor.submit<Boolean> {
                 check(startGate.await(10, TimeUnit.SECONDS)) { "Save start gate timed out" }
-                LyricsStorage.savePlainLyrics(
+                writePlainLyricsForStorageTest(
                     context = context,
                     title = "Concurrent Song $index",
                     artist = "AndSi",
@@ -171,4 +177,20 @@ class LyricsStorageInstrumentedTest {
         val base = context.getExternalFilesDir(null) ?: context.filesDir
         File(base, "lyrics").deleteRecursively()
     }
+}
+
+internal fun writePlainLyricsForStorageTest(
+    context: Context,
+    title: String,
+    artist: String,
+    duration: Long,
+    plainLrc: String,
+    album: String = "",
+    plainSource: String = LyricsStorage.SOURCE_DOWNLOADED,
+    plainProvider: String = "local",
+    overwrite: Boolean = true,
+): Boolean = LyricsStorage.withStorageLock {
+    PlainLyricsStorageOps.savePlainLyrics(
+        context, title, artist, duration, plainLrc, album, plainSource, plainProvider, overwrite,
+    )
 }

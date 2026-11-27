@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app.interaction
 
+import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -40,11 +42,32 @@ class BatchLyricsSessionTest {
         context = ApplicationProvider.getApplicationContext()
         resetLyricsStorage(context)
         listOf("One", "Two", "Untouched").forEach {
-            assertTrue(LyricsStorage.savePlainLyrics(context, it, "Artist", 180_000, "[00:01.00]old $it"))
+            assertTrue(seedPlainLyrics(context, it, "Artist", 180_000, "[00:01.00]old $it"))
         }
         document("One"); document("Two")
     }
     @After fun cleanup() { scopes.forEach { it.owner.cancel(); it.scope.testScheduler.runCurrent() }; resetLyricsStorage(context) }
+
+    @Test fun confirmedDeletionPublishesOnlyTheDeletedSongAndReportsAStaleSelection() {
+        val f = fixture()
+        val items = items()
+        val selected = items.single { it.title == "One" }
+        val stale = items.single { it.title == "Two" }.copy(indexKey = "missing-key")
+        assertTrue(f.session.begin(listOf(selected, stale), delete = true))
+
+        f.session.confirm()
+        f.session.confirm()
+        f.scope.testScheduler.runCurrent()
+
+        val result = requireNotNull(f.session.state.value)
+        assertEquals(BatchLyricsStage.FINISHED, result.stage)
+        assertEquals(1, result.completed)
+        assertEquals(listOf(BatchLyricsFailure(stale.displayTitle, BatchLyricsProblem.DELETE)), result.failures)
+        assertNull(content("One"))
+        assertEquals("[00:01.00]old Two", content("Two"))
+        assertEquals("[00:01.00]old Untouched", content("Untouched"))
+        assertEquals(listOf(LyricsChange.deleted(SongIdentity("One", "Artist", durationMs = 180_000))), changes)
+    }
 
     @Test fun cancelPickerDoesNotReadWriteOrRetainGrants() {
         val f = fixture()

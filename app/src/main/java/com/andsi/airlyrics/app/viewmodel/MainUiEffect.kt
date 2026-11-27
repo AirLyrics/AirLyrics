@@ -2,7 +2,6 @@ package com.andsi.airlyrics.app.viewmodel
 
 import androidx.annotation.StringRes
 import com.andsi.airlyrics.core.model.SongIdentity
-import com.andsi.airlyrics.lyrics.LyricsLookupException
 
 internal sealed interface MainUiEffect {
     data object RestoreOperationConfirmation : MainUiEffect
@@ -22,10 +21,6 @@ internal sealed interface MainUiEffect {
     data class ShowImportFormatError(
         val invalidLineNumbers: List<Int>,
         val wordByWord: Boolean
-    ) : MainUiEffect
-
-    data class ShowLyricsLookupError(
-        val error: LyricsLookupException
     ) : MainUiEffect
 
     data class ShowLyricsImportChoices(

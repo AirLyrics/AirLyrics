@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.settings.store
 
+import com.andsi.airlyrics.testutil.seedLegacyFloatingPosition
 import android.content.Context
 import android.graphics.Color
 import com.andsi.airlyrics.core.model.FloatingLyricsFontFamily
@@ -16,7 +17,7 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
     @Test
     fun relativePositionTakesPrecedenceAndPreservesLegacyKeys() {
         val position = com.andsi.airlyrics.core.model.FloatingPosition(0.5f, 0.8f)
-        FloatingLyricsStyleStore.savePosition(context, 123, 456)
+        seedLegacyFloatingPosition(context, 123, 456)
         FloatingLyricsStyleStore.saveRelativePosition(context, position)
         assertEquals(position, FloatingLyricsStyleStore.getRelativePosition(context))
         assertEquals(123 to 456, FloatingLyricsStyleStore.getPosition(context))
@@ -29,7 +30,7 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
             .putFloat("position_vertical_fraction", 0.5f).commit()
         org.junit.Assert.assertNull(FloatingLyricsStyleStore.getRelativePosition(context))
         assertFalse(FloatingLyricsStyleStore.hasLegacyPosition(context))
-        FloatingLyricsStyleStore.savePosition(context, 5, 10)
+        seedLegacyFloatingPosition(context, 5, 10)
         assertTrue(FloatingLyricsStyleStore.hasLegacyPosition(context))
     }
 
@@ -44,7 +45,7 @@ class FloatingLyricsStyleStoreTest : SettingsStoreTestBase() {
         FloatingLyricsStyleStore.setBackgroundColor(context, Color.argb(12, 1, 2, 3))
         FloatingLyricsStyleStore.setBackgroundAlpha(context, 12)
         FloatingLyricsStyleStore.setBackgroundEnabled(context, true)
-        FloatingLyricsStyleStore.savePosition(context, 321, 654)
+        seedLegacyFloatingPosition(context, 321, 654)
         FloatingLyricsStyleStore.setPreviewExpanded(context, false)
 
         val style = FloatingLyricsStyleStore.getStyle(context)

@@ -35,8 +35,6 @@ class FloatingServiceCommandTest {
             FloatingServiceCommand.ClickThroughOn,
             FloatingServiceCommand.ClickThroughOff,
             FloatingServiceCommand.ToggleVisibleFromNotification,
-            FloatingServiceCommand.ToggleLockFromNotification,
-            FloatingServiceCommand.ToggleClickThroughFromNotification,
             FloatingServiceCommand.ToggleAdjustModeFromNotification,
             FloatingServiceCommand.ApplyAutoHideSettings,
             FloatingServiceCommand.ApplyDisplayScope,
@@ -51,37 +49,36 @@ class FloatingServiceCommandTest {
     }
 
     @Test
-    fun valueCommands_roundTripByValue() {
-        val uri = Uri.parse("content://com.example.lyrics/song.lrc")
-        val commands = listOf(
-            FloatingServiceCommand.ApplyLyricsOffset(1_250L),
-            FloatingServiceCommand.ImportPlainLyrics(uri = uri, overwrite = false)
-        )
+    fun lyricsOffsetCommand_roundTripsByValue() {
+        val command = FloatingServiceCommand.ApplyLyricsOffset(1_250L)
 
-        commands.forEach { command ->
-            assertEquals(command, FloatingServiceCommand.fromIntent(command.toIntent(context)))
-        }
+        assertEquals(command, FloatingServiceCommand.fromIntent(command.toIntent(context)))
     }
 
     @Test
-    fun fromIntent_ignoresUnknownOrMalformedCommand() {
-        val missingUri = FloatingServiceCommand.ImportPlainLyrics(
-            uri = Uri.parse("content://com.example.lyrics/song.lrc")
-        ).toIntent(context).apply {
-            data = null
-        }
-
+    fun fromIntent_ignoresUnknownCommand() {
         assertNull(FloatingServiceCommand.fromIntent(Intent("com.example.UNKNOWN")))
-        assertNull(FloatingServiceCommand.fromIntent(missingUri))
     }
 
     @Test
-    fun legacyPausedAutoHideAction_mapsToGeneralAutoHideSettings() {
-        val legacyIntent = Intent("com.andsi.airlyrics.APPLY_AUTO_HIDE_WHEN_PAUSED")
+    fun retiredPlainImportIntentIsIgnored() {
+        val intent = Intent("com.andsi.airlyrics.IMPORT_LYRICS").apply {
+            data = Uri.parse("content://com.example.lyrics/song.lrc")
+        }
 
-        assertSame(
-            FloatingServiceCommand.ApplyAutoHideSettings,
-            FloatingServiceCommand.fromIntent(legacyIntent)
+        assertNull(FloatingServiceCommand.fromIntent(intent))
+    }
+
+    @Test
+    fun retiredNotificationAndAutoHideCommandsAreIgnored() {
+        val retired = listOf(
+            "com.andsi.airlyrics.NOTIFICATION_TOGGLE_LOCK",
+            "com.andsi.airlyrics.NOTIFICATION_TOGGLE_CLICK_THROUGH",
+            "com.andsi.airlyrics.APPLY_AUTO_HIDE_WHEN_PAUSED",
         )
+
+        retired.forEach { action ->
+            assertNull(action, FloatingServiceCommand.fromIntent(Intent(action)))
+        }
     }
 }

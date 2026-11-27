@@ -16,7 +16,6 @@ import org.json.JSONObject
  */
 internal object SongAliasStore {
     const val SOURCE_USER = "user"
-    const val SOURCE_CATALOGUE = "catalogue"
 
     data class Alias(
         val originalTitle: String,
@@ -78,34 +77,6 @@ internal object SongAliasStore {
 
     fun read(context: Context, song: SongIdentity): Alias? = LyricsStorage.withStorageLock {
         readAlias(file(context, song))
-    }
-
-    fun save(context: Context, song: SongIdentity, alias: Alias): Alias = LyricsStorage.withStorageLock {
-        val target = file(context, song)
-        val dir = directory(context)
-        check(dir.isDirectory || dir.mkdirs()) { "Cannot create alias directory" }
-        val stream = target.startWrite()
-        try {
-            stream.write(alias.toJson().toString().toByteArray(Charsets.UTF_8))
-            target.finishWrite(stream)
-        } catch (error: Exception) {
-            target.failWrite(stream)
-            throw error
-        }
-        alias
-    }
-
-    fun forget(context: Context, song: SongIdentity): Boolean = LyricsStorage.withStorageLock {
-        val target = file(context, song)
-        val existed = target.baseFile.exists() || File(target.baseFile.path + ".bak").exists()
-        target.delete()
-        existed
-    }
-
-    fun all(context: Context): List<Alias> = LyricsStorage.withStorageLock {
-        directory(context).listFiles { file -> file.isFile && file.name.endsWith(".json") }
-            ?.mapNotNull { stored -> readAlias(AtomicFile(stored)) }
-            ?: emptyList()
     }
 
     fun toNativeJson(aliases: List<Alias>): String {

@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.floating
 
+import com.andsi.airlyrics.testutil.seedLegacyFloatingPosition
 import android.app.Application
 import android.content.Context
 import android.content.res.Configuration
@@ -115,7 +116,7 @@ class FloatingLyricsRotationTest {
     }
 
     @Test fun legacyPixelsMigrateOnceAndSurviveRotation() {
-        FloatingLyricsStyleStore.savePosition(application, 0, 200)
+        seedLegacyFloatingPosition(application, 0, 200)
         show()
         val params = requireNotNull(service.lyricsView).rootView.layoutParams as WindowManager.LayoutParams
         assertEquals(0, params.x)

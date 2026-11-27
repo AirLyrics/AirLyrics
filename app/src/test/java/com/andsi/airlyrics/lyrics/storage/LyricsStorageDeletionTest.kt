@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
@@ -69,7 +71,7 @@ class LyricsStorageDeletionTest : LyricsStorageTestBase() {
     @Test
     fun deleteLocalLyricsItem_neverFallsBackFromStaleKeyOrPathName() {
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = "Indexed song",
                 artist = "AirLyrics",
@@ -111,7 +113,7 @@ class LyricsStorageDeletionTest : LyricsStorageTestBase() {
     @Test
     fun deleteAllSavedLyrics_removesManagedOrphanAndLegacyLyrics_butPreservesOtherFiles() {
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = "Plain song",
                 artist = "AirLyrics",
@@ -120,7 +122,7 @@ class LyricsStorageDeletionTest : LyricsStorageTestBase() {
             )
         )
         assertTrue(
-            LyricsStorage.saveWordByWordLyrics(
+            seedLegacyWordLyrics(
                 context = context,
                 title = "Word song",
                 artist = "AirLyrics",

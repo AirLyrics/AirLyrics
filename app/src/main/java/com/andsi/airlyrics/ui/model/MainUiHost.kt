@@ -42,9 +42,6 @@ internal abstract class MainUiHost(
     var savedLyricsDeletionPending: Set<String>? = null
     var savedLyricsDeletionRefresh: ((Set<String>) -> Unit)? = null
     val interactionUi = com.andsi.airlyrics.ui.state.InteractionUiRegistry()
-    private var panelControlIndex = 0
-    fun beginPanelControls() { panelControlIndex = 0 }
-    fun nextPanelControlKey(kind: String): String? = interactions.panel?.let { "panel.control.${it.name}.$kind.${panelControlIndex++}" }
 
     init {
         activity.lifecycle.addObserver(

@@ -179,23 +179,10 @@ object LyricsStorage {
         plainLrc: String
     ): LocalLyricsUpdateResult {
         if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX)) return SpicyLyricsCache.forContext(context)
-            .edit(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX), plainLrc, false)
+            .editPlain(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX), plainLrc)
         return LocalLyricsEditor.updatePlainItemTextWithResult(context, item, plainLrc).also { result ->
             if (result.saved) markContentChanged()
         }
-    }
-
-    fun updateWordByWordLyricsItemTextWithResult(
-        context: Context,
-        item: LocalLyricsItem,
-        wordByWordLrc: String
-    ): LocalLyricsUpdateResult {
-        if (item.indexKey.startsWith(SpicyLyricsCache.PREFIX)) return SpicyLyricsCache.forContext(context)
-            .edit(item.indexKey.removePrefix(SpicyLyricsCache.PREFIX), wordByWordLrc, true)
-        return LocalLyricsEditor.updateWordByWordItemTextWithResult(context, item, wordByWordLrc)
-            .also { result ->
-                if (result.saved) markContentChanged()
-            }
     }
 
     fun saveLyricsDirUri(context: Context, uri: Uri) = withStorageLock {
@@ -234,61 +221,6 @@ object LyricsStorage {
             ?: PlainLyricsStorageOps.readPlainLyrics(context, title, artist, duration)
             ?: SpicyLyricsCache.forContext(context).read(SpicyLyricsCache.key(title, artist, duration))?.plainLrc
     }
-
-    fun savePlainLyrics(
-        context: Context,
-        title: String,
-        artist: String,
-        duration: Long,
-        plainLrc: String,
-        album: String = "",
-        plainSource: String = SOURCE_DOWNLOADED,
-        plainProvider: String = "local",
-        overwrite: Boolean = true,
-        matchedTitle: String = "",
-        matchedArtist: String = "",
-        matchedDurationMs: Long = 0L,
-        isUntimed: Boolean = false,
-        untimedTranslation: String? = null
-    ): Boolean = withStorageLock {
-        if (plainProvider == "spicy") return@withStorageLock false
-        val saved = PlainLyricsStorageOps.savePlainLyrics(
-            context = context,
-            title = title,
-            artist = artist,
-            duration = duration,
-            plainLrc = plainLrc,
-            album = album,
-            plainSource = plainSource,
-            plainProvider = plainProvider,
-            overwrite = overwrite,
-            matchedTitle = matchedTitle,
-            matchedArtist = matchedArtist,
-            matchedDurationMs = matchedDurationMs,
-            isUntimed = isUntimed,
-            untimedTranslation = untimedTranslation
-        )
-        if (saved) markContentChanged()
-        saved
-    }
-
-    fun importPlainLyricsFromUri(
-        context: Context,
-        uri: Uri,
-        title: String,
-        artist: String,
-        duration: Long,
-        album: String = "",
-        overwrite: Boolean = true
-    ): Boolean = importPlainLyricsFromUriWithResult(
-        context = context,
-        uri = uri,
-        title = title,
-        artist = artist,
-        duration = duration,
-        album = album,
-        overwrite = overwrite
-    ) is ImportLyricsResult.Saved
 
     fun importPlainLyricsFromUriWithResult(
         context: Context,
@@ -331,35 +263,6 @@ object LyricsStorage {
             return@withStorageLock it.result.wordByWordLines
         }
         WordByWordLyricsStorageOps.readWordByWordLyrics(context, title, artist, duration)
-    }
-
-    fun saveWordByWordLyrics(
-        context: Context,
-        title: String,
-        artist: String,
-        duration: Long,
-        wordByWordLines: List<WordByWordLine>,
-        album: String = "",
-        wordByWordSource: String = SOURCE_DOWNLOADED,
-        wordByWordProvider: String = "local",
-        overwrite: Boolean = true,
-        metadataLines: List<String> = emptyList()
-    ): Boolean = withStorageLock {
-        if (wordByWordProvider == "spicy") return@withStorageLock false
-        val saved = WordByWordLyricsStorageOps.saveWordByWordLyrics(
-            context = context,
-            title = title,
-            artist = artist,
-            duration = duration,
-            wordByWordLines = wordByWordLines,
-            album = album,
-            wordByWordSource = wordByWordSource,
-            wordByWordProvider = wordByWordProvider,
-            overwrite = overwrite,
-            metadataLines = metadataLines
-        )
-        if (saved) markContentChanged()
-        saved
     }
 
     fun importWordByWordLyricsFromUriWithResult(

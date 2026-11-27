@@ -30,7 +30,6 @@ internal interface SettingsUiHost {
 
     fun manageSavedLyrics(items: List<LocalLyricsUiItem>, delete: Boolean)
 
-    fun changelogItem(title: String, body: String): View
     fun permissionSummary(): String
     fun getAppVersionName(): String
     fun openUrl(url: String)

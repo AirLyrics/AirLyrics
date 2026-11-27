@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.app.viewmodel
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.os.Bundle
@@ -11,7 +10,6 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.app.contracts.MediaControllerProvider
 import com.andsi.airlyrics.app.controller.CurrentLyricsDeleteOutcome
@@ -22,7 +20,6 @@ import com.andsi.airlyrics.app.controller.LyricsController
 import com.andsi.airlyrics.app.controller.LyricsDocumentValidation
 import com.andsi.airlyrics.app.controller.LyricsImportOutcome
 import com.andsi.airlyrics.app.controller.LyricsOperations
-import com.andsi.airlyrics.app.controller.OnlineLyricsSearchOutcome
 import com.andsi.airlyrics.app.state.MainFloatingState
 import com.andsi.airlyrics.app.state.LyricsImportType
 import com.andsi.airlyrics.app.state.PendingLyricsImport
@@ -32,9 +29,6 @@ import com.andsi.airlyrics.app.state.toPendingLyricsImport
 import com.andsi.airlyrics.app.state.toPendingLyricsOverwrite
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.BroadcastLyricsChangedPublisher
-import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
-import com.andsi.airlyrics.lyrics.LyricsSearchCoordinator
-import com.andsi.airlyrics.lyrics.LyricsSearchOrigin
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.CurrentMediaReader
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
@@ -46,7 +40,6 @@ import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.navigation.parentPage
 import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -103,9 +96,6 @@ internal class MainViewModel(
     private val uiEffectChannel = Channel<MainUiEffect>(capacity = Channel.BUFFERED)
     val uiEffects = uiEffectChannel.receiveAsFlow()
     private var mediaRefreshJob: Job? = null
-    private var onlineLyricsSearchJob: Job? = null
-    private var onlineLyricsSearchToken: LyricsLookupCancellationToken? = null
-    private var nextOnlineLyricsSearchGeneration = 0L
 
     override val locked: Boolean
         get() = _uiState.value.locked
@@ -318,77 +308,6 @@ internal class MainViewModel(
         }
     }
 
-    fun searchOnlineLyricsForCurrentMedia() = searchOnlineLyrics(lyricsController.getCurrentMediaInfo())
-
-    fun searchOnlineLyrics(media: CurrentMediaInfo?, mode: LyricsSearchMode = LyricsSearchMode.Original) {
-        cancelOnlineLyricsSearch()
-        if (media == null) {
-            showMessage(R.string.ui_no_active_media_found)
-            return
-        }
-
-        val cancellationToken = LyricsLookupCancellationToken(
-            requestKey = "manual:${media.toSongIdentity().storageKey()}",
-            generation = ++nextOnlineLyricsSearchGeneration
-        )
-        val lease = LyricsSearchCoordinator.begin(media.toSongIdentity(), cancellationToken, LyricsSearchOrigin.Manual, mode)
-        var displayedMode = mode
-        cancellationToken.onSearchModeChanged = { effectiveMode ->
-            viewModelScope.launch {
-                if (onlineLyricsSearchToken === cancellationToken && !cancellationToken.isCancellationRequested && displayedMode != effectiveMode) {
-                    displayedMode = effectiveMode
-                    showMessage(if (effectiveMode == LyricsSearchMode.International) R.string.ui_searching_international_title else R.string.ui_searching_online_again)
-                }
-            }
-        }
-        val searchJob = viewModelScope.launch(start = CoroutineStart.LAZY) {
-            try {
-                val outcome = withContext(ioDispatcher) {
-                    lyricsController.searchOnlineLyricsForCurrentMedia(
-                        media = media,
-                        cancellationToken = cancellationToken,
-                        mode = mode
-                    )
-                }
-                cancellationToken.throwIfCancellationRequested()
-                if (onlineLyricsSearchToken !== cancellationToken) return@launch
-
-                when (outcome) {
-                    OnlineLyricsSearchOutcome.Saved ->
-                        showMessage(R.string.ui_online_lyrics_saved)
-                    OnlineLyricsSearchOutcome.NotFound ->
-                        showMessage(R.string.ui_lyrics_not_found)
-                    is OnlineLyricsSearchOutcome.LookupFailed ->
-                        uiEffectChannel.trySend(MainUiEffect.ShowLyricsLookupError(outcome.error))
-                    OnlineLyricsSearchOutcome.Failed ->
-                        showMessage(R.string.ui_online_lyrics_search_failed, error = true)
-                }
-            } finally {
-                lease.close()
-                if (onlineLyricsSearchToken === cancellationToken) {
-                    onlineLyricsSearchToken = null
-                    onlineLyricsSearchJob = null
-                }
-            }
-        }
-        onlineLyricsSearchToken = cancellationToken
-        onlineLyricsSearchJob = searchJob
-        showMessage(if (mode == LyricsSearchMode.International) R.string.ui_searching_international_title else R.string.ui_searching_online_again)
-        searchJob.start()
-    }
-
-    private fun cancelOnlineLyricsSearch() {
-        onlineLyricsSearchToken?.cancel()
-        onlineLyricsSearchJob?.cancel()
-        onlineLyricsSearchToken = null
-        onlineLyricsSearchJob = null
-    }
-
-    fun deleteLyricsForCurrentMedia(mode: LyricsStorage.DeleteMode) {
-        val media = lyricsController.getCurrentMediaInfo() ?: return
-        deleteLyricsForTarget(media, mode)
-    }
-
     fun deleteLyricsForTarget(media: CurrentMediaInfo, mode: LyricsStorage.DeleteMode) {
         viewModelScope.launch {
             val outcome = withContext(ioDispatcher) {
@@ -397,29 +316,6 @@ internal class MainViewModel(
             showCurrentLyricsDeleteMessage(outcome)
         }
     }
-
-    fun deleteSavedLyricsItem(item: LyricsStorage.LocalLyricsItem): Deferred<Boolean> =
-        viewModelScope.async {
-            val result = withContext(ioDispatcher) {
-                lyricsController.deleteSavedLyricsItem(item)
-            }
-            notifyLyricsChanged(LyricsStorage.currentRevision())
-            val deleted = when (result) {
-                is LyricsStorage.DeleteLocalLyricsItemResult.Deleted -> {
-                    showMessage(R.string.ui_all_saved_lyrics_deleted)
-                    true
-                }
-                LyricsStorage.DeleteLocalLyricsItemResult.NotFound -> {
-                    showMessage(R.string.ui_lyrics_not_found)
-                    false
-                }
-                LyricsStorage.DeleteLocalLyricsItemResult.Failed -> {
-                    showMessage(R.string.ui_delete_saved_lyrics_failed, error = true)
-                    false
-                }
-            }
-            deleted
-        }
 
     fun deleteAllSavedLyricsIfUnchanged(request: Bundle) {
         viewModelScope.launch {
@@ -451,12 +347,6 @@ internal class MainViewModel(
         }
     }
 
-    fun deleteAllSavedLyrics() {
-        viewModelScope.launch {
-            showDeleteAllResult(withContext(ioDispatcher) { lyricsController.deleteAllSavedLyrics() })
-        }
-    }
-
     fun currentMediaInfo(): CurrentMediaInfo? = lyricsController.getCurrentMediaInfo()
 
     fun lyricsDirectoryPath(): String = lyricsController.lyricsDirectoryPath()
@@ -482,12 +372,6 @@ internal class MainViewModel(
     fun cancelMediaRefresh() {
         mediaRefreshJob?.cancel()
         mediaRefreshJob = null
-    }
-
-    @SuppressLint("EmptySuperCall")
-    override fun onCleared() {
-        cancelOnlineLyricsSearch()
-        super.onCleared()
     }
 
     override fun updateFloatingState(

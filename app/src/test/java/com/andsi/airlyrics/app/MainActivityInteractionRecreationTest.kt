@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.testutil.descendants
 import com.andsi.airlyrics.testutil.awaitUiCondition as await
 import android.app.Dialog
@@ -190,7 +191,7 @@ class MainActivityInteractionRecreationTest {
 
     private fun openLyricsSettingsWithSongs(count: Int): View {
         repeat(count) { index ->
-            assertTrue(LyricsStorage.savePlainLyrics(
+            assertTrue(seedPlainLyrics(
                 context = context,
                 title = "Song ${index + 1}",
                 artist = "Artist",
@@ -417,7 +418,7 @@ class MainActivityInteractionRecreationTest {
     }
 
     private fun openEditor(plainLrc: String = "[00:01.00]original") {
-        assertTrue(LyricsStorage.savePlainLyrics(context = context, title = "Song", artist = "Artist", duration = 180000L, album = "Album", plainLrc = plainLrc))
+        assertTrue(seedPlainLyrics(context = context, title = "Song", artist = "Artist", duration = 180000L, album = "Album", plainLrc = plainLrc))
         val host = activity.graph.uiHost
         host.localLyricsRow(host.savedLyricsState().lyrics.single()).performClick()
         await { latestDialogOrNull() is BottomSheetDialog && editorRowOrNull() != null }

@@ -1,7 +1,6 @@
 package com.andsi.airlyrics.app.interaction
 
 import android.os.Bundle
-import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.core.model.SongIdentity
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
@@ -18,17 +17,16 @@ internal class MainOperationConfirmations(
     private val editorSessionId: () -> String?,
     private val deleteAll: (Bundle) -> Unit,
     private val deleteCurrent: (CurrentMediaInfo, LyricsStorage.DeleteMode) -> Unit,
-    private val search: (CurrentMediaInfo) -> Unit,
     private val deleteEditor: () -> Unit,
-    private val searchWithMode: (CurrentMediaInfo, LyricsSearchMode) -> Unit = { media, mode ->
-        check(mode == LyricsSearchMode.Original) { "International search handler is not configured" }
-        search(media)
-    }
 ) : OperationConfirmations {
     override val pending: ConfirmationPrompt?
         get() {
             val request = interactions.read(KEY) ?: return null
-            val action = request.action() ?: return null
+            val action = request.action()
+            if (action == null) {
+                interactions.remove(KEY)
+                return null
+            }
             if (action is ConfirmationAction.DeleteEditor && action.sessionId != editorSessionId()) return null
             return ConfirmationPrompt(
                 id = request.getString("id") ?: return null,
@@ -56,11 +54,6 @@ internal class MainOperationConfirmations(
                     putLong("revision", LyricsStorage.currentRevision())
                     putString("process", LyricsStorage.processGeneration)
                 }
-                is ConfirmationAction.Search -> {
-                    putString("operation", "SEARCH")
-                    putString("searchMode", action.mode.name)
-                    putBundle("media", action.target.toBundle())
-                }
                 is ConfirmationAction.DeleteEditor -> {
                     putString("operation", "DELETE_EDITOR")
                     putString("editor", action.sessionId)
@@ -79,7 +72,6 @@ internal class MainOperationConfirmations(
         when (val action = request.action()) {
             is ConfirmationAction.DeleteCurrent -> deleteCurrent(action.target.toMedia(), action.mode.toStorageMode())
             ConfirmationAction.DeleteAll -> deleteAll(request)
-            is ConfirmationAction.Search -> searchWithMode(action.target.toMedia(), action.mode)
             is ConfirmationAction.DeleteEditor -> if (action.sessionId == editorSessionId()) deleteEditor()
             null -> Unit
         }
@@ -98,10 +90,6 @@ internal class MainOperationConfirmations(
             if (target != null && mode != null) ConfirmationAction.DeleteCurrent(target, mode) else null
         }
         "DELETE_ALL" -> if (containsKey("revision") && getString("process") != null) ConfirmationAction.DeleteAll else null
-        "SEARCH" -> target()?.let { target ->
-            ConfirmationAction.Search(target, LyricsSearchMode.entries
-                .find { it.name == getString("searchMode") } ?: LyricsSearchMode.Original)
-        }
         "DELETE_EDITOR" -> getString("editor")?.let(ConfirmationAction::DeleteEditor)
         else -> null
     }

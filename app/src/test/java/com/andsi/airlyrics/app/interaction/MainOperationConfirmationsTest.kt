@@ -20,7 +20,6 @@ class MainOperationConfirmationsTest {
     private val interactions = MainInteractionState(handle)
     private val target = LyricsOperationTarget("player", SongIdentity("Song A", "Artist", "Album", 123000))
     private val deletions = mutableListOf<Pair<CurrentMediaInfo, LyricsStorage.DeleteMode>>()
-    private val searches = mutableListOf<CurrentMediaInfo>()
     private val deleteAllRequests = mutableListOf<Bundle>()
     private var editorId: String? = "editor-one"
     private var editorDeletes = 0
@@ -36,7 +35,6 @@ class MainOperationConfirmationsTest {
             assertNull(state.read("confirmation"))
             deletions += media to mode
         },
-        search = { searches += it },
         deleteEditor = { editorDeletes++ }
     )
 
@@ -64,29 +62,29 @@ class MainOperationConfirmationsTest {
         val controller = confirmations()
         controller.request(ConfirmationAction.DeleteAll, "Delete", "All", "Delete")
         val oldId = requireNotNull(controller.pending).id
-        controller.request(ConfirmationAction.Search(target), "Search", "Song A", "Search")
+        controller.request(ConfirmationAction.DeleteCurrent(target, LyricsDeleteMode.PLAIN), "Delete", "Song A", "Remove")
         val current = requireNotNull(controller.pending)
 
         controller.cancel(oldId)
         controller.confirm(oldId)
         assertEquals(current, controller.pending)
         assertTrue(deleteAllRequests.isEmpty())
-        assertTrue(searches.isEmpty())
+        assertTrue(deletions.isEmpty())
 
         controller.confirm(current.id)
-        assertEquals(target, searches.single().toOperationTarget())
+        assertEquals(target, deletions.single().first.toOperationTarget())
         assertNull(controller.pending)
     }
 
     @Test
     fun cancellationPreventsLaterConfirmation() {
         val controller = confirmations()
-        controller.request(ConfirmationAction.Search(target), "Search", "Song A", "Search")
+        controller.request(ConfirmationAction.DeleteCurrent(target, LyricsDeleteMode.PLAIN), "Delete", "Song A", "Remove")
         val id = requireNotNull(controller.pending).id
         controller.cancel(id)
         controller.confirm(id)
         assertNull(controller.pending)
-        assertTrue(searches.isEmpty())
+        assertTrue(deletions.isEmpty())
     }
 
     @Test
@@ -149,14 +147,36 @@ class MainOperationConfirmationsTest {
     }
 
     @Test
+    fun retiredSearchIsDiscardedWhenRestoringAConfirmation() {
+        interactions.write("confirmation") {
+            putString("id", "retired-search")
+            putString("operation", "SEARCH")
+            putString("title", "Search")
+            putBundle("media", Bundle().apply {
+                putString("source", "player")
+                putString("title", "Song A")
+            })
+        }
+        val controller = confirmations()
+
+        assertNull(controller.pending)
+        assertNull(interactions.read("confirmation"))
+        controller.confirm("retired-search")
+        assertTrue(deletions.isEmpty())
+        assertTrue(deleteAllRequests.isEmpty())
+        assertEquals(0, editorDeletes)
+    }
+
+    @Test
     fun incompleteTargetDoesNotFallBackToTheCurrentlyPlayingSong() {
         interactions.write("confirmation") {
             putString("id", "missing-target")
-            putString("operation", "SEARCH")
+            putString("operation", "DELETE_CURRENT")
+            putString("mode", "PLAIN")
         }
         val controller = confirmations()
         assertNull(controller.pending)
         controller.confirm("missing-target")
-        assertTrue(searches.isEmpty())
+        assertTrue(deletions.isEmpty())
     }
 }

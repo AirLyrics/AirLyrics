@@ -1,6 +1,5 @@
 package com.andsi.airlyrics.lyrics
 
-import com.andsi.airlyrics.core.model.LyricsSearchMode
 import android.os.Handler
 import android.os.Looper
 import java.util.concurrent.CancellationException
@@ -29,14 +28,6 @@ class LyricsLookupCancellationToken internal constructor(
 ) {
     private val lock = Any()
     private val cancellationCallbacks = mutableListOf<() -> Unit>()
-    internal var onSearchModeChanged: ((LyricsSearchMode) -> Unit)? = null
-
-    internal fun reportSearchMode(mode: LyricsSearchMode) {
-        throwIfCancellationRequested()
-        LyricsSearchCoordinator.updateMode(this, mode)
-        onSearchModeChanged?.invoke(mode)
-    }
-
     @Volatile
     private var cancelled: Boolean = false
     @Volatile

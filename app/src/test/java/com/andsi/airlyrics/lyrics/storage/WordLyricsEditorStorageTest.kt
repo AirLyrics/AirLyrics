@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
 import com.andsi.airlyrics.app.interaction.EditableLrcDocument
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
@@ -23,7 +24,7 @@ class WordLyricsEditorStorageTest : LyricsStorageTestBase() {
     private val document = WordLyricsDocument(listOf(lead, background), listOf("[ar:Artist]"))
 
     private fun localItem(): LyricsStorage.LocalLyricsItem {
-        assertTrue(WordByWordLyricsStorageOps.saveWordByWordLyrics(context, "Song", "Artist", 10000,
+        assertTrue(seedLegacyWordLyrics(context, "Song", "Artist", 10000,
             document.lines, metadataLines = document.metadata))
         return LyricsStorage.listAllLyrics(context).single()
     }

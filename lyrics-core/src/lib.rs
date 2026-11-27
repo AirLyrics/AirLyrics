@@ -3,8 +3,7 @@ use jni::objects::{JObject, JString};
 use jni::sys::jstring;
 use jni::JNIEnv;
 use matching::{
-    build_search_keywords, is_confident_early_match, normalize_usable_lrc, score_candidate,
-    MatchMetadata,
+    build_search_keywords, is_confident_early_match, normalize_usable_lrc, MatchMetadata,
 };
 use ncmapi::types::{Album, Artist, LyricResp, SearchSongResp, Song};
 use ncmapi::NcmApi;
@@ -34,7 +33,6 @@ mod native_result_contract_tests;
 mod qq;
 mod qrc_crypto;
 mod recording;
-mod review;
 mod spicy;
 
 const NETEASE_LOOKUP_TIMEOUT: Duration = Duration::from_secs(12);
@@ -92,18 +90,6 @@ pub(crate) struct NativeResult {
     untimed_text: Option<String>,
     error_type: Option<&'static str>,
     error: Option<String>,
-}
-
-#[no_mangle]
-pub extern "system" fn Java_com_andsi_airlyrics_lyrics_providers_LrclibLyricsNative_takeReviewCandidatesJson(
-    env: JNIEnv,
-    _this: JObject,
-) -> jstring {
-    let payload = std::panic::catch_unwind(review::take_json)
-        .unwrap_or_else(|_| "{\"query\":null,\"candidates\":[]}".to_owned());
-    env.new_string(payload)
-        .map(|value| value.into_raw())
-        .unwrap_or(std::ptr::null_mut())
 }
 
 #[no_mangle]
@@ -1186,27 +1172,7 @@ fn map_song(
         album: album_name,
         duration_ms: Some(*duration as u64).filter(|value| *value > 0),
     };
-    let match_score = match confidence::assess(query_metadata, candidate_metadata) {
-        Some(assessment) => assessment.score,
-        None => {
-            if let Some(title_score) = score_candidate(query_metadata, candidate_metadata) {
-                review::park(
-                    &review::query_key(target_title, target_artist, target_duration_ms),
-                    review::ParkedCandidate {
-                        title: name.clone(),
-                        artist: artist.clone(),
-                        album: album_name.to_owned(),
-                        duration_ms: Some(*duration as u64).filter(|value| *value > 0),
-                        provider: "netease",
-                        score: title_score.total,
-                        reason: confidence::rejection_reason(query_metadata, candidate_metadata),
-                        alias_hit: aliases::lookup(target_title, target_artist).is_some(),
-                    },
-                );
-            }
-            return None;
-        }
-    };
+    let match_score = confidence::assess(query_metadata, candidate_metadata)?.score;
 
     Some(Candidate {
         id: *id,

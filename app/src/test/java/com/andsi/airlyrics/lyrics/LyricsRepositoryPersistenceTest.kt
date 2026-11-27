@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
@@ -9,17 +11,21 @@ import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.LyricsSettings
 import com.andsi.airlyrics.core.model.LyricsSwitchAnimationMode
 import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.providers.SpicyLyricsParser
+import com.andsi.airlyrics.lyrics.providers.spicyFixture
 import com.andsi.airlyrics.lyrics.search.ManualLyricsSearch
 import com.andsi.airlyrics.lyrics.storage.LyricsFileStore
 import com.andsi.airlyrics.lyrics.storage.LyricsIndexStore
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.ManualLyricsSelectionStore
+import com.andsi.airlyrics.lyrics.storage.SpicyLyricsCache
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -118,7 +124,7 @@ class LyricsRepositoryPersistenceTest {
                 )
             )
             assertTrue(
-                LyricsStorage.saveWordByWordLyrics(
+                seedLegacyWordLyrics(
                     context = context,
                     title = WORD_BY_WORD_TITLE,
                     artist = ARTIST,
@@ -173,12 +179,54 @@ class LyricsRepositoryPersistenceTest {
 
     private val appleWords = listOf(WordByWordLine(1000, 2000, "hello",
         listOf(WordByWordSegment("hello", 1000, 2000))))
+    @Test
+    fun restrictedWordLyricsStayInProviderCacheWhenAutomaticSaveIsEnabled() {
+        val song = SongIdentity("Repository Restricted Lyrics", ARTIST, durationMs = 10_000L)
+        val key = SpicyLyricsCache.key(song.title, song.artist, song.durationMs)
+        val cache = SpicyLyricsCache.forContext(context)
+        val raw = spicyFixture()
+        val fetchedAt = System.currentTimeMillis()
+        val result = requireNotNull(SpicyLyricsParser.parse(raw, key, fetchedAt)).copy(
+            pendingSpicyLyrics = PendingSpicyLyrics(raw, key, fetchedAt)
+        )
+        val provider = object : LyricsProvider {
+            override val id = "spicy"
+            override val name = "Spicy Lyrics"
+            override val supportsWordTiming = true
+            override fun fetch(request: PlainLyricsSearchRequest): Result<LyricsProviderResult?> = Result.success(result)
+        }
+        try {
+            val found = LyricsRepository.findLyricsWithProviders(
+                context = context,
+                onlinePlainLyricsProviders = mapOf(PlainLyricsSearchSource.SPICY to provider),
+                settings = onlineAutoSaveSettings().copy(
+                    plainLyricsSearchSources = listOf(PlainLyricsSearchSource.SPICY),
+                    wordByWordLyricsEnabled = true,
+                ),
+                title = song.title,
+                artist = song.artist,
+                durationMs = song.durationMs,
+            ).getOrThrow()
+
+            assertEquals(result.wordByWordLines, found?.wordByWordLines)
+            assertEquals(found, cache.read(key))
+            assertNull(LyricsIndexStore.find(context, song.title, song.artist, song.durationMs))
+            val access = requireNotNull(LyricsStorage.restrictedLyricsAccess(context, "spicy:$key"))
+            assertFalse(access.allowExport)
+        } finally {
+            cache.delete(key)
+        }
+    }
+
     private fun appleResult(text: String = "hello") = LyricsProviderResult("apple", "Apple",
         "[00:01.00]$text", "[00:01.00]你好", appleWords)
 
-    private fun lookupApple(result: LyricsProviderResult = appleResult(), auto: Boolean = false,
-        force: Boolean = false, manual: Boolean = false, enabled: Boolean = true,
-        beforeFetch: (() -> Unit)? = null): Result<LyricsProviderResult?> {
+    private fun lookupApple(
+        result: LyricsProviderResult = appleResult(),
+        auto: Boolean = false,
+        enabled: Boolean = true,
+        beforeFetch: (() -> Unit)? = null,
+    ): Result<LyricsProviderResult?> {
         val provider = object : PlainLyricsProvider {
             override val id = "apple"
             override val name = "Apple"
@@ -191,9 +239,15 @@ class LyricsRepositoryPersistenceTest {
         return LyricsRepository.findLyricsWithProviders(
             context, mapOf(PlainLyricsSearchSource.NETEASE to provider),
             onlineAutoSaveSettings().copy(autoSaveLocal = auto, wordByWordLyricsEnabled = enabled),
-            STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS, bypassLocal = true,
-            forceSaveOnline = force,
-            searchOrigin = if (manual) LyricsSearchOrigin.Manual else LyricsSearchOrigin.Automatic)
+            STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS,
+        )
+    }
+
+    private fun applyApple(result: LyricsProviderResult = appleResult()): Boolean {
+        val song = SongIdentity(STORED_TITLE, ARTIST, ALBUM, STORED_DURATION_MS)
+        return ManualLyricsSearch(context).apply(
+            song, result, LyricsLookupCancellationToken(song.storageKey(), 1L), approvedRevision = null,
+        )
     }
 
     private fun durableState(): Map<String, List<Byte>> {
@@ -208,7 +262,7 @@ class LyricsRepositoryPersistenceTest {
     fun appleCommitFailuresRestoreAllFilesAndFirstSaveLeavesNothing() {
         for (existing in listOf(false, true)) for (step in listOf("wordFile", "wordIndex", "selection")) {
             resetLyricsStorage(context)
-            if (existing) lookupApple(manual = true).getOrThrow()
+            if (existing) assertTrue(applyApple())
             val before = durableState()
             ManualLyricsSelectionStore.beforeCommitStep = {
                 if (it == step) {
@@ -228,7 +282,7 @@ class LyricsRepositoryPersistenceTest {
                 }
             }
             try {
-                assertTrue(lookupApple(appleResult("replacement"), manual = true).isFailure)
+                assertTrue(runCatching { applyApple(appleResult("replacement")) }.isFailure)
                 assertEquals(before, durableState())
             } finally {
                 ManualLyricsSelectionStore.beforeCommitStep = null
@@ -238,18 +292,18 @@ class LyricsRepositoryPersistenceTest {
 
     @Test
     fun appleAutomaticPersistenceUsesBothSettingsAndManualAlwaysPersists() {
-        for (auto in listOf(false, true)) for (force in listOf(false, true)) {
+        for (auto in listOf(false, true)) {
             resetLyricsStorage(context)
             val before = durableState()
-            assertEquals(appleWords, lookupApple(auto = auto, force = force).getOrThrow()!!.wordByWordLines)
-            if (!auto && !force) assertEquals(before, durableState())
+            assertEquals(appleWords, lookupApple(auto = auto).getOrThrow()!!.wordByWordLines)
+            if (!auto) assertEquals(before, durableState())
             else {
                 assertNotNull(LyricsStorage.readPlainLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS))
                 assertEquals(appleWords, LyricsStorage.readWordByWordLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS))
             }
         }
         resetLyricsStorage(context)
-        lookupApple(manual = true).getOrThrow()
+        assertTrue(applyApple())
         assertNotNull(LyricsStorage.readPlainLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS))
         assertTrue(lookupApple(enabled = false).getOrThrow()!!.wordByWordLines.isEmpty())
         assertEquals(appleWords, lookupApple().getOrThrow()!!.wordByWordLines)
@@ -260,7 +314,7 @@ class LyricsRepositoryPersistenceTest {
         val old = appleResult("imported")
         var expected: Map<String, List<Byte>>? = null
         val found = lookupApple(auto = true, beforeFetch = {
-            LyricsStorage.savePlainLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS,
+            seedPlainLyrics(context, STORED_TITLE, ARTIST, STORED_DURATION_MS,
                 old.plainLrc, plainSource = LyricsStorage.SOURCE_MANUAL_IMPORT)
             expected = durableState()
         }).getOrThrow()!!

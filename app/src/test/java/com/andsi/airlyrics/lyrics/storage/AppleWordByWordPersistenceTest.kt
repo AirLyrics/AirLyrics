@@ -1,9 +1,12 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.core.model.SongIdentity
+import com.andsi.airlyrics.lyrics.LyricsLookupCancellationToken
+import com.andsi.airlyrics.lyrics.LyricsProviderResult
+import com.andsi.airlyrics.lyrics.LyricsResultCommitter
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,9 +29,9 @@ class AppleWordByWordPersistenceTest : LyricsStorageTestBase() {
 
     @Test
     fun storageCommitRestoresAfterPartialWordIndexFailure() {
-        val song = com.andsi.airlyrics.core.model.SongIdentity("Storage failure", "Artist", durationMs = 10000)
-        val result = com.andsi.airlyrics.lyrics.LyricsProviderResult("apple", "Apple", "[00:22.18]old", wordByWordLines = lines)
-        fun commit(value: com.andsi.airlyrics.lyrics.LyricsProviderResult) = ManualLyricsSelectionStore.commit(
+        val song = SongIdentity("Storage failure", "Artist", durationMs = 10000)
+        val result = LyricsProviderResult("apple", "Apple", "[00:22.18]old", wordByWordLines = lines)
+        fun commit(value: LyricsProviderResult) = ManualLyricsSelectionStore.commit(
             context, song, com.andsi.airlyrics.core.model.LyricsSearchMode.Original, value,
             manual = true, savePlain = false)
         commit(result)
@@ -51,10 +54,10 @@ class AppleWordByWordPersistenceTest : LyricsStorageTestBase() {
 
     @Test
     fun manualReferenceRestoresOnlyItsOwnCompleteResult() {
-        val song = com.andsi.airlyrics.core.model.SongIdentity("Apple manual", "Artist", durationMs = 10000)
-        val result = com.andsi.airlyrics.lyrics.LyricsProviderResult("apple", "Apple",
+        val song = SongIdentity("Apple manual", "Artist", durationMs = 10000)
+        val result = LyricsProviderResult("apple", "Apple",
             "[00:22.18]攔路雨偏似雪花", "[00:22.18]translation", lines)
-        fun commit(value: com.andsi.airlyrics.lyrics.LyricsProviderResult) = ManualLyricsSelectionStore.commit(
+        fun commit(value: LyricsProviderResult) = ManualLyricsSelectionStore.commit(
             context, song, com.andsi.airlyrics.core.model.LyricsSearchMode.Original, value,
             manual = true, savePlain = false)
         commit(result)
@@ -83,34 +86,15 @@ class AppleWordByWordPersistenceTest : LyricsStorageTestBase() {
 
     @Test
     fun appleWordTimingIsPersistedAndReadBack() {
+        val song = SongIdentity("富士山下", "陈奕迅", durationMs = 259_133L)
+        val result = LyricsProviderResult("apple", "Apple", "[00:22.186]攔路雨偏似雪花", wordByWordLines = lines)
         assertTrue(
-            LyricsStorage.saveWordByWordLyrics(
-                context = context,
-                title = "富士山下",
-                artist = "陈奕迅",
-                duration = 259_133L,
-                wordByWordLines = lines,
-                wordByWordProvider = "apple"
+            LyricsResultCommitter(context).applySelection(
+                song, result, LyricsLookupCancellationToken(song.storageKey(), 1L), approvedRevision = null
             )
         )
 
-        val stored = LyricsStorage.readWordByWordLyrics(context, "富士山下", "陈奕迅", 259_133L)
-        assertEquals(1, stored.size)
-        assertEquals(2, stored[0].segments.size)
-        assertTrue(LyricsStorage.hasWordByWordLyrics(context, "富士山下", "陈奕迅", 259_133L))
-    }
-
-    @Test
-    fun spicyProviderStillCannotWriteThroughThisPath() {
-        assertFalse(
-            LyricsStorage.saveWordByWordLyrics(
-                context = context,
-                title = "Spicy Song",
-                artist = "Artist",
-                duration = 180_000L,
-                wordByWordLines = lines,
-                wordByWordProvider = "spicy"
-            )
-        )
+        assertEquals(lines, LyricsStorage.readWordByWordLyrics(context, song.title, song.artist, song.durationMs))
+        assertTrue(LyricsStorage.hasWordByWordLyrics(context, song.title, song.artist, song.durationMs))
     }
 }

@@ -114,7 +114,7 @@ class LyricsStorageSafInstrumentedTest {
         val fallbackManagedFile = registerFallbackIdentity(identity)
 
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            writePlainLyricsForStorageTest(
                 context = context,
                 title = identity.title,
                 artist = identity.artist,
@@ -249,7 +249,7 @@ class LyricsStorageSafInstrumentedTest {
         val managedFileName = LyricsFileNaming.managedPlainFileName(identity)
 
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            writePlainLyricsForStorageTest(
                 context = context,
                 title = identity.title,
                 artist = identity.artist,
@@ -323,7 +323,7 @@ class LyricsStorageSafInstrumentedTest {
         val fallbackManagedFile = registerFallbackIdentity(identity)
 
         assertFalse(
-            LyricsStorage.savePlainLyrics(
+            writePlainLyricsForStorageTest(
                 context = context,
                 title = identity.title,
                 artist = identity.artist,

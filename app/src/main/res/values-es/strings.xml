@@ -172,7 +172,6 @@
     <string name="ui_green">Verde</string>
     <string name="ui_hidden">Oculto</string>
     <string name="ui_hide">Ocultar</string>
-    <string name="ui_hide_rgb">Ocultar RGB</string>
     <string name="ui_highlight">Resaltado</string>
     <string name="ui_highlight_color">Color de resaltado</string>
     <string name="ui_horizontal_padding">Relleno horizontal</string>
@@ -204,8 +203,6 @@
     <string name="ui_lyrics_format_guide">Guía de formato de letras</string>
     <string name="ui_lyrics_format_lrc_tab">LRC</string>
     <string name="ui_lyrics_format_ttml_tab">TTML</string>
-    <string name="ui_lyrics_import_failed">Falló la importación de letras</string>
-    <string name="ui_lyrics_import_empty_error">Las letras importadas están vacías</string>
     <string name="ui_lyrics_not_found">Letras no encontradas</string>
     <string name="ui_lyrics_removed_auto_search_paused">Letras eliminadas. No se buscarán automáticamente para esta canción.</string>
     <string name="ui_lyrics_offset">Desfase de letras</string>
@@ -240,7 +237,6 @@
     <string name="ui_no_plain_lrc_to_remove_for_this_song">No hay letras simples para eliminar</string>
     <string name="ui_no_playback_state">Sin estado de reproducción</string>
     <string name="ui_recent_lyrics_empty_hint">Aún no hay letras guardadas</string>
-    <string name="ui_no_song_for_lyrics_binding">No hay ninguna canción reproduciéndose</string>
     <string name="ui_no_apps_found">No se encontraron apps</string>
     <string name="ui_no_translation_for_this_lyric">Sin traducción para esta letra</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">Agrega al menos una línea: [00:12.34]&lt;00:12.34&gt;letra</string>
@@ -262,8 +258,6 @@
     <string name="ui_on">Activado</string>
     <string name="ui_online_fallback_off">Búsqueda automática: desactivada</string>
     <string name="ui_online_fallback_on">Búsqueda automática: activada</string>
-    <string name="ui_online_lyrics_saved">Letras guardadas</string>
-    <string name="ui_online_lyrics_search_failed">Falló la búsqueda en línea</string>
     <string name="ui_opacity">Opacidad</string>
     <string name="ui_grant_usage_access">Otorgar acceso de uso</string>
     <string name="ui_orange">Naranja</string>
@@ -340,7 +334,6 @@ TTML de tiempo por palabra:
     <string name="ui_no_saved_lyrics_to_delete">No hay letras guardadas</string>
     <string name="ui_reset_current_song_offset">Restablecer el desfase de la canción actual</string>
     <string name="ui_rewinding">Retrocediendo</string>
-    <string name="ui_rgb_tune">Ajuste RGB</string>
     <string name="ui_custom_color">Color personalizado</string>
     <string name="ui_save_color_swatch">Guardar muestra</string>
     <string name="ui_delete_color_swatch">Eliminar muestra</string>

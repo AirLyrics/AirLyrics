@@ -345,13 +345,6 @@ object FloatingLyricsStyleStore {
         return prefs(context).getBoolean(KEY_AUTO_HIDE_WHEN_LYRICS_UNAVAILABLE, false)
     }
 
-    fun savePosition(context: Context, x: Int, y: Int) {
-        prefs(context).edit {
-            putInt(KEY_POS_X, x)
-            putInt(KEY_POS_Y, y)
-        }
-    }
-
     fun getPosition(context: Context): Pair<Int, Int> {
         val prefs = prefs(context)
         return prefs.getInt(KEY_POS_X, DEFAULT_X) to prefs.getInt(KEY_POS_Y, DEFAULT_Y)

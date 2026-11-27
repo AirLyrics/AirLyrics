@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.floating
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -88,7 +90,7 @@ class FloatingLyricsServiceLatestMediaTest {
         MediaSourceStore.saveSelectedPackage(context, source)
         LyricsSettingsStore.setWordByWordLyricsEnabled(context, true)
         saveLocalPlainLyrics(OLD_TITLE, "[00:00.00]local words")
-        assertTrue(LyricsStorage.saveWordByWordLyrics(
+        assertTrue(seedLegacyWordLyrics(
             context = context,
             title = OLD_TITLE,
             artist = ARTIST,
@@ -508,7 +510,7 @@ class FloatingLyricsServiceLatestMediaTest {
 
     private fun saveLocalPlainLyrics(title: String, plainLrc: String) {
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = title,
                 artist = ARTIST,

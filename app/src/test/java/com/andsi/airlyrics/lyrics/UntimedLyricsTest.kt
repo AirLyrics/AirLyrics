@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.core.model.*
 import com.andsi.airlyrics.lyrics.providers.*
 import com.andsi.airlyrics.lyrics.search.*
@@ -69,9 +71,9 @@ class UntimedLyricsTest : LyricsStorageTestBase() {
     }
 
     @Test fun applyAndReloadUseTxtAndDoNotAttachOldWords() {
-        assertTrue(WordByWordLyricsStorageOps.saveWordByWordLyrics(context, song.title, song.artist, song.durationMs,
+        assertTrue(seedLegacyWordLyrics(context, song.title, song.artist, song.durationMs,
             listOf(WordByWordLine(1000, 2000, "Old", listOf(WordByWordSegment("Old",1000,2000))))))
-        assertTrue(LyricsStorage.savePlainLyrics(context, song.title, song.artist, song.durationMs,
+        assertTrue(seedPlainLyrics(context, song.title, song.artist, song.durationMs,
             "[00:01.00]Old", plainSource = LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK))
         val service = ManualLyricsSearch(context)
         assertFalse(service.apply(song, result(), token(), null))
@@ -135,8 +137,9 @@ class UntimedLyricsTest : LyricsStorageTestBase() {
         val cache = SpicyLyricsCache.forContext(context)
         val key = SpicyLyricsCache.key(song.title, song.artist, song.durationMs)
         val original = cache.save(key, song.title, song.artist, song.album, song.durationMs, staticSpicyFixture())!!
-        assertTrue(cache.item(key)!!.isUntimed)
-        assertTrue(cache.edit(key, text, false).saved)
+        val item = requireNotNull(cache.item(key))
+        assertTrue(item.isUntimed)
+        assertTrue(LyricsStorage.updatePlainLyricsItemTextWithResult(context, item, text).saved)
         val edited = cache.read(key)!!
         assertEquals(text, edited.untimedLyrics!!.text)
         assertEquals(original.access, edited.access)
@@ -145,9 +148,9 @@ class UntimedLyricsTest : LyricsStorageTestBase() {
     }
 
     @Test fun textTypeSurvivesSeparateWordCacheWritesAndNeverFallsBackToLegacyLrc() {
-        assertTrue(LyricsStorage.savePlainLyrics(context, song.title, song.artist, song.durationMs,
+        assertTrue(seedPlainLyrics(context, song.title, song.artist, song.durationMs,
             text, isUntimed = true, untimedTranslation = "Translation"))
-        assertTrue(LyricsStorage.saveWordByWordLyrics(context, song.title, song.artist, song.durationMs,
+        assertTrue(seedLegacyWordLyrics(context, song.title, song.artist, song.durationMs,
             listOf(WordByWordLine(1000, 2000, "Old", listOf(WordByWordSegment("Old", 1000, 2000))))))
         assertTrue(local().isUntimed)
         assertEquals("Translation", local().untimedLyrics!!.translatedText)

@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.lyrics.importer.BatchLyricsDocument
@@ -191,7 +192,7 @@ class LyricsReplacementOpsTest {
     }
 
     private fun seed(): LyricsStorage.LocalLyricsItem {
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 180_000, "[00:01.00]old"))
+        assertTrue(seedPlainLyrics(context, "Song", "Artist", 180_000, "[00:01.00]old"))
         return LyricsStorage.listAllLyrics(context).single()
     }
 }

@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics.exporter
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
@@ -39,7 +41,7 @@ class BatchLyricsExporterTest {
 
     @Test fun safeUniqueFilenamesAndIdentitySurviveEditingAndReimport() {
         for (title in listOf("../Song:Live", "../Song/Live")) {
-            assertTrue(LyricsStorage.savePlainLyrics(context, title, "Artist/Name", 180_000,
+            assertTrue(seedPlainLyrics(context, title, "Artist/Name", 180_000,
                 "[00:01.00]old"))
         }
         val items = LyricsStorage.listAllLyrics(context)
@@ -68,7 +70,7 @@ class BatchLyricsExporterTest {
 
     @Test fun wordLyricsExportAsEditableEnhancedLrc() {
         val words = WordByWordLrcParser.parse("[00:01.00]<00:01.00>hello <00:02.00>world")
-        assertTrue(LyricsStorage.saveWordByWordLyrics(context, "Words", "Artist", 180_000, words))
+        assertTrue(seedLegacyWordLyrics(context, "Words", "Artist", 180_000, words))
         assertEquals(1, export(LyricsStorage.listAllLyrics(context)).exported)
         ZipFile(destination).use { zip ->
             val entry = zip.entries().nextElement()
@@ -80,8 +82,8 @@ class BatchLyricsExporterTest {
     }
 
     @Test fun onlyRequestedItemsExportAndRestrictedCacheIsReported() {
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Local", "Artist", 180_000, "[00:01.00]local"))
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Unselected", "Artist", 180_000, "[00:01.00]other"))
+        assertTrue(seedPlainLyrics(context, "Local", "Artist", 180_000, "[00:01.00]local"))
+        assertTrue(seedPlainLyrics(context, "Unselected", "Artist", 180_000, "[00:01.00]other"))
         val cache = SpicyLyricsCache.forContext(context)
         val key = SpicyLyricsCache.key("Cached", "Artist", 180_000)
         assertNotNull(cache.save(key, "Cached", "Artist", "", 180_000, spicyFixture()))
@@ -92,7 +94,7 @@ class BatchLyricsExporterTest {
     }
 
     @Test fun staleItemsAndChangedDirectoryAreSkippedWithoutWritingDestination() {
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Local", "Artist", 180_000, "[00:01.00]local"))
+        assertTrue(seedPlainLyrics(context, "Local", "Artist", 180_000, "[00:01.00]local"))
         val items = LyricsStorage.listAllLyrics(context)
         val result = BatchLyricsExporter.export(context, items, "changed-directory", Uri.fromFile(destination))
         assertEquals(0, result.exported)
@@ -103,7 +105,7 @@ class BatchLyricsExporterTest {
     }
 
     @Test fun destinationFailureIsReportedAndStagingFileIsRemoved() {
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Local", "Artist", 180_000, "[00:01.00]local"))
+        assertTrue(seedPlainLyrics(context, "Local", "Artist", 180_000, "[00:01.00]local"))
         val result = BatchLyricsExporter.export(context, LyricsStorage.listAllLyrics(context),
             LyricsStorage.getLyricsDirRawPath(context), Uri.fromFile(context.cacheDir))
         assertTrue(result.writeFailed)

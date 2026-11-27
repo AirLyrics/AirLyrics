@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.floating
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.app.Application
 import android.app.Service
 import android.content.Context
@@ -12,7 +13,6 @@ import com.andsi.airlyrics.lyrics.LyricsChangedBroadcast
 import com.andsi.airlyrics.testutil.QueuedCallbackDispatcher
 import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.storage.FALLBACK_LYRICS_DIR
-import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.lyrics.storage.PREFS_NAME
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
 import com.andsi.airlyrics.media.MediaSourceStore
@@ -337,7 +337,7 @@ class FloatingLyricsServiceCommandLifecycleTest {
 
     private fun saveLocalPlainLyrics(plainLrc: String) {
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = application,
                 title = TITLE,
                 artist = ARTIST,

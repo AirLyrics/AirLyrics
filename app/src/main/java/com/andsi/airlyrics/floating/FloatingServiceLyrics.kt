@@ -3,7 +3,6 @@ package com.andsi.airlyrics.floating
 import com.andsi.airlyrics.core.model.LyricsSearchMode
 import com.andsi.airlyrics.lyrics.LyricsSearchCoordinator
 import com.andsi.airlyrics.core.model.SongIdentity
-import android.net.Uri
 import android.os.SystemClock
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.i18n.lyrics.localizedLyricsLookupMessage
@@ -11,7 +10,6 @@ import com.andsi.airlyrics.lyrics.LyricsChange
 import com.andsi.airlyrics.lyrics.LyricsChangeKind
 import com.andsi.airlyrics.lyrics.LyricsLookupException
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
-import com.andsi.airlyrics.lyrics.storage.LyricsStorage
 import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
 import com.andsi.airlyrics.media.toSongIdentity
@@ -117,20 +115,7 @@ internal fun FloatingLyricsService.loadLyricsForSong(
 
     lyricsLookupRunner.submit(
         requestKey = lookupRequestKey.value,
-        lookup = { token ->
-            token.onSearchModeChanged = { mode ->
-                syncHandler.post {
-                    if (!token.isCancellationRequested && activeLyricsLookupRequestKey == lookupRequestKey) {
-                        renderer.show {
-                            getString(if (mode == LyricsSearchMode.International)
-                                R.string.ui_searching_international_title else R.string.ui_searching_online_again) +
-                                "\n" + media.displayText
-                        }
-                    }
-                }
-            }
-            lookupLyricsForMedia(media, lookupSettings, token)
-        },
+        lookup = { token -> lookupLyricsForMedia(media, lookupSettings, token) },
         callback = { completedLookupRequestKey, result ->
             if (activeLyricsLookupRequestKey == LyricsLookupRequestKey(completedLookupRequestKey)) {
                 activeLyricsLookupRequestKey = null
@@ -201,63 +186,6 @@ internal fun FloatingLyricsService.notFoundText(media: CurrentMediaInfo): String
         "${getString(R.string.ui_using_local_lyrics_only)}\n${media.displayText}\n${getString(R.string.ui_local_file_not_found)}"
     } else {
         "${media.displayText}\n${getString(R.string.ui_lyrics_not_found)}"
-    }
-}
-
-internal fun FloatingLyricsService.importPlainLyrics(uri: Uri, overwrite: Boolean) {
-    lyricsLookupRunner.cancelActive()
-    activeLyricsLookupRequestKey = null
-    val media = currentMedia
-
-    if (media.title.isBlank()) {
-        renderer.show { getString(R.string.ui_no_song_for_lyrics_binding) }
-        return
-    }
-
-    val imported = LyricsStorage.importPlainLyricsFromUri(
-        context = this,
-        uri = uri,
-        title = media.title,
-        artist = media.artist,
-        duration = media.durationMs,
-        album = media.album,
-        overwrite = overwrite
-    )
-
-    if (!imported) {
-        renderer.show { getString(R.string.ui_lyrics_import_failed) }
-        return
-    }
-
-    val localPlainLrc = LyricsStorage.readPlainLyrics(
-        context = this,
-        title = media.title,
-        artist = media.artist,
-        duration = media.durationMs
-    )
-
-    if (localPlainLrc != null) {
-        renderer.setLyricsAccess(null)
-        automaticOnlineLookupSuppressedSong = null
-        lastPlaybackLyricsKey = media.playbackLyricsKey()
-        activeLyricsLookupRequestKey = null
-        renderer.setLyricsOffset(LyricsOffsetStore.getOffsetMs(this, media.toSongIdentity()))
-        if (LyricsStorage.getLocalPlainLyricsInfo(this, media.title, media.artist, media.durationMs)?.isUntimed == true) {
-            showUntimedLyricsStatus(media)
-            return
-        }
-        val availability = renderer.parseAndShow(
-            plainLrc = localPlainLrc,
-            emptyText = { getString(R.string.ui_lyrics_import_empty_error) }
-        )
-        if (availability == ParsedLyricsAvailability.AVAILABLE) {
-            markLyricsAvailable(media.playbackLyricsKey())
-        } else {
-            markLyricsUnavailable(media.playbackLyricsKey())
-        }
-        scheduleNextLyricsSync()
-    } else {
-        renderer.show { getString(R.string.ui_lyrics_import_failed) }
     }
 }
 

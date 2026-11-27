@@ -19,7 +19,7 @@ internal object LyricsSearchCoordinator {
         val song: SongIdentity,
         val token: LyricsLookupCancellationToken,
         val origin: LyricsSearchOrigin,
-        var mode: LyricsSearchMode
+        val mode: LyricsSearchMode
     ) : AutoCloseable {
         internal var active = true
         internal var cancellation: LyricsLookupCancellationRegistration? = null
@@ -74,22 +74,8 @@ internal object LyricsSearchCoordinator {
         return lease
     }
 
-    fun current(token: LyricsLookupCancellationToken): Lease? = lock.withLock {
-        searches.values.asSequence().flatten().firstOrNull { it.token === token && it.active }
-    }
-
     fun manualMode(song: SongIdentity): LyricsSearchMode? = lock.withLock {
         searches[song.copy(durationMs = 0L).storageKey()]?.firstOrNull { it.origin == LyricsSearchOrigin.Manual }?.mode
-    }
-
-    fun updateMode(token: LyricsLookupCancellationToken, mode: LyricsSearchMode) {
-        val song = lock.withLock {
-            current(token)?.takeIf { it.origin == LyricsSearchOrigin.Manual && it.mode != mode }?.let {
-                it.mode = mode
-                it.song
-            }
-        }
-        if (song != null) notifyObservers(song)
     }
 
     fun observe(observer: (SongIdentity) -> Unit): AutoCloseable {

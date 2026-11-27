@@ -27,8 +27,6 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
         FloatingServiceCommand.ClickThroughOn -> setClickThrough(clickThrough = true)
         FloatingServiceCommand.ClickThroughOff -> setClickThrough(clickThrough = false)
         FloatingServiceCommand.ToggleVisibleFromNotification -> toggleVisibleFromNotification()
-        FloatingServiceCommand.ToggleLockFromNotification -> toggleLockFromNotification()
-        FloatingServiceCommand.ToggleClickThroughFromNotification -> toggleClickThroughFromNotification()
         FloatingServiceCommand.ToggleAdjustModeFromNotification -> toggleAdjustModeFromNotification()
         FloatingServiceCommand.ApplyAutoHideSettings -> applyAutoHideSettings()
         FloatingServiceCommand.ApplyDisplayScope -> applyDisplayScopeSetting()
@@ -41,7 +39,6 @@ internal fun FloatingLyricsService.handleCommand(intent: Intent?, startId: Int) 
         FloatingServiceCommand.ReloadLyrics -> reloadCurrentLyrics()
         is FloatingServiceCommand.ApplyLyricsOffset -> applyLyricsOffset(command.offsetMs)
         FloatingServiceCommand.SyncMediaSource -> syncSelectedMediaSource()
-        is FloatingServiceCommand.ImportPlainLyrics -> importPlainLyrics(uri = command.uri, overwrite = command.overwrite)
     }
 }
 
@@ -126,16 +123,6 @@ internal fun FloatingLyricsService.toggleVisibleFromNotification() {
     } else {
         hideLyrics()
     }
-}
-
-internal fun FloatingLyricsService.toggleLockFromNotification() {
-    val nextLocked = !FloatingLyricsStyleStore.isLocked(this)
-    setLocked(locked = nextLocked)
-}
-
-internal fun FloatingLyricsService.toggleClickThroughFromNotification() {
-    val nextClickThrough = !FloatingLyricsStyleStore.isClickThrough(this)
-    setClickThrough(clickThrough = nextClickThrough)
 }
 
 internal fun FloatingLyricsService.toggleAdjustModeFromNotification() {

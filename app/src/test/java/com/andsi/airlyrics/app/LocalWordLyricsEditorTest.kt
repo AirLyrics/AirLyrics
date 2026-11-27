@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
 import android.app.Dialog
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -43,7 +44,7 @@ class LocalWordLyricsEditorTest : LyricsStorageTestBase() {
     private val originalRaw = "<00:01.001>Hello <00:02.111><00:02.444>world<00:03.789>"
 
     @Before fun open() {
-        assertTrue(WordByWordLyricsStorageOps.saveWordByWordLyrics(context, "Song", "Artist", 10000, listOf(line)))
+        assertTrue(seedLegacyWordLyrics(context, "Song", "Artist", 10000, listOf(line)))
         controller = Robolectric.buildActivity(MainActivity::class.java).setup().visible()
         val host = activity.graph.uiHost
         host.localLyricsRow(host.savedLyricsState().lyrics.single()).performClick()

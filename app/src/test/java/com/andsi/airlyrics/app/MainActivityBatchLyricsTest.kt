@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.content.Context
 import android.animation.ValueAnimator
 import android.graphics.Rect
@@ -53,7 +54,7 @@ class MainActivityBatchLyricsTest {
         context = ApplicationProvider.getApplicationContext()
         resetLyricsStorage(context)
         for (title in listOf("One", "Two")) {
-            assertTrue(LyricsStorage.savePlainLyrics(context, title, "Artist", 180_000, "[00:01.00]old $title"))
+            assertTrue(seedPlainLyrics(context, title, "Artist", 180_000, "[00:01.00]old $title"))
         }
     }
 
@@ -453,7 +454,7 @@ class MainActivityBatchLyricsTest {
 
     @Test fun recycledListRestoresScrollAndSelectAllIncludesOffscreenSearchResults() {
         repeat(60) { index ->
-            assertTrue(LyricsStorage.savePlainLyrics(context, "Extra $index", "Artist", 180_000, "[00:01.00]test"))
+            assertTrue(seedPlainLyrics(context, "Extra $index", "Artist", 180_000, "[00:01.00]test"))
         }
         val activity = launch()
         val list = descendants(activity.window.decorView).filterIsInstance<ListView>().single()

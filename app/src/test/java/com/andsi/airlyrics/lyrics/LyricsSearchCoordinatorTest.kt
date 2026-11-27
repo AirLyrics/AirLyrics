@@ -7,7 +7,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -56,7 +55,6 @@ class LyricsSearchCoordinatorTest {
             assertTrue("Automatic search never reached the ownership wait", waiting.await(5, TimeUnit.SECONDS))
             automaticToken.cancel()
             assertTrue(future.get(5, TimeUnit.SECONDS))
-            assertNull(LyricsSearchCoordinator.current(automaticToken))
             assertEquals(LyricsSearchMode.Original, LyricsSearchCoordinator.manualMode(song))
         } finally {
             manual.close()

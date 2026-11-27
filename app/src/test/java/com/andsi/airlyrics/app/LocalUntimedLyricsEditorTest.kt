@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.widget.EditText
 import android.widget.TextView
 import com.andsi.airlyrics.R
@@ -25,7 +26,7 @@ class LocalUntimedLyricsEditorTest : LyricsStorageTestBase() {
     private val original = "First paragraph\n\n第二段\n[00:01.00]Literal text"
 
     @Before fun open() {
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 10000, original, isUntimed = true))
+        assertTrue(seedPlainLyrics(context, "Song", "Artist", 10000, original, isUntimed = true))
         controller = Robolectric.buildActivity(MainActivity::class.java).setup().visible()
         val host = activity.graph.uiHost
         val item = host.savedLyricsState().lyrics.single()

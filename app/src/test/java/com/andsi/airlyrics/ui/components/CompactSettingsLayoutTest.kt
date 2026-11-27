@@ -10,7 +10,6 @@ import com.andsi.airlyrics.ui.theme.colorBackground
 import java.io.File
 import org.robolectric.Shadows.shadowOf
 import android.graphics.Rect
-import android.graphics.Color
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
@@ -147,22 +146,6 @@ class CompactSettingsLayoutTest {
         }
     }
 
-    @Test fun swatchesHaveExplicitGapsAndUseWidthDrivenColumns() {
-        val host = host()
-        val colors = host.colorControl("Texto", Color.WHITE, false) {}
-        layout(colors, host.dp(320))
-        val grid = descendants(colors).filterIsInstance<AdaptiveGridLayout>().single()
-        assertEquals(3, grid.columns)
-        val preview = colors.getChildAt(0)
-        assertEquals(host.dp(AirUiTokens.Layout.SettingGap), grid.top - preview.bottom)
-        val height = grid.height
-        (grid.getChildAt(0) as TextView).text = "A very long localized color name"
-        layout(colors, host.dp(320))
-        assertEquals(3, grid.columns)
-        assertTrue(grid.height >= height)
-        assertEquals(grid.getChildAt(0).height, grid.getChildAt(1).height)
-    }
-
     @Test fun readerIsStaticByDefaultAndStopsOnSourceChangeFocusLossAndDetach() {
         val host = host()
         controller!!.visible()
@@ -281,28 +264,6 @@ class CompactSettingsLayoutTest {
         capturePanel(page, "short-screen-summary")
         close.performClick()
         assertNull(host.interactions.panel)
-    }
-
-    @Test fun translucentColorsKeepPresetSelectionAndOpacityWhenChangingHue() {
-        val host = host()
-        val opacity = 90
-        var changedColor = Color.TRANSPARENT
-        val colors = host.colorControl("Color", Color.argb(opacity, 66, 165, 245), true) { changedColor = it }
-        layout(colors, host.dp(280))
-        val grid = descendants(colors).filterIsInstance<AdaptiveGridLayout>().single()
-        fun swatch(label: Int) = descendants(grid).filterIsInstance<TextView>()
-            .single { it.text.toString() == host.getString(label) }
-        assertTrue(swatch(R.string.ui_blue).isSelected)
-        swatch(R.string.ui_red).performClick()
-        assertEquals(opacity, Color.alpha(changedColor))
-        assertTrue(swatch(R.string.ui_red).isSelected)
-        assertFalse(swatch(R.string.ui_blue).isSelected)
-        swatch(R.string.ui_custom).performClick()
-        layout(colors, host.dp(280))
-        val sliders = descendants(colors).filterIsInstance<SettingsSliderRow>()
-        assertEquals(4, sliders.size)
-        assertTrue(sliders.all { it.parent.let { parent -> (parent as View).visibility == View.VISIBLE } })
-        assertTrue(sliders.all { it.seekBar.height >= host.dp(48) })
     }
 
     @Test fun floatingSubSettingsRenderWithReadableControlsAcrossThemesAndTextSizes() {

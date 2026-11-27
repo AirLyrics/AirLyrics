@@ -108,7 +108,6 @@ private fun FloatingPageScope.openFloatingPanel(
         onUndo = edits?.let { it::undo },
         onInteraction = edits?.let { it::finishMotion }
     ) {
-        host.beginPanelControls()
         edits?.beginContent()
         content(edits)
     }
@@ -197,15 +196,11 @@ private fun FloatingPageScope.openFloatingPanel(
 }
 
 internal fun FloatingPageScope.installBackHandler() {
-    host.floatingPanelBackHandler = {
-        if (activePanelNavigation?.navigateBack() == true) {
-            true
-        } else if (activeBubble != null || focusOverlay?.visibility == View.VISIBLE) {
-            closePanel()
-            true
-        } else {
-            false
-        }
+    host.floatingPanelBackHandler = back@{
+        if (activePanelNavigation?.navigateBack() == true) return@back true
+        val isPanelOpen = (activeBubble != null) || (focusOverlay?.visibility == View.VISIBLE)
+        if (isPanelOpen) closePanel()
+        isPanelOpen
     }
 }
 

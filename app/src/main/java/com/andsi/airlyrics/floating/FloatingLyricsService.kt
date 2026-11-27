@@ -28,6 +28,7 @@ import com.andsi.airlyrics.lyrics.LyricsLookupRunner
 import com.andsi.airlyrics.lyrics.LyricsProviderResult
 import com.andsi.airlyrics.lyrics.LyricsRepository
 import com.andsi.airlyrics.media.CurrentMediaBroadcast
+import com.andsi.airlyrics.media.displayText
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.PlaybackClock
 import com.andsi.airlyrics.media.model.CurrentMediaInfo
@@ -94,13 +95,14 @@ open class FloatingLyricsService : Service() {
             durationMs = media.durationMs,
             spotifyTrackId = media.spotifyTrackId,
             cancellationToken = cancellationToken,
-            onInterimResult = { interim ->
+            onOnlineLookup = {
                 syncHandler.post {
-                    if (!cancellationToken.isCancellationRequested && activeLyricsLookupRequestKey?.value == cancellationToken.requestKey) {
-                        applyLyricsResult(Result.success(interim), media)
-                    }
+                    if (cancellationToken.isCancellationRequested ||
+                        (activeLyricsLookupRequestKey?.value != cancellationToken.requestKey)
+                    ) return@post
+                    renderer.show { getString(R.string.ui_searching_online_again) + "\n" + media.displayText }
                 }
-            }
+            },
         )
     }
 

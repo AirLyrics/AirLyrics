@@ -42,11 +42,9 @@ class MainViewModelConfirmationTest : MainViewModelTestBase() {
         val model = viewModel(lyrics = operations)
         model.deleteAllSavedLyricsIfUnchanged(request())
         model.deleteLyricsForTarget(media(songA), LyricsStorage.DeleteMode.PLAIN)
-        model.searchOnlineLyrics(media(songA))
         advanceUntilIdle()
         assertEquals(1, operations.deleteAllRequests)
         assertEquals(media(songA), operations.currentDeleteRequests.single().first)
-        assertEquals(media(songA), operations.onlineSearchRequests.single())
     }
     @Test fun restoredConfirmationRequiresFreshApproval_thenExecutesOnlyOnce() = runTest(mainDispatcherRule.dispatcher) {
         val operations = FakeLyricsOperations()
@@ -81,10 +79,6 @@ class MainViewModelConfirmationTest : MainViewModelTestBase() {
         controller.confirm(requireNotNull(controller.pending).id)
         advanceUntilIdle()
         assertEquals(songA, operations.currentDeleteRequests.single().first.toOperationTarget().song)
-        controller.request(ConfirmationAction.Search(media(songA).toOperationTarget()), "Search", "Song A", "Search")
-        controller.confirm(requireNotNull(controller.pending).id)
-        advanceUntilIdle()
-        assertEquals(songA, operations.onlineSearchRequests.single().toOperationTarget().song)
     }
 
     private fun confirmations(model: MainViewModel) = MainOperationConfirmations(
@@ -92,7 +86,6 @@ class MainViewModelConfirmationTest : MainViewModelTestBase() {
         editorSessionId = { null },
         deleteAll = model::deleteAllSavedLyricsIfUnchanged,
         deleteCurrent = model::deleteLyricsForTarget,
-        search = { model.searchOnlineLyrics(it) },
         deleteEditor = { error("No editor in this test") }
     )
 

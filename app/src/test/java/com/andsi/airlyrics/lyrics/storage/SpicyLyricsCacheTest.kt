@@ -1,6 +1,8 @@
 package com.andsi.airlyrics.lyrics.storage
 
-import com.andsi.airlyrics.lyrics.parser.WordByWordLrcParser
+import com.andsi.airlyrics.lyrics.WordByWordSegment
+import com.andsi.airlyrics.lyrics.WordLyricsDocument
+import com.andsi.airlyrics.lyrics.WordLyricsTextEditor
 import com.andsi.airlyrics.lyrics.providers.SpicyLyricsParser
 import com.andsi.airlyrics.lyrics.providers.spicyFixture
 import java.io.File
@@ -50,11 +52,15 @@ class SpicyLyricsCacheTest {
     @Test fun editsPreserveRawMarksPreciseTimingsAndOriginalDeadline() {
         val cache = cache()
         val original = cache.save(key, "Test", "Artist", "", 10000, spicyFixture())!!
-        val editor = WordByWordLrcParser.wordByWordLinesToWordByWordLrc(original.wordByWordLines)
+        val draft = WordLyricsDocument(original.wordByWordLines, translatedLrc = original.translatedLrc)
         now += 100
-        assertTrue(cache.edit(key, editor, true).saved)
+        assertTrue(cache.editWords(key, draft).saved)
         assertEquals(original, cache.read(key))
-        assertTrue(cache.edit(key, editor.replace("world", "earth"), true).saved)
+
+        val line = draft.lines.single()
+        val segments = line.segments.map { it.copy(text = it.text.replace("world", "earth")) }
+        val updated = draft.copy(lines = listOf(WordLyricsTextEditor.withSegments(line, segments)))
+        assertTrue(cache.editWords(key, updated).saved)
         val edited = cache.read(key)!!
         assertEquals(original.access, edited.access)
         assertEquals(original.wordByWordLines.single().endMs, edited.wordByWordLines.single().endMs)
@@ -69,26 +75,55 @@ class SpicyLyricsCacheTest {
         assertNull(cache.save(key, "Test", "Artist", "", 10000, spicyFixture(), fetchedAtMs = access.fetchedAtMs))
         assertTrue(folder.root.listFiles()!!.isEmpty())
     }
+
+    @Test fun readsLegacyCachedWordEditsWithTheirOriginalTimingAndExpiry() {
+        val cache = cache()
+        val original = requireNotNull(cache.save(key, "Test", "Artist", "", 10000, spicyFixture()))
+        val cacheFile = folder.root.resolve("$key.json")
+        val legacy = JSONObject(cacheFile.readText()).apply {
+            put("edit", "[00:01.00]<00:01.00>Edited<00:03.78>")
+            put(
+                "wordEdit",
+                """[{"startMs":1001,"endMs":3789,"text":"Edited",
+                    "tokens":[{"startMs":1001,"endMs":3789,"text":"Edited"}]}]""",
+            )
+        }
+        cacheFile.writeText(legacy.toString())
+
+        val restored = requireNotNull(cache.read(key))
+        assertEquals("[00:01.001]Edited", restored.plainLrc)
+        assertEquals(
+            WordByWordSegment("Edited", 1001L, 3789L),
+            restored.wordByWordLines.single().segments.single()
+        )
+        assertEquals(original.access, restored.access)
+    }
+
     @Test fun editedLineAlsoExpiresAndCannotBeResaved() {
         val cache = cache()
         cache.save(key, "Test", "Artist", "", 10000, spicyFixture("Line", "spotify"))
         now += SpicyLyricsParser.RETENTION_MS - 1
-        assertTrue(cache.edit(key, "[00:01.00]Correction", false).saved)
+        assertTrue(cache.editPlain(key, "[00:01.00]Correction").saved)
         assertTrue(cache.read(key)!!.plainLrc.contains("Correction"))
         now++
-        assertFalse(cache.edit(key, "[00:01.00]Extend", false).saved)
+        assertFalse(cache.editPlain(key, "[00:01.00]Extend").saved)
         assertTrue(cache.list().isEmpty())
     }
-    @Test fun privateSourceCannotBeSavedExternallyAndDoesNotBlockManualImport() {
+    @Test fun privateCacheStaysSeparateAndDoesNotBlockManualImport() {
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val cache = SpicyLyricsCache.forContext(context)
         try {
             cache.save(key, "Test", "Artist", "", 10000, spicyFixture())
             assertEquals(LyricsStorage.SOURCE_PROVIDER_CACHE, LyricsStorage.getLocalPlainLyricsInfo(context, "Test", "Artist", 10000)!!.plainSource)
-            assertFalse(LyricsStorage.savePlainLyrics(context, "Test", "Artist", 10000, "[00:01.00]restricted", plainProvider = "spicy"))
-            assertFalse(LyricsStorage.saveWordByWordLyrics(context, "Test", "Artist", 10000, cache.read(key)!!.wordByWordLines, wordByWordProvider = "spicy"))
+            assertTrue(LyricsIndexStore.read(context).isEmpty())
+            assertFalse(requireNotNull(LyricsStorage.restrictedLyricsAccess(context, "spicy:$key")).allowExport)
             val imported = folder.root.resolve("manual.lrc").apply { writeText("[00:01.00]Manual") }
-            assertTrue(LyricsStorage.importPlainLyricsFromUri(context, android.net.Uri.fromFile(imported), "Test", "Artist", 10000))
+            assertEquals(
+                LyricsStorage.ImportLyricsResult.Saved,
+                LyricsStorage.importPlainLyricsFromUriWithResult(
+                    context, android.net.Uri.fromFile(imported), "Test", "Artist", 10000
+                )
+            )
             assertEquals(LyricsStorage.SOURCE_MANUAL_IMPORT, LyricsStorage.getLocalPlainLyricsInfo(context, "Test", "Artist", 10000)!!.plainSource)
             assertFalse(LyricsStorage.hasWordByWordLyrics(context, "Test", "Artist", 10000))
             assertTrue(LyricsStorage.readPlainLyrics(context, "Test", "Artist", 10000)!!.contains("Manual"))

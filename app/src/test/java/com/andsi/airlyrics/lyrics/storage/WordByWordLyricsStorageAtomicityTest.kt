@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.testutil.resetLyricsStorage
 import android.content.Context
 import android.net.Uri
@@ -134,20 +136,19 @@ class WordByWordLyricsStorageAtomicityTest {
             )
         )
         assertTrue(
-            LyricsStorage.saveWordByWordLyrics(
+            seedLegacyWordLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS,
                 wordByWordLines = oldWordByWordLines,
                 album = ALBUM,
-                wordByWordSource = LyricsStorage.SOURCE_DOWNLOADED,
                 wordByWordProvider = "old-karaoke",
                 metadataLines = listOf("[ar:Old Artist]", "[ti:Old Title]")
             )
         )
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,
@@ -522,20 +523,19 @@ class WordByWordLyricsStorageAtomicityTest {
         )
         val plainLrc = "[ar:Old Artist]\n[00:10.00]old fallback"
         assertTrue(
-            LyricsStorage.saveWordByWordLyrics(
+            seedLegacyWordLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,
                 duration = DURATION_MS,
                 wordByWordLines = wordByWordLines,
                 album = ALBUM,
-                wordByWordSource = LyricsStorage.SOURCE_DOWNLOADED,
                 wordByWordProvider = "old-karaoke",
                 metadataLines = listOf("[ar:Old Artist]", "[ti:Old Title]")
             )
         )
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = TITLE,
                 artist = ARTIST,

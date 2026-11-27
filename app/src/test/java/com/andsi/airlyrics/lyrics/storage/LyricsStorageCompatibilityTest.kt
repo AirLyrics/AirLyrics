@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.core.model.SongIdentity
 import java.io.File
 import java.util.Locale
@@ -70,7 +71,7 @@ class LyricsStorageCompatibilityTest : LyricsStorageTestBase() {
         try {
             Locale.setDefault(Locale.forLanguageTag("tr-TR"))
             assertTrue(
-                LyricsStorage.savePlainLyrics(
+                seedPlainLyrics(
                     context = context,
                     title = "INDIGO",
                     artist = "ARTIST",

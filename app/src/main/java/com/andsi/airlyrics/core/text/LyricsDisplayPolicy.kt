@@ -65,10 +65,4 @@ object LyricsDisplayPolicy {
         ChineseText.containsTraditional(translation) -> translation
         else -> original
     }
-
-    fun join(rendered: Rendered): String {
-        val primary = rendered.primary.takeIf { it.isNotBlank() }.orEmpty()
-        val secondary = rendered.secondary?.takeIf { it.isNotBlank() }
-        return if (secondary == null) primary else "$primary\n$secondary"
-    }
 }

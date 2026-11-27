@@ -114,46 +114,27 @@ internal class SpicyLyricsCache(private val directory: File, private val clock: 
         LyricsStorage.markContentChanged()
     }
 
-    fun edit(key: String, text: String, word: Boolean): LyricsStorage.LocalLyricsUpdateResult = synchronized(lock) {
-        val doc = document(key) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
-        val payload = result(key, doc) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
-        if (payload.isUntimed) {
-            if (word || (text.isBlank() && payload.untimedLyrics?.translatedText.isNullOrBlank())) return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
-            if (text != payload.untimedLyrics!!.text) writeEdit(key, doc.put("textEdit", text).put("updatedAt", clock()))
-            return@synchronized LyricsStorage.LocalLyricsUpdateResult(true)
-        }
-        if (word != payload.wordByWordLines.isNotEmpty()) return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
-        val validation = if (word) {
-            val v = WordByWordLrcParser.validateForStorage(text)
-            LyricsStorage.LocalLyricsUpdateResult(v.isValid, v.invalidLineNumbers)
-        } else {
-            val v = LrcParser.validateForStorage(text)
-            LyricsStorage.LocalLyricsUpdateResult(v.isValid, v.invalidLineNumbers)
-        }
-        if (!validation.saved) return@synchronized validation
-        val currentText = if (word) WordByWordLrcParser.wordByWordLinesToWordByWordLrc(payload.wordByWordLines) else payload.plainLrc
-        if (text == currentText) return@synchronized validation
-        if (word) {
-            val baseline = WordByWordLrcParser.parse(currentText)
-            val edited = WordByWordLrcParser.parse(text).mapIndexed { i, line ->
-                val before = baseline.getOrNull(i)
-                val precise = payload.wordByWordLines.getOrNull(i)
-                if (before == null || precise == null || before.segments.size != line.segments.size) line
-                else line.copy(
-                    isBackground = precise.isBackground,
-                    startMs = if (line.startMs == before.startMs) precise.startMs else line.startMs,
-                    endMs = if (line.segments.map { it.startMs } == before.segments.map { it.startMs }) precise.endMs else line.endMs,
-                    segments = line.segments.mapIndexed { j, segment ->
-                        if (segment.startMs == before.segments[j].startMs) precise.segments[j].copy(text = segment.text) else segment
-                    }
-                )
+    fun editPlain(key: String, text: String): LyricsStorage.LocalLyricsUpdateResult = synchronized(lock) {
+        val doc = document(key) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(saved = false)
+        val payload = result(key, doc) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(saved = false)
+        val untimed = payload.untimedLyrics
+        if (untimed != null) {
+            if (text.isBlank() && untimed.translatedText.isNullOrBlank()) {
+                return@synchronized LyricsStorage.LocalLyricsUpdateResult(saved = false)
             }
-            doc.put("wordEdit", WordByWordLyricsJsonCodec.wordByWordLinesToJson(edited))
+            if (text != untimed.text) {
+                writeEdit(key, doc.put("textEdit", text).put("updatedAt", clock()))
+            }
+            return@synchronized LyricsStorage.LocalLyricsUpdateResult(saved = true)
         }
-        // fetchedAt is immutable, even for edits. The original response (including marks) survives intact.
-        writeEdit(key, doc.put("edit", text).put("updatedAt", clock()))
-        validation
+        if (payload.wordByWordLines.isNotEmpty()) return@synchronized LyricsStorage.LocalLyricsUpdateResult(saved = false)
+        val validation = LrcParser.validateForStorage(text)
+        if (validation.isValid && text != payload.plainLrc) {
+            writeEdit(key, doc.put("edit", text).put("updatedAt", clock()))
+        }
+        LyricsStorage.LocalLyricsUpdateResult(saved = validation.isValid, invalidLineNumbers = validation.invalidLineNumbers)
     }
+
     fun editWords(key: String, edited: WordLyricsDocument): LyricsStorage.LocalLyricsUpdateResult = synchronized(lock) {
         val doc = document(key) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)
         val original = result(key, doc) ?: return@synchronized LyricsStorage.LocalLyricsUpdateResult(false)

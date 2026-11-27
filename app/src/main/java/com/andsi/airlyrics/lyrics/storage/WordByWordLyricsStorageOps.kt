@@ -27,55 +27,6 @@ internal object WordByWordLyricsStorageOps {
         return WordByWordLyricsJsonCodec.parseWordByWordLinesJson(wordByWordJson)
     }
 
-    fun saveWordByWordLyrics(
-        context: Context,
-        title: String,
-        artist: String,
-        duration: Long,
-        wordByWordLines: List<WordByWordLine>,
-        album: String = "",
-        wordByWordSource: String = LyricsStorage.SOURCE_DOWNLOADED,
-        wordByWordProvider: String = "local",
-        overwrite: Boolean = true,
-        metadataLines: List<String> = emptyList()
-    ): Boolean {
-        if (wordByWordLines.isEmpty()) return false
-
-        val identity = SongIdentity(title = title, artist = artist, album = album, durationMs = duration)
-        val normalizedKey = identity.storageKey()
-        val existing = LyricsIndexStore.find(context, title, artist, duration)
-        if (existing?.wordByWordFile?.isNotBlank() == true && !overwrite) return false
-
-        val now = System.currentTimeMillis()
-        val fileName = LyricsFileNaming.managedWordByWordFileName(identity)
-        val relativeFile = LyricsFileNaming.managedRelativePath(fileName)
-        val wordByWordJson = WordByWordLyricsJsonCodec.wordByWordLinesToJson(wordByWordLines, metadataLines)
-        if (!LyricsFileStore.writeManagedLyrics(context, fileName, wordByWordJson)) return false
-
-        val entries = LyricsIndexStore.read(context)
-            .filterNot { it.isSameSong(identity) || it.key == normalizedKey }
-            .toMutableList()
-
-        entries += LyricsIndexEntry(
-            key = normalizedKey,
-            title = title.trim(),
-            artist = artist.trim(),
-            album = album.trim(),
-            durationMs = duration,
-            plainFile = existing?.plainFile.orEmpty(),
-            wordByWordFile = relativeFile,
-            plainSource = existing?.plainSource ?: wordByWordSource,
-            plainProvider = existing?.plainProvider ?: "local",
-            wordByWordProvider = wordByWordProvider,
-            createdAt = existing?.createdAt ?: now,
-            updatedAt = now,
-            isUntimed = existing?.isUntimed == true,
-            untimedTranslation = existing?.untimedTranslation
-        )
-
-        return LyricsIndexStore.write(context, entries)
-    }
-
     fun importWordByWordLyricsFromUriWithResult(
         context: Context,
         uri: Uri,

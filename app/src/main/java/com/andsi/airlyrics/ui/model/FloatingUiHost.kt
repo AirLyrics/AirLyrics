@@ -50,7 +50,6 @@ internal interface FloatingUiHost {
     fun floatingPresets(): List<FloatingLyricsPreset>
     val floatingFontOperations: FontPanelOperations
     fun floatingCustomFontName(): String?
-    fun hasFloatingCustomFont(): Boolean
     fun selectFloatingFontFile()
     val floatingColorSwatchChanges: Flow<Long>
     fun floatingColorSwatches(): List<Int>

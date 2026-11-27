@@ -33,7 +33,6 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
         toggleDisplayScope = ::toggleDisplayScope,
         chooseDisplayScopeApps = { displayScopeWorkflow.showAppPicker() },
         reloadFloatingLyrics = floatingController::reloadLyrics,
-        searchOnlineLyricsForCurrentMedia = viewModel::searchOnlineLyricsForCurrentMedia,
         currentLyricsOffsetSummary = lyricsWorkflow::currentLyricsOffsetSummary,
         adjustLyricsOffsetForCurrentMedia = lyricsWorkflow::adjustLyricsOffsetForCurrentMedia,
         resetLyricsOffsetForCurrentMedia = lyricsWorkflow::resetLyricsOffsetForCurrentMedia,
@@ -44,13 +43,6 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
         selectLyricsDirectory = viewModel::selectLyricsDirectory,
         copyLyricsDirectory = ::copyLyricsDirectory,
         importLyricsForCurrentMedia = viewModel::requestLyricsImport,
-        deleteLyricsForCurrentMedia = { mode ->
-            viewModel.deleteLyricsForCurrentMedia(mode.toStorageDeleteMode())
-        },
-        deleteSavedLyrics = { item, onCompleted ->
-            deleteSavedLyrics(item.toStorageItem(), onCompleted)
-        },
-        deleteAllSavedLyrics = viewModel::deleteAllSavedLyrics,
         toggleLyricsAutoSearch = {
             val enabled = !LyricsSettingsStore.isAutoSearchOnlineEnabled(activity)
             LyricsSettingsStore.setAutoSearchOnlineEnabled(activity, enabled)
@@ -66,7 +58,6 @@ internal fun MainGraph.createMainUiActions(): MainUiActions {
             LyricsSettingsStore.setPlainLyricsSearchSources(activity, plainLyricsSearchSources)
             floatingController.reloadLyrics()
         },
-        openUrl = uiHost::openUrl,
         selectMediaSource = { packageName, sourceCard ->
             mediaSourceController.selectSource(packageName)
             uiHost.updateMediaSourceSelectionVisualsImpl(packageName)

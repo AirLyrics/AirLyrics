@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.app
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import android.app.Dialog
 import android.graphics.Bitmap
 import android.graphics.Insets
@@ -62,7 +64,7 @@ class LocalBulkLyricsEditorTest : LyricsStorageTestBase() {
     @Config(qualifiers = "en-rUS-w400dp-h900dp-mdpi")
     fun timedLrcSharesTheDraftAndKeepsInvalidTextOpen() {
         val original = "[00:01.00]Original\n[00:02.00]Second line"
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 10000, original))
+        assertTrue(seedPlainLyrics(context, "Song", "Artist", 10000, original))
         openEditor()
         assertTrue(mode(R.string.ui_lyrics_mode_timeline).isChecked)
         capture("editor-stable-timeline-en-400")
@@ -122,7 +124,7 @@ class LocalBulkLyricsEditorTest : LyricsStorageTestBase() {
             translatedText = "First line",
             translatedSegments = listOf(WordByWordSegment("First line", 1100, 3500)),
         )
-        assertTrue(WordByWordLyricsStorageOps.saveWordByWordLyrics(context, "歌曲", "歌手", 10000, listOf(original)))
+        assertTrue(seedLegacyWordLyrics(context, "歌曲", "歌手", 10000, listOf(original)))
         openEditor()
         capture("editor-stable-timeline-zh-320")
         mode(R.string.ui_lyrics_mode_text).performClick()
@@ -146,7 +148,7 @@ class LocalBulkLyricsEditorTest : LyricsStorageTestBase() {
     @Config(sdk = [35], qualifiers = "zh-rCN-w360dp-h800dp-night-mdpi")
     fun dialogInsetsKeepTheCaretAndFooterReachableWhenKeyboardOpensTwice() {
         val lyrics = (1..24).joinToString("\n") { "[00:%02d.00]歌词 %02d".format(java.util.Locale.ROOT, it, it) }
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 30000, lyrics))
+        assertTrue(seedPlainLyrics(context, "Song", "Artist", 30000, lyrics))
         openEditor()
         val list = views().filterIsInstance<RecyclerView>().single()
         val position = 23
@@ -250,7 +252,7 @@ class LocalBulkLyricsEditorTest : LyricsStorageTestBase() {
     @Config(sdk = [35], qualifiers = "en-rUS-w844dp-h390dp-land-mdpi")
     fun openEditorUsesTheResizedWindowForItsAvailableWidthAndHeight() {
         val lyrics = (1..24).joinToString("\n") { "[00:%02d.00]Lyric %02d".format(java.util.Locale.ROOT, it, it) }
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 30_000, lyrics))
+        assertTrue(seedPlainLyrics(context, "Song", "Artist", 30_000, lyrics))
         openEditor()
         mode(R.string.ui_lyrics_mode_text).performClick()
         ShadowLooper.idleMainLooper(350, TimeUnit.MILLISECONDS)
@@ -284,7 +286,7 @@ class LocalBulkLyricsEditorTest : LyricsStorageTestBase() {
         shadowOf(RuntimeEnvironment.getApplication())
             .grantPermissions("${context.packageName}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION")
         val lyrics = (1..24).joinToString("\n") { "[00:%02d.00]Lyric %02d".format(java.util.Locale.ROOT, it, it) }
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 30000, lyrics))
+        assertTrue(seedPlainLyrics(context, "Song", "Artist", 30000, lyrics))
         openEditor()
         mode(R.string.ui_lyrics_mode_text).performClick()
         ShadowLooper.idleMainLooper(350, TimeUnit.MILLISECONDS)
@@ -313,7 +315,7 @@ class LocalBulkLyricsEditorTest : LyricsStorageTestBase() {
         val lyrics = (1..90).joinToString("\n") {
             "[%02d:%02d.00]Lyric %02d".format(java.util.Locale.ROOT, it / 60, it % 60, it)
         }
-        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 120000, lyrics))
+        assertTrue(seedPlainLyrics(context, "Song", "Artist", 120000, lyrics))
         openEditor()
         ShadowLooper.idleMainLooper(350, TimeUnit.MILLISECONDS)
         val title = requireNotNull(textLabel("Song"))

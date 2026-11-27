@@ -1,9 +1,9 @@
 package com.andsi.airlyrics.app.host
 
+import com.andsi.airlyrics.ui.components.SettingsSliderRow
 import android.view.MotionEvent
 import android.view.View
 import android.widget.ScrollView
-import android.widget.SeekBar
 import com.andsi.airlyrics.app.MainActivity
 import org.junit.Assert.*
 import org.junit.Test
@@ -18,9 +18,8 @@ class MainSliderGestureTest {
         Robolectric.buildActivity(MainActivity::class.java).setup().use { controller ->
             val activity = controller.get()
             var commits = 0
-            val row = activity.graph.uiHost.sliderRowImpl(
-                "Glow spread", 100, 50, 200, "%", 5, { commits++ }, {}
-            )
+            val row = SettingsSliderRow(activity.graph.uiHost, "Glow spread", "100%")
+            row.bindRange(100, 50, 200, 5, { "$it%" }, onPreview = {}, onCommit = { commits++ })
             var disallowed = false
             val scroll = object : ScrollView(activity) {
                 override fun requestDisallowInterceptTouchEvent(disallow: Boolean) {
@@ -32,7 +31,7 @@ class MainSliderGestureTest {
             scroll.measure(View.MeasureSpec.makeMeasureSpec(400, View.MeasureSpec.EXACTLY),
                 View.MeasureSpec.makeMeasureSpec(300, View.MeasureSpec.EXACTLY))
             scroll.layout(0, 0, 400, 300)
-            val slider = row.getChildAt(1) as SeekBar
+            val slider = row.seekBar
             fun touch(action: Int, x: Float, time: Long) {
                 val event = MotionEvent.obtain(0L, time, action, x, slider.height / 2f, 0)
                 try { slider.dispatchTouchEvent(event) } finally { event.recycle() }

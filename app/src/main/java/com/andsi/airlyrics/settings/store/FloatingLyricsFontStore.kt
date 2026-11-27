@@ -290,9 +290,6 @@ object FloatingLyricsFontStore {
         }
     }
 
-    fun hasCustomFont(context: Context): Boolean =
-        fonts(context).any { it.source == FloatingFontSource.IMPORTED }
-
     fun customFontDisplayName(context: Context, id: String? = null): String? = synchronized(mutationLock) {
         (id ?: preferredCustomId(context))?.let { font(context, it)?.displayName }
     }

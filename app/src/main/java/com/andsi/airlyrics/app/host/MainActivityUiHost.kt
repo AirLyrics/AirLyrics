@@ -81,7 +81,6 @@ import com.andsi.airlyrics.ui.model.LanguageOptionUiItem
 import com.andsi.airlyrics.ui.model.LanguageSettingsUiState
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
 import com.andsi.airlyrics.ui.model.LocalLyricsUiChange
-import com.andsi.airlyrics.ui.model.LyricsDeleteMode
 import com.andsi.airlyrics.ui.model.LyricsSettingsUiState
 import com.andsi.airlyrics.ui.model.MainUiActions
 import com.andsi.airlyrics.ui.model.MainUiHost
@@ -123,7 +122,9 @@ internal class MainActivityUiHost(
         private set
 
     fun bindAppUpdates() {
-        if (!BuildConfig.APP_UPDATE_INSTALLER_ENABLED || appUpdates != null) return
+        // The generated installer flag can differ between build variants.
+        @Suppress("SimplifyBooleanWithConstants")
+        if (!BuildConfig.APP_UPDATE_INSTALLER_ENABLED || (appUpdates != null)) return
         val model = ViewModelProvider(activity, viewModelFactory {
             initializer { AppUpdateModel(activity.applicationContext) }
         })[AppUpdateModel::class.java]
@@ -141,8 +142,6 @@ internal class MainActivityUiHost(
             editorSessionId = { editorSession.state.value?.id },
             deleteAll = graph.viewModel::deleteAllSavedLyricsIfUnchanged,
             deleteCurrent = graph.viewModel::deleteLyricsForTarget,
-            search = { graph.viewModel.searchOnlineLyrics(it) },
-            searchWithMode = { media, mode -> graph.viewModel.searchOnlineLyrics(media, mode) },
             deleteEditor = {
                 if (savedLyricsDeletionRefresh != null) {
                     editorSession.state.value?.item?.run {
@@ -253,27 +252,9 @@ internal class MainActivityUiHost(
     override fun mediaSourceCard(controller: MediaController, selected: Boolean): com.andsi.airlyrics.ui.model.MediaSourceCardBinding =
         mediaSourceCardImpl(controller, selected)
 
-    override fun optionGrid(items: List<OptionItem>): LinearLayout = optionGridImpl(items)
     override fun liveOptionGrid(items: List<KeyedOptionItem>): LinearLayout = liveOptionGridImpl(items)
     override fun optionButton(item: OptionItem): TextView = optionButtonImpl(item)
     override fun applyOptionButtonState(button: TextView, title: String, selected: Boolean) = applyOptionButtonStateImpl(button, title, selected)
-    override fun sliderRow(
-        title: String,
-        value: Int,
-        min: Int,
-        max: Int,
-        suffix: String,
-        step: Int,
-        compact: Boolean,
-        onChangeFinished: ((Int) -> Unit)?,
-        onChanged: (Int) -> Unit
-    ): LinearLayout = sliderRowImpl(title, value, min, max, suffix, step, onChangeFinished, onChanged, compact)
-    override fun colorControl(
-        title: String,
-        color: Int,
-        includeOpacity: Boolean,
-        onChanged: (Int) -> Unit
-    ): LinearLayout = colorControlImpl(title, color, includeOpacity, onChanged)
     override fun settingGrid(vararg items: FloatingSettingTile): LinearLayout = settingGridImpl(*items)
     override fun floatingTile(item: FloatingSettingTile): LinearLayout = floatingTileImpl(item)
     override fun floatingFocusBubble(
@@ -291,7 +272,6 @@ internal class MainActivityUiHost(
     override val floatingFontOperations: FontPanelOperations = StoredFontPanelOperations(this)
     override fun floatingCustomFontName(): String? =
         FloatingLyricsFontStore.customFontDisplayName(this, floatingStyle().customFontId)
-    override fun hasFloatingCustomFont(): Boolean = FloatingLyricsFontStore.hasCustomFont(this)
     override fun selectFloatingFontFile() = graph.viewModel.selectFloatingFontFile()
 
     override val floatingColorSwatchChanges get() = FloatingColorSwatchStore.changes
@@ -500,7 +480,6 @@ internal class MainActivityUiHost(
         badgeText: CharSequence?,
         onClickIntercept: (() -> Boolean)?
     ): View = localLyricsRowImpl(item, onLyricsChanged, badgeText, onClickIntercept)
-    override fun changelogItem(title: String, body: String): View = changelogItemImpl(title, body)
     override fun permissionSummary(): String = permissionSummaryImpl()
     override fun getAppVersionName(): String = getAppVersionNameImpl()
     override fun openUrl(url: String) = openUrlImpl(url)
@@ -813,12 +792,4 @@ private fun com.andsi.airlyrics.media.model.CurrentMediaInfo.toUiInfo(): Current
         displayText = displayText,
         isEmpty = isEmpty
     )
-}
-
-internal fun LyricsDeleteMode.toStorageDeleteMode(): LyricsStorage.DeleteMode {
-    return when (this) {
-        LyricsDeleteMode.PLAIN -> LyricsStorage.DeleteMode.PLAIN
-        LyricsDeleteMode.WORD_BY_WORD -> LyricsStorage.DeleteMode.WORD_BY_WORD
-        LyricsDeleteMode.ALL -> LyricsStorage.DeleteMode.ALL
-    }
 }

@@ -173,7 +173,6 @@
     <string name="ui_green">Green</string>
     <string name="ui_hidden">Hidden</string>
     <string name="ui_hide">Hide</string>
-    <string name="ui_hide_rgb">Hide RGB</string>
     <string name="ui_highlight">Highlight</string>
     <string name="ui_highlight_color">Highlight color</string>
     <string name="ui_horizontal_padding">Horizontal padding</string>
@@ -205,8 +204,6 @@
     <string name="ui_lyrics_format_guide">Lyrics format guide</string>
     <string name="ui_lyrics_format_lrc_tab">LRC</string>
     <string name="ui_lyrics_format_ttml_tab">TTML</string>
-    <string name="ui_lyrics_import_failed">Lyrics import failed</string>
-    <string name="ui_lyrics_import_empty_error">Imported lyrics are empty</string>
     <string name="ui_lyrics_not_found">Lyrics not found</string>
     <string name="ui_lyrics_removed_auto_search_paused">Lyrics removed. Auto-search is paused for this song.</string>
     <string name="ui_lyrics_offset">Lyrics offset</string>
@@ -241,7 +238,6 @@
     <string name="ui_no_plain_lrc_to_remove_for_this_song">No plain lyrics to remove</string>
     <string name="ui_no_playback_state">No playback state</string>
     <string name="ui_recent_lyrics_empty_hint">No saved lyrics yet</string>
-    <string name="ui_no_song_for_lyrics_binding">No song is playing</string>
     <string name="ui_no_apps_found">No apps found</string>
     <string name="ui_no_translation_for_this_lyric">No translation for this lyric</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">Add at least one line: [00:12.34]&lt;00:12.34&gt;lyric</string>
@@ -263,8 +259,6 @@
     <string name="ui_on">On</string>
     <string name="ui_online_fallback_off">Auto-search: off</string>
     <string name="ui_online_fallback_on">Auto-search: on</string>
-    <string name="ui_online_lyrics_saved">Lyrics saved</string>
-    <string name="ui_online_lyrics_search_failed">Online search failed</string>
     <string name="ui_opacity">Opacity</string>
     <string name="ui_grant_usage_access">Grant usage access</string>
     <string name="ui_orange">Orange</string>
@@ -341,7 +335,6 @@ Word-timed TTML:
     <string name="ui_no_saved_lyrics_to_delete">No saved lyrics</string>
     <string name="ui_reset_current_song_offset">Reset current song offset</string>
     <string name="ui_rewinding">Rewinding</string>
-    <string name="ui_rgb_tune">RGB tune</string>
     <string name="ui_custom_color">Custom color</string>
     <string name="ui_save_color_swatch">Save swatch</string>
     <string name="ui_delete_color_swatch">Delete swatch</string>

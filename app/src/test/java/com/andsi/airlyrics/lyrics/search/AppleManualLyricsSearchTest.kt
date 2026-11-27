@@ -1,5 +1,6 @@
 package com.andsi.airlyrics.lyrics.search
 
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.apple.AppleMusicSession
 import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.core.model.SongIdentity
@@ -68,7 +69,7 @@ class AppleManualLyricsSearchTest : LyricsStorageTestBase() {
     }
 
     @Test fun catalogueSongWithoutLyricsReplacesOldLyricsWithAnEmptySelection() {
-        assertTrue(LyricsStorage.savePlainLyrics(context, target.title, target.artist, target.durationMs,
+        assertTrue(seedPlainLyrics(context, target.title, target.artist, target.durationMs,
             "[00:01.00]Old lyrics", target.album, LyricsStorage.SOURCE_DOWNLOADED, "old"))
         val service = ManualLyricsSearch(context) { _, _ ->
             """{"ok":true,"content_state":"empty","reason":"source_empty"}"""

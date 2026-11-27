@@ -1,5 +1,7 @@
 package com.andsi.airlyrics.lyrics.storage
 
+import com.andsi.airlyrics.testutil.seedLegacyWordLyrics
+import com.andsi.airlyrics.testutil.seedPlainLyrics
 import com.andsi.airlyrics.lyrics.WordByWordLine
 import com.andsi.airlyrics.lyrics.WordByWordSegment
 import org.junit.Assert.assertEquals
@@ -51,13 +53,8 @@ class LyricsStorageCrossFormatLifecycleTest : LyricsStorageTestBase() {
         val item = LyricsStorage.listRecentLyrics(context, limit = 8)
             .single { it.title == "Karaoke Fallback Sync" }
 
-        val update = LyricsStorage.updateWordByWordLyricsItemTextWithResult(
-            context = context,
-            item = item,
-            wordByWordLrc = "[00:10.00]<00:10.00>new"
-        )
+        replaceWordInEditor(item, original = "old", replacement = "new")
 
-        assertTrue(update.saved)
         assertEquals(
             "[00:10.00]new / 旧翻译",
             LyricsStorage.readPlainLyrics(context, "Karaoke Fallback Sync", "AndSi", 10_000L)
@@ -68,7 +65,7 @@ class LyricsStorageCrossFormatLifecycleTest : LyricsStorageTestBase() {
     fun importWordByWordLyrics_blocksWhenManualPlainLyricsExist() {
         val manualPlain = "[00:10.00]manual plain"
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = "Karaoke Manual Plain",
                 artist = "AndSi",
@@ -204,7 +201,7 @@ class LyricsStorageCrossFormatLifecycleTest : LyricsStorageTestBase() {
             )
         )
         assertTrue(
-            LyricsStorage.savePlainLyrics(
+            seedPlainLyrics(
                 context = context,
                 title = "Karaoke Manual Plain",
                 artist = "AndSi",
@@ -214,7 +211,7 @@ class LyricsStorageCrossFormatLifecycleTest : LyricsStorageTestBase() {
             )
         )
         assertTrue(
-            LyricsStorage.saveWordByWordLyrics(
+            seedLegacyWordLyrics(
                 context = context,
                 title = "Karaoke Manual Plain",
                 artist = "AndSi",
@@ -225,13 +222,8 @@ class LyricsStorageCrossFormatLifecycleTest : LyricsStorageTestBase() {
         val item = LyricsStorage.listRecentLyrics(context, limit = 8)
             .single { it.title == "Karaoke Manual Plain" }
 
-        val update = LyricsStorage.updateWordByWordLyricsItemTextWithResult(
-            context = context,
-            item = item,
-            wordByWordLrc = "[00:10.00]<00:10.00>changed"
-        )
+        replaceWordInEditor(item, original = "karaoke", replacement = "changed")
 
-        assertTrue(update.saved)
         assertEquals(
             LyricsStorage.SOURCE_WORD_BY_WORD_FALLBACK,
             LyricsStorage.getLocalPlainLyricsInfo(

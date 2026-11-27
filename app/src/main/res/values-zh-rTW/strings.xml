@@ -172,7 +172,6 @@
     <string name="ui_green">綠</string>
     <string name="ui_hidden">已隱藏</string>
     <string name="ui_hide">隱藏</string>
-    <string name="ui_hide_rgb">收起 RGB 細調</string>
     <string name="ui_highlight">醒目提示</string>
     <string name="ui_highlight_color">醒目提示色</string>
     <string name="ui_horizontal_padding">左右內邊界</string>
@@ -204,8 +203,6 @@
     <string name="ui_lyrics_format_guide">歌詞格式說明</string>
     <string name="ui_lyrics_format_lrc_tab">LRC</string>
     <string name="ui_lyrics_format_ttml_tab">TTML</string>
-    <string name="ui_lyrics_import_failed">匯入歌詞失敗</string>
-    <string name="ui_lyrics_import_empty_error">匯入的歌詞為空</string>
     <string name="ui_lyrics_not_found">未找到歌詞</string>
     <string name="ui_lyrics_removed_auto_search_paused">歌詞已移除，暫不自動搜尋這首歌的歌詞</string>
     <string name="ui_lyrics_offset">歌詞偏移</string>
@@ -240,7 +237,6 @@
     <string name="ui_no_plain_lrc_to_remove_for_this_song">沒有可移除的一般歌詞</string>
     <string name="ui_no_playback_state">沒有播放狀態</string>
     <string name="ui_recent_lyrics_empty_hint">尚無已儲存歌詞</string>
-    <string name="ui_no_song_for_lyrics_binding">目前沒有播放中的歌曲</string>
     <string name="ui_no_apps_found">未找到應用程式</string>
     <string name="ui_no_translation_for_this_lyric">尚無翻譯</string>
     <string name="ui_no_valid_word_by_word_lyrics_line">請至少新增一行：[00:12.34]&lt;00:12.34&gt;歌詞</string>
@@ -262,8 +258,6 @@
     <string name="ui_on">開啟</string>
     <string name="ui_online_fallback_off">自動線上搜尋：關閉</string>
     <string name="ui_online_fallback_on">自動線上搜尋：開啟</string>
-    <string name="ui_online_lyrics_saved">歌詞已儲存</string>
-    <string name="ui_online_lyrics_search_failed">線上搜尋失敗</string>
     <string name="ui_opacity">不透明度</string>
     <string name="ui_grant_usage_access">授予使用情況存取權</string>
     <string name="ui_orange">橙色</string>
@@ -340,7 +334,6 @@
     <string name="ui_no_saved_lyrics_to_delete">尚無已儲存歌詞</string>
     <string name="ui_reset_current_song_offset">重設目前歌曲偏移</string>
     <string name="ui_rewinding">倒轉中</string>
-    <string name="ui_rgb_tune">展開 RGB 細調</string>
     <string name="ui_custom_color">自訂顏色</string>
     <string name="ui_save_color_swatch">儲存色票</string>
     <string name="ui_delete_color_swatch">刪除色票</string>
