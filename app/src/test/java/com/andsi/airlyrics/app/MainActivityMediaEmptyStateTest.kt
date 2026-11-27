@@ -125,47 +125,56 @@ class MainActivityMediaEmptyStateTest {
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     fun emptyTitleWrapsAtLargeFontSizesAndRefreshFollowsCardAcrossWidths() {
-        RuntimeEnvironment.setFontScale(2f)
+        val originalQualifiers = RuntimeEnvironment.getQualifiers()
         try {
-            withEmptyMediaPage(accessGranted = true) { controller ->
-                val host = controller.get().graph.uiHost
-                val page = page(host)
-                val card = anchor(page, "media.current")!!
-                val title = descendants(card).filterIsInstance<TextView>()
-                    .single { it.text.toString() == "未检测到音乐...现在还没有" }
-
-                fun resize(widthDp: Int, fontScale: Float) {
-                    host.windowLayout = WindowLayoutSpec(widthDp.toFloat(), 720f, fontScale)
-                    page.measure(
-                        View.MeasureSpec.makeMeasureSpec(host.dp(widthDp), View.MeasureSpec.EXACTLY),
-                        View.MeasureSpec.makeMeasureSpec(host.dp(720), View.MeasureSpec.EXACTLY)
-                    )
-                    page.layout(0, 0, page.measuredWidth, page.measuredHeight)
-                    val refresh = anchor(page, "media.refresh")!!
-                    assertEquals(anchor(page, "media.heading")!!.width, card.width)
-                    assertEquals(minOf(host.dp(widthDp), host.dp(1160)) - host.dp(if (widthDp >= 900) 48 else 40), card.width)
-                    val parent = card.parent as ViewGroup
-                    assertSame(parent, refresh.parent)
-                    assertEquals(parent.indexOfChild(card) + 1, parent.indexOfChild(refresh))
-                    val cardParams = card.layoutParams as ViewGroup.MarginLayoutParams
-                    val refreshParams = refresh.layoutParams as ViewGroup.MarginLayoutParams
-                    assertEquals(cardParams.bottomMargin + refreshParams.topMargin,
-                        refresh.top - card.bottom)
-                    val layout = title.layout
-                    assertEquals(title.text.length, layout.getLineEnd(layout.lineCount - 1))
-                    assertTrue((0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 })
-                }
-
-                resize(320, 2f)
-                assertTrue(title.lineCount > 1)
-                val narrowHeight = card.height
-                resize(360, 2f)
-                resize(1200, 1f)
-                assertTrue("Empty card retained unused height", card.height < narrowHeight)
-                assertEmptyPage(host, accessGranted = true)
-            }
+            assertEmptyTitleLayout("zh-rCN", listOf("当前媒体", "未检测到音乐...至少现在"))
+            assertEmptyTitleLayout("zh-rTW", listOf("目前媒體", "未偵測到音樂...至少現在"))
+            assertEmptyTitleLayout("en-rUS", listOf("Current media", "No music detected...not yet"))
         } finally {
+            RuntimeEnvironment.setQualifiers(originalQualifiers)
             RuntimeEnvironment.setFontScale(1f)
+        }
+    }
+
+    private fun assertEmptyTitleLayout(locale: String, expectedCardTexts: List<String>) {
+        RuntimeEnvironment.setQualifiers("$locale-w360dp-h720dp-mdpi")
+        RuntimeEnvironment.setFontScale(2f)
+        withEmptyMediaPage(accessGranted = true) { controller ->
+            val host = controller.get().graph.uiHost
+            val page = page(host)
+            val card = anchor(page, "media.current")!!
+            val title = descendants(card).asSequence().filterIsInstance<TextView>().last()
+            assertEquals(expectedCardTexts.last(), title.text.toString())
+
+            fun resize(widthDp: Int, fontScale: Float) {
+                host.windowLayout = WindowLayoutSpec(widthDp.toFloat(), 720f, fontScale)
+                page.measure(
+                    View.MeasureSpec.makeMeasureSpec(host.dp(widthDp), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(host.dp(720), View.MeasureSpec.EXACTLY)
+                )
+                page.layout(0, 0, page.measuredWidth, page.measuredHeight)
+                val refresh = anchor(page, "media.refresh")!!
+                assertEquals(anchor(page, "media.heading")!!.width, card.width)
+                assertEquals(minOf(host.dp(widthDp), host.dp(1160)) - host.dp(if (widthDp >= 900) 48 else 40), card.width)
+                val parent = card.parent as ViewGroup
+                assertSame(parent, refresh.parent)
+                assertEquals(parent.indexOfChild(card) + 1, parent.indexOfChild(refresh))
+                val cardParams = card.layoutParams as ViewGroup.MarginLayoutParams
+                val refreshParams = refresh.layoutParams as ViewGroup.MarginLayoutParams
+                assertEquals(cardParams.bottomMargin + refreshParams.topMargin,
+                    refresh.top - card.bottom)
+                val layout = title.layout
+                assertEquals(title.text.length, layout.getLineEnd(layout.lineCount - 1))
+                assertTrue((0 until layout.lineCount).all { layout.getEllipsisCount(it) == 0 })
+            }
+
+            resize(320, 2f)
+            assertTrue(title.lineCount > 1)
+            val narrowHeight = card.height
+            resize(360, 2f)
+            resize(1200, 1f)
+            assertTrue("Empty card retained unused height", card.height < narrowHeight)
+            assertEmptyPage(host, accessGranted = true, expectedCardTexts = expectedCardTexts)
         }
     }
 
@@ -201,13 +210,17 @@ class MainActivityMediaEmptyStateTest {
         descendants(requireNotNull(anchor(page, cardKey)) { "Missing card $cardKey" })
             .filterIsInstance<TextView>().map { it.text.toString() }.toList()
 
-    private fun assertEmptyPage(host: MainUiHost, accessGranted: Boolean) {
+    private fun assertEmptyPage(
+        host: MainUiHost,
+        accessGranted: Boolean,
+        expectedCardTexts: List<String> = if (accessGranted) {
+            listOf("当前媒体", "未检测到音乐...至少现在")
+        } else {
+            listOf("当前媒体", "未检测到播放器")
+        }
+    ) {
         val page = page(host)
-        assertEquals(
-            if (accessGranted) listOf("当前媒体", "未检测到音乐...现在还没有")
-            else listOf("当前媒体", "未检测到播放器"),
-            cardTexts(page)
-        )
+        assertEquals(expectedCardTexts, cardTexts(page))
         assertNull(anchor(page, "media.players.heading"))
         assertEquals(accessGranted, anchor(page, "media.refresh") != null)
         assertEquals(!accessGranted, anchor(page, "media.notification_access") != null)

@@ -231,7 +231,7 @@
     <string name="ui_no_word_by_word_lyrics_to_remove">沒有可移除的逐字歌詞</string>
     <string name="ui_no_local_lyrics_to_remove">沒有可移除的本機歌詞</string>
     <string name="ui_media_no_player">未偵測到播放器</string>
-    <string name="ui_media_no_music">未偵測到音樂...現在還沒有</string>
+    <string name="ui_media_no_music">未偵測到音樂...至少現在</string>
     <string name="ui_media_enable_notif_access">前往開啟通知存取權</string>
     <string name="ui_no_media_source_status">未選擇播放器</string>
     <string name="ui_no_offset">無偏移</string>
