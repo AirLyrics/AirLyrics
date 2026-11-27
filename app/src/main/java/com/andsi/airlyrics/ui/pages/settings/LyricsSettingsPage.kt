@@ -14,6 +14,8 @@ import com.andsi.airlyrics.core.model.PlainLyricsSearchSource
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceCompactTitle
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceTitle
 import com.andsi.airlyrics.ui.components.*
+import com.andsi.airlyrics.ui.layout.ResponsiveColumns
+import com.andsi.airlyrics.ui.layout.ResponsivePage
 import com.andsi.airlyrics.ui.model.LyricsSettingsUiState
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -22,12 +24,15 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
     val container = pageContainer(activity, animateChanges = false)
     val settings = lyricsSettingsState()
 
-    container.addView(settingsBackHeader(getString(R.string.ui_lyrics)))
+    container.addView(settingsBackHeader(getString(R.string.ui_lyrics)).apply {
+        setTag(R.id.interaction_anchor, "lyrics.settings.heading")
+    })
+    val cards = ResponsiveColumns(activity)
 
     val currentLyricsCard = createCurrentLyricsCard(activity)
-    container.addView(currentLyricsCard.view)
+    cards.addLeading(currentLyricsCard.view)
 
-    container.addView(
+    cards.addView(
         card(activity) {
             addView(bigText(activity, getString(R.string.ui_search_strategy)))
 
@@ -49,9 +54,9 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
         }
     )
 
-    container.addView(createLyricsSourceOrderCard(activity, settings))
+    cards.addView(createLyricsSourceOrderCard(activity, settings))
 
-    container.addView(
+    cards.addView(
         card(activity) {
             isFocusable = true
             enableSoftPressFeedback(AirUiTokens.Motion.StrongPressScale)
@@ -68,7 +73,7 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
         }
     )
 
-    container.addView(
+    cards.addView(
         card(activity) {
             addView(bigText(activity, getString(R.string.ui_local_lyrics_folder)))
             addView(normalText(activity, getString(R.string.ui_save_folder) + settings.lyricsDirectoryPath))
@@ -83,9 +88,9 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
     )
 
     val recentLyricsCard = createRecentLyricsCard(activity)
-    container.addView(recentLyricsCard.view)
+    cards.addLeading(recentLyricsCard.view)
 
-    container.addView(
+    cards.addView(
         card(activity) {
             addView(LinearLayout(activity).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -122,10 +127,11 @@ internal fun createLyricsSettingsPage(activity: MainUiHost): View  = with(activi
         recentLyricsCard.refreshContent()
     }
 
-    listOf("heading", "current", "search", "sources", "apple_account", "directory", "recent", "delete").forEachIndexed { index, name ->
-        container.getChildAt(index).setTag(R.id.interaction_anchor, "lyrics.settings.$name")
+    listOf("current", "search", "sources", "apple_account", "directory", "recent", "delete").forEachIndexed { index, name ->
+        cards.getChildAt(index).setTag(R.id.interaction_anchor, "lyrics.settings.$name")
     }
-    return com.andsi.airlyrics.ui.layout.ResponsivePage(activity, container, setOf(0, 1, 6), "scroll.SETTINGS.LYRICS")
+    container.addView(cards)
+    return ResponsivePage(activity, container, "scroll.SETTINGS.LYRICS")
 }
 
 internal fun createLyricsSourceOrderCard(

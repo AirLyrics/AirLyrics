@@ -25,7 +25,11 @@ internal fun View.findInteractionScroll(): View? {
 }
 
 @SuppressLint("ClickableViewAccessibility")
-internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String, onInteraction: () -> Unit = {}): () -> Unit {
+internal fun MainUiHost.bindInteractionScroll(
+    scroll: View,
+    key: String,
+    preferredAnchor: () -> String? = { null },
+): () -> Unit {
     val group = scroll as? ViewGroup ?: return {}
     val density = resources.displayMetrics.density
     val saved = interactions.read(key)
@@ -52,18 +56,24 @@ internal fun MainUiHost.bindInteractionScroll(scroll: View, key: String, onInter
         if (key.startsWith("formatGuide.") && interactions.read("formatGuide") == null) return
         if (key.startsWith("aux.") && interactions.read(key.substringBeforeLast('.')) == null) return
         val content = group.getChildAt(0) ?: return
-        val candidates = anchors(content).filter { it.height > 0 && top(it) <= scroll.scrollY }
-        val anchor = candidates.maxByOrNull { top(it) }
+        val candidates = anchors(content).asSequence().filter { it.height > 0 }
+        val preferredKey = preferredAnchor()
+        val visibleHeight = scroll.height - scroll.paddingTop - scroll.paddingBottom
+        val preferred = preferredKey?.let { id ->
+            candidates.firstOrNull { view ->
+                view.getTag(R.id.interaction_anchor) == id &&
+                    top(view) < scroll.scrollY + visibleHeight && top(view) + view.height > scroll.scrollY
+            }
+        }
+        val anchor = preferred ?: candidates.filter { top(it) <= scroll.scrollY }.maxByOrNull(::top)
         interactions.write(key) {
             putFloat("y", scroll.scrollY / density)
             putString("anchor", anchor?.getTag(R.id.interaction_anchor) as? String)
+            putString("preferredAnchor", preferred?.let { preferredKey })
             putFloat("offset", (scroll.scrollY - (anchor?.let(::top) ?: 0)) / density)
         }
     }
-    scroll.setOnScrollChangeListener { _, _, _, _, _ ->
-        if (!restoring) onInteraction()
-        capture()
-    }
+    scroll.setOnScrollChangeListener { _, _, _, _, _ -> capture() }
     interactionUi.snapshot(scroll, ::capture)
     val restoreListener = ViewTreeObserver.OnGlobalLayoutListener {
         if (!restoring || isLoading(group)) return@OnGlobalLayoutListener

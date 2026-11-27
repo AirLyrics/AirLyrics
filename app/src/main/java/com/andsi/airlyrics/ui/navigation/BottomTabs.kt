@@ -92,8 +92,10 @@ internal fun createBottomTabs(activity: MainUiHost): View  = with(activity) crea
 
     shell.addView(tabHighlight)
     shell.addView(bar)
-    shell.addOnLayoutChangeListener { _, l, t, r, b, oldL, oldT, oldR, oldB ->
-        if (r - l != oldR - oldL || b - t != oldB - oldT) updateTabHighlight(activity, animate = false)
+    shell.addOnLayoutChangeListener { view, _, _, _, _, oldL, oldT, oldR, oldB ->
+        val widthChanged = view.width != (oldR - oldL)
+        val heightChanged = view.height != (oldB - oldT)
+        if (widthChanged || heightChanged) activity.positionTabHighlight(animate = false)
     }
     return shell
 }
@@ -350,33 +352,32 @@ private fun playQuickStatusSwap(
         }.start()
 }
 
-private fun updateTabHighlight(activity: MainUiHost, animate: Boolean = true) = with(activity) {
+private fun updateTabHighlight(activity: MainUiHost, animate: Boolean) = with(activity) {
     val page = currentPage
-    val selectedTab = tabViews[page] ?: return@with
-    selectedTab.post {
-        if (currentPage != page || !selectedTab.isAttachedToWindow) return@post
-        val highlight = tabHighlight ?: return@post
-        if (!highlight.isAttachedToWindow) return@post
-        val selectedSlot = selectedTab.parent as? View ?: selectedTab
-        val textWidth = measureTabTextWidth(selectedTab)
-        val horizontalPadding = if (page == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingPadding) else dp(AirUiTokens.Layout.BottomTabDefaultPadding)
-        val targetWidth = (textWidth + horizontalPadding).coerceAtMost(selectedSlot.width.toFloat())
-        val baseHeight = if (page == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingHeight) else dp(AirUiTokens.Layout.BottomTabDefaultHeight)
-        val targetHeight = maxOf(baseHeight, selectedTab.height).coerceAtMost(highlight.height).toFloat()
-
-        val slotLocation = IntArray(2)
-        val highlightLocation = IntArray(2)
-        selectedSlot.getLocationInWindow(slotLocation)
-        highlight.getLocationInWindow(highlightLocation)
-
-        val centerX = slotLocation[0] - highlightLocation[0] + selectedSlot.width / 2f
-        val centerY = slotLocation[1] - highlightLocation[1] + selectedSlot.height / 2f
-        highlight.moveTo(
-            targetCenterX = centerX,
-            targetCenterY = centerY,
-            targetWidth = targetWidth,
-            targetHeight = targetHeight,
-            animate = animate && highlight.hasPosition
-        )
+    tabViews[page]?.post {
+        if (currentPage == page) positionTabHighlight(animate)
     }
+}
+
+private fun MainUiHost.positionTabHighlight(animate: Boolean) {
+    val page = currentPage
+    val selectedTab = tabViews[page] ?: return
+    val highlight = tabHighlight ?: return
+    val row = tabRow ?: return
+    val slot = selectedTab.parent as? View ?: return
+    if (!slot.isAttachedToWindow || !highlight.isAttachedToWindow) return
+
+    val textWidth = measureTabTextWidth(selectedTab)
+    val horizontalPadding = if (page == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingPadding) else dp(AirUiTokens.Layout.BottomTabDefaultPadding)
+    val targetWidth = (textWidth + horizontalPadding).coerceAtMost(slot.width.toFloat())
+    val baseHeight = if (page == Page.FLOATING) dp(AirUiTokens.Layout.BottomTabFloatingHeight) else dp(AirUiTokens.Layout.BottomTabDefaultHeight)
+    val targetHeight = maxOf(baseHeight, selectedTab.height).coerceAtMost(highlight.height).toFloat()
+
+    highlight.moveTo(
+        targetCenterX = row.left + slot.left - highlight.left + slot.width / 2f,
+        targetCenterY = row.top + slot.top - highlight.top + slot.height / 2f,
+        targetWidth = targetWidth,
+        targetHeight = targetHeight,
+        animate = animate && highlight.hasPosition
+    )
 }

@@ -74,11 +74,14 @@ class SettingsAppearanceMotionInstrumentedTest {
             accent(scenario); pause(250)
             var height = 0
             var scroll = 0
+            lateinit var settingsScroll: ScrollView
             val sampleReady = CountDownLatch(1)
             var sampledBackground = 0
             scenario.onActivity { a ->
                 height = panel.height
-                scroll = root.nodes().filterIsInstance<ScrollView>().single().scrollY
+                settingsScroll = generateSequence(panel.parent as? View) { it.parent as? View }
+                    .filterIsInstance<ScrollView>().first()
+                scroll = settingsScroll.scrollY
                 a.graph.uiHost.toggleThemeMode()
                 // Sample on the UI clock. A later onActivity() may wait for the fade to finish.
                 root.postDelayed({
@@ -92,7 +95,7 @@ class SettingsAppearanceMotionInstrumentedTest {
                 assertNotEquals(AirLyricsTheme.palette(true, ThemeAccent.BLUE).background, sampledBackground)
                 assertNotEquals(AirLyricsTheme.palette(false, ThemeAccent.BLUE).background, sampledBackground)
                 assertEquals(height, panel.height)
-                assertEquals(scroll, root.nodes().filterIsInstance<ScrollView>().single().scrollY)
+                assertEquals(scroll, settingsScroll.scrollY)
             }
             pause(500); capture("app-light-open")
             val rapidDone = CountDownLatch(1)

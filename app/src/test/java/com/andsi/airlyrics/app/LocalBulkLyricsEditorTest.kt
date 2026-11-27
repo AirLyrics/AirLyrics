@@ -9,6 +9,7 @@ import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
@@ -243,6 +244,37 @@ class LocalBulkLyricsEditorTest : LyricsStorageTestBase() {
         layoutWindow(decor, windowWidth, keyboardTop)
         assertEquals("A window already resized by the IME must fit on its first layout", bodyHeight, scroller.height)
         assertEditingAreaVisible()
+    }
+
+    @Test
+    @Config(sdk = [35], qualifiers = "en-rUS-w844dp-h390dp-land-mdpi")
+    fun openEditorUsesTheResizedWindowForItsAvailableWidthAndHeight() {
+        val lyrics = (1..24).joinToString("\n") { "[00:%02d.00]Lyric %02d".format(java.util.Locale.ROOT, it, it) }
+        assertTrue(LyricsStorage.savePlainLyrics(context, "Song", "Artist", 30_000, lyrics))
+        openEditor()
+        mode(R.string.ui_lyrics_mode_text).performClick()
+        ShadowLooper.idleMainLooper(350, TimeUnit.MILLISECONDS)
+        val dialog = requireNotNull(dialogOrNull())
+        val decor = requireNotNull(dialog.window).decorView
+        val sheet: View = requireNotNull(dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet))
+        val shortHeight = textScroller().height
+
+        layoutWindow(decor, 1240, 775)
+        assertTrue(sheet.width > 640)
+        assertTrue("A taller window gives the editor more room", textScroller().height > (shortHeight + 100))
+        val save = requireNotNull(textLabel(activity.getString(R.string.ui_save_changes)))
+        fun assertSaveFits() {
+            val bounds = Rect()
+            save.getDrawingRect(bounds)
+            (decor as ViewGroup).offsetDescendantRectToMyCoords(save, bounds)
+            assertTrue(bounds.left >= 0 && bounds.right <= decor.width)
+            assertTrue(bounds.top >= 0 && bounds.bottom <= decor.height)
+        }
+        assertSaveFits()
+
+        layoutWindow(decor, 550, 720)
+        assertTrue(sheet.width <= 550)
+        assertSaveFits()
     }
 
     @Test

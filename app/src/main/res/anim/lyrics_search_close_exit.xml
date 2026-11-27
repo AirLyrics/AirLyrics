@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:interpolator="@anim/lyrics_search_exit_interpolator"
+    android:shareInterpolator="true">
+    <translate
+        android:duration="@integer/lyrics_search_exit_duration"
+        android:fromXDelta="0"
+        android:toXDelta="@fraction/lyrics_search_advance_offset" />
+    <alpha
+        android:duration="@integer/lyrics_search_exit_duration"
+        android:fromAlpha="1"
+        android:toAlpha="0" />
+</set>

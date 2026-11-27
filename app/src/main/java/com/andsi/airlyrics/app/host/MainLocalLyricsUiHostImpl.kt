@@ -12,7 +12,9 @@ import com.andsi.airlyrics.R
 import com.andsi.airlyrics.lyrics.importer.wordByWordLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.importer.plainLyricsFormatErrorMessage
 import com.andsi.airlyrics.lyrics.storage.LyricsStorage
+import com.andsi.airlyrics.ui.components.LocalLyricsRowView
 import com.andsi.airlyrics.ui.components.showAirDialog
+import com.andsi.airlyrics.ui.layout.ResponsivePage
 import com.andsi.airlyrics.ui.components.showAirInfoDialog
 import com.andsi.airlyrics.ui.state.restoreOperationConfirmation
 import com.andsi.airlyrics.ui.model.LocalLyricsUiItem
@@ -25,10 +27,17 @@ internal fun MainActivityUiHost.localLyricsRowImpl(
     item: LocalLyricsUiItem,
     onLyricsChanged: ((LocalLyricsUiChange) -> Unit)? = null,
     badgeText: CharSequence? = null,
-    onClickIntercept: (() -> Boolean)? = null
+    onClickIntercept: (() -> Boolean)? = null,
 ): View {
-    return com.andsi.airlyrics.ui.components.LocalLyricsRowView(
-        this, { current -> openLocalLyricsEditorForItem(current, onLyricsChanged) }, onClickIntercept, badgeText
+    return LocalLyricsRowView(
+        this,
+        onOpen = { row, current ->
+            generateSequence(row.parent as? View) { it.parent as? View }
+                .filterIsInstance<ResponsivePage>().firstOrNull()?.rememberScrollAnchor(row)
+            openLocalLyricsEditorForItem(current, onLyricsChanged)
+        },
+        onClickIntercept = onClickIntercept,
+        badgeText = badgeText,
     ).apply { bind(item) }
 }
 

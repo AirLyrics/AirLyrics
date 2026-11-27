@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import androidx.core.view.children
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.core.color.AirColorUtils
 import com.andsi.airlyrics.design.tokens.AirUiTokens
@@ -24,135 +25,86 @@ import kotlin.math.roundToInt
 @SuppressLint("ViewConstructor")
 internal class ResponsivePage(
     private val host: MainUiHost,
-    source: LinearLayout,
-    private val leftIndices: Set<Int>,
+    private val source: LinearLayout,
     private val key: String,
-    private val singleColumnHeader: Header? = null
+    pinnedHeader: Header? = null,
 ) : ViewGroup(host) {
     internal data class Header(
-        val cardIndex: Int,
+        val view: View,
         val isExpanded: () -> Boolean,
         val expansionFraction: () -> Float = { if (isExpanded()) 1f else 0f }
     )
 
-    private val cards = (0 until source.childCount).map(source::getChildAt)
-    private val cardParams = cards.map { LinearLayout.LayoutParams(it.layoutParams as? MarginLayoutParams ?: MarginLayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)) }
-    private val padding = source.paddingLeft.coerceAtLeast(host.dp(16))
-    private var mode = 0
-    private var lastWidth = -1
-    private var lastHeight = -1
-    private var lastFontScale = -1f
-    internal val columnCount get() = mode
-    private var bindings = emptyList<() -> Unit>()
-    private var panes = emptyList<ScrollView>()
-    private var header: PinnedPageHeader? = null
+    private val header = pinnedHeader?.let { PinnedPageHeader(host, it) }
+    private val scroll = if (header == null) ScrollView(host) else HeaderScrollView(host)
+    private var releaseScroll: (() -> Unit)? = null
+    private var lastLayout: WindowLayoutSpec? = null
+    private var preferredAnchor: String? = null
 
     init {
-        // Structural moves must not leave disappearing children attached to their old parent.
         source.layoutTransition = null
-        cards.forEachIndexed { index, view -> view.markInteractionAnchors("$key.card.$index") }
-        addView(source)
+        source.children.forEachIndexed { index, view -> view.markInteractionAnchors("$key.card.$index") }
+        scroll.addView(source)
+        addView(scroll)
+        header?.let(::addView)
     }
 
-    private fun configure(columns: Int) {
-        host.interactionUi.capture()
-        bindings.forEach { it() }
-        cards.forEach { card ->
-            (card.parent as? ViewGroup)?.let { parent ->
-                parent.layoutTransition = null
-                parent.removeView(card)
-                parent.endViewTransition(card)
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (host.interactions.read(key) == null) {
+            val oldPane = if (host.interactions.read("$key.layout")?.getInt("columns") == 2) {
+                host.interactions.read("$key.active")?.getString("key") ?: "$key.left"
+            } else "$key.single"
+            host.interactions.read(oldPane)?.let { snapshot ->
+                host.interactions.write(key) { putAll(snapshot) }
             }
         }
-        removeAllViews()
-        val previous = if (mode == 0) host.interactions.read("$key.layout")?.getInt("columns") ?: 0 else mode
-        mode = columns
-        host.interactions.write("$key.layout") { putInt("columns", columns) }
-        if (previous != 0 && previous != columns) {
-            val from = if (previous == 1) "$key.single" else host.interactions.read("$key.active")?.getString("key") ?: "$key.left"
-            host.interactions.read(from)?.let { snapshot ->
-                val anchor = snapshot.getString("anchor")
-                val index = cards.indexOfFirst { it.containsAnchor(anchor) }
-                val target = if (columns == 1) "$key.single" else when {
-                    index < 0 -> host.interactions.read("$key.active")?.getString("key")?.takeIf { it != "$key.single" } ?: "$key.left"
-                    index in leftIndices -> "$key.left"
-                    else -> "$key.right"
-                }
-                host.interactions.write(target) { clear(); putAll(snapshot) }
-            }
-        }
-        val headerSpec = singleColumnHeader.takeIf { columns == 1 }
-        header = headerSpec?.let { spec ->
-            PinnedPageHeader(host, padding, spec).apply {
-                addView(cards[spec.cardIndex], cardParams[spec.cardIndex])
-            }
-        }
-        panes = (0 until columns).map { column ->
-            val body = LinearLayout(host).apply { orientation = LinearLayout.VERTICAL }
-            cards.forEachIndexed { index, card ->
-                if (index != headerSpec?.cardIndex && (columns == 1 || (index in leftIndices) == (column == 0))) {
-                    body.addView(card, cardParams[index])
-                }
-            }
-            val pane = if (headerSpec == null) ScrollView(host) else HeaderScrollView(host)
-            pane.addView(body)
-            addView(pane)
-            pane
-        }
-        header?.let { addView(it) }
-        bindPanes()
+        preferredAnchor = host.interactions.read(key)?.getString("preferredAnchor")
+        bindScroll()
     }
 
-    private fun bindPanes() {
-        bindings = panes.mapIndexed { index, pane ->
-            val paneKey = if (mode == 1) "$key.single" else "$key.${if (index == 0) "left" else "right"}"
-            host.bindInteractionScroll(pane, paneKey) {
-                host.interactions.write("$key.active") { putString("key", paneKey) }
-            }
-        }
+    internal fun rememberScrollAnchor(view: View) {
+        preferredAnchor = view.getTag(R.id.interaction_anchor) as? String
+    }
+
+    private fun bindScroll() {
+        releaseScroll?.invoke()
+        releaseScroll = host.bindInteractionScroll(scroll, key) { preferredAnchor }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
-        val density = resources.displayMetrics.density
-        val boundedWidth = width.coerceAtMost(host.dp(WindowLayoutSpec.DOUBLE_MAX))
-        val columns = host.windowLayout.columns((boundedWidth - padding * 4) / density)
-        if (mode != columns) {
-            configure(columns)
-        } else if (lastWidth != width || lastHeight != height || lastFontScale != host.windowLayout.fontScale) {
+        val contentWidth = width.coerceAtMost(host.dp(WindowLayoutSpec.PAGE_MAX_WIDTH_DP))
+        val layout = host.windowLayout
+        val viewportChanged = (contentWidth != scroll.measuredWidth) ||
+            (height != scroll.measuredHeight) || (layout != lastLayout)
+        if ((releaseScroll != null) && scroll.isLaidOut && viewportChanged) {
             host.interactionUi.capture()
-            bindings.forEach { it() }
-            bindPanes()
+            bindScroll()
         }
-        lastWidth = width
-        lastHeight = height
-        lastFontScale = host.windowLayout.fontScale
-        val maxWidth = host.dp(if (columns == 2) WindowLayoutSpec.DOUBLE_MAX else WindowLayoutSpec.SINGLE_MAX)
-        val contentWidth = width.coerceAtMost(maxWidth)
-        val gap = if (columns == 2) host.dp(WindowLayoutSpec.GAP) else 0
-        val paneWidthSpec = MeasureSpec.makeMeasureSpec((contentWidth - gap) / columns, MeasureSpec.EXACTLY)
-        val topPadding = if (header == null) host.dp(if (host.windowLayout.compact) 4 else 12) else 0
-        header?.measure(paneWidthSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST))
-        val scrollInset = header?.scrollInset ?: 0
-        val paneHeightSpec = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
-        panes.forEach { pane ->
-            pane.setPadding(0, scrollInset, 0, 0)
-            pane.getChildAt(0).setPadding(padding, topPadding, padding, host.dp(24))
-            pane.measure(paneWidthSpec, paneHeightSpec)
-        }
+        lastLayout = layout
+        val inset = host.dp(layout.pageInsetDp).coerceAtMost(contentWidth / 2)
+        val pageTop = if (header == null) host.dp(AirUiTokens.Space.PageTop) else 0
+        source.setPadding(inset, pageTop, inset, host.dp(AirUiTokens.Space.PageBottom))
+        header?.measure(
+            MeasureSpec.makeMeasureSpec(contentWidth - inset * 2, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST)
+        )
+        scroll.setPadding(0, header?.scrollInset ?: 0, 0, 0)
+        scroll.measure(
+            MeasureSpec.makeMeasureSpec(contentWidth, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
+        )
         setMeasuredDimension(width, height)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        val gap = if (mode == 2) host.dp(WindowLayoutSpec.GAP) else 0
-        val total = panes.sumOf { it.measuredWidth } + gap
-        var x = (width - total) / 2
-        header?.let { view -> view.layout(x, 0, x + view.measuredWidth, view.measuredHeight) }
-        val ordered = if (layoutDirection == LAYOUT_DIRECTION_RTL) panes.reversed() else panes
-        ordered.forEach { pane ->
-            pane.layout(x, 0, x + pane.measuredWidth, height)
-            x += pane.measuredWidth + gap
+        val x = (width - scroll.measuredWidth) / 2
+        scroll.layout(x, 0, x + scroll.measuredWidth, height)
+        header?.let {
+            val start = x + source.paddingLeft
+            it.layout(start, 0, start + it.measuredWidth, it.measuredHeight)
         }
         renderHeaderExpansion()
     }
@@ -160,11 +112,12 @@ internal class ResponsivePage(
     internal fun renderHeaderExpansion() {
         val pinnedHeader = header ?: return
         pinnedHeader.invalidate()
-        (panes.singleOrNull() as? HeaderScrollView)?.renderExpansion(pinnedHeader.expansionFraction)
+        (scroll as HeaderScrollView).renderExpansion(pinnedHeader.expansionFraction)
     }
 
     override fun onDetachedFromWindow() {
-        bindings.forEach { it() }
+        releaseScroll?.invoke()
+        releaseScroll = null
         super.onDetachedFromWindow()
     }
 }
@@ -172,7 +125,6 @@ internal class ResponsivePage(
 @SuppressLint("ViewConstructor")
 private class PinnedPageHeader(
     private val host: MainUiHost,
-    private val horizontalPadding: Int,
     private val header: ResponsivePage.Header
 ) : LinearLayout(host) {
     private val fadeHeight = host.dp(14)
@@ -184,6 +136,7 @@ private class PinnedPageHeader(
 
     init {
         orientation = VERTICAL
+        addView(header.view)
         host.bindAppearance(this) {
             val color = AirColorUtils.withAlpha(host.colorBackground, 204)
             scrim.color = color
@@ -197,7 +150,7 @@ private class PinnedPageHeader(
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val top = host.dp(AirUiTokens.Space.PageTop)
         val bottom = if (hasExpandedBounds()) fadeHeight else 0
-        setPadding(horizontalPadding, top, horizontalPadding, bottom)
+        setPadding(0, top, 0, bottom)
 
         val available = MeasureSpec.getSize(heightMeasureSpec)
         val toggleHeight = getChildAt(0).minimumHeight
@@ -265,6 +218,3 @@ private class HeaderScrollView(context: Context) : ScrollView(context) {
         return super.computeScrollDeltaToGetChildRectOnScreen(rect)
     }
 }
-
-private fun View.containsAnchor(anchor: String?): Boolean = anchor != null &&
-    (getTag(R.id.interaction_anchor) == anchor || (this is ViewGroup && (0 until childCount).any { getChildAt(it).containsAnchor(anchor) }))

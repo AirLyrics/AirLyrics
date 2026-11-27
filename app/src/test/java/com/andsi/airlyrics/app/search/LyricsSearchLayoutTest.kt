@@ -1,9 +1,14 @@
 package com.andsi.airlyrics.app.search
 
+import android.app.Activity
 import android.content.ClipboardManager
+import android.graphics.Matrix
 import android.graphics.Rect
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
+import android.view.animation.Transformation
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -34,6 +39,7 @@ import com.andsi.airlyrics.settings.store.ThemeSettingsStore
 import com.andsi.airlyrics.testutil.descendants
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputLayout
 import java.util.concurrent.TimeUnit
 import org.json.JSONObject
@@ -41,6 +47,7 @@ import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -63,6 +70,159 @@ class LyricsSearchLayoutTest {
             1000, 2000, "你好", listOf(WordByWordSegment("你", 1000, 1400), WordByWordSegment("好", 1400, 2000)),
         ),
     )
+
+    @Config(sdk = [35], qualifiers = "en-rUS-mdpi")
+    @Test fun searchWindowEntersFromTheEndAndReturnsWithShortMotion() {
+        fixture.launch(emptyList(), fixture.intent(target)).use { controller ->
+            val activity = controller.get()
+            val shadow = shadowOf(activity)
+            val open = shadow.getOverriddenActivityTransition(Activity.OVERRIDE_TRANSITION_OPEN)
+            val close = shadow.getOverriddenActivityTransition(Activity.OVERRIDE_TRANSITION_CLOSE)
+            assertNotNull("Search should register a window opening transition", open)
+            assertNotNull("Search should register a window closing transition", close)
+            val openSearch = AnimationUtils.loadAnimation(activity, requireNotNull(open).enterAnim)
+            val retreatSettings = AnimationUtils.loadAnimation(activity, open.exitAnim)
+            val returnSettings = AnimationUtils.loadAnimation(activity, requireNotNull(close).enterAnim)
+            val closeSearch = AnimationUtils.loadAnimation(activity, close.exitAnim)
+            assertEquals(190L, openSearch.computeDurationHint())
+            assertEquals(190L, returnSettings.computeDurationHint())
+            assertEquals(140L, retreatSettings.computeDurationHint())
+            assertEquals(140L, closeSearch.computeDurationHint())
+
+            for (width in listOf(412, 1240)) {
+                assertTrue(translationX(openSearch, width, 0) in 1f..30f)
+                assertTrue(translationX(retreatSettings, width, 140) in -15f..-1f)
+                assertTrue(translationX(returnSettings, width, 0) in -15f..-1f)
+                assertTrue(translationX(closeSearch, width, 140) in 1f..30f)
+                assertEquals(0f, translationX(openSearch, width, 190), 0.01f)
+                assertEquals(0f, translationX(returnSettings, width, 190), 0.01f)
+            }
+            activity.onBackPressedDispatcher.onBackPressed()
+            assertTrue(activity.isFinishing)
+        }
+    }
+
+    @Config(sdk = [28])
+    @Test fun olderAndroidUsesTheSameMotionWhenLaunchingAndClosingSearch() {
+        Robolectric.buildActivity(Activity::class.java).setup().use { caller ->
+            val activity = caller.get()
+            val shadow = shadowOf(activity)
+            LyricsSearchActivity.open(activity, target)
+            val intent = requireNotNull(shadow.nextStartedActivity)
+            assertEquals(LyricsSearchActivity::class.java.name, intent.component?.className)
+            assertEquals(target.title, intent.getStringExtra("search.title"))
+            assertTrue(
+                "Search entry should request a custom animation",
+                shadow.pendingTransitionEnterAnimationResourceId > 0
+            )
+            val enter = AnimationUtils.loadAnimation(activity, shadow.pendingTransitionEnterAnimationResourceId)
+            assertEquals(190L, enter.computeDurationHint())
+            assertTrue(translationX(enter, 1240, 0) > 0f)
+
+            fixture.launch(emptyList(), intent).use { controller ->
+                val search = controller.get()
+                search.onBackPressedDispatcher.onBackPressed()
+                assertTrue(search.isFinishing)
+                val searchShadow = shadowOf(search)
+                assertTrue(
+                    "Closing search should request a custom animation",
+                    searchShadow.pendingTransitionExitAnimationResourceId > 0
+                )
+                val exit = AnimationUtils.loadAnimation(search, searchShadow.pendingTransitionExitAnimationResourceId)
+                assertEquals(140L, exit.computeDurationHint())
+                assertTrue(translationX(exit, 1240, 140) > 0f)
+            }
+        }
+    }
+
+    private fun translationX(animation: Animation, width: Int, timeMs: Long): Float {
+        animation.reset()
+        animation.initialize(width, 775, width, 775)
+        animation.startTime = 0L
+        val frame = Transformation()
+        animation.getTransformation(timeMs, frame)
+        val values = FloatArray(9)
+        frame.matrix.getValues(values)
+        return values[Matrix.MTRANS_X]
+    }
+
+    @Config(qualifiers = "en-rUS-w1240dp-h775dp-land-mdpi")
+    @Test fun previewBackRestoresTheQuerySourceAndReadingPositionAfterResize() {
+        val lrclib = PlainLyricsSearchSource.LRCLIB
+        fixture.access.candidates = (1..24).map { index ->
+            LyricsCandidate(lrclib, index.toString(), target.copy(title = "Match $index"), 1.0)
+        }
+        fixture.access.fetchResult = ManualLyricsFetchResult.Available(
+            LyricsProviderResult(plainProviderId = lrclib.key, plainProviderName = "LRCLIB", plainLrc = "[00:01.000]Preview lyric")
+        )
+        fixture.launch(listOf(netease, lrclib), fixture.intent(target)).use { controller ->
+            val activity = controller.get()
+            val content = fixture.content(activity)
+            fixture.layout(content, height = 775, width = 1240)
+            val query = listOf("Edited title", "Edited artist")
+            descendants(content).filterIsInstance<EditText>()
+                .filter { it.isShown }.zip(query).forEach { (input, text) -> input.setText(text) }
+            assertTrue(fixture.button(activity, R.string.search_regular_search).performClick())
+            fixture.finishRequests()
+            appBar(content).setExpanded(false, false)
+            fixture.layout(content, height = 775, width = 1240)
+            fun tabs(root: View) = descendants(root).filterIsInstance<TabLayout>().single()
+            tabs(content).getTabAt(1)!!.select()
+            fixture.layout(content, height = 775, width = 1240)
+            val list = wordList(content)
+            val manager = list.layoutManager as LinearLayoutManager
+            manager.scrollToPositionWithOffset(8, -10)
+            fixture.layout(content, height = 775, width = 1240)
+            val first = manager.findFirstVisibleItemPosition()
+            val firstRow = requireNotNull(manager.findViewByPosition(first))
+            val top = firstRow.top
+            val title = visibleTextViews(firstRow).first().text.toString()
+            assertTrue(first > 0)
+            val candidate = requireNotNull(manager.findViewByPosition(first + 1))
+            val entry = visibleTextViews(candidate).first().text.toString()
+
+            fun openPreview(current: LyricsSearchActivity, width: Int, height: Int) {
+                val root = fixture.content(current)
+                assertTrue(fixture.row(current, entry).performClick())
+                fixture.finishRequests()
+                fixture.layout(root, height, width)
+                assertTrue(fixture.button(current, R.string.search_apply_current).isEnabled)
+                assertTrue(visibleTextViews(root).any { it.text.toString().contains("Preview lyric") })
+            }
+
+            fun assertRestored(current: LyricsSearchActivity, width: Int, height: Int) {
+                val root = fixture.content(current)
+                fixture.layout(root, height, width)
+                assertEquals(1, tabs(root).selectedTabPosition)
+                val restored = wordList(root)
+                val layout = restored.layoutManager as LinearLayoutManager
+                assertEquals(first, layout.findFirstVisibleItemPosition())
+                val restoredRow = requireNotNull(layout.findViewByPosition(first))
+                assertEquals(title, visibleTextViews(restoredRow).first().text.toString())
+                assertEquals(top, restoredRow.top)
+                appBar(root).setExpanded(true, false)
+                fixture.layout(root, height, width)
+                assertEquals(query, descendants(root).filterIsInstance<EditText>()
+                    .filter { it.isShown }.map { it.text.toString() })
+                appBar(root).setExpanded(false, false)
+                fixture.layout(root, height, width)
+            }
+
+            openPreview(activity, 1240, 775)
+            descendants(content).single { it.contentDescription == activity.getString(R.string.search_back) }.performClick()
+            assertRestored(activity, 1240, 775)
+            openPreview(activity, 1240, 775)
+            fixture.layout(content, height = 720, width = 550)
+            assertTrue("Search preview spills past the resized window", appBar(content).width <= 550)
+            RuntimeEnvironment.setQualifiers("en-rUS-w550dp-h720dp-port-mdpi")
+            controller.recreate()
+            val resized = controller.get()
+            fixture.layout(fixture.content(resized), height = 720, width = 550)
+            assertTrue(fixture.button(resized, R.string.search_apply_current).isEnabled)
+            resized.onBackPressedDispatcher.onBackPressed()
+            assertRestored(resized, 550, 720)
+        }
+    }
 
     @Test fun formWithoutSourcesRemainsBoundedAtKeyboardHeights() {
         fixture.launch(emptyList(), fixture.intent(target)).use { controller ->

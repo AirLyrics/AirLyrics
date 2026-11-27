@@ -42,15 +42,7 @@ internal class FloatingPageScope(
     private val rootFrame = FrameLayout(host)
     private var backgroundPage: ResponsivePage? = null
     private var backgroundInteractionState: Pair<Int, Int>? = null
-    private val root = LinearLayout(host).apply {
-        orientation = LinearLayout.VERTICAL
-        setPadding(
-            host.dp(FloatingPageTokens.PAGE_PADDING_HORIZONTAL_DP),
-            host.dp(FloatingPageTokens.PAGE_PADDING_TOP_DP),
-            host.dp(FloatingPageTokens.PAGE_PADDING_HORIZONTAL_DP),
-            host.dp(FloatingPageTokens.PAGE_PADDING_BOTTOM_DP)
-        )
-    }
+    private val root = pageContainer(host, animateChanges = false)
 
     internal var openingPanelId: FloatingPanelId? = null
     internal var restoringPanel = false
@@ -123,8 +115,6 @@ internal class FloatingPageScope(
             isVisible = isPreviewVisible
         )
         createdPreviewHandle.cardView.setTag(R.id.interaction_anchor, "floating.preview")
-        root.addView(createdPreviewHandle.cardView)
-
         val list = pageContainer(host).apply {
             setPadding(0, dp(FloatingPageTokens.LIST_PADDING_TOP_DP), 0, 0)
             addAppearanceSection(this)
@@ -138,10 +128,9 @@ internal class FloatingPageScope(
         val page = ResponsivePage(
             host,
             root,
-            leftIndices = setOf(0),
             key = "scroll.FLOATING.root",
-            singleColumnHeader = ResponsivePage.Header(
-                cardIndex = 0,
+            pinnedHeader = ResponsivePage.Header(
+                view = createdPreviewHandle.cardView,
                 isExpanded = createdPreviewHandle.isExpanded,
                 expansionFraction = createdPreviewHandle.expansionFraction
             )

@@ -1,58 +1,80 @@
 package com.andsi.airlyrics.ui.layout
 
 import android.annotation.SuppressLint
+import android.graphics.drawable.GradientDrawable
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ScrollView
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.children
+import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
 import com.andsi.airlyrics.ui.model.MainUiHost
 import com.andsi.airlyrics.ui.navigation.createBottomTabs
 import com.andsi.airlyrics.ui.navigation.updateTabs
 
 @SuppressLint("ViewConstructor")
 internal class AdaptiveWindowLayout(private val host: MainUiHost, private val content: View) : ViewGroup(host) {
-    private var rail: Boolean? = null
+    private var rail = false
+    private var imeOverlap = 0
     private val tabs = createBottomTabs(host)
+    private val tabBackground = tabs.background as GradientDrawable
+    private val bottomCorners = tabBackground.cornerRadii
     private val bottomHorizontalPadding = tabs.paddingLeft
     private val labelHorizontalPadding = host.tabViews.values.first().paddingLeft
-    private val railScroll = ScrollView(host).apply { isFillViewport = false }
-    private var navigation: View = tabs
+    private val navigation = ScrollView(host).apply {
+        isFillViewport = true
+        isVerticalScrollBarEnabled = false
+        overScrollMode = OVER_SCROLL_NEVER
+        addView(tabs)
+    }
 
     init {
         addView(content)
-        addView(tabs)
+        addView(navigation)
         updateTabs(host, animate = false)
+        ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
+            val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
+            val overlap = (ime.bottom - safe.bottom).coerceAtLeast(0)
+            if (overlap != imeOverlap) {
+                imeOverlap = overlap
+                requestLayout()
+            }
+            setPadding(safe.left, remainingTopSystemInset(safe.top), safe.right, maxOf(safe.bottom, ime.bottom))
+            insets
+        }
+        post { ViewCompat.requestApplyInsets(this) }
     }
 
     private fun configureNavigation(useRail: Boolean) {
         if (rail == useRail) return
-        if (tabs.parent === railScroll) railScroll.removeView(tabs) else removeView(tabs)
-        removeView(railScroll)
-        val row = requireNotNull(host.tabRow)
-        tabs.setPadding(if (useRail) host.dp(2) else bottomHorizontalPadding, tabs.paddingTop,
-            if (useRail) host.dp(2) else bottomHorizontalPadding, tabs.paddingBottom)
-        host.tabViews.values.forEach { label ->
-            val horizontal = if (useRail) host.dp(2) else labelHorizontalPadding
-            label.setPadding(horizontal, label.paddingTop, horizontal, label.paddingBottom)
-        }
-        row.orientation = if (useRail) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-        for (index in 0 until row.childCount) {
-            row.getChildAt(index).layoutParams = if (useRail) {
-                LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
-            } else LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
-        }
-        navigation = if (useRail) railScroll.also { it.addView(tabs) } else tabs
-        addView(navigation)
         rail = useRail
+        val horizontal = if (useRail) host.dp(2) else bottomHorizontalPadding
+        tabs.setPadding(horizontal, tabs.paddingTop, horizontal, tabs.paddingBottom)
+        tabBackground.cornerRadii = if (useRail) null else bottomCorners
+        host.tabViews.values.forEach { label ->
+            val inset = if (useRail) host.dp(2) else labelHorizontalPadding
+            label.setPadding(inset, label.paddingTop, inset, label.paddingBottom)
+        }
+        val row = requireNotNull(host.tabRow)
+        row.orientation = if (useRail) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
+        row.children.forEach { slot ->
+            slot.layoutParams = if (useRail) {
+                LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)
+            } else {
+                LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f)
+            }
+        }
         updateTabs(host, animate = false)
     }
 
-    private fun updateWindowSpec(widthDp: Float, heightDp: Float) {
-        val old = host.windowLayout
+    private fun windowSpec(widthDp: Float, heightDp: Float): WindowLayoutSpec {
+        val current = host.windowLayout
         val scale = resources.configuration.fontScale
-        if (old.widthDp != widthDp || old.heightDp != heightDp || old.fontScale != scale) {
-            host.windowLayout = WindowLayoutSpec(widthDp, heightDp, scale)
-        }
+        if ((current.widthDp == widthDp) && (current.heightDp == heightDp) && (current.fontScale == scale)) return current
+        return WindowLayoutSpec(widthDp, heightDp, scale).also { host.windowLayout = it }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -61,29 +83,35 @@ internal class AdaptiveWindowLayout(private val host: MainUiHost, private val co
         val availableWidth = (width - paddingLeft - paddingRight).coerceAtLeast(0)
         val availableHeight = (height - paddingTop - paddingBottom).coerceAtLeast(0)
         val density = resources.displayMetrics.density
-        val useRail = availableWidth / density >= 600f
-        configureNavigation(useRail)
-        val nav = navigation
-        val navWidth = if (useRail) host.dp(WindowLayoutSpec.RAIL).coerceAtMost(availableWidth) else availableWidth
-        nav.measure(MeasureSpec.makeMeasureSpec(navWidth, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(availableHeight, if (useRail) MeasureSpec.EXACTLY else MeasureSpec.AT_MOST))
-        val contentHeight = (availableHeight - if (useRail) 0 else nav.measuredHeight).coerceAtLeast(0)
-        updateWindowSpec(availableWidth / density, contentHeight / density)
-        content.measure(MeasureSpec.makeMeasureSpec((availableWidth - if (useRail) navWidth else 0).coerceAtLeast(0), MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec((availableHeight - if (useRail) 0 else nav.measuredHeight).coerceAtLeast(0), MeasureSpec.EXACTLY))
+        val layout = windowSpec(availableWidth / density, (availableHeight + imeOverlap) / density)
+        configureNavigation(layout.railWidthDp > 0)
+        val navWidth = if (rail) host.dp(layout.railWidthDp) else availableWidth
+        navigation.measure(
+            MeasureSpec.makeMeasureSpec(navWidth, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(availableHeight, if (rail) MeasureSpec.EXACTLY else MeasureSpec.AT_MOST),
+        )
+        val contentWidth = if (rail) availableWidth - navWidth else availableWidth
+        val contentHeight = if (rail) availableHeight else availableHeight - navigation.measuredHeight
+        content.measure(
+            MeasureSpec.makeMeasureSpec(contentWidth, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(contentHeight, MeasureSpec.EXACTLY)
+        )
         setMeasuredDimension(width, height)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        val nav = navigation
-        val rtl = layoutDirection == LAYOUT_DIRECTION_RTL
-        if (rail == true) {
-            val navX = if (rtl) width - paddingRight - nav.measuredWidth else paddingLeft
-            val contentX = if (rtl) paddingLeft else paddingLeft + nav.measuredWidth
-            nav.layout(navX, paddingTop, navX + nav.measuredWidth, height - paddingBottom)
-            content.layout(contentX, paddingTop, contentX + content.measuredWidth, height - paddingBottom)
+        val bottom = paddingTop + (height - paddingTop - paddingBottom).coerceAtLeast(0)
+        if (rail) {
+            val rtl = layoutDirection == LAYOUT_DIRECTION_RTL
+            val navX = if (rtl) width - paddingRight - navigation.measuredWidth else paddingLeft
+            val contentX = if (rtl) paddingLeft else paddingLeft + navigation.measuredWidth
+            navigation.layout(navX, paddingTop, navX + navigation.measuredWidth, bottom)
+            content.layout(contentX, paddingTop, contentX + content.measuredWidth, bottom)
         } else {
-            content.layout(paddingLeft, paddingTop, width - paddingRight, paddingTop + content.measuredHeight)
-            nav.layout(paddingLeft, height - paddingBottom - nav.measuredHeight, width - paddingRight, height - paddingBottom)
+            val right = paddingLeft + content.measuredWidth
+            val split = paddingTop + content.measuredHeight
+            content.layout(paddingLeft, paddingTop, right, split)
+            navigation.layout(paddingLeft, split, right, bottom)
         }
     }
 }

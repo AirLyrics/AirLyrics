@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="lyrics_search_advance_offset" type="fraction">-2%</item>
+    <item name="lyrics_search_retreat_offset" type="fraction">0.8%</item>
+</resources>

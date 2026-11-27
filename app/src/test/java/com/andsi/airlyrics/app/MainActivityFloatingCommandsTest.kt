@@ -2,6 +2,7 @@ package com.andsi.airlyrics.app
 
 import android.app.Application
 import android.content.Intent
+import android.view.View
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.app.controller.FloatingVisibilityOutcome
 import com.andsi.airlyrics.floating.FloatingLyricsService
@@ -9,10 +10,14 @@ import com.andsi.airlyrics.floating.FloatingServiceCommand
 import com.andsi.airlyrics.floating.FloatingWindowStateBroadcast
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.settings.store.QuickFloatingStore
+import com.andsi.airlyrics.testutil.descendants
+import com.andsi.airlyrics.ui.layout.AdaptiveWindowLayout
+import com.andsi.airlyrics.ui.navigation.Page
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -129,6 +134,37 @@ class MainActivityFloatingCommandsTest {
 
             assertNull(MediaSourceStore.getSelectedPackage(application))
             assertNull(service.selectedSourcePackage)
+        }
+    }
+
+    @Test
+    fun floatingTabReselectionTogglesTheWindowFromRailAndBottomBar() {
+        Robolectric.buildActivity(MainActivity::class.java).setup().visible().use { controller ->
+            val activity = controller.get()
+            val host = activity.graph.uiHost
+            val root = descendants(activity.window.decorView).filterIsInstance<AdaptiveWindowLayout>().single()
+            fun resize(width: Int, height: Int) {
+                root.measure(
+                    View.MeasureSpec.makeMeasureSpec(host.dp(width), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(host.dp(height), View.MeasureSpec.EXACTLY),
+                )
+                root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+            }
+
+            resize(1240, 775)
+            val tab = host.tabViews.getValue(Page.FLOATING).parent as View
+            assertTrue(tab.performClick())
+            ShadowLooper.idleMainLooper()
+            assertEquals(Page.FLOATING, activity.graph.state.currentPage)
+            assertFalse(QuickFloatingStore.isDesiredVisible(application))
+            assertTrue(tab.performClick())
+            assertTrue(QuickFloatingStore.isDesiredVisible(application))
+
+            resize(550, 720)
+            assertSame(tab, host.tabViews.getValue(Page.FLOATING).parent as View)
+            assertTrue(tab.performClick())
+            assertFalse(QuickFloatingStore.isDesiredVisible(application))
+            assertEquals(Page.FLOATING, activity.graph.state.currentPage)
         }
     }
 

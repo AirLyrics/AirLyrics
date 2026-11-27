@@ -1,12 +1,14 @@
 package com.andsi.airlyrics.app.search
 
 import android.animation.ValueAnimator
+import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Typeface
+import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -157,6 +159,18 @@ class LyricsSearchActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val initial=readTarget(savedInstanceState ?: intent.extras) ?: run { finish(); return }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            overrideActivityTransition(
+                OVERRIDE_TRANSITION_OPEN,
+                R.anim.lyrics_search_open_enter,
+                R.anim.lyrics_search_open_exit
+            )
+            overrideActivityTransition(
+                OVERRIDE_TRANSITION_CLOSE,
+                R.anim.lyrics_search_close_enter,
+                R.anim.lyrics_search_close_exit
+            )
+        }
         val app = applicationContext
         val dependencies = dependenciesFactory?.invoke(app)
         session = ViewModelProvider(this, object : ViewModelProvider.Factory {
@@ -290,9 +304,11 @@ class LyricsSearchActivity : AppCompatActivity() {
         val panelParams = FrameLayout.LayoutParams(-1, -1, Gravity.CENTER)
         val root=object: FrameLayout(this) {
             override fun onMeasure(widthMeasureSpec:Int,heightMeasureSpec:Int) {
-                val wide=resources.configuration.screenWidthDp>=840
+                val width = MeasureSpec.getSize(widthMeasureSpec) - paddingLeft - paddingRight
+                val height = MeasureSpec.getSize(heightMeasureSpec) - paddingTop - paddingBottom
+                val wide = width >= dp(840)
                 panelParams.width = if (wide) dp(760) else LayoutParams.MATCH_PARENT
-                panelParams.height = if (wide) (MeasureSpec.getSize(heightMeasureSpec) * 0.9).toInt() else LayoutParams.MATCH_PARENT
+                panelParams.height = if (wide && height >= dp(480)) (height * 0.9f).toInt() else LayoutParams.MATCH_PARENT
                 super.onMeasure(widthMeasureSpec,heightMeasureSpec)
             }
         }.apply {
@@ -451,6 +467,7 @@ class LyricsSearchActivity : AppCompatActivity() {
         updating=false
         val showPreview=state.previewCandidate!=null
         val changed=inPreview!=showPreview
+        if (showPreview && changed) results.capturePositions()
         inPreview=showPreview
         if(shownMore!=state.moreConditions) {
             if(!state.moreConditions && albumInput.hasFocus()) albumInput.clearFocus()
@@ -680,6 +697,7 @@ class LyricsSearchActivity : AppCompatActivity() {
     private fun copyPreviewLyrics(title: String, lyrics: String): Boolean {
         val copied = try {
             val clipboard = getSystemService(ClipboardManager::class.java)
+            @Suppress("UsePropertyAccessSyntax")
             clipboard?.setPrimaryClip(ClipData.newPlainText(title, lyrics))
             clipboard != null
         } catch (_: RuntimeException) {
@@ -775,9 +793,18 @@ class LyricsSearchActivity : AppCompatActivity() {
         if (::session.isInitialized) {
             writeTarget(outState,session.state.value.target)
             outState.putString("search.spotifyId",session.state.value.spotifyTrackId)
+            if (!inPreview) results.capturePositions()
         }
         super.onSaveInstanceState(outState)
     }
+    override fun finish() {
+        super.finish()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            @Suppress("DEPRECATION")
+            overridePendingTransition(R.anim.lyrics_search_close_enter, R.anim.lyrics_search_close_exit)
+        }
+    }
+
     override fun onDestroy() {
         interactionUi.destroy()
         if(::paneMotion.isInitialized) paneMotion.finish()
@@ -792,9 +819,17 @@ class LyricsSearchActivity : AppCompatActivity() {
         @Volatile
         internal var dependenciesFactory: ((Context) -> LyricsSearchDependencies)? = null
 
-        internal fun open(context:Context,target:SongIdentity,spotifyTrackId:String? = null) {
-            if(target.title.isBlank()) return
-            context.startActivity(Intent(context,LyricsSearchActivity::class.java).putExtras(Bundle().apply { writeTarget(this,target); putString("search.spotifyId",spotifyTrackId) }))
+        internal fun open(activity: Activity, target: SongIdentity, spotifyTrackId: String? = null) {
+            if (target.title.isBlank()) return
+            val extras = Bundle().apply {
+                writeTarget(this, target)
+                putString("search.spotifyId", spotifyTrackId)
+            }
+            activity.startActivity(Intent(activity, LyricsSearchActivity::class.java).putExtras(extras))
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                @Suppress("DEPRECATION")
+                activity.overridePendingTransition(R.anim.lyrics_search_open_enter, R.anim.lyrics_search_open_exit)
+            }
         }
         private fun writeTarget(bundle:Bundle,target:SongIdentity) {
             bundle.putString("search.title",target.title);bundle.putString("search.artist",target.artist)

@@ -62,32 +62,34 @@ class CompactSettingsLayoutTest {
     private fun tile(title: String, summary: String = "100%", enabled: Boolean = true, onClick: (View) -> Unit = {}) =
         FloatingSettingTile(title, summary, R.drawable.ic_air_visibility, enabled, onClick)
 
-    @Test fun allGroupsKeepTwoEqualColumnsAndOddItemsNeverStretch() {
+    @Test fun gridReflowsWithoutStretchingShortRowsOrChangingTileHeights() {
         val host = host()
-        for (scale in listOf(1f, 1.3f, 2f)) {
+        val sizes = listOf(
+            Triple(1f, 240, 1), Triple(1f, 320, 2), Triple(1f, 700, 3), Triple(1f, 900, 4),
+            Triple(1.3f, 430, 2), Triple(2f, 320, 1), Triple(2f, 600, 2)
+        )
+        for ((scale, width, columns) in sizes) {
             RuntimeEnvironment.setFontScale(scale)
-            for (width in listOf(320, 360, 600)) {
-                val short = host.settingGrid(tile("Font"), tile("Color"), tile("Width")) as AdaptiveGridLayout
-                val long = host.settingGrid(tile("Opacidad de la fuente ".repeat(5)), tile("文字颜色", "R255 G255 B255 A255"), tile("Diseño de ventana")) as AdaptiveGridLayout
-                for (direction in listOf(View.LAYOUT_DIRECTION_LTR, View.LAYOUT_DIRECTION_RTL)) {
-                    short.layoutDirection = direction
-                    long.layoutDirection = direction
-                    layout(short, host.dp(width - 40))
-                    layout(long, host.dp(width - 40))
-                    assertEquals(2, short.columns)
-                    assertEquals(2, long.columns)
-                    assertEquals(short.height, long.height)
-                    assertEquals(1, (0 until long.childCount).map { long.getChildAt(it).height }.distinct().size)
-                    val last = long.getChildAt(2) as LinearLayout
-                    assertEquals(long.getChildAt(0).width, last.width)
-                    assertEquals(LinearLayout.VERTICAL, last.orientation)
-                    assertEquals(long.getChildAt(0).left, last.left)
-                    assertTrue(descendants(long).filterIsInstance<TextView>().all { it.maxLines == 1 })
-                    if (long.columns == 2) {
-                        assertEquals(long.getChildAt(0).height, long.getChildAt(1).height)
-                        assertEquals(LinearLayout.VERTICAL, (long.getChildAt(0) as LinearLayout).orientation)
-                    }
-                }
+            val short = host.settingGrid(*Array(columns + 1) { tile("Font") }) as AdaptiveGridLayout
+            val long = host.settingGrid(*Array(columns + 1) { index ->
+                tile("Opacidad de la fuente ".repeat(5), if (index == 0) "R255 G255 B255 A255" else "文字颜色")
+            }) as AdaptiveGridLayout
+            for (direction in listOf(View.LAYOUT_DIRECTION_LTR, View.LAYOUT_DIRECTION_RTL)) {
+                short.layoutDirection = direction
+                long.layoutDirection = direction
+                layout(short, host.dp(width))
+                layout(long, host.dp(width))
+                assertEquals(columns, short.columns)
+                assertEquals(columns, long.columns)
+                assertEquals(short.height, long.height)
+                val first = long.getChildAt(0) as LinearLayout
+                val last = long.getChildAt(columns) as LinearLayout
+                assertEquals(first.width, last.width)
+                assertEquals(first.left, last.left)
+                assertEquals(first.height, last.height)
+                assertEquals(LinearLayout.VERTICAL, first.orientation)
+                assertEquals(LinearLayout.VERTICAL, last.orientation)
+                assertTrue(descendants(long).filterIsInstance<TextView>().all { it.maxLines == 1 })
             }
         }
     }
@@ -223,7 +225,7 @@ class CompactSettingsLayoutTest {
                         .copy(onSubtitleViewCreated = subtitles::add)
                 }.toTypedArray()) as AdaptiveGridLayout
                 layout(grid, host.dp(320))
-                assertEquals(qualifier, 2, grid.columns)
+                assertEquals(qualifier, 1, grid.columns)
                 assertEquals(titleIds.size, subtitles.size)
                 for (index in titleIds.indices) {
                     val tile = grid.getChildAt(index) as ViewGroup
@@ -240,7 +242,6 @@ class CompactSettingsLayoutTest {
                 }
                 assertEquals(titleIds.indices.toList(), clicked)
                 val tiles = (0 until grid.childCount).map(grid::getChildAt)
-                tiles.chunked(2).forEach { row -> assertEquals(1, row.map { it.height }.distinct().size) }
                 assertEquals(tiles.first().width, tiles.last().width)
                 subtitles.first().text = "Updated summary"
                 layout(grid, host.dp(320))
@@ -268,6 +269,7 @@ class CompactSettingsLayoutTest {
         assertTrue(scroll.height > 0)
         assertTrue(scroll.getChildAt(0).height > scroll.height)
         val top = header.top
+        scroll.isSmoothScrollingEnabled = false
         scroll.fullScroll(View.FOCUS_DOWN)
         layoutPage(page, 320, 470)
         assertTrue(scroll.scrollY > 0)

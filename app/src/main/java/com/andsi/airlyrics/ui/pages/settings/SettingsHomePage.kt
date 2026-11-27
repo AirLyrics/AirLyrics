@@ -10,6 +10,8 @@ import android.widget.FrameLayout
 import androidx.core.view.ViewCompat
 import com.andsi.airlyrics.R
 import com.andsi.airlyrics.ui.model.MainUiHost
+import com.andsi.airlyrics.ui.layout.ResponsiveColumns
+import com.andsi.airlyrics.ui.layout.ResponsivePage
 import com.andsi.airlyrics.ui.navigation.SettingsSubPage
 import com.andsi.airlyrics.ui.components.*
 import com.andsi.airlyrics.i18n.localizedPlainLyricsSourceList
@@ -23,9 +25,9 @@ internal fun createSettingsHomePage(activity: MainUiHost, animateChildren: Boole
     val lyricsSettings = lyricsSettingsState()
 
     container.addView(settingsHomeHeader())
+    val categories = ResponsiveColumns(activity)
 
-
-    container.addView(
+    categories.addLeading(
         settingsCategoryCard(
             title = getString(R.string.ui_lyrics),
             subtitle = getString(R.string.ui_lyrics_settings_summary),
@@ -36,7 +38,7 @@ internal fun createSettingsHomePage(activity: MainUiHost, animateChildren: Boole
         }
     )
 
-    container.addView(
+    categories.addView(
         settingsCategoryCard(
             title = getString(R.string.ui_system),
             subtitle = getString(R.string.ui_overlay_and_notification_permissions),
@@ -47,16 +49,11 @@ internal fun createSettingsHomePage(activity: MainUiHost, animateChildren: Boole
         }
     )
 
-    container.addView(aboutSettingsCard())
-
-
-    val categories = (1 until container.childCount).map(container::getChildAt)
-    categories.forEach(container::removeView)
-    container.addView(AdaptiveGridLayout(activity, 2, dp(24), dp(12),
-        columnPolicy = GridColumnPolicy.Width(360)).apply {
-        categories.forEach { addView(it) }
-    })
-    return scroll(activity, container, animateChildren = animateChildren, maxWidthDp = 1200)
+    categories.addLeading(aboutSettingsCard())
+    container.addView(categories)
+    return ResponsivePage(activity, container, "scroll.SETTINGS.HOME").apply {
+        if (animateChildren) post { animateChildrenCascade(activity, container) }
+    }
 }
 
 private fun MainUiHost.aboutSettingsCard(): View {

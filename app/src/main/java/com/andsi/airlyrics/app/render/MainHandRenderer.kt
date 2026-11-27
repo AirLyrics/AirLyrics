@@ -7,11 +7,10 @@ import android.animation.ValueAnimator
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.andsi.airlyrics.app.MainGraph
 import com.andsi.airlyrics.design.tokens.AirUiTokens
-import com.andsi.airlyrics.ui.insets.remainingTopSystemInset
+import com.andsi.airlyrics.ui.layout.AdaptiveWindowLayout
+import com.andsi.airlyrics.ui.layout.ResponsivePage
 import com.andsi.airlyrics.ui.navigation.Page
 import com.andsi.airlyrics.ui.navigation.SettingsNavigation
 import com.andsi.airlyrics.ui.navigation.SettingsNavigationDirection
@@ -54,15 +53,8 @@ internal class MainHandRenderer(
         })
         host.contentContainer = content
         graph.viewRefs.feedbackAnchor = content
-        return com.andsi.airlyrics.ui.layout.AdaptiveWindowLayout(host, content).apply {
+        return AdaptiveWindowLayout(host, content).apply {
             host.bindAppearance(this) { it.setBackgroundColor(host.colorBackground) }
-            ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
-                val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
-                val ime = insets.getInsets(WindowInsetsCompat.Type.ime())
-                view.setPadding(safe.left, view.remainingTopSystemInset(safe.top), safe.right, maxOf(safe.bottom, ime.bottom))
-                insets
-            }
-            post { ViewCompat.requestApplyInsets(this) }
         }
     }
 
@@ -206,5 +198,5 @@ internal class MainHandRenderer(
     }
 }
 
-private fun View.hasResponsivePage(): Boolean = this is com.andsi.airlyrics.ui.layout.ResponsivePage ||
+private fun View.hasResponsivePage(): Boolean = this is ResponsivePage ||
     (this is ViewGroup && (0 until childCount).any { getChildAt(it).hasResponsivePage() })

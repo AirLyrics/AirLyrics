@@ -34,11 +34,13 @@ import com.andsi.airlyrics.ui.theme.colorBubble
 import com.andsi.airlyrics.ui.theme.colorTextMuted
 import kotlin.math.roundToInt
 
+private val floatingTileColumnBreakpoints = GridColumnPolicy.Breakpoints(listOf(260, 630, 860))
+
 internal fun MainUiHost.settingGridImpl(vararg items: FloatingSettingTile): LinearLayout {
+    val gap = dp(AirUiTokens.Layout.SettingGap)
     return AdaptiveGridLayout(
-        this, AirUiTokens.Layout.OptionColumns,
-        dp(AirUiTokens.Layout.SettingGap), dp(AirUiTokens.Layout.SettingGap),
-        columnPolicy = GridColumnPolicy.Fixed
+        this, 4, gap, gap,
+        columnPolicy = floatingTileColumnBreakpoints
     ).apply {
         items.forEach { addView(floatingTile(it)) }
         setPadding(0, 0, 0, dp(AirUiTokens.Layout.SettingGap))

@@ -113,6 +113,8 @@ internal class LyricsSourcePages(
         addView(pager, LayoutParams(-1, 0, 1f))
     }
 
+    fun capturePositions() = mountedPages.forEach(Page::save)
+
     fun render(next: Map<PlainLyricsSearchSource, SourceResults>) {
         val keys = next.keys.toList()
         val previous = results
@@ -396,7 +398,7 @@ internal class LyricsSourcePages(
         }
 
         fun save() {
-            if (generation != session.resultsGeneration || list.visibility != VISIBLE) return
+            if (generation != session.resultsGeneration || list.visibility != VISIBLE || list.childCount == 0) return
             source?.let { key ->
                 list.layoutManager?.onSaveInstanceState()?.let { session.pagePositions[key] = it }
             }

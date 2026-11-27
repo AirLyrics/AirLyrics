@@ -14,7 +14,7 @@ import com.andsi.airlyrics.ui.theme.*
 @SuppressLint("ViewConstructor")
 internal class LocalLyricsRowView(
     private val host: MainUiHost,
-    private val onOpen: (LocalLyricsUiItem) -> Unit,
+    private val onOpen: (LocalLyricsRowView, LocalLyricsUiItem) -> Unit,
     private val onClickIntercept: (() -> Boolean)? = null,
     badgeText: CharSequence? = null
 ) : LinearLayout(host) {
@@ -59,7 +59,7 @@ internal class LocalLyricsRowView(
             textLayouts += layout
             addView(layout)
         }
-        setOnClickListener { if (onClickIntercept?.invoke() != true) onOpen(item) }
+        setOnClickListener { if (onClickIntercept?.invoke() != true) onOpen(this, item) }
     }
 
     fun bind(value: LocalLyricsUiItem, expanded: MutableSet<String>? = null) {

@@ -1,9 +1,6 @@
 package com.andsi.airlyrics.ui.pages.floating
 
 internal object FloatingPageTokens {
-    const val PAGE_PADDING_HORIZONTAL_DP = 20
-    const val PAGE_PADDING_TOP_DP = 6
-    const val PAGE_PADDING_BOTTOM_DP = 24
     const val LIST_PADDING_TOP_DP = 4
 
     const val SECTION_TITLE_TEXT_SP = 18f

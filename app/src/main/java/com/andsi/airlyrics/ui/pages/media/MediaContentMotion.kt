@@ -165,6 +165,8 @@ internal class MediaArtworkSwap(
     private val host: MainUiHost,
     private val motionState: MediaArtworkMotionState = MediaArtworkMotionState()
 ) : FrameLayout(host) {
+    private val compactSize = host.dp(72)
+    private val maxSize = host.dp(112)
     private var current = imageView()
     private var incoming: ImageView? = null
     private var animator: ValueAnimator? = null
@@ -185,7 +187,7 @@ internal class MediaArtworkSwap(
 
     init {
         layoutParams = LinearLayout.LayoutParams(
-            host.dp(MEDIA_ARTWORK_SIZE_DP), host.dp(MEDIA_ARTWORK_SIZE_DP)
+            LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT,
         ).apply { marginStart = host.dp(AirUiTokens.Space.Xxl + AirUiTokens.Space.Xxs) }
         background = GradientDrawable().apply {
             cornerRadius = host.dp(AirUiTokens.Radius.Sm).toFloat()
@@ -197,6 +199,19 @@ internal class MediaArtworkSwap(
             current.setImageBitmap(bitmap)
             currentKey = key
         }
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val availableWidth = MeasureSpec.getSize(widthMeasureSpec)
+        val desiredSize = if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.UNSPECIFIED) {
+            compactSize
+        } else {
+            (availableWidth / 5).coerceIn(compactSize, maxSize).coerceAtMost(availableWidth / 2)
+        }
+        super.onMeasure(
+            MeasureSpec.makeMeasureSpec(resolveSize(desiredSize, widthMeasureSpec), MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(resolveSize(desiredSize, heightMeasureSpec), MeasureSpec.EXACTLY),
+        )
     }
 
     fun show(bitmap: Bitmap?, uri: Uri?, contentKey: String, animate: Boolean = true) {
@@ -248,15 +263,14 @@ internal class MediaArtworkSwap(
         when {
             bitmap != null -> showResolved(bitmap, key, animate)
             uri != null -> {
-                val size = host.dp(MEDIA_ARTWORK_SIZE_DP)
-                val cacheKey = "$key:$size"
+                val cacheKey = "$key:$maxSize"
                 motionState.decoded(cacheKey)?.let {
                     showResolved(it, key, animate)
                     return
                 }
                 val generation = host.currentUiGeneration()
                 host.runOnAppIo {
-                    val resolved = decodeMediaArtwork(host, uri, size)
+                    val resolved = decodeMediaArtwork(host, uri, maxSize)
                     host.runOnStartedUi(generation) {
                         if (!disposed && requestId == id && desiredKey == key) {
                             if (resolved != null) motionState.cache(cacheKey, resolved)

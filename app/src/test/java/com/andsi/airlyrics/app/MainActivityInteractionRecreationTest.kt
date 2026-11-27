@@ -15,6 +15,11 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.ListView
 import android.widget.TextView
+import com.andsi.airlyrics.ui.components.LocalLyricsRowView
+import com.andsi.airlyrics.ui.navigation.SettingsSubPage
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.core.app.ApplicationProvider
 import com.andsi.airlyrics.R
@@ -120,6 +125,101 @@ class MainActivityInteractionRecreationTest {
         assertNull(activity.graph.viewModel.interactions.read("editor"))
         assertTrue(LyricsStorage.readLocalLyricsItemText(activity, LyricsStorage.listAllLyrics(activity).single(), LyricsStorage.LocalLyricsEditTarget.PLAIN)!!.contains("original"))
     }
+
+    @Config(qualifiers = "en-rUS-w1240dp-h775dp-land-mdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test fun recentLyricsEditorRestoresDraftAndReturnsToTheSameSongAfterResize() {
+        val overview = openLyricsSettingsWithSongs(8)
+        val row = descendants(overview).filterIsInstance<LocalLyricsRowView>()[2]
+        val key = row.getTag(R.id.interaction_anchor)
+        val scroll = generateSequence(row.parent as View) { it.parent as? View }
+            .filterIsInstance<ScrollView>().first()
+        scroll.scrollTo(0, scroll.scrollY + offsetWithin(row, scroll) + 4)
+        val offset = offsetWithin(row, scroll)
+        assertTrue(scroll.scrollY > 0)
+        assertTrue(row.performClick())
+        await { editorRowOrNull() != null }
+        editFirstLine("unsaved draft")
+        val sheet = latestDialog().findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        assertTrue("The editor can use both columns on a tablet", sheet.width > 640)
+
+        RuntimeEnvironment.setQualifiers("en-rUS-w550dp-h720dp-port-mdpi")
+        controller.recreate()
+        settle()
+        await { editorRowOrNull()?.contentDescription == "[00:01.00], unsaved draft" }
+        assertEquals(SettingsSubPage.LYRICS, activity.graph.state.settingsSubPage)
+        assertTrue(button(latestDialog(), R.string.ui_cancel).performClick())
+        settle()
+
+        val restored = requireNotNull(activity.graph.uiHost.contentContainer)
+        await { descendants(restored).any { it.getTag(R.id.interaction_anchor) == key } }
+        val restoredRow = descendants(restored).single { it.getTag(R.id.interaction_anchor) == key }
+        val restoredScroll = descendants(restored).filterIsInstance<ScrollView>().single()
+        assertEquals(offset, offsetWithin(restoredRow, restoredScroll))
+        assertNull(activity.graph.uiHost.editorSession.state.value)
+        assertTrue(LyricsStorage.listAllLyrics(activity).all { item ->
+            LyricsStorage.readLocalLyricsItemText(activity, item, LyricsStorage.LocalLyricsEditTarget.PLAIN)
+                ?.contains("original") == true
+        })
+    }
+
+    @Config(qualifiers = "en-rUS-w550dp-h720dp-port-mdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test fun savedLyricsEditorClosesBackToTheSameListPosition() {
+        val overview = openLyricsSettingsWithSongs(12)
+        assertTrue(visibleAction(overview, R.string.ui_view_all).performClick())
+        settle()
+        val content = requireNotNull(activity.graph.uiHost.contentContainer)
+        await { descendants(content).filterIsInstance<ListView>().any { it.count == 12 && it.childCount > 0 } }
+        val list = descendants(content).filterIsInstance<ListView>().single()
+        list.setSelectionFromTop(3, 18)
+        settle()
+        val first = list.firstVisiblePosition
+        val top = list.getChildAt(0).top
+        assertTrue(first > 0)
+
+        assertTrue(descendants(list.getChildAt(0)).filterIsInstance<LocalLyricsRowView>().single().performClick())
+        await { editorRowOrNull() != null }
+        assertTrue(button(latestDialog(), R.string.ui_cancel).performClick())
+        settle()
+
+        assertEquals(SettingsSubPage.SAVED_LYRICS, activity.graph.state.settingsSubPage)
+        assertEquals(first, list.firstVisiblePosition)
+        assertEquals(top, list.getChildAt(0).top)
+    }
+
+    private fun openLyricsSettingsWithSongs(count: Int): View {
+        repeat(count) { index ->
+            assertTrue(LyricsStorage.savePlainLyrics(
+                context = context,
+                title = "Song ${index + 1}",
+                artist = "Artist",
+                duration = 180_000L,
+                plainLrc = "[00:01.00]original"
+            ))
+        }
+        val graph = activity.graph
+        val host = graph.uiHost
+        assertTrue((host.tabViews.getValue(Page.SETTINGS).parent as View).performClick())
+        settle()
+        graph.mainHandRenderer.finishPageTransition()
+        val content = requireNotNull(host.contentContainer)
+        assertTrue(visibleAction(content, R.string.ui_lyrics).performClick())
+        settle()
+        graph.mainHandRenderer.finishPageTransition()
+        val overview = content.getChildAt(0)
+        await { descendants(overview).filterIsInstance<LocalLyricsRowView>().size >= 8 }
+        return overview
+    }
+
+    private fun visibleAction(root: View, res: Int): View {
+        val label = descendants(root).filterIsInstance<TextView>()
+            .single { it.isShown && it.text.toString() == activity.getString(res) }
+        return generateSequence(label as View) { it.parent as? View }.first(View::isClickable)
+    }
+
+    private fun offsetWithin(view: View, parent: View): Int =
+        IntArray(2).also(view::getLocationInWindow)[1] - IntArray(2).also(parent::getLocationInWindow)[1]
 
     @Test fun rowActionsFillTheSameWidthForShortLongAndEmptyLyrics() {
         openEditor("[00:01.00]x\n[00:02.00]A normal lyric line\n[00:03.00]A longer lyric that wraps across several display lines and keeps going\n[00:04.00]\n[00:05.00]♪ music ♪")

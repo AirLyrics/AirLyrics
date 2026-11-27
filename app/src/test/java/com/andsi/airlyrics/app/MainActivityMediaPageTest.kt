@@ -1,8 +1,12 @@
 package com.andsi.airlyrics.app
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.BitmapDrawable
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -11,9 +15,13 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.net.Uri
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.test.core.app.ApplicationProvider
+import com.andsi.airlyrics.R
+import com.andsi.airlyrics.design.tokens.AirUiTokens
 import com.andsi.airlyrics.media.MediaSourceStore
 import com.andsi.airlyrics.media.mediaArtworkRefreshKey
 import com.andsi.airlyrics.app.viewmodel.MainForegroundStateReader
@@ -31,6 +39,11 @@ import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLooper
+import java.io.File
+import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 // ShadowMediaController's metadata field is protected; use its public setter.
@@ -69,7 +82,7 @@ class MainActivityMediaPageTest {
             keys.forEach { managerShadow.addController(controllers.getValue(it)) }
         }
         fun packages(root: View): List<String> = descendants(root).mapNotNull { view ->
-            (view.getTag(com.andsi.airlyrics.R.id.interaction_anchor) as? String)
+            (view.getTag(R.id.interaction_anchor) as? String)
                 ?.takeIf { it.startsWith("media.player.") && '/' !in it }
                 ?.removePrefix("media.player.")
         }.toList()
@@ -234,12 +247,116 @@ class MainActivityMediaPageTest {
     }
 
     @Test
+    @Config(qualifiers = "en-rUS-night-mdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun currentMediaStaysAboveThePlayerListInEnglish() = verifyMediaStack(
+        locale = "en",
+        title = "The Last Train Across the City — Live from the Riverside Sessions",
+        artist = "Night Studio",
+        playerName = "Music player",
+    )
+
+    @Test
+    @Config(qualifiers = "zh-rCN-night-mdpi")
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun currentMediaStaysAboveThePlayerListInChinese() = verifyMediaStack(
+        locale = "zh-CN",
+        title = "深夜列车：从市中心到河畔的现场演出",
+        artist = "夜间工作室",
+        playerName = "音乐播放器",
+    )
+
+    private fun verifyMediaStack(locale: String, title: String, artist: String, playerName: String) {
+        val packageName = "preview.player"
+        withPlayer(packageName, visible = true) { host, player ->
+            shadowOf(host.packageManager).installPackage(PackageInfo().apply {
+                this.packageName = packageName
+                applicationInfo = ApplicationInfo().apply {
+                    this.packageName = packageName
+                    nonLocalizedLabel = playerName
+                }
+            })
+            val cover = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888).apply {
+                val canvas = Canvas(this)
+                canvas.drawColor(Color.rgb(84, 70, 116))
+                requireNotNull(AppCompatResources.getDrawable(host, R.drawable.ic_air_music_note)).apply {
+                    setTint(Color.rgb(242, 220, 255))
+                    setBounds(64, 64, 192, 192)
+                    draw(canvas)
+                }
+            }
+            shadowOf(player).setMetadata(MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                .putBitmap(MediaMetadata.METADATA_KEY_ART, cover)
+                .build())
+            shadowOf(player).setPlaybackState(PlaybackState.Builder()
+                .setState(PlaybackState.STATE_PLAYING, 0L, 1f)
+                .build())
+            host.refreshMediaContent()
+            val content = requireNotNull(host.contentContainer)
+            val root = content.parent as ViewGroup
+            val page = content.getChildAt(0)
+            fun anchor(key: String) = descendants(page).single { it.getTag(R.id.interaction_anchor) == key }
+            fun bounds(view: View) = Rect().apply {
+                view.getDrawingRect(this)
+                root.offsetDescendantRectToMyCoords(view, this)
+            }
+
+            val heading = anchor("media.heading")
+            val current = anchor("media.current")
+            val playerHeading = anchor("media.players.heading")
+            val playerCard = anchor("media.player.$packageName")
+            val refresh = anchor("media.refresh")
+            val artwork = descendants(current).filterIsInstance<MediaArtworkSwap>().single()
+            val titleView = descendants(current).filterIsInstance<TextView>().single { it.text.toString() == title }
+            val windows = listOf(
+                Triple(1240, 775, 112..112),
+                Triple(550, 720, 73..111),
+                Triple(412, 820, 72..72),
+            )
+
+            for ((width, height, coverSizes) in windows) {
+                val size = "${width}x$height"
+                fun layout() {
+                    root.setPadding(0, host.dp(24), 0, host.dp(16))
+                    root.measure(
+                        View.MeasureSpec.makeMeasureSpec(host.dp(width), View.MeasureSpec.EXACTLY),
+                        View.MeasureSpec.makeMeasureSpec(host.dp(height), View.MeasureSpec.EXACTLY),
+                    )
+                    root.layout(0, 0, root.measuredWidth, root.measuredHeight)
+                }
+                layout()
+                assertEquals(size, heading.width, current.width)
+                assertEquals(size, bounds(current).left, bounds(playerHeading).left)
+                assertTrue("$size player section should follow the current media card", bounds(playerHeading).top >= bounds(current).bottom)
+                assertTrue("$size refresh should follow the player cards", bounds(refresh).top >= bounds(playerCard).bottom)
+                assertTrue("$size artwork measured ${artwork.width} dp", artwork.width in coverSizes)
+                assertEquals(size, artwork.width, artwork.height)
+                assertTrue("$size title overlaps the artwork", bounds(titleView).right <= bounds(artwork).left)
+                if (width == 1240) {
+                    assertTrue((0 until titleView.lineCount).all { titleView.layout.getEllipsisCount(it) == 0 })
+                }
+                val directory = System.getenv("AIRLYRICS_LAYOUT_PREVIEW_DIR") ?: continue
+                ShadowLooper.idleMainLooper(AirUiTokens.Motion.MediaArtworkSwapMs, TimeUnit.MILLISECONDS)
+                layout()
+                val bitmap = Bitmap.createBitmap(root.width, root.height, Bitmap.Config.ARGB_8888)
+                root.draw(Canvas(bitmap))
+                File(directory, "airlyrics-media-$locale-$size.png").outputStream().use {
+                    check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it))
+                }
+                bitmap.recycle()
+            }
+        }
+    }
+
+    @Test
     fun playerCardRemainsClickableInsideEntranceHolder() {
         withPlayer("other.player") { host, controller ->
             shadowOf(controller).setMetadata(metadata("Song", "Artist", null, null))
             val page = createMediaPage(host, animateContent = false)
             val card = descendants(page).single {
-                it.getTag(com.andsi.airlyrics.R.id.interaction_anchor) ==
+                it.getTag(R.id.interaction_anchor) ==
                     "media.player.${controller.packageName}"
             }
 
@@ -257,7 +374,7 @@ class MainActivityMediaPageTest {
             val container = host.contentContainer!!
             val page = container.getChildAt(0)
             val card = descendants(page).single {
-                it.getTag(com.andsi.airlyrics.R.id.interaction_anchor) ==
+                it.getTag(R.id.interaction_anchor) ==
                     "media.player.${controller.packageName}"
             }
             val icon = descendants(card).filterIsInstance<ImageView>().single {
@@ -274,7 +391,7 @@ class MainActivityMediaPageTest {
 
             assertSame(page, container.getChildAt(0))
             assertSame(card, descendants(page).single {
-                it.getTag(com.andsi.airlyrics.R.id.interaction_anchor) ==
+                it.getTag(R.id.interaction_anchor) ==
                     "media.player.${controller.packageName}"
             })
             assertSame(icon, descendants(card).filterIsInstance<ImageView>().single {
@@ -373,7 +490,11 @@ class MainActivityMediaPageTest {
         assertTrue("Artist missing from page: $texts", texts.any { it.startsWith("$artist · ") })
     }
 
-    private fun withPlayer(packageName: String, block: (MainUiHost, MediaController) -> Unit) {
+    private fun withPlayer(
+        packageName: String,
+        visible: Boolean = false,
+        block: (MainUiHost, MediaController) -> Unit,
+    ) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val manager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
         val session = MediaSession(context, "media-page-test")
@@ -383,6 +504,7 @@ class MainActivityMediaPageTest {
         MediaSourceStore.saveSelectedPackage(context, packageName)
         try {
             Robolectric.buildActivity(MainActivity::class.java).setup().use { activity ->
+                if (visible) activity.visible()
                 block(activity.get().graph.uiHost, controller)
             }
         } finally {

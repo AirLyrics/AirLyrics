@@ -82,6 +82,7 @@ class MainActivityMediaEmptyStateTest {
             try {
                 val controller = MediaController(activity, session.sessionToken)
                 shadowOf(controller).setPackageName("test.player")
+                @Suppress("UsePropertyAccessSyntax")
                 shadowOf(controller).setMetadata(MediaMetadata.Builder()
                     .putString(MediaMetadata.METADATA_KEY_TITLE, "Song")
                     .putString(MediaMetadata.METADATA_KEY_ARTIST, "Artist")
@@ -141,6 +142,8 @@ class MainActivityMediaEmptyStateTest {
                     )
                     page.layout(0, 0, page.measuredWidth, page.measuredHeight)
                     val refresh = anchor(page, "media.refresh")!!
+                    assertEquals(anchor(page, "media.heading")!!.width, card.width)
+                    assertEquals(minOf(host.dp(widthDp), host.dp(1160)) - host.dp(if (widthDp >= 900) 48 else 40), card.width)
                     val parent = card.parent as ViewGroup
                     assertSame(parent, refresh.parent)
                     assertEquals(parent.indexOfChild(card) + 1, parent.indexOfChild(refresh))
@@ -208,14 +211,14 @@ class MainActivityMediaEmptyStateTest {
         assertNull(anchor(page, "media.players.heading"))
         assertEquals(accessGranted, anchor(page, "media.refresh") != null)
         assertEquals(!accessGranted, anchor(page, "media.notification_access") != null)
-        val body = anchor(page, "media.current")!!.parent as ViewGroup
-        assertEquals(3, body.childCount)
+        val current = requireNotNull(anchor(page, "media.current"))
+        val actionKey = if (accessGranted) "media.refresh" else "media.notification_access"
+        val action = requireNotNull(anchor(page, actionKey))
+        val parent = current.parent as ViewGroup
+        assertSame(parent, action.parent)
+        assertEquals(parent.indexOfChild(current) + 1, parent.indexOfChild(action))
         if (!accessGranted) {
-            val permissionButton = anchor(page, "media.notification_access") as TextView
-            assertEquals("去开启通知访问权限", permissionButton.text.toString())
-            assertSame(body, permissionButton.parent)
-            assertEquals(body.indexOfChild(anchor(page, "media.current")) + 1,
-                body.indexOfChild(permissionButton))
+            assertEquals("去开启通知访问权限", (action as TextView).text.toString())
         }
     }
 }

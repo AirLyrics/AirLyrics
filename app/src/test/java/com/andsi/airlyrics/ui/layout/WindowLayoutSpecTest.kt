@@ -4,23 +4,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class WindowLayoutSpecTest {
-    @Test fun navigationUsesWindowWidthRatherThanOrientation() {
-        assertFalse(WindowLayoutSpec(599f, 320f, 1f).useRail)
-        assertTrue(WindowLayoutSpec(600f, 1000f, 1f).useRail)
-        assertTrue(WindowLayoutSpec(600f, 240f, 2f).useRail)
+    @Test fun navigationUsesBothWindowDimensions() {
+        assertEquals(0, WindowLayoutSpec(619f, 390f, 1f).railWidthDp)
+        assertEquals(84, WindowLayoutSpec(620f, 479f, 1f).railWidthDp)
+        assertEquals(0, WindowLayoutSpec(620f, 480f, 1f).railWidthDp)
+        assertEquals(0, WindowLayoutSpec(899f, 480f, 1f).railWidthDp)
+        assertEquals(104, WindowLayoutSpec(900f, 480f, 1f).railWidthDp)
+        assertEquals(0, WindowLayoutSpec(800f, 1024f, 1f).railWidthDp)
     }
-    @Test fun columnsRespectBothGapAndScaledMinimumCardWidth() {
-        val normal = WindowLayoutSpec(1200f, 800f, 1f)
-        assertEquals(1, normal.columns(743f))
-        assertEquals(2, normal.columns(744f))
-        assertEquals(1, normal.copy(fontScale = 2f).columns(1200f))
-        assertEquals(2, normal.copy(fontScale = 0.85f).columns(744f))
-    }
-    @Test fun compactHeightDoesNotChangeNavigation() {
-        val tall = WindowLayoutSpec(800f, 600f, 1f)
-        assertFalse(tall.compact)
-        val short = tall.copy(heightDp = 300f)
-        assertTrue(short.compact)
-        assertEquals(tall.useRail, short.useRail)
+
+    @Test fun twoColumnsRequireAnExpandedWindowAndRoomForBothScaledCards() {
+        val wide = WindowLayoutSpec(1240f, 775f, 1f)
+        assertFalse(wide.usesTwoColumns(743f))
+        assertTrue(wide.usesTwoColumns(744f))
+        assertFalse(wide.copy(fontScale = 2f).usesTwoColumns(1112f))
+        assertTrue(wide.copy(fontScale = 0.85f).usesTwoColumns(744f))
+        assertFalse(WindowLayoutSpec(800f, 1024f, 1f).usesTwoColumns(760f))
     }
 }
