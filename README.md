@@ -54,7 +54,7 @@ If something isn't working or there's a feature you'd like to see, you're very w
 3. Play some music, then manually select the corresponding player on the **Media** page.
 4. Open the **Floating** page and tap **Show** in the bottom bar.
 
-GitHub builds can check for and install updates in **Settings > About**.
+Release builds can check for and install GitHub updates in **Settings > About**.
 
 For more settings and help with common problems, see the [User Guide](docs/USER_GUIDE.md).
 

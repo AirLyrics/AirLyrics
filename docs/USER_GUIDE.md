@@ -59,11 +59,14 @@ Open a saved lyric to edit its text and timing. Word-by-word lyrics support line
 translations, and background vocals. The **Full line** field uses `<mm:ss.SSS>` word timestamps,
 including an end timestamp after the last word; tap **Update words**, then save the lyric.
 
+Use **Edit all** to edit the whole synced lyric as text or **Timeline** to edit it line by line.
+
 Plain text lyrics can be imported from TXT files, saved, and edited, but cannot be displayed in the floating window.
 
 ### Manage Saved Lyrics in Batches
 
-In **Saved lyrics** (Recent local lyrics -> View all), long-press a lyric or tap **Select multiple** to select multiple entries.
+In **Saved lyrics** (Recent local lyrics > View all), touch and hold a song, then drag across more
+songs to select them. You can also tap **Select multiple**.
 
 - **Export** saves a ZIP containing LRC files, or TXT files for plain text lyrics. Edit them, then **Import and replace**. Keep `airlyrics-key` tags in LRC files to match the original entries.
 - Imports match selected songs: export tags take priority, followed by LRC title and artist tags. Without a title tag, filenames are matched; use `Title - Artist.lrc` or `Title - Artist.txt`. One selected song and one file without an export tag map directly.
@@ -86,7 +89,8 @@ You can sign out from the same page.
 ### Manual Lyrics Search
 
 In **Settings > Lyrics > Current song lyrics**, tap **Search lyrics**. Edit the title, artist or album,
-choose sources, and search. Swipe between sources, open a result to preview it, then tap **Apply lyrics**.
+choose sources, and search. Swipe between sources and open a result to preview it. Use the copy
+buttons to copy lyrics or translations, or tap **Apply lyrics** to use the result.
 The reset icon at the end of each edited field restores its original value.
 Searching and previewing leave existing lyrics intact; applying uses the song shown at the top of the window.
 
@@ -106,7 +110,9 @@ add support for more lyrics formats; you can use AI to convert them yourself.
 
 ## App Updates
 
-In a GitHub build, tap the version in **Settings > About**. If **Update available** appears, open it and tap **Update**. After the download finishes, tap **Install** and confirm in Android.
+Release builds check GitHub for updates by default. Tap the version in **Settings > About**.
+If **Update available** appears, tap it, then tap **Update**. After the download finishes, tap
+**Install** and confirm in Android.
 
 ## Troubleshooting
 
